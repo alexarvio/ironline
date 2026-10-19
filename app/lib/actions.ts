@@ -293,6 +293,10 @@ import {
   endSession,
   saveProgramWorkoutQuestions,
   discardSession,
+  createFreeSession,
+  addFreeExercise,
+  removeFreeSession,
+  getCurrentWeekNumber,
   setExerciseAlternatives,
   setExerciseSwap,
   listExercises,
@@ -3520,6 +3524,30 @@ export async function discardSessionAction(programDayId: number) {
   discardSession(Number(programDayId));
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+// ---- Free sessions (19 Oct): see createFreeSession in queries.ts.
+/** Starts an empty session in this week, off the plan; refused while another is going. */
+export async function createFreeSessionAction(clientId: number, at?: string): Promise<{ ok: true; id: number } | { ok: false; other?: string }> {
+  if (!(await canAccessClient(Number(clientId)))) return { ok: false };
+  const r = createFreeSession(Number(clientId), getCurrentWeekNumber(Number(clientId)), stampOrNow(at));
+  if (r.ok) revalidatePath("/admin");
+  return r;
+}
+
+/** An exercise into a free session; answers with its id, or null. The client's screen draws it at once, so no page rebuild here. */
+export async function addFreeExerciseAction(programDayId: number, v: { exerciseId?: number | null; name?: string | null }): Promise<number | null> {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || !(await canAccessClient(owner))) return null;
+  return addFreeExercise(Number(programDayId), v)?.id ?? null;
+}
+
+/** A free session left with nothing in it goes. */
+export async function removeFreeSessionAction(programDayId: number) {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || !(await canAccessClient(owner))) return;
+  removeFreeSession(Number(programDayId));
+  revalidatePath("/client");
 }
 
 /** The client did another exercise instead: one from the library, or a name they typed. */

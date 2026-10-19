@@ -79,7 +79,12 @@ export type SessionDay = {
   answers: Record<string, number | string>;
   gyms: GymOption[];
   gymId: number | null;
+  /** The client's own session off the plan (19 Oct): no targets, exercises added as they go. */
+  free?: boolean;
 };
+
+/** The coach's library as a free session offers it: what can be added. */
+export type LibraryPick = { id: number; name: string; group: string };
 
 /** The exercise as it reads to the client: the swap's name when there is one. */
 export const shownName = (ex: SessionExercise) => ex.swap?.name ?? ex.name;

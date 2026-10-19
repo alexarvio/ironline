@@ -93,6 +93,8 @@ type ProgramDay = {
   // question as it was asked so a later rename leaves history alone. Absent
   // on sessions ended before it: those read the two fields above.
   session_answers?: SessionAnswer[];
+  /** A free session (19 Oct): one the client made to train off the plan, not one the coach planned. Left out of every week's plan (getWeek, getPublishedWeek); see createFreeSession. */
+  free?: boolean;
 };
 // A multi-week training program — the coach picks a name and a length
 // (total_weeks) up front; program_days for weeks [start_week, start_week +
@@ -544,6 +546,8 @@ type WorkoutAssignment = {
   // the prescription stays, so the coach sees what was asked against what
   // was done. Absent when nothing was swapped.
   swap?: { library_exercise_id: number | null; custom_name: string | null; at: string };
+  /** In a free session, an exercise the client named that is not in the library (exercise_id 0). */
+  custom_name?: string | null;
   // What the coach offers instead when the machine is taken: exercises from
   // their library, each with an optional note. The client picks one from the
   // swap sheet. Absent or empty: the sheet offers only "write it down".

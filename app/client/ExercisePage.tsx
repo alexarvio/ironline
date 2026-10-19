@@ -56,7 +56,10 @@ export default function ExercisePage({
   request = null,
   onSetLogged,
   tools = null,
+  free = false,
 }: {
+  /** In a free session (19 Oct): no coach, so no targets line. */
+  free?: boolean;
   /** The workout's chat and ⋯, on this exercise's own row (2 Oct): what is said there is about the exercise. */
   tools?: React.ReactNode;
   exercise: SessionExercise;
@@ -87,7 +90,8 @@ export default function ExercisePage({
   // The weight for the gym trained at: a machine there is its own machine,
   // so each gym carries its own weight forward.
   const gymWeight = (gymId != null ? exercise.gymTargets?.[gymId] : null) ?? exercise.targetWeight;
-  const askWeight = exercise.targetWeight != null;
+  // A free session always asks the weight: nothing prescribed says it's a bodyweight exercise.
+  const askWeight = exercise.targetWeight != null || free;
   // Swapped for something else: the weight and RPE were set for the
   // prescribed exercise, so only the reps carry over.
   const swapped = exercise.swap != null;
@@ -535,7 +539,7 @@ export default function ExercisePage({
             targetRpe != null && String(targetRpe).trim() ? `RPE ${targetRpe}` : null,
             exercise.time?.trim() ? exercise.time.trim() : null,
           ].filter(Boolean) as string[];
-          return parts.length ? (
+          return parts.length && !free ? (
             <div className="lw-target">
               <span className="lw-target-label">Target</span>
               <span className="lw-target-vals">

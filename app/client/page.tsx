@@ -6,6 +6,7 @@ import { getData } from "../lib/db";
 import { logoutAction } from "../lib/auth-actions";
 import {
   getAssignmentsForDay,
+  getFreeSessions,
   getClient,
   listClientEvents,
   carriedVideoReply,
@@ -563,6 +564,10 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
   // figures and its sessions, outside any day.
   const program = getDeployedProgram(CLIENT_ID);
   const trainingDays = days.filter((d) => d.assignments.length > 0 || listCardioForDay(d.day.id).length > 0);
+  // The client's own free sessions this week (19 Oct), after the plan's: drawn like them, counted in none of the figures above.
+  const freeDays = getFreeSessions(CLIENT_ID, week)
+    .filter((day) => !!day.session_started_at)
+    .map((day) => ({ day, assignments: getAssignmentsForDay(day.id) }));
   const stats = weekStats(CLIENT_ID, week);
   const dayTarget = stats.totalDays || 7;
   // Sessions finished this week: every set logged and any cardio ticked, the
@@ -700,7 +705,9 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
               clientName={(getClient(CLIENT_ID)?.name ?? "").trim().split(/\s+/)[0] ?? ""}
               liveSession={liveSessionFor(CLIENT_ID)}
               headerPicture={bannerPictures(CLIENT_ID, "training")[0] ?? null}
-              days={trainingDays.map(({ day, assignments }, i) => {
+              clientId={CLIENT_ID}
+              library={[...library.values()].map((e) => ({ id: e.id, name: e.name, group: exerciseGroup(e) }))}
+              days={[...trainingDays, ...freeDays].map(({ day, assignments }, i) => {
                 const gymId = dayGymId(day.id);
                 // Videos the coach asked for in this session.
                 // Ask every session (15 Oct): requests this session inherits from recurring ones are made here, as the app loads it.
@@ -712,6 +719,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                 return {
                 key: day.id,
                 index: i + 1,
+                free: !!day.free,
                 week: week - (program?.start_week ?? 1) + 1,
                 gyms: dayGyms.map((g) => ({ id: g.id, name: g.name, color: isGymColor(g.color) ? g.color : "navy", kind: g.kind ?? "gym", sessions: gymStats.get(g.id)?.sessions ?? 0, lastUsedAt: gymStats.get(g.id)?.lastUsedAt ?? null, lastUsed: g.id === lastGymId, logo: g.logo_path ?? null })),
                 gymId,

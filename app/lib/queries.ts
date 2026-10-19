@@ -67,6 +67,8 @@ export type ProgramDay = {
   session_enjoyment?: number;
   session_adherence?: number;
   session_answers?: SessionAnswer[];
+  /** A free session (19 Oct): one the client made to train off the plan, not one the coach planned. Left out of every week's plan (getWeek, getPublishedWeek); see createFreeSession. */
+  free?: boolean;
 };
 export type WorkoutAssignment = {
   id: number;
@@ -90,6 +92,8 @@ export type WorkoutAssignment = {
   gym_targets?: Record<string, { kg: number | null; set_at?: string | null }>;
   warmup_sets?: { weight_kg: number | null; reps: number | null }[];
   swap?: { library_exercise_id: number | null; custom_name: string | null; at: string };
+  /** In a free session, an exercise the client named that is not in the library (exercise_id 0). */
+  custom_name?: string | null;
   /** The coach's alternatives (see db.ts). */
   alternatives?: { exercise_id: number; note: string | null }[];
   /** The library's substitutes for this exercise kept off this session (14 Oct); absent, they are offered along with the alternatives above. */
@@ -670,8 +674,9 @@ export function trainingDates(clientId: number): Set<string> {
 }
 
 export function getWeek(clientId: number, week: number): ProgramDay[] {
+  // The plan only: a free session the client made is not one of the week's sessions (19 Oct).
   return getData()
-    .program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week)
+    .program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week && !pd.free)
     .sort((a, b) => a.day_of_week - b.day_of_week);
 }
 
@@ -1297,7 +1302,7 @@ export function getAssignmentsForDay(programDayId: number): WorkoutAssignment[] 
         note_kind: wa.note_kind ?? null,
         note_at: wa.note_at ?? null,
         note_read: wa.note_read ?? false,
-        exercise_name: exercise ? (variation ? `${exercise.name} · ${variation.name}` : exercise.name) : "Unknown exercise",
+        exercise_name: wa.custom_name?.trim() || (exercise ? (variation ? `${exercise.name} · ${variation.name}` : exercise.name) : "Unknown exercise"),
         exercise_video_url: variation ? variation.video_url ?? null : exercise?.video_url ?? null,
       };
     });
@@ -1567,7 +1572,7 @@ export function publishWeek(clientId: number, week: number) {
 export function getPublishedWeek(clientId: number, week: number): ProgramDay[] {
   return getData()
     .program_days.filter(
-      (pd) => pd.client_id === clientId && pd.week_number === week && pd.status === "published"
+      (pd) => pd.client_id === clientId && pd.week_number === week && pd.status === "published" && !pd.free
     )
     .sort((a, b) => a.day_of_week - b.day_of_week);
 }
@@ -2479,8 +2484,9 @@ export function getClientSummary(clientId: number) {
   const publishedDays = data.program_days.filter(
     (pd) => pd.client_id === clientId && pd.status === "published"
   );
+  const planned = new Set(data.program_days.filter((pd) => pd.client_id === clientId && !pd.free).map((pd) => pd.id));
   const trainingDaysBuilt = [...dayIds].filter(
-    (id) => data.workout_assignments.some((wa) => wa.program_day_id === id)
+    (id) => planned.has(id) && data.workout_assignments.some((wa) => wa.program_day_id === id)
   ).length;
   const totalSets = data.set_logs.filter((sl) => assignmentIds.has(sl.workout_assignment_id)).length;
 
@@ -2560,11 +2566,12 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
   };
 
   // "Session 2 · Push A (Week 3)", with the week counted inside its programme.
-  const dayTitle = (day: { client_id: number; week_number: number; day_of_week: number; label: string | null }) => {
+  const dayTitle = (day: { client_id: number; week_number: number; day_of_week: number; label: string | null; free?: boolean }) => {
     const program = data.training_programs.find(
       (p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks
     );
     const week = program ? programWeekLabel(program, day.week_number) : `Week ${day.week_number}`;
+    if (day.free) return `Free session (${week})`;
     return `Session ${day.day_of_week}${day.label ? ` · ${day.label}` : ""} (${week})`;
   };
 
@@ -8703,6 +8710,76 @@ export function endStaleSessions() {
 
 /** The client began the session: its clock starts. One live session per
     client, so another one still going is returned instead of starting. */
+// ---- Free sessions (19 Oct, Alex): the extra row under the week's sessions.
+// The client trains off the plan: an empty session filled as they go, from
+// the coach's library or a name of their own, sets with no targets. It is a
+// program_day flagged free, in the week it was trained, so the workout screen,
+// the set logging and the feed work as for any session; the plan's own
+// counting (getWeek, getPublishedWeek) leaves it out, so it never raises a
+// week's target or reads as missed.
+export function createFreeSession(clientId: number, week: number, at: string): { ok: true; id: number } | { ok: false; other: string } {
+  const data = getData();
+  const live = liveSessionFor(clientId);
+  if (live) return { ok: false, other: live.label };
+  const free = data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week && pd.free).length;
+  const day: ProgramDay = { id: allocId("program_days"), client_id: clientId, week_number: week, day_of_week: 100 + free, label: "Free session", status: "published", free: true, session_started_at: at };
+  data.program_days.push(day);
+  persist();
+  return { ok: true, id: day.id };
+}
+
+/** The client's free sessions in a week, oldest first. */
+export function getFreeSessions(clientId: number, week: number): ProgramDay[] {
+  return getData()
+    .program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week && pd.free)
+    .sort((a, b) => a.id - b.id);
+}
+
+/** An exercise added to a free session: the library's, or a name of the client's own. Three sets, no targets. */
+export function addFreeExercise(programDayId: number, v: { exerciseId?: number | null; name?: string | null }): WorkoutAssignment | null {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day?.free) return null;
+  const coachId = getClient(day.client_id)?.coach_id ?? null;
+  const lib = v.exerciseId != null ? data.exercises.find((e) => e.id === Number(v.exerciseId) && e.coach_id === coachId) ?? null : null;
+  const name = (v.name ?? "").trim().slice(0, 80);
+  if (!lib && !name) return null;
+  const order = data.workout_assignments.filter((wa) => wa.program_day_id === day.id).length;
+  const row: WorkoutAssignment = {
+    id: allocId("workout_assignments"),
+    program_day_id: day.id,
+    exercise_id: lib?.id ?? 0,
+    order_index: order,
+    sets: 3,
+    reps: "",
+    target_weight_kg: null,
+    rpe_target: null,
+    rest_seconds: null,
+    tempo: null,
+    notes: null,
+    demo_url: null,
+    note_kind: null,
+    note_at: null,
+    note_read: false,
+    ...(lib ? {} : { custom_name: name }),
+  };
+  data.workout_assignments.push(row);
+  persist();
+  return row;
+}
+
+/** A free session taken away whole: left with nothing in it, or discarded. */
+export function removeFreeSession(programDayId: number) {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day?.free) return;
+  const ids = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id));
+  data.set_logs = data.set_logs.filter((sl) => !ids.has(sl.workout_assignment_id));
+  data.workout_assignments = data.workout_assignments.filter((wa) => wa.program_day_id !== day.id);
+  data.program_days = data.program_days.filter((pd) => pd.id !== day.id);
+  persist();
+}
+
 export function startSession(programDayId: number, at: string): { ok: true } | { ok: false; other: string } {
   const data = getData();
   const day = data.program_days.find((pd) => pd.id === programDayId);
@@ -8775,6 +8852,14 @@ export function endSession(programDayId: number, at: string, note: string, answe
   const data = getData();
   const day = data.program_days.find((pd) => pd.id === programDayId);
   if (!day) return;
+  // A free session's exercises are as many sets as were logged: there was no plan to fall short of.
+  if (day.free) {
+    for (const wa of data.workout_assignments) {
+      if (wa.program_day_id !== day.id) continue;
+      const done = data.set_logs.filter((sl) => sl.workout_assignment_id === wa.id).length;
+      wa.sets = Math.max(1, done);
+    }
+  }
   if (!day.session_started_at) day.session_started_at = at;
   day.session_ended_at = at;
   const text = note.trim().slice(0, 1000);
@@ -8843,6 +8928,11 @@ export function discardSession(programDayId: number) {
   const data = getData();
   const day = data.program_days.find((pd) => pd.id === programDayId);
   if (!day) return;
+  // A free session discarded is gone altogether: it only ever was the client's workout.
+  if (day.free) {
+    removeFreeSession(programDayId);
+    return;
+  }
   const ids = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id));
   data.set_logs = data.set_logs.filter((sl) => !ids.has(sl.workout_assignment_id));
   for (const wa of data.workout_assignments) {

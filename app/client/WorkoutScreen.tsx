@@ -10,6 +10,8 @@ import ExercisePage, { MAX_WARMUPS, type ExerciseRequest } from "./ExercisePage"
 import GymPickerDialog from "./GymPickerDialog";
 import RestTimerPill, { useRestTimer } from "./RestTimer";
 import SwipeToEnd from "./SwipeToEnd";
+import FreeAddPage from "./FreeAddPage";
+import type { LibraryPick } from "./workoutShared";
 import {
   CardioCard,
   clock,
@@ -36,7 +38,7 @@ import {
 // the swipe; the session keeps its date and time.
 
 const PAGE_KEY = "ironline.client.workout-page";
-type Page = { kind: "exercise"; index: number } | { kind: "cardio"; index: number } | { kind: "wrap" };
+type Page = { kind: "exercise"; index: number } | { kind: "cardio"; index: number } | { kind: "add" } | { kind: "wrap" };
 
 function readPage(dayId: number, editing: boolean): number | null {
   try {
@@ -62,7 +64,12 @@ export default function WorkoutScreen({
   onEnded,
   onDiscarded,
   onEdited,
+  library,
+  onAddExercise,
 }: {
+  /** A free session (19 Oct): the coach's library, and how an exercise is added to it. */
+  library?: LibraryPick[];
+  onAddExercise?: (pick: { exerciseId: number | null; name: string; group: string }) => Promise<number | null>;
   day: SessionDay;
   /** A finished session opened again to correct it. */
   editing?: boolean;
@@ -84,6 +91,8 @@ export default function WorkoutScreen({
   const pages: Page[] = [
     ...day.exercises.map((_, index) => ({ kind: "exercise", index }) as Page),
     ...day.cardio.map((_, index) => ({ kind: "cardio", index }) as Page),
+    // A free session (19 Oct): its "Add an exercise" page after what it has so far.
+    ...(day.free && !editing && onAddExercise ? [{ kind: "add" } as Page] : []),
     { kind: "wrap" },
   ];
   const firstPage = () => {
@@ -249,7 +258,18 @@ export default function WorkoutScreen({
     </>
   );
 
-  const pageDone = (p: Page) => (p.kind === "exercise" ? isDone(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].done : ended);
+  // In a free session an exercise is done once anything is logged: there is no number of sets it was asked for.
+  const exDone = (ex: SessionExercise) => (day.free ? loggedCount(ex) > 0 : isDone(ex));
+  const pageDone = (p: Page) => (p.kind === "exercise" ? exDone(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].done : p.kind === "add" ? false : ended);
+  // An exercise just added: its page comes up once the session has it.
+  const wantPage = useRef<number | null>(null);
+  useEffect(() => {
+    if (wantPage.current == null || wantPage.current >= day.exercises.length) return;
+    const at = wantPage.current;
+    wantPage.current = null;
+    setTimeout(() => jumpTo(at), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- on a new exercise only
+  }, [day.exercises.length]);
   // Where "next" goes from page i (19 Oct): the earliest exercise or cardio
   // not done yet, counted from the start, so one skipped earlier comes back
   // before going on (skip 1–3, finish 4, and it lands on 1, not 5). With
@@ -294,7 +314,7 @@ export default function WorkoutScreen({
               type="button"
               role="tab"
               aria-selected={i === page}
-              aria-label={p.kind === "exercise" ? shownName(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].name : "Wrap up"}
+              aria-label={p.kind === "exercise" ? shownName(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].name : p.kind === "add" ? "Add an exercise" : "Wrap up"}
               className={`wo-seg${i === page ? " now" : ""}${pageDone(p) ? " done" : pageStarted(p) ? " part" : ""}`}
               onClick={() => jumpTo(i)}
             >
@@ -373,7 +393,7 @@ export default function WorkoutScreen({
                 coachPhoto={coachPhoto}
                 nextName={(() => {
                   const n = pages[nextOpen(i)];
-                  return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;
+                  return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : n?.kind === "add" ? "Another exercise" : null;
                 })()}
                 onNext={(line) => {
                   if (line) setToast(line);
@@ -381,6 +401,21 @@ export default function WorkoutScreen({
                 }}
                 request={request?.page === i ? request : null}
                 tools={headTools("wo-round-btn wo-ex-btn", day.exercises[p.index])}
+                free={!!day.free}
+              />
+            ) : p.kind === "add" ? (
+              <FreeAddPage
+                library={library ?? []}
+                coachName={coachName}
+                count={day.exercises.length}
+                onAdd={async (pick) => {
+                  if (!onAddExercise) return false;
+                  const at = day.exercises.length;
+                  const id = await onAddExercise(pick);
+                  if (id == null) return false;
+                  wantPage.current = at;
+                  return true;
+                }}
               />
             ) : p.kind === "cardio" ? (
               <div className="wo-page-inner">
@@ -395,17 +430,18 @@ export default function WorkoutScreen({
                 <p className="wo-wrap-sub">
                   {(() => {
                     const total = day.exercises.length + day.cardio.length;
-                    const done = day.exercises.filter(isDone).length + day.cardio.filter((c) => c.done).length;
+                    const done = day.exercises.filter(exDone).length + day.cardio.filter((c) => c.done).length;
+                    if (day.free) return total === 0 ? "Nothing added yet." : `You logged ${done} of ${total} exercise${total === 1 ? "" : "s"}.`;
                     return done >= total && total > 0 ? "You have completed all exercises." : `You have completed ${done} out of ${total} exercises.`;
                   })()}
                 </p>
                 <div className="wo-checklist">
                   {pages.map((q, j) => {
-                    if (q.kind === "wrap") return null;
+                    if (q.kind === "wrap" || q.kind === "add") return null;
                     const ex = q.kind === "exercise" ? day.exercises[q.index] : null;
                     const complete = pageDone(q);
                     const count = ex ? loggedCount(ex) : null;
-                    const status = complete ? "Done" : ex && count ? `${count} of ${ex.sets}` : "Not started";
+                    const status = day.free && ex ? (count ? `${count} set${count === 1 ? "" : "s"}` : "Not started") : complete ? "Done" : ex && count ? `${count} of ${ex.sets}` : "Not started";
                     return (
                       <button key={j} type="button" className={`wo-check-row${complete ? " done" : ""}`} onClick={() => jumpTo(j)}>
                         <span className={`wo-check-circle${complete ? " done" : ""}`}>{complete ? "✓" : j + 1}</span>

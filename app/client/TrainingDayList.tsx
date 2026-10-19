@@ -2,12 +2,12 @@
 
 import { Fragment, useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { pickGymAction, startSessionAction } from "../lib/actions";
+import { addFreeExerciseAction, createFreeSessionAction, pickGymAction, removeFreeSessionAction, startSessionAction } from "../lib/actions";
 import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
 import { useFocusRef, useNavigateTab, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
-import { clock, durationMinutes, elapsedMs, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type SessionDay } from "./workoutShared";
+import { clock, durationMinutes, elapsedMs, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type LibraryPick, type SessionDay, type SessionExercise } from "./workoutShared";
 
 // The week's sessions as rows on the Training tab. A finished session (swiped
 // to its end) opens in place with its sets (16 Oct); any other row opens the
@@ -56,8 +56,14 @@ export default function TrainingDayList({
   clientName = "",
   liveSession: serverLive,
   headerPicture = null,
+  clientId,
+  library = [],
 }: {
   days: SessionDay[];
+  /** Whose sessions: a free session is made for them (19 Oct). */
+  clientId: number;
+  /** The coach's library, for what a free session can add. */
+  library?: LibraryPick[];
   /** The selected week is the current one: sessions can be started. */
   currentWeek: boolean;
   /** The selected week is over: sessions read as done, skipped or missed. */
@@ -77,8 +83,21 @@ export default function TrainingDayList({
   // start it had, so a fresh start right after is not hidden).
   const [discardedHere, setDiscardedHere] = useState<{ dayId: number; startedAt: string } | null>(null);
   const masked = (d: SessionDay) => discardedHere != null && d.key === discardedHere.dayId && d.startedAt === discardedHere.startedAt;
-  const days = discardedHere == null ? serverDays : serverDays.map((d) => (masked(d) ? fresh(d) : d));
-  const liveSession = serverLive && discardedHere && serverLive.id === discardedHere.dayId && serverLive.startedAt === discardedHere.startedAt ? null : serverLive;
+  // Free sessions (19 Oct, Alex): the one just started here and the exercises
+  // just added to it are drawn before the server's page has them; one left
+  // empty or discarded is gone at once.
+  const [localFree, setLocalFree] = useState<SessionDay | null>(null);
+  const [freeAdds, setFreeAdds] = useState<{ dayId: number; ex: SessionExercise }[]>([]);
+  const [goneFree, setGoneFree] = useState<number[]>([]);
+  const withFree = [...serverDays, ...(localFree && !serverDays.some((d) => d.key === localFree.key) ? [localFree] : [])]
+    .filter((d) => !goneFree.includes(d.key))
+    .map((d) => {
+      const adds = freeAdds.filter((a) => a.dayId === d.key && !d.exercises.some((e) => e.id === a.ex.id)).map((a) => a.ex);
+      return adds.length ? { ...d, exercises: [...d.exercises, ...adds] } : d;
+    });
+  const days = discardedHere == null ? withFree : withFree.map((d) => (masked(d) ? fresh(d) : d));
+  const liveSession =
+    serverLive && ((discardedHere && serverLive.id === discardedHere.dayId && serverLive.startedAt === discardedHere.startedAt) || goneFree.includes(serverLive.id)) ? null : serverLive;
   const [view, setViewState] = useState<View>(null);
   // Put back from storage after a reload: shown in place, not slid in.
   const [restored, setRestored] = useState(false);
@@ -160,6 +179,47 @@ export default function TrainingDayList({
     });
   };
 
+  // A free session: made on the server, then straight into its workout, empty,
+  // on its "Add an exercise" page. Refused while another session is going.
+  const [freeBusy, setFreeBusy] = useState(false);
+  const startFree = () => {
+    if (freeBusy) return;
+    const at = new Date().toISOString();
+    setFreeBusy(true);
+    setStartProblem(null);
+    startTransition(async () => {
+      try {
+        const r = await createFreeSessionAction(clientId, at);
+        if (!r.ok) {
+          setStartProblem(r.other ? `Finish ${r.other} first.` : "Couldn't start a free session.");
+          return;
+        }
+        const like = serverDays.find((d) => !d.free) ?? serverDays[0];
+        setLocalFree({ key: r.id, index: days.length + 1, week: like?.week ?? 1, title: "Free session", exercises: [], cardio: [], skipReason: "", startedAt: at, endedAt: null, sessionNote: "", questions: like?.questions ?? [], answers: {}, gyms: like?.gyms ?? [], gymId: like ? gymIdFor(like) : null, free: true });
+        setView({ dayId: r.id, screen: "workout" });
+      } finally {
+        setFreeBusy(false);
+      }
+    });
+  };
+  /** An exercise into the open free session: drawn the moment the server gives it an id. */
+  const addFree = async (dayId: number, pick: { exerciseId: number | null; name: string; group: string }): Promise<number | null> => {
+    const id = await addFreeExerciseAction(dayId, pick.exerciseId != null ? { exerciseId: pick.exerciseId } : { name: pick.name });
+    if (id == null) return null;
+    const ex: SessionExercise = { id, name: pick.name, swap: null, alternatives: [], group: pick.group, sets: 3, reps: "", targetWeight: null, unit: null, targetRpe: null, tempo: null, rest: null, distance: null, time: null, videoUrl: null, logs: [], note: { text: null, dateLabel: "", unread: false }, myNote: "", warmups: [], lastWarmups: [], videoRequest: null, lastSets: null, history: [] };
+    setFreeAdds((a) => [...a, { dayId, ex }]);
+    return id;
+  };
+  /** A free session left with nothing in it: gone here at once, and on the server behind. */
+  const dropFree = (dayId: number) => {
+    setGoneFree((g) => [...g, dayId]);
+    if (localFree?.key === dayId) setLocalFree(null);
+    setView(null);
+    startTransition(async () => {
+      await removeFreeSessionAction(dayId);
+    });
+  };
+
   // Live: this week's live session, or the one elsewhere for the resume bar.
   const liveDay = days.find((d) => d.startedAt && !d.endedAt) ?? null;
   const now = useTicker(!!liveSession && !view);
@@ -199,7 +259,7 @@ export default function TrainingDayList({
           const isOpen = ended && expanded === d.key;
           return (
             <Fragment key={d.key}>
-            <button type="button" className={`tr-row ${tone}${isOpen ? " open" : ""}`} onClick={() => (ended ? setExpanded((k) => (k === d.key ? null : d.key)) : setView({ dayId: d.key, screen: "overview" }))} aria-expanded={ended ? isOpen : undefined}>
+            <button type="button" className={`tr-row ${tone}${isOpen ? " open" : ""}`} onClick={() => (ended ? setExpanded((k) => (k === d.key ? null : d.key)) : setView({ dayId: d.key, screen: d.free ? "workout" : "overview" }))} aria-expanded={ended ? isOpen : undefined}>
               <span className={`tr-row-tile ${tone}`}>{d.index}</span>
               <span className="tr-row-main">
                 <span className="tr-row-title">{d.title}</span>
@@ -255,6 +315,20 @@ export default function TrainingDayList({
           );
         })}
       </div>
+
+      {/* The extra row (19 Oct, Alex): an empty session to fill, off the plan. */}
+      {currentWeek && (
+        <div className="tr-rows tr-free-rows">
+          <button type="button" className="tr-row tr-free" onClick={startFree} disabled={freeBusy}>
+            <span className="tr-row-tile free">{days.length + 1}</span>
+            <span className="tr-row-main">
+              <span className="tr-row-title">Free session</span>
+              <span className="tr-row-sub">{freeBusy ? "Starting…" : "Your own workout, off the plan"}</span>
+            </span>
+            <span className="tr-row-chev" aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       {startProblem && (
         <p className="tr-start-problem" role="alert">
@@ -335,7 +409,9 @@ export default function TrainingDayList({
           coachPhoto={coachPhoto}
           clientName={clientName}
           focusExercise={openDay.key === focus ? focusExercise : null}
-          onBack={() => setView({ dayId: openDay.key, screen: "overview" })}
+          onBack={() => (openDay.free ? (openDay.exercises.length === 0 ? dropFree(openDay.key) : setView(null)) : setView({ dayId: openDay.key, screen: "overview" }))}
+          library={openDay.free ? library : undefined}
+          onAddExercise={openDay.free ? (pick) => addFree(openDay.key, pick) : undefined}
           onEnded={() => {
             const minutes = openDay.startedAt ? Math.max(1, Math.round((Date.now() - Date.parse(openDay.startedAt)) / 60000)) : null;
             const sets = loggedSets(openDay);
@@ -343,6 +419,13 @@ export default function TrainingDayList({
             setToast({ title: `${openDay.title} saved`, sub: `${minutes != null ? `${minutes} min · ` : ""}${sets} set${sets === 1 ? "" : "s"} · ${coachName} can see it now` });
           }}
           onDiscarded={() => {
+            // A free session discarded is gone, not put back as unstarted.
+            if (openDay.free) {
+              setGoneFree((g) => [...g, openDay.key]);
+              if (localFree?.key === openDay.key) setLocalFree(null);
+              setView(null);
+              return;
+            }
             const at = openDay.startedAt ?? (startedHere?.dayId === openDay.key ? startedHere.at : null);
             if (at) setDiscardedHere({ dayId: openDay.key, startedAt: at });
             if (startedHere?.dayId === openDay.key) setStartedHere(null);
