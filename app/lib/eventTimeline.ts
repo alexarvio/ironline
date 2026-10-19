@@ -2,7 +2,9 @@
 // opened on today. Pure: the window, the labels and the relative "when" for
 // each item, so the card only draws.
 
-export type TimelineEvent = { id: number; kind: string | null; title: string; start: string; end: string; /** A phase of the plan on the timeline: its track colours it. */ phase?: "training" | "nutrition" | "lifestyle" | null };
+import { nextOccurrence, repeatDays, type EventRepeat } from "./eventRepeat";
+
+export type TimelineEvent = { id: number; kind: string | null; title: string; start: string; end: string; /** A phase of the plan on the timeline: its track colours it. */ phase?: "training" | "nutrition" | "lifestyle" | null; /** Repeating (19 Oct). */ repeat?: EventRepeat | null };
 
 export type TimelineItem =
   | { key: string; slot: "past" | "today" | "upcoming"; event: TimelineEvent; label: string; when: string }
@@ -38,6 +40,12 @@ export function whenPast(e: TimelineEvent, today: string): string {
 }
 
 export function whenToday(e: TimelineEvent, today: string): { label: string; when: string } {
+  // Repeating (19 Oct): today if it is one of its days, else when it comes next.
+  if (e.repeat) {
+    const next = nextOccurrence(e.start, e.end, e.repeat, today);
+    if (next === today) return { label: "Today", when: repeatDays(e.repeat.days) };
+    return { label: "Now", when: next ? `Next ${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][((parse(next).getDay() + 6) % 7)]} ${dayMon(next)}` : repeatDays(e.repeat.days) };
+  }
   if (e.start < today && e.end > today) return { label: "Now", when: `Until ${dayMon(e.end)}` };
   if (e.start < today && e.end === today) return { label: "Now", when: "Last day" };
   if (e.start === today && e.end > today) return { label: e.kind === "supplement" ? "Starts today" : "Now", when: e.kind === "supplement" ? "From today" : `Until ${dayMon(e.end)}` };

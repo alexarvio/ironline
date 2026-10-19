@@ -309,7 +309,7 @@ function homeEvents(clientId: number): HomeEvents {
     .filter((p) => !p.draft)
     .map((p) => ({ id: -p.id, kind: null, title: `${p.name} starts`, start: p.start_week, end: p.start_week, note: (p.objectives ?? []).join(String.fromCharCode(10)), mine: false, phase: p.track }));
   return {
-    list: [...listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, mine: e.added_by === "client" })), ...phases],
+    list: [...listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, mine: e.added_by === "client", repeat: e.repeat ?? null })), ...phases],
     categories: listEventCategories(getClient(clientId)?.coach_id ?? 0).map(({ id, label, color }) => ({ id, label, color })),
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { EventRepeat } from "../lib/eventRepeat";
 import type React from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -18,7 +19,7 @@ import { TypeIcon } from "./events/AddEventSheet";
 // coach's activity). The client can change or remove only what they added;
 // the coach's events are listed read-only, so both see the same calendar.
 
-export type HomeEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it. */ mine: boolean; /** A phase of the plan, on the timeline as an event (9 Oct); its track colours it. */ phase?: "training" | "nutrition" | "lifestyle" | null };
+export type HomeEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it. */ mine: boolean; /** A phase of the plan, on the timeline as an event (9 Oct); its track colours it. */ phase?: "training" | "nutrition" | "lifestyle" | null; /** Comes back on these weekdays (19 Oct), lib/eventRepeat.ts. */ repeat?: EventRepeat | null };
 export type HomeEventCategory = { id: string; label: string; color: string };
 export type HomeEvents = { list: HomeEvent[]; categories: HomeEventCategory[] };
 

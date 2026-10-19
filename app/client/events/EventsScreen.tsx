@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction } from "../../lib/actions";
 import { eventTypeOf, EVENT_TYPES, type EventTypeId } from "../../lib/eventTypes";
 import { dayOf, daysBetween, shortDay } from "../../lib/eventDates";
+import { isoWeekday, nextOccurrence, repeatWords } from "../../lib/eventRepeat";
 import { ChevronLeftIcon } from "../../components/icons";
 import { useCoachIdentity } from "../CheckInContext";
 import type { HomeEvent, HomeEvents } from "../EventsCard";
@@ -59,6 +60,14 @@ const monthOf = (iso: string) => MONTHS[Number(iso.slice(5, 7)) - 1];
 
 /** The row's "when" line. */
 function whenOf(e: HomeEvent, status: Status, today: string): string {
+  // Repeating (19 Oct): the days, then when it comes next, and its end if it has one.
+  if (e.repeat && status !== "past") {
+    const every = repeatWords(e.repeat, { until: false });
+    const until = e.repeat.until ? ` · until ${shortDay(e.repeat.until, today)}` : "";
+    if (status === "next") return `${every} · from ${shortDay(e.start, today)}${until}`;
+    const next = nextOccurrence(e.start, e.end, e.repeat, today);
+    return `${every} · ${next === today ? "today" : next ? `next ${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][isoWeekday(next) - 1]} ${shortDay(next, today)}` : "done"}${until}`;
+  }
   if (status === "next") {
     // The countdown, then the date it starts (16 Oct); a stretch shows both ends.
     const n = daysBetween(today, e.start);
@@ -245,7 +254,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     try {
       localStorage.setItem(LAST_TYPE_KEY, v.type);
     } catch {}
-    const input = { kind: v.type, title: v.title, start: v.start, end: v.end, note: v.note };
+    const input = { kind: v.type, title: v.title, start: v.start, end: v.end, note: v.note, repeat: v.repeat ?? null };
     // Only an event on today is lit and brought to the spot (17 Oct, Alex): a future one goes straight into its place in the future's quiet style.
     const onToday = v.start <= today && v.end >= today;
     setSheet(null);
@@ -263,7 +272,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
       return;
     }
     // In its place at once; the server's copy replaces it on the refresh.
-    const temp: HomeEvent = { id: -Date.now(), kind: v.type, title: v.title, start: v.start, end: v.end, note: v.note, mine: true };
+    const temp: HomeEvent = { id: -Date.now(), kind: v.type, title: v.title, start: v.start, end: v.end, note: v.note, mine: true, repeat: v.repeat ?? null };
     setAdded((a) => [...a, temp]);
     if (onToday) setHighlight(temp.id);
     try {
@@ -427,7 +436,7 @@ function EventRow(p: RowProps) {
   const who = e.mine ? me?.name || "You" : coachName;
   const photo = e.mine ? (me?.photoPath ?? null) : coachPhoto;
   const spoken = `${label ? `${label} ` : ""}${e.title}, ${c.label}, ${when}, added by ${who}${status === "past" ? ", past" : ""}`;
-  const progress = isNow && e.start !== e.end ? dayOf(e, today) : null;
+  const progress = isNow && e.start !== e.end && !e.repeat ? dayOf(e, today) : null;
   // A title cut short (16 Oct) gets the chevron too: open, the row shows it in full.
   const titleRef = useRef<HTMLSpanElement>(null);
   const [clipped, setClipped] = useState(false);

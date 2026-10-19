@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { addClientEventAction, addClientPhaseAction, removeClientPhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import { Dialog } from "../../../components/ui/dialog";
 import { eventTypeOf } from "../../../lib/eventTypes";
+import { repeatDays } from "../../../lib/eventRepeat";
 import PhaseDetailDialog from "./PhaseDetailDialog";
 import EventDetailDialog from "./EventDetailDialog";
 import type { PhaseTrack } from "../../../lib/db";
@@ -83,7 +84,7 @@ const phaseTip = (p: OverviewPhase, today: string) => {
   const tail = st === "draft" ? " · draft" : st === "running" ? ` · ${leftLabel(daysLeft(p, today)).toLowerCase()}` : "";
   return `${TRACK_LABEL[p.track]} · ${p.name} · ${shortDate(p.start)} – ${shortDate(p.end)} · ${weeksOf(p)} week${weeksOf(p) === 1 ? "" : "s"}${tail}`;
 };
-const eventTip = (e: OverviewEvent) => `${eventTypeOf(e.kind).label} · ${e.title} · ${shortDate(e.start)}${e.end > e.start ? ` – ${shortDate(e.end)}` : ""}${e.note ? ` · ${e.note}` : ""} · added by ${e.addedBy === "client" ? "the client" : "you"}`;
+const eventTip = (e: OverviewEvent) => `${eventTypeOf(e.kind).label} · ${e.title}${e.repeat ? ` · ${repeatDays(e.repeat.days)}` : ""} · ${shortDate(e.start)}${e.repeat && !e.repeat.until ? " – no end" : e.end > e.start ? ` – ${shortDate(e.end)}` : ""}${e.note ? ` · ${e.note}` : ""} · added by ${e.addedBy === "client" ? "the client" : "you"}`;
 
 export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
   const router = useRouter();
@@ -536,7 +537,8 @@ function ClientBlock({
                           <span className="pov-ev-mark">
                             <EventIcon kind={e.kind} size={18} />
                           </span>
-                          <span className="pov-ev-label">{e.title}</span>
+                          {/* Repeating (19 Oct): one stretch, the days beside the name. */}
+                          <span className="pov-ev-label">{e.repeat ? `${e.title} · ${repeatDays(e.repeat.days)}` : e.title}</span>
                         </button>
                       </span>
                     );

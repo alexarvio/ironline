@@ -5,6 +5,7 @@
 // read the same data through these, so they always agree.
 
 import type { PhaseTrack } from "../../../lib/db";
+import { nextOccurrence, type EventRepeat } from "../../../lib/eventRepeat";
 
 export type OverviewPhase = {
   id: number;
@@ -22,7 +23,7 @@ export type OverviewPhase = {
   /** A training phase's programme, for the way to its Training tab. */
   programId: number | null;
 };
-export type OverviewEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; addedBy: "coach" | "client"; /** When it was added, yyyy-mm-dd. */ createdAt: string };
+export type OverviewEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; addedBy: "coach" | "client"; /** When it was added, yyyy-mm-dd. */ createdAt: string; /** Comes back on these weekdays (19 Oct), lib/eventRepeat.ts. */ repeat?: EventRepeat | null };
 
 export const TRACKS: PhaseTrack[] = ["lifestyle", "training", "nutrition"];
 /** The tracks' colours, the Plan tab's (phaseChrome TRACK_PALETTE): a pale tint for a bar, its ink for the words and a line for the edge. */
@@ -277,6 +278,12 @@ export function eventTiming(e: OverviewEvent, today: string): EventTiming {
     return { chip: { text: range ? "Ended" : "Done", cls: "done" }, relative, pct: 1, range, days };
   }
   if (!range) return { chip: { text: "Today", cls: "solid" }, relative: "Today", pct: 1, range, days };
+  // Repeating (19 Oct): on, and when it comes next; no day count, and none to an end it doesn't have.
+  if (e.repeat) {
+    const next = nextOccurrence(e.start, e.end, e.repeat, today);
+    const nextWords = next === today ? "Today" : next ? `Next ${new Date(`${next}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}` : "No more to come";
+    return { chip: { text: "Now", cls: "solid" }, relative: e.repeat.until ? `${nextWords} · ends in ${toEnd} day${toEnd === 1 ? "" : "s"}` : nextWords, pct: e.repeat.until ? (daysBetween(e.start, today) + 1) / days : 0, range, days };
+  }
   const day = daysBetween(e.start, today) + 1;
   return { chip: { text: `Now · day ${day} of ${days}`, cls: "solid" }, relative: toEnd === 0 ? (trip ? "Back tomorrow" : "Ends today") : `${trip ? "Back" : "Ends"} in ${toEnd} day${toEnd === 1 ? "" : "s"}`, pct: day / days, range, days };
 }

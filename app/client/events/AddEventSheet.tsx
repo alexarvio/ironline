@@ -5,6 +5,7 @@ import type React from "react";
 import { createPortal } from "react-dom";
 import { EVENT_TYPES, eventTypeOf, type EventTypeId } from "../../lib/eventTypes";
 import { addDays, longDay } from "../../lib/eventDates";
+import { isoWeekday, openEnd, repeatWords, WEEKDAY_LETTERS, type EventRepeat } from "../../lib/eventRepeat";
 import type { HomeEvent } from "../EventsCard";
 
 // The "New event" sheet (9 Oct), colour-coded: the type picked colours the
@@ -13,7 +14,8 @@ import type { HomeEvent } from "../EventsCard";
 // whatever the type. Opened from the navy card or one of its chips; the
 // same sheet edits an event of the client's own.
 
-export type EventValues = { type: EventTypeId; title: string; start: string; end: string; note: string };
+export type EventValues = { type: EventTypeId; title: string; start: string; end: string; note: string; /** Repeats on these weekdays (19 Oct). */ repeat?: EventRepeat | null };
+type Mode = "range" | "one" | "repeat";
 
 export function TypeIcon({ path, fill, size = 14, stroke = 2 }: { path: string; fill?: string; size?: number; stroke?: number }) {
   return (
@@ -60,10 +62,15 @@ export default function AddEventSheet({
   /** Editing: removes the event, after the sheet's own confirm. */
   onDelete?: () => void;
 }) {
-  const seed: EventValues | null = initial ?? (event ? { type: eventTypeOf(event.kind).id, title: event.title, start: event.start, end: event.end, note: event.note } : null);
+  const seed: EventValues | null = initial ?? (event ? { type: eventTypeOf(event.kind).id, title: event.title, start: event.start, end: event.end, note: event.note, repeat: event.repeat ?? null } : null);
   const [type, setType] = useState<EventTypeId>(seed?.type ?? initialType);
   const [title, setTitle] = useState(seed?.title ?? "");
   const [oneDay, setOneDay] = useState(seed ? seed.start === seed.end : !!eventTypeOf(initialType).oneDay);
+  // Repeats (19 Oct, Alex: sports twice a week, every week): the weekdays, from the start, until a day or with no end ("").
+  const [repeating, setRepeating] = useState(!!seed?.repeat);
+  const [days, setDays] = useState<number[]>(seed?.repeat?.days ?? [isoWeekday(seed?.start ?? today)]);
+  const [until, setUntil] = useState(seed?.repeat?.until ?? "");
+  const toggleDay = (d: number) => setDays((xs) => (xs.includes(d) ? xs.filter((x) => x !== d) : [...xs, d].sort((a, b) => a - b)));
   const [touchedMode, setTouchedMode] = useState(!!seed);
   const [start, setStart] = useState(seed?.start ?? today);
   const [end, setEnd] = useState(seed ? seed.end : addDays(today, 6));
@@ -72,7 +79,7 @@ export default function AddEventSheet({
   const [discard, setDiscard] = useState(false);
   const [sure, setSure] = useState(false);
   const t = eventTypeOf(type);
-  const endOk = oneDay || (valid(end) && end >= start);
+  const endOk = repeating ? days.length > 0 && (!until || (valid(until) && until >= start)) : oneDay || (valid(end) && end >= start);
   const ok = title.trim().length > 0 && valid(start) && endOk;
   const dirty = title.trim() !== (seed?.title ?? "") || note.trim() !== (seed?.note ?? "");
 
@@ -87,8 +94,11 @@ export default function AddEventSheet({
     setOneDay(one);
     if (!one) setEnd(addDays(start, 6));
   };
-  const setMode = (one: boolean) => {
+  const setMode = (m: Mode) => {
     setTouchedMode(true);
+    setRepeating(m === "repeat");
+    if (m === "repeat") return;
+    const one = m === "one";
     if (one === oneDay) return;
     setOneDay(one);
     // Range → one day keeps the start; one day → range gives it a week.
@@ -101,7 +111,12 @@ export default function AddEventSheet({
 
   const submit = () => {
     if (!ok || pending) return;
-    onSubmit({ type, title: title.trim().slice(0, 60), start, end: oneDay ? start : end, note: note.trim().slice(0, 280) });
+    if (repeating) {
+      const r = { days, until: until || null };
+      onSubmit({ type, title: title.trim().slice(0, 60), start, end: r.until ?? openEnd(start, today), note: note.trim().slice(0, 280), repeat: r });
+      return;
+    }
+    onSubmit({ type, title: title.trim().slice(0, 60), start, end: oneDay ? start : end, note: note.trim().slice(0, 280), repeat: null });
   };
   const close = () => {
     if (pending) return;
@@ -253,7 +268,7 @@ export default function AddEventSheet({
             </span>
           </label>
 
-          <WhenSection oneDay={oneDay} start={start} end={end} today={today} onMode={setMode} onStart={moveStart} onEnd={setEnd} />
+          <WhenSection mode={repeating ? "repeat" : oneDay ? "one" : "range"} start={start} end={end} until={until} days={days} today={today} onMode={setMode} onStart={moveStart} onEnd={setEnd} onUntil={setUntil} onDay={toggleDay} />
 
           <span className="evs-note">
             <textarea value={note} onChange={(e) => setNote(e.target.value)} onFocus={keepInView} placeholder={`Anything ${coachName} should know? (optional)`} maxLength={280} aria-label="Note" />
@@ -308,8 +323,8 @@ function TypePicker({ value, onPick }: { value: EventTypeId; onPick: (id: EventT
 
 // ---- When: navy, whatever the type. Starts → Ends, or one Date.
 
-function WhenSection({ oneDay, start, end, today, onMode, onStart, onEnd }: { oneDay: boolean; start: string; end: string; today: string; onMode: (one: boolean) => void; onStart: (v: string) => void; onEnd: (v: string) => void }) {
-  const field = (head: string, value: string, min: string | undefined, onChange: (v: string) => void, extra = "") => {
+function WhenSection({ mode, start, end, until, days, today, onMode, onStart, onEnd, onUntil, onDay }: { mode: Mode; start: string; end: string; until: string; days: number[]; today: string; onMode: (m: Mode) => void; onStart: (v: string) => void; onEnd: (v: string) => void; onUntil: (v: string) => void; onDay: (d: number) => void }) {
+  const field = (head: string, value: string, min: string | undefined, onChange: (v: string) => void, extra = "", empty = "Pick a date") => {
     const shown = fmt(value, today);
     // A tap anywhere on the field opens the picker: on a desktop browser the
     // see-through input only focuses, so ask for the picker outright.
@@ -325,7 +340,7 @@ function WhenSection({ oneDay, start, end, today, onMode, onStart, onEnd }: { on
     return (
       <span className={`evs-date${shown ? "" : " empty"}${extra}`} onClick={(e) => open(e.currentTarget.querySelector("input"))}>
         <span className="evs-date-head">{head}</span>
-        <b>{shown ?? "Pick a date"}</b>
+        <b>{shown ?? empty}</b>
         <input type="date" value={value} min={min} onChange={(e) => onChange(e.target.value)} onClick={(e) => {
             e.stopPropagation();
             open(e.currentTarget);
@@ -337,17 +352,30 @@ function WhenSection({ oneDay, start, end, today, onMode, onStart, onEnd }: { on
     <div className="evs-when">
       <div className="evs-when-head">
         <span className="evs-label">When</span>
-        <div className="evs-seg" role="group" aria-label="A date range or one day">
-          <button type="button" className={!oneDay ? "on" : ""} aria-pressed={!oneDay} onClick={() => onMode(false)}>
+        <div className="evs-seg" role="group" aria-label="A date range, one day, or repeating">
+          <button type="button" className={mode === "range" ? "on" : ""} aria-pressed={mode === "range"} onClick={() => onMode("range")}>
             Date range
           </button>
-          <button type="button" className={oneDay ? "on" : ""} aria-pressed={oneDay} onClick={() => onMode(true)}>
+          <button type="button" className={mode === "one" ? "on" : ""} aria-pressed={mode === "one"} onClick={() => onMode("one")}>
             One day
+          </button>
+          <button type="button" className={mode === "repeat" ? "on" : ""} aria-pressed={mode === "repeat"} onClick={() => onMode("repeat")}>
+            Repeats
           </button>
         </div>
       </div>
       <div className="evs-dates">
-        {oneDay ? (
+        {mode === "repeat" ? (
+          <>
+            {field("STARTS", start, undefined, onStart)}
+            <span className="evs-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </span>
+            {field("UNTIL", until, start, onUntil, " ends", "No end")}
+          </>
+        ) : mode === "one" ? (
           field("DATE", start, undefined, onStart)
         ) : (
           <>
@@ -361,6 +389,25 @@ function WhenSection({ oneDay, start, end, today, onMode, onStart, onEnd }: { on
           </>
         )}
       </div>
+      {mode === "repeat" && (
+        <>
+          <div className="evr-days" role="group" aria-label="On these days">
+            {WEEKDAY_LETTERS.map((l, i) => (
+              <button key={i} type="button" className={days.includes(i + 1) ? "on" : ""} aria-pressed={days.includes(i + 1)} aria-label={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][i]} onClick={() => onDay(i + 1)}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <p className="evr-says">
+            {days.length ? repeatWords({ days, until: until || null }) : "Pick the days it happens."}
+            {until && (
+              <button type="button" className="evr-noend" onClick={() => onUntil("")}>
+                No end
+              </button>
+            )}
+          </p>
+        </>
+      )}
     </div>
   );
 }

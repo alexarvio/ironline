@@ -430,6 +430,8 @@ export type ClientEvent = {
   added_by?: "client" | null;
   /** Made from a call's note (9 Oct): the meeting it came out of. */
   meeting_id?: number | null;
+  /** Comes back on these weekdays from its start (19 Oct); see lib/eventRepeat.ts. */
+  repeat?: { days: number[]; until: string | null } | null;
 };
 
 // A coach's own event category beside the built-in ones: a name and one of

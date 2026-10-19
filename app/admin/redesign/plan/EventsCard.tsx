@@ -1,6 +1,7 @@
 "use client";
 
 import Pager from "../Pager";
+import { repeatWords, WEEKDAY_LETTERS, isoWeekday, type EventRepeat } from "../../../lib/eventRepeat";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
@@ -40,7 +41,7 @@ function KindIcon({ id, size = 20 }: { id: string | null; size?: number }) {
 // the actions in lib/actions.ts and come back from the loader.
 
 /** kind is the category's id, and optional: an event can just be an event. */
-export type PlanEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it from their Home. */ byClient?: boolean };
+export type PlanEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it from their Home. */ byClient?: boolean; /** Comes back on these weekdays (19 Oct), lib/eventRepeat.ts. */ repeat?: EventRepeat | null };
 
 export type Category = { id: string; label: string; color: string; custom: boolean };
 const NONE = { tint: "#eceff3", ink: "#5b6474", line: "#c3c9d2" };
@@ -79,6 +80,8 @@ const standing = (today: string, e: PlanEvent) => {
   if (single) return relative(today, e.start);
   if (today < e.start) return relative(today, e.start);
   if (today > e.end) return `ended ${relative(today, e.end)}`;
+  // Repeating with no end (19 Oct): its stored end is only a horizon.
+  if (e.repeat && !e.repeat.until) return "ongoing";
   const left = daysBetween(today, e.end);
   return left === 0 ? "last day" : `now · ${left} day${left === 1 ? "" : "s"} left`;
 };
@@ -349,13 +352,14 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                             beginDrag(ev, e, "move");
                           }}
                           onClick={open}
-                          title={`${e.title} · ${longDate(e.start)} → ${longDate(e.end)} · ${standing(today, e)} · click to edit · drag to move, or an edge to stretch`}
+                          title={`${e.title} · ${e.repeat ? `${repeatWords(e.repeat, { until: false })} · ` : ""}${longDate(e.start)} → ${e.repeat && !e.repeat.until ? "no end" : longDate(e.end)} · ${standing(today, e)} · click to edit · drag to move, or an edge to stretch`}
                         >
                           <span className="rq-bar-edge left" onPointerDown={(ev) => beginDrag(ev, e, "start")} onClick={(ev) => ev.stopPropagation()} />
                           <span className="rq-bar-edge right" onPointerDown={(ev) => beginDrag(ev, e, "end")} onClick={(ev) => ev.stopPropagation()} />
                           <b>{e.title}</b>
                           <small>
-                            {daysBetween(shown.start, shown.end) + 1} days · {standing(today, shown)}
+                            {/* Repeating (19 Oct): the days it comes back on, not a length. */}
+                            {e.repeat ? repeatWords(e.repeat, { until: false }) : `${daysBetween(shown.start, shown.end) + 1} days`} · {standing(today, shown)}
                           </small>
                         </button>
                       );
@@ -404,7 +408,8 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                 <div key={e.id} className={`rd-row${past ? " rq-ev-past" : ""}`}>
                   <button type="button" className="rd-row-main rq-evrow" onClick={() => setDlg({ event: e })}>
                     <span className="rq-evrow-when">
-                      <b>{e.start === e.end ? shortDate(e.start) : `${shortDate(e.start)} → ${shortDate(e.end)}`}</b>
+                      <b>{e.repeat ? `${shortDate(e.start)} → ${e.repeat.until ? shortDate(e.end) : "no end"}` : e.start === e.end ? shortDate(e.start) : `${shortDate(e.start)} → ${shortDate(e.end)}`}</b>
+                      {e.repeat && <small>{repeatWords(e.repeat, { until: false })}</small>}
                     </span>
                     <span className="rq-state" style={{ background: k.tint, color: k.ink }}>
                       {k.label}
@@ -475,12 +480,16 @@ export function EventDialog({ today, event, cats, initialStart, onSave, onDelete
   // A new event starts on Trip, the first tile (14 Oct).
   const [kind, setKind] = useState<string | null>(event ? event.kind : "trip");
   const [title, setTitle] = useState(event?.title ?? "");
-  const [shape, setShape] = useState<"event" | "period">(event ? (event.start === event.end ? "event" : "period") : "event");
+  // Repeats (19 Oct, Alex: sports twice a week): on these weekdays from its start, until a day or with no end.
+  const [shape, setShape] = useState<"event" | "period" | "repeat">(event?.repeat ? "repeat" : event ? (event.start === event.end ? "event" : "period") : "event");
   const [start, setStart] = useState(event?.start ?? initialStart ?? today);
   const [end, setEnd] = useState(event?.end ?? addDays(initialStart ?? today, 6));
   const [note, setNote] = useState(event?.note ?? "");
+  const [days, setDays] = useState<number[]>(event?.repeat?.days ?? [isoWeekday(event?.start ?? initialStart ?? today)]);
+  const [until, setUntil] = useState<string | null>(event?.repeat?.until ?? null);
+  const toggleDay = (d: number) => setDays((xs) => (xs.includes(d) ? xs.filter((x) => x !== d) : [...xs, d].sort((a, b) => a - b)));
   const k = chromeOf(cats, kind);
-  const endOk = shape === "event" || end >= start;
+  const endOk = shape === "event" || (shape === "repeat" ? until == null || until >= start : end >= start);
   // The calendar: which month shows, and which end a click sets (a period).
   const [cursor, setCursor] = useState(start.slice(0, 7));
   const [picking, setPicking] = useState<"start" | "end">("start");
@@ -504,9 +513,22 @@ export function EventDialog({ today, event, cats, initialStart, onSave, onDelete
       setEnd(d);
       return;
     }
+    if (shape === "repeat") {
+      // The first click sets the start, the next the last day; before the start, a new start.
+      if (picking === "start" || d < start) {
+        setStart(d);
+        if (until && until < d) setUntil(null);
+        setPicking("end");
+      } else {
+        setUntil(d);
+        setPicking("start");
+      }
+      setCursor(d.slice(0, 7));
+      return;
+    }
     pickAs(picking, d);
   };
-  const ok = title.trim().length > 0 && !!start && endOk;
+  const ok = title.trim().length > 0 && !!start && endOk && (shape !== "repeat" || days.length > 0);
   const placeholder = isEventTypeId(kind) ? eventTypeOf(kind).placeholder : "What happened, or will";
   return (
     <DialogContent className="rd-dlg rq-ev-dlg">
@@ -549,7 +571,7 @@ export function EventDialog({ today, event, cats, initialStart, onSave, onDelete
           timestamp is one day; a period takes a click for its first day and
           one for its last, as a phase does. */}
       <div className="rdd-cols">
-        <MonthRange from={start} to={shape === "event" ? start : end} onPick={pick} chrome={calChrome} planned={[]} cursor={cursor} setCursor={setCursor} today={today} />
+        <MonthRange from={start} to={shape === "event" ? start : shape === "repeat" ? until ?? start : end} onPick={pick} chrome={calChrome} planned={[]} cursor={cursor} setCursor={setCursor} today={today} />
         <div className="rdd-fields">
           <div className="rd-field">
             <span className="rq-when-head">
@@ -561,10 +583,29 @@ export function EventDialog({ today, event, cats, initialStart, onSave, onDelete
                 <button type="button" className={shape === "event" ? "on" : ""} aria-pressed={shape === "event"} onClick={() => setShape("event")}>
                   One day
                 </button>
+                <button type="button" className={shape === "repeat" ? "on" : ""} aria-pressed={shape === "repeat"} onClick={() => setShape("repeat")}>
+                  Repeats
+                </button>
               </span>
             </span>
             <div className="evs-dates rq-dates" style={{ "--c": cal.ink, "--rgb": rgbOf(cal.ink) } as React.CSSProperties}>
-              {shape === "event" ? (
+              {shape === "repeat" ? (
+                <>
+                  <button type="button" className={`evs-date${picking === "start" ? " arm" : ""}`} onClick={() => setPicking("start")} aria-pressed={picking === "start"}>
+                    <span className="evs-date-head">STARTS</span>
+                    <b>{start === today ? "Today" : longDate(start)}</b>
+                  </button>
+                  <span className="evs-arrow" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </span>
+                  <button type="button" className={`evs-date ends${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")} aria-pressed={picking === "end"}>
+                    <span className="evs-date-head">UNTIL</span>
+                    <b>{until ? longDate(until) : "No end"}</b>
+                  </button>
+                </>
+              ) : shape === "event" ? (
                 <span className="evs-date arm">
                   <span className="evs-date-head">DATE</span>
                   <b>{start === today ? "Today" : longDate(start)}</b>
@@ -587,6 +628,25 @@ export function EventDialog({ today, event, cats, initialStart, onSave, onDelete
                 </>
               )}
             </div>
+            {shape === "repeat" && (
+              <div className="evr-days" role="group" aria-label="On these days">
+                {WEEKDAY_LETTERS.map((l, i) => (
+                  <button key={i} type="button" className={days.includes(i + 1) ? "on" : ""} aria-pressed={days.includes(i + 1)} aria-label={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][i]} onClick={() => toggleDay(i + 1)}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
+            {shape === "repeat" && (
+              <p className="evr-says">
+                {days.length ? repeatWords({ days, until }) : "Pick the days it happens."}
+                {until && (
+                  <button type="button" className="evr-noend" onClick={() => setUntil(null)}>
+                    No end
+                  </button>
+                )}
+              </p>
+            )}
             {!endOk && <p className="rdd-picking">Ends before it starts.</p>}
           </div>
           <label className="rd-field rq-note">
@@ -604,7 +664,7 @@ export function EventDialog({ today, event, cats, initialStart, onSave, onDelete
         )}
         <span className="rd-dlg-hint grow" />
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ kind, title: title.trim(), start, end: shape === "event" ? start : end, note: note.trim() })}>
+        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ kind, title: title.trim(), start, end: shape === "event" ? start : shape === "repeat" ? until ?? start : end, note: note.trim(), repeat: shape === "repeat" ? { days, until } : null })}>
           {event ? "Save" : "Add event"}
         </button>
       </DialogFooter>

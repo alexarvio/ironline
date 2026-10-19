@@ -690,7 +690,7 @@ export function loadPlan(clientId: number): DraftPlan {
     goalOptions: d.goalOptions,
     mainGoal: d.mainGoal,
     mainGoalSavedAt: d.mainGoalSavedAt ? new Date(d.mainGoalSavedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : null,
-    events: listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, byClient: e.added_by === "client" })),
+    events: listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, byClient: e.added_by === "client", repeat: e.repeat ?? null })),
     eventCategories: listEventCategories(getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0),
   };
 }

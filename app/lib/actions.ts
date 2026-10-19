@@ -2176,7 +2176,7 @@ export async function createProgramWithAction(clientId: number, name: string, we
 }
 
 // ---- Events on the plan, and the coach's own categories for them.
-export type EventInput = { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null };
+export type EventInput = { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null; /** Repeating on these weekdays (19 Oct); lib/eventRepeat.ts. */ repeat?: { days: number[]; until: string | null } | null };
 
 export async function addClientEventAction(clientId: number, v: EventInput) {
   if (!(await coachForClient(Number(clientId)))) return null;

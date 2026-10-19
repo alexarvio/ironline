@@ -41,7 +41,7 @@ function LineIcon({ path, size = 20 }: { path: string; size?: number }) {
 export default function EventsTimelineCard({ events, today }: { events: HomeEvents; today: string }) {
   const openEvents = useOpenEvents();
   const { items, todayIndex } = useMemo(
-    () => buildTimeline(events.list.map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start, end: e.end, phase: e.phase ?? null })), today),
+    () => buildTimeline(events.list.map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start, end: e.end, phase: e.phase ?? null, repeat: e.repeat ?? null })), today),
     [events.list, today],
   );
   const wrapRef = useRef<HTMLElement>(null);

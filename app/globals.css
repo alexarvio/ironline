@@ -20336,3 +20336,10 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw .lw-open-head .lw-badge.lw-badge.lw-badge { position: relative; box-shadow: none; }
 .lw-badge-ring { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.5; pointer-events: none; }
 .lw .lw-open.extra .lw-badge-ring { display: none; }
+
+/* Repeating events (19 Oct, Alex): the weekdays it comes back on, seven round buttons, the chosen ones in ink; under them the rule in words, and No end to take the last day off. Shared by the coach's dialog and the client's sheet. */
+.evr-days { display: flex; gap: 6px; margin-top: 10px; }
+.evr-days button { flex: 1; min-width: 0; max-width: 40px; aspect-ratio: 1; padding: 0; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.evr-days button.on { background: #141a24; box-shadow: none; color: #fff; }
+.evr-says { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 8px 2px 0; font-size: 12.5px; font-weight: 500; color: #5b6474; }
+.evr-noend { padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

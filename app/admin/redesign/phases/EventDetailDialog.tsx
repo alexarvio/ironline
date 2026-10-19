@@ -5,6 +5,7 @@ import type React from "react";
 import Link from "next/link";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { eventTypeOf } from "../../../lib/eventTypes";
+import { repeatWords } from "../../../lib/eventRepeat";
 import type { OverviewClient } from "./load";
 import { daysBetween, eventTiming, shortDate, type OverviewEvent } from "./timeline";
 
@@ -83,10 +84,10 @@ export default function EventDetailDialog({ client, event: e, today, coach }: { 
                   <small>From</small>
                   <b>{dayDate(e.start)}</b>
                 </span>
-                <span className="evd-len">{lengthLabel(timing.days)}</span>
+                <span className="evd-len">{e.repeat ? repeatWords(e.repeat, { until: false }) : lengthLabel(timing.days)}</span>
                 <span className="evd-end to">
-                  <small>To</small>
-                  <b>{dayDate(e.end)}</b>
+                  <small>{e.repeat ? "Until" : "To"}</small>
+                  <b>{e.repeat && !e.repeat.until ? "No end" : dayDate(e.end)}</b>
                 </span>
               </div>
               <span className="evd-bar" aria-hidden="true">

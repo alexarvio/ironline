@@ -37,7 +37,7 @@ export function loadPhasesOverview(coachId: number, coachEmail = ""): PhasesOver
       objectives: objectives.get(p.id) ?? [],
       programId: p.program?.id ?? null,
     }));
-    const events: OverviewEvent[] = listClientEvents(c.id).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, addedBy: e.added_by === "client" ? "client" : "coach", createdAt: String(e.created_at ?? "").slice(0, 10) }));
+    const events: OverviewEvent[] = listClientEvents(c.id).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, addedBy: e.added_by === "client" ? "client" : "coach", createdAt: String(e.created_at ?? "").slice(0, 10), repeat: e.repeat ?? null }));
     return { id: c.id, name: c.name ?? "Client", avatarPath: c.avatar_path ?? null, phases, events, plan: { phases: plan.phases, programs: plan.programs } };
   });
   const profile = getCoachProfile(coachId);

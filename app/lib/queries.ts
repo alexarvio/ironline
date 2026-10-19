@@ -17,6 +17,7 @@ import { metricAskAt, metricFromWorkout } from "./metricAskAt";
 import { DEFAULT_WORKOUT_QUESTIONS, MAX_QUESTION_LENGTH, MAX_WORKOUT_QUESTIONS } from "./workoutQuestions";
 import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
+import { cleanRepeat, openEnd, type EventRepeat } from "./eventRepeat";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -5631,36 +5632,46 @@ export const EVENT_PRESETS: { id: string; label: string; color: string }[] = [
 ];
 
 export function listClientEvents(clientId: number): ClientEvent[] {
+  const today = localDateStr();
   return getData()
     .client_events.filter((e) => e.client_id === clientId)
+    // A repeating event with no end keeps a year ahead of today (19 Oct).
+    .map((e) => (e.repeat && !e.repeat.until && e.end_date < openEnd(e.start_date, today) ? { ...e, end_date: openEnd(e.start_date, today) } : e))
     .sort((a, b) => (a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : a.id - b.id));
 }
 
-const cleanEvent = (v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null; meetingId?: number | null }) => {
+type EventFields = { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null; meetingId?: number | null; repeat?: EventRepeat | null };
+const cleanEvent = (v: EventFields) => {
   const start = String(v.start).slice(0, 10);
-  const endRaw = String(v.end ?? start).slice(0, 10);
-  return { kind: v.kind?.trim() || null, title: v.title.trim().slice(0, 80), start, end: endRaw < start ? start : endRaw, note: (v.note ?? "").trim().slice(0, 500) };
+  // Repeating (19 Oct): it runs to its until, or with no end a year out.
+  const repeat = cleanRepeat(v.repeat);
+  const until = repeat?.until && repeat.until < start ? start : repeat?.until ?? null;
+  const endRaw = repeat ? until ?? openEnd(start, localDateStr()) : String(v.end ?? start).slice(0, 10);
+  return { kind: v.kind?.trim() || null, title: v.title.trim().slice(0, 80), start, end: endRaw < start ? start : endRaw, note: (v.note ?? "").trim().slice(0, 500), repeat: repeat ? { ...repeat, until } : null };
 };
 
-export function addClientEvent(clientId: number, v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null; meetingId?: number | null }, by: "client" | null = null): ClientEvent | null {
+export function addClientEvent(clientId: number, v: EventFields, by: "client" | null = null): ClientEvent | null {
   const c = cleanEvent(v);
   if (!c.title || !/^\d{4}-\d{2}-\d{2}$/.test(c.start)) return null;
   const data = getData();
-  const row: ClientEvent = { id: allocId("client_events"), client_id: clientId, kind: c.kind, title: c.title, start_date: c.start, end_date: c.end, note: c.note, created_at: new Date().toISOString(), ...(by ? { added_by: by } : {}), ...(v.meetingId ? { meeting_id: v.meetingId } : {}) };
+  const row: ClientEvent = { id: allocId("client_events"), client_id: clientId, kind: c.kind, title: c.title, start_date: c.start, end_date: c.end, note: c.note, created_at: new Date().toISOString(), ...(by ? { added_by: by } : {}), ...(v.meetingId ? { meeting_id: v.meetingId } : {}), ...(c.repeat ? { repeat: c.repeat } : {}) };
   data.client_events.push(row);
   persist();
   return row;
 }
 
-export function updateClientEvent(clientId: number, eventId: number, v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null }) {
+export function updateClientEvent(clientId: number, eventId: number, v: EventFields) {
   const row = getData().client_events.find((e) => e.id === eventId && e.client_id === clientId);
-  const c = cleanEvent(v);
+  // A change that doesn't speak of repeating (a drag on the Plan tab) keeps the event's own.
+  const c = cleanEvent("repeat" in v ? v : { ...v, repeat: row?.repeat ?? null });
   if (!row || !c.title || !/^\d{4}-\d{2}-\d{2}$/.test(c.start)) return;
   row.kind = c.kind;
   row.title = c.title;
   row.start_date = c.start;
   row.end_date = c.end;
   row.note = c.note;
+  if (c.repeat) row.repeat = c.repeat;
+  else delete row.repeat;
   persist();
 }
 
