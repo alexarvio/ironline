@@ -151,3 +151,10 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 .npd.npd .npd-goals-list li { display: flex; align-items: center; gap: 12px; }
 .npd.npd .npd-goals-list li > i { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #141a24; }
 .npd.npd .npd-goals-list .npd-line { border-bottom-color: #eef0f3; }
+
+/* The Plan timeline's step back into the past (21 Oct): ‹ Today › beside the window toggle. */
+.rq-pan { display: inline-flex; align-items: center; gap: 2px; }
+.rq-pan .rd-btn.ghost { min-width: 32px; height: 32px; padding: 0 8px; }
+.rq-pan .rd-btn.ghost svg { width: 15px; height: 15px; }
+.rq-pan .rd-btn.ghost:disabled { opacity: 0.35; }
+.rq-pan .rq-today { font-size: 12.5px; font-weight: 600; }

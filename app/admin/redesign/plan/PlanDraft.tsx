@@ -10,7 +10,7 @@ import Link from "next/link";
 import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, duplicateClientPhaseAction, removeClientGoalAction, deletePhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { GoalEditorOptions, PlanGoalRow, PlanPhaseRow, PlanProgramOption } from "../../../lib/queries";
 import type { GoalTracking } from "../../../lib/goalView";
 import type { PhaseTrack } from "../../../lib/db";
@@ -187,10 +187,11 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   // most of the grid what is coming. "Now" is one fixed line a week and a
   // half in; the weeks slide under it as the week goes by.
   // Last week behind now (a week and a half with where today sits), so a phase that just ended stays on the
-  // timeline and drifts off as the weeks go by. No "Show past" (30 Sep, the
-  // user's call): a past phase is looked back on from its own tab's switcher.
+  // timeline and drifts off as the weeks go by. The arrows step back into the past a month at a time
+  // (21 Oct, Alex: a past phase that clashed was nowhere to be seen); Today comes back.
+  const [back, setBack] = useState(0);
   // The grid for this window (the maths in gridFor, shared with the Events card, which has a window of its own since 10 Oct).
-  const { first, count, weeks, nowIdx, months, cols, nowLeft, shift } = gridFor(win, thisWeek, intoWeek);
+  const { first, count, weeks, nowIdx, months, cols, nowLeft, shift } = gridFor(win, thisWeek, intoWeek, back);
 
   const weekAt = (clientX: number) => {
     const el = areaRef.current;
@@ -302,6 +303,19 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
         <div className="rn-card-head">
           <h2>Phases</h2>
           <div className="rq-ev-tools">
+            <div className="rq-pan" role="group" aria-label="Move in time">
+              <button type="button" className="rd-btn ghost" onClick={() => setBack((b) => b + 4)} aria-label="Earlier" title="Earlier">
+                <ChevronLeftIcon />
+              </button>
+              {back > 0 && (
+                <button type="button" className="rd-btn ghost rq-today" onClick={() => setBack(0)}>
+                  Today
+                </button>
+              )}
+              <button type="button" className="rd-btn ghost" disabled={back === 0} onClick={() => setBack((b) => Math.max(0, b - 4))} aria-label="Later" title="Later">
+                <ChevronRightIcon />
+              </button>
+            </div>
             <div className="rd-btn-group" role="group" aria-label="Time shown">
               {WINDOWS.map((w) => (
                 <button key={w.weeks} type="button" className={win === w.weeks ? "on" : ""} aria-pressed={win === w.weeks} onClick={() => setWin(w.weeks)}>
@@ -382,7 +396,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                         {weeks.map((w, i) => (
                           <span key={w} className="rq-cell" style={{ gridColumn: i + 1, gridRow: `1 / span ${laneCount}` }} />
                         ))}
-                        {mine.length === 0 && (
+                        {mine.length === 0 && nowIdx < count && (
                           <button type="button" className="rq-empty" style={{ gridColumn: `${nowIdx + 1} / span ${Math.min(count - nowIdx, 8)}`, gridRow: 1 }} onClick={() => setDlg({ kind: "phase", phase: null, track: t.id })}>
                             No phase planned <b>+ add</b>
                           </button>
@@ -766,9 +780,9 @@ export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCurso
  * (30 Sep: the weeks sat a week off the line, so the bars' "behind us" shade
  * stopped short of it).
  */
-export function gridFor(win: number, thisWeek: string, intoWeek: number) {
+export function gridFor(win: number, thisWeek: string, intoWeek: number, /** Weeks stepped back into the past (21 Oct); 0 is today's window. */ pastBy = 0) {
   const back = 1;
-  const first = addWeeks(thisWeek, -back);
+  const first = addWeeks(thisWeek, -back - pastBy);
   const count = win + back;
   const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
   const nowIdx = weeksBetween(first, thisWeek);
@@ -779,7 +793,8 @@ export function gridFor(win: number, thisWeek: string, intoWeek: number) {
     if (prev && prev.label === label) prev.span += 1;
     else months.push({ label, start: i, span: 1 });
   });
-  const shift = (nowIdx + intoWeek) * (1 - win / count);
+  // Stepped back into the past: whole weeks, no slide under the now line (which shows only while it is still on screen).
+  const shift = pastBy ? 0 : (nowIdx + intoWeek) * (1 - win / count);
   const nowCol = nowIdx + intoWeek - shift;
   const cols: React.CSSProperties = { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`, width: `${(count / win) * 100}%`, transform: `translateX(${-(shift / count) * 100}%)` };
   // The "now" line at today's spot; none when today is past the window's right edge.
