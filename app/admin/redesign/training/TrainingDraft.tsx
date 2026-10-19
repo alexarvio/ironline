@@ -2407,13 +2407,83 @@ function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardi
   const blank = { name: "", time: "", pace: "", incline: "", distance: "", note: "" };
   const [c, setC] = useState(blank);
   const first = useRef<HTMLInputElement>(null);
+  const timeRef = useRef<HTMLInputElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   // A bare number gets its unit; anything else is kept as typed.
   const withUnit = (v: string, u: string) => (/^\s*[\d.,]+\s*$/.test(v) ? `${v.trim()}${u}` : v.trim());
   useClickAway(wrap, onClose);
+  // First the activity, picked the way an exercise is (19 Oct, Alex: cardio
+  // had only the browser's own suggestion list): the search bar over the
+  // Library's cardio, open at once since the list is short; a name not in it
+  // is used as typed. Then the numbers.
+  const [picked, setPicked] = useState(false);
+  const [q, setQ] = useState("");
+  const [cursor, setCursor] = useState(0);
+  const needle = q.trim().toLowerCase();
+  const list = needle ? moves.filter((m) => m.name.toLowerCase().includes(needle)) : moves;
   useEffect(() => {
-    first.current?.focus();
-  }, []);
+    (picked ? timeRef : first).current?.focus();
+  }, [picked]);
+  const emit = (next: typeof blank) => {
+    const any = Object.values(next).some((v) => v.trim());
+    onChange(any ? { ...next, name: next.name.trim(), time: withUnit(next.time, " min"), pace: withUnit(next.pace, " km/h"), incline: withUnit(next.incline, "%"), distance: withUnit(next.distance, " km"), note: next.note.trim() } : null);
+  };
+  const choose = (name: string) => {
+    const nm = name.trim();
+    if (!nm) return;
+    const move = moves.find((m) => m.name.toLowerCase() === nm.toLowerCase());
+    const next = { ...c, name: move?.name ?? nm, note: c.note.trim() ? c.note : move?.cue ?? "" };
+    setC(next);
+    emit(next);
+    setPicked(true);
+  };
+  if (!picked) {
+    return (
+      <div ref={wrap} className="rd-addrow">
+        <div className="rd-addrow-bar open">
+          <input
+            ref={first}
+            className="rd-addrow-search"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setCursor(0);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") onClose();
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setCursor((i) => Math.min(i + 1, Math.max(0, list.length - 1)));
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setCursor((i) => Math.max(i - 1, 0));
+              }
+              if (e.key === "Enter") choose(list[cursor]?.name ?? q);
+            }}
+            placeholder="Search cardio"
+            aria-label="Search cardio"
+          />
+          <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </div>
+        <div className="rd-addrow-list" role="listbox" aria-label="Cardio">
+          {list.map((m, i) => (
+            <button key={m.name} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}`} onMouseEnter={() => setCursor(i)} onClick={() => choose(m.name)}>
+              {m.name}
+            </button>
+          ))}
+          {needle && !moves.some((m) => m.name.toLowerCase() === needle) && (
+            <button type="button" className="rd-addrow-item create" onClick={() => choose(q)}>
+              <PlusIcon /> Use &ldquo;{q.trim()}&rdquo;
+            </button>
+          )}
+          {!needle && moves.length === 0 && <p className="rd-addrow-hint">Type the activity, e.g. Incline walk.</p>}
+        </div>
+      </div>
+    );
+  }
   const set = (k: keyof typeof c) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const next = { ...c, [k]: e.target.value };
     // A movement from the library brings its default cue as the note, when none is typed yet.
@@ -2422,8 +2492,7 @@ function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardi
       if (move?.cue) next.note = move.cue;
     }
     setC(next);
-    const any = Object.values(next).some((v) => v.trim());
-    onChange(any ? { ...next, name: next.name.trim(), time: withUnit(next.time, " min"), pace: withUnit(next.pace, " km/h"), incline: withUnit(next.incline, "%"), distance: withUnit(next.distance, " km"), note: next.note.trim() } : null);
+    emit(next);
   };
   return (
     <div
@@ -2439,16 +2508,11 @@ function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardi
       <div className="rd-cardio-form">
         <label className="wide">
           <span>Activity</span>
-          <input ref={first} value={c.name} onChange={set("name")} placeholder="Incline walk" list="rd-cardio-moves" autoComplete="off" />
-          <datalist id="rd-cardio-moves">
-            {moves.map((m) => (
-              <option key={m.name} value={m.name} />
-            ))}
-          </datalist>
+          <input value={c.name} onChange={set("name")} placeholder="Incline walk" autoComplete="off" />
         </label>
         <label>
           <span>Time (min)</span>
-          <input value={c.time} onChange={set("time")} placeholder="15" inputMode="decimal" />
+          <input ref={timeRef} value={c.time} onChange={set("time")} placeholder="15" inputMode="decimal" />
         </label>
         <label>
           <span>Pace (km/h)</span>
