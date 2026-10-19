@@ -169,7 +169,9 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
       // other route, and the whole shell remounted: the chat closed and the
       // tab snapped back to the route's own. Other tabs' query (week,
       // programme, phase) stays out of the address.
-      window.history.replaceState(null, "", `${window.location.pathname}?client=${clientId}&tab=${t}`);
+      // The hairline preview's ?look= stays (19 Oct): a reload kept the tab but lost the look.
+      const look = new URLSearchParams(window.location.search).get("look");
+      window.history.replaceState(null, "", `${window.location.pathname}?client=${clientId}&tab=${t}${look ? `&look=${encodeURIComponent(look)}` : ""}`);
     },
     [clientId, openChat]
   );

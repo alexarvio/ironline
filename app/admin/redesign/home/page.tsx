@@ -17,6 +17,7 @@ import "../invoices/invoices.css";
 import "../ncdialog.css";
 import "../rail.css";
 import "../look-hairline.css";
+import "../training/training-hairline.css";
 import LookFlag from "../LookFlag";
 
 // The redesign drafts, opened on Home. Read-only: nothing here saves.

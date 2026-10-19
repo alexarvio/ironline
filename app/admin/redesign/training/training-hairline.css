@@ -1,0 +1,84 @@
+/* The Training tab in the client app's language (19 Oct, Alex), the same
+   preview as Home's and Phases': on only with ?look=hairline (LookFlag puts
+   .look-hl on <html>). Flat white panels with a hairline edge, 500/600 type
+   in ink, the chosen thing in ink, a state's colour only as a thin ring and
+   its words, no tinted fills and no shadows. Off without the parameter. */
+
+/* ---- The weeks: their own tiles, not one pill (the shared tab rule made the
+   strip a capsule and filled the chosen week solid). White with a hairline;
+   the chosen week ringed in ink, its bars still readable. */
+html.look-hl .rd-weeks [role="tablist"],
+html.look-hl .rd-weeklist { background: none; box-shadow: none; border-radius: 0; }
+html.look-hl .rd-weeklist [role="tab"],
+html.look-hl .rd-weeklist [role="tab"][data-state="active"] { border-radius: 14px; }
+html.look-hl .rd-week,
+html.look-hl .rd-week.ahead,
+html.look-hl .rd-week.past,
+html.look-hl .rd-week.live { border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #141a24; font-weight: 600; }
+html.look-hl .rd-weeklist [data-state="active"] .rd-week,
+html.look-hl .rd-week[data-state="active"],
+html.look-hl .rd-weeklist [role="tab"][data-state="active"].rd-week { background: #fff; box-shadow: inset 0 0 0 1.5px #141a24; color: #141a24; }
+html.look-hl .rd-weeklist [data-state="active"] .rd-week small,
+html.look-hl .rd-week[data-state="active"] small { color: #5b6474; }
+html.look-hl .rd-week small,
+html.look-hl .rd-week > small { font-weight: 500; color: #8b93a1; }
+html.look-hl .rd-week.add { box-shadow: none; border: 1px dashed #c9cfd8; background: transparent; color: #5b6474; font-weight: 600; }
+html.look-hl .rd-weekhead h2 { font-weight: 600; }
+html.look-hl .rd-weekhead h2 span { font-weight: 500; color: #8b93a1; }
+
+/* ---- Sessions: flat cards, no lift when open */
+html.look-hl .rd-session,
+html.look-hl .rd-session.open { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; }
+html.look-hl .rd-session.add { border: 1px dashed #c9cfd8; border-radius: 14px; box-shadow: none; background: transparent; font-weight: 600; }
+html.look-hl .rd-session-name,
+html.look-hl .rd-session-name-box,
+html.look-hl .rg-name { font-weight: 600; }
+html.look-hl .rd-session-count { font-weight: 500; color: #8b93a1; }
+
+/* The head's pills: the state as a thin ring and its words; the time, gym and note as quiet words. */
+html.look-hl .rd-pill { background: none; box-shadow: inset 0 0 0 1px #e1e5eb; font-weight: 600; color: #8b93a1; }
+html.look-hl .rd-pill.good { background: none; box-shadow: inset 0 0 0 1px currentColor; color: #2f7a3f; }
+html.look-hl .rd-pill.warn,
+html.look-hl .rd-pill.unfinished { background: none; box-shadow: inset 0 0 0 1px currentColor; color: #b8471f; }
+html.look-hl .rd-pill.quiet { box-shadow: none; font-weight: 500; }
+html.look-hl .rd-tag,
+html.look-hl .rd-tag.gym,
+html.look-hl .rd-tag.time,
+html.look-hl .rd-tag.note { background: none; box-shadow: inset 0 0 0 1px #e1e5eb; font-weight: 500; color: #5b6474; }
+
+/* ---- The table: small grey heads, hairlines between rows, names at 500, figures at 600 */
+html.look-hl .rd-cols { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+html.look-hl .rd-row { border-top-color: #e1e5eb; }
+html.look-hl .rd-ex { font-weight: 500; color: #141a24; }
+html.look-hl .rd-ex small { font-weight: 500; color: #8b93a1; }
+html.look-hl .rd-num { font-weight: 600; color: #141a24; }
+html.look-hl .rg-fig { font-weight: 600; }
+
+/* What the client did: plain figures, a thin ring for up or down, no tinted chips. */
+html.look-hl .rd-set { background: none; box-shadow: inset 0 0 0 1px #e1e5eb; font-weight: 600; color: #141a24; }
+html.look-hl .rd-set.up { background: none; box-shadow: inset 0 0 0 1px currentColor; color: #2f7a3f; }
+html.look-hl .rd-set.down { background: none; box-shadow: inset 0 0 0 1px currentColor; color: #b8471f; }
+html.look-hl .rd-set.swap { background: none; box-shadow: inset 0 0 0 1px currentColor; color: #a8761f; }
+html.look-hl .rd-set.extra { outline: 0; box-shadow: inset 0 0 0 1px #e1e5eb; border: 1px dashed #c9cfd8; }
+html.look-hl .rd-trendcell,
+html.look-hl .rd-trendcell.same { background: none; box-shadow: inset 0 0 0 1px #e1e5eb; font-weight: 600; color: #5b6474; }
+html.look-hl .rd-trendcell.up { background: none; box-shadow: inset 0 0 0 1px currentColor; color: #2f7a3f; }
+html.look-hl .rd-trendcell.down { background: none; box-shadow: inset 0 0 0 1px currentColor; color: #b8471f; }
+html.look-hl .rd-trendcell.none { box-shadow: none; }
+
+/* ---- The column picker and the add row in the same white-and-ink */
+html.look-hl .rd-coltabs { background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; }
+html.look-hl .rd-coltabs button { font-weight: 500; color: #5b6474; }
+html.look-hl .rd-coltabs button.on { background: #141a24; box-shadow: none; color: #fff; font-weight: 600; }
+html.look-hl .rd-addrow { border: 0; border-radius: 14px; box-shadow: inset 0 0 0 1px #e1e5eb; }
+html.look-hl .rd-addrow-bar,
+html.look-hl .rd-addrow-search { border-color: #141a24; box-shadow: none; }
+
+/* ---- Rogue sessions: the heading in the shared small caps */
+html.look-hl .rg-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; }
+
+/* Above the shared tab rule (html.look-hl .rd-page [role="tablist"] …), which otherwise rounds the week tiles into capsules. */
+html.look-hl .rd-page .rd-weeks [role="tablist"] { background: none; box-shadow: none; border-radius: 0; }
+html.look-hl .rd-page .rd-weeks [role="tablist"] [role="tab"],
+html.look-hl .rd-page .rd-weeks [role="tablist"] [role="tab"][data-state="active"] { border-radius: 14px; }
+html.look-hl .rd-page .rd-weeks [role="tablist"] [role="tab"][data-state="active"] { background: #fff; box-shadow: inset 0 0 0 1.5px #141a24; color: #141a24; }
