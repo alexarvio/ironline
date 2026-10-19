@@ -274,7 +274,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
               <DropdownMenuItem onSelect={() => message({ label: "Lifestyle", link: { kind: "checkin", section: logCadence } })}>
-                <ChatIcon /> Message about measurements
+                <ChatIcon /> Message about lifestyle
               </DropdownMenuItem>
               {plan.id !== 0 && (
                 <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>
