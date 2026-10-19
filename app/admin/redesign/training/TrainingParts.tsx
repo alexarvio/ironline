@@ -374,7 +374,8 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
             <span className="trn-avgs">
               {averages.map((a) => (
                 <span key={a.label}>
-                  {a.label} <b>{a.value}</b>
+                  {a.label}
+                  <b>Avg {a.value}</b>
                 </span>
               ))}
             </span>
