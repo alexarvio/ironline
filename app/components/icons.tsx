@@ -515,3 +515,13 @@ export function ShieldIcon() {
     </svg>
   );
 }
+
+/** A compass (19 Oct): the rogue session, a route of the client's own. With its rim on its own; without, inside a ring of its own (the client's dashed one). */
+export function CompassIcon({ size = 14, rim = true }: { size?: number; rim?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {rim && <circle cx="12" cy="12" r="9.5" />}
+      <path d={rim ? "M15.8 8.2 13.6 13.6l-5.4 2.2 2.2-5.4z" : "M17.5 6.5 14.3 14.3l-7.8 3.2 3.2-7.8z"} fill="currentColor" fillOpacity="0.15" />
+    </svg>
+  );
+}

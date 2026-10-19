@@ -1352,7 +1352,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           <p className="rd-full">{MAX_SESSIONS} sessions is the most a week can hold.</p>
         )}
         {/* The client's own workouts this week, off the plan (19 Oct): read only, under the week's sessions. */}
-        <RogueSessions items={program.rogue[viewIdx] ?? []} firstName={firstName} />
+        <RogueSessions items={program.rogue[viewIdx] ?? []} firstName={firstName} grid={colStyle} cols={cols} unit={unit} minW={tableMinW} kgOf={(kg) => (kg == null ? null : half(lbs ? kg * LB : kg))} />
       </div>
 
       {/* ---- What the client is asked as they end a workout in this phase, and what they answered, newest first (6 Oct: both at the foot, under the weeks). */}

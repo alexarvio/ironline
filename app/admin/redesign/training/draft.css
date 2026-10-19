@@ -1320,3 +1320,11 @@
 .rg-cols.rg-cols > span:not(:first-child), .rg-row.rg-row > span:not(:first-child) { justify-self: center; text-align: center; }
 .rg-row.rg-row > .rg-span { justify-self: stretch; }
 .rg-cols.rg-cols, .rd-row-main.rg-row.rg-row { padding-left: 10px; padding-right: 10px; }
+/* The rogue session's compass (19 Oct), in a dashed ring before its name. */
+.rg-namecol.rg-namecol { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; overflow: visible; }
+.rg-ring.rg-ring { display: inline-flex; align-items: center; justify-content: center; color: #5b6474; }
+.rg-namecol.rg-namecol.rg-namecol { flex: 0 0 calc(var(--rd-name-ch, 16) * 1.08ch + 20px); min-width: max-content; }
+/* The rogue session's compass in the grip's place (19 Oct), so its name and count line up with the week's; its figures as the planned sessions'. */
+.rd-grip.rg-compass { cursor: default; color: #5b6474; letter-spacing: 0; }
+.rg-fig { font-size: 14px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
+.rg-fig.rg-span { font-weight: 500; color: #3a4250; }

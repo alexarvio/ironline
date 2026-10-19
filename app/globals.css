@@ -20422,3 +20422,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .fa-kind.cardio { color: #a3366b; }
 .fa-kind:active { background: #F5F6F8; }
 .fa-kind:disabled { opacity: 0.55; cursor: default; }
+/* The compass in the rogue session row's dashed ring (19 Oct). */
+.tr-body .tr-row-tile.free { display: inline-flex; align-items: center; justify-content: center; color: #5b6474; }

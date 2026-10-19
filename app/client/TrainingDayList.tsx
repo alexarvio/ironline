@@ -6,6 +6,7 @@ import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, pi
 import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
+import { CompassIcon } from "../components/icons";
 import { useFocusRef, useNavigateTab, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
 import { clock, durationMinutes, elapsedMs, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type LibraryPick, type SessionCardio, type SessionDay, type SessionExercise } from "./workoutShared";
 
@@ -333,7 +334,9 @@ export default function TrainingDayList({
             number, so it doesn't read as one more to do this week. */}
         {currentWeek && (
           <button type="button" className="tr-row tr-free" onClick={startFree} disabled={freeBusy} aria-label="Rogue session: your own workout, off the plan">
-            <span className="tr-row-tile free" aria-hidden="true" />
+            <span className="tr-row-tile free" aria-hidden="true">
+              <CompassIcon size={20} rim={false} />
+            </span>
             <span className="tr-row-main">
               <span className="tr-row-title">Rogue session</span>
               <span className="tr-row-sub">{freeBusy ? "Starting…" : "Your own workout, off the plan"}</span>

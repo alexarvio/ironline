@@ -1,24 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDownIcon } from "../../../components/icons";
+import type React from "react";
+import { ChevronDownIcon, CompassIcon } from "../../../components/icons";
 import type { DraftRogue } from "./TrainingDraft";
 
 // The client's rogue sessions under the week's own (19 Oct, Alex): workouts
 // they made themselves, off the plan. Built from the session card's own parts
-// (head, pills, column heads, rows) so they read as sessions: the head says
-// how many exercises, when, how long and whether it ended; open, the table is
-// Exercise, then Sets, KG and Reps centred. Read only, and counted in nothing.
+// on the week's own column grid, so Sets, KG and Reps sit exactly under the
+// planned sessions' (19 Oct, Alex: "as if they were part of the regular
+// workout"); the columns a rogue session has nothing for stay empty. The
+// compass takes the grip's place. Read only, and counted in nothing.
+
+type Cols = { sets: boolean; weight: boolean; reps: boolean; rpe: boolean; tempo: boolean; rest: boolean };
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 const num = (n: number | null) => (n == null ? "–" : String(Math.round(n * 100) / 100));
 /** "60" when every set is the same, else each in turn: "60 · 65 · 70". */
 const each = (xs: (number | null)[]) => (xs.length === 0 ? "–" : xs.every((x) => x === xs[0]) ? num(xs[0]) : xs.map(num).join(" · "));
-const GRID = { gridTemplateColumns: "minmax(200px, 1fr) 90px 140px 140px" };
+/** The figure columns the week shows, in their order, as the planned sessions draw them. */
+const FIGURES: (keyof Cols)[] = ["sets", "weight", "reps", "rpe", "tempo", "rest"];
+/** After the figures: note, what the client did, 7 days, 30 days, ⋯. */
+const TAIL = 5;
 
-export default function RogueSessions({ items, firstName }: { items: DraftRogue[]; firstName: string }) {
+export default function RogueSessions({ items, firstName, grid, cols, unit, minW, kgOf }: { items: DraftRogue[]; firstName: string; grid: React.CSSProperties; cols: Cols; unit: string; minW: number; /** Kg into what the coach is reading in. */ kgOf: (kg: number | null) => number | null }) {
   const [open, setOpen] = useState<number | null>(null);
   if (items.length === 0) return null;
+  const shown = FIGURES.filter((k) => cols[k]);
+  const label: Record<keyof Cols, string> = { sets: "Sets", weight: unit, reps: "Reps", rpe: "RPE", tempo: "Tempo", rest: "Rest" };
   return (
     <div className="rg">
       <div className="rg-head">
@@ -31,6 +40,9 @@ export default function RogueSessions({ items, firstName }: { items: DraftRogue[
         return (
           <section key={r.id} className={`rd-session rg-session${isOpen ? " open" : ""}`}>
             <div className="rd-session-head" onClick={() => setOpen(isOpen ? null : r.id)}>
+              <span className="rd-grip rg-compass" aria-hidden="true">
+                <CompassIcon size={18} />
+              </span>
               <button type="button" className="rd-session-toggle" onClick={(e) => (e.stopPropagation(), setOpen(isOpen ? null : r.id))} aria-expanded={isOpen} aria-label={isOpen ? "Fold rogue session" : "Open rogue session"}>
                 <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
                   <ChevronDownIcon />
@@ -49,20 +61,30 @@ export default function RogueSessions({ items, firstName }: { items: DraftRogue[
               </span>
             </div>
             {isOpen && (
-              <div className="rd-rows">
-                <div className="rd-cols rg-cols" aria-hidden="true" style={GRID}>
+              <div className="rd-rows rd-rows-scroll" style={{ "--rd-minw": `${minW}px` } as React.CSSProperties}>
+                <div className="rd-cols" aria-hidden="true" style={grid}>
+                  <span />
                   <span>Exercise</span>
-                  <span>Sets</span>
-                  <span>KG</span>
-                  <span>Reps</span>
+                  {shown.map((k) => (
+                    <span key={k}>{label[k]}</span>
+                  ))}
+                  {Array.from({ length: TAIL }, (_, i) => (
+                    <span key={`t${i}`} />
+                  ))}
                 </div>
                 {r.exercises.map((e) => (
                   <div key={e.id} className="rd-row">
-                    <div className="rd-row-main static rg-row" style={GRID}>
+                    <div className="rd-row-main static" style={grid}>
+                      <span />
                       <span className="rd-ex">{e.name}</span>
-                      <span>{e.sets.length || "–"}</span>
-                      <span>{each(e.sets.map((s) => s.kg))}</span>
-                      <span>{each(e.sets.map((s) => s.reps))}</span>
+                      {shown.map((k) => (
+                        <span key={k} className="rg-fig">
+                          {k === "sets" ? e.sets.length || "–" : k === "weight" ? each(e.sets.map((s) => kgOf(s.kg))) : k === "reps" ? each(e.sets.map((s) => s.reps)) : ""}
+                        </span>
+                      ))}
+                      {Array.from({ length: TAIL }, (_, i) => (
+                        <span key={`t${i}`} />
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -70,11 +92,14 @@ export default function RogueSessions({ items, firstName }: { items: DraftRogue[
                   const bits = [c.time && `${c.time} min`, c.distance && `${c.distance} km`, c.pace && `${c.pace} km/h`, c.incline && `${c.incline}% incline`].filter(Boolean).join(" · ");
                   return (
                     <div key={`c${c.id}`} className="rd-row cardio">
-                      <div className="rd-row-main static rg-row" style={GRID}>
+                      <div className="rd-row-main static" style={grid}>
+                        <span />
                         <span className="rd-ex">
                           {c.name} <small className="rg-tag">Cardio</small>
                         </span>
-                        <span className="rg-span">{bits || (c.done ? "Done" : "Not logged")}</span>
+                        <span className="rg-fig rg-span" style={{ gridColumn: `3 / span ${Math.max(1, shown.length)}` }}>
+                          {bits || (c.done ? "Done" : "Not logged")}
+                        </span>
                       </div>
                     </div>
                   );
