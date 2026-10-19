@@ -3114,6 +3114,20 @@ export async function setPhaseCoverAction(id: number, cover: string | null) {
   revalidatePath("/client");
 }
 
+// Deleting a phase deletes what it is (20 Oct, Alex): a training phase's
+// programme goes with it, its weeks and sessions and anything logged on
+// them (the coach was warned and ticked for that). Other tracks: the phase.
+export async function deletePhaseAction(phaseId: number) {
+  const id = Number(phaseId);
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForPhase(id)))) return;
+  const phase = getPhaseById(id);
+  if (!phase) return;
+  if (phase.program_id) removeProgram(phase.program_id);
+  removeClientPhase(id);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function removeClientPhaseAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id || !(await coachForClient(getClientIdForPhase(id)))) return;

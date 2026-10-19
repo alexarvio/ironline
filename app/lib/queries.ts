@@ -1271,15 +1271,20 @@ export function applyDueClientReminders() {
 // still a draft, to avoid leaving a gap in the sequence.
 export function removeWeek(clientId: number, week: number) {
   const data = getData();
+  // The plan's sessions only: the client's own rogue sessions that week are theirs and stay (20 Oct).
   const dayIds = new Set(
-    data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week).map((pd) => pd.id)
+    data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week && !pd.free).map((pd) => pd.id)
   );
   const assignmentIds = new Set(
     data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id)
   );
+  const cardioIds = new Set((data.cardio_entries ?? []).filter((c) => dayIds.has(c.program_day_id)).map((c) => c.id));
   keepSessions(dayIds);
   data.set_logs = data.set_logs.filter((sl) => !assignmentIds.has(sl.workout_assignment_id));
+  data.assignment_custom_values = data.assignment_custom_values.filter((v) => !assignmentIds.has(v.workout_assignment_id));
   data.workout_assignments = data.workout_assignments.filter((wa) => !assignmentIds.has(wa.id));
+  data.cardio_logs = (data.cardio_logs ?? []).filter((l) => !cardioIds.has(l.cardio_entry_id));
+  data.cardio_entries = (data.cardio_entries ?? []).filter((c) => !cardioIds.has(c.id));
   data.program_days = data.program_days.filter((pd) => !dayIds.has(pd.id));
   persist();
 }

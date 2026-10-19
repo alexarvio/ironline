@@ -5,7 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
-import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, removeClientPhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, deletePhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
@@ -1873,22 +1873,29 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         )}
 
         {dlg?.kind === "deletePhase" && program.phaseId != null && (
-          <ConfirmDialog
-            title={`Delete ${program.name}?`}
-            // An unbuilt draft goes with its phase; anything built, scheduled or live stays here, off the plan (removeClientPhase).
-            description={program.status === "draft" && !weeks.some((w) => w.trained.length > 0) ? "It comes off the plan, and its empty programme with it." : program.status === "live" ? `It comes off the plan and ${firstName}'s Home. The programme stays here.` : "It comes off the plan. The programme stays here."}
-            confirm="Delete phase"
-            danger
-            onConfirm={() => {
-              const id = program.phaseId!;
-              close();
-              startTransition(async () => {
-                await removeClientPhaseAction(fd({ id }));
-                savedToast(`${program.name} deleted`);
-                router.push(`${window.location.pathname}?client=${clientId}&tab=training`, { scroll: false });
-              });
-            }}
-          />
+          (() => {
+            // The phase is its programme (20 Oct, Alex): both go. Sessions the client trained go too, so that needs a tick.
+            const logged = weeks.reduce((t, w) => t + w.trained.filter(Boolean).length + w.missed.filter(Boolean).length, 0);
+            const sessionsAll = weeks.reduce((t, w) => t + w.trained.length, 0);
+            return (
+              <DeletePhaseDialog
+                name={program.name}
+                what={`${weeks.length} ${weeks.length === 1 ? "week" : "weeks"} · ${sessionsAll} ${sessionsAll === 1 ? "session" : "sessions"}`}
+                logged={logged}
+                firstName={firstName}
+                onDelete={() => {
+                  const id = program.phaseId!;
+                  close();
+                  startTransition(async () => {
+                    await deletePhaseAction(id);
+                    savedToast(`${program.name} deleted`);
+                    router.push(`${window.location.pathname}?client=${clientId}&tab=training`, { scroll: false });
+                  });
+                }}
+                onClose={close}
+              />
+            );
+          })()
         )}
 
         {dlg?.kind === "addWeek" && (
@@ -2088,6 +2095,51 @@ function SessionName({ value, onChange }: { value: string; onChange: (v: string)
       }}
       aria-label="Session name"
     />
+  );
+}
+
+/** Deleting a phase and its programme: what goes, and a tick when the client's logged sessions go with it. */
+function DeletePhaseDialog({ name, what, logged, firstName, onDelete, onClose }: { name: string; what: string; logged: number; firstName: string; onDelete: () => void; onClose: () => void }) {
+  const [agreed, setAgreed] = useState(false);
+  const cancel = useRef<HTMLButtonElement>(null);
+  return (
+    <DialogContent
+      className="dlh"
+      role="alertdialog"
+      onOpenAutoFocus={(ev) => {
+        ev.preventDefault();
+        setTimeout(() => cancel.current?.focus(), 60);
+      }}
+    >
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Delete {name}?</DialogTitle>
+        <button type="button" className="dlh-x" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <DialogDescription className="dlh-what">{what}</DialogDescription>
+      {logged > 0 && (
+        <>
+          <p className="dlh-warn">
+            {firstName} trained {logged} {logged === 1 ? "session" : "sessions"} of it. They go too.
+          </p>
+          <button type="button" role="checkbox" aria-checked={agreed} className="dlh-ack" onClick={() => setAgreed((x) => !x)}>
+            <span className={`dlh-box${agreed ? " on" : ""}`} aria-hidden="true">
+              {agreed ? "✓" : ""}
+            </span>
+            Delete {firstName}&rsquo;s logged sessions too
+          </button>
+        </>
+      )}
+      <div className="dlh-foot">
+        <button ref={cancel} type="button" className="dlh-cancel" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="dlh-delete" disabled={logged > 0 && !agreed} onClick={onDelete}>
+          Delete
+        </button>
+      </div>
+    </DialogContent>
   );
 }
 
@@ -2949,34 +3001,31 @@ export function ConfirmDialog({ title, description, confirm, danger, tick, onCon
 /** A new week at the end: blank, or a copy of the week on screen. */
 function AddWeekDialog({ next, date, source, sessionCount, onAdd }: { next: number; date: string | null; source: { label: string }; sessionCount: number; onAdd: (copy: boolean) => void }) {
   const [copy, setCopy] = useState(sessionCount > 0);
+  // In the hairline style, no explanations (20 Oct, Alex): the title, the day it starts, Blank or a copy as one capsule.
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>Add Week {next}</DialogTitle>
-        <DialogDescription>{date ? `Starts ${date}. ` : ""}Blank, or a copy of the week on screen?</DialogDescription>
-      </DialogHeader>
-      <div className="rd-choices" role="radiogroup">
-        <label className={`rd-choice${!copy ? " on" : ""}`}>
-          <input type="radio" name="addweek" checked={!copy} onChange={() => setCopy(false)} />
-          <span>
-            <b>Blank week</b>
-            <small>No sessions yet; add them one by one</small>
-          </span>
-        </label>
-        <label className={`rd-choice${copy ? " on" : ""}${sessionCount === 0 ? " off" : ""}`}>
-          <input type="radio" name="addweek" checked={copy} disabled={sessionCount === 0} onChange={() => setCopy(true)} />
-          <span>
-            <b>Copy of {source.label}</b>
-            <small>{sessionCount === 0 ? `${source.label} has no sessions to copy` : `Its ${sessionCount} ${sessionCount === 1 ? "session" : "sessions"}, exercises and cardio; nothing logged comes along`}</small>
-          </span>
-        </label>
+    <DialogContent className="dlh">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Add Week {next}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
       </div>
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" onClick={() => onAdd(copy)} autoFocus>
-          {copy ? `Add as copy of ${source.label}` : "Add blank week"}
+      {date && <DialogDescription className="dlh-what">Starts {date}</DialogDescription>}
+      <div className="dlh-seg" role="radiogroup" aria-label="What the week starts with">
+        <button type="button" role="radio" aria-checked={!copy} className={!copy ? "on" : ""} onClick={() => setCopy(false)}>
+          Blank
         </button>
-      </DialogFooter>
+        <button type="button" role="radio" aria-checked={copy} className={copy ? "on" : ""} disabled={sessionCount === 0} onClick={() => setCopy(true)}>
+          Copy {source.label}
+          {sessionCount > 0 && <small> · {sessionCount} {sessionCount === 1 ? "session" : "sessions"}</small>}
+        </button>
+      </div>
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel">Cancel</DialogClose>
+        <button type="button" className="dlh-go" onClick={() => onAdd(copy)} autoFocus>
+          Add week
+        </button>
+      </div>
     </DialogContent>
   );
 }

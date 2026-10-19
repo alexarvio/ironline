@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../../../lib/phaseCovers";
 import Link from "next/link";
-import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, duplicateClientPhaseAction, removeClientGoalAction, removeClientPhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, duplicateClientPhaseAction, removeClientGoalAction, deletePhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
@@ -621,16 +621,14 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
         {dlg?.kind === "deletePhase" && phases.find((p) => p.id === dlg.id) && (
           <ConfirmDialog
             title={`Delete ${phases.find((p) => p.id === dlg.id)!.name}?`}
-            description={phases.find((p) => p.id === dlg.id)!.program ? "The phase comes off the plan. The programme behind it stays on the Training tab as a draft." : `The phase comes off the plan and off ${firstName}'s app.`}
+            description={phases.find((p) => p.id === dlg.id)!.program ? "Its programme goes with it." : `It comes off the plan and ${firstName}'s app.`}
             confirm="Delete phase"
             danger
             onConfirm={() => {
               const id = dlg.id;
               setPhases((prev) => prev.filter((p) => p.id !== id));
               close();
-              const fd = new FormData();
-              fd.set("id", String(id));
-              act(() => removeClientPhaseAction(fd), "Phase deleted");
+              act(() => deletePhaseAction(id), "Phase deleted");
             }}
           />
         )}
