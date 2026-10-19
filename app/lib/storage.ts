@@ -129,13 +129,76 @@ export async function putUploadFromDisk(publicPath: string, filePath: string, co
 export async function deleteUpload(publicPath: string | null | undefined) {
   const b = bucket();
   const key = publicPath ? keyOf(publicPath) : null;
-  if (!b || !key) return;
-  inBucket.delete(key);
-  linkCache.delete(key);
+  if (!key) return;
+  // Its small copies go with it (19 Oct), wherever they were made.
+  const smalls = SMALL_WIDTHS.map((w) => smallKey(key, w)).filter((k): k is string => !!k);
+  for (const k of smalls) dropDiskCopy(k);
+  if (!b) return;
+  for (const k of [key, ...smalls]) {
+    inBucket.delete(k);
+    linkCache.delete(k);
+    try {
+      await b.s3.send(new DeleteObjectCommand({ Bucket: b.bucket, Key: k }));
+    } catch {
+      /* already gone */
+    }
+  }
+}
+
+// ---- Small copies of pictures (19 Oct, Alex: the chat's photos were slow on
+// the phone). A phone photo is several MB; the chat draws it about 260 px
+// wide. "/uploads/<key>?w=1080" answers with a WebP that wide, made once with
+// sharp and kept beside the original in the same client folder (so erasing a
+// client takes them too): "chat/9/abc.jpg" -> "chat/9/_w1080/abc.webp".
+export const SMALL_WIDTHS = [480, 1080];
+
+export function smallKey(key: string, w: number): string | null {
+  if (!/\.(jpe?g|png|webp)$/i.test(key)) return null;
+  const parts = key.split("/");
+  if (parts.length < 3) return null;
+  const [kind, owner, ...rest] = parts;
+  return `${kind}/${owner}/_w${w}/${rest.join("/").replace(/\.[^.]+$/, "")}.webp`;
+}
+
+/** The original's bytes, from the bucket or the disk; null when it is nowhere. */
+async function readUpload(key: string): Promise<Buffer | null> {
+  const b = bucket();
+  if (b && (await exists(b, key))) {
+    const r = await b.s3.send(new GetObjectCommand({ Bucket: b.bucket, Key: key }));
+    const bytes = await (r.Body as { transformToByteArray: () => Promise<Uint8Array> } | undefined)?.transformToByteArray();
+    return bytes ? Buffer.from(bytes) : null;
+  }
+  const file = path.join(DATA_DIR, "uploads", key);
+  return fs.existsSync(file) ? fs.readFileSync(file) : null;
+}
+
+/**
+ * The small copy as a response: a link into the bucket once it is there, or
+ * the bytes. Made on the first ask. Null (serve the original) when the file
+ * is not a picture, cannot be read, or sharp is missing.
+ */
+export async function smallCopy(key: string, w: number): Promise<Response | null> {
+  const small = smallKey(key, w);
+  if (!small || !SMALL_WIDTHS.includes(w)) return null;
+  const cache = "private, max-age=86400";
+  const link = await bucketLink(small);
+  if (link) return new Response(null, { status: 302, headers: { Location: link, "Cache-Control": `private, max-age=${LINK_CACHE_SECONDS}` } });
+  const onDisk = path.join(DATA_DIR, "uploads", small);
+  if (!bucket() && fs.existsSync(onDisk)) return new Response(new Uint8Array(fs.readFileSync(onDisk)), { headers: { "Content-Type": "image/webp", "Cache-Control": cache } });
   try {
-    await b.s3.send(new DeleteObjectCommand({ Bucket: b.bucket, Key: key }));
-  } catch {
-    /* already gone */
+    const original = await readUpload(key);
+    if (!original) return null;
+    const sharp = (await import("sharp")).default;
+    const out = await sharp(original, { failOn: "none" }).rotate().resize({ width: w, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
+    if (bucket()) await putUpload(`/uploads/${small}`, out, "image/webp");
+    else {
+      fs.mkdirSync(path.dirname(onDisk), { recursive: true });
+      fs.writeFileSync(onDisk, out);
+    }
+    return new Response(new Uint8Array(out), { headers: { "Content-Type": "image/webp", "Content-Length": String(out.length), "Cache-Control": cache } });
+  } catch (error) {
+    console.error(`[uploads] no small copy of ${key}:`, error instanceof Error ? error.message : error);
+    return null;
   }
 }
 

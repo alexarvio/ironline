@@ -63,7 +63,7 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
                       </>
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element -- an upload from the chat
-                      <img src={i.media.path} alt="" loading="lazy" />
+                      <img src={i.media.path.startsWith("/uploads/") ? `${i.media.path}${i.media.path.includes("?") ? "&" : "?"}w=480` : i.media.path} alt="" loading="lazy" decoding="async" />
                     )}
                   </button>
                   <a className="cmg-open" href={i.media.path} target="_blank" rel="noreferrer" aria-label="Open it full size" title="Open">

@@ -4,7 +4,7 @@ import { Readable } from "stream";
 import { DATA_DIR } from "../../lib/db";
 import { canAccessClient, getSessionUser, isOwner } from "../../lib/auth";
 import { coachIdOfClient, coachOwnsExercise } from "../../lib/tenancy";
-import { bucketLink, LINK_CACHE_SECONDS, streamUpload } from "../../lib/storage";
+import { bucketLink, LINK_CACHE_SECONDS, smallCopy, streamUpload } from "../../lib/storage";
 
 // Serves files written by savePhotoUpload/saveChatMedia in queries.ts. Those
 // live under DATA_DIR/uploads rather than /public/uploads so they survive on
@@ -98,8 +98,15 @@ export async function GET(
   // from the bucket through a link that expires; a file not copied there yet
   // is served from the disk below. "?stream=1" (10 Oct) sends the bytes
   // through the app instead, same-origin, for the whiteboard's canvas.
-  const stream = new URL(request.url).searchParams.get("stream") === "1";
+  const search = new URL(request.url).searchParams;
+  const stream = search.get("stream") === "1";
   const range = request.headers.get("range");
+  // "?w=1080" (19 Oct): a picture at that width, a fraction of the phone's original.
+  const w = Number(search.get("w"));
+  if (!stream && w) {
+    const small = await smallCopy(segments.join("/"), w);
+    if (small) return small;
+  }
   if (stream) {
     const piped = await streamUpload(segments.join("/"), range);
     if (piped) return piped;

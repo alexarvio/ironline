@@ -503,9 +503,14 @@ function LinkBubble({ view }: { view: LinkView }) {
   );
 }
 
+/** A picture at this width (19 Oct): the uploads route makes a small copy once; a phone photo is several MB. */
+export const sized = (src: string, w: number) => (src.startsWith("/uploads/") ? `${src}${src.includes("?") ? "&" : "?"}w=${w}` : src);
+/** A video's first frame shows before it plays (19 Oct): iOS draws nothing until asked for a time. */
+const firstFrame = (src: string) => (src.includes("#") ? src : `${src}#t=0.001`);
+
 // A picture shows, a video and a voice message play, any other file downloads.
 function Media({ media }: { media: NonNullable<CoachMessageView["media"]> }) {
-  if (media.type === "video") return <video className="cm-msg-video" src={media.path} controls playsInline />;
+  if (media.type === "video") return <video className="cm-msg-video" src={firstFrame(media.path)} controls playsInline preload="metadata" />;
   if (media.type === "audio") return <audio className="cm-msg-audio" src={media.path} controls preload="metadata" />;
   if (media.type === "file")
     return (
@@ -515,7 +520,7 @@ function Media({ media }: { media: NonNullable<CoachMessageView["media"]> }) {
       </a>
     );
   // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-  return <img className="cm-msg-img" src={media.path} alt="" />;
+  return <img className="cm-msg-img" src={sized(media.path, 1080)} alt="" decoding="async" />;
 }
 
 function FileGlyph() {
