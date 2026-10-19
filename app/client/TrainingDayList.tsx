@@ -314,21 +314,20 @@ export default function TrainingDayList({
             </Fragment>
           );
         })}
-      </div>
-
-      {/* The extra row (19 Oct, Alex): an empty session to fill, off the plan. */}
-      {currentWeek && (
-        <div className="tr-rows tr-free-rows">
-          <button type="button" className="tr-row tr-free" onClick={startFree} disabled={freeBusy}>
-            <span className="tr-row-tile free">{days.length + 1}</span>
+        {/* The extra row (19 Oct, Alex): an empty session to fill, off the plan.
+            On the same line as the week's sessions, but its ring empty: no
+            number, so it doesn't read as one more to do this week. */}
+        {currentWeek && (
+          <button type="button" className="tr-row tr-free" onClick={startFree} disabled={freeBusy} aria-label="Free session: your own workout, off the plan">
+            <span className="tr-row-tile free" aria-hidden="true" />
             <span className="tr-row-main">
               <span className="tr-row-title">Free session</span>
               <span className="tr-row-sub">{freeBusy ? "Starting…" : "Your own workout, off the plan"}</span>
             </span>
             <span className="tr-row-chev" aria-hidden="true" />
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {startProblem && (
         <p className="tr-start-problem" role="alert">
