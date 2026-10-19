@@ -2488,10 +2488,18 @@ function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardi
     emit(next);
     setPicked(true);
   };
+  // The list floats over the page under the bar, as the exercise search's does (20 Oct, Alex).
+  const showList = list.length > 0 || !!needle;
+  const pop = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    pop.current?.querySelector(".rd-addrow-item.on")?.scrollIntoView({ block: "nearest" });
+  }, [cursor]);
   if (!picked) {
     return (
       <div ref={wrap} className="rd-addrow">
-        <div className="rd-addrow-bar open">
+        <Popover open={showList} onOpenChange={() => {}}>
+        <PopoverAnchor asChild>
+        <div className={`rd-addrow-bar${showList ? " open" : ""}`}>
           <input
             ref={first}
             className="rd-addrow-search"
@@ -2519,19 +2527,36 @@ function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardi
             ×
           </button>
         </div>
-        <div className="rd-addrow-list" role="listbox" aria-label="Cardio">
-          {list.map((m, i) => (
-            <button key={m.name} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}`} onMouseEnter={() => setCursor(i)} onClick={() => choose(m.name)}>
-              {m.name}
-            </button>
-          ))}
+        </PopoverAnchor>
+        <PopoverContent
+          ref={pop}
+          className="rd-addpop"
+          align="start"
+          sideOffset={6}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            if (wrap.current?.contains(e.target as Node)) e.preventDefault();
+          }}
+        >
+          {list.length > 0 && (
+            <div className="rd-addpop-scroll" role="listbox" aria-label="Cardio">
+              {list.map((m, i) => (
+                <button key={m.name} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}`} onMouseEnter={() => setCursor(i)} onClick={() => choose(m.name)}>
+                  {m.name}
+                </button>
+              ))}
+            </div>
+          )}
           {needle && !moves.some((m) => m.name.toLowerCase() === needle) && (
-            <button type="button" className="rd-addrow-item create" onClick={() => choose(q)}>
+            <button type="button" className={`rd-addrow-item create${list.length === 0 ? " solo" : ""}`} onClick={() => choose(q)}>
               <PlusIcon /> Use &ldquo;{q.trim()}&rdquo;
             </button>
           )}
-          {!needle && moves.length === 0 && <p className="rd-addrow-hint">Type the activity, e.g. Incline walk.</p>}
-        </div>
+        </PopoverContent>
+        </Popover>
+        {!needle && moves.length === 0 && <p className="rd-addrow-hint">Type the activity, e.g. Incline walk.</p>}
       </div>
     );
   }
@@ -2585,7 +2610,7 @@ function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardi
           ×
         </button>
       </div>
-      <p className="rd-addrow-hint">It goes on the bar below as you type, until Apply · Enter closes · Esc drops it.</p>
+      <p className="rd-addrow-hint">Saves once you&rsquo;re done · Enter closes · Esc drops it.</p>
     </div>
   );
 }
