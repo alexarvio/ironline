@@ -208,7 +208,7 @@ export default function WorkoutScreen({
     if (ending) return;
     setEnding(true);
     // A free session ended with nothing in it is not kept (19 Oct): it goes, as when left empty.
-    if (day.free && day.exercises.length === 0) {
+    if (day.free && day.exercises.length === 0 && day.cardio.length === 0) {
       onDiscarded();
       startTransition(async () => {
         await discardSessionAction(day.key);
@@ -270,15 +270,16 @@ export default function WorkoutScreen({
   // In a free session an exercise is done once anything is logged: there is no number of sets it was asked for.
   const exDone = (ex: SessionExercise) => (day.free ? loggedCount(ex) > 0 : isDone(ex));
   const pageDone = (p: Page) => (p.kind === "exercise" ? exDone(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].done : p.kind === "add" ? false : ended);
-  // An exercise just added: its page comes up once the session has it.
+  // An exercise or cardio just added: its page comes up once the session has it.
   const wantPage = useRef<number | null>(null);
+  const added = day.exercises.length + day.cardio.length;
   useEffect(() => {
-    if (wantPage.current == null || wantPage.current >= day.exercises.length) return;
+    if (wantPage.current == null || wantPage.current >= added) return;
     const at = wantPage.current;
     wantPage.current = null;
     setTimeout(() => jumpTo(at), 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- on a new exercise only
-  }, [day.exercises.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- on a new page only
+  }, [added]);
   // Where "next" goes from page i (19 Oct, Alex, second word on it): always
   // forward first, to the next one after this not done yet; only with
   // everything ahead done, back to the earliest one skipped; with nothing
@@ -419,10 +420,11 @@ export default function WorkoutScreen({
             ) : p.kind === "add" ? (
               <FreeAddPage
                 library={library ?? []}
-                count={day.exercises.length}
+                count={day.exercises.length + day.cardio.length}
                 onAdd={async (pick) => {
                   if (!onAddExercise) return false;
-                  const at = day.exercises.length;
+                  // An exercise goes after the exercises, cardio after the cardio.
+                  const at = pick.group === "cardio" ? day.exercises.length + day.cardio.length : day.exercises.length;
                   const id = await onAddExercise(pick);
                   if (id == null) return false;
                   wantPage.current = at;
@@ -431,7 +433,7 @@ export default function WorkoutScreen({
               />
             ) : p.kind === "cardio" ? (
               <div className="wo-page-inner lw">
-                <CardioCard cardio={day.cardio[p.index]} index={day.exercises.length + p.index + 1} coachName={coachName} sessionLabel={editing ? `Editing · ${day.title}` : day.title} position={{ n: p.index + 1, total: day.cardio.length }} />
+                <CardioCard cardio={day.cardio[p.index]} index={day.exercises.length + p.index + 1} coachName={coachName} sessionLabel={editing ? `Editing · ${day.title}` : day.title} position={{ n: p.index + 1, total: day.cardio.length }} free={!!day.free && !editing} />
               </div>
             ) : (
               <div className="wo-page-inner wo-wrap">

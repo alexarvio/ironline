@@ -8773,6 +8773,34 @@ export function addFreeExercise(programDayId: number, v: { exerciseId?: number |
   return row;
 }
 
+/** Cardio in a free session (19 Oct): a name, then what the client did (time, distance, pace, incline) filled in on its page. */
+export function addFreeCardio(programDayId: number, name: string): CardioEntry | null {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  const clean = name.trim().slice(0, 80);
+  if (!day?.free || !clean) return null;
+  data.cardio_entries ??= [];
+  const order = data.cardio_entries.filter((c) => c.program_day_id === day.id).length;
+  const row: CardioEntry = { id: allocId("cardio_entries"), program_day_id: day.id, name: clean, time: "", pace: "", incline: "", distance: "", notes: "", order_index: order };
+  data.cardio_entries.push(row);
+  persist();
+  return row;
+}
+
+/** A free session's cardio, as done: the numbers are the client's own, there being no plan. */
+export function setFreeCardio(cardioId: number, v: { time?: string; pace?: string; incline?: string; distance?: string }) {
+  const data = getData();
+  const row = (data.cardio_entries ?? []).find((c) => c.id === cardioId);
+  const day = row ? data.program_days.find((pd) => pd.id === row.program_day_id) : undefined;
+  if (!row || !day?.free) return;
+  const clip = (s: string | undefined) => String(s ?? "").trim().slice(0, 20);
+  if (v.time !== undefined) row.time = clip(v.time);
+  if (v.pace !== undefined) row.pace = clip(v.pace);
+  if (v.incline !== undefined) row.incline = clip(v.incline);
+  if (v.distance !== undefined) row.distance = clip(v.distance);
+  persist();
+}
+
 /** A free session taken away whole: left with nothing in it, or discarded. */
 export function removeFreeSession(programDayId: number) {
   const data = getData();
@@ -8781,6 +8809,9 @@ export function removeFreeSession(programDayId: number) {
   const ids = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id));
   data.set_logs = data.set_logs.filter((sl) => !ids.has(sl.workout_assignment_id));
   data.workout_assignments = data.workout_assignments.filter((wa) => wa.program_day_id !== day.id);
+  const cardio = new Set((data.cardio_entries ?? []).filter((c) => c.program_day_id === day.id).map((c) => c.id));
+  data.cardio_logs = (data.cardio_logs ?? []).filter((c) => !cardio.has(c.cardio_entry_id));
+  data.cardio_entries = (data.cardio_entries ?? []).filter((c) => c.program_day_id !== day.id);
   data.program_days = data.program_days.filter((pd) => pd.id !== day.id);
   persist();
 }

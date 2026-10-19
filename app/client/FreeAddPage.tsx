@@ -37,6 +37,8 @@ export default function FreeAddPage({
     else setProblem("That didn't add. Try again.");
   };
   const create = () => add({ exerciseId: null, name: q.trim(), group: "other" });
+  // Cardio of one's own (19 Oct): its own page, time and distance typed in there.
+  const createCardio = () => add({ exerciseId: null, name: q.trim(), group: "cardio" });
 
   return (
     <div className="wo-page-inner fa">
@@ -68,17 +70,28 @@ export default function FreeAddPage({
         <div className="fa-list" role="listbox" aria-label="Matches">
           {matches.map((e) => (
             <button key={e.id} type="button" role="option" aria-selected={false} className="fa-row" onClick={() => add({ exerciseId: e.id, name: e.name, group: e.group })} disabled={busy}>
-              <span className="fa-row-name">{e.name}</span>
+              <span className="fa-row-name">
+                {e.name}
+                {e.group === "cardio" && <small className="fa-tag">Cardio</small>}
+              </span>
               <span className="fa-row-add">Add</span>
             </button>
           ))}
           {!exact && (
-            <button type="button" className="fa-row fa-create" onClick={create} disabled={busy}>
-              <span className="fa-row-name">
-                Create &ldquo;{q.trim()}&rdquo;
-              </span>
-              <span className="fa-row-add">{busy ? "Adding…" : "Add"}</span>
-            </button>
+            <>
+              <button type="button" className="fa-row fa-create" onClick={create} disabled={busy}>
+                <span className="fa-row-name">
+                  Create &ldquo;{q.trim()}&rdquo;
+                </span>
+                <span className="fa-row-add">{busy ? "Adding…" : "Add"}</span>
+              </button>
+              <button type="button" className="fa-row fa-create" onClick={createCardio} disabled={busy}>
+                <span className="fa-row-name">
+                  Create &ldquo;{q.trim()}&rdquo; as cardio
+                </span>
+                <span className="fa-row-add">{busy ? "Adding…" : "Add"}</span>
+              </button>
+            </>
           )}
         </div>
       )}

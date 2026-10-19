@@ -2,12 +2,12 @@
 
 import { Fragment, useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { addFreeExerciseAction, createFreeSessionAction, pickGymAction, removeFreeSessionAction, startSessionAction } from "../lib/actions";
+import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, pickGymAction, removeFreeSessionAction, startSessionAction } from "../lib/actions";
 import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
 import { useFocusRef, useNavigateTab, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
-import { clock, durationMinutes, elapsedMs, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type LibraryPick, type SessionDay, type SessionExercise } from "./workoutShared";
+import { clock, durationMinutes, elapsedMs, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type LibraryPick, type SessionCardio, type SessionDay, type SessionExercise } from "./workoutShared";
 
 // The week's sessions as rows on the Training tab. A finished session (swiped
 // to its end) opens in place with its sets (16 Oct); any other row opens the
@@ -88,12 +88,14 @@ export default function TrainingDayList({
   // empty or discarded is gone at once.
   const [localFree, setLocalFree] = useState<SessionDay | null>(null);
   const [freeAdds, setFreeAdds] = useState<{ dayId: number; ex: SessionExercise }[]>([]);
+  const [freeCardio, setFreeCardio] = useState<{ dayId: number; c: SessionCardio }[]>([]);
   const [goneFree, setGoneFree] = useState<number[]>([]);
   const withFree = [...serverDays, ...(localFree && !serverDays.some((d) => d.key === localFree.key) ? [localFree] : [])]
     .filter((d) => !goneFree.includes(d.key))
     .map((d) => {
       const adds = freeAdds.filter((a) => a.dayId === d.key && !d.exercises.some((e) => e.id === a.ex.id)).map((a) => a.ex);
-      return adds.length ? { ...d, exercises: [...d.exercises, ...adds] } : d;
+      const cardio = freeCardio.filter((a) => a.dayId === d.key && !d.cardio.some((c) => c.id === a.c.id)).map((a) => a.c);
+      return adds.length || cardio.length ? { ...d, exercises: [...d.exercises, ...adds], cardio: [...d.cardio, ...cardio] } : d;
     });
   const days = discardedHere == null ? withFree : withFree.map((d) => (masked(d) ? fresh(d) : d));
   const liveSession =
@@ -209,6 +211,13 @@ export default function TrainingDayList({
   };
   /** An exercise into the open free session: drawn the moment the server gives it an id. */
   const addFree = async (dayId: number, pick: { exerciseId: number | null; name: string; group: string }): Promise<number | null> => {
+    // Cardio (19 Oct): its own page, the client's numbers filled in there.
+    if (pick.group === "cardio") {
+      const cid = await addFreeCardioAction(dayId, pick.name);
+      if (cid == null) return null;
+      setFreeCardio((a) => [...a, { dayId, c: { id: cid, name: pick.name, time: "", pace: "", incline: "", distance: "", notes: "", done: false, swap: null, alternatives: [] } }]);
+      return cid;
+    }
     const id = await addFreeExerciseAction(dayId, pick.exerciseId != null ? { exerciseId: pick.exerciseId } : { name: pick.name });
     if (id == null) return null;
     const ex: SessionExercise = { id, name: pick.name, swap: null, alternatives: [], group: pick.group, sets: 1, reps: "", targetWeight: null, unit: null, targetRpe: null, tempo: null, rest: null, distance: null, time: null, videoUrl: null, logs: [], note: { text: null, dateLabel: "", unread: false }, myNote: "", warmups: [], lastWarmups: [], videoRequest: null, lastSets: null, history: [] };
@@ -413,7 +422,7 @@ export default function TrainingDayList({
           coachPhoto={coachPhoto}
           clientName={clientName}
           focusExercise={openDay.key === focus ? focusExercise : null}
-          onBack={() => (openDay.free ? (openDay.exercises.length === 0 ? dropFree(openDay.key) : setView(null)) : setView({ dayId: openDay.key, screen: "overview" }))}
+          onBack={() => (openDay.free ? (openDay.exercises.length === 0 && openDay.cardio.length === 0 ? dropFree(openDay.key) : setView(null)) : setView({ dayId: openDay.key, screen: "overview" }))}
           library={openDay.free ? library : undefined}
           onAddExercise={openDay.free ? (pick) => addFree(openDay.key, pick) : undefined}
           onEnded={() => {

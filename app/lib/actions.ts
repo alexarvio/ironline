@@ -295,6 +295,8 @@ import {
   discardSession,
   createFreeSession,
   addFreeExercise,
+  addFreeCardio,
+  setFreeCardio,
   removeFreeSession,
   getCurrentWeekNumber,
   setExerciseAlternatives,
@@ -3540,6 +3542,20 @@ export async function addFreeExerciseAction(programDayId: number, v: { exerciseI
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return null;
   return addFreeExercise(Number(programDayId), v)?.id ?? null;
+}
+
+/** Cardio into a free session; answers with its id, or null. */
+export async function addFreeCardioAction(programDayId: number, name: string): Promise<number | null> {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || !(await canAccessClient(owner))) return null;
+  return addFreeCardio(Number(programDayId), String(name ?? ""))?.id ?? null;
+}
+
+/** What the client did on a free session's cardio: time, distance, pace, incline. */
+export async function setFreeCardioAction(cardioId: number, v: { time?: string; pace?: string; incline?: string; distance?: string }) {
+  const owner = getClientIdForCardio(Number(cardioId));
+  if (owner == null || !(await canAccessClient(owner))) return;
+  setFreeCardio(Number(cardioId), v);
 }
 
 /** A free session left with nothing in it goes. */

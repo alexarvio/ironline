@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { clearCardioSwapAction, saveSkipReasonAction, setCardioDoneAction, swapCardioAction } from "../lib/actions";
+import { clearCardioSwapAction, saveSkipReasonAction, setCardioDoneAction, setFreeCardioAction, swapCardioAction } from "../lib/actions";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import type { VideoAsk } from "./VideoAskSheet";
@@ -242,8 +242,13 @@ export function CoachNote({ assignmentId, note }: { assignmentId: number | null;
 // Cardio: the targets as tiles, the coach's note, one button to tick it
 // off, a second tap to undo. Bike taken: Swap says what was done instead
 // (the coach's alternatives, or typed), which ticks it off too (28 Sep).
-export function CardioCard({ cardio, index, readOnly = false, coachName = "Your coach", sessionLabel = null, position = null }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: string | null; position?: { n: number; total: number } | null }) {
+export function CardioCard({ cardio, index, readOnly = false, coachName = "Your coach", sessionLabel = null, position = null, free = false }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: string | null; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean }) {
   const [pending, startTransition] = useTransition();
+  // What was done, typed in (a free session): kept here, saved as each box is left.
+  const [did, setDid] = useState({ time: cardio.time, distance: cardio.distance, pace: cardio.pace, incline: cardio.incline });
+  const saveDid = (k: keyof typeof did) => {
+    void setFreeCardioAction(cardio.id, { [k]: did[k] });
+  };
   const [swapOpen, setSwapOpen] = useState(false);
   const done = cardio.done;
   const cells = (
@@ -282,7 +287,24 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
           )}
         </div>
       )}
-      {cells.length > 0 && (
+      {free && (
+        <div className="wo-cardio-did">
+          {(
+            [
+              ["time", "Minutes"],
+              ["distance", "Km"],
+              ["pace", "Km/h"],
+              ["incline", "Incline %"],
+            ] as const
+          ).map(([k, label]) => (
+            <label key={k} className="wo-cardio-field">
+              <input value={did[k]} onChange={(e) => setDid((d) => ({ ...d, [k]: e.target.value }))} onBlur={() => saveDid(k)} inputMode="decimal" placeholder="–" aria-label={label} disabled={readOnly} />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+      {!free && cells.length > 0 && (
         <div className="lw-target">
           <span className="lw-target-label">Target</span>
           <span className="lw-target-vals">
@@ -305,7 +327,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
           {done ? "Done ✓ · tap to undo" : "Mark as done"}
         </button>
       )}
-      {!readOnly && (
+      {!readOnly && !free && (
         <button type="button" className="wo-cardio-swap" onClick={() => setSwapOpen(true)} disabled={pending}>
           {cardio.swap ? "Change today's substitute" : "Substitute today"}
         </button>
