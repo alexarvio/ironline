@@ -22,6 +22,7 @@ import {
   CoachIdentityProvider,
   CoachProvider,
   FocusRefProvider,
+  TabActiveProvider,
   FoodProvider,
   LinkProvider,
   MessagesProvider,
@@ -497,7 +498,9 @@ export default function AppShell({
                             >
                               {/* A deep link's target is for the tab it was sent to only. */}
                               <FocusRefProvider value={t.id === activeId ? focusRef : null}>
-                                <TrainingFocusProvider value={t.id === activeId ? trainingFocus : null}>{t.content}</TrainingFocusProvider>
+                                <TabActiveProvider value={t.id === activeId && !pushView}>
+                                  <TrainingFocusProvider value={t.id === activeId ? trainingFocus : null}>{t.content}</TrainingFocusProvider>
+                                </TabActiveProvider>
                               </FocusRefProvider>
                             </main>
                           ))}

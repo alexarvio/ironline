@@ -72,6 +72,17 @@ export function useFocusRef() {
   return useContext(FocusRefContext);
 }
 
+// Whether this tab is the one showing, with nothing laid over it (19 Oct).
+// Tabs stay mounted while hidden, so a tab that should come back the same way
+// every time (Home's events on Now, Training on this week) watches this.
+const TabActiveContext = createContext(true);
+
+export const TabActiveProvider = TabActiveContext.Provider;
+
+export function useTabActive() {
+  return useContext(TabActiveContext);
+}
+
 // Same bridge for the food diary, opened from the ring on Nutrition.
 // The Events screen (8 Oct), from Home's "Coming up" card.
 // With an event id (10 Oct), the screen lands on that event: a glow, and open when it has a note.

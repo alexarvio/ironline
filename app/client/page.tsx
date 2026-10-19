@@ -761,7 +761,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   // The coach's demo for this prescription wins; the exercise
                   // library's own video is the fallback.
                   // Swapped (17 Oct): the substitute's own demo from the library, or none; the original's would show the wrong exercise.
-                  videoUrl: a.swap ? (a.swap.library_exercise_id != null ? library.get(a.swap.library_exercise_id)?.video_url ?? null : null) : a.demo_hidden ? null : a.exercise_video_url ?? a.demo_url ?? null,
+                  videoUrl: day.free ? null : a.swap ? (a.swap.library_exercise_id != null ? library.get(a.swap.library_exercise_id)?.video_url ?? null : null) : a.demo_hidden ? null : a.exercise_video_url ?? a.demo_url ?? null,
                   myNote: myNotes.get(a.exercise_id) || latestNotes.get(a.exercise_id) || "",
                   warmups: (a.warmup_sets ?? []).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
                   lastWarmups: getLastWarmupSets(a.id).map((w) => ({ weight: w.weight_kg, reps: w.reps })),

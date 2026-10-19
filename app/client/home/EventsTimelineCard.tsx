@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type React from "react";
 import { eventTypeOf } from "../../lib/eventTypes";
 import { buildTimeline, ITEM_WIDTH, STRIDE, type TimelineItem } from "../../lib/eventTimeline";
-import { useOpenEvents } from "../CheckInContext";
+import { useOpenEvents, useTabActive } from "../CheckInContext";
 import type { HomeEvents } from "../EventsCard";
 
 // Home's events as a hairline timeline (15 Oct, restyled the same evening):
@@ -64,14 +64,17 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
     return () => ro.disconnect();
   }, []);
 
-  // Open on today, before the first paint, once the padding is known.
-  const opened = useRef(false);
+  // On today, before the first paint, once the padding is known; and again
+  // every time Home comes back (19 Oct, Alex: after Training or the chat it
+  // came back anywhere, the hidden tab having lost its padding and scroll).
+  const tabActive = useTabActive();
   useLayoutEffect(() => {
     const row = rowRef.current;
-    if (!row || side === 0 || opened.current) return;
+    if (!row || side === 0 || !tabActive) return;
     row.scrollLeft = todayIndex * STRIDE;
-    opened.current = true;
-  }, [side, todayIndex]);
+    setPos(todayIndex);
+    lastFocused.current = todayIndex;
+  }, [side, todayIndex, tabActive]);
 
   // The scroll drives the ring scale and the focus, one update a frame.
   const raf = useRef(0);

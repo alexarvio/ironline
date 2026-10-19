@@ -206,7 +206,7 @@ export default function TrainingDayList({
   const addFree = async (dayId: number, pick: { exerciseId: number | null; name: string; group: string }): Promise<number | null> => {
     const id = await addFreeExerciseAction(dayId, pick.exerciseId != null ? { exerciseId: pick.exerciseId } : { name: pick.name });
     if (id == null) return null;
-    const ex: SessionExercise = { id, name: pick.name, swap: null, alternatives: [], group: pick.group, sets: 3, reps: "", targetWeight: null, unit: null, targetRpe: null, tempo: null, rest: null, distance: null, time: null, videoUrl: null, logs: [], note: { text: null, dateLabel: "", unread: false }, myNote: "", warmups: [], lastWarmups: [], videoRequest: null, lastSets: null, history: [] };
+    const ex: SessionExercise = { id, name: pick.name, swap: null, alternatives: [], group: pick.group, sets: 1, reps: "", targetWeight: null, unit: null, targetRpe: null, tempo: null, rest: null, distance: null, time: null, videoUrl: null, logs: [], note: { text: null, dateLabel: "", unread: false }, myNote: "", warmups: [], lastWarmups: [], videoRequest: null, lastSets: null, history: [] };
     setFreeAdds((a) => [...a, { dayId, ex }]);
     return id;
   };

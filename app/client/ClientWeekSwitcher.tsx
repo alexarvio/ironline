@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useLayoutEffect, useRef, useState } from "react";
-import { useTrainingFocus } from "./CheckInContext";
+import { useTabActive, useTrainingFocus } from "./CheckInContext";
 import PictureCycle from "./PictureCycle";
 
 // Read-only week switcher for the client's own Training tab — every
@@ -49,6 +49,14 @@ export default function ClientWeekSwitcher({
     setSelectedState(w);
     setVisited((v) => (v.includes(w) ? v : [...v, w]));
   };
+  // Back on this week whenever the tab is left (19 Oct, Alex: a past week
+  // looked at stayed open after going to Home and back).
+  const tabActive = useTabActive();
+  const [wasActive, setWasActive] = useState(tabActive);
+  if (wasActive !== tabActive) {
+    setWasActive(tabActive);
+    if (!tabActive && selected !== currentWeek) setSelected(currentWeek);
+  }
   // With more weeks than fit, the strip scrolls and always opens with the
   // current week in the same place: just in from the left edge, with a sliver
   // of last week showing behind it so the row reads as scrollable. Week 1 has
@@ -66,7 +74,7 @@ export default function ClientWeekSwitcher({
     // result to the scrollable range at both ends.
     const peek = 28;
     strip.scrollLeft += anchor.getBoundingClientRect().left - strip.getBoundingClientRect().left - peek;
-  }, [currentWeek, scrolls]);
+  }, [currentWeek, scrolls, tabActive]);
 
   // Weeks ahead of the current one are locked: the client can see the
   // programme has a Week 4, but not what is in it until that week arrives.

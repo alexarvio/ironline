@@ -270,13 +270,14 @@ export default function WorkoutScreen({
     setTimeout(() => jumpTo(at), 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- on a new exercise only
   }, [day.exercises.length]);
-  // Where "next" goes from page i (19 Oct): the earliest exercise or cardio
-  // not done yet, counted from the start, so one skipped earlier comes back
-  // before going on (skip 1–3, finish 4, and it lands on 1, not 5). With
-  // everything else done, the wrap up. Never one already done.
+  // Where "next" goes from page i (19 Oct, Alex, second word on it): always
+  // forward first, to the next one after this not done yet; only with
+  // everything ahead done, back to the earliest one skipped; with nothing
+  // left, the wrap up. "Next up" says the same. Never one already done.
   const nextOpen = (i: number) => {
     const wrap = pages.length - 1;
-    for (let j = 0; j < wrap; j++) if (j !== i && !pageDone(pages[j])) return j;
+    for (let j = i + 1; j < wrap; j++) if (!pageDone(pages[j])) return j;
+    for (let j = 0; j < Math.min(i, wrap); j++) if (!pageDone(pages[j])) return j;
     return wrap;
   };
   const pageStarted = (p: Page) => p.kind === "exercise" && loggedCount(day.exercises[p.index]) > 0;
@@ -314,7 +315,7 @@ export default function WorkoutScreen({
               type="button"
               role="tab"
               aria-selected={i === page}
-              aria-label={p.kind === "exercise" ? shownName(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].name : p.kind === "add" ? "Add an exercise" : "Wrap up"}
+              aria-label={p.kind === "exercise" ? shownName(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].name : p.kind === "add" ? "Add exercise" : "Wrap up"}
               className={`wo-seg${i === page ? " now" : ""}${pageDone(p) ? " done" : pageStarted(p) ? " part" : ""}`}
               onClick={() => jumpTo(i)}
             >
@@ -326,7 +327,8 @@ export default function WorkoutScreen({
           <>
             <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
             <div className="wo-menu" role="menu" style={menuAt ? { top: menuAt.top, right: menuAt.right } : undefined}>
-              {day.gyms.length > 0 && (
+              {/* A free session (19 Oct, Alex): no Change gym, no Substitute today, no note for yourself; it is all the client's own already. */}
+              {day.gyms.length > 0 && !day.free && (
                 <button
                   type="button"
                   role="menuitem"
@@ -346,17 +348,19 @@ export default function WorkoutScreen({
                     <MenuIcon kind="warmup" />
                     Add a warm-up set
                   </button>
-                  <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("swap")}>
-                    <MenuIcon kind="swap" />
-                    {currentEx.swap ? "Change today's substitute" : "Substitute today"}
-                  </button>
+                  {!day.free && (
+                    <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("swap")}>
+                      <MenuIcon kind="swap" />
+                      {currentEx.swap ? "Change today's substitute" : "Substitute today"}
+                    </button>
+                  )}
                   {/* A photo or a video for the coach, unasked (9 Oct): a question about the form, the machine they found. */}
                   <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("media")}>
                     <MenuIcon kind="media" />
                     Send a photo or video
                   </button>
                   {/* The note for yourself fourth, after the swap (30 Sep); not on a substitute, whose note would be the replaced exercise's (17 Oct). */}
-                  {!currentEx.swap && (
+                  {!currentEx.swap && !day.free && (
                     <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("note")}>
                       <MenuIcon kind="note" />
                       {currentNote ? "Edit your note" : "Add a note for yourself"}
@@ -393,7 +397,7 @@ export default function WorkoutScreen({
                 coachPhoto={coachPhoto}
                 nextName={(() => {
                   const n = pages[nextOpen(i)];
-                  return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : n?.kind === "add" ? "Another exercise" : null;
+                  return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : n?.kind === "add" ? "Add exercise" : null;
                 })()}
                 onNext={(line) => {
                   if (line) setToast(line);
@@ -406,7 +410,6 @@ export default function WorkoutScreen({
             ) : p.kind === "add" ? (
               <FreeAddPage
                 library={library ?? []}
-                coachName={coachName}
                 count={day.exercises.length}
                 onAdd={async (pick) => {
                   if (!onAddExercise) return false;

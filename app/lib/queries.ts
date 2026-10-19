@@ -8735,22 +8735,24 @@ export function getFreeSessions(clientId: number, week: number): ProgramDay[] {
     .sort((a, b) => a.id - b.id);
 }
 
-/** An exercise added to a free session: the library's, or a name of the client's own. Three sets, no targets. */
+/** An exercise added to a free session: a library name, or one of the client's own. One set to start, no targets. */
 export function addFreeExercise(programDayId: number, v: { exerciseId?: number | null; name?: string | null }): WorkoutAssignment | null {
   const data = getData();
   const day = data.program_days.find((pd) => pd.id === programDayId);
   if (!day?.free) return null;
+  // Independent of the coach's library (19 Oct, Alex): a library pick is copied
+  // as its name only, so no demo, cue or note of the coach's comes with it.
   const coachId = getClient(day.client_id)?.coach_id ?? null;
   const lib = v.exerciseId != null ? data.exercises.find((e) => e.id === Number(v.exerciseId) && e.coach_id === coachId) ?? null : null;
-  const name = (v.name ?? "").trim().slice(0, 80);
-  if (!lib && !name) return null;
+  const name = (lib?.name ?? v.name ?? "").trim().slice(0, 80);
+  if (!name) return null;
   const order = data.workout_assignments.filter((wa) => wa.program_day_id === day.id).length;
   const row: WorkoutAssignment = {
     id: allocId("workout_assignments"),
     program_day_id: day.id,
-    exercise_id: lib?.id ?? 0,
+    exercise_id: 0,
     order_index: order,
-    sets: 3,
+    sets: 1,
     reps: "",
     target_weight_kg: null,
     rpe_target: null,
@@ -8761,7 +8763,7 @@ export function addFreeExercise(programDayId: number, v: { exerciseId?: number |
     note_kind: null,
     note_at: null,
     note_read: false,
-    ...(lib ? {} : { custom_name: name }),
+    custom_name: name,
   };
   data.workout_assignments.push(row);
   persist();
