@@ -76,15 +76,19 @@ export default function FreeAddPage({
             </button>
           ))}
           {!exact && (
-            <>
-              <button type="button" className="fa-row fa-create" onClick={create} disabled={busy}>
-                <span className="fa-row-name">Create &ldquo;{q.trim()}&rdquo;</span>
-              </button>
-              <button type="button" className="fa-row fa-create" onClick={createCardio} disabled={busy}>
-                <span className="fa-row-name">Create &ldquo;{q.trim()}&rdquo;</span>
-                <small className="fa-tag">Cardio</small>
-              </button>
-            </>
+            // One row for one's own (19 Oct, Alex: two "Create" rows read as the
+            // same thing twice): the name, then which kind, Strength or Cardio.
+            <div className="fa-row fa-create">
+              <span className="fa-row-name">Create &ldquo;{q.trim()}&rdquo;</span>
+              <span className="fa-kinds" role="group" aria-label={`Create ${q.trim()} as`}>
+                <button type="button" className="fa-kind" onClick={create} disabled={busy}>
+                  Strength
+                </button>
+                <button type="button" className="fa-kind cardio" onClick={createCardio} disabled={busy}>
+                  Cardio
+                </button>
+              </span>
+            </div>
           )}
         </div>
       )}

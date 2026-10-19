@@ -20415,3 +20415,10 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .fa-row.fa-row, .fa-row.fa-row:last-child { min-height: 46px; border: 0; }
 .fa-row.fa-row:active { opacity: 0.6; }
 .fa-tag.fa-tag { margin-left: 0; flex: none; }
+/* One's own exercise: one row, the kind picked on its right (19 Oct): two hairline pills, Strength in ink, Cardio in its rose. */
+.fa-row.fa-create { cursor: default; }
+.fa-kinds { flex: none; display: inline-flex; gap: 6px; }
+.fa-kind { height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; cursor: pointer; }
+.fa-kind.cardio { color: #a3366b; }
+.fa-kind:active { background: #F5F6F8; }
+.fa-kind:disabled { opacity: 0.55; cursor: default; }
