@@ -696,7 +696,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             act(() => reorderSessionsAction(clientId, weekNo(viewIdx), ids as number[]), "Session order changed");
           }}
         >
-        {sessions.map((s, i) => {
+        {sessions.map((s) => {
           const p = pend(s.id);
           const isOpen = open === s.id;
           const name = p.renamed ?? s.name;
@@ -738,9 +738,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               >
                 <span className="rd-grip trn-grip" {...sessionGrip}>
                   <GripIcon />
-                </span>
-                <span className="trn-disc" aria-hidden="true">
-                  {i + 1}
                 </span>
                 <span className="trn-row-name">
                   {isOpen ? <SessionName value={name} onChange={(v) => patch(s.id, (q) => ({ ...q, renamed: v === s.name ? null : v }))} /> : <b>{name}</b>}

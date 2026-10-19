@@ -19374,7 +19374,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .tr-body .tr-days { margin-top: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
 .tr-body .tr-days-top { padding: 22px 12px 18px; }
 .tr-body .tr-ring svg circle:first-child { stroke: #E1E5EB; }
-.tr-body .tr-note, .tr-body .tr-note-saved, .tr-body .tr-note-writing { margin: 0 12px; padding-left: 0; padding-right: 0; border-top: 1px solid #E1E5EB; background: none; }
+.tr-body .tr-note, .tr-body .tr-note-saved, .tr-body .tr-note-writing { margin: 0 12px; padding-left: 0; padding-right: 0; border-top: 0; background: none; }
 .tr-body .tr-note-prompt { padding-left: 0; padding-right: 0; background: none; }
 .tr-body .tr-note-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
 .tr-body .tr-note-text { font-size: 14px; font-weight: 500; color: #3a4250; }

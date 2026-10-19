@@ -19,20 +19,26 @@ import { ConfirmDialog, type DraftAnswered, type DraftProgram } from "./Training
 
 const preview = (s: string) => (s.length > 80 ? `${s.slice(0, 80).trimEnd()}…` : s);
 
-// ---- Goals and note: two pills, one pop-over under them.
+// ---- Goals and note: two pills, one pop-over under them. The pop-over
+// works as the client's note does (20 Oct, Alex): a clean line to write on,
+// Cancel and Save only once something changed. The goals are three lines,
+// one a goal, as the client's Home shows them under the phase.
+
+const fill = (g: string[]) => Array.from({ length: PHASE_OBJECTIVES_MAX }, (_, i) => g[i] ?? "");
 
 export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName: string; phaseId: number; goals: string[]; note: string }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [open, setOpen] = useState<"goals" | "note" | null>(null);
   const [text, setText] = useState("");
-  // Esc, an outside click or ✕ with the text changed asks first.
+  const [rows, setRows] = useState<string[]>(fill([]));
+  // Esc, an outside click or ✕ with something changed asks first.
   const [asking, setAsking] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
-  const savedGoals = goals.map((g) => g.trim()).filter(Boolean).join("\n");
+  const box = useRef<HTMLTextAreaElement>(null);
+  const savedGoals = goals.map((g) => g.trim()).filter(Boolean);
   const savedNote = note.trim();
-  const saved = open === "goals" ? savedGoals : savedNote;
-  const changed = open != null && text.trim() !== saved;
+  const changed = open === "goals" ? rows.map((g) => g.trim()).join("\n") !== fill(savedGoals).join("\n") : open === "note" && text.trim() !== savedNote;
   const tryClose = () => (changed ? setAsking(true) : setOpen(null));
   const closeRef = useRef(tryClose);
   useEffect(() => {
@@ -53,11 +59,19 @@ export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName:
       document.removeEventListener("keydown", key);
     };
   }, [open]);
+  // The note's line grows with the text.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = "0";
+    el.style.height = `${Math.max(el.scrollHeight, 30)}px`;
+  }, [text, open]);
   const openIt = (k: "goals" | "note") => {
     if (open === k) return tryClose();
     if (open && changed) return setAsking(true);
     setOpen(k);
-    setText(k === "goals" ? savedGoals : savedNote);
+    setText(savedNote);
+    setRows(fill(savedGoals));
     setAsking(false);
   };
   const save = () => {
@@ -65,7 +79,7 @@ export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName:
     setOpen(null);
     startTransition(async () => {
       if (was === "goals") {
-        const lines = text.split("\n").map((g) => g.trim().slice(0, PHASE_OBJECTIVE_CHARS)).filter(Boolean).slice(0, PHASE_OBJECTIVES_MAX);
+        const lines = rows.map((g) => g.trim().slice(0, PHASE_OBJECTIVE_CHARS)).filter(Boolean);
         await setPhaseGoalsAction(phaseId, lines);
         toast.success("Saved", { description: lines.length ? `Phase goals · ${firstName} sees them on Home` : "Phase goals cleared" });
       } else {
@@ -76,17 +90,16 @@ export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName:
     });
   };
   const pill = (k: "goals" | "note") => {
-    const value = k === "goals" ? savedGoals : savedNote;
+    const value = k === "goals" ? savedGoals.join(" · ") : savedNote;
     const set = !!value;
     const name = k === "goals" ? "Phase goals" : `Note to ${firstName}`;
     return (
       <button type="button" className={`trn-pill${set ? " set" : ""}${open === k ? " on" : ""}`} aria-haspopup="dialog" aria-expanded={open === k} aria-label={`${name}, ${set ? "set" : "not set"}`} onClick={() => openIt(k)}>
         {k === "goals" ? <TargetIcon /> : <ChatIcon />}
         <span>{set ? (k === "goals" ? "Goals · set" : "Note · set") : name}</span>
-        {!set && <b className="trn-pill-add">Add</b>}
         {set && open == null && (
           <span className="trn-tip" role="tooltip">
-            {preview(value.replace(/\n/g, " · "))}
+            {preview(value)}
           </span>
         )}
       </button>
@@ -99,25 +112,51 @@ export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName:
       {open && (
         <div className="trn-pop" role="dialog" aria-label={open === "goals" ? "Phase goals" : `Note to ${firstName}`}>
           <div className="trn-pop-head">
-            <h3>{open === "goals" ? "Phase goals" : `Note to ${firstName}`}</h3>
+            <span className="trn-pop-label">{open === "goals" ? "Phase goals" : `A note to ${firstName}`}</span>
             <button type="button" className="trn-pop-x" aria-label="Close" onClick={tryClose}>
               ✕
             </button>
           </div>
-          <p className="trn-pop-hint">{open === "goals" ? `Up to three, one a line. ${firstName} sees them under the phase on Home.` : `${firstName} reads it at the top of their Training tab.`}</p>
-          <textarea
-            className="trn-pop-text"
-            value={text}
-            autoFocus
-            maxLength={open === "goals" ? PHASE_OBJECTIVES_MAX * (PHASE_OBJECTIVE_CHARS + 1) : 1000}
-            onChange={(e) => setText(open === "goals" ? e.target.value.split("\n").slice(0, PHASE_OBJECTIVES_MAX).join("\n") : e.target.value)}
-            placeholder={open === "goals" ? "Squat 100 kg for 5\nFour sessions every week" : `What ${firstName} should keep in mind: what's going well, what to push, what to watch.`}
-            aria-label={open === "goals" ? "Phase goals" : `Note to ${firstName}`}
-          />
+          {open === "goals" ? (
+            <ul className="trn-goals">
+              {rows.map((g, i) => (
+                <li key={i}>
+                  <i aria-hidden="true" />
+                  <input
+                    value={g}
+                    autoFocus={i === 0}
+                    maxLength={PHASE_OBJECTIVE_CHARS}
+                    onChange={(e) => setRows((r) => r.map((x, j) => (j === i ? e.target.value : x)))}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      e.preventDefault();
+                      const next = e.currentTarget.closest("li")?.nextElementSibling?.querySelector("input");
+                      if (next) next.focus();
+                      else if (changed) save();
+                    }}
+                    placeholder={i === 0 ? "What this phase is for" : "Another goal (optional)"}
+                    aria-label={`Goal ${i + 1}`}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <textarea
+              ref={box}
+              className="trn-pop-line"
+              value={text}
+              autoFocus
+              rows={1}
+              maxLength={1000}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={`What ${firstName} should keep in mind this phase`}
+              aria-label={`Note to ${firstName}`}
+            />
+          )}
           {asking ? (
             <div className="trn-pop-foot">
               <span className="trn-pop-ask">Discard your changes?</span>
-              <button type="button" className="trn-btn" onClick={() => setAsking(false)}>
+              <button type="button" className="trn-btn ghost" onClick={() => setAsking(false)}>
                 Keep editing
               </button>
               <button
@@ -132,14 +171,16 @@ export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName:
               </button>
             </div>
           ) : (
-            <div className="trn-pop-foot">
-              <button type="button" className="trn-btn" onClick={tryClose}>
-                Cancel
-              </button>
-              <button type="button" className="trn-btn primary" disabled={!changed} onClick={save}>
-                Save
-              </button>
-            </div>
+            changed && (
+              <div className="trn-pop-foot">
+                <button type="button" className="trn-btn ghost" onClick={() => setOpen(null)}>
+                  Cancel
+                </button>
+                <button type="button" className="trn-btn primary" onClick={save}>
+                  Save
+                </button>
+              </div>
+            )
           )}
         </div>
       )}
@@ -179,8 +220,10 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
           >
             <span className="trn-week-top">
               <span className="trn-week-name">Week {w.index}</span>
+              {/* Black, a green pulse on its left (20 Oct, Alex). */}
               {now && (
                 <span className="trn-now" aria-hidden="true">
+                  <i className="trn-pulse" />
                   NOW
                 </span>
               )}
