@@ -260,3 +260,11 @@
 @media (prefers-reduced-motion: reduce) {
   .evd, .evd[data-state="closed"] { animation: none; }
 }
+
+/* By state (19 Oct, Alex): only a running phase at full strength. One still to come is faint with a dashed edge, blue when it is sent and waiting for its day (scheduled), rust when it is a draft not sent. Stacked classes so these win over the rules above and the hairline preview's. */
+.pov-bar.pov-bar.upcoming { background: rgba(var(--rgb), 0.05); box-shadow: none; border: 1.5px dashed #2f5d8f; color: rgba(var(--rgb), 0.85); }
+.pov-bar.pov-bar.draft { background: rgba(var(--rgb), 0.04); box-shadow: none; border: 1.5px dashed #b8471f; color: rgba(var(--rgb), 0.8); }
+html.look-hl .pov-bar.pov-bar.upcoming,
+html.look-hl .pov-bar.pov-bar.draft { border-width: 1px; background: #fff; box-shadow: none; }
+.pov-legend i.sched { border: 1.5px dashed #2f5d8f; background: rgba(47, 93, 143, 0.05); }
+.pov-legend.pov-legend i.draft { border-color: #b8471f; background: rgba(184, 71, 31, 0.04); }

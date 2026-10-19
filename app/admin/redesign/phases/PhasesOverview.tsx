@@ -253,6 +253,9 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
               <i className="run" /> Running
             </span>
             <span>
+              <i className="sched" /> Scheduled
+            </span>
+            <span>
               <i className="draft" /> Draft
             </span>
             <span>
