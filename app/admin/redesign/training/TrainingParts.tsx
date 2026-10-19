@@ -145,7 +145,8 @@ export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName:
           ) : (
             <textarea
               ref={box}
-              className="trn-pop-line"
+              // The line under it only once something is typed: it separates the text from Cancel and Save (20 Oct, Alex).
+              className={`trn-pop-line${changed ? " typed" : ""}`}
               value={text}
               autoFocus
               rows={1}
