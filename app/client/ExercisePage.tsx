@@ -575,7 +575,7 @@ export default function ExercisePage({
               const rpe = shownOf(row, "rpe");
               return (
                 <Fold key={row.id} state={state}>
-                <button type="button" className={`lw-row${row.saved ? " done" : " upcoming"}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" ? " extra" : ""}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
+                <button type="button" className={`lw-row${row.saved ? " done" : " upcoming"}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" && !free ? " extra" : ""}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
                   <span className="lw-row-badge" aria-hidden="true">
                     {row.saved ? (
                       <svg viewBox="0 0 24 24">
@@ -595,7 +595,7 @@ export default function ExercisePage({
             const busy = row.kind === "work" && saving.includes(row.n);
             return (
               <Fold key={row.id} state={state}>
-              <div className={`lw-open${row.saved ? " saved" : ""}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" ? " extra" : ""}`}>
+              <div className={`lw-open${row.saved ? " saved" : ""}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" && !free ? " extra" : ""}`}>
                 <div className="lw-open-head">
                   <button type="button" className="lw-badge" onClick={() => acceptAll(row)} aria-label={`Log ${row.kind === "warm" ? "warm-up" : "set"} ${row.n} as planned`} title="Log as planned">
                     {/* The ring as a vector (19 Oct): an inset shadow on a half-pixel spot came out thicker on one side on iOS. */}
