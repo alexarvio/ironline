@@ -369,7 +369,7 @@ import { COACH_PROFILE_LIMITS } from "./coachProfileView";
 import { deleteUpload, keyOf, putUpload } from "./storage";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
-import { getPhotoCadence, getPhotoInstructions, getPhotoStartDate, listPhotoSlots, listPhotoUploads, photoSheetFor } from "./queries";
+import { clearPhotoOpenSheet, getPhotoCadence, getPhotoInstructions, getPhotoStartDate, listActivePhotoSlots, listPhotoSlots, listPhotoUploads, photoSheetFor, photoSheetForClient, resetPhotoOpenSheet } from "./queries";
 import { dayMonth } from "./dayMonth";
 import { isTimezone, SERVER_TZ, tzShort, zonedToUtc } from "./timezones";
 import { inZone } from "./viewZone";
@@ -1240,6 +1240,8 @@ export async function addPhotoSlotAction(formData: FormData) {
   if (!(await coachForClient(clientId))) return;
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
+  // The first angle asked for: the schedule starts afresh from now (nothing held from before).
+  if (listActivePhotoSlots(clientId).length === 0) clearPhotoOpenSheet(clientId);
   addPhotoSlot(clientId, label);
   noteChange(clientId, `Changed your progress pictures: Added a ${label} picture`, { tab: "home", label: "See your tasks", key: "photos", detail: `Added a ${label} picture` });
   revalidatePath("/admin");
@@ -1283,6 +1285,7 @@ export async function setPhotoCadenceAction(formData: FormData) {
   const raw = String(formData.get("cadence") || "weekly");
   const cadence = (["weekly", "biweekly", "monthly", "sixweekly"] as const).find((c) => c === raw);
   if (!cadence) return;
+  if (getPhotoCadence(clientId) !== cadence) resetPhotoOpenSheet(clientId, localDateStr());
   setPhotoCadence(clientId, cadence);
   noteChange(clientId, `Changed your progress pictures: Now every ${CADENCE_WORDS[cadence]}`, { tab: "home", label: "See your tasks", key: "photos", detail: `Now every ${CADENCE_WORDS[cadence]}` });
   revalidatePath("/admin");
@@ -1290,7 +1293,9 @@ export async function setPhotoCadenceAction(formData: FormData) {
 }
 
 export async function setPhotoSlotPausedAction(id: number, paused: boolean) {
-  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForPhotoSlot(id)))) return;
+  const clientId = getClientIdForPhotoSlot(id);
+  if (!Number.isInteger(id) || !(await coachForClient(clientId))) return;
+  if (!paused && clientId != null && listActivePhotoSlots(clientId).length === 0) clearPhotoOpenSheet(clientId);
   setPhotoSlotPaused(id, paused === true);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1319,9 +1324,11 @@ export async function savePhotoScheduleAction(
   // one note a day of its own (not joined onto the angles' changes).
   const wordsFor = (c: keyof typeof CADENCE_WORDS, start: string | null, instr: string) => `Every ${CADENCE_WORDS[c]}${start ? ` from ${dayMonth(start)}` : ""}${instr.trim() ? ", with instructions" : ""}`;
   const before = wordsFor(getPhotoCadence(clientId), getPhotoStartDate(clientId), getPhotoInstructions(clientId) ?? "");
+  const moved = getPhotoCadence(clientId) !== cadence || (getPhotoStartDate(clientId) ?? null) !== startDate;
   setPhotoCadence(clientId, cadence);
   setPhotoStartDate(clientId, startDate);
   setPhotoInstructions(clientId, String(schedule.instructions ?? "").slice(0, 600));
+  if (moved) resetPhotoOpenSheet(clientId, localDateStr());
   const words = wordsFor(cadence, startDate, String(schedule.instructions ?? ""));
   if (words !== before) noteChange(clientId, `Changed your progress pictures: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
   revalidatePath("/admin");
@@ -1347,6 +1354,7 @@ export async function savePhotoSetupAction(clientId: number, setup: PhotoSetup):
   if (labels.some((l) => !l)) return { ok: false, error: "Every angle needs a name" };
   if (new Set(labels.map((l) => l.toLowerCase())).size !== labels.length) return { ok: false, error: "Two angles have the same name" };
   const mine = new Map(listPhotoSlots(clientId).map((s) => [s.id, s]));
+  const askedBefore = listActivePhotoSlots(clientId).length;
   // Only this client's angles, and only with the photos the coach was shown.
   const removed = (setup.removed ?? []).filter((r) => mine.has(r.id) && !setup.angles.some((a) => a.id === r.id));
   // One short, and every removed angle's count goes back, so one more round settles it.
@@ -1356,9 +1364,12 @@ export async function savePhotoSetupAction(clientId: number, setup: PhotoSetup):
   // The schedule, and the client's note when its words change (one note a day of its own).
   const wordsFor = (c: keyof typeof CADENCE_WORDS, start: string | null, instr: string) => `Every ${CADENCE_WORDS[c]}${start ? ` from ${dayMonth(start)}` : ""}${instr.trim() ? ", with instructions" : ""}`;
   const before = wordsFor(getPhotoCadence(clientId), getPhotoStartDate(clientId), getPhotoInstructions(clientId) ?? "");
+  const moved = getPhotoCadence(clientId) !== cadence || (getPhotoStartDate(clientId) ?? null) !== startDate;
   setPhotoCadence(clientId, cadence);
   setPhotoStartDate(clientId, startDate);
   setPhotoInstructions(clientId, String(setup.instructions ?? "").slice(0, 600));
+  // A new start or rhythm: the calendar decides which sheet is open again (21 Oct).
+  if (moved) resetPhotoOpenSheet(clientId, localDateStr());
   const words = wordsFor(cadence, startDate, String(setup.instructions ?? ""));
   if (words !== before) noteChange(clientId, `Changed your progress pictures: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
 
@@ -1385,6 +1396,8 @@ export async function savePhotoSetupAction(clientId: number, setup: PhotoSetup):
     }
   });
   reorderPhotoSlots(clientId, order);
+  // The first angle asked for: the schedule starts afresh from now.
+  if (askedBefore === 0 && setup.angles.some((a) => !a.paused)) clearPhotoOpenSheet(clientId);
   if (said.length) noteChange(clientId, `Changed your progress pictures: ${said.join(", ")}`, { tab: "home", label: "See your tasks", key: "photos", detail: said.join(", ") });
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1435,6 +1448,11 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   // photo can't be filed into another client's sheet.
   if (getClientIdForPhotoSlot(slotId) !== clientId) return;
 
+  // Only into the sheet the client's screen shows (it may have closed meanwhile), never an angle no longer asked for.
+  const sheet = photoSheetForClient(clientId, localDateStr());
+  const sent = String(formData.get("period") ?? "");
+  if (!sheet || (sent && sent !== sheet)) throw new Error("That sheet has closed");
+  if (!listActivePhotoSlots(clientId).some((s) => s.id === slotId)) throw new Error("That angle isn't asked for any more");
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return;
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -1449,6 +1467,8 @@ export async function removeProgressPhotoAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const slotId = Number(formData.get("slotId"));
   if (getClientIdForPhotoSlot(slotId) !== clientId) return;
+  const sent = String(formData.get("period") ?? "");
+  if (sent && sent !== photoSheetForClient(clientId, localDateStr())) throw new Error("That sheet has closed");
   await deleteUpload(removePhotoUpload(clientId, slotId));
   revalidatePath("/admin");
   revalidatePath("/client");

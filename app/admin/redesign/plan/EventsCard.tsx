@@ -8,12 +8,13 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { addClientEventAction, deleteClientEventAction, updateClientEventAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { ChevronDownIcon, PlusIcon } from "../../../components/icons";
+import { PlusIcon } from "../../../components/icons";
 import { gridFor, MonthRange } from "./PlanDraft";
 import DateText from "../DateText";
 import { dayMonth } from "../../../lib/dayMonth";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
 import { SepJoin } from "../Sep";
+import { Fold } from "../Fold";
 
 // The New event dialog after the client's sheet and the phase dialog (10 Oct):
 // a category pill in the title, category tiles with icons, the dates as pills.
@@ -414,10 +415,8 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
       <div className={`rq-evlog${logOpen ? " open" : ""}`}>
         <div className="rq-evlog-head">
           <button type="button" className="rq-evlog-toggle" onClick={() => setLogOpen((o) => !o)} aria-expanded={logOpen}>
-            <span className={`rd-chev${logOpen ? " open" : ""}`} aria-hidden="true">
-              <ChevronDownIcon />
-            </span>
             <span className="rd-eyebrow">Log</span>
+            <Fold open={logOpen} />
           </button>
         </div>
         {!logOpen ? null : listed.length === 0 ? (

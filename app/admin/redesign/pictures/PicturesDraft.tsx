@@ -4,11 +4,13 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransitio
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { remindProgressPicturesAction, savePhotoSetupAction, sendChatMessageAction } from "../../../lib/actions";
+import { addPhotoSlotAction, remindProgressPicturesAction, removePhotoAngleAction, savePhotoSetupAction, sendChatMessageAction, setPhotoSlotPausedAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import type { PhaseTrack } from "../../../lib/db";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { SepJoin } from "../Sep";
+import CompareDialog from "./CompareDialog";
+import { Fold } from "../Fold";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
 import { CameraIcon, ChatIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
@@ -62,11 +64,13 @@ export type DraftPictures = {
   nextSheet: string | null;
   /** The start date, else the oldest sheet's day. */
   since: string | null;
+  /** Nothing open: the next sheet, on its own day, its places empty (21 Oct, Alex). */
+  upcoming: Sheet | null;
   /** The coach already reminded the client about the open sheet today. */
   remindedToday: boolean;
 };
 
-type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "photo"; period: string; slotId: number } | { kind: "setup" } | { kind: "compare"; periods: string[] } | null;
+type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "photo"; period: string; slotId: number; /** Opened from Compare: closing it goes back there. */ back?: string[] } | { kind: "setup" } | { kind: "compare"; periods: string[] } | null;
 
 const ROWS_SHOWN = 12;
 const REPEATS: { value: Cadence; label: string }[] = [
@@ -87,7 +91,6 @@ const fd = (o: Record<string, string | number | null | undefined>) => {
 const stateOf = (sh: Sheet): { text: string; tone: "good" | "open" | "quiet" } =>
   sh.complete ? { text: "Complete", tone: "good" } : sh.live ? { text: sh.inCount === 0 ? "Open" : `${sh.inCount} of ${sh.total} in`, tone: "open" } : { text: `${sh.total - sh.inCount} missing`, tone: "quiet" };
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const kgChange = (d: number) => `${d > 0 ? "+" : "−"}${Math.abs(d).toFixed(1)} kg`;
 
 type Props = { clientId: number; firstName: string; plan: DraftPictures };
 
@@ -102,7 +105,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
   const reRead = () => startRefresh(() => router.refresh());
   const q = useSaveQueue(reRead);
   const [dlg, setDlg] = useState<Dlg>(null);
-  const close = () => setDlg(null);
+  // A photo opened from Compare goes back to Compare when it closes.
+  const close = () => setDlg((d) => (d?.kind === "photo" && d.back ? { kind: "compare", periods: d.back } : null));
 
   // ---- A comment typed on the sheet, not sent yet: leaving the page asks first.
   const [commentTyped, setCommentTyped] = useState(false);
@@ -111,6 +115,24 @@ function Pictures({ clientId, firstName, plan }: Props) {
   // ---- Sheets, newest first. The top of the tab is the newest alone (21 Oct, Alex): the one open now, or the last one.
   const sheets = plan.sheets;
   const latest = sheets[0] ?? null;
+  // The top: the sheet open now (until every photo is in), else the next one on its own day (21 Oct, Alex).
+  const openSheet = sheets.find((s) => s.live) ?? null;
+  const top = openSheet ?? plan.upcoming;
+  // All sheets: the closed ones; the open one sits at the top until it is done.
+  const closed = sheets.filter((s) => !s.live);
+  // An empty place taken off the top (×): gone at once, saved behind it.
+  const [dropped, setDropped] = useState<number[]>([]);
+  const topCells = top ? top.cells.filter((c) => !dropped.includes(c.slotId)) : [];
+  const dropAngle = (slotId: number) => {
+    const slot = plan.slots.find((x) => x.id === slotId);
+    setDropped((xs) => [...xs, slotId]);
+    q.save(async () => {
+      // Never asked for yet: it goes. With photos on earlier sheets: paused, so they stay (Sheet setup can resume it).
+      const r = slot && slot.count === 0 ? await removePhotoAngleAction(slotId, 0) : undefined;
+      if (!r?.removed) await setPhotoSlotPausedAction(slotId, true);
+      return true;
+    });
+  };
   const oldest = sheets[sheets.length - 1] ?? null;
   const [all, setAll] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -118,14 +140,28 @@ function Pictures({ clientId, firstName, plan }: Props) {
     setAll(true);
     requestAnimationFrame(() => tableRef.current?.querySelectorAll<HTMLButtonElement>(".rp-trow")[ROWS_SHOWN]?.focus());
   };
-  // Compare: the first sheet beside the newest; from a row, that sheet beside the newest.
+  // + Add on the sheet (21 Oct, Alex): a new angle from the same search, saved at once; faded until the re-read brings it.
+  const [addingTile, setAddingTile] = useState(false);
+  const addTile = useRef<HTMLButtonElement>(null);
+  const [pendingAngles, setPendingAngles] = useState<string[]>([]);
+  const shownPending = pendingAngles.filter((l) => !plan.slots.some((x) => x.label.trim().toLowerCase() === l.toLowerCase()));
+  const quickAdd = (label: string) => {
+    setPendingAngles((xs) => [...xs, label]);
+    q.save(async () => {
+      await addPhotoSlotAction(fd({ clientId, label }));
+      return true;
+    });
+  };
+  // A row of All sheets open on its photos, one at a time.
+  const [openRow, setOpenRow] = useState<string | null>(null);
+  // Compare: the first sheet beside the newest.
   const openCompare = (period?: string) => {
     if (!latest) return;
     const other = period && period !== latest.period ? period : oldest && oldest.period !== latest.period ? oldest.period : null;
     setDlg({ kind: "compare", periods: other ? [other, latest.period] : [latest.period] });
   };
   const [remindedNow, setRemindedNow] = useState<string | null>(null);
-  const reminded = !!latest && latest.live && (plan.remindedToday || remindedNow === latest.period);
+  const reminded = !!openSheet && (plan.remindedToday || remindedNow === openSheet.period);
   const remind = (sh: Sheet) => {
     setRemindedNow(sh.period);
     q.save(async () => {
@@ -139,8 +175,9 @@ function Pictures({ clientId, firstName, plan }: Props) {
   const openChat = useOpenChat();
   const message = (label: string, link: MessageLink) => (openChat ? openChat({ area: "Lifestyle", label, link }) : setDlg({ kind: "message", label, link }));
   const photoSheet = dlg?.kind === "photo" ? (sheets.find((x) => x.period === dlg.period) ?? null) : null;
-  const shownRows = all ? sheets : sheets.slice(0, ROWS_SHOWN);
-  const cols = Math.max(1, latest?.cells.length ?? 0);
+  const shownRows = all ? closed : closed.slice(0, ROWS_SHOWN);
+  // The sheet's tiles: its angles, any just added, and + Add.
+  const cols = topCells.length + shownPending.length + 1;
 
   return (
     <div className="rd trn rls rp">
@@ -150,8 +187,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
           <span className="trn-eyebrow">Progress pictures</span>
           <div className="trn-name-row">
             <h1 className="trn-name">{firstName}&rsquo;s pictures</h1>
-            {latest?.live ? (
-              <span className="trn-status rp-tag open">{latest.title} open</span>
+            {openSheet ? (
+              <span className="trn-status rp-tag open">{openSheet.title} open</span>
             ) : plan.nextSheet ? (
               <span className="trn-status rp-tag next">Next {dayMonth(plan.nextSheet)}</span>
             ) : null}
@@ -191,93 +228,143 @@ function Pictures({ clientId, firstName, plan }: Props) {
         </div>
       </header>
 
-      {!latest ? (
-        <div className="rp-card rp-empty">No sheets yet</div>
+      {!top ? (
+        sheets.length === 0 && <div className="rp-card rp-empty">No sheets yet</div>
       ) : (
-        <>
-          {/* ---- The newest sheet: what came in (empty places while it is open), the weigh-in, the phases, the notes. */}
-          <section className="rp-focus" aria-label={latest.title}>
-            <div className="rp-selhead">
-              <h2>{latest.title}</h2>
-              <span className="rp-selmeta">{latest.dateLabel}</span>
-              {sheets.length > 1 && (
-                <div className="rp-selright">
-                  <button type="button" className="trn-btn rp-cmp-btn" aria-haspopup="dialog" onClick={() => openCompare()}>
-                    <CompareIcon /> Compare
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="rp-card rp-sheet">
-              <div className="rp-grid" style={{ "--rp-cols": cols, "--rp-cols-narrow": Math.min(cols, 3) } as React.CSSProperties}>
-                {latest.cells.map((c) => {
-                  const status = c.src ? "in" : latest.live ? "waiting" : "missing";
-                  return (
-                    <div key={c.slotId} className="rp-slot">
-                      <Tile cell={c} sheet={latest} label={c.label} tag={c.shotDay} emptyText={latest.live ? "Waiting" : "Missing"} onOpen={(slotId) => setDlg({ kind: "photo", period: latest.period, slotId })} />
-                      <div className="rp-cap">
-                        <b>{c.label}</b>
-                        <span className={`rp-cap-state ${status}`}>{status === "in" ? "In" : status === "waiting" ? "Waiting" : "Missing"}</span>
-                      </div>
-                    </div>
-                  );
-                })}
+        // ---- The top (21 Oct, Alex): the sheet open now, until every photo is in; then the next one, on its own day,
+        // its places empty, where its angles are added (+ Add) and taken off (× on an empty place).
+        <section className="rp-focus" aria-label={top.title}>
+          <div className="rp-selhead">
+            <h2>{top.title}</h2>
+            <span className="rp-selmeta">{top.dateLabel}</span>
+            {sheets.length > 1 && (
+              <div className="rp-selright">
+                <button type="button" className="trn-btn rp-cmp-btn" aria-haspopup="dialog" onClick={() => openCompare()}>
+                  <CompareIcon /> Compare
+                </button>
               </div>
-              <div className="rp-foot">
-                <span className="rp-weight">
-                  <span className="rp-label">Weight</span>
-                  <b>{latest.weight == null ? "—" : `${latest.weight} kg`}</b>
-                </span>
-                <span className="rp-div" aria-hidden="true" />
-                <span className="rp-phases">
-                  <PhaseTags phases={latest.phases} />
-                </span>
-                {/* Reminded keeps the focus (aria-disabled, not disabled): the keyboard isn't dropped to the page. */}
-                {latest.live && !latest.complete && (
-                  <span className="rp-acts">
-                    <button type="button" className="rp-pill" aria-disabled={reminded || undefined} onClick={() => !reminded && remind(latest)}>
-                      {reminded ? "Reminded" : `Remind ${firstName}`}
-                    </button>
-                  </span>
+            )}
+          </div>
+          <div className="rp-card rp-sheet">
+            <div className="rp-grid" style={{ "--rp-cols": cols, "--rp-cols-narrow": Math.min(cols, 3) } as React.CSSProperties}>
+              {topCells.map((c) => {
+                const status = c.src ? "in" : top.live ? "waiting" : null;
+                return (
+                  <div key={c.slotId} className="rp-slot">
+                    <div className="rp-tilewrap">
+                      <Tile cell={c} sheet={top} label={c.label} tag={c.shotDay} emptyText={top.live ? "Waiting" : ""} onOpen={(slotId) => setDlg({ kind: "photo", period: top.period, slotId })} />
+                      {/* An empty place can go: the client isn't asked for it any more (its earlier photos stay). */}
+                      {!c.src && (
+                        <button type="button" className="rp-drop" onClick={() => dropAngle(c.slotId)} aria-label={`Stop asking for ${c.label}`} title="Take it off">
+                          ×
+                        </button>
+                      )}
+                    </div>
+                    <div className="rp-cap">
+                      <b>{c.label}</b>
+                      {status && <span className={`rp-cap-state ${status}`}>{status === "in" ? "In" : "Waiting"}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              {shownPending.map((label) => (
+                <div key={`new-${label}`} className="rp-slot trn-incoming">
+                  <Tile cell={null} sheet={top} label={label} tag={null} emptyText={top.live ? "Waiting" : ""} onOpen={() => {}} />
+                  <div className="rp-cap">
+                    <b>{label}</b>
+                  </div>
+                </div>
+              ))}
+              <div className="rp-slot">
+                {addingTile ? (
+                  <AddAngle
+                    tile
+                    have={[...plan.slots.map((x) => x.label.trim().toLowerCase()), ...shownPending.map((l) => l.toLowerCase())]}
+                    onAdd={(label) => {
+                      quickAdd(label);
+                      setAddingTile(false);
+                    }}
+                    onClose={(refocus) => {
+                      setAddingTile(false);
+                      if (refocus) requestAnimationFrame(() => addTile.current?.focus());
+                    }}
+                  />
+                ) : (
+                  <button ref={addTile} type="button" className="rp-tile rp-addtile" onClick={() => setAddingTile(true)} aria-label="Add an angle">
+                    <span>
+                      <PlusIcon /> Add
+                    </span>
+                  </button>
                 )}
               </div>
-              {/* A comment on the sheet goes to the chat, linked to it (21 Oct, Alex): no notes of its own. */}
+            </div>
+            <div className="rp-foot">
+              {top.live && (
+                <>
+                  <span className="rp-weight">
+                    <span className="rp-label">Weight</span>
+                    <b>{top.weight == null ? "—" : `${top.weight} kg`}</b>
+                  </span>
+                  <span className="rp-div" aria-hidden="true" />
+                </>
+              )}
+              <span className="rp-phases">
+                <PhaseTags phases={top.phases} />
+              </span>
+              {/* Reminded keeps the focus (aria-disabled, not disabled): the keyboard isn't dropped to the page. */}
+              {top.live && !top.complete && (
+                <span className="rp-acts">
+                  <button type="button" className="rp-pill" aria-disabled={reminded || undefined} onClick={() => !reminded && remind(top)}>
+                    {reminded ? "Reminded" : `Remind ${firstName}`}
+                  </button>
+                </span>
+              )}
+            </div>
+            {/* A comment on the open sheet goes to the chat, linked to it (21 Oct, Alex): no notes of its own. */}
+            {top.live && (
               <SheetComment
                 firstName={firstName}
                 onTyped={setCommentTyped}
                 onSend={async (text) => {
                   const f = fd({ clientId, text });
-                  f.set("link", JSON.stringify({ kind: "photos", period: latest.period }));
+                  f.set("link", JSON.stringify({ kind: "photos", period: top.period }));
                   await sendChatMessageAction(f);
                   reRead();
-                  toast.success("Sent", { description: `In the chat, linked to ${latest.title}.` });
+                  toast.success("Sent", { description: `In the chat, linked to ${top.title}.` });
                 }}
               />
-            </div>
-          </section>
+            )}
+          </div>
+        </section>
+      )}
 
-          {/* ---- All sheets, newest first: a log, the rows together as every log in the app (21 Oct, Alex). A row opens Compare on it. */}
-          <section className="rls-section">
-            <div className="trn-weekhead">
-              <div>
-                <h2>All sheets</h2>
-              </div>
+      {/* ---- All sheets, newest first, the closed ones (the open one is at the top until it is done): a log, the rows
+          together as every log in the app (21 Oct, Alex). A row opens in place on its photos (the chevron after its title). */}
+      {closed.length > 0 && (
+        <section className="rls-section">
+          <div className="trn-weekhead">
+            <div>
+              <h2>All sheets</h2>
             </div>
-            <div ref={tableRef} className="rp-card rp-table">
-              <div className="rp-thead" aria-hidden="true">
-                <span>Sheet</span>
-                <span>Photos</span>
-                <span>Weight</span>
-                <span>Phases</span>
-                <span className="end">State</span>
-              </div>
-              {shownRows.map((sh) => {
-                const st = stateOf(sh);
-                return (
-                  <button key={sh.period} type="button" className="rp-trow" aria-label={`${sh.title}, ${sh.dateLabel}, ${sh.inCount} of ${sh.total} photos, ${st.text}. Compare`} onClick={() => openCompare(sh.period)}>
+          </div>
+          <div ref={tableRef} className="rp-card rp-table">
+            <div className="rp-thead" aria-hidden="true">
+              <span>Sheet</span>
+              <span>Photos</span>
+              <span>Weight</span>
+              <span>Phases</span>
+              <span className="end">State</span>
+            </div>
+            {shownRows.map((sh) => {
+              const st = stateOf(sh);
+              const isOpen = openRow === sh.period;
+              return (
+                <div key={sh.period} className={`rp-tgroup${isOpen ? " open" : ""}`}>
+                  <button type="button" className="rp-trow" aria-expanded={isOpen} aria-label={`${sh.title}, ${sh.dateLabel}, ${sh.inCount} of ${sh.total} photos, ${st.text}`} onClick={() => setOpenRow((x) => (x === sh.period ? null : sh.period))}>
                     <span className="rp-tsheet">
                       <b>{sh.title}</b>
                       <small>{sh.dateLabel}</small>
+                      <Fold open={isOpen} />
                     </span>
                     <span className={`rp-bars${sh.complete ? " done" : ""}`} aria-hidden="true">
                       {sh.cells.map((c) => (
@@ -291,16 +378,31 @@ function Pictures({ clientId, firstName, plan }: Props) {
                       <span className={`trn-state${st.tone === "good" ? " good" : st.tone === "open" ? " warn" : ""}`}>{st.text}</span>
                     </span>
                   </button>
-                );
-              })}
-            </div>
-            {!all && sheets.length > ROWS_SHOWN && (
-              <button type="button" className="rp-showall" onClick={showAll}>
-                Show all {sheets.length}
-              </button>
-            )}
-          </section>
-        </>
+                  {isOpen && (
+                    <div className="rp-tbody">
+                      <div className="rp-grid rp-tgrid" style={{ "--rp-cols": Math.max(1, sh.cells.length), "--rp-cols-narrow": Math.min(Math.max(1, sh.cells.length), 3) } as React.CSSProperties}>
+                        {sh.cells.map((c) => (
+                          <div key={c.slotId} className="rp-slot">
+                            <Tile cell={c} sheet={sh} label={c.label} tag={c.shotDay} emptyText="Missing" onOpen={(slotId) => setDlg({ kind: "photo", period: sh.period, slotId })} />
+                            <div className="rp-cap">
+                              <b>{c.label}</b>
+                              <span className={`rp-cap-state ${c.src ? "in" : "missing"}`}>{c.src ? "In" : "Missing"}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {!all && closed.length > ROWS_SHOWN && (
+            <button type="button" className="rp-showall" onClick={showAll}>
+              Show all {closed.length}
+            </button>
+          )}
+        </section>
       )}
 
       {/* ---- Dialogs. One open at a time. */}
@@ -319,7 +421,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
             }}
           />
         )}
-        {dlg?.kind === "photo" && photoSheet && <PhotoDialog sheet={photoSheet} sheets={sheets} slotId={dlg.slotId} onMove={(period, slotId) => setDlg({ kind: "photo", period, slotId })} />}
+        {dlg?.kind === "photo" && photoSheet && <PhotoDialog sheet={photoSheet} sheets={sheets} slotId={dlg.slotId} onMove={(period, slotId) => setDlg({ kind: "photo", period, slotId, back: dlg.back })} />}
         {dlg?.kind === "setup" && (
           <SetupDialog
             clientId={clientId}
@@ -331,7 +433,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
             }}
           />
         )}
-        {dlg?.kind === "compare" && <CompareDialog sheets={sheets} initial={dlg.periods} />}
+        {dlg?.kind === "compare" && <CompareDialog clientId={clientId} sheets={sheets} initial={dlg.periods} onOpenPhoto={(period, slotId) => setDlg({ kind: "photo", period, slotId, back: dlg.periods })} />}
       </Dialog>
     </div>
   );
@@ -547,80 +649,6 @@ function SetupDialog({ clientId, firstName, plan, onSaved }: { clientId: number;
   );
 }
 
-/** Compare (21 Oct, Alex): pick the sheets (up to four) and an angle; each sheet's photo of that angle side by side,
- *  oldest first, each with its weigh-in and the change from the first one weighed. */
-function CompareDialog({ sheets, initial }: { sheets: Sheet[]; initial: string[] }) {
-  const chrono = [...sheets].reverse();
-  const [picked, setPicked] = useState<string[]>(initial);
-  const shown = chrono.filter((s) => picked.includes(s.period));
-  // The angles any sheet has, in the newest sheet's order first.
-  const angles: { slotId: number; label: string }[] = [];
-  for (const s of sheets) for (const c of s.cells) if (!angles.some((a) => a.slotId === c.slotId)) angles.push({ slotId: c.slotId, label: c.label });
-  const [slot, setSlot] = useState<number | null>(angles[0]?.slotId ?? null);
-  const base = shown.find((s) => s.weight != null) ?? null;
-  const toggle = (p: string) => setPicked((xs) => (xs.includes(p) ? (xs.length > 1 ? xs.filter((x) => x !== p) : xs) : xs.length >= 4 ? xs : [...xs, p]));
-  return (
-    <DialogContent className="dlh rp-cmpdlg">
-      <div className="dlh-head">
-        <DialogTitle className="dlh-title">Compare</DialogTitle>
-        <DialogClose className="dlh-x" aria-label="Close">
-          ✕
-        </DialogClose>
-      </div>
-      <DialogDescription className="sr-only">The same angle from the sheets picked, side by side, with the weigh-ins</DialogDescription>
-      <div className="rp-cmp-weeks" role="group" aria-label="Sheets, up to four">
-        {chrono.map((s) => {
-          const on = picked.includes(s.period);
-          return (
-            <button key={s.period} type="button" className={`rp-wk${on ? " on" : ""}`} aria-pressed={on} disabled={!on && picked.length >= 4} onClick={() => toggle(s.period)}>
-              {s.title}
-            </button>
-          );
-        })}
-      </div>
-      {angles.length > 1 && (
-        <div className="rd-btn-group rp-cmp-angles" role="radiogroup" aria-label="Angle">
-          {angles.map((a) => (
-            <button key={a.slotId} type="button" role="radio" aria-checked={slot === a.slotId} className={slot === a.slotId ? "on" : ""} onClick={() => setSlot(a.slotId)}>
-              {a.label}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="rp-cmp-cols" style={{ "--rp-n": shown.length } as React.CSSProperties}>
-        {shown.map((s) => {
-          const c = s.cells.find((x) => x.slotId === slot) ?? null;
-          const change = base && s !== base && base.weight != null && s.weight != null ? Math.round((s.weight - base.weight) * 10) / 10 : null;
-          return (
-            <figure key={s.period} className="rp-cmp-col">
-              <div className="rp-cmp-photo">
-                {c?.src ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                  <img src={c.src} alt={`${c.label}, ${s.title}`} />
-                ) : (
-                  <span className="rp-hole">
-                    <CameraIcon />
-                    <span>No photo</span>
-                  </span>
-                )}
-              </div>
-              <figcaption>
-                <span className="rp-cmp-name">
-                  <b>{s.title}</b>
-                  <small>{s.dateLabel}</small>
-                </span>
-                <span className="rp-cmp-kg">
-                  {s.weight == null ? "—" : `${s.weight} kg`}
-                  {change != null && Math.abs(change) >= 0.05 && <em>{kgChange(change)}</em>}
-                </span>
-              </figcaption>
-            </figure>
-          );
-        })}
-      </div>
-    </DialogContent>
-  );
-}
 
 
 /** One photo in the focus card, or the empty place for it; a click opens it big. */
@@ -687,7 +715,7 @@ function GrowText({ value, onChange, className, placeholder, maxLength, label, t
 
 /** + Angle's dropdown, as + Item's on Nutrition: the search at its top, the usual angles, and one of your own pinned at the foot. */
 /** onClose(true): closed from the keyboard's reach (Esc, ×, + Angle again), so the focus goes back to + Angle; a click away leaves it where it went. */
-function AddAngle({ have, onAdd, onClose }: { have: string[]; onAdd: (label: string) => void; onClose: (refocus: boolean) => void }) {
+function AddAngle({ have, onAdd, onClose, tile = false }: { have: string[]; onAdd: (label: string) => void; onClose: (refocus: boolean) => void; /** Anchored on the sheet's dashed + Add tile instead of the + Angle words. */ tile?: boolean }) {
   const [q, setQ] = useState("");
   const [cursor, setCursor] = useState(0);
   const box = useRef<HTMLInputElement>(null);
@@ -744,12 +772,20 @@ function AddAngle({ have, onAdd, onClose }: { have: string[]; onAdd: (label: str
     box.current?.focus();
   };
   return (
-    <div ref={wrap} className="rd-addrow rp-addrow">
+    <div ref={wrap} className={`rd-addrow rp-addrow${tile ? " rp-addtile-wrap" : ""}`}>
       <Popover open onOpenChange={() => {}}>
         <PopoverAnchor asChild>
-          <button type="button" className="rp-add on" onClick={() => onClose(true)} aria-expanded="true">
-            <PlusIcon /> Angle
-          </button>
+          {tile ? (
+            <button type="button" className="rp-tile rp-addtile on" onClick={() => onClose(true)} aria-expanded="true" aria-label="Add an angle">
+              <span>
+                <PlusIcon /> Add
+              </span>
+            </button>
+          ) : (
+            <button type="button" className="rp-add on" onClick={() => onClose(true)} aria-expanded="true">
+              <PlusIcon /> Angle
+            </button>
+          )}
         </PopoverAnchor>
         <PopoverContent
           className="rd-addpop rls-findpop rp-findpop"

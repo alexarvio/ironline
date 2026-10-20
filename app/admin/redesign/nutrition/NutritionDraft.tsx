@@ -24,6 +24,7 @@ import { useOpenChat } from "../ChatPanel";
 import { dayMonth } from "../../../lib/dayMonth";
 import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
 import { Sep } from "../Sep";
+import { Fold } from "../Fold";
 
 // The Nutrition tab, built as Training and Lifestyle are (21 Oct, Alex): the
 // phase's name to click and type, its state tag as its menu, the goals and
@@ -1277,11 +1278,12 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
   return (
     <div id={`day-${day.date}`} className={`rd-row rn-day${open ? " open" : ""}`}>
       <div className="rd-row-main" style={grid} onClick={onToggle} role="button" tabIndex={0} aria-expanded={open} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onToggle())}>
-        <span className={`rd-chev${open ? " open" : ""}`} aria-hidden="true">
-          <ChevronDownIcon />
-        </span>
+        <span />
         <span className="rd-ex">
-          <span className="rd-ex-name">{fmtDay(day.date)}</span>
+          <span className="rd-ex-name">
+            {fmtDay(day.date)}
+            <Fold open={open} />
+          </span>
           {day.note && <small title={day.note}>{day.note}</small>}
         </span>
         <span className="rd-num">{n(day.kcal)}</span>

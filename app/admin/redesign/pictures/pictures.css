@@ -151,25 +151,42 @@
 .npd.npd.rp-setupdlg .rp-ack { margin-top: 16px; }
 .npd.npd.rp-setupdlg .rp-err { margin-right: auto; font-size: 13px; font-weight: 500; color: #b42318; }
 
-/* ---- Compare: the .dlh card, wider. The sheets as chips (up to four, ink when picked), the angle as the shared
-   capsule, then each sheet's photo of it side by side with its weigh-in and the change from the first one weighed. */
-.dlh.dlh.rp-cmpdlg { width: min(1080px, 100vw - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; gap: 14px; scrollbar-width: thin; }
-.rp-cmp-weeks { display: flex; flex-wrap: wrap; gap: 6px; }
-.rp-wk { height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
-.rp-wk:hover:not(:disabled):not(.on) { box-shadow: inset 0 0 0 1px #c5ccd8; }
-.rp-wk.on { background: #141a24; box-shadow: none; color: #fff; }
-.rp-wk:disabled { color: #98a2b3; cursor: default; }
-.rp-cmp-angles { align-self: flex-start; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-.rp-cmp-cols { display: grid; grid-template-columns: repeat(var(--rp-n, 2), minmax(0, 300px)); justify-content: center; gap: 14px; }
-.rp-cmp-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; }
-.rp-cmp-photo { aspect-ratio: 3 / 4; max-height: 58vh; border-radius: 14px; background: #f5f6f8; overflow: hidden; }
-.rp-cmp-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.rp-cmp-col figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
-.rp-cmp-name { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
-.rp-cmp-name b { font-size: 14px; font-weight: 600; color: #141a24; }
-.rp-cmp-name small { font-size: 12px; font-weight: 500; color: #98a2b3; font-variant-numeric: tabular-nums; }
-.rp-cmp-kg { display: inline-flex; align-items: baseline; gap: 6px; font-size: 14px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rp-cmp-kg em { font-size: 12px; font-style: normal; font-weight: 500; color: #8b93a1; }
+/* ---- Compare (21 Oct, Alex): the .dlh card at 960px, everything on a laptop screen without a scroll. Two week pickers,
+   the angle switch across the row in equal parts (the shared capsule, ink when chosen), then two 3:4 photos or the slider. */
+.dlh.dlh.cmp { width: min(960px, 100vw - 32px); max-height: calc(100dvh - 48px); overflow-y: auto; gap: 14px; padding: 18px 22px 22px; scrollbar-width: thin; }
+.cmp-head { display: flex; align-items: center; gap: 12px; }
+.cmp-head .cmp-view { margin-left: auto; }
+.cmp-weeks { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.cmp-week { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 42px; padding: 0 14px; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
+.cmp-week:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
+.cmp-week[data-state="open"], .cmp-week:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px #141a24; }
+.cmp-week svg { flex: none; width: 11px; height: 11px; color: #8b93a1; }
+.cmp-vs { font-size: 12.5px; font-weight: 500; color: #98a2b3; }
+.cmp-menu { max-height: 280px; overflow-y: auto; scrollbar-width: thin; }
+/* Every angle an equal share of the row, never a short group. */
+.rd-btn-group.cmp-angles { display: grid; grid-template-columns: repeat(var(--cmp-n, 4), minmax(0, 1fr)); width: 100%; height: 40px; }
+.rd-btn-group.cmp-angles button { height: 32px; padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Side by side: each photo 3:4 at the column's width, never taller than the screen allows; its week and weigh-in under it. */
+.cmp-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; container-type: inline-size; }
+.cmp-col { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; margin: 0; }
+.cmp-photo { display: block; height: min(52vh, calc((50cqi - 6px) * 4 / 3)); aspect-ratio: 3 / 4; max-width: 100%; padding: 0; border: 0; border-radius: 16px; background: #f5f6f8; box-shadow: inset 0 0 0 1px #e1e5eb; overflow: hidden; cursor: zoom-in; }
+.cmp-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cmp-photo.none { display: flex; align-items: center; justify-content: center; cursor: default; }
+.cmp-photo.none svg, .cmp-empty svg { width: 22px; height: 22px; color: #c5ccd8; stroke-width: 1.5; }
+.cmp-photo:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
+.cmp-cap { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; max-width: calc(min(52vh, (50cqi - 6px) * 4 / 3) * 3 / 4); font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; }
+.cmp-kg { display: inline-flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+.cmp-kg em { font-size: 12px; font-style: normal; font-weight: 500; color: #8b93a1; }
+/* The slider: one stage, the right week under, the left on top cut at the divider. */
+.cmp-reveal { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.cmp-stage { position: relative; height: min(52vh, 520px); aspect-ratio: 3 / 4; max-width: 100%; border-radius: 16px; background: #f5f6f8; box-shadow: inset 0 0 0 1px #e1e5eb; overflow: hidden; cursor: ew-resize; touch-action: none; user-select: none; }
+.cmp-under, .cmp-over, .cmp-over img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cmp-stage img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.cmp-empty { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f5f6f8; }
+.cmp-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; pointer-events: none; }
+.cmp-handle { position: absolute; top: 50%; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 999px; background: #fff; box-shadow: 0 4px 12px rgba(10, 12, 18, 0.3); color: #141a24; }
+.cmp-handle:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
+.cmp-stagecap { max-width: calc(min(52vh, 520px) * 3 / 4); }
 
 /* ---- One photo big (portalled: not under .rd.rp): the .dlh card (head 18px/600, round ghost ✕), wider.
    Doubled classes out-rank the dialog's own utility classes. */
@@ -194,3 +211,25 @@
 .rp-mini img { display: block; width: 64px; height: 84px; object-fit: cover; border-radius: 8px; border: 2px solid transparent; box-sizing: border-box; }
 .rp-mini.on img { border-color: #141a24; }
 .rp-mini small { font-size: 10.5px; font-weight: 600; color: #5b6474; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* + Add on the sheet (21 Oct, Alex): one more tile, a dashed edge and + Add in the middle; it opens the angle search under it. */
+.rp-tile.rp-addtile { display: flex; align-items: center; justify-content: center; background: none; border: 1.5px dashed #c5ccd8; box-sizing: border-box; cursor: pointer; }
+.rp-tile.rp-addtile span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #5b6474; }
+.rp-tile.rp-addtile svg { width: 14px; height: 14px; }
+.rp-tile.rp-addtile:hover, .rp-tile.rp-addtile.on { border-color: #8b93a1; background: #fafbfc; }
+.rp-tile.rp-addtile:hover span, .rp-tile.rp-addtile.on span { color: #141a24; }
+.rd-addrow.rp-addrow.rp-addtile-wrap { display: block; }
+
+/* A row of All sheets open on its photos: under the row, from the sheet's column, smaller tiles. */
+.rd.rp .rp-tgroup + .rp-tgroup { border-top: 1px solid #eef0f3; }
+.rd.rp .rp-tgroup .rp-trow { border-top: 0; }
+.rd.rp .rp-tgroup.open .rp-trow { background: #fafbfc; }
+.rd.rp .rp-tbody { padding: 4px 18px 16px; background: #fafbfc; }
+.rd.rp .rp-tgrid { grid-template-columns: repeat(var(--rp-cols, 4), minmax(0, 170px)); }
+
+/* An empty place on the top sheet can go (21 Oct, Alex): a round × in its corner, on hover or focus, as row actions. */
+.rd.rp .rp-tilewrap { position: relative; }
+.rd.rp .rp-drop { position: absolute; top: 6px; right: 6px; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; font-size: 13px; line-height: 1; color: #5b6474; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
+.rd.rp .rp-tilewrap:hover .rp-drop, .rd.rp .rp-drop:focus-visible { opacity: 1; }
+.rd.rp .rp-drop:hover { color: #b42318; box-shadow: inset 0 0 0 1px rgba(180, 35, 24, 0.3); }
+.rd.rp .rp-drop:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }

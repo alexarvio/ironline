@@ -209,6 +209,7 @@ function OpenSheet({
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("slotId", String(slot.id));
+    fd.set("period", sheet.period);
     startSaving(async () => {
       await removeProgressPhotoAction(fd);
     });
@@ -233,6 +234,8 @@ function OpenSheet({
         const fd = new FormData();
         fd.set("clientId", String(clientId));
         fd.set("slotId", String(slot.id));
+        // The sheet on screen: the server refuses it if that sheet has closed meanwhile (21 Oct).
+        fd.set("period", sheet.period);
         // Shrunk on the phone first (17 Oct): 1600px on the long edge, a few hundred KB instead of the camera's MBs.
         const small = await fitJpeg(item.file);
         fd.set("file", small ? new File([small], "photo.jpg", { type: "image/jpeg" }) : item.file);

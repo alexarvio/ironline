@@ -69,6 +69,11 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-chev { display: inline-flex; color: #8b93a1; transition: transform 0.15s; }
 .rd-chev svg { width: 16px; height: 16px; }
 .rd-chev.open { transform: rotate(180deg); }
+/* A row that opens: the chevron right after its title, pointing right, down once open (21 Oct, Alex: as Training's sessions). Fold.tsx. */
+.rd-fold { display: inline-flex; flex: none; align-self: center; color: #98a2b3; transition: transform 0.15s; }
+.rd-fold svg { width: 16px; height: 16px; }
+.rd-fold.open { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .rd-fold { transition: none; } }
 /* The answers feed folded under the workout questionnaire (9 Oct). */
 .rm-answers { margin-top: 10px; padding-top: 6px; border-top: 1px solid #eef1f5; }
 .rm-answers-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 4px 8px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; text-align: left; cursor: pointer; }

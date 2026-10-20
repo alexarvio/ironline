@@ -25,6 +25,7 @@ import { dayMonth } from "../../../lib/dayMonth";
 import { groupColour } from "../../../lib/categoryColors";
 import { defaultSummary, type MetricSummary } from "../../../lib/metricSummary";
 import { Sep, SepJoin } from "../Sep";
+import { Fold } from "../Fold";
 
 // The Lifestyle tab, built as Training is (21 Oct, Alex): the phase's name
 // to click and type, its state tag as the menu of what can be done with it,
@@ -1180,12 +1181,11 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
         return (
           <div key={p.key} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
             <div className="rd-row-main" style={grid} onClick={() => setOpen((x) => (x === p.key ? null : p.key))} role="button" tabIndex={0} aria-expanded={isOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen((x) => (x === p.key ? null : p.key)))}>
-              <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
-                <ChevronDownIcon />
-              </span>
+              <span />
               <span className="rd-ex">
                 <span className="rd-ex-name">
                   {p.label}
+                  <Fold open={isOpen} />
                   {note && <NoteBubble text={note} onReply={() => onReply(p.key)} />}
                 </span>
               </span>

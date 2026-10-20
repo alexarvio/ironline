@@ -67,7 +67,7 @@ import {
   listPhotoSlots,
   listPhotoUploads,
   photoSheetFor,
-  upcomingPhotoSheets,
+  nextPhotoSheet,
   localDateStr,
   METRIC_GROUPS,
   METRIC_LIBRARY,
@@ -710,13 +710,32 @@ export function loadPictures(clientId: number): DraftPictures {
     };
   });
 
+  // Nothing open (the last sheet is done, the next one's day hasn't come): the next sheet, on its own day, its places
+  // empty, at the top of the tab where its angles are set (21 Oct, Alex). Not on the list of sheets until it opens.
+  const nextSheet = active.length > 0 && !live ? nextPhotoSheet(clientId, today) : null;
+  const upcoming = nextSheet
+    ? {
+        period: nextSheet,
+        title: `${PERIOD_UNIT[cadence]} ${periods.length + 1}`,
+        live: false,
+        complete: false,
+        dateLabel: dayMonth(nextSheet),
+        inCount: 0,
+        total: active.length,
+        cells: active.map((s) => ({ slotId: s.id, label: s.label, src: null, shot: null, shotDay: null })),
+        weight: null,
+        phases: phasesIn(nextSheet, undefined),
+      }
+    : null;
+
   // The coach has nudged the client about the open sheet today already (Remind, 21 Oct).
   const remindedToday = !!live && getData().coach_activity.some((a) => a.client_id === clientId && a.dedupe_key === `photos-remind:${live}:${today}`);
 
   return {
     cadence,
     startDate,
-    nextSheet: active.length > 0 ? (upcomingPhotoSheets(clientId, today, 1)[0] ?? null) : null,
+    nextSheet,
+    upcoming,
     since: startDate ?? periods[periods.length - 1] ?? null,
     remindedToday,
     instructions: getPhotoInstructions(clientId) ?? "",

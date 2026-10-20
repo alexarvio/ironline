@@ -9,7 +9,7 @@ import type React from "react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
@@ -19,6 +19,7 @@ import Picker from "../Picker";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth } from "../../../lib/dayMonth";
 import { SepJoin } from "../Sep";
+import { Fold } from "../Fold";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
 // sheet. The next call with everything to prepare it, the calls after it,
@@ -410,14 +411,15 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                 return (
                   <div key={m.id} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
                     <div className="rd-row-main" style={pGrid} onClick={() => setOpenPast((x) => (x === m.id ? null : m.id))} role="button" tabIndex={0} aria-expanded={isOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpenPast((x) => (x === m.id ? null : m.id)))}>
-                      <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
-                        <ChevronDownIcon />
-                      </span>
+                      <span />
                       <span className="rd-ex">
                         <span className="rd-ex-name">{dateCol(m.date)}</span>
                       </span>
                       <span className="rd-ex">
-                        <span className="rd-ex-name">{m.topic || "Check-in call"}</span>
+                        <span className="rd-ex-name">
+                          {m.topic || "Check-in call"}
+                          <Fold open={isOpen} />
+                        </span>
                       </span>
                       <span>
                         <span className={`rt-state ${st.cls}`}>{st.text}</span>

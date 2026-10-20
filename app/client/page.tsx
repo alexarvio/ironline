@@ -84,7 +84,8 @@ import {
   listPhotoUploads,
   localDateStr,
   photoSheetFor,
-  upcomingPhotoSheets,
+  nextPhotoSheet,
+  photoSheetForClient,
   programWeekLabel,
   slugify,
   SUPPLEMENT_ITEMS,
@@ -1253,7 +1254,9 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
   const srcFor = (slotId: number, period: string) =>
     uploads.find((u) => u.slot_id === slotId && u.period === period)?.file_path ?? null;
 
-  const openPeriod = active.length > 0 ? photoSheetFor(CLIENT_ID, today) : null;
+  // The client's sheet: the open one, else the one just finished (a wrong photo can still be swapped) until the next opens.
+  const openPeriod = active.length > 0 ? photoSheetForClient(CLIENT_ID, today) : null;
+  const strictlyOpen = active.length > 0 ? photoSheetFor(CLIENT_ID, today) : null;
   const earlier = listPhotoPeriods(slots.map((s) => s.id))
     .filter((p) => p !== openPeriod)
     .map((period) => ({
@@ -1265,7 +1268,7 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
         .map((s) => ({ slotId: s.id, label: s.label, src: srcFor(s.id, period) })),
     }));
   const oldest = earlier[earlier.length - 1];
-  const next = active.length > 0 ? upcomingPhotoSheets(CLIENT_ID, today, 1)[0] : null;
+  const next = active.length > 0 && !strictlyOpen ? nextPhotoSheet(CLIENT_ID, today) : null;
 
   return {
     clientId: CLIENT_ID,
@@ -1334,7 +1337,7 @@ export default async function ClientPage({
   const photoCount = checkInData.photoSlots.length;
   const photosIn = checkInData.photoSlots.filter((p) => p.src).length;
   const lastPhotoDay = (() => {
-    const period = photoSheetFor(CLIENT_ID, localDateStr());
+    const period = photoSheetForClient(CLIENT_ID, localDateStr());
     const latest = listPhotoUploads(listPhotoSlots(CLIENT_ID).map((s) => s.id))
       .filter((u) => u.period === period)
       .map((u) => u.uploaded_at)

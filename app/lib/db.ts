@@ -799,6 +799,9 @@ type PhotoSettings = {
   // The coach's note on how to take the pictures (light, distance, pose),
   // shown on the client's open sheet.
   photo_instructions?: string | null;
+  /** The sheet open now, by the day it opened (21 Oct, Alex): it stays open until every photo asked for is in, and only
+   *  then does the next one open, on its own day. Missing until a sheet first opens. Kept in the row's extra jsonb. */
+  photo_open_period?: string | null;
 };
 
 // The coach's written feedback on one period's photo set — shape, what's

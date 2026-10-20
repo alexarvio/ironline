@@ -4319,14 +4319,108 @@ function photoSheetNumber(start: string, cadence: PhotoCadence, day: string): nu
   return Math.floor(days / (7 * PHOTO_WEEKS_PER_SHEET[cadence]));
 }
 
-// The sheet a day belongs to, keyed by the day it opened. null before the
+// The calendar's sheet for a day, keyed by the day it opened. null before the
 // coach's first sheet date: nothing is open yet.
-export function photoSheetFor(clientId: number, day: string): string | null {
+function calendarPhotoSheet(clientId: number, day: string): string | null {
   const cadence = getPhotoCadence(clientId);
   const start = getPhotoStartDate(clientId);
   if (!start) return photoPeriodFor(day, cadence);
   if (day < start) return null;
   return photoSheetOpening(start, cadence, photoSheetNumber(start, cadence, day));
+}
+
+/** The day the sheet after `period` opens: a cadence step on from the start date, else the calendar's next bucket. */
+export function photoSheetAfter(clientId: number, period: string): string {
+  const cadence = getPhotoCadence(clientId);
+  const start = getPhotoStartDate(clientId);
+  if (!start) return nextPhotoPeriodStart(period, cadence);
+  if (period < start) return start;
+  return photoSheetOpening(start, cadence, photoSheetNumber(start, cadence, period) + 1);
+}
+
+/** Every angle asked for now has its photo on this sheet. */
+function photoSheetComplete(clientId: number, period: string): boolean {
+  const active = listActivePhotoSlots(clientId);
+  if (active.length === 0) return false;
+  const ups = listPhotoUploads(active.map((s) => s.id)).filter((u) => u.period === period);
+  return active.every((s) => ups.some((u) => u.slot_id === s.id));
+}
+
+/** The sheet held open, if one has opened: kept on the photo settings row. */
+export function getPhotoOpenPeriod(clientId: number): string | null {
+  return getData().photo_settings.find((s) => s.client_id === clientId)?.photo_open_period ?? null;
+}
+
+function holdPhotoSheet(clientId: number, period: string | null) {
+  const data = getData();
+  let row = data.photo_settings.find((s) => s.client_id === clientId);
+  if ((row?.photo_open_period ?? null) === period) return;
+  if (!row) {
+    row = { client_id: clientId, cadence: "weekly" };
+    data.photo_settings.push(row);
+  }
+  row.photo_open_period = period;
+  persist();
+}
+
+/** A new start date or rhythm: the calendar decides the open sheet again. */
+export function clearPhotoOpenSheet(clientId: number) {
+  holdPhotoSheet(clientId, null);
+}
+
+// The sheet open on a day (21 Oct, Alex): one stays open until every photo
+// asked for is in; only then does the next one open, on its own day (at once
+// when that day has passed, so none is skipped). Between a finished sheet and
+// the next one's day, nothing is open: null. Before any sheet was held, the
+// calendar's sheet for the day is the first one held. null before the coach's
+// first sheet date.
+export function photoSheetFor(clientId: number, day: string): string | null {
+  // No angle asked for: no sheet, and nothing held, so the first one dates from when angles are asked for.
+  if (listActivePhotoSlots(clientId).length === 0) return null;
+  let held = getPhotoOpenPeriod(clientId);
+  if (!held) {
+    held = calendarPhotoSheet(clientId, day);
+    if (!held) return null;
+    holdPhotoSheet(clientId, held);
+  }
+  // The next sheet, waiting for its day: nothing is open (a finished sheet never opens again, even when an angle is
+  // added for the next one).
+  if (held > day) return null;
+  if (!photoSheetComplete(clientId, held)) return held;
+  // Finished: the next sheet opens on its own day. A late finish doesn't open the ones missed meanwhile (they would
+  // all be due at once, back-dated): it waits for the next day a sheet opens, or opens today's when one opens today.
+  let next = photoSheetAfter(clientId, held);
+  if (next <= day) {
+    const today = calendarPhotoSheet(clientId, day);
+    next = today && today === day && today > held ? today : (upcomingPhotoSheets(clientId, day, 1)[0] ?? next);
+  }
+  holdPhotoSheet(clientId, next);
+  return next > day ? null : next;
+}
+
+/** The sheet the client works on (21 Oct): the open one, else the one just finished, so a wrong photo can still be
+ *  swapped, until the next one opens. The coach's tab and the reminders use photoSheetFor alone. */
+export function photoSheetForClient(clientId: number, day: string): string | null {
+  const open = photoSheetFor(clientId, day);
+  if (open) return open;
+  const held = getPhotoOpenPeriod(clientId);
+  if (!held || held <= day) return null;
+  const slots = listActivePhotoSlots(clientId);
+  return listPhotoPeriods(slots.map((s) => s.id)).find((p) => p < held && p <= day) ?? null;
+}
+
+/** A new start date or rhythm (21 Oct): a sheet waiting for its day waits for the new schedule's next day (so a
+ *  finished one never opens again); otherwise the calendar decides the open sheet again. */
+export function resetPhotoOpenSheet(clientId: number, day: string) {
+  const held = getPhotoOpenPeriod(clientId);
+  holdPhotoSheet(clientId, held && held > day ? (upcomingPhotoSheets(clientId, day, 1)[0] ?? null) : null);
+}
+
+/** The day the next sheet opens while none is open: the one waiting for its day, else the calendar's next. */
+export function nextPhotoSheet(clientId: number, day: string): string | null {
+  const held = getPhotoOpenPeriod(clientId);
+  if (held && held > day) return held;
+  return upcomingPhotoSheets(clientId, day, 1)[0] ?? null;
 }
 
 // The next `count` days a sheet opens after `day`, starting with the first
@@ -4516,7 +4610,8 @@ export function saveDemoVideoUpload(
 }
 
 export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer, mimeType: string): string {
-  const period = photoSheetFor(clientId, localDateStr());
+  // The open sheet, or the one just finished (a wrong photo swapped) until the next one opens.
+  const period = photoSheetForClient(clientId, localDateStr());
   // Before the coach's first sheet date there is no sheet to file it in.
   if (!period) return "";
   const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
@@ -4547,7 +4642,7 @@ export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer
 
 /** Takes one angle's photo off the sheet open now (17 Oct). Back with its file, to delete; null when there was none. */
 export function removePhotoUpload(clientId: number, slotId: number): string | null {
-  const period = photoSheetFor(clientId, localDateStr());
+  const period = photoSheetForClient(clientId, localDateStr());
   if (!period) return null;
   const data = getData();
   const i = data.photo_uploads.findIndex((u) => u.slot_id === slotId && u.period === period);
@@ -7113,7 +7208,7 @@ export function getCheckInSections(clientId: number): CheckInData {
           .join(" · ") || null;
 
   const cadence = getPhotoCadence(clientId);
-  const photoPeriod = photoSheetFor(clientId, today);
+  const photoPeriod = photoSheetForClient(clientId, today);
   const slots = listActivePhotoSlots(clientId);
   const uploads = listPhotoUploads(slots.map((s) => s.id));
 
@@ -7132,9 +7227,10 @@ export function getCheckInSections(clientId: number): CheckInData {
     photoPeriodLabel: unit,
     // Nothing to upload before the coach's first sheet date.
     photosDue: photoPeriod != null && photoSlots.length > 0 && photoSlots.some((p) => !p.src),
-    photosNextLabel: photoPeriod
-      ? `All ${photoSlots.length} taken. The next set opens ${fmtDate(upcomingPhotoSheets(clientId, today, 1)[0])}.`
-      : `The first set opens ${fmtDate(upcomingPhotoSheets(clientId, today, 1)[0])}.`,
+    // A set stays open until every photo is in, then the next one waits for its day (21 Oct, Alex).
+    photosNextLabel: photoPeriod || getPhotoOpenPeriod(clientId)
+      ? `All ${photoSlots.length} taken. The next set opens ${fmtDate(nextPhotoSheet(clientId, today) ?? today)}.`
+      : `The first set opens ${fmtDate(nextPhotoSheet(clientId, today) ?? today)}.`,
   };
 }
 
