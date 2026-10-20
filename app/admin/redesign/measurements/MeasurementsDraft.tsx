@@ -331,7 +331,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       else savedToast(`${plan.name} is live`);
     });
   };
-  const grid = { gridTemplateColumns: "20px minmax(200px, 1.4fr) 128px minmax(160px, 1fr) 32px", columnGap: 20 } as const;
 
   return (
     <div className={`rd trn rls${plan.status === "past" ? " rd-past" : ""}`}>
@@ -511,42 +510,25 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               </button>
             </div>
           ) : (
-            <>
-              {shown.length > 0 && (
-                <div className="rls-cols" aria-hidden="true" style={grid}>
-                  <span />
-                  <span>Metric</span>
-                  <span>Group</span>
-                  <span>Last</span>
-                  <span />
-                </div>
-              )}
-              <SortableList ids={shown.map((m) => m.id)} label="metric" onMove={moveShown}>
+            // A pill a metric, side by side (21 Oct, Alex): with the last figure gone (the check-ins below have it),
+            // rows across the page were near empty. The name, its unit, its group in the group's colour; the grip
+            // and ··· on hover; + Metric at the end of the line opens the search there.
+            <SortableList ids={shown.map((m) => m.id)} label="metric" onMove={moveShown} layout="wrap">
+              <div className="rls-pills">
+                {shown.length === 0 && !adding && <span className="rls-pills-none">None yet</span>}
                 {shown.map((m) => {
                   // Just added: there, faded and still, until the save gives it its number.
                   const incoming = m.id < 0;
                   return (
-                    <SortableItem key={m.id} id={m.id} className={`rls-row${incoming ? " trn-incoming" : ""}`}>
+                    <SortableItem key={m.id} id={m.id} className={`rls-pill${incoming ? " trn-incoming" : ""}`}>
                       {(grip) => (
-                        <div className="rls-row-main" style={grid}>
-                          <span className="rd-grip trn-grip" {...(canDrag ? grip : {})}>
+                        <>
+                          <span className="rls-pill-grip" {...(canDrag ? grip : {})}>
                             <GripIcon />
                           </span>
-                          <span className="rls-name">
-                            <b>{m.name}</b>
-                            {m.unit && <small>{m.unit}</small>}
-                          </span>
-                          <span className="rls-group" style={{ background: m.tint, color: groupColour(m.groupKey).hex }}>
-                            {m.groupLabel}
-                          </span>
-                          {m.last ? (
-                            <span className="rls-last">
-                              {withUnit(m.last.value, m.unit)}
-                              <small>{m.last.when}</small>
-                            </span>
-                          ) : (
-                            <span className="rls-last none">None yet</span>
-                          )}
+                          <b>{m.name}</b>
+                          {m.unit && <small>{m.unit}</small>}
+                          <em style={{ color: groupColour(m.groupKey).hex }}>{m.groupLabel}</em>
                           <span className="rls-more">
                             {!incoming && (
                               <DropdownMenu modal={false}>
@@ -571,20 +553,20 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                               </DropdownMenu>
                             )}
                           </span>
-                        </div>
+                        </>
                       )}
                     </SortableItem>
                   );
                 })}
-              </SortableList>
-              {adding ? (
-                <AddMetricRow library={plan.library} groups={plan.groups} have={rows.map((r) => r.name.toLowerCase())} onAdd={addMetric} onClose={() => setAdding(false)} />
-              ) : (
-                <button type="button" className="rls-add" onClick={() => setAdding(true)}>
-                  <PlusIcon /> Metric
-                </button>
-              )}
-            </>
+                {adding ? (
+                  <AddMetricRow library={plan.library} groups={plan.groups} have={rows.map((r) => r.name.toLowerCase())} onAdd={addMetric} onClose={() => setAdding(false)} />
+                ) : (
+                  <button type="button" className="rls-add" onClick={() => setAdding(true)}>
+                    <PlusIcon /> Metric
+                  </button>
+                )}
+              </div>
+            </SortableList>
           )}
         </div>
       </section>
@@ -867,9 +849,31 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
     </button>
   );
   return (
+    // A dropdown under + Metric, the search bar at its top (21 Oct, Alex): the metrics card never changes while adding.
     <div ref={wrap} className="rd-addrow rls-addrow">
-      <Popover open={open} onOpenChange={() => {}}>
+      <Popover open onOpenChange={() => {}}>
         <PopoverAnchor asChild>
+          <button type="button" className="rls-add on" onClick={onClose} aria-expanded="true">
+            <PlusIcon /> Metric
+          </button>
+        </PopoverAnchor>
+        <PopoverContent
+          ref={pop}
+          className="rd-addpop rls-findpop"
+          align="start"
+          sideOffset={6}
+          // Straight into the search: the bar is in the panel, which mounts after the row does.
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            box.current?.focus();
+          }}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          // + Metric is outside the panel; a click on it closes the search itself.
+          onInteractOutside={(e) => {
+            if (wrap.current?.contains(e.target as Node)) e.preventDefault();
+          }}
+        >
           <div className={`rd-addrow-bar${open ? " open" : ""}`}>
             <input
               ref={box}
@@ -920,20 +924,6 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
               ×
             </button>
           </div>
-        </PopoverAnchor>
-        <PopoverContent
-          ref={pop}
-          className="rd-addpop"
-          align="start"
-          sideOffset={6}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          onCloseAutoFocus={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-          // The bar is outside the panel; a click in it is not a click away.
-          onInteractOutside={(e) => {
-            if (wrap.current?.contains(e.target as Node)) e.preventDefault();
-          }}
-        >
           {creating && (
             <CreateMetric
               groups={groups}

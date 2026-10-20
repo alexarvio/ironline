@@ -175,7 +175,7 @@
 
 /* ---- The exercise search's list (AddExerciseRow): a panel over the page,
    portalled (so not under .rd.trn), six rows then it scrolls; Create pinned at its foot. */
-.rd-addpop.rd-addpop { width: var(--radix-popper-anchor-width); max-width: min(560px, 100vw - 32px); display: flex; flex-direction: column; padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; }
+.rd-addpop.rd-addpop { width: var(--radix-popper-anchor-width); min-width: min(320px, 100vw - 32px); max-width: min(560px, 100vw - 32px); display: flex; flex-direction: column; padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; }
 .rd-addpop-scroll { display: flex; flex-direction: column; max-height: calc(6 * 38px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
 .rd-addpop .rd-addrow-item { flex: none; min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: #141a24; }
 .rd-addpop .rd-addrow-item.on, .rd-addpop .rd-addrow-item:hover { background: #f5f6f8; color: #141a24; }

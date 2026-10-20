@@ -3,7 +3,7 @@
 import { createContext, useContext, type CSSProperties, type ReactNode } from "react";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 // Drag to reorder, the same everywhere in the coach's tabs: take a row by its
@@ -24,7 +24,7 @@ type Id = number | string;
 
 const ListLabel = createContext("item");
 
-export function SortableList({ ids, onMove, label = "item", children }: { ids: Id[]; onMove: (ids: Id[]) => void; label?: string; children: ReactNode }) {
+export function SortableList({ ids, onMove, label = "item", layout = "list", children }: { ids: Id[]; onMove: (ids: Id[]) => void; label?: string; /** "wrap": items side by side, wrapping onto lines (pills), dragged any way. */ layout?: "list" | "wrap"; children: ReactNode }) {
   const sensors = useSensors(
     // A few pixels of movement before it counts as a drag, so a click on the grip stays a click.
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -39,8 +39,8 @@ export function SortableList({ ids, onMove, label = "item", children }: { ids: I
   };
   return (
     <ListLabel.Provider value={label}>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onDragEnd}>
-        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={layout === "wrap" ? [restrictToParentElement] : [restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onDragEnd}>
+        <SortableContext items={ids} strategy={layout === "wrap" ? rectSortingStrategy : verticalListSortingStrategy}>
           {children}
         </SortableContext>
       </DndContext>
