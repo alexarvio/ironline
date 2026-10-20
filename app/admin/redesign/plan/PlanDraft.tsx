@@ -1095,13 +1095,15 @@ function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: 
       </DialogDescription>
       <div className="mvd-rows">
         {rows.map((r) => (
-          <div key={r.label} className="mvd-row">
+          // No arrows (21 Oct, Alex): the new value in the track's ink, the old one after it, struck through.
+          <div key={r.label} className={`mvd-row${r.was === r.now ? " same" : ""}`}>
             <span className="mvd-label">{r.label}</span>
-            <span className="mvd-was">{r.was}</span>
-            <span className="mvd-arrow" aria-hidden="true">
-              {r.was === r.now ? "" : "→"}
-            </span>
-            <span className="mvd-now">{r.was === r.now ? "" : r.now}</span>
+            <span className="mvd-now">{r.now}</span>
+            {r.was !== r.now && (
+              <s className="mvd-was" aria-label={`was ${r.was}`}>
+                {r.was}
+              </s>
+            )}
           </div>
         ))}
       </div>
@@ -1110,7 +1112,7 @@ function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: 
           Cancel
         </button>
         <button type="button" className="dlh-go" onClick={onSave} autoFocus>
-          Save new dates
+          Save
         </button>
       </div>
     </DialogContent>
