@@ -274,7 +274,7 @@ function TodaysTasks({ pics }: { pics: NonNullable<ProgressPics> }) {
   // it used to vanish on coming back from the pictures screen, which remounts
   // Home). When to show it at all is the server's call (homePhotos).
   return (
-    <section className="hm-tasks" aria-label="Progress pictures">
+    <section className="hm-tasks" aria-label="Shape update">
       <ProgressPicsPill pics={pics} />
     </section>
   );

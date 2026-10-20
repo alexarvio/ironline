@@ -1243,7 +1243,7 @@ export async function addPhotoSlotAction(formData: FormData) {
   // The first angle asked for: the schedule starts afresh from now (nothing held from before).
   if (listActivePhotoSlots(clientId).length === 0) clearPhotoOpenSheet(clientId);
   addPhotoSlot(clientId, label);
-  noteChange(clientId, `Changed your progress pictures: Added a ${label} picture`, { tab: "home", label: "See your tasks", key: "photos", detail: `Added a ${label} picture` });
+  noteChange(clientId, `Changed your shape update: Added a ${label} picture`, { tab: "home", label: "See your tasks", key: "photos", detail: `Added a ${label} picture` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1287,7 +1287,7 @@ export async function setPhotoCadenceAction(formData: FormData) {
   if (!cadence) return;
   if (getPhotoCadence(clientId) !== cadence) resetPhotoOpenSheet(clientId, localDateStr());
   setPhotoCadence(clientId, cadence);
-  noteChange(clientId, `Changed your progress pictures: Now every ${CADENCE_WORDS[cadence]}`, { tab: "home", label: "See your tasks", key: "photos", detail: `Now every ${CADENCE_WORDS[cadence]}` });
+  noteChange(clientId, `Changed your shape update: Now every ${CADENCE_WORDS[cadence]}`, { tab: "home", label: "See your tasks", key: "photos", detail: `Now every ${CADENCE_WORDS[cadence]}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1330,7 +1330,7 @@ export async function savePhotoScheduleAction(
   setPhotoInstructions(clientId, String(schedule.instructions ?? "").slice(0, 600));
   if (moved) resetPhotoOpenSheet(clientId, localDateStr());
   const words = wordsFor(cadence, startDate, String(schedule.instructions ?? ""));
-  if (words !== before) noteChange(clientId, `Changed your progress pictures: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
+  if (words !== before) noteChange(clientId, `Changed your shape update: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1371,7 +1371,7 @@ export async function savePhotoSetupAction(clientId: number, setup: PhotoSetup):
   // A new start or rhythm: the calendar decides which sheet is open again (21 Oct).
   if (moved) resetPhotoOpenSheet(clientId, localDateStr());
   const words = wordsFor(cadence, startDate, String(setup.instructions ?? ""));
-  if (words !== before) noteChange(clientId, `Changed your progress pictures: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
+  if (words !== before) noteChange(clientId, `Changed your shape update: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
 
   // The angles: gone, changed, new, then the order as listed.
   const said: string[] = [];
@@ -1398,7 +1398,7 @@ export async function savePhotoSetupAction(clientId: number, setup: PhotoSetup):
   reorderPhotoSlots(clientId, order);
   // The first angle asked for: the schedule starts afresh from now.
   if (askedBefore === 0 && setup.angles.some((a) => !a.paused)) clearPhotoOpenSheet(clientId);
-  if (said.length) noteChange(clientId, `Changed your progress pictures: ${said.join(", ")}`, { tab: "home", label: "See your tasks", key: "photos", detail: said.join(", ") });
+  if (said.length) noteChange(clientId, `Changed your shape update: ${said.join(", ")}`, { tab: "home", label: "See your tasks", key: "photos", detail: said.join(", ") });
   revalidatePath("/admin");
   revalidatePath("/client");
   return { ok: true };
@@ -1418,7 +1418,7 @@ export async function savePhotoPeriodNoteAction(formData: FormData) {
     next_steps: String(formData.get("next_steps") || ""),
     saved_at: new Date().toISOString(),
   });
-  noteChange(clientId, "Left instructions for your progress pictures", { tab: "home", label: "See your tasks", key: "photos-note" });
+  noteChange(clientId, "Left instructions for your shape update", { tab: "home", label: "See your tasks", key: "photos-note" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1435,7 +1435,7 @@ export async function remindProgressPicturesAction(clientId: number) {
   const k = active.filter((s) => uploads.some((u) => u.slot_id === s.id)).length;
   const n = active.length;
   if (k >= n) return;
-  logCoachActivity(clientId, `Time for your progress pictures: ${k} of ${n} in`, { kind: "general", push: true, actionTab: "home", actionLabel: "Take them", dedupeKey: `photos-remind:${period}:${today}` });
+  logCoachActivity(clientId, `Time for your shape update: ${k} of ${n} in`, { kind: "general", push: true, actionTab: "home", actionLabel: "Take them", dedupeKey: `photos-remind:${period}:${today}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }

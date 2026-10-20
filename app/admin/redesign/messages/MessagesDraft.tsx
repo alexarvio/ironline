@@ -731,9 +731,9 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
                   {c === "daily" ? "Daily check-in" : "Weekly check-in"}
                 </button>
               ))}
-            {t.photos && hit("Progress pictures") && (
-              <button type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick("Progress pictures", { kind: "photos" })}>
-                Progress pictures
+            {t.photos && hit("Shape update") && (
+              <button type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick("Shape update", { kind: "photos" })}>
+                Shape update
               </button>
             )}
           </>

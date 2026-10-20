@@ -927,7 +927,7 @@ export function describeMessageLink(clientId: number, link: MessageLink): LinkVi
       return view("Lifestyle", link.section === "daily" ? `${what} · ${shortDay(link.period)}` : `${what} · week of ${shortDay(link.period)}`);
     }
     case "photos":
-      return view("Lifestyle", link.period ? `Progress pictures · ${shortDay(link.period)}` : "Progress pictures");
+      return view("Lifestyle", link.period ? `Shape update · ${shortDay(link.period)}` : "Shape update");
   }
 }
 
@@ -2758,7 +2758,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       category: "measurements",
       at: s.latest ? stampMs(s.latest) : middayMs(s.period),
       tab: "photos",
-      text: `sent ${plural(s.photos.length, "progress picture")} for the sheet of ${feedDay(s.period)}`,
+      text: `sent ${plural(s.photos.length, "photo")} for the sheet of ${feedDay(s.period)}`,
       thumbs: s.photos.sort((a, b) => a.order - b.order).map((p) => p.src),
     });
   });
@@ -6053,7 +6053,7 @@ export function getDueItems(clientId: number): DueItem[] {
   if (currentPeriod && photoSlots.length > 0 && uploadedThisPeriod < photoSlots.length) {
     items.push({
       id: "photos",
-      label: "Progress pictures",
+      label: "Shape update",
       detail: `${uploadedThisPeriod}/${photoSlots.length} uploaded for this ${PHOTO_PERIOD_UNIT[cadence].toLowerCase()}`,
       targetTab: "measurements",
     });

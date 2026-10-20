@@ -39,7 +39,7 @@ export default function ProgressPicsCard({ pics }: { pics: NonNullable<ProgressP
       type="button"
       className={`hm-pp${done ? " done" : ""}`}
       onClick={() => openPhotos?.()}
-      aria-label={done ? "Progress pictures completed. View." : `Progress pictures, ${pics.uploaded} of ${pics.total} uploaded, due today. Start.`}
+      aria-label={done ? "Shape update completed. View." : `Shape update, ${pics.uploaded} of ${pics.total} uploaded, due today. Start.`}
     >
       {!failed && (
         // eslint-disable-next-line @next/next/no-img-element -- a public stock photo
@@ -52,7 +52,7 @@ export default function ProgressPicsCard({ pics }: { pics: NonNullable<ProgressP
             <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
             <circle cx="12" cy="13" r="3.5" />
           </svg>
-          Progress pics
+          Shape update
         </span>
         {/* Keyed on the state, so the switch to Completed cross-fades. */}
         <span key={pics.status} className={`hm-pp-status${done ? " done" : ""}`}>
@@ -61,7 +61,7 @@ export default function ProgressPicsCard({ pics }: { pics: NonNullable<ProgressP
         </span>
       </span>
       <span className="hm-pp-panel" aria-hidden="true">
-        <span className="hm-pp-title">Progress pictures</span>
+        <span className="hm-pp-title">Shape update</span>
         <span key={pics.status} className="hm-pp-btn">
           {done ? "View" : "Start"}
         </span>

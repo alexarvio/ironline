@@ -65,7 +65,7 @@ export const NOTIFICATION_TYPES: Record<NotificationCategory, NotificationType> 
   // Other's calendar, by name (20 Oct: by place, [5], it turned into Training's dumbbell when Family was added).
   event_added: { label: "Event", ...AMBER, icon: eventTypeOf("other").icon, action: "View event" },
   event_changed: { label: "Event", ...AMBER, icon: eventTypeOf("other").icon, action: "View event" },
-  pics_reviewed: { label: "Progress pictures", ...ORANGE, icon: ICON.camera, action: "Open pictures" },
+  pics_reviewed: { label: "Shape update", ...ORANGE, icon: ICON.camera, action: "Open shape update" },
   nutrition_phase: { label: "Nutrition", ...TEAL, icon: ICON.apple, action: "See targets" },
   nutrition_changed: { label: "Nutrition", ...TEAL, icon: ICON.apple, action: "See targets" },
   message: { label: "Message", ...NAVY, icon: ICON.chat, action: "Reply" },
@@ -107,7 +107,8 @@ export function categorize(n: StoredNotification): NotificationCategory {
   if (starts(m, "Updated your training", "Added a week to your programme", "Left a note on your training")) return "training_changed";
   if (starts(m, "Your coach set new nutrition targets", "Your coach set a new nutrition phase")) return "nutrition_phase";
   if (starts(m, "Updated your nutrition", "Updated your supplements", "Updated your water goal", "Left a note on your nutrition")) return "nutrition_changed";
-  if (starts(m, "Changed your progress pictures", "Left instructions for your progress pictures")) return "pics_reviewed";
+  // "progress pictures" is the feature's old name (21 Oct), still in rows written before.
+  if (starts(m, "Changed your shape update", "Left instructions for your shape update", "Changed your progress pictures", "Left instructions for your progress pictures")) return "pics_reviewed";
   if (starts(m, "Changed what you check in", "Moved your weekly check-in day", "Moved your monthly check-in day", "Left a note on your check-in")) return "checkin_comment";
   if (starts(m, "Sent you invoice", "Sent a new invoice", "Marked invoice")) return "invoice";
   if (n.action_tab === "invoices") return "invoice";

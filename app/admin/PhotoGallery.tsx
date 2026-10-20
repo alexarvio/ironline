@@ -287,7 +287,7 @@ function SheetView({
       </div>
 
       <div className="ma-row">
-        <MessageAboutButton target={{ link: { kind: "photos", period: sheet.period }, area: "Lifestyle", label: `Progress pictures · ${sheet.title}, ${sheet.dateLabel}` }} />
+        <MessageAboutButton target={{ link: { kind: "photos", period: sheet.period }, area: "Lifestyle", label: `Shape update · ${sheet.title}, ${sheet.dateLabel}` }} />
       </div>
 
       <SheetNotes key={sheet.period} clientId={clientId} firstName={firstName} sheet={sheet} />

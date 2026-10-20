@@ -35,7 +35,7 @@ const TABS = [
   { key: "measurements", label: "Lifestyle" },
   { key: "training", label: "Training" },
   { key: "nutrition", label: "Nutrition" },
-  { key: "pictures", label: "Progress pictures" },
+  { key: "pictures", label: "Shape update" },
   { key: "meetings", label: "Meetings" },
   { key: "invoices", label: "Invoices" },
 ] as const;

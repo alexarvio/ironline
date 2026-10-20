@@ -26,7 +26,7 @@ export default async function PicturesRedesignPage({ searchParams }: { searchPar
   const coach = await requireCoach();
   const params = await searchParams;
   const { client, firstName } = pickClient(coach.id, params.client);
-  touchPresence(coach, client ? `${firstName} · Pictures` : "Clients");
+  touchPresence(coach, client ? `${firstName} · Shape update` : "Clients");
   if (!client) return <NoClients rail={loadRail(coach)} />;
   return (
     <RedesignShell

@@ -184,9 +184,9 @@ function Pictures({ clientId, firstName, plan }: Props) {
       {/* ---- Header, as Training's; no fact line (21 Oct, Alex). */}
       <header className="trn-head bare">
         <div className="trn-head-main">
-          <span className="trn-eyebrow">Progress pictures</span>
+          <span className="trn-eyebrow">Shape update</span>
           <div className="trn-name-row">
-            <h1 className="trn-name">{firstName}&rsquo;s pictures</h1>
+            <h1 className="trn-name">{firstName}&rsquo;s shape updates</h1>
             {openSheet ? (
               <span className="trn-status rp-tag open">{openSheet.title} open</span>
             ) : plan.nextSheet ? (
@@ -216,12 +216,12 @@ function Pictures({ clientId, firstName, plan }: Props) {
             </small>
           </button>
           <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="trn-more" aria-label="More for progress pictures">
+            <DropdownMenuTrigger className="trn-more" aria-label="More for shape updates">
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => message("Progress pictures", { kind: "photos" })}>
-                <ChatIcon /> Message about progress pictures
+              <DropdownMenuItem onSelect={() => message("Shape update", { kind: "photos" })}>
+                <ChatIcon /> Message about shape updates
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

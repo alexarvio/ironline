@@ -48,7 +48,7 @@ export default function QuickActions({
     });
   }
   if (picsDue && openPhotos) {
-    actions.push({ key: "photos", label: "Progress pictures", name: "Due today", button: "Add", onClick: () => openPhotos() });
+    actions.push({ key: "photos", label: "Shape update", name: "Due today", button: "Add", onClick: () => openPhotos() });
   }
   // A session begun and not ended is always there; otherwise the next one, until one is done today.
   if (nextSession && (nextSession.live || !trainedToday)) {

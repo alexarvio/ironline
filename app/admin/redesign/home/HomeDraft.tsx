@@ -69,7 +69,7 @@ const TONE: Record<HomeAction["tone"], { text: string; cls: string }> = { urgent
 const TRACK_OF: Record<string, PhaseTrack> = { training: "training", nutrition: "nutrition", measurements: "lifestyle" };
 const OTHER_TAG: Record<string, { label: string; icon: ReactNode }> = {
   meetings: { label: "Meetings", icon: <CalendarIcon /> },
-  photos: { label: "Pictures", icon: <CameraIcon /> },
+  photos: { label: "Shape update", icon: <CameraIcon /> },
   messages: { label: "Chat", icon: <ChatIcon /> },
   invoices: { label: "Invoices", icon: <ReceiptIcon /> },
   plan: { label: "Plan", icon: <PhasesIcon /> },

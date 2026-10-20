@@ -64,7 +64,7 @@ export default function CompareDialog({ clientId, sheets, initial, onOpenPhoto }
   const change = left?.weight != null && right?.weight != null ? Math.round((right.weight - left.weight) * 10) / 10 : null;
 
   return (
-    <DialogContent className="dlh cmp" aria-label="Compare progress pictures">
+    <DialogContent className="dlh cmp" aria-label="Compare shape updates">
       <div className="cmp-head">
         <DialogTitle className="dlh-title">Compare</DialogTitle>
         <div className="rd-btn-group cmp-view" role="radiogroup" aria-label="View">
