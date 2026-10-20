@@ -5,7 +5,7 @@
 // Reminders (check-ins due, pictures due) are not notifications: they live
 // on Home and go out as pushes, never into this list.
 
-import { EVENT_TYPES, eventTypeOf, TRAINING_ICON, type EventTypeId } from "./eventTypes";
+import { eventTypeOf, TRAINING_ICON, type EventTypeId } from "./eventTypes";
 
 export type NotificationCategory =
   | "meeting_booked"
@@ -62,8 +62,9 @@ export const NOTIFICATION_TYPES: Record<NotificationCategory, NotificationType> 
   training_block: { label: "Training", ...INDIGO, icon: ICON.dumbbell, action: "Preview block" },
   training_changed: { label: "Training", ...INDIGO, icon: ICON.dumbbell, action: "See training" },
   checkin_comment: { label: "Check-in", ...BEIGE, icon: ICON.chat, action: "Open check-in" },
-  event_added: { label: "Event", ...AMBER, icon: EVENT_TYPES[5].icon, action: "View event" },
-  event_changed: { label: "Event", ...AMBER, icon: EVENT_TYPES[5].icon, action: "View event" },
+  // Other's calendar, by name (20 Oct: by place, [5], it turned into Training's dumbbell when Family was added).
+  event_added: { label: "Event", ...AMBER, icon: eventTypeOf("other").icon, action: "View event" },
+  event_changed: { label: "Event", ...AMBER, icon: eventTypeOf("other").icon, action: "View event" },
   pics_reviewed: { label: "Progress pictures", ...ORANGE, icon: ICON.camera, action: "Open pictures" },
   nutrition_phase: { label: "Nutrition", ...TEAL, icon: ICON.apple, action: "See targets" },
   nutrition_changed: { label: "Nutrition", ...TEAL, icon: ICON.apple, action: "See targets" },
