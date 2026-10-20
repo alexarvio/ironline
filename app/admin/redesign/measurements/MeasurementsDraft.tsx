@@ -22,6 +22,7 @@ import Picker from "../Picker";
 import Pager from "../Pager";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { dayMonth } from "../../../lib/dayMonth";
+import { groupColour } from "../../../lib/categoryColors";
 
 // The Lifestyle tab, built as Training is (21 Oct, Alex): the phase's name
 // to click and type, its state tag as the menu of what can be done with it,
@@ -535,7 +536,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                             <b>{m.name}</b>
                             {m.unit && <small>{m.unit}</small>}
                           </span>
-                          <span className="rls-group" style={{ background: m.tint }}>
+                          <span className="rls-group" style={{ background: m.tint, color: groupColour(m.groupKey).hex }}>
                             {m.groupLabel}
                           </span>
                           {m.last ? (
@@ -857,10 +858,11 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
   useEffect(() => {
     pop.current?.querySelector(".rd-addrow-item.on")?.scrollIntoView({ block: "nearest" });
   }, [cursor, open]);
-  const row = (m: Item, i: number, hint: string) => (
+  // The category's word in its colour (21 Oct, Alex), as the group pill on the rows; a unit stays grey.
+  const row = (m: Item, i: number, hint: "group" | "unit") => (
     <button key={`${m.pack}-${m.name}`} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}${m.taken ? " taken" : ""}`} disabled={m.taken} onMouseEnter={() => setCursor(i)} onClick={() => pick(m)}>
       {m.name}
-      <small>{m.taken ? "On the list" : hint}</small>
+      <small style={!m.taken && hint === "group" ? { color: groupColour(m.group).hex } : undefined}>{m.taken ? "On the list" : hint === "group" ? m.pack : m.unit}</small>
     </button>
   );
   return (
@@ -952,7 +954,7 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
                 ‹ All groups
               </button>
               <div className="rd-addpop-scroll" role="listbox" aria-label={packNow.label}>
-                {list.map((m, i) => row(m, i, m.unit))}
+                {list.map((m, i) => row(m, i, "unit"))}
               </div>
             </>
           )}
@@ -960,7 +962,7 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
             <>
               {list.length > 0 && (
                 <div className="rd-addpop-scroll" role="listbox" aria-label="Metrics">
-                  {list.map((m, i) => row(m, i, m.pack))}
+                  {list.map((m, i) => row(m, i, "group"))}
                 </div>
               )}
               {!exact && (
