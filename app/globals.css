@@ -20424,3 +20424,10 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .fa-kind:disabled { opacity: 0.55; cursor: default; }
 /* The compass in the rogue session row's dashed ring (19 Oct). */
 .tr-body .tr-row-tile.free { display: inline-flex; align-items: center; justify-content: center; color: #5b6474; }
+
+/* The card pictures sheet (21 Oct): Done is the thing to do, in the app's ink; a picture still going up shows dimmed; one that failed, struck. */
+.cv-btn.primary.primary { border-color: #141a24; background: #141a24; color: #fff; }
+.cv-cell.up img { opacity: 0.55; }
+.cv-cell.up::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 2px solid rgba(255, 255, 255, 0.5); border-top-color: #fff; border-radius: 50%; animation: cv-spin 0.8s linear infinite; }
+.cv-cell.failed img { opacity: 0.3; filter: grayscale(1); }
+@keyframes cv-spin { to { transform: rotate(360deg); } }

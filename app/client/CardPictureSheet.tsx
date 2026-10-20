@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { PhaseTrack } from "../lib/db";
-import { removeCardPictureAction, resetCardCoverAction, uploadCardCoverAction } from "../lib/actions";
+import { discardCardPicturesAction, resetCardCoverAction, saveCardPicturesAction, stageCardPictureAction } from "../lib/actions";
 import { coverJpeg } from "../lib/coverJpeg";
 
 // The client's own picture on a Home card (12 Oct). Press and hold a card
@@ -87,100 +87,140 @@ export default function CardPictureSheet({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [list, setList] = useState(own);
-  const fileRef = useRef<HTMLInputElement>(null);
+  // The grid as it is in the sheet (21 Oct, Alex): a new picture shows at once from the phone,
+  // goes up in the background, and the card changes only on Done. Closing without Done keeps the card as it was.
+  type Item = { key: string; preview: string; path: string | null; failed?: boolean };
+  const [items, setItems] = useState<Item[]>(() => own.map((p) => ({ key: p, preview: p, path: p })));
+  const itemsRef = useRef(items);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  // Several at once from the camera roll (14 Oct): each cut to the card and
-  // uploaded in turn, the grid filling as they land; past six, the rest are left.
-  const pick = async (files: FileList | null) => {
-    if (!files?.length || busy) return;
-    setBusy(true);
-    let next = list;
-    for (const file of Array.from(files).slice(0, Math.max(0, MAX_PICTURES - list.length))) {
-      const blob = await coverJpeg(file);
-      if (!blob) continue;
-      const fd = new FormData();
-      fd.set("clientId", String(clientId));
-      fd.set("track", track);
-      fd.set("file", new File([blob], "cover.jpg", { type: "image/jpeg" }));
-      const saved = await uploadCardCoverAction(fd);
-      if (!saved) break;
-      next = [...next, saved];
-      setList(next);
-      onSaved(track, next);
-    }
-    router.refresh();
-    if (fileRef.current) fileRef.current.value = "";
-    setBusy(false);
+    itemsRef.current = items;
+  });
+  const uploads = useRef(new Map<string, Promise<string | null>>());
+  /** Put up in this sitting: thrown away if they don't end up on the card. */
+  const staged = useRef<string[]>([]);
+  const previews = useRef<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  useEffect(() => () => previews.current.forEach((u) => URL.revokeObjectURL(u)), []);
+  const discard = () => {
+    if (staged.current.length) void discardCardPicturesAction(clientId, track, staged.current);
+    staged.current = [];
   };
-  const remove = async (p: string) => {
-    if (busy) return;
-    setBusy(true);
-    await removeCardPictureAction(clientId, track, p);
-    const next = list.filter((x) => x !== p);
-    setList(next);
-    onSaved(track, next);
-    router.refresh();
-    setBusy(false);
-  };
-  const reset = async () => {
-    if (busy) return;
-    setBusy(true);
-    await resetCardCoverAction(clientId, track);
-    setList([]);
-    onSaved(track, []);
-    router.refresh();
-    setBusy(false);
+  const close = () => {
+    if (saving) return;
+    discard();
     onClose();
   };
-  const full = list.length >= MAX_PICTURES;
+  const closeRef = useRef(close);
+  useEffect(() => {
+    closeRef.current = close;
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  // Several at once from the camera roll, all cut and sent together (they went one after another and felt slow).
+  const pick = (files: FileList | null) => {
+    if (!files?.length) return;
+    const room = Math.max(0, MAX_PICTURES - itemsRef.current.length);
+    const fresh = Array.from(files)
+      .slice(0, room)
+      .map((file, i) => {
+        const preview = URL.createObjectURL(file);
+        previews.current.push(preview);
+        return { file, item: { key: `new-${files.length}-${i}-${preview}`, preview, path: null } as Item };
+      });
+    if (fileRef.current) fileRef.current.value = "";
+    setItems((prev) => [...prev, ...fresh.map((f) => f.item)]);
+    for (const { file, item } of fresh) {
+      const job = (async () => {
+        const blob = await coverJpeg(file);
+        if (!blob) return null;
+        const fd = new FormData();
+        fd.set("clientId", String(clientId));
+        fd.set("track", track);
+        fd.set("file", new File([blob], "cover.jpg", { type: "image/jpeg" }));
+        return stageCardPictureAction(fd).catch(() => null);
+      })();
+      uploads.current.set(item.key, job);
+      void job.then((saved) => {
+        if (saved) staged.current.push(saved);
+        setItems((prev) => prev.map((x) => (x.key === item.key ? { ...x, path: saved, failed: !saved } : x)));
+      });
+    }
+  };
+  const remove = (key: string) => setItems((prev) => prev.filter((x) => x.key !== key));
+  const changed = items.length !== own.length || items.some((x, i) => x.path !== own[i]);
+  const uploading = items.some((x) => !x.path && !x.failed);
+  const done = async () => {
+    if (saving) return;
+    if (!changed) return onClose();
+    setSaving(true);
+    await Promise.all(uploads.current.values());
+    // What the grid holds once everything is up, in its order.
+    const paths = itemsRef.current.map((x) => x.path).filter((p): p is string => !!p);
+    await saveCardPicturesAction(clientId, track, paths);
+    const unused = staged.current.filter((p) => !paths.includes(p));
+    staged.current = [];
+    if (unused.length) void discardCardPicturesAction(clientId, track, unused);
+    onSaved(track, paths);
+    router.refresh();
+    onClose();
+  };
+  const reset = async () => {
+    if (saving) return;
+    setSaving(true);
+    discard();
+    await resetCardCoverAction(clientId, track);
+    onSaved(track, []);
+    router.refresh();
+    onClose();
+  };
+  const full = items.length >= MAX_PICTURES;
   return createPortal(
-    <div className="cv-scrim" onClick={onClose}>
-      <div className={`cv-sheet${busy ? " busy" : ""}`} role="dialog" aria-label={`${TRACK_LABEL[track]} card pictures`} onClick={(e) => e.stopPropagation()}>
+    <div className="cv-scrim" onClick={close}>
+      <div className={`cv-sheet${saving ? " busy" : ""}`} role="dialog" aria-label={`${TRACK_LABEL[track]} card pictures`} onClick={(e) => e.stopPropagation()}>
         <span className="cv-grab" aria-hidden="true" />
         <div className="cv-head">
           <div className="cv-head-text">
             <h2 className="cv-title">
-              {TRACK_LABEL[track]} card <span className="cv-count">{list.length}/{MAX_PICTURES}</span>
+              {TRACK_LABEL[track]} card <span className="cv-count">{items.length}/{MAX_PICTURES}</span>
             </h2>
             <p className="cv-sub">
-              {list.length === 0
+              {items.length === 0
                 ? `${coachName}'s picture shows. Yours go on the card on Home and behind the ${TRACK_LABEL[track]} screen; several take turns.`
                 : "On the card on Home and behind the screen, taking turns."}
             </p>
           </div>
         </div>
         <div className="cv-grid">
-          {list.map((p) => (
-            <span key={p} className="cv-cell">
-              {/* eslint-disable-next-line @next/next/no-img-element -- an upload */}
-              <img src={p} alt="" />
-              <button type="button" disabled={busy} onClick={() => remove(p)} aria-label="Remove this picture">
+          {items.map((x) => (
+            <span key={x.key} className={`cv-cell${!x.path && !x.failed ? " up" : ""}${x.failed ? " failed" : ""}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- an upload, or the photo itself while it goes up */}
+              <img src={x.preview} alt="" />
+              <button type="button" disabled={saving} onClick={() => remove(x.key)} aria-label="Remove this picture">
                 ×
               </button>
             </span>
           ))}
           {!full && (
-            <button type="button" className="cv-cell cv-add" disabled={busy} onClick={() => fileRef.current?.click()} aria-label="Add pictures from your photos">
+            <button type="button" className="cv-cell cv-add" disabled={saving} onClick={() => fileRef.current?.click()} aria-label="Add pictures from your photos">
               <span className="cv-add-plus" aria-hidden="true">+</span>
-              <span className="cv-add-text">{busy ? "Saving…" : "Add"}</span>
+              <span className="cv-add-text">Add</span>
             </button>
           )}
         </div>
+        {/* Done first, as the thing to do (21 Oct, Alex); going back to the coach's picture the quiet option under it. */}
         <div className="cv-actions">
-          {list.length > 0 && (
-            <button type="button" className="cv-btn" disabled={busy} onClick={reset}>
+          <button type="button" className="cv-btn primary" disabled={saving} onClick={done}>
+            {saving ? (uploading ? "Uploading…" : "Saving…") : "Done"}
+          </button>
+          {(items.length > 0 || own.length > 0) && (
+            <button type="button" className="cv-btn plain" disabled={saving} onClick={reset}>
               Use {coachName}&rsquo;s picture
             </button>
           )}
-          <button type="button" className="cv-btn plain" onClick={onClose}>
-            {list.length ? "Done" : "Cancel"}
-          </button>
         </div>
         <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => pick(e.target.files)} />
       </div>

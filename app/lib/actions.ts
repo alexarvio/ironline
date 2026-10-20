@@ -160,6 +160,9 @@ import {
   savePhotoUpload,
   removePhotoUpload,
   addClientCardPicture,
+  stageClientCardPicture,
+  setClientCardPictures,
+  discardClientCardPictures,
   clearClientCardCover,
   removeClientCardPicture,
   saveMealPhoto,
@@ -3696,6 +3699,34 @@ export async function uploadCardCoverAction(formData: FormData): Promise<string 
   await putUpload(r.saved, body, file.type);
   revalidatePath("/client");
   return r.saved;
+}
+
+// The card sheet (21 Oct): each picture goes up as it is picked, but the card
+// changes only on Done; closing without Done throws the new ones away.
+export async function stageCardPictureAction(formData: FormData): Promise<string | null> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const track = String(formData.get("track") ?? "");
+  if (!CARD_TRACKS.has(track)) return null;
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0 || file.size > 6 * 1024 * 1024 || !file.type.startsWith("image/")) return null;
+  const body = Buffer.from(await file.arrayBuffer());
+  const saved = stageClientCardPicture(clientId, track as PhaseTrack, body, file.type);
+  if (!saved) return null;
+  await putUpload(saved, body, file.type);
+  return saved;
+}
+
+export async function saveCardPicturesAction(clientId: number, track: PhaseTrack, paths: string[]) {
+  const id = await requireClientAccess(Number(clientId));
+  if (!CARD_TRACKS.has(track) || !Array.isArray(paths)) return;
+  for (const p of setClientCardPictures(id, track, paths.map(String))) await deleteUpload(p);
+  revalidatePath("/client");
+}
+
+export async function discardCardPicturesAction(clientId: number, track: PhaseTrack, paths: string[]) {
+  const id = await requireClientAccess(Number(clientId));
+  if (!CARD_TRACKS.has(track) || !Array.isArray(paths)) return;
+  for (const p of discardClientCardPictures(id, track, paths.map(String))) await deleteUpload(p);
 }
 
 export async function removeCardPictureAction(clientId: number, track: PhaseTrack, publicPath: string) {

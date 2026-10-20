@@ -10731,6 +10731,45 @@ export function addClientCardPicture(clientId: number, track: PhaseTrack, buffer
   return { saved };
 }
 
+/**
+ * A picture put up from the card sheet but not on the card yet (21 Oct, Alex:
+ * Home changed before Done). The file is kept; the list changes only when the
+ * sheet's Done sends it (setClientCardPictures).
+ */
+export function stageClientCardPicture(clientId: number, track: PhaseTrack, buffer: Buffer, mimeType: string): string | null {
+  const client = getData().clients.find((c) => c.id === clientId);
+  if (!client) return null;
+  const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
+  const dir = path.join(DATA_DIR, "uploads", "covers", String(clientId));
+  fs.mkdirSync(dir, { recursive: true });
+  // Several go up at once, so the millisecond alone could repeat.
+  const filename = `${track}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  return `/uploads/covers/${clientId}/${filename}`;
+}
+
+/** The sheet's Done: the track's pictures become exactly these (theirs only, at most six). Returns the ones dropped, for the storage bucket. */
+export function setClientCardPictures(clientId: number, track: PhaseTrack, paths: string[]): string[] {
+  const client = getData().clients.find((c) => c.id === clientId);
+  if (!client) return [];
+  const mine = (p: string) => p.startsWith(`/uploads/covers/${clientId}/${track}-`);
+  const next = [...new Set(paths.filter(mine))].slice(0, MAX_CARD_PICTURES);
+  const have = getClientCardPictures(clientId)[track] ?? [];
+  const dropped = have.filter((p) => !next.includes(p));
+  setCardPictures(client, track, next);
+  persist();
+  dropped.forEach((p) => unlinkQuietly(coverFile(p)));
+  return dropped;
+}
+
+/** Pictures put up and then not kept (the sheet closed without Done): their files go. Only ones not on the card. */
+export function discardClientCardPictures(clientId: number, track: PhaseTrack, paths: string[]): string[] {
+  const have = getClientCardPictures(clientId)[track] ?? [];
+  const gone = paths.filter((p) => p.startsWith(`/uploads/covers/${clientId}/${track}-`) && !have.includes(p));
+  gone.forEach((p) => unlinkQuietly(coverFile(p)));
+  return gone;
+}
+
 /** One of them taken off. Returns the path removed, for the storage bucket. */
 export function removeClientCardPicture(clientId: number, track: PhaseTrack, publicPath: string): string | null {
   const client = getData().clients.find((c) => c.id === clientId);
