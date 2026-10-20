@@ -16,6 +16,7 @@ import DatePick from "../DatePick";
 import Picker from "../Picker";
 import type { DraftInvoices } from "../loaders";
 import { dayMonth } from "../../../lib/dayMonth";
+import { Sep } from "../Sep";
 
 // A client's invoices: every one with its number, dates, total and where it
 // stands, and a new one made from Settings (numbering, VAT, payment terms).
@@ -107,7 +108,9 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
             <small>Next number</small>
             <b>{plan.defaults.nextNumber}</b>
             <span>
-              {plan.defaults.taxLabel} {plan.defaults.vatRate}% · {plan.defaults.termsDays} days to pay
+              {plan.defaults.taxLabel} {plan.defaults.vatRate}%
+              <Sep />
+              {plan.defaults.termsDays} days to pay
             </span>
           </CardContent>
         </Card>
@@ -214,7 +217,9 @@ function NewInvoiceDialog({ clientName, plan, onCreate }: { clientName: string; 
         <div>
           <DialogTitle className="ncd-title">New invoice</DialogTitle>
           <DialogDescription className="ncd-sub">
-            {d.nextNumber} · for {clientName}
+            {d.nextNumber}
+            <Sep />
+            for {clientName}
           </DialogDescription>
         </div>
         <DialogClose className="cc-dialog-x" aria-label="Close">

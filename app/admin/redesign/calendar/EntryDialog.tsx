@@ -14,6 +14,7 @@ import { paletteOf, type Category } from "../palette";
 import type { CalEntry } from "./CalendarDay";
 import { dayMonth } from "../../../lib/dayMonth";
 import { TRAINING_ICON } from "../../../lib/eventTypes";
+import { Sep } from "../Sep";
 
 // The Calendar's entry pop-up (14 Oct): the New event and New phase
 // dialogs' language. A glow and a title pill in the category's colour,
@@ -210,7 +211,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
               {date ? dayMonth(date) : "No day yet"}
               {client && (
                 <>
-                  {" · "}
+                  <Sep />
                   <Link href={`/admin/redesign/meetings?client=${client.id}`} className="cal-entry-link">
                     Open {first(client.name)}&rsquo;s meetings
                   </Link>
@@ -339,7 +340,10 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
           ) : (
             <button type="button" className="cal-entry-pickbtn" onClick={() => setPicking(true)}>
               <SearchIcon />
-              Pick a client · optional
+              <span>
+                Pick a client<Sep />
+                optional
+              </span>
             </button>
           )}
           {e && client && <small className="cal-entry-faint">{first(client.name)} sees this in their app.</small>}

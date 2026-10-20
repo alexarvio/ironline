@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { SortableItem, SortableList } from "../Sortable";
 import { useClickAway } from "./TrainingDraft";
+import { Sep } from "../Sep";
 import { MAX_QUESTION_LENGTH, MAX_WORKOUT_QUESTIONS, WORKOUT_QUESTION_PRESETS } from "../../../lib/workoutQuestions";
 
 // The workout questionnaire (30 Sep): what the client is asked, 1 to 10
@@ -110,7 +111,12 @@ export default function WorkoutQuestionsCard({ programId, firstName, questions: 
                         aria-label="Question"
                         placeholder="Question"
                       />
-                      {isNew(r.id) && <small>New · not applied yet</small>}
+                      {isNew(r.id) && (
+                        <small>
+                          New<Sep />
+                          not applied yet
+                        </small>
+                      )}
                     </span>
                     {/* How it is answered: the ten pills, a number (with its unit box beside the switch), or words. */}
                     <span className="rm-q-how">
@@ -160,7 +166,9 @@ export default function WorkoutQuestionsCard({ programId, firstName, questions: 
           <div className="rd-pending">
             <span className="rd-pending-count">{changeCount || 1}</span>
             <span className="rd-pending-text">
-              {changeCount === 1 ? "change" : "changes"} to what {firstName} is asked after a workout{blank ? " · every question needs words" : " · asked from their next workout once applied"}
+              {changeCount === 1 ? "change" : "changes"} to what {firstName} is asked after a workout
+              <Sep />
+              {blank ? "every question needs words" : "asked from their next workout once applied"}
             </span>
             <button type="button" className="rd-pending-ghost" onClick={() => setRows(saved)}>
               Discard

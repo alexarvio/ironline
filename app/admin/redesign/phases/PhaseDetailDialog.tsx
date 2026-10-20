@@ -9,6 +9,7 @@ import { stateTagStyle, TRACK_LABEL } from "../../phaseChrome";
 import { TRAINING_ICON } from "../../../lib/eventTypes";
 import type { OverviewClient } from "./load";
 import { daysBetween, daysLeft, nextOnTrack, phaseState, phaseStatus, prevOnTrack, dayMonth, TRACK_COLOR, weekIndexOf, weekSegments, weeksOf, type OverviewPhase, type PhaseState } from "./timeline";
+import { SepJoin } from "../Sep";
 
 // A phase's detail (14 Oct), from a bar on the Phases timeline. Read-only:
 // the track pill and a state chip, the name, the client's first name, the
@@ -31,14 +32,14 @@ export const planHref = (clientId: number, p: OverviewPhase) =>
   p.track === "training" ? `/admin/redesign/training?client=${clientId}${p.programId ? `&program=${p.programId}` : ""}` : `/admin/redesign/${p.track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${p.id}`;
 
 /** The chip wears the shared state colours (20 Oct, Alex): running is Live green, upcoming Scheduled blue, a draft peach, done grey. */
-function chipOf(p: OverviewPhase, state: PhaseState, today: string): { text: string; cls: string; tag: "live" | "scheduled" | "draft" | "past" } {
+function chipOf(p: OverviewPhase, state: PhaseState, today: string): { text: React.ReactNode; cls: string; tag: "live" | "scheduled" | "draft" | "past" } {
   if (state === "soon") {
     const d = daysLeft(p, today);
     return { text: d <= 0 ? "Ends today" : d === 1 ? "Ends tomorrow" : `Ends in ${d} days`, cls: "soon", tag: "live" };
   }
   if (state === "running") return { text: `Week ${weekIndexOf(p, today)} of ${weeksOf(p)}`, cls: "track", tag: "live" };
   if (state === "upcoming") return { text: `Starts in ${daysBetween(today, p.start)} days`, cls: "track", tag: "scheduled" };
-  if (state === "draft") return { text: "Draft · not sent", cls: "draft", tag: "draft" };
+  if (state === "draft") return { text: <SepJoin parts={["Draft", "not sent"]} />, cls: "draft", tag: "draft" };
   return { text: "Done", cls: "done", tag: "past" };
 }
 
@@ -65,16 +66,16 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
     : draft
       ? { text: "Draft", cls: "rust" }
       : status === "upcoming"
-        ? { text: `Sent · ${first(client.name)} sees it`, cls: "faint" }
+        ? { text: <SepJoin parts={["Sent", `${first(client.name)} sees it`]} />, cls: "faint" }
         : { text: `${weeks} of ${weeks} weeks`, cls: "ok" };
 
   // After this: the next phase on the track, or the warning that nothing is.
   const after = next
     ? next.draft
-      ? { text: `${next.name} · draft · from ${dayMonth(next.start)}`, cls: "rust" }
+      ? { text: <SepJoin parts={[next.name, "draft", `from ${dayMonth(next.start)}`]} />, cls: "rust" }
       : phaseStatus(next, today) === "running"
-        ? { text: `${next.name} · running since ${dayMonth(next.start)}`, cls: "track" }
-        : { text: `${next.name} · from ${dayMonth(next.start)}`, cls: "track" }
+        ? { text: <SepJoin parts={[next.name, `running since ${dayMonth(next.start)}`]} />, cls: "track" }
+        : { text: <SepJoin parts={[next.name, `from ${dayMonth(next.start)}`]} />, cls: "track" }
     : status === "done"
       ? { text: "Nothing followed", cls: "faint" }
       : { text: `Nothing planned. The ${TRACK_LABEL[p.track].toLowerCase()} track ends here.`, cls: "rust" };

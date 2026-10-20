@@ -27,6 +27,9 @@
 /* ---- Small shared bits */
 .rd.trn .trn-btn { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); font: inherit; font-size: 13px; font-weight: 600; color: var(--trn-ink); cursor: pointer; white-space: nowrap; }
 .rd.trn .trn-btn svg { width: 15px; height: 15px; }
+/* Archivo's capitals sit a touch above the middle of their line, so an icon centred beside them read low (21 Oct, Alex):
+   measured 0.58px under the capitals' middle at 13px; the icon is lifted half a pixel to meet them. */
+.rd.trn .trn-btn svg, .rd.trn .trn-pill svg, .rd.rls .rls-add svg { translate: 0 -0.5px; }
 .rd.trn .trn-btn:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
 .rd.trn .trn-btn.ghost { background: transparent; box-shadow: none; color: var(--trn-sec); }
 .rd.trn .trn-btn.ghost:hover { color: var(--trn-ink); }
@@ -258,6 +261,13 @@ body:has(.rd-addpop) .rd-picker-menu [data-slot="dropdown-menu-item"].on { backg
 .dlh-seg > button:disabled { opacity: 0.4; cursor: default; }
 .dlh-go { height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13.5px; font-weight: 600; color: #fff; cursor: pointer; }
 .dlh-go:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(20, 26, 36, 0.18); }
+.dlh-go:disabled { background: #c9cfd8; cursor: default; }
+/* A field in the card is a clean line (design rules 4): no box, a hairline under it, ink while typing. */
+.dlh-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.dlh-line { display: block; width: 100%; margin: 0; padding: 8px 0 9px; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; background: transparent; box-shadow: none; outline: none; box-sizing: border-box; font: inherit; font-size: 15px; font-weight: 500; line-height: 1.45; color: #141a24; }
+.dlh-line:focus { border-bottom-color: #141a24; }
+.dlh-line::placeholder { color: #98a2b3; }
+textarea.dlh-line { resize: none; }
 .dlh-delete:disabled { background: none; color: rgba(180, 35, 24, 0.35); cursor: default; }
 
 /* ---- Rogue sessions: a label row, then slim rows of their own */

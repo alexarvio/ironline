@@ -6,6 +6,7 @@ import { MonthRange } from "../MonthRange";
 import { addDays, mondayOf } from "../phases/timeline";
 import DateText from "../DateText";
 import { dayMonth } from "../../../lib/dayMonth";
+import { Sep } from "../Sep";
 
 // Scheduling a built programme (20 Oct, Alex): not its dates, which it
 // already has, but when it goes live. The coach picks the week it starts
@@ -53,7 +54,9 @@ export default function ScheduleDialog({
         <div>
           <DialogTitle className="npd-title">Schedule {name}</DialogTitle>
           <DialogDescription className="npd-meta">
-            {weeks} {weeks === 1 ? "week" : "weeks"} · {short(start)} – {short(end)}
+            {weeks} {weeks === 1 ? "week" : "weeks"}
+            <Sep />
+            {short(start)} – {short(end)}
           </DialogDescription>
         </div>
         <button type="button" className="npd-x" onClick={onClose} aria-label="Close">

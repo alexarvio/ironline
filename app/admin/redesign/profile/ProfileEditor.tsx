@@ -11,6 +11,7 @@ import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectV
 import { publishCoachProfileAction, removeCoachPhotoAction, saveCoachProfileAction, uploadCoachPhotoAction } from "../../../lib/actions";
 import { COACH_PROFILE_LIMITS as LIMIT, type CoachProfileView, type CoachRole, type CoachStudy } from "../../../lib/coachProfileView";
 import { dayMonth } from "../../../lib/dayMonth";
+import { Sep } from "../Sep";
 
 // The coach's profile editor in the redesign: the form in cards on the left,
 // the client's own profile screen in a phone on the right, fed from what is
@@ -330,7 +331,10 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
           <Card>
             <CardHeader>
               <CardTitle>Experience</CardTitle>
-              <CardDescription>Newest first · drag to reorder</CardDescription>
+              <CardDescription>
+                Newest first<Sep />
+                drag to reorder
+              </CardDescription>
             </CardHeader>
             <CardContent className="rpf-list">
               {experience.length > 0 && (
@@ -363,7 +367,15 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
           {dirty ? (
             <div className="rd-pending rd-pending-sticky" role="region" aria-label="Unsaved changes">
               <span className="rd-pending-count">{changeCount || 1}</span>
-              <span className="rd-pending-text">{error || `${changeCount === 1 ? "change" : "changes"} to your profile · clients see them once saved`}</span>
+              <span className="rd-pending-text">
+                {error || (
+                  <>
+                    {changeCount === 1 ? "change" : "changes"} to your profile
+                    <Sep />
+                    clients see them once saved
+                  </>
+                )}
+              </span>
               <button type="button" className="rd-pending-ghost" onClick={discard} disabled={saving}>
                 Discard
               </button>
@@ -373,11 +385,24 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
             </div>
           ) : (
           <div className="rpf-bar">
-            <span className="rpf-saved">{savedAt ? `Saved · ${ago(savedAt, now)}` : "Not saved yet"}</span>
+            <span className="rpf-saved">
+              {savedAt ? (
+                <>
+                  Saved<Sep />
+                  {ago(savedAt, now)}
+                </>
+              ) : (
+                "Not saved yet"
+              )}
+            </span>
             {error && <span className="rpf-error">{error}</span>}
             <div className="rpf-publish">
               <Label htmlFor="rpf-published" className="rpf-publish-label">
-                <b>{published ? "Published" : "Not published"}</b> · clients see it from their Account tab
+                <span>
+                  <b>{published ? "Published" : "Not published"}</b>
+                  <Sep />
+                  clients see it from their Account tab
+                </span>
               </Label>
               <Switch id="rpf-published" checked={published} onCheckedChange={togglePublished} disabled={saving} aria-label="Published" />
             </div>
@@ -480,7 +505,11 @@ function PhotoSlot({ coachId, kind, label, hint, path }: { coachId: number; kind
     >
       <span className="rpf-photo-main">
         <b>{label}</b>
-        <span className="rpf-hint">{hint} · up to 6 MB</span>
+        <span className="rpf-hint">
+          {hint}
+          <Sep />
+          up to 6 MB
+        </span>
       </span>
       <span className={`rpf-photo-state${path ? " on" : ""}`}>{busy ? "Uploading…" : path ? "Uploaded" : "None yet"}</span>
       <input

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ChevronDownIcon } from "../../components/icons";
 import { setPhaseGoalsAction } from "../../lib/actions";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../../lib/phaseCovers";
+import { Sep } from "./Sep";
 import "./phase-goals.css";
 
 // The coach's goals for the phase on screen, the same card on Training,
@@ -82,7 +83,9 @@ export default function PhaseGoalsCard({ phaseId, phaseName, firstName, goals }:
         <div className="rd-pending">
           <span className="rd-pending-count">{changes}</span>
           <span className="rd-pending-text">
-            {changes === 1 ? "change" : "changes"} to the goals · {firstName} sees them on Home
+            {changes === 1 ? "change" : "changes"} to the goals
+            <Sep />
+            {firstName} sees them on Home
           </span>
           <button type="button" className="rd-pending-ghost" onClick={() => setRows(saved)}>
             Discard

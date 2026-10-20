@@ -9,6 +9,7 @@ import { SETTINGS, type SettingsKey } from "./settingsNav";
 import { logoutAction } from "../../lib/auth-actions";
 import NewClientDialog from "../NewClientDialog";
 import type { RailData } from "./loaders";
+import { Sep } from "./Sep";
 
 // The left rail, in the redesign's sheet: the brand, the coach's cross-client
 // views as icon rows, every client in one scrolling list, and the coach at
@@ -168,7 +169,16 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
         </span>
         <span className="rr-coach-text">
           <b>{rail.coach.name}</b>
-          <small>{rail.isOwner ? "Owner · Coach" : "Coach"}</small>
+          <small>
+            {rail.isOwner ? (
+              <>
+                Owner<Sep />
+                Coach
+              </>
+            ) : (
+              "Coach"
+            )}
+          </small>
         </span>
         <span className="rr-coach-chev" aria-hidden="true">
           <ChevronDownIcon />

@@ -5,6 +5,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } fro
 import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/form";
 import { DEFAULT_DIAL, PhoneInput } from "../../InfoRow";
 import { saveCoachContactAction } from "../../../lib/actions";
+import { Sep } from "../Sep";
 
 // Your profile → Your details (26 Sep): the account basics any profile has,
 // the sign-in email, a phone and an address. Only the coach (and the owner)
@@ -103,7 +104,11 @@ export default function ProfileDetails({ coachId, data, countries }: { coachId: 
       {dirty && (
         <div className="rd-pending rd-pending-sticky" role="region" aria-label="Unsaved changes">
           <span className="rd-pending-count">{changed || 1}</span>
-          <span className="rd-pending-text">{changed === 1 ? "change" : "changes"} to your details · only you and the app see them</span>
+          <span className="rd-pending-text">
+            {changed === 1 ? "change" : "changes"} to your details
+            <Sep />
+            only you and the app see them
+          </span>
           <button type="button" className="rd-pending-ghost" onClick={() => setD(JSON.parse(saved))} disabled={pending}>
             Discard
           </button>

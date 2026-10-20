@@ -6,6 +6,7 @@ import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../.
 import DateText from "./DateText";
 import { MonthRange } from "./MonthRange";
 import { dayMonth } from "../../lib/dayMonth";
+import { SepJoin } from "./Sep";
 
 // When a programme or phase reaches the client: a month to click the dates
 // on, and the same dates as fields to type into. A programme runs Monday to
@@ -106,7 +107,9 @@ export default function PhaseDatesDialog({
         <DialogTitle className="pdh-title">{title}</DialogTitle>
       </div>
       {/* The one fact line: how long, from when to when (20 Oct: no explanations). */}
-      <DialogDescription className="pdh-what">{[lengthLabel, `${dayMonth(from)} – ${dayMonth(to)}`].filter(Boolean).join(" · ")}</DialogDescription>
+      <DialogDescription className="pdh-what">
+        <SepJoin parts={[lengthLabel, `${dayMonth(from)} – ${dayMonth(to)}`]} />
+      </DialogDescription>
       {name !== undefined && (
         <label className="pdh-field pdh-name">
           <span className="pdh-label">Name</span>

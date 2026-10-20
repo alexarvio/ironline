@@ -5,6 +5,7 @@ import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { dayMonth } from "../../../lib/dayMonth";
 import { judge, nudgeFor, repRange, rowStatus, setStatus, tipFor, type Session, type Verdict } from "../../../lib/progressRules";
 import { TRAINING_ICON } from "../../../lib/eventTypes";
+import { Sep, SepJoin } from "../Sep";
 
 // An exercise's progress (15 Oct), for the coach: one glance at whether the
 // client is progressing, stalling or dropping, and why, with real numbers.
@@ -110,7 +111,7 @@ export default function ExerciseProgressDialog({
   const [how, setHow] = useState(false);
   const rows = [...ss].reverse();
   const shownRows = showAll || rows.length <= 12 ? rows : rows.slice(0, 12);
-  const targetsText = [targets.sets ? `${targets.sets} × ${targets.reps || "?"}` : "", targets.kg != null ? `${kg(targets.kg)} ${unit}` : "", targets.rpe != null ? `RPE ${targets.rpe}` : ""].filter(Boolean).join(" · ");
+  const targetParts = [targets.sets ? `${targets.sets} × ${targets.reps || "?"}` : "", targets.kg != null ? `${kg(targets.kg)} ${unit}` : "", targets.rpe != null ? `RPE ${targets.rpe}` : ""].filter(Boolean);
 
   return (
     <DialogContent className="exp" aria-describedby={undefined} aria-label={`${exerciseName} progress`} style={{ "--vc": v.c, "--vrgb": v.rgb, "--vbg": v.bg } as React.CSSProperties} onOpenAutoFocus={(ev) => ev.preventDefault()}>
@@ -125,9 +126,21 @@ export default function ExerciseProgressDialog({
           <div className="exp-head-text">
             <DialogTitle className="exp-title">{exerciseName}</DialogTitle>
             <div className="exp-context">
-              {targetsText && <span className="exp-targets">{targetsText}</span>}
-              <span>{firstName}</span>
-              {gymOptions.length > 1 ? (
+              {targetParts.length > 0 && (
+                <span className="exp-targets">
+                  <SepJoin parts={targetParts} />
+                </span>
+              )}
+              <span>
+                {firstName}
+                {gymOptions.length <= 1 && gymOptions[0] ? (
+                  <>
+                    <Sep />
+                    {gymOptions[0]}
+                  </>
+                ) : null}
+              </span>
+              {gymOptions.length > 1 && (
                 <select className="exp-gym" value={gym ?? ""} onChange={(ev) => setGym(ev.target.value)} aria-label="Gym">
                   {gymOptions.map((g) => (
                     <option key={g} value={g}>
@@ -135,8 +148,6 @@ export default function ExerciseProgressDialog({
                     </option>
                   ))}
                 </select>
-              ) : (
-                gymOptions[0] && <span>· {gymOptions[0]}</span>
               )}
             </div>
           </div>
@@ -228,7 +239,7 @@ export default function ExerciseProgressDialog({
               {last && <span className={`exp-latest${pts[n - 1].y < 22 ? " below" : ""}`} style={{ left: `calc(8px + ${pts[n - 1].x / 100} * (100% - 50px))`, top: `calc(14px + ${pts[n - 1].y / 100} * (100% - 28px))` }}>{`${kg(last.best.set.weight)} × ${last.best.set.reps}`}</span>}
               {hover != null && (
                 <span className="exp-tooltip" style={{ left: `calc(8px + ${pts[hover].x / 100} * (100% - 50px))`, top: `calc(14px + ${pts[hover].y / 100} * (100% - 28px))` }}>
-                  {shortDate(pts[hover].s.date)} · {kg(pts[hover].s.best.set.weight)} {unit} × {pts[hover].s.best.set.reps} · e1RM {kg(pts[hover].s.best.e1rm)}
+                  <SepJoin parts={[shortDate(pts[hover].s.date), `${kg(pts[hover].s.best.set.weight)} ${unit} × ${pts[hover].s.best.set.reps}`, `e1RM ${kg(pts[hover].s.best.e1rm)}`]} />
                 </span>
               )}
             </div>

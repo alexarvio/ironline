@@ -17,6 +17,7 @@ import ExerciseDrawer, { DRAWER_WIDTH } from "./ExerciseDrawer";
 import { groupColour } from "../../../lib/muscleGroups";
 import ExerciseLibraryGrid from "./ExerciseLibraryGrid";
 import { dayMonth } from "../../../lib/dayMonth";
+import { Sep, SepJoin } from "../Sep";
 
 // The coach's Library (5 Oct, rebuilt 6 Oct on the shadcn parts and the
 // Training tab's rows). Three shelves on tabs:
@@ -105,7 +106,13 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         <div className="rd-head-main">
           <span className="rd-eyebrow">Library</span>
           <h1 className="rd-title">{shelf === "cardio" ? "Cardio movements" : shelf === "videos" ? "Videos" : "Exercises"}</h1>
-          {shelf === "videos" && <span className="rd-sub">{`${data.videos.length} ${data.videos.length === 1 ? "video" : "videos"} · ${data.videos.filter((v) => v.usedBy.length === 0).length} not used yet`}</span>}
+          {shelf === "videos" && (
+            <span className="rd-sub">
+              {`${data.videos.length} ${data.videos.length === 1 ? "video" : "videos"}`}
+              <Sep />
+              {`${data.videos.filter((v) => v.usedBy.length === 0).length} not used yet`}
+            </span>
+          )}
         </div>
         <div className="rd-head-actions">
           <Tabs
@@ -259,7 +266,9 @@ function VideosShelf({
         <CardContent className="lb-drop-body">
           {queue ? (
             <span className="lb-drop-progress">
-              Uploading {queue.done + 1} of {queue.total} · <b>{queue.current}</b>
+              Uploading {queue.done + 1} of {queue.total}
+              <Sep />
+              <b>{queue.current}</b>
               <i style={{ width: `${(queue.done / queue.total) * 100}%` }} />
             </span>
           ) : (
@@ -288,7 +297,10 @@ function VideosShelf({
       {videos.length > 0 && (
         <div className="lb-tools">
           <Button variant={unusedOnly ? "default" : "outline"} size="sm" aria-pressed={unusedOnly} onClick={() => setUnusedOnly((v) => !v)}>
-            Not used yet · {videos.filter((v) => v.usedBy.length === 0).length}
+            <span>
+              Not used yet<Sep />
+              {videos.filter((v) => v.usedBy.length === 0).length}
+            </span>
           </Button>
         </div>
       )}
@@ -375,7 +387,7 @@ function VideoCard({ v, index, hint, renaming, onRename, onStartRename, onDelete
           />
         )}
         <span className="lib-cue" title={v.name}>
-          {[v.bytes != null ? fmtBytes(v.bytes) : null, dayMonth(v.at)].filter(Boolean).join(" · ")}
+          <SepJoin parts={[v.bytes != null ? fmtBytes(v.bytes) : null, dayMonth(v.at)]} />
         </span>
         <span className="lib-cardchips">
           {v.usedBy.length > 0 ? (

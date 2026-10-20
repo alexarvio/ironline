@@ -68,6 +68,7 @@ import {
   listPhotoSlots,
   listPhotoUploads,
   photoSheetFor,
+  upcomingPhotoSheets,
   localDateStr,
   METRIC_GROUPS,
   METRIC_LIBRARY,
@@ -660,10 +661,10 @@ export function loadPictures(clientId: number): DraftPictures {
     const last = inside[inside.length - 1];
     return last ? Math.round(last.value * 10) / 10 : null;
   };
-  // The Plan tab's phase that covered the week a sheet opened in.
+  // The Plan tab's phases that covered the day a sheet opened: Lifestyle, Training, Nutrition (as the Plan's lanes run).
+  const trackOrder = ["lifestyle", "training", "nutrition"] as const;
   const phases = listClientPhases(clientId).filter((p) => !p.draft);
-  const phaseOn = (track: "nutrition" | "training", day: string) =>
-    phases.find((p) => p.track === track && phaseCovers(p.start_week, p.end_week, day))?.name ?? null;
+  const phasesOn = (day: string) => trackOrder.flatMap((track) => phases.filter((p) => p.track === track && phaseCovers(p.start_week, p.end_week, day)).map((p) => ({ track, name: p.name })));
 
   const sheets = periods.map((period, i) => {
     const cells = slots
@@ -687,13 +688,19 @@ export function loadPictures(clientId: number): DraftPictures {
       note: { shape: note.shape, strengths: note.strengths, improvements: note.improvements, next_steps: note.next_steps },
       savedLabel: note.saved_at ? stampDayTime(note.saved_at) : null,
       weight: weightFor(period, periods[i - 1]),
-      phases: { nutrition: phaseOn("nutrition", period), training: phaseOn("training", period) },
+      phases: phasesOn(period),
     };
   });
+
+  // The coach has nudged the client about the open sheet today already (Remind, 21 Oct).
+  const remindedToday = !!live && getData().coach_activity.some((a) => a.client_id === clientId && a.dedupe_key === `photos-remind:${live}:${today}`);
 
   return {
     cadence,
     startDate,
+    nextSheet: active.length > 0 ? (upcomingPhotoSheets(clientId, today, 1)[0] ?? null) : null,
+    since: startDate ?? periods[periods.length - 1] ?? null,
+    remindedToday,
     instructions: getPhotoInstructions(clientId) ?? "",
     slots: slots.map((s) => ({ id: s.id, label: s.label, paused: !!s.paused, count: uploads.filter((u) => u.slot_id === s.id).length })),
     sheets,

@@ -3,6 +3,7 @@
 import "./ask-video.css";
 import { useEffect, useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
+import { SepJoin } from "../Sep";
 
 // Asking the client for a video of one exercise, in the admin hairline style
 // (20 Oct, Alex): the title, one quiet line of facts (the exercise, the
@@ -29,8 +30,8 @@ export default function AskVideoDialog({
   /** The session's name ("Push") and the week it is in. */
   session: string;
   week: number;
-  /** "3 × 8-10 · RPE 8": only what is set. */
-  targets: string;
+  /** ["3 × 8-10", "RPE 8"]: only what is set. */
+  targets: string[];
   /** A request already on this exercise: edit it. */
   existing: { note: string; recurring: boolean } | null;
   onAsk: (note: string, recurring: boolean) => Promise<void>;
@@ -85,7 +86,9 @@ export default function AskVideoDialog({
           ✕
         </button>
       </div>
-      <DialogDescription className="avh-what">{[exerciseName, session, `Week ${week}`, targets].filter(Boolean).join(" · ")}</DialogDescription>
+      <DialogDescription className="avh-what">
+        <SepJoin parts={[exerciseName, session, `Week ${week}`, ...targets]} />
+      </DialogDescription>
 
       <div className="avh-field">
         <textarea

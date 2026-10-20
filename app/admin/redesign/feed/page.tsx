@@ -13,6 +13,7 @@ import "../rail.css";
 import "../messages/messages.css";
 import "./feed.css";
 import { dayMonth } from "../../../lib/dayMonth";
+import { Sep, SepJoin } from "../Sep";
 
 // The Feed in the redesign, the rail on its left (replaces /admin?view=feed).
 // Where a coach starts their day (12 Oct; before, one log of everything):
@@ -244,7 +245,8 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
           <section className="rfd-lane">
             <h2 className="rfd-lane-title">
               Start here
-              <span>{needs.length === 0 ? " · nothing needs you" : ` · ${needs.length} client${needs.length === 1 ? "" : "s"}`}</span>
+              <Sep />
+              <span>{needs.length === 0 ? "nothing needs you" : `${needs.length} client${needs.length === 1 ? "" : "s"}`}</span>
             </h2>
             {needs.length > 0 && (
               <Card className="rfd-card">
@@ -255,7 +257,9 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
                     return (
                       <div key={b.id} className={`rfd-bucket ${b.id}`}>
                         <h3 className="rfd-bucket-title">
-                          {b.label} <span>· {b.sub}</span>
+                          {b.label}
+                          <Sep />
+                          <span>{b.sub}</span>
                         </h3>
                         {/* One line a client (12 Oct, calmer): the first thing, its words cut to
                             a line, and how many more; five a bucket, the rest behind "Show". */}
@@ -274,7 +278,9 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
             )}
             {onTrack.length > 0 && clientId == null && (
               <p className="rfd-ontrack">
-                <b>On track</b> · {onTrack.map((c) => c.name).join(", ")}
+                <b>On track</b>
+                <Sep />
+                {onTrack.map((c) => c.name).join(", ")}
               </p>
             )}
           </section>
@@ -296,8 +302,19 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
                         {l.scope === "device" ? "3 wrong passwords from one device" : "10 wrong passwords from different devices"}.
                       </div>
                       <div className="rfd-lock-meta">
-                        {dayMonth(l.at)} · {feedClock(new Date(l.at).getTime())} · {l.email} · IP {l.ip}
-                        {l.active ? " · still locked" : l.cleared ? " · unlocked" : ""}
+                        {dayMonth(l.at)}
+                        <Sep />
+                        {feedClock(new Date(l.at).getTime())}
+                        <Sep />
+                        {l.email}
+                        <Sep />
+                        IP {l.ip}
+                        {(l.active || l.cleared) && (
+                          <>
+                            <Sep />
+                            {l.active ? "still locked" : "unlocked"}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -360,8 +377,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
                               </span>
                               <span className="rfd-main">
                                 <span className="rfd-text">
-                                  <b>{g.events.length} things</b> · {shown.join(" · ")}
-                                  {more > 0 && ` · and ${more} more`}
+                                  <SepJoin parts={[<b key="n">{g.events.length} things</b>, ...shown, more > 0 && `and ${more} more`]} />
                                 </span>
                               </span>
                               <span className="rfd-when">{clock(g.events[0])}</span>

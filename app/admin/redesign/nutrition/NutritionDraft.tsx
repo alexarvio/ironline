@@ -23,6 +23,7 @@ import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth } from "../../../lib/dayMonth";
 import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
+import { Sep } from "../Sep";
 
 // The Nutrition tab, built as Training and Lifestyle are (21 Oct, Alex): the
 // phase's name to click and type, its state tag as its menu, the goals and
@@ -148,7 +149,7 @@ type Dlg =
 function SaveStatus({ busy, failed, onRetry, solo = false }: { busy: boolean; failed: boolean; onRetry: () => void; solo?: boolean }) {
   return failed ? (
     <span className={`trn-allsaved failed${solo ? " solo" : ""}`} role="alert">
-      Not saved ·{" "}
+      Not saved<Sep />
       <button type="button" onClick={onRetry}>
         Retry
       </button>
@@ -778,7 +779,11 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                 <span>Date</span>
                 <span>Logged</span>
                 <span className="rnt-daycol">Day</span>
-                <span>Protein · carbs · fat</span>
+                <span>
+                  Protein<Sep />
+                  carbs<Sep />
+                  fat
+                </span>
                 <span />
               </div>
               {days.map((d) => (
@@ -1338,7 +1343,10 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
               ))}
               {commentsOn(day.date, m).map((c) => (
                 <p key={c.id} className="rn-said">
-                  <b>You · {c.when}</b>
+                  <b>
+                    You<Sep />
+                    {c.when}
+                  </b>
                   {c.text}
                 </p>
               ))}
@@ -1362,10 +1370,18 @@ function PhotoDialog({ firstName, date, meal, comments, onSend }: { firstName: s
     <DialogContent className="rd-dlg rn-shotdlg">
       <DialogHeader>
         <DialogTitle>
-          {meal.label} · {dayMonth(date)}
+          {meal.label}
+          <Sep />
+          {dayMonth(date)}
         </DialogTitle>
         <DialogDescription>
-          {n(meal.kcal)} kcal · {meal.protein} g protein · {meal.carbs} g carbs · {meal.fat} g fat
+          {n(meal.kcal)} kcal
+          <Sep />
+          {meal.protein} g protein
+          <Sep />
+          {meal.carbs} g carbs
+          <Sep />
+          {meal.fat} g fat
         </DialogDescription>
       </DialogHeader>
       {/* eslint-disable-next-line @next/next/no-img-element -- client-uploaded file */}
@@ -1374,7 +1390,10 @@ function PhotoDialog({ firstName, date, meal, comments, onSend }: { firstName: s
         <div className="rn-saidlist">
           {comments.map((c) => (
             <p key={c.id} className="rn-said">
-              <b>You · {c.when}</b>
+              <b>
+                You<Sep />
+                {c.when}
+              </b>
               {c.text}
             </p>
           ))}

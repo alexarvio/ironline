@@ -4,6 +4,7 @@ import "./demo-video.css";
 import { useEffect, useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { dayMonth } from "../../../lib/dayMonth";
+import { Sep, SepJoin } from "../Sep";
 
 // The demo video on an exercise (15 Oct), in the admin hairline style (20 Oct,
 // Alex): the exercise name, one quiet fact line, the demo as clients see it,
@@ -152,11 +153,7 @@ export default function DemoVideoDialog({
   const previewTitle = preview ? (isUpload(preview) ? fileName(preview) : `${exerciseName} demo`) : "";
   const previewProvider = preview ? providerOf(preview) : null;
   const clip = preview && isUpload(preview) ? videos.find((v) => v.path === preview) ?? null : null;
-  const previewMeta = !preview
-    ? ""
-    : isUpload(preview)
-      ? ["Uploaded", clip ? dayMonth(clip.at) : null, clip?.bytes ? mb(clip.bytes) : null].filter(Boolean).join(" · ")
-      : `${previewProvider} · ${shortUrl(preview)}`;
+  const previewMeta = !preview ? null : <SepJoin parts={isUpload(preview) ? ["Uploaded", clip ? dayMonth(clip.at) : null, clip?.bytes ? mb(clip.bytes) : null] : [previewProvider, shortUrl(preview)]} />;
 
   return (
     <DialogContent className="dmvh" aria-describedby={undefined} aria-label={`${exerciseName} demo video`} onOpenAutoFocus={(ev) => ev.preventDefault()}>
@@ -166,7 +163,15 @@ export default function DemoVideoDialog({
           ✕
         </button>
       </div>
-      <DialogDescription className="dmvh-what">Demo video{clientsUsing > 1 ? ` · ${clientsUsing} clients` : ""}</DialogDescription>
+      <DialogDescription className="dmvh-what">
+        Demo video
+        {clientsUsing > 1 ? (
+          <>
+            <Sep />
+            {clientsUsing} clients
+          </>
+        ) : null}
+      </DialogDescription>
 
       <div className="dmvh-body">
         {preview && previewProvider && (
@@ -275,7 +280,10 @@ export default function DemoVideoDialog({
                   </>
                 ) : upload.state === "error" ? (
                   <>
-                    <b>Couldn’t upload · {upload.reason}</b>
+                    <b>
+                      Couldn’t upload<Sep />
+                      {upload.reason}
+                    </b>
                     <small>Try again</small>
                   </>
                 ) : file ? (
@@ -286,7 +294,10 @@ export default function DemoVideoDialog({
                 ) : (
                   <>
                     <b>Drop or choose a video</b>
-                    <small>MP4 or MOV · up to 200 MB</small>
+                    <small>
+                      MP4 or MOV<Sep />
+                      up to 200 MB
+                    </small>
                   </>
                 )}
               </button>
@@ -310,7 +321,9 @@ export default function DemoVideoDialog({
                         </span>
                         <span className="dmvh-rtext">
                           <b>{v.name}</b>
-                          <small>{[v.path === attached ? "Current" : null, dayMonth(v.at), v.bytes ? mb(v.bytes) : null].filter(Boolean).join(" · ")}</small>
+                          <small>
+                            <SepJoin parts={[v.path === attached ? "Current" : null, dayMonth(v.at), v.bytes ? mb(v.bytes) : null]} />
+                          </small>
                         </span>
                         {on && (
                           <i className="dmvh-tick" aria-hidden="true">

@@ -13,6 +13,7 @@ import { gridFor, MonthRange } from "./PlanDraft";
 import DateText from "../DateText";
 import { dayMonth } from "../../../lib/dayMonth";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
+import { SepJoin } from "../Sep";
 
 // The New event dialog after the client's sheet and the phase dialog (10 Oct):
 // a category pill in the title, category tiles with icons, the dates as pills.
@@ -82,18 +83,20 @@ const relative = (today: string, d: string) => {
   const w = abs >= 14 ? `${Math.round(abs / 7)} weeks` : abs === 1 ? "1 day" : `${abs} days`;
   return n > 0 ? `in ${w}` : `${w} ago`;
 };
-/** The words on a bar or pin: where it stands against today. */
-const standing = (today: string, e: PlanEvent) => {
+/** The words on a bar or pin: where it stands against today, as its facts ("now", "3 days left"); on screen a bar parts them. */
+const standingParts = (today: string, e: PlanEvent): string[] => {
   const single = e.start === e.end;
   // A timestamp is only ever "in 3 days", "today" or "2 days ago".
-  if (single) return relative(today, e.start);
-  if (today < e.start) return relative(today, e.start);
-  if (today > e.end) return `ended ${relative(today, e.end)}`;
+  if (single) return [relative(today, e.start)];
+  if (today < e.start) return [relative(today, e.start)];
+  if (today > e.end) return [`ended ${relative(today, e.end)}`];
   // Repeating with no end (19 Oct): its stored end is only a horizon.
-  if (e.repeat && !e.repeat.until) return "ongoing";
+  if (e.repeat && !e.repeat.until) return ["ongoing"];
   const left = daysBetween(today, e.end);
-  return left === 0 ? "last day" : `now · ${left} day${left === 1 ? "" : "s"} left`;
+  return left === 0 ? ["last day"] : ["now", `${left} day${left === 1 ? "" : "s"} left`];
 };
+/** The same as one string, for a tooltip. */
+const standing = (today: string, e: PlanEvent) => standingParts(today, e).join(" · ");
 
 export type EventsCardProps = {
   clientId: number;
@@ -371,7 +374,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                           <span className="rq-pin-text">
                             <b>{e.title}</b>
                             <small>
-                              {dayMonth(shown.start)} · {standing(today, shown)}
+                              <SepJoin parts={[dayMonth(shown.start), ...standingParts(today, shown)]} />
                             </small>
                           </span>
                         </button>
@@ -394,7 +397,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                           <b>{e.title}</b>
                           <small>
                             {/* Repeating (19 Oct): the days it comes back on, not a length. */}
-                            {e.repeat ? repeatWords(e.repeat, { until: false }) : `${daysBetween(shown.start, shown.end) + 1} days`} · {standing(today, shown)}
+                            <SepJoin parts={[e.repeat ? repeatWords(e.repeat, { until: false }) : `${daysBetween(shown.start, shown.end) + 1} days`, ...standingParts(today, shown)]} />
                           </small>
                         </button>
                       );
@@ -450,7 +453,9 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                       {e.byClient && <span className="rq-ev-by">From client</span>}
                       {e.note && <span className="rq-evrow-note">{e.note}</span>}
                     </span>
-                    <span className="rq-evrow-rel">{standing(today, e)}</span>
+                    <span className="rq-evrow-rel">
+                      <SepJoin parts={standingParts(today, e)} />
+                    </span>
                   </button>
                 </div>
               );

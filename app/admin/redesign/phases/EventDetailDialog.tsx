@@ -8,6 +8,7 @@ import { eventTypeOf } from "../../../lib/eventTypes";
 import { repeatWords } from "../../../lib/eventRepeat";
 import type { OverviewClient } from "./load";
 import { daysBetween, eventTiming, dayMonth, type OverviewEvent } from "./timeline";
+import { Sep, SepJoin } from "../Sep";
 
 // An event's detail (14 Oct), from a marker on the Phases timeline: the
 // phase pop-up's sibling. The category's icon big and alone, a category
@@ -58,7 +59,7 @@ export default function EventDetailDialog({ client, event: e, today, coach }: { 
             <div className="evd-pills">
               <span className="evd-cat">{t.label}</span>
               <DialogDescription id="evd-state" className={`evd-chip ${timing.chip.cls}`}>
-                {timing.chip.text}
+                <SepJoin parts={timing.chip.text.split(" · ")} />
               </DialogDescription>
             </div>
             <DialogTitle className="evd-title">{e.title}</DialogTitle>
@@ -88,7 +89,9 @@ export default function EventDetailDialog({ client, event: e, today, coach }: { 
               <span className="evd-bar" aria-hidden="true">
                 <i style={{ width: `${timing.pct * 100}%` }} />
               </span>
-              <span className="evd-rel">{timing.relative}</span>
+              <span className="evd-rel">
+                <SepJoin parts={timing.relative.split(" · ")} />
+              </span>
             </>
           ) : (
             <div className="evd-day">
@@ -99,7 +102,9 @@ export default function EventDetailDialog({ client, event: e, today, coach }: { 
               </span>
               <span className="evd-day-text">
                 <span className="evd-date">{dayMonth(e.start)}</span>
-                <span className="evd-rel">{timing.relative}</span>
+                <span className="evd-rel">
+                  <SepJoin parts={timing.relative.split(" · ")} />
+                </span>
               </span>
             </div>
           )}
@@ -129,7 +134,12 @@ export default function EventDetailDialog({ client, event: e, today, coach }: { 
             <b>{client.name}</b>
             <small>
               Added by {byClient ? first(client.name) : "you"}
-              {e.createdAt ? ` · ${addedWhen(e.createdAt, today)}` : ""}
+              {e.createdAt ? (
+                <>
+                  <Sep />
+                  {addedWhen(e.createdAt, today)}
+                </>
+              ) : null}
             </small>
           </span>
         </div>

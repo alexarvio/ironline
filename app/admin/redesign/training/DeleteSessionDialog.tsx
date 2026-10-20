@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { dayMonth } from "../../../lib/dayMonth";
+import { SepJoin } from "../Sep";
 
 // Deleting a session, in the admin hairline style (20 Oct, Alex): the title,
 // one line of what goes with it, and, when the client logged sets on it, a
@@ -81,7 +82,7 @@ export default function DeleteSessionDialog({
       </div>
       {/* What goes with it, as one quiet line (20 Oct, Alex: the hairline style). */}
       <DialogDescription id="dlh-desc" className="dlh-what">
-        {[plural(exercises, "exercise"), cardioBlocks ? `${cardioBlocks} cardio` : null, loggedSets ? plural(loggedSets, "logged set") : "nothing logged"].filter(Boolean).join(" · ")}
+        <SepJoin parts={[plural(exercises, "exercise"), cardioBlocks ? `${cardioBlocks} cardio` : null, loggedSets ? plural(loggedSets, "logged set") : "nothing logged"]} />
       </DialogDescription>
       {gated && (
         <p className="dlh-warn">

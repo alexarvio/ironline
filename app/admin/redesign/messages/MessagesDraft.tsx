@@ -13,6 +13,7 @@ import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMess
 import type { MessageLink } from "../../../lib/messageLinks";
 import type { LinkTargets } from "../../../lib/queries";
 import { ConfirmDialog } from "../training/TrainingDraft";
+import { Sep } from "../Sep";
 
 // The Messages tab in the redesign's sheet: one chat box, and unlike the
 // other drafts it is real. Everything here sends and saves through the same
@@ -319,7 +320,12 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
                 <LinkGlyph />
                 <span className="rm-linkdot-tip" aria-hidden="true">
                   {m.link.label}
-                  {m.link.gone && <em> · no longer opens</em>}
+                  {m.link.gone && (
+                    <>
+                      <Sep />
+                      <em>no longer opens</em>
+                    </>
+                  )}
                 </span>
               </span>
             ))}
@@ -696,7 +702,12 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
                 <small>calories and macros</small>
               </button>
             )}
-            {t.foodDays.length > 0 && <span className="rd-menu-head">Food diary · last two weeks</span>}
+            {t.foodDays.length > 0 && (
+              <span className="rd-menu-head">
+                Food diary<Sep />
+                last two weeks
+              </span>
+            )}
             {t.foodDays
               .filter((d) => hit(d.label))
               .map((d) => (

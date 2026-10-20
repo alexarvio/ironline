@@ -369,6 +369,8 @@ import { COACH_PROFILE_LIMITS } from "./coachProfileView";
 import { deleteUpload, keyOf, putUpload } from "./storage";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
+import { getPhotoCadence, getPhotoInstructions, getPhotoStartDate, listPhotoSlots, listPhotoUploads, photoSheetFor } from "./queries";
+import { dayMonth } from "./dayMonth";
 import { isTimezone, SERVER_TZ, tzShort, zonedToUtc } from "./timezones";
 import { inZone } from "./viewZone";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -1262,6 +1264,19 @@ export async function removePhotoSlotAction(formData: FormData) {
   revalidatePath("/client");
 }
 
+// Remove from the Progress pictures tab: the coach confirmed a number of
+// photos going with the angle. When the client has uploaded more since the
+// tab was read, nothing goes and the real count comes back to ask again.
+export async function removePhotoAngleAction(id: number, confirmedPhotos: number): Promise<{ removed: boolean; count: number } | undefined> {
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForPhotoSlot(id)))) return;
+  const count = listPhotoUploads([id]).length;
+  if (count > Math.max(0, Number(confirmedPhotos) || 0)) return { removed: false, count };
+  removePhotoSlot(id);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return { removed: true, count };
+}
+
 export async function setPhotoCadenceAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   if (!(await coachForClient(clientId))) return;
@@ -1288,7 +1303,7 @@ export async function reorderPhotoSlotsAction(clientId: number, orderedIds: numb
   revalidatePath("/client");
 }
 
-// The photo sheet schedule in one save, when the coach presses Save: the day
+// The photo sheet schedule in one save (the Progress pictures tab autosaves it): the day
 // the first sheet opens (empty goes back to calendar buckets), how often a
 // new one opens, and the note on how to take the pictures.
 export async function savePhotoScheduleAction(
@@ -1299,11 +1314,16 @@ export async function savePhotoScheduleAction(
   const cadence = (["weekly", "biweekly", "monthly", "sixweekly"] as const).find((c) => c === schedule.cadence);
   const startDate = /^\d{4}-\d{2}-\d{2}$/.test(schedule.startDate) ? schedule.startDate : null;
   if (!cadence || (schedule.startDate && !startDate)) return;
+  // The tab autosaves (every click, every pause in typing): the client's note
+  // changes only when its words would, and says the schedule as it is now,
+  // one note a day of its own (not joined onto the angles' changes).
+  const wordsFor = (c: keyof typeof CADENCE_WORDS, start: string | null, instr: string) => `Every ${CADENCE_WORDS[c]}${start ? ` from ${dayMonth(start)}` : ""}${instr.trim() ? ", with instructions" : ""}`;
+  const before = wordsFor(getPhotoCadence(clientId), getPhotoStartDate(clientId), getPhotoInstructions(clientId) ?? "");
   setPhotoCadence(clientId, cadence);
   setPhotoStartDate(clientId, startDate);
   setPhotoInstructions(clientId, String(schedule.instructions ?? "").slice(0, 600));
-  const words = `Every ${CADENCE_WORDS[cadence]}${startDate ? ` from ${new Date(`${startDate}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}${String(schedule.instructions ?? "").trim() ? ", with instructions" : ""}`;
-  noteChange(clientId, `Changed your progress pictures: ${words}`, { tab: "home", label: "See your tasks", key: "photos", detail: words });
+  const words = wordsFor(cadence, startDate, String(schedule.instructions ?? ""));
+  if (words !== before) noteChange(clientId, `Changed your progress pictures: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1323,6 +1343,23 @@ export async function savePhotoPeriodNoteAction(formData: FormData) {
     saved_at: new Date().toISOString(),
   });
   noteChange(clientId, "Left instructions for your progress pictures", { tab: "home", label: "See your tasks", key: "photos-note" });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// Remind (21 Oct): a nudge about the open sheet, to the lock screen too, once
+// a day a sheet (the dedupe key). Nothing when no sheet is open or it is full.
+export async function remindProgressPicturesAction(clientId: number) {
+  if (!Number.isInteger(clientId) || !(await coachForClient(clientId))) return;
+  const today = localDateStr();
+  const active = listPhotoSlots(clientId).filter((s) => !s.paused);
+  const period = active.length > 0 ? photoSheetFor(clientId, today) : null;
+  if (!period) return;
+  const uploads = listPhotoUploads(active.map((s) => s.id)).filter((u) => u.period === period);
+  const k = active.filter((s) => uploads.some((u) => u.slot_id === s.id)).length;
+  const n = active.length;
+  if (k >= n) return;
+  logCoachActivity(clientId, `Time for your progress pictures: ${k} of ${n} in`, { kind: "general", push: true, actionTab: "home", actionLabel: "Take them", dedupeKey: `photos-remind:${period}:${today}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -3496,9 +3533,9 @@ export async function saveWarmupSetsAction(assignmentId: number, sets: { weight_
 // Everything the coach changes reaches the client as a notification: one per
 // kind per day, so an afternoon of edits reads as one line, not thirty.
 // In the app only, unless push says it is a real moment (see logCoachActivity).
-function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings" | "invoices" | "checkin"; label?: string; ref?: number; key: string; push?: boolean; detail?: string }) {
+function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings" | "invoices" | "checkin"; label?: string; ref?: number; key: string; push?: boolean; detail?: string; replace?: boolean }) {
   if (clientId == null) return;
-  logCoachActivity(clientId, message, { kind: "general", actionTab: opts.tab, actionLabel: opts.label, actionRef: opts.ref, dedupeKey: `${opts.key}:${localDateStr()}`, push: opts.push, mergeDetail: opts.detail });
+  logCoachActivity(clientId, message, { kind: "general", actionTab: opts.tab, actionLabel: opts.label, actionRef: opts.ref, dedupeKey: `${opts.key}:${localDateStr()}`, push: opts.push, mergeDetail: opts.detail, replace: opts.replace });
 }
 
 // ---- A training change, in words, for Home's "Latest from" card and the

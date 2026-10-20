@@ -4356,12 +4356,13 @@ export function listPhotoSlots(clientId: number): PhotoSlot[] {
 
 export function addPhotoSlot(clientId: number, label: string) {
   const data = getData();
-  const count = data.photo_slots.filter((s) => s.client_id === clientId).length;
+  // After the last one, whatever removals left gaps in the numbers.
+  const mine = data.photo_slots.filter((s) => s.client_id === clientId);
   data.photo_slots.push({
     id: allocId("photo_slots"),
     client_id: clientId,
     label,
-    order_index: count,
+    order_index: Math.max(-1, ...mine.map((s) => s.order_index)) + 1,
   });
   persist();
 }

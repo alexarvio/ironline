@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "../../.
 import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Textarea } from "../../../components/ui/form";
 import { ArrowRightIcon } from "../../../components/icons";
 import { COUNTRIES, CURRENCIES, countryCodeFromName, countryOf, currencyName, formatMoney, invoicingFor } from "../../../lib/countries";
+import { Sep, SepJoin } from "../Sep";
 
 // Settings' sections, on the shadcn parts: cards of fields, and a bar at the
 // foot that appears once something is changed, with Save and Discard. Each
@@ -230,7 +231,15 @@ function OnlinePayments({ state }: { state: PaymentsState }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Online payments{state.testMode ? " · test mode" : ""}</CardTitle>
+        <CardTitle>
+          Online payments
+          {state.testMode ? (
+            <>
+              <Sep />
+              test mode
+            </>
+          ) : null}
+        </CardTitle>
         {badge}
       </CardHeader>
       <CardContent className="rst-pay">
@@ -299,7 +308,9 @@ export function InvoicingSettings({ initial, business, payments }: { initial: Co
               <SelectContent className="max-h-80">
                 {currencies.map((c) => (
                   <SelectItem key={c} value={c}>
-                    {c} · {currencyName(c)}
+                    {c}
+                    <Sep />
+                    {currencyName(c)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -405,7 +416,7 @@ export function InvoicingSettings({ initial, business, payments }: { initial: Co
 
 // ---- Privacy & legal: the documents clients see, and what happens to their data.
 export function PrivacySettings({ company, country, contactEmail, updated }: { company: string; country: string; contactEmail: string; updated: string }) {
-  const doc = (label: string, href: string | null, note: string) => (
+  const doc = (label: string, href: string | null, note: ReactNode) => (
     <li className="rst-line">
       <span>
         <b>{label}</b>
@@ -428,7 +439,7 @@ export function PrivacySettings({ company, country, contactEmail, updated }: { c
         </CardHeader>
         <CardContent>
           <ul className="rst-lines">
-            {doc("Privacy policy", "/privacy", `Updated ${updated} · linked from the app and the App Store`)}
+            {doc("Privacy policy", "/privacy", <SepJoin parts={[`Updated ${updated}`, "linked from the app and the App Store"]} />)}
             {doc("Support page", "/support", "Where clients find help")}
             {doc("Terms of service", null, "What clients agree to when they sign up")}
             {doc("Data processing agreement", null, "Between you and the app, for clients' health data")}

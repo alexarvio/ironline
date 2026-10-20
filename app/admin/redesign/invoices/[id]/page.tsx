@@ -6,6 +6,9 @@ import { getInvoiceView } from "../../../../lib/queries";
 import InvoiceSheet from "../../../../components/InvoiceSheet";
 import InvoicePrintButton from "../../../../components/InvoicePrintButton";
 import { countryCodeFromName, countryOf, hasBankDetails } from "../../../../lib/countries";
+import { Sep } from "../../Sep";
+// For the bar between the two Settings links (.rd-sep); every rule in it is scoped to its own classes.
+import "../../training/draft.css";
 
 // One invoice as it prints, for the coach: the sheet (components/InvoiceSheet)
 // with a bar above it. While it is "Not sent" it reads Settings live and
@@ -34,7 +37,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
       </div>
       {missing.length > 0 && !v.frozen && (
         <p className="ivp-missing">
-          Missing from Settings: {missing.join(", ")}. <Link href="/admin/redesign/settings/business">Business details</Link> · <Link href="/admin/redesign/settings/invoicing">Invoicing</Link>
+          Missing from Settings: {missing.join(", ")}. <Link href="/admin/redesign/settings/business">Business details</Link>
+          <Sep />
+          <Link href="/admin/redesign/settings/invoicing">Invoicing</Link>
         </p>
       )}
       <InvoiceSheet v={v} />

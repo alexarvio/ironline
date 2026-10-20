@@ -33,6 +33,7 @@ import { stateTagStyle } from "../../phaseChrome";
 import ExerciseProgressDialog from "./ExerciseProgressDialog";
 import DatePick from "../DatePick";
 import { dayMonth } from "../../../lib/dayMonth";
+import { Sep, SepJoin } from "../Sep";
 
 // The calmer builder, as a draft on real data. Nothing here saves: every
 // action ends in a toast. What it settles, against the current builder:
@@ -177,6 +178,15 @@ const weeksWords = (indexes: number[]) => {
 type AddedExercise = { kind: "exercise"; exerciseId: number | null; /** The exercise's variation picked with it; its name is already in `name`. */ variationId?: number | null; name: string; sets: number | string; reps: string; kg: number | null; rpe?: string; tempo?: string; rest?: string; note?: string };
 type AddedCardio = { kind: "cardio"; name: string; time: string; pace: string; incline: string; distance: string; note: string };
 type Added = { key: number } & (AddedExercise | AddedCardio);
+/** A cardio figure as it is saved: a bare number gets its unit ("15" → "15 min"); anything else is kept as typed. */
+const cardioUnit = (v: string, u: string) => (/^\s*[\d.,]+\s*$/.test(v) ? `${v.trim()}${u}` : v.trim());
+const CARDIO_UNITS = { time: " min", pace: " km/h", incline: "%", distance: " km" } as const;
+/** A cardio's typed figures with their units, for the server. */
+const cardioOut = <T extends Partial<Record<keyof typeof CARDIO_UNITS, string>>>(c: T): T => {
+  const out = { ...c };
+  for (const k of Object.keys(CARDIO_UNITS) as (keyof typeof CARDIO_UNITS)[]) if (out[k] !== undefined) out[k] = cardioUnit(out[k]!, CARDIO_UNITS[k]) as T[typeof k];
+  return out;
+};
 type Edits = { name?: string; note?: string; sets?: string; reps?: string; kg?: number | null; gymKg?: Record<string, number | null>; rpe?: string; tempo?: string; rest?: string };
 type CardioEdit = Partial<Pick<DraftCardio, "name" | "time" | "pace" | "incline" | "distance" | "notes">>;
 type Pending = { added: Added[]; removed: number[]; cardioRemoved: number[]; edits: Record<number, Edits>; cardioEdits: Record<number, CardioEdit>; order: number[] | null; renamed: string | null; alsoRemaining: boolean };
@@ -276,16 +286,15 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // The band the exercise figures take up, gaps included: cardio's figures
   // share it, so the name, "did" and ⋯ columns line up across both tables.
   const bandW = exWidths.reduce((t, w) => t + w, 0) + Math.max(0, exWidths.length - 1) * GAP;
-  // A cardio column shows when it is ticked and at least one row has a value in it.
-  type CardioShow = { time: boolean; pace: boolean; incline: boolean; distance: boolean; note: boolean };
-  const cardioStyleFor = (show: CardioShow) => {
-    const m = Object.values(show).filter(Boolean).length;
-    // With the exercise band too narrow for the figures, the band grows.
-    const w = Math.max(bandW, m * 92 + Math.max(0, m - 1) * GAP);
-    return { grid: { gridTemplateColumns: `20px minmax(220px, 1.5fr) ${w}px minmax(180px, 1fr) minmax(260px, 1.3fr) 80px 80px 112px`, columnGap: GAP } as const, band: { gridTemplateColumns: `repeat(${Math.max(1, m)}, minmax(0, 1fr))`, columnGap: GAP } as const };
+  // Cardio's four figures (time, pace, incline, distance) sit in the exercise figure columns, one under each,
+  // and its note under the exercises' Note (21 Oct, Alex). A column unticked in Columns keeps its place, empty.
+  // With fewer than four exercise columns on, the four share a band of their own.
+  const cardioAligned = exWidths.length >= 4;
+  const cardioBandW = cardioAligned ? bandW : Math.max(bandW, 4 * 72 + 3 * GAP);
+  const cardioStyle = {
+    grid: { gridTemplateColumns: `20px minmax(220px, 1.5fr) ${cardioBandW}px minmax(180px, 1fr) minmax(260px, 1.3fr) 80px 80px 112px`, columnGap: GAP } as const,
+    band: { gridTemplateColumns: cardioAligned ? exWidths.map((w) => `${w}px`).join(" ") : "repeat(4, minmax(0, 1fr))", columnGap: GAP } as const,
   };
-  // Old rows kept bare figures ("6"); shown with the unit the form now adds.
-  const unitOf = (v: string, u: string) => (!v ? "—" : /^\s*[\d.,]+\s*$/.test(v) ? `${v.trim()}${u}` : v);
 
   // The week's sessions, and the weeks, live in state so delete, reorder and
   // add can show what they would do.
@@ -356,10 +365,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
       custom: {},
       gyms: gymsOut,
       cardio: {
-        fields: Object.fromEntries(Object.entries(p.cardioEdits).map(([id, e]) => [id, { ...e }])),
+        fields: Object.fromEntries(Object.entries(p.cardioEdits).map(([id, e]) => [id, cardioOut(e)])),
         removed: p.cardioRemoved,
         // Typed without a name (the activity), it goes out as plain "Cardio".
-        added: p.added.filter((a): a is Added & AddedCardio => a.kind === "cardio").map((a) => ({ name: a.name.trim() || "Cardio", time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note })),
+        added: p.added.filter((a): a is Added & AddedCardio => a.kind === "cardio").map((a) => cardioOut({ name: a.name.trim() || "Cardio", time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note.trim() })),
         order: null,
       },
       removed: p.removed,
@@ -652,7 +661,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   };
   const removeRowCopy = (r: DraftRow) => ({
     title: `Remove ${r.name}?`,
-    what: `${r.sets} ${r.sets === 1 ? "set" : "sets"} · ${r.logged.length ? `${r.logged.length} logged` : "nothing logged"}`,
+    what: <SepJoin parts={[`${r.sets} ${r.sets === 1 ? "set" : "sets"}`, r.logged.length ? `${r.logged.length} logged` : "nothing logged"]} />,
     warn: r.logged.length ? `${firstName}'s ${r.logged.length} logged ${r.logged.length === 1 ? "set goes" : "sets go"} with it.` : null,
   });
   const removeCardioCopy = (c: DraftCardio) => ({ title: `Remove ${c.name}?`, what: c.done ? "Done" : "Not done yet", warn: c.done ? `What ${firstName} logged on it goes with it.` : null });
@@ -784,7 +793,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             {/* Every change saves itself (20 Oct); the status sits beside the title and its tag (21 Oct, Alex), as on Lifestyle and Nutrition. */}
             {weekFailed ? (
               <span className="trn-allsaved failed" role="alert">
-                Not saved ·{" "}
+                Not saved<Sep />
                 <button type="button" onClick={retry}>
                   Retry
                 </button>
@@ -1037,7 +1046,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                   {isOpen ? <SessionName value={name} onChange={(v) => patch(s.id, (q) => ({ ...q, renamed: v === s.name ? null : v }))} /> : <b>{name}</b>}
                   <small>
                     {rows.length} {rows.length === 1 ? "exercise" : "exercises"}
-                    {s.cardio.length ? ` · ${s.cardio.length} cardio` : ""}
+                    {s.cardio.length ? (
+                      <>
+                        <Sep />
+                        {s.cardio.length} cardio
+                      </>
+                    ) : null}
                   </small>
                   {/* The fold beside the title (20 Oct, Alex); the row's far end is the ··· menu. */}
                   <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : s.id)} aria-expanded={isOpen} aria-label={isOpen ? `Fold ${name}` : `Open ${name}`}>
@@ -1121,7 +1135,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                   {/* Answers in words only: the numbers are the head row's pills already. */}
                   {!!s.answers?.some((a) => a.text != null) && (
                     <p className="rd-session-note">
-                      {firstName} answered: {s.answers.filter((a) => a.text != null).map((a) => `${a.label}: “${a.text}”`).join(" · ")}
+                      {firstName} answered: <SepJoin parts={s.answers.filter((a) => a.text != null).map((a) => `${a.label}: “${a.text}”`)} />
                     </p>
                   )}
                   {s.note && (
@@ -1306,10 +1320,20 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               <DropdownMenuContent align="end" className="pb-menu">
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "video", rowId: r.id })}>
                                   {video?.media === "photo" && video.state !== "asked" ? <PhotoIcon /> : <VideoIcon />}
-                                  {!video ? "Ask for a video" : video.state === "asked" ? `Video asked for · waiting${video.recurring ? " · every session" : ""}` : video.media === "photo" ? (video.state === "in" ? "See their photo · reply" : "Their photo · replied") : video.state === "in" ? "Watch their video · reply" : "Their video · replied"}
+                                  <span>
+                                    <SepJoin parts={!video ? ["Ask for a video"] : video.state === "asked" ? ["Video asked for", "waiting", video.recurring && "every session"] : video.media === "photo" ? (video.state === "in" ? ["See their photo", "reply"] : ["Their photo", "replied"]) : video.state === "in" ? ["Watch their video", "reply"] : ["Their video", "replied"]} />
+                                  </span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", rowId: r.id })}>
-                                  <PlayIcon /> {(demos[r.id] === undefined ? r.demo : demos[r.id]) ? "Demo video · change" : "Add demo"}
+                                  <PlayIcon />{" "}
+                                  {(demos[r.id] === undefined ? r.demo : demos[r.id]) ? (
+                                    <span>
+                                      Demo video<Sep />
+                                      change
+                                    </span>
+                                  ) : (
+                                    "Add demo"
+                                  )}
                                 </DropdownMenuItem>
                                 {/* The exercise has a demo, but this client needs no guidance on it: keep it off this row (and the weeks after). */}
                                 {r.id > 0 && (demos[r.id] === undefined ? r.demo : demos[r.id]) && (
@@ -1326,14 +1350,24 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     const pickVariation = (id: number | null) => act(() => setRowVariationAction(r.id, id), `${base}${id != null ? ` · ${variations.find((v) => v.id === id)?.name}` : ""} · ${firstName} sees it from this week`);
                                     return (
                                       <DropdownMenuItem onSelect={() => setDlg({ kind: "variation", rowId: r.id })}>
-                                        <ColumnsIcon /> Variation · {current ? current.name : "standard"}
+                                        <ColumnsIcon />{" "}
+                                        <span>
+                                          Variation<Sep />
+                                          {current ? current.name : "standard"}
+                                        </span>
                                       </DropdownMenuItem>
                                     );
                                   })()}
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "alternatives", rowId: r.id })}>
                                   <DumbbellIcon /> {(() => {
                                     const n = r.alternatives.length || r.librarySubstitutes.filter((s) => !r.libraryHidden.includes(s.exerciseId)).length;
-                                    return n ? `Substitutes · ${n}${r.alternatives.length ? " · this session" : ""}` : "Substitutes";
+                                    return n ? (
+                                      <span>
+                                        <SepJoin parts={["Substitutes", n, r.alternatives.length > 0 && "this session"]} />
+                                      </span>
+                                    ) : (
+                                      "Substitutes"
+                                    );
                                   })()}
                                 </DropdownMenuItem>
                                 {/* Only once the programme is live: before that the client has nothing of it to talk about. */}
@@ -1430,29 +1464,40 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                   })}
 
                   {(s.cardio.some((c) => !p.cardioRemoved.includes(c.id)) || p.added.some((r) => r.kind === "cardio")) && (() => {
-                    const live = s.cardio.filter((c) => !p.cardioRemoved.includes(c.id));
-                    const fresh = p.added.filter((r): r is Added & AddedCardio => r.kind === "cardio");
-                    const show: CardioShow = {
-                      time: ccols.time && (live.some((c) => c.time.trim()) || fresh.some((r) => r.time.trim())),
-                      pace: ccols.pace && (live.some((c) => c.pace.trim()) || fresh.some((r) => r.pace.trim())),
-                      incline: ccols.incline && (live.some((c) => c.incline.trim()) || fresh.some((r) => r.incline.trim())),
-                      distance: ccols.distance && (live.some((c) => c.distance.trim()) || fresh.some((r) => r.distance.trim())),
-                      note: live.some((c) => c.notes.trim()) || fresh.some((r) => r.note.trim()),
+                    // A cardio row is a row like an exercise's (21 Oct, Alex): its figures typed in place on clean lines under
+                    // the exercise columns, its note under Note. No form, no boxes, no sample figures.
+                    const editCardio = (id: number, v: CardioEdit) => patch(s.id, (q) => ({ ...q, cardioEdits: { ...q.cardioEdits, [id]: { ...(q.cardioEdits[id] ?? {}), ...v } } }));
+                    const editNew = (key: number, v: Partial<AddedCardio>) => patch(s.id, (q) => ({ ...q, added: q.added.map((x) => (x.key === key && x.kind === "cardio" ? { ...x, ...v } : x)) }));
+                    // Enter puts the row down (it saves once the typing stops); Esc on one just added takes it off again.
+                    const keys = (key?: number) => (ev: React.KeyboardEvent) => {
+                      if (ev.key === "Enter") {
+                        ev.preventDefault();
+                        (ev.target as HTMLElement).blur();
+                        if (adding?.session === s.id && adding.kind === "cardio") setAdding(null);
+                      } else if (ev.key === "Escape" && key != null && adding?.key === key) {
+                        patch(s.id, (q) => ({ ...q, added: q.added.filter((x) => x.key !== key) }));
+                        setAdding(null);
+                      }
                     };
-                    const cs = cardioStyleFor(show);
+                    const figures = (v: { time: string; pace: string; incline: string; distance: string }, set: (k: "time" | "pace" | "incline" | "distance", val: string) => void, name: string) => (
+                      <span className="rd-cband" style={cardioStyle.band}>
+                        {(["time", "pace", "incline", "distance"] as const).map((k) =>
+                          ccols[k] ? <Cell key={k} value={v[k]} onChange={(val) => set(k, val)} label={`${k.charAt(0).toUpperCase() + k.slice(1)} of ${name}`} /> : <span key={k} />
+                        )}
+                      </span>
+                    );
                     return (
                     <div className="rd-cardio">
-                      <div className="rd-cols" aria-hidden="true" style={cs.grid}>
+                      <div className="rd-cols" aria-hidden="true" style={cardioStyle.grid}>
                         <span />
                         <span>Cardio</span>
-                        <span className="rd-cband" style={cs.band}>
-                          {show.time && <span>Time</span>}
-                          {show.pace && <span>Pace</span>}
-                          {show.incline && <span>Incline</span>}
-                          {show.distance && <span>Distance</span>}
-                          {show.note && <span>Note</span>}
+                        <span className="rd-cband" style={cardioStyle.band}>
+                          <span>{ccols.time ? "Time" : ""}</span>
+                          <span>{ccols.pace ? "Pace" : ""}</span>
+                          <span>{ccols.incline ? "Incline" : ""}</span>
+                          <span>{ccols.distance ? "Distance" : ""}</span>
                         </span>
-                        <span />
+                        <span>Note</span>
                         <span>{firstName} did</span>
                         <span />
                         <span />
@@ -1463,25 +1508,21 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                         .map((c0) => ({ ...c0, ...(p.cardioEdits[c0.id] ?? {}) }))
                         .map((c) => (
                           <div key={c.id} className={`rd-row cardio${p.cardioEdits[c.id] ? " edited" : ""}`}>
-                            <div className="rd-row-main" style={cs.grid}>
+                            <div className="rd-row-main static" style={cardioStyle.grid} onKeyDown={keys()}>
                               <span />
                               <span className="rd-ex">
                                 <span className="rd-ex-name">
-                                  <button type="button" className="rd-ex-btn" onClick={() => setDlg({ kind: "editCardio", sessionId: s.id, cardioId: c.id })} title="Edit this cardio">
+                                  <button type="button" className="rd-ex-btn" onClick={() => setDlg({ kind: "editCardio", sessionId: s.id, cardioId: c.id })} title="Rename">
                                     {c.name}
                                   </button>
                                 </span>
                                 {/* The client did something else instead (the bike was taken). */}
                                 {c.swap && <span className="rd-cardio-swap">Did {c.swap} instead</span>}
                               </span>
-                              <span className="rd-cband" style={cs.band}>
-                                {show.time && <span className="rd-num">{unitOf(c.time, " min")}</span>}
-                                {show.pace && <span className="rd-num">{unitOf(c.pace, " km/h")}</span>}
-                                {show.incline && <span className="rd-num">{unitOf(c.incline, "%")}</span>}
-                                {show.distance && <span className="rd-num">{unitOf(c.distance, " km")}</span>}
-                                {show.note && <span className="rd-note-cell">{c.notes || <em>—</em>}</span>}
+                              {figures(c, (k, val) => editCardio(c.id, { [k]: val }), c.name)}
+                              <span className="rd-cell rd-notecol">
+                                <input className="rd-cell-box" value={c.notes} onChange={(ev) => editCardio(c.id, { notes: ev.target.value })} placeholder="Add a note" aria-label={`Note on ${c.name}`} maxLength={300} />
                               </span>
-                              <span />
                               <span className="rd-did">{c.done ? <span className="rd-set up">Done</span> : <em>{week.state === "ahead" ? "" : "Not done"}</em>}</span>
                               <span />
                               <span />
@@ -1499,24 +1540,19 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                           </div>
                         ))}
                       {p.added
-                        // The one still being typed shows in its form below, not twice.
-                        .filter((r): r is Added & AddedCardio => r.kind === "cardio" && !(adding?.kind === "cardio" && adding.key === r.key))
+                        .filter((r): r is Added & AddedCardio => r.kind === "cardio")
                         .map((r) => (
-                          <div key={r.key} className="rd-row cardio new">
-                            <div className="rd-row-main" style={cs.grid}>
+                          <div key={r.key} className="rd-row cardio new" data-cardio-key={r.key}>
+                            <div className="rd-row-main static" style={cardioStyle.grid} onKeyDown={keys(r.key)}>
                               <span />
                               <span className="rd-ex">
                                 <span className="rd-ex-name">{r.name}</span>
                                 <small>New</small>
                               </span>
-                              <span className="rd-cband" style={cs.band}>
-                                {show.time && <span className="rd-num">{r.time || "—"}</span>}
-                                {show.pace && <span className="rd-num">{r.pace || "—"}</span>}
-                                {show.incline && <span className="rd-num">{r.incline || "—"}</span>}
-                                {show.distance && <span className="rd-num">{r.distance || "—"}</span>}
-                                {show.note && <span className="rd-note-cell">{r.note || <em>—</em>}</span>}
+                              {figures(r, (k, val) => editNew(r.key, { [k]: val }), r.name)}
+                              <span className="rd-cell rd-notecol">
+                                <input className="rd-cell-box" value={r.note} onChange={(ev) => editNew(r.key, { note: ev.target.value })} placeholder="Add a note" aria-label={`Note on ${r.name}`} maxLength={300} />
                               </span>
-                              <span />
                               <span className="rd-did">
                                 <em />
                               </span>
@@ -1534,20 +1570,18 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     );
                   })()}
 
-                  {adding?.session === s.id ? (
+                  {adding?.session === s.id && (adding.kind === "exercise" || adding.key == null) ? (
                     adding.kind === "exercise" ? (
                       <AddExerciseRow library={library} onPick={(nm, exerciseId) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "exercise", exerciseId, name: nm, sets: "", reps: "", kg: null, ...(cueOf(exerciseId) ? { note: cueOf(exerciseId) } : {}) }] }))} onClose={() => setAdding(null)} />
                     ) : (
                       <AddCardioRow
                         moves={cardioMoves}
-                        onChange={(c) => {
-                          // The first keystroke queues it (the bar appears); every one after updates it; cleared or dropped, it comes off.
-                          const key = adding.key ?? Date.now() + Math.random();
-                          if (adding.key == null && c) setAdding({ ...adding, key });
-                          patch(s.id, (q) => {
-                            const rest = q.added.filter((x) => x.key !== key);
-                            return { ...q, added: c ? (q.added.some((x) => x.key === key) ? q.added.map((x) => (x.key === key ? { key, kind: "cardio", ...c } : x)) : [...rest, { key, kind: "cardio", ...c }]) : rest };
-                          });
+                        onPick={(name, cue) => {
+                          // The activity picked, the cardio is a row in the table at once, its time ready to type in.
+                          const key = Date.now() + Math.random();
+                          setAdding({ session: s.id, kind: "cardio", key });
+                          patch(s.id, (q) => ({ ...q, added: [...q.added, { key, kind: "cardio", name, time: "", pace: "", incline: "", distance: "", note: cue }] }));
+                          setTimeout(() => document.querySelector<HTMLInputElement>(`[data-cardio-key="${key}"] input`)?.focus(), 0);
                         }}
                         onClose={() => setAdding(null)}
                       />
@@ -1757,7 +1791,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             exerciseName={rowById(dlg.rowId)!.swap ?? rowById(dlg.rowId)!.name}
             session={sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}
             week={week.index}
-            targets={[rowById(dlg.rowId)!.reps ? `${rowById(dlg.rowId)!.sets} × ${rowById(dlg.rowId)!.reps}` : rowById(dlg.rowId)!.sets ? `${rowById(dlg.rowId)!.sets} sets` : "", rowById(dlg.rowId)!.rpe != null ? `RPE ${rowById(dlg.rowId)!.rpe}` : ""].filter(Boolean).join(" · ")}
+            targets={[rowById(dlg.rowId)!.reps ? `${rowById(dlg.rowId)!.sets} × ${rowById(dlg.rowId)!.reps}` : rowById(dlg.rowId)!.sets ? `${rowById(dlg.rowId)!.sets} sets` : "", rowById(dlg.rowId)!.rpe != null ? `RPE ${rowById(dlg.rowId)!.rpe}` : ""].filter(Boolean)}
             existing={videos[dlg.rowId] ? { note: videos[dlg.rowId]!.note ?? "", recurring: !!videos[dlg.rowId]!.recurring } : null}
             onAsk={async (note, recurring) => {
               const rowId = dlg.rowId;
@@ -2243,7 +2277,7 @@ export function DeletePhaseDialog({ name, logged, firstName, onDelete, onClose }
 }
 
 /** Taking a row off a session, in the delete pop-up's style: the title, one line of what it is, the logged sets in red when there are any. Cancel holds the focus. */
-function RemoveDialog({ title, what, warn, onRemove, onClose }: { title: string; what: string; warn: string | null; onRemove: () => void; onClose: () => void }) {
+function RemoveDialog({ title, what, warn, onRemove, onClose }: { title: string; what: React.ReactNode; warn: string | null; onRemove: () => void; onClose: () => void }) {
   const cancel = useRef<HTMLButtonElement>(null);
   return (
     <DialogContent
@@ -2567,7 +2601,16 @@ function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; 
     <DialogContent className="rd-dlg">
       <DialogHeader>
         <DialogTitle>Edit {row.name}</DialogTitle>
-        <DialogDescription>Replace the exercise in the programme{row.logged.length ? " · what the client logged stays" : ""}.</DialogDescription>
+        <DialogDescription>
+          Replace the exercise in the programme
+          {row.logged.length ? (
+            <>
+              <Sep />
+              what the client logged stays
+            </>
+          ) : null}
+          .
+        </DialogDescription>
       </DialogHeader>
       <div className="rd-field">
         <span>Exercise</span>
@@ -2663,88 +2706,49 @@ function CardioAlternativesDialog({ cardio, firstName, onSave }: { cardio: Draft
   );
 }
 
-/** Editing a cardio row: the same fields it was added with. */
+/** Renaming a cardio row: its figures and note are typed in the row itself (21 Oct, Alex), so this is the name alone, on a clean line. */
 function EditCardioDialog({ cardio, onSave }: { cardio: DraftCardio; onSave: (v: CardioEdit) => void }) {
-  const [c, setC] = useState({ name: cardio.name, time: cardio.time, pace: cardio.pace, incline: cardio.incline, distance: cardio.distance, notes: cardio.notes });
-  const set = (k: keyof typeof c) => (e: React.ChangeEvent<HTMLInputElement>) => setC({ ...c, [k]: e.target.value });
+  const [name, setName] = useState(cardio.name);
+  const ok = !!name.trim() && name.trim() !== cardio.name;
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>Edit {cardio.name}</DialogTitle>
-      </DialogHeader>
-      <label className="rd-field">
-        <span>Activity</span>
-        <input value={c.name} onChange={set("name")} autoFocus />
-      </label>
-      <div className="rd-field-row">
-        <label className="rd-field">
-          <span>Time (min)</span>
-          <input value={c.time} onChange={set("time")} placeholder="15" />
-        </label>
-        <label className="rd-field">
-          <span>Pace (km/h)</span>
-          <input value={c.pace} onChange={set("pace")} placeholder="6" />
-        </label>
-        <label className="rd-field">
-          <span>Incline (%)</span>
-          <input value={c.incline} onChange={set("incline")} placeholder="8" />
-        </label>
-        <label className="rd-field">
-          <span>Distance (km)</span>
-          <input value={c.distance} onChange={set("distance")} placeholder="3" />
-        </label>
+    <DialogContent className="dlh">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Rename {cardio.name}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
       </div>
-      <label className="rd-field">
-        <span>Note</span>
-        <input value={c.notes} onChange={set("notes")} placeholder="Easy, cool-down" />
-      </label>
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!c.name.trim()} onClick={() => onSave({ ...c, name: c.name.trim() })}>
+      <DialogDescription className="sr-only">The activity&rsquo;s name on this session</DialogDescription>
+      <input className="dlh-line" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} aria-label="Activity" autoFocus onKeyDown={(e) => e.key === "Enter" && ok && onSave({ name: name.trim() })} />
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel">Cancel</DialogClose>
+        <button type="button" className="dlh-go" disabled={!ok} onClick={() => onSave({ name: name.trim() })}>
           Save
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }
 
-/** Cardio: a short form. Enter, or clicking away, puts the row on the change bar; Esc or × drops it. */
-// A cardio typed in place, no Add button: the first keystroke puts it on the
-// session's bar (onChange), every keystroke after updates it there. Enter,
-// clicking away or × closes the form and leaves it queued; Esc drops it.
-function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardio movements (Library), offered as the activity is typed. */ moves?: CardioMove[]; onChange: (c: Omit<AddedCardio, "kind"> | null) => void; onClose: () => void }) {
-  const blank = { name: "", time: "", pace: "", incline: "", distance: "", note: "" };
-  const [c, setC] = useState(blank);
+/** + Cardio: the activity, picked the way an exercise is (19 Oct, Alex): the search bar over the Library's cardio, the
+ *  list floating under it; a name not in it is used as typed. The pick becomes a row in the cardio table, where its
+ *  figures are typed in place (21 Oct, Alex: no form under it). */
+function AddCardioRow({ moves = [], onPick, onClose }: { /** The coach's cardio movements (Library), offered as the activity is typed. */ moves?: CardioMove[]; /** The activity, and the library's default cue for it as the row's note. */ onPick: (name: string, cue: string) => void; onClose: () => void }) {
   const first = useRef<HTMLInputElement>(null);
-  const timeRef = useRef<HTMLInputElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
-  // A bare number gets its unit; anything else is kept as typed.
-  const withUnit = (v: string, u: string) => (/^\s*[\d.,]+\s*$/.test(v) ? `${v.trim()}${u}` : v.trim());
   useClickAway(wrap, onClose);
-  // First the activity, picked the way an exercise is (19 Oct, Alex: cardio
-  // had only the browser's own suggestion list): the search bar over the
-  // Library's cardio, open at once since the list is short; a name not in it
-  // is used as typed. Then the numbers.
-  const [picked, setPicked] = useState(false);
   const [q, setQ] = useState("");
   const [cursor, setCursor] = useState(0);
   const needle = q.trim().toLowerCase();
   const list = needle ? moves.filter((m) => m.name.toLowerCase().includes(needle)) : moves;
   useEffect(() => {
-    (picked ? timeRef : first).current?.focus();
-  }, [picked]);
-  const emit = (next: typeof blank) => {
-    const any = Object.values(next).some((v) => v.trim());
-    onChange(any ? { ...next, name: next.name.trim(), time: withUnit(next.time, " min"), pace: withUnit(next.pace, " km/h"), incline: withUnit(next.incline, "%"), distance: withUnit(next.distance, " km"), note: next.note.trim() } : null);
-  };
+    first.current?.focus();
+  }, []);
   const choose = (name: string) => {
     const nm = name.trim();
     if (!nm) return;
     const move = moves.find((m) => m.name.toLowerCase() === nm.toLowerCase());
-    const next = { ...c, name: move?.name ?? nm, note: c.note.trim() ? c.note : move?.cue ?? "" };
-    setC(next);
-    emit(next);
-    setPicked(true);
+    onPick(move?.name ?? nm, move?.cue ?? "");
   };
   // The list floats over the page under the bar, as the exercise search's does (20 Oct, Alex).
   const showList = list.length > 0 || !!needle;
@@ -2752,39 +2756,38 @@ function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardi
   useEffect(() => {
     pop.current?.querySelector(".rd-addrow-item.on")?.scrollIntoView({ block: "nearest" });
   }, [cursor]);
-  if (!picked) {
-    return (
-      <div ref={wrap} className="rd-addrow">
-        <Popover open={showList} onOpenChange={() => {}}>
+  return (
+    <div ref={wrap} className="rd-addrow">
+      <Popover open={showList} onOpenChange={() => {}}>
         <PopoverAnchor asChild>
-        <div className={`rd-addrow-bar${showList ? " open" : ""}`}>
-          <input
-            ref={first}
-            className="rd-addrow-search"
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setCursor(0);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") onClose();
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setCursor((i) => Math.min(i + 1, Math.max(0, list.length - 1)));
-              }
-              if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setCursor((i) => Math.max(i - 1, 0));
-              }
-              if (e.key === "Enter") choose(list[cursor]?.name ?? q);
-            }}
-            placeholder="Search cardio"
-            aria-label="Search cardio"
-          />
-          <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+          <div className={`rd-addrow-bar${showList ? " open" : ""}`}>
+            <input
+              ref={first}
+              className="rd-addrow-search"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setCursor(0);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") onClose();
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setCursor((i) => Math.min(i + 1, Math.max(0, list.length - 1)));
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setCursor((i) => Math.max(i - 1, 0));
+                }
+                if (e.key === "Enter") choose(list[cursor]?.name ?? q);
+              }}
+              placeholder="Search cardio"
+              aria-label="Search cardio"
+            />
+            <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
+              ×
+            </button>
+          </div>
         </PopoverAnchor>
         <PopoverContent
           ref={pop}
@@ -2813,65 +2816,11 @@ function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardi
             </button>
           )}
         </PopoverContent>
-        </Popover>
-        {!needle && moves.length === 0 && <p className="rd-addrow-hint">Type the activity, e.g. Incline walk.</p>}
-      </div>
-    );
-  }
-  const set = (k: keyof typeof c) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = { ...c, [k]: e.target.value };
-    // A movement from the library brings its default cue as the note, when none is typed yet.
-    if (k === "name" && !c.note.trim()) {
-      const move = moves.find((m) => m.name.toLowerCase() === next.name.trim().toLowerCase());
-      if (move?.cue) next.note = move.cue;
-    }
-    setC(next);
-    emit(next);
-  };
-  return (
-    <div
-      ref={wrap}
-      className="rd-addrow"
-      onKeyDown={(e) => {
-        if (e.key === "Escape") {
-          onChange(null);
-          onClose();
-        } else if (e.key === "Enter") onClose();
-      }}
-    >
-      <div className="rd-cardio-form">
-        <label className="wide">
-          <span>Activity</span>
-          <input value={c.name} onChange={set("name")} placeholder="Incline walk" autoComplete="off" />
-        </label>
-        <label>
-          <span>Time (min)</span>
-          <input ref={timeRef} value={c.time} onChange={set("time")} placeholder="15" inputMode="decimal" />
-        </label>
-        <label>
-          <span>Pace (km/h)</span>
-          <input value={c.pace} onChange={set("pace")} placeholder="6" inputMode="decimal" />
-        </label>
-        <label>
-          <span>Incline (%)</span>
-          <input value={c.incline} onChange={set("incline")} placeholder="8" inputMode="decimal" />
-        </label>
-        <label>
-          <span>Distance (km)</span>
-          <input value={c.distance} onChange={set("distance")} placeholder="3" inputMode="decimal" />
-        </label>
-        <label className="wide">
-          <span>Note</span>
-          <input value={c.note} onChange={set("note")} placeholder="Easy, cool-down" />
-        </label>
-        <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
-          ×
-        </button>
-      </div>
-      <p className="rd-addrow-hint">Saves once you&rsquo;re done · Enter closes · Esc drops it.</p>
+      </Popover>
     </div>
   );
 }
+
 
 // ---- Dialogs ------------------------------------------------------------------
 
@@ -2919,8 +2868,7 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
       <DialogHeader>
         <DialogTitle>{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s ${video.media}${video.about === "swap" ? " of the substitute" : ""}`}</DialogTitle>
         <DialogDescription>
-          {row.name} · {where}
-          {video && video.state !== "asked" && video.fromClient ? ` · sent unasked` : ""}
+          <SepJoin parts={[row.name, where, video && video.state !== "asked" && video.fromClient && "sent unasked"]} />
         </DialogDescription>
       </DialogHeader>
       {!video && (
@@ -3144,7 +3092,10 @@ function NoteDialog({ firstName, note, onSeen }: { firstName: string; note: { te
     <DialogContent className="rd-dlg">
       <DialogHeader>
         <DialogTitle>Note from {firstName}</DialogTitle>
-        <DialogDescription>On this programme · {note.when}</DialogDescription>
+        <DialogDescription>
+          On this programme<Sep />
+          {note.when}
+        </DialogDescription>
       </DialogHeader>
       <p className="rd-dlg-para rd-note-text">{note.text}</p>
       <DialogFooter>

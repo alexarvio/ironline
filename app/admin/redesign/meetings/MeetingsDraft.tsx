@@ -8,7 +8,7 @@ import { agreedPoints } from "../../../lib/meetingDates";
 import type React from "react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
@@ -16,9 +16,9 @@ import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
 import { allTimezones, SERVER_TZ, tzShort, zonedToUtc } from "../../../lib/timezones";
 import TimezonePicker from "./TimezonePicker";
 import Picker from "../Picker";
-import HelpTip from "../HelpTip";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth } from "../../../lib/dayMonth";
+import { SepJoin } from "../Sep";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
 // sheet. The next call with everything to prepare it, the calls after it,
@@ -176,19 +176,22 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
   const pGrid = { gridTemplateColumns: "20px 140px minmax(200px, 1fr) 130px 32px", columnGap: 24 } as const;
 
   return (
-    <div className="rd">
+    // Built as the track tabs are (21 Oct, Alex): Training's header, each section's title on the page and its content in one hairline card.
+    <div className="rd trn rls rt">
       {/* ---- Header. */}
-      <header className="rd-head bare">
-        <div className="rd-head-main">
-          <span className="rd-eyebrow">Meetings</span>
-          <h1 className="rd-title">{firstName}&rsquo;s calls</h1>
+      <header className="trn-head">
+        <div className="trn-head-main">
+          <span className="trn-eyebrow">Meetings</span>
+          <div className="trn-name-row">
+            <h1 className="trn-name">{firstName}&rsquo;s calls</h1>
+          </div>
         </div>
-        <div className="rd-head-actions">
-          <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null })}>
+        <div className="trn-head-actions">
+          <button type="button" className="trn-btn primary rt-head-btn" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null })}>
             <PlusIcon /> Schedule a meeting
           </button>
           <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="rd-btn ghost" aria-label="More for meetings">
+            <DropdownMenuTrigger className="trn-more" aria-label="More for meetings">
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
@@ -200,185 +203,233 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
         </div>
       </header>
 
-      <div className="rt-cols">
-        <div className="rt-main">
-          {/* ---- A call the client asked for (9 Oct): on top until a call is booked, which answers it. */}
-          {plan.request && (
-            <section className="rt-ask" aria-label="Call requested">
-              <span className="rt-ask-text">
-                <b>{firstName} asked for a call</b>
-                <span>
-                  “{plan.request.about}”{plan.request.whenSuits ? ` · ${plan.request.whenSuits}` : ""}
-                </span>
-              </span>
-              <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null, topic: plan.request!.about })}>
-                <PlusIcon /> Schedule a call
-              </button>
-            </section>
-          )}
-          {/* ---- The next call. Nothing booked: no card (the calendar is where one gets booked). */}
-          {upcoming && (
-          <section className="rd-session open rn-card">
-            <div className="rn-card-head">
+      {/* ---- A call the client asked for (9 Oct): on top until a call is booked, which answers it. A hairline row, no blue box. */}
+      {plan.request && (
+        <section className="rt-ask" aria-label="Call requested">
+          <span className="rt-ask-text">
+            <b>{firstName} asked for a call</b>
+            <span>
+              <SepJoin parts={[`“${plan.request.about}”`, plan.request.whenSuits]} />
+            </span>
+          </span>
+          <button type="button" className="trn-btn primary" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null, topic: plan.request!.about })}>
+            <PlusIcon /> Schedule a call
+          </button>
+        </section>
+      )}
+      {/* ---- The next call. Nothing booked: no card (Schedule a meeting is where one gets booked). */}
+      {upcoming && (
+        <section className="rls-section">
+          <div className="trn-weekhead">
+            <div>
               <h2>Next call</h2>
-              {upcoming && (
-                <div className="rt-actions">
-                  {/* The one button that commits, then the rest under ⋯ (6 Oct: Reschedule moved in beside Delete, so the menu has two things in it). */}
-                  <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "complete", meetingId: upcoming.id })}>
-                    Mark completed
+            </div>
+            <div className="trn-weekhead-actions">
+              {/* The one button that commits, then the rest under ⋯ (6 Oct: Reschedule moved in beside Delete, so the menu has two things in it). */}
+              <button type="button" className="trn-btn primary" onClick={() => setDlg({ kind: "complete", meetingId: upcoming.id })}>
+                Mark completed
+              </button>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger className="trn-more" aria-label="More for the next call">
+                  <MoreIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="pb-menu">
+                  <DropdownMenuItem onSelect={() => setDlg({ kind: "schedule", date: upcoming.date, reschedule: upcoming })}>
+                    <CalendarIcon /> Reschedule
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "delete", meetingId: upcoming.id })}>
+                    <TrashIcon /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          <div className="rls-card rt-card">
+            <div className="rt-band">
+              <span className="rt-tile">
+                <small>{monthCap(upcoming.date)}</small>
+                <b>{dayNum(upcoming.date)}</b>
+              </span>
+              <div className="rt-band-main">
+                <span className="rt-eyebrow">
+                  <SepJoin parts={["Upcoming", inDaysLabel(today, upcoming.date)]} />
+                </span>
+                <input
+                  className="rt-topic"
+                  value={upcoming.topic}
+                  onChange={(e) => patchMeeting(upcoming.id, { topic: e.target.value })}
+                  onBlur={() => upcoming.topic.trim() !== (plan.upcoming?.topic ?? "") && act(() => updateMeetingAction(fd({ id: upcoming.id, topic: upcoming.topic.trim() })), `Topic: ${upcoming.topic.trim() || "Check-in call"}`)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
+                  placeholder="Topic"
+                  aria-label="Topic"
+                />
+                <span className="rt-when">
+                  <SepJoin parts={[dayMonth(upcoming.date), upcoming.time ? `${upcoming.time} – ${endTime(upcoming.time, upcoming.durationMinutes)} ${zoneOf(upcoming)}` : null, `${upcoming.durationMinutes} min`]} />
+                </span>
+              </div>
+              <div className="rt-band-right">
+                {upcoming.link ? (
+                  <>
+                    <a className="trn-btn primary" href={upcoming.link} target="_blank" rel="noopener noreferrer">
+                      <PlayIcon /> Join {upcoming.provider}
+                    </a>
+                    <span className="rt-host">
+                      {upcoming.host}
+                      <button type="button" onClick={() => setDlg({ kind: "link", meetingId: upcoming.id })}>
+                        Edit
+                      </button>
+                    </span>
+                  </>
+                ) : (
+                  <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "link", meetingId: upcoming.id })}>
+                    <PlusIcon /> Add a link
                   </button>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger className="rd-btn ghost" aria-label="More for the next call">
-                      <MoreIcon />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="pb-menu">
-                      <DropdownMenuItem onSelect={() => setDlg({ kind: "schedule", date: upcoming.date, reschedule: upcoming })}>
-                        <CalendarIcon /> Reschedule
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "delete", meetingId: upcoming.id })}>
-                        <TrashIcon /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                )}
+              </div>
+            </div>
+            <div className="rt-body">
+              {/* Prep notes and meeting notes are the coach's own; the summary is what the client gets on Home once the call is completed. */}
+              <div className="rt-notes-tabs">
+                <div className="rd-btn-group" role="radiogroup" aria-label="Notes">
+                  {(["prep", "meeting", "summary"] as const).map((t) => (
+                    <button key={t} type="button" role="radio" className={notesTab === t ? "on" : ""} aria-checked={notesTab === t} onClick={() => setNotesTab(t)}>
+                      {t === "prep" ? "Prep notes" : t === "meeting" ? "Meeting notes" : `Summary for ${firstName}`}
+                    </button>
+                  ))}
                 </div>
+              </div>
+              {notesTab === "prep" ? (
+                <PrepNotes
+                  key={upcoming.id}
+                  value={upcoming.prepNotes}
+                  onSave={(v) => {
+                    patchMeeting(upcoming.id, { prepNotes: v });
+                    act(() => updateMeetingAction(fd({ id: upcoming.id, prepNotes: v })), "Prep notes");
+                  }}
+                />
+              ) : notesTab === "meeting" ? (
+                <PrepNotes
+                  key={`m${upcoming.id}`}
+                  label="Meeting notes"
+                  value={upcoming.meetingNotes}
+                  onSave={(v) => {
+                    patchMeeting(upcoming.id, { meetingNotes: v });
+                    act(() => updateMeetingAction(fd({ id: upcoming.id, meetingNotes: v })), "Meeting notes");
+                  }}
+                />
+              ) : (
+                <PastBody
+                  key={upcoming.id}
+                  bare
+                  m={upcoming}
+                  firstName={firstName}
+                  onPatch={(f) => {
+                    patchMeeting(upcoming.id, f);
+                    if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: upcoming.id, summary: f.summary ?? upcoming.summary, summaryTitle: f.summaryTitle ?? upcoming.summaryTitle })));
+                  }}
+                  onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: upcoming.id, text: line, date: upcoming.date })), `Added to ${firstName}'s events: ${line}`)}
+                />
               )}
             </div>
-            {upcoming ? (
-              <>
-                <div className="rt-band">
-                  <span className="rt-tile">
-                    <small>{monthCap(upcoming.date)}</small>
-                    <b>{dayNum(upcoming.date)}</b>
-                  </span>
-                  <div className="rt-band-main">
-                    <span className="rt-eyebrow">Upcoming · {inDaysLabel(today, upcoming.date)}</span>
-                    <input
-                      className="rt-topic"
-                      value={upcoming.topic}
-                      onChange={(e) => patchMeeting(upcoming.id, { topic: e.target.value })}
-                      onBlur={() => upcoming.topic.trim() !== (plan.upcoming?.topic ?? "") && act(() => updateMeetingAction(fd({ id: upcoming.id, topic: upcoming.topic.trim() })), `Topic: ${upcoming.topic.trim() || "Check-in call"}`)}
-                      onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
-                      placeholder="Topic"
-                      aria-label="Topic"
-                    />
-                    <span className="rt-when">
-                      {dayMonth(upcoming.date)}
-                      {upcoming.time ? ` · ${upcoming.time} – ${endTime(upcoming.time, upcoming.durationMinutes)} ${zoneOf(upcoming)}` : ""} · {upcoming.durationMinutes} min
+          </div>
+        </section>
+      )}
+
+      {/* ---- Also scheduled. */}
+      {also.length > 0 && (
+        <section className="rls-section">
+          <div className="trn-weekhead">
+            <div>
+              <h2>Also scheduled</h2>
+            </div>
+          </div>
+          <div className="rls-card rt-card">
+            <div className="rd-rows">
+              {also.map((m) => (
+                <div key={m.id} className="rd-row">
+                  <div className="rd-row-main static" style={pGrid}>
+                    <span />
+                    <span className="rt-tile sm">
+                      <small>{monthCap(m.date)}</small>
+                      <b>{dayNum(m.date)}</b>
+                    </span>
+                    <span className="rd-ex">
+                      <span className="rd-ex-name">{m.topic || "Check-in call"}</span>
+                      <small>
+                        <SepJoin parts={[dayMonth(m.date), m.time ? `${m.time} – ${endTime(m.time, m.durationMinutes)} ${zoneOf(m)}` : null, `${m.durationMinutes} min`, m.provider]} />
+                      </small>
+                    </span>
+                    <span className="rd-num quiet">{inDaysLabel(today, m.date)}</span>
+                    <span className="rd-row-more">
+                      <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${m.topic || "call"}`}>
+                          <MoreIcon />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="pb-menu">
+                          <DropdownMenuItem onSelect={() => setDlg({ kind: "schedule", date: m.date, reschedule: m })}>
+                            <CalendarIcon /> Reschedule
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "delete", meetingId: m.id })}>
+                            <TrashIcon /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </span>
                   </div>
-                  <div className="rt-band-right">
-                    {upcoming.link ? (
-                      <>
-                        <a className="rd-btn primary" href={upcoming.link} target="_blank" rel="noopener noreferrer">
-                          <PlayIcon /> Join {upcoming.provider}
-                        </a>
-                        <span className="rt-host">
-                          {upcoming.host}{" "}
-                          <button type="button" onClick={() => setDlg({ kind: "link", meetingId: upcoming.id })}>
-                            edit
-                          </button>
-                        </span>
-                      </>
-                    ) : (
-                      <button type="button" className="rd-btn" onClick={() => setDlg({ kind: "link", meetingId: upcoming.id })}>
-                        <PlusIcon /> Add a link
-                      </button>
-                    )}
-                  </div>
                 </div>
-                <div className="rt-body">
-                  <div className="rt-col">
-                    {/* Prep notes are the coach's own; meeting notes are the recap the client gets on Home once the call is completed. */}
-                    <div className="rt-notes-tabs">
-                      <div className="rd-btn-group" role="group" aria-label="Notes">
-                        {(["prep", "meeting", "summary"] as const).map((t) => (
-                          <button key={t} type="button" className={notesTab === t ? "on" : ""} aria-pressed={notesTab === t} onClick={() => setNotesTab(t)}>
-                            {t === "prep" ? "Prep notes" : t === "meeting" ? "Meeting notes" : `Summary for ${firstName}`}
-                          </button>
-                        ))}
-                      </div>
-                      <HelpTip title="Which notes go where">
-                        <p>
-                          <b>Prep notes</b> and <b>Meeting notes</b> are for you: before the call, and during it. {firstName} never sees them.
-                        </p>
-                        <p>
-                          <b>Summary for {firstName}</b> is the only one {firstName} gets, on Home, once you mark the call completed.
-                        </p>
-                      </HelpTip>
-                    </div>
-                    {notesTab === "prep" ? (
-                      <PrepNotes
-                        key={upcoming.id}
-                        bare
-                        value={upcoming.prepNotes}
-                        onSave={(v) => {
-                          patchMeeting(upcoming.id, { prepNotes: v });
-                          act(() => updateMeetingAction(fd({ id: upcoming.id, prepNotes: v })), "Prep notes");
-                        }}
-                      />
-                    ) : notesTab === "meeting" ? (
-                      <PrepNotes
-                        key={`m${upcoming.id}`}
-                        bare
-                        label="Meeting notes"
-                        value={upcoming.meetingNotes}
-                        onSave={(v) => {
-                          patchMeeting(upcoming.id, { meetingNotes: v });
-                          act(() => updateMeetingAction(fd({ id: upcoming.id, meetingNotes: v })), "Meeting notes");
-                        }}
-                      />
-                    ) : (
-                      <PastBody
-                        key={upcoming.id}
-                        bare
-                        m={upcoming}
-                        firstName={firstName}
-                        onPatch={(f) => {
-                          patchMeeting(upcoming.id, f);
-                          if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: upcoming.id, summary: f.summary ?? upcoming.summary, summaryTitle: f.summaryTitle ?? upcoming.summaryTitle })));
-                        }}
-                        onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: upcoming.id, text: line, date: upcoming.date })), `Added to ${firstName}'s events: ${line}`)}
-                      />
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : null}
-          </section>
-          )}
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
-          {/* ---- Also scheduled. */}
-          {also.length > 0 && (
-            <section className="rd-session open rn-card">
-              <div className="rn-card-head">
-                <h2>Also scheduled</h2>
+      {/* ---- Past calls. */}
+      <section className="rls-section">
+        <div className="trn-weekhead">
+          <div>
+            <h2>Past calls</h2>
+          </div>
+        </div>
+        <div className="rls-card rt-card">
+          {past.length === 0 ? (
+            <p className="rt-none">None yet</p>
+          ) : (
+            <div className="rd-rows">
+              <div className="rd-cols" aria-hidden="true" style={pGrid}>
+                <span />
+                <span>Date</span>
+                <span>Call</span>
+                <span>Status</span>
+                <span />
               </div>
-              <div className="rd-rows">
-                {also.map((m) => (
-                  <div key={m.id} className="rd-row">
-                    <div className="rd-row-main static" style={pGrid}>
-                      <span />
-                      <span className="rt-tile sm">
-                        <small>{monthCap(m.date)}</small>
-                        <b>{dayNum(m.date)}</b>
+              {past.map((m) => {
+                const isOpen = openPast === m.id;
+                const st = STATUS[m.status];
+                return (
+                  <div key={m.id} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
+                    <div className="rd-row-main" style={pGrid} onClick={() => setOpenPast((x) => (x === m.id ? null : m.id))} role="button" tabIndex={0} aria-expanded={isOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpenPast((x) => (x === m.id ? null : m.id)))}>
+                      <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
+                        <ChevronDownIcon />
+                      </span>
+                      <span className="rd-ex">
+                        <span className="rd-ex-name">{dateCol(m.date)}</span>
                       </span>
                       <span className="rd-ex">
                         <span className="rd-ex-name">{m.topic || "Check-in call"}</span>
-                        <small>
-                          {dayMonth(m.date)}
-                          {m.time ? ` · ${m.time} – ${endTime(m.time, m.durationMinutes)} ${zoneOf(m)}` : ""} · {m.durationMinutes} min · {m.provider}
-                        </small>
                       </span>
-                      <span className="rd-num quiet">{inDaysLabel(today, m.date)}</span>
-                      <span className="rd-row-more">
+                      <span>
+                        <span className={`rt-state ${st.cls}`}>{st.text}</span>
+                      </span>
+                      <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu modal={false}>
-                          <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${m.topic || "call"}`}>
+                          <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${m.topic || "call"}`}>
                             <MoreIcon />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="pb-menu">
-                            <DropdownMenuItem onSelect={() => setDlg({ kind: "schedule", date: m.date, reschedule: m })}>
-                              <CalendarIcon /> Reschedule
+                            <DropdownMenuItem onSelect={() => (openChat ? openChat() : setDlg({ kind: "message", label: `${m.topic || "Check-in call"} · ${dayMonth(m.date)}` }))}>
+                              <ChatIcon /> Message about this call
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "delete", meetingId: m.id })}>
@@ -388,84 +439,24 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                         </DropdownMenu>
                       </span>
                     </div>
+                    {isOpen && (
+                      <PastBody
+                        m={m}
+                        firstName={firstName}
+                        onPatch={(f) => {
+                          patchMeeting(m.id, f);
+                          if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: m.id, summary: f.summary ?? m.summary, summaryTitle: f.summaryTitle ?? m.summaryTitle })));
+                        }}
+                        onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: m.id, text: line, date: m.date })), `Added to ${firstName}'s events: ${line}`)}
+                      />
+                    )}
                   </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* ---- Past calls. */}
-          <section className="rd-session open rn-card">
-            <div className="rn-card-head">
-              <h2>Past calls</h2>
+                );
+              })}
             </div>
-            {past.length === 0 ? (
-              <p className="rd-full">Nothing yet.</p>
-            ) : (
-              <div className="rd-rows">
-                <div className="rd-cols" aria-hidden="true" style={pGrid}>
-                  <span />
-                  <span>Date</span>
-                  <span>Call</span>
-                  <span>Status</span>
-                  <span />
-                </div>
-                {past.map((m) => {
-                  const isOpen = openPast === m.id;
-                  const st = STATUS[m.status];
-                  return (
-                    <div key={m.id} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
-                      <div className="rd-row-main" style={pGrid} onClick={() => setOpenPast((x) => (x === m.id ? null : m.id))} role="button" tabIndex={0} aria-expanded={isOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpenPast((x) => (x === m.id ? null : m.id)))}>
-                        <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
-                          <ChevronDownIcon />
-                        </span>
-                        <span className="rd-ex">
-                          <span className="rd-ex-name">{dateCol(m.date)}</span>
-                        </span>
-                        <span className="rd-ex">
-                          <span className="rd-ex-name">{m.topic || "Check-in call"}</span>
-                        </span>
-                        <span>
-                          <span className={`rd-set rn-vs ${st.cls}`}>{st.text}</span>
-                        </span>
-                        <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu modal={false}>
-                            <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${m.topic || "call"}`}>
-                              <MoreIcon />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="pb-menu">
-                              <DropdownMenuItem onSelect={() => (openChat ? openChat() : setDlg({ kind: "message", label: `${m.topic || "Check-in call"} · ${dayMonth(m.date)}` }))}>
-                                <ChatIcon /> Message about this call
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "delete", meetingId: m.id })}>
-                                <TrashIcon /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </span>
-                      </div>
-                      {isOpen && (
-                        <PastBody
-                          m={m}
-                          firstName={firstName}
-                          onPatch={(f) => {
-                            patchMeeting(m.id, f);
-                            if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: m.id, summary: f.summary ?? m.summary, summaryTitle: f.summaryTitle ?? m.summaryTitle })));
-                          }}
-                          onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: m.id, text: line, date: m.date })), `Added to ${firstName}'s events: ${line}`)}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+          )}
         </div>
-
-        {/* ---- The month, and the picked day's bookings. */}
-      </div>
+      </section>
 
       {/* ---- Dialogs. One open at a time. */}
       <Dialog open={dlg != null} onOpenChange={(o) => !o && close()}>
@@ -553,64 +544,57 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
   );
 }
 
-/** The coach's prep notes on the next call: typed, then saved on purpose. */
-function PrepNotes({ value, onSave, bare, label = "Prep notes" }: { value: string; onSave: (v: string) => void; /** No label of its own: the toggle above names it. */ bare?: boolean; /** "Prep notes" or "Meeting notes": both the coach's own. */ label?: string }) {
-  const [text, setText] = useState(value);
-  const changed = text.trim() !== value.trim();
+/** Cancel in words and a small ink Save, under a note once it differs from what is saved (design rules 4). */
+function NoteFoot({ onCancel, onSave }: { onCancel: () => void; onSave: () => void }) {
   return (
-    <div className="rt-col">
-      {!bare && (
-        <div className="rd-cols" aria-hidden="true">
-          <span>{label}</span>
-        </div>
-      )}
-      <textarea className="rt-prep rt-notes-box" value={text} onChange={(e) => setText(e.target.value)} placeholder="What to cover, what to ask, what changed since last time…" aria-label="Prep notes" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changed && onSave(text.trim())} />
-      {/* The moment the notes differ from what is saved, the bar comes up under the card, as on a session. */}
-      {changed && (
-        <div className="rd-pending rt-bar">
-          <span className="rd-pending-count">1</span>
-          <span className="rd-pending-text">{label} changed · yours only, never sent</span>
-          <button type="button" className="rd-pending-ghost" onClick={() => setText(value)}>
-            Discard
-          </button>
-          <button type="button" className="rd-pending-apply" onClick={() => onSave(text.trim())}>
-            Save notes
-          </button>
-        </div>
-      )}
+    <div className="rt-note-foot">
+      <button type="button" className="rt-note-cancel" onClick={onCancel}>
+        Cancel
+      </button>
+      <button type="button" className="rt-note-save" onClick={onSave}>
+        Save
+      </button>
     </div>
   );
 }
 
-/** An open past call: what was agreed, written for the client. */
-function PastBody({ m, firstName, onPatch, bare, onAddEvent }: { m: DraftMeeting; firstName: string; onPatch: (f: Partial<DraftMeeting>) => void; /** Under the next call: no label or indent of its own. */ bare?: boolean; /** A saved line of the recap as an event on the client's plan (9 Oct). */ onAddEvent?: (line: string) => void }) {
+/** The coach's prep notes (or meeting notes) on the next call: words on the page, no box; a line, Cancel and Save
+ *  come up once something is typed (21 Oct, as every note that saves). */
+function PrepNotes({ value, onSave, label = "Prep notes" }: { value: string; onSave: (v: string) => void; /** "Prep notes" or "Meeting notes": both the coach's own. */ label?: string }) {
+  const [text, setText] = useState(value);
+  const changed = text.trim() !== value.trim();
+  return (
+    <div className="rt-note">
+      <textarea className={`rt-note-text${changed ? " typed" : ""}`} value={text} onChange={(e) => setText(e.target.value)} placeholder="What to cover, what to ask, what changed since last time…" aria-label={label} onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changed && onSave(text.trim())} />
+      {changed && <NoteFoot onCancel={() => setText(value)} onSave={() => onSave(text.trim())} />}
+    </div>
+  );
+}
+
+/** A call's summary for the client: under the next call the words alone; on a past call its one-line title over them. */
+function PastBody({ m, firstName, onPatch, bare, onAddEvent }: { m: DraftMeeting; firstName: string; onPatch: (f: Partial<DraftMeeting>) => void; /** Under the next call: no label or title of its own. */ bare?: boolean; /** A saved line of the recap as an event on the client's plan (9 Oct). */ onAddEvent?: (line: string) => void }) {
   const [recap, setRecap] = useState(m.summary);
   // The title starts as the call's name (the Meetings screen's subheading), unless the coach wrote one.
   const [title, setTitle] = useState(m.summaryTitle || m.topic || "Check-in call");
-  // The title and the body, each a change of its own.
-  const changes = (recap.trim() !== m.summary.trim() ? 1 : 0) + (title.trim() !== (m.summaryTitle || m.topic || "Check-in call").trim() ? 1 : 0);
+  const changed = recap.trim() !== m.summary.trim() || title.trim() !== (m.summaryTitle || m.topic || "Check-in call").trim();
   const save = () => {
     onPatch({ summary: recap.trim(), summaryTitle: title.trim() });
     savedToast(`Summary · ${dayMonth(m.date)}`);
   };
+  const cancel = () => {
+    setRecap(m.summary);
+    setTitle(m.summaryTitle || m.topic || "Check-in call");
+  };
   return (
     <div className={`rt-past${bare ? " bare" : ""}`}>
-      {/* The recap as one note: its title over its body. */}
-      {!bare && <span className="rd-cols rt-past-label">Summary for {firstName}</span>}
-      {/* Under the next call it is the one box prep notes are, same size; the title stays the call's name. On a past call, the title sits over the body. */}
-      {bare ? (
-        <textarea className="rt-prep rt-notes-box" value={recap} onChange={(e) => setRecap(e.target.value)} rows={4} placeholder={`What you covered and what ${firstName} agreed to…`} aria-label="Meeting notes" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changes > 0 && save()} />
-      ) : (
-        <div className="rt-recap">
-          <input className="rt-recap-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="A one-line title" aria-label="Recap title" />
-          <textarea value={recap} onChange={(e) => setRecap(e.target.value)} rows={4} placeholder={`What you covered and what ${firstName} agreed to…`} aria-label="Meeting notes" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changes > 0 && save()} />
-        </div>
-        )}
+      {!bare && <span className="rt-past-label">Summary for {firstName}</span>}
+      {!bare && <input className="rt-recap-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="A one-line title" aria-label="Recap title" />}
+      <textarea className={`rt-note-text${changed ? " typed" : ""}${bare ? "" : " short"}`} value={recap} onChange={(e) => setRecap(e.target.value)} placeholder={`What you covered and what ${firstName} agreed to…`} aria-label={`Summary for ${firstName}`} onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changed && save()} />
       {/* The saved lines, each one an event on the client's plan in a click (9 Oct): a trip they mentioned, a supplement to start. */}
-      {onAddEvent && changes === 0 && !agreedPoints(m.summary).prose && agreedPoints(m.summary).points.length > 0 && (
+      {onAddEvent && !changed && !agreedPoints(m.summary).prose && agreedPoints(m.summary).points.length > 0 && (
         <ul className="rt-lines" aria-label="Agreed points">
           {agreedPoints(m.summary).points.map((line, i) => (
-            <li key={i} className="rt-line">
+            <li key={i} className="dlh-line">
               <span>{line}</span>
               <button type="button" className="rd-chip" onClick={() => onAddEvent(line)}>
                 <PlusIcon /> Add as event
@@ -619,28 +603,11 @@ function PastBody({ m, firstName, onPatch, bare, onAddEvent }: { m: DraftMeeting
           ))}
         </ul>
       )}
-      {changes > 0 && (
-        <div className="rd-pending rt-bar">
-          <span className="rd-pending-count">{changes}</span>
-          <span className="rd-pending-text">Summary changed · lands on {firstName}&rsquo;s Home</span>
-          <button
-            type="button"
-            className="rd-pending-ghost"
-            onClick={() => {
-              setRecap(m.summary);
-              setTitle(m.summaryTitle);
-            }}
-          >
-            Discard
-          </button>
-          <button type="button" className="rd-pending-apply" onClick={save}>
-            Save
-          </button>
-        </div>
-      )}
+      {changed && <NoteFoot onCancel={cancel} onSave={save} />}
     </div>
   );
 }
+
 
 /** The month at a glance: this client's calls, everyone else's, and the picked day's bookings under it. The phase pop-up's
  *  calendar (MonthRange, 21 Oct, Alex: one calendar, a week per wheel step), the picked day in ink, the calls as dots. */
@@ -692,9 +659,7 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
               <div key={i} className={`rt-day-row${e.mine ? " mine" : ""}`}>
                 <b>{e.time ? `${e.time} – ${endTime(e.time, e.durationMinutes)}` : "no time"}</b>
                 <span>
-                  {e.name}
-                  {e.topic ? ` · ${e.topic}` : ""}
-                  {e.completed ? " · done" : ""}
+                  <SepJoin parts={[e.name, e.topic, e.completed ? "done" : null]} />
                 </span>
               </div>
             ))
@@ -713,13 +678,14 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
   );
 }
 
-/** Booking a call, or moving one: the day, a 24-hour time, how long, what about, the way in. */
+/** Booking a call, or moving one: the day, a 24-hour time, how long, what about, the way in. The event pop-up's pattern
+ *  (21 Oct): the kind as tiles, a clean line for the words, the month on the left with the fields on the right, Cancel and one black pill. */
 function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; initialTopic?: string; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null; repeatWeeks: number; count: number; meetingType: MeetingTypeId }) => void }) {
   const [date, setDate] = useState(reschedule?.date ?? initialDate);
   const [time, setTime] = useState(reschedule?.time ?? "");
   // The time is in the coach's own timezone unless they pick another; a
   // reschedule keeps the meeting's. The client sees it in theirs.
-  const [tz, setTz] = useState(() => reschedule ? reschedule.tz || SERVER_TZ : coachTz || Intl.DateTimeFormat().resolvedOptions().timeZone || SERVER_TZ);
+  const [tz, setTz] = useState(() => (reschedule ? reschedule.tz || SERVER_TZ : coachTz || Intl.DateTimeFormat().resolvedOptions().timeZone || SERVER_TZ));
   const [zones] = useState(() => {
     const list = allTimezones();
     return list.includes(tz) ? list : [tz, ...list];
@@ -734,52 +700,78 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
   const [count, setCount] = useState("6");
   const calls = Math.min(26, Math.max(2, Number(count) || 2));
   const lastDate = date ? addDaysIso(date, (calls - 1) * repeatWeeks * 7) : "";
-  // Overlap with another client at the chosen slot, as the coach types.
   const linkOk = link.trim() === "" || providerOf(link) != null;
+  const kind = MEETING_TYPES.find((t) => t.id === mtype) ?? MEETING_TYPES[0];
   return (
-    <DialogContent className="rd-dlg rt-dlg">
-      <DialogHeader>
-        <DialogTitle>{reschedule ? "Reschedule" : "Schedule a meeting"}</DialogTitle>
-      </DialogHeader>
-      {/* The month on the left, with the day's bookings under it; the same date typed on the right. */}
-      <div className="rdd-cols">
-        <div className="rt-dlg-cal">
-          <MiniCalendar today={today} selected={date} dots={dots} onPick={setDate} />
-        </div>
-        <div className="rdd-fields">
-          {/* Date and time side by side, the timezone they are in under them. */}
-          <div className="rd-field-row rt-when-row">
-            <label className="rd-field">
-              <span>Date</span>
-              <DateText value={date} onChange={setDate} label="Date" />
-            </label>
-            <label className="rd-field">
-              <span>Time · 24h</span>
-              <input type="text" inputMode="numeric" value={time} onChange={(e) => setTime(e.target.value)} onBlur={() => setTime(tidyTime(time))} placeholder="14:30" />
-            </label>
+    <DialogContent className="npd rt-npd" style={{ "--npd-c": reschedule ? "#141a24" : kind.color, "--npd-rgb": reschedule ? "20,26,36" : kind.rgb } as React.CSSProperties}>
+      <div className="npd-head">
+        <DialogTitle className="npd-title">{reschedule ? `Reschedule ${reschedule.topic || "the call"}` : "Schedule a meeting"}</DialogTitle>
+        <span className="npd-tools">
+          <DialogClose className="npd-x" aria-label="Close">
+            ✕
+          </DialogClose>
+        </span>
+      </div>
+      <DialogDescription className="sr-only">{reschedule ? "A new day and time for the call" : "The day, time and length of a new call"}</DialogDescription>
+
+      {!reschedule && (
+        <div className="npd-field">
+          <span className="npd-label">Kind of call</span>
+          <div className="npd-tiles" role="radiogroup" aria-label="Kind of call">
+            {MEETING_TYPES.map((t) => (
+              <button key={t.id} type="button" role="radio" aria-checked={mtype === t.id} className={`npd-tile${mtype === t.id ? " on" : ""}`} style={{ "--tc": t.color } as React.CSSProperties} onClick={() => setMtype(t.id)}>
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d={t.icon} />
+                </svg>
+                {t.label}
+              </button>
+            ))}
           </div>
-          <div className="rd-field">
-            <span>Timezone</span>
+        </div>
+      )}
+
+      <label className="npd-field">
+        <span className="npd-label">Topic</span>
+        <input className="npd-line" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Week 6 check-in" maxLength={80} autoFocus={!reschedule} />
+      </label>
+
+      <div className="npd-cols">
+        <MiniCalendar today={today} selected={date} dots={dots} onPick={setDate} />
+        <div className="npd-side">
+          {/* Date and time side by side, the timezone they are in under them. */}
+          <div className="npd-dates">
+            <div className="npd-date arm">
+              <span className="npd-date-head">Date</span>
+              <DateText value={date} onChange={setDate} label="Date" />
+            </div>
+            <div className="npd-date">
+              <span className="npd-date-head">
+                <SepJoin parts={["Time", "24h"]} />
+              </span>
+              <input className="rd-input rdt" type="text" inputMode="numeric" value={time} onChange={(e) => setTime(e.target.value)} onBlur={() => setTime(tidyTime(time))} placeholder="14:30" aria-label="Time, 24-hour" />
+            </div>
+          </div>
+          <div className="npd-field">
+            <span className="npd-label">Timezone</span>
             <TimezonePicker value={tz} zones={zones} onChange={setTz} />
           </div>
-          <div className="rd-field">
-            <span>Duration</span>
-            <div className="rt-durations">
+          <div className="npd-field">
+            <span className="npd-label">Length</span>
+            <div className="npd-seg" role="radiogroup" aria-label="Length">
               {[15, 30, 45, 60].map((d) => (
-                <button key={d} type="button" className={`rd-chip${duration === d ? " on" : ""}`} onClick={() => setDuration(d)}>
+                <button key={d} type="button" role="radio" aria-checked={duration === d} className={duration === d ? "on" : ""} onClick={() => setDuration(d)}>
                   {d} min
                 </button>
               ))}
             </div>
           </div>
           {!reschedule && (
-            <div className="rd-field">
-              <span>Repeat</span>
+            <div className="npd-field">
+              <span className="npd-label">Repeat</span>
               <Picker
                 value={String(repeatWeeks)}
                 onChange={(v) => setRepeatWeeks(Number(v))}
                 label="Repeat"
-                className="rt-wide"
                 options={[
                   { value: "0", label: "Once" },
                   { value: "1", label: "Weekly" },
@@ -795,42 +787,27 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
               )}
             </div>
           )}
-          {!reschedule && (
-            <div className="rd-field">
-              <span>Kind of call</span>
-              <div className="rd-chips" role="radiogroup" aria-label="Kind of call">
-                {MEETING_TYPES.map((t) => (
-                  <button key={t.id} type="button" role="radio" aria-checked={mtype === t.id} className={`rd-chip${mtype === t.id ? " on" : ""}`} onClick={() => setMtype(t.id)}>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <label className="rd-field">
-            <span>Topic</span>
-            <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Week 6 check-in" maxLength={80} autoFocus={!reschedule} />
-          </label>
-          <label className="rd-field">
-            <span className="rd-field-row" style={{ justifyContent: "space-between" }}>
-              Meeting link · optional
+          <label className="npd-field">
+            <span className="npd-label rt-label-row">
+              Meeting link
               {lastLink && !link && (
-                <button type="button" className="rd-ex-btn" style={{ color: "#2f5d8f", letterSpacing: 0, textTransform: "none" }} onClick={() => setLink(lastLink)}>
+                <button type="button" className="npd-act" onClick={() => setLink(lastLink)}>
                   Reuse last
                 </button>
               )}
             </span>
-            <input type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://meet.google.com/abc-defg-hij" />
+            <input className="npd-line" type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://meet.google.com/abc-defg-hij" />
           </label>
         </div>
       </div>
-      <DialogFooter>
-        <span className="rd-dlg-hint grow">{link.trim() && !linkOk ? "That does not look like a link yet." : ""}</span>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null, repeatWeeks, count: repeatWeeks ? calls : 1, meetingType: mtype })}>
-          {reschedule ? "Move the call" : repeatWeeks ? `Schedule ${calls} calls` : "Schedule"}
+
+      <div className="npd-foot">
+        {link.trim() && !linkOk && <span className="rt-bad">Not a meeting link yet.</span>}
+        <DialogClose className="npd-cancel">Cancel</DialogClose>
+        <button type="button" className="npd-save" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null, repeatWeeks, count: repeatWeeks ? calls : 1, meetingType: mtype })}>
+          {reschedule ? "Move" : repeatWeeks ? `Schedule ${calls}` : "Schedule"}
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }
@@ -841,21 +818,28 @@ function LinkDialog({ value, onSave }: { value: string; onSave: (link: string) =
   const provider = link.trim() ? providerOf(link) : null;
   const ok = link.trim() === "" || provider != null;
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>{value ? "Meeting link" : "Add a meeting link"}</DialogTitle>
-      </DialogHeader>
-      <label className="rd-field">
-        <span>Link</span>
-        <input type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://meet.google.com/abc-defg-hij" autoFocus onKeyDown={(e) => e.key === "Enter" && ok && onSave(link.trim())} />
-      </label>
-      <DialogFooter>
-        <span className="rd-dlg-hint grow">{link.trim() && !provider ? "That does not look like a link yet." : ""}</span>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave(link.trim())}>
-          {value ? (link.trim() ? "Save link" : "Remove link") : "Add link"}
-        </button>
-      </DialogFooter>
+    <DialogContent className="dlh">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Meeting link</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <DialogDescription className="sr-only">The link the client joins the call with</DialogDescription>
+      <input className="dlh-line" type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://meet.google.com/abc-defg-hij" aria-label="Link" autoFocus onKeyDown={(e) => e.key === "Enter" && ok && onSave(link.trim())} />
+      {link.trim() && !provider && <p className="dlh-error">Not a meeting link yet.</p>}
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel">Cancel</DialogClose>
+        {value && !link.trim() ? (
+          <button type="button" className="dlh-delete" onClick={() => onSave("")}>
+            Remove
+          </button>
+        ) : (
+          <button type="button" className="dlh-go" disabled={!ok || !link.trim()} onClick={() => onSave(link.trim())}>
+            {value ? "Save" : "Add"}
+          </button>
+        )}
+      </div>
     </DialogContent>
   );
 }
@@ -865,31 +849,35 @@ function CompleteDialog({ firstName, value, title: initialTitle, onComplete }: {
   const [recap, setRecap] = useState(value);
   const [title, setTitle] = useState(initialTitle);
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>How did the call go?</DialogTitle>
-        <DialogDescription>What you write here reaches {firstName} on their Home, under their next call. Your prep notes stay yours.</DialogDescription>
-      </DialogHeader>
+    <DialogContent className="dlh rt-complete">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">How did the call go?</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <DialogDescription className="sr-only">A summary for {firstName}, on their Home</DialogDescription>
       {/* A title first (the one line on the client's Home), then what was agreed (opens under it). */}
-      <label className="rd-field">
-        <span>Title</span>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="Calories held, bench to 100 kg" autoFocus />
+      <label className="rt-field">
+        <span className="dlh-label">Title</span>
+        <input className="dlh-line" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="Calories held, bench to 100 kg" autoFocus />
       </label>
-      <label className="rd-field">
-        <span>Summary for {firstName}</span>
-        <textarea rows={4} value={recap} onChange={(e) => setRecap(e.target.value)} placeholder="What you covered and what you agreed…" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && recap.trim() && onComplete(recap.trim(), title.trim())} />
+      <label className="rt-field">
+        <span className="dlh-label">Summary for {firstName}</span>
+        <textarea className="dlh-line" rows={4} value={recap} onChange={(e) => setRecap(e.target.value)} placeholder="What you covered and what you agreed…" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && recap.trim() && onComplete(recap.trim(), title.trim())} />
       </label>
-      <DialogFooter>
-        <button type="button" className="rd-btn" onClick={() => onComplete("", "")}>
+      <div className="dlh-foot">
+        <button type="button" className="dlh-cancel" onClick={() => onComplete("", "")}>
           Complete without one
         </button>
-        <button type="button" className="rd-btn primary" disabled={!recap.trim()} onClick={() => onComplete(recap.trim(), title.trim())}>
-          Save and complete
+        <button type="button" className="dlh-go" disabled={!recap.trim()} onClick={() => onComplete(recap.trim(), title.trim())}>
+          Complete
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }
+
 
 /** "GMT+7": the timezone a meeting's time reads in, at that moment. */
 function zoneOf(m: { date: string; time: string; tz: string | null }): string {

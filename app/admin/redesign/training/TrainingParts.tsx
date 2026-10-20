@@ -12,6 +12,7 @@ import { ChatIcon, TargetIcon } from "../../../components/icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog } from "../../../components/ui/dialog";
 import { ConfirmDialog, type DraftAnswered, type DraftProgram } from "./TrainingDraft";
+import { SepJoin } from "../Sep";
 
 // The Training tab's restructure (19 Oct, Alex's spec): the header's goals
 // and note as two pills with one pop-over, the weeks as a rail of cards, and
@@ -19,6 +20,24 @@ import { ConfirmDialog, type DraftAnswered, type DraftProgram } from "./Training
 // into a table). Styled in trn.css, the admin hairline language.
 
 const preview = (s: string) => (s.length > 80 ? `${s.slice(0, 80).trimEnd()}…` : s);
+/** The goals in the tip, in turn, cut at 80 characters in all as `preview` cuts the note; a bar between them on screen. */
+const previewGoals = (goals: string[]) => {
+  const out: string[] = [];
+  let left = 80;
+  for (const g of goals) {
+    if (left <= 0) {
+      out[out.length - 1] = `${out[out.length - 1]}…`;
+      break;
+    }
+    if (g.length > left) {
+      out.push(`${g.slice(0, left).trimEnd()}…`);
+      break;
+    }
+    out.push(g);
+    left -= g.length + 3;
+  }
+  return out;
+};
 
 // ---- Goals and note: two pills, one pop-over under them. The pop-over
 // works as the client's note does (20 Oct, Alex): a clean line to write on,
@@ -93,8 +112,7 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
     });
   };
   const pill = (k: "goals" | "note") => {
-    const value = k === "goals" ? savedGoals.join(" · ") : savedNote;
-    const set = !!value;
+    const set = k === "goals" ? savedGoals.length > 0 : !!savedNote;
     const name = k === "goals" ? "Phase goals" : `Note to ${firstName}`;
     return (
       <button type="button" className={`trn-pill${set ? " set" : ""}${open === k ? " on" : ""}`} aria-haspopup="dialog" aria-expanded={open === k} aria-label={`${name}, ${set ? "set" : "not set"}`} onClick={() => openIt(k)}>
@@ -104,7 +122,7 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
         {k === "goals" && <b className="trn-pill-n">{savedGoals.length}</b>}
         {set && open == null && (
           <span className="trn-tip" role="tooltip">
-            {preview(value)}
+            {k === "goals" ? <SepJoin parts={previewGoals(savedGoals)} /> : preview(savedNote)}
           </span>
         )}
       </button>

@@ -9,6 +9,7 @@ import { ChevronDownIcon, PlayIcon, SearchIcon } from "../../../components/icons
 import { assignVideoToExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryItem } from "./load";
 import { useLibraryView, type LibraryFilter } from "./useLibraryView";
+import { Sep } from "../Sep";
 
 // Library → Exercises as a card grid (14 Oct): one block a muscle group,
 // folded to a row with its colour, count and demo coverage; open, a grid
@@ -211,7 +212,11 @@ export default function ExerciseLibraryGrid({
               )}
               <span className="lib-group-count">
                 {filtering ? `${shown.length} of ${alive.length}` : `${alive.length} ${alive.length === 1 ? noun : `${noun}s`}`}
-                {needle && shown.length === 0 ? " · 0 matches" : ""}
+                {needle && shown.length === 0 && (
+                  <>
+                    <Sep />0 matches
+                  </>
+                )}
               </span>
             </button>
             {isOpen && (

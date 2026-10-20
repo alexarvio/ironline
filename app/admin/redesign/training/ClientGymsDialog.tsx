@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import type React from "react";
 import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { dayMonth } from "../../../lib/dayMonth";
+import { SepJoin } from "../Sep";
 
 // The client's gyms (15 Oct), in the admin hairline style since 20 Oct (Alex:
 // no explanations, facts only). A hairline row a gym: its initial, Home as
@@ -146,7 +147,7 @@ export default function ClientGymsDialog({
                       <b>{g.name}</b>
                       {g.home && <span className="cgh-home">Home</span>}
                     </span>
-                    <small>{g.sessions8w ? `${g.sessions8w} session${g.sessions8w === 1 ? "" : "s"} in the last 8 weeks${g.lastSessionAt ? ` · last ${when(g.lastSessionAt, today)}` : ""}` : "No sessions yet"}</small>
+                    <small>{g.sessions8w ? <SepJoin parts={[`${g.sessions8w} session${g.sessions8w === 1 ? "" : "s"} in the last 8 weeks`, g.lastSessionAt && `last ${when(g.lastSessionAt, today)}`]} /> : "No sessions yet"}</small>
                   </span>
                   <span className="cgh-actions">
                     {!g.home && (

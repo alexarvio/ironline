@@ -1,135 +1,122 @@
-/* The Meetings draft: what it adds on top of the Training draft's sheet. */
+/* The Meetings tab (21 Oct, Alex): built as the track tabs are (root "rd trn rls rt"): Training's header, each
+   section's title on the page and its content in one hairline card. Ink, never navy; weights 500 and 600. */
 
-.rt-cols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.8fr); gap: 18px; align-items: start; }
-.rt-main, .rt-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
-@media (max-width: 1100px) { .rt-cols { grid-template-columns: 1fr; } }
+.rd.rt { display: flex; flex-direction: column; gap: 22px; }
+.rd.rt .rt-head-btn { height: 36px; }
 
-/* The next call: a date tile, the topic, when, and the way in. */
-.rt-band { display: flex; align-items: center; gap: 16px; padding: 4px 14px 14px 24px; }
-.rt-tile { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 58px; height: 62px; border-radius: 14px; background: #1e3a6e; color: #fff; }
-.rt-tile small { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.75; }
-.rt-tile b { font-size: 24px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.rt-tile.sm { width: 44px; height: 46px; border-radius: 10px; background: #e6ecf3; color: #1e3a6e; }
-.rt-tile.sm small { font-size: 9px; }
-.rt-tile.sm b { font-size: 17px; }
-.rt-band-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.rt-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #1b7a4b; }
-.rt-topic { width: 100%; margin-left: -6px; padding: 2px 6px; border: 1px solid transparent; border-radius: 8px; background: none; font: inherit; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
-.rt-topic:hover { border-color: #dfe3e8; background: #fff; }
-.rt-topic:focus { outline: none; border-color: #2f5d8f; background: #fff; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
-.rt-topic::placeholder { color: #b0b6c0; }
-.rt-when { font-size: 13px; color: #5b6474; }
-.rt-band-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.rt-host { font-size: 11.5px; color: #8b93a1; }
-.rt-host button { padding: 0; border: 0; background: none; font: inherit; color: #2f5d8f; cursor: pointer; }
+/* A call the client asked for (9 Oct): a hairline row on the page, no blue box. */
+.rd.rt .rt-ask { display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 18px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; }
+.rd.rt .rt-ask-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rd.rt .rt-ask-text b { font-size: 14px; font-weight: 600; color: #141a24; }
+.rd.rt .rt-ask-text span { font-size: 13px; font-weight: 500; color: #5b6474; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Under the band: goals to review on the left, prep notes on the right. */
-.rt-body { display: grid; grid-template-columns: 1fr; gap: 16px 28px; padding: 0 14px 14px; }
-@media (max-width: 900px) { .rt-body { grid-template-columns: 1fr; } }
-.rt-col { display: flex; flex-direction: column; min-width: 0; }
-.rt-col .rd-cols { padding-left: 10px; }
-.rt-goal-dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; background: #c3c9d2; }
-.rt-goal-dot.green { background: #1b7a4b; }
-.rt-goal-dot.orange { background: #b3471d; }
-.rt-goal-status { font-size: 12.5px; font-weight: 600; color: #5b6474; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rt-goal-status.green { color: #1b7a4b; }
-.rt-goal-status.orange { color: #b3471d; }
-.rt-prep { width: 100%; max-width: none; margin: 0; height: auto; min-height: 120px; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #141a24; resize: vertical; }
-.rt-prep:focus { outline: none; border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
-.rt-actions { display: flex; align-items: center; gap: 8px; }
-.rt-goal-add { display: flex; gap: 8px; align-items: center; padding: 8px 10px 4px; }
-.rt-goal-add .rd-input { flex: 1; }
+.rd.rt .rt-card { padding: 4px 0 10px; }
+.rd.rt .rd-cols { font-weight: 600; letter-spacing: 0.16em; }
+.rd.rt .rt-none { margin: 0; padding: 14px 20px 6px; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
 
-/* Past calls: the recap, the notes, the goals set. */
-/* An open past call: the label, then the recap as one note (title over body), capped so it never stretches across a wide screen. */
-.rt-past { display: flex; flex-direction: column; gap: 8px; padding: 4px 14px 16px; }
-.rt-past-label { padding: 0; }
-.rt-recap { display: flex; flex-direction: column; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; overflow: hidden; }
-.rt-recap:focus-within { border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
-/* Title line plus body add up to the 150px the next call's box has, so the two read as the same thing. */
-.rt-recap-title { width: 100%; height: 38px; box-sizing: border-box; padding: 0 12px; border: 0; border-bottom: 1px solid #eceff3; background: none; font: inherit; font-size: 14.5px; font-weight: 700; color: #141a24; }
-.rt-recap textarea { width: 100%; height: 112px; min-height: 112px; padding: 10px 12px; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.55; color: #141a24; resize: vertical; box-sizing: border-box; }
-.rt-recap-title:focus, .rt-recap textarea:focus { outline: none; }
-.rt-recap-title::placeholder, .rt-recap textarea::placeholder { color: #a0a7b3; font-weight: 500; }
-.rt-note { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-top: 1px solid #eceff3; }
-.rt-note p { margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #313851; white-space: pre-wrap; }
-.rt-note small { font-size: 11px; color: #8b93a1; }
-.rt-note-add { display: flex; gap: 8px; padding: 8px 10px 0; }
-.rt-note-add .rd-input { flex: 1; }
-.rt-empty { margin: 0; padding: 8px 10px; font-size: 12.5px; color: #8b93a1; }
+/* The next call: a date tile, the topic, when, and the way in. The tile is light numerals on a hairline, never a filled block. */
+.rd.rt .rt-band { display: flex; align-items: center; gap: 16px; padding: 14px 18px 12px 20px; }
+.rd.rt .rt-tile { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 56px; height: 60px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #141a24; }
+.rd.rt .rt-tile small { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #8b93a1; }
+.rd.rt .rt-tile b { font-size: 22px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.rd.rt .rt-tile.sm { width: 44px; height: 46px; border-radius: 12px; }
+.rd.rt .rt-tile.sm small { font-size: 9px; }
+.rd.rt .rt-tile.sm b { font-size: 17px; }
+.rd.rt .rt-band-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.rd.rt .rt-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+/* The topic is typed in place on a clean line: nothing round it, a line on hover, ink while typing. */
+.rd.rt .rt-topic { width: 100%; height: 32px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; box-shadow: none; outline: none; font: inherit; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
+.rd.rt .rt-topic:hover { border-bottom-color: #e1e5eb; }
+.rd.rt .rt-topic:focus { border-bottom-color: #141a24; }
+.rd.rt .rt-topic::placeholder { color: #98a2b3; }
+.rd.rt .rt-when { font-size: 13px; font-weight: 500; color: #5b6474; font-variant-numeric: tabular-nums; }
+.rd.rt .rt-band-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.rd.rt .rt-band-right .trn-btn { height: 36px; text-decoration: none; }
+.rd.rt .rt-band-right .trn-btn svg { width: 14px; height: 14px; }
+.rd.rt .rt-host { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 500; color: #8b93a1; }
+.rd.rt .rt-host button { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: #5b6474; cursor: pointer; }
+.rd.rt .rt-host button:hover { color: #141a24; }
+
+/* Under the band: Prep notes | Meeting notes | Summary, one at a time, each the words on the page. */
+.rd.rt .rt-body { display: flex; flex-direction: column; padding: 4px 20px 6px; }
+.rd.rt .rt-notes-tabs { display: flex; align-items: center; gap: 10px; padding: 0 0 8px; }
+
+/* A note that saves (design rules 4): no box and no line until something is typed; then the line, Cancel and Save.
+   One height whatever tab is on, so the toggle swaps the words and nothing else moves. */
+.rd.rt .rt-note { display: flex; flex-direction: column; }
+.rd.rt .rt-note-text { display: block; width: 100%; height: 132px; margin: 0; padding: 6px 0 8px; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; box-shadow: none; outline: none; resize: none; box-sizing: border-box; font: inherit; font-size: 15px; font-weight: 500; line-height: 1.5; color: #141a24; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+.rd.rt .rt-note-text.short { height: 96px; }
+.rd.rt .rt-note-text::placeholder { color: #98a2b3; }
+.rd.rt .rt-note-text.typed { border-bottom-color: #e1e5eb; }
+.rd.rt .rt-note-text.typed:focus { border-bottom-color: #141a24; }
+.rd.rt .rt-note-foot { display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding-top: 10px; }
+.rd.rt .rt-note-cancel { height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.rd.rt .rt-note-cancel:hover { color: #141a24; }
+.rd.rt .rt-note-save { height: 32px; padding: 0 16px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer; }
+.rd.rt .rt-note-save:hover { background: #262e3b; }
+
+/* An open past call: the label, then its one-line title over what was agreed. */
+.rd.rt .rt-past { display: flex; flex-direction: column; gap: 4px; padding: 4px 14px 16px 52px; }
+.rd.rt .rt-past.bare { padding: 0; gap: 0; }
+.rd.rt .rt-past-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.rd.rt .rt-recap-title { width: 100%; height: 34px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; box-shadow: none; outline: none; font: inherit; font-size: 15px; font-weight: 600; color: #141a24; }
+.rd.rt .rt-recap-title:hover { border-bottom-color: #e1e5eb; }
+.rd.rt .rt-recap-title:focus { border-bottom-color: #141a24; }
+.rd.rt .rt-recap-title::placeholder { color: #98a2b3; font-weight: 500; }
+.rd.rt .rt-lines { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; }
+.rd.rt .rt-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13.5px; font-weight: 500; color: #3a4250; }
+
+/* A past call's state: a hairline capsule (design rules 8). Completed green, No-show red, the rest grey. */
+.rd.rt .rt-state { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 11.5px; font-weight: 600; color: #5b6474; white-space: nowrap; }
+.rd.rt .rt-state.up { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.35); color: #2f7a3f; }
+.rd.rt .rt-state.down { box-shadow: inset 0 0 0 1px rgba(180, 35, 24, 0.3); color: #b42318; }
+
+/* ---- Pop-ups (portaled, so never under .rd). */
+
+/* Schedule a meeting / Reschedule: the event pop-up's .npd; the month at a glance on the left. */
+.npd.npd.rt-npd .rt-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.npd.npd.rt-npd .rt-label-row .npd-act { margin: -6px -10px -6px 0; }
+.npd.npd.rt-npd .npd-date input.rdt { width: 100%; padding: 0; border: 0; background: none; box-shadow: none; outline: none; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; }
+.npd.npd.rt-npd .rt-repeat { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12.5px; font-weight: 500; color: #5b6474; }
+.npd.npd.rt-npd .rt-repeat input { width: 44px; height: 28px; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; background: none; font: inherit; font-size: 14px; font-weight: 500; text-align: center; color: #141a24; outline: none; }
+.npd.npd.rt-npd .rt-repeat input:focus { border-bottom-color: #141a24; }
+.npd.npd.rt-npd .rt-bad { margin-right: auto; font-size: 13px; font-weight: 500; color: #b42318; }
 
 /* The month at a glance (MonthRange, month-range.css), with the picked day's bookings under it. */
-.rt-cal { padding: 0 14px 14px; }
+.rt-cal { min-width: 0; }
 /* A day's calls as dots under its number (MonthRange's marks): this client's in ink, everyone else's grey; white on the picked day. */
 .rt-cal-dots { display: flex; gap: 2px; height: 5px; }
 .rt-cal-dots i, .rt-legend i { display: block; width: 5px; height: 5px; border-radius: 999px; background: #c3c9d2; }
 .rt-cal-dots i.mine, .rt-legend i.mine { background: #141a24; }
-.rt-cal-dots i.done, .rt-legend i.done { background: #1b7a4b; }
 .rdd-cell.in.start .rt-cal-dots i { background: rgba(255, 255, 255, 0.55); }
-.rdd-cell.in.start .rt-cal-dots i.mine, .rdd-cell.in.start .rt-cal-dots i.done { background: #fff; }
-.rt-day { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eef0f3; }
-.rt-day-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; color: #141a24; }
-.rt-day-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #5b6474; }
+.rdd-cell.in.start .rt-cal-dots i.mine { background: #fff; }
+/* The month and the day under it keep one height whatever is on them. */
+.rt-day { display: flex; flex-direction: column; gap: 6px; min-height: 118px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eef0f3; }
+.rt-day-head { font-size: 13px; font-weight: 600; color: #141a24; }
+.rt-day-list { display: flex; flex-direction: column; gap: 6px; max-height: 72px; overflow-y: auto; scrollbar-width: thin; }
+.rt-day-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 500; color: #5b6474; }
 .rt-day-row b { font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rt-day-row.mine b { color: #141a24; }
 .rt-day-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rt-legend { display: flex; gap: 12px; margin-top: 10px; font-size: 11px; color: #8b93a1; }
+.rt-empty { margin: 0; font-size: 12.5px; font-weight: 500; color: #8b93a1; }
+.rt-legend { display: flex; gap: 12px; margin-top: 10px; font-size: 11px; font-weight: 500; color: #8b93a1; }
 .rt-legend span { display: inline-flex; align-items: center; gap: 5px; }
 
-/* The schedule dialog: the duration as chips. */
-/* The four lengths fill the field's width, like the timezone above them, each centred. */
-.rt-durations { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.rt-durations .rd-chip { justify-content: center; text-align: center; padding-left: 4px; padding-right: 4px; }
-.rt-wide { width: 100%; flex: none; }
-/* How many times a repeating call happens, and the day of the last one. */
-.rt-repeat { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12.5px; color: #59627a; }
-.rt-repeat input { width: 48px; text-align: center; }
-.rt-busy { color: #b3471d; }
-.rt-free { color: #1b7a4b; }
+/* The link and the complete pop-ups: the .dlh card, its fields .dlh-line / .dlh-label (training/trn.css). */
+.dlh .rt-field { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.dlh.dlh.rt-complete { width: min(480px, 100vw - 32px); }
 
-/* The calendar lives in the schedule dialog now: the month on the left, the fields on the right. */
-.rt-cols { display: block; }
-.rt-dlg { max-width: 760px; }
-.rt-dlg .rdd-cols { grid-template-columns: minmax(0, 1.1fr) minmax(240px, 0.9fr); }
-/* No panel round the month (21 Oct): the same calendar as the phase pop-up's. */
-.rt-dlg-cal { min-width: 0; }
-.rt-dlg-cal .rt-cal { padding: 0; }
-/* The month and the day under it keep one height whatever is on them. */
-.rt-day { min-height: 118px; }
-.rt-day-list { display: flex; flex-direction: column; gap: 6px; max-height: 72px; overflow-y: auto; scrollbar-width: thin; }
-/* The bar under a note, flush with the card it sits in. */
-.rt-bar { margin: 12px 0 0; border-radius: 12px; }
-.rt-past .rt-bar { margin: 0; }
 /* The timezone under the time: the coach's own unless another is picked. */
-.rt-tz { width: 100%; margin-top: 6px; padding: 5px 8px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 12.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #5b6474; }
-/* A past call's recap: the one-line title over what was agreed. */
-/* Date and time as two equal fields, the timezone a full row under them (25 Sep). */
-.rt-when-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
-.rt-when-row .rd-field { min-width: 0; }
-.rt-when-row input { width: 100%; height: 38px; box-sizing: border-box; }
 .rt-tzp { position: relative; }
-.rt-tzp-btn { display: flex; width: 100%; height: 38px; flex: none; }
+.rt-tzp-btn { display: flex; width: 100%; height: 40px; flex: none; }
 .rt-tzp-btn small { font-size: inherit; font-weight: 500; color: #5b6474; }
-.rt-tzp-pop { position: absolute; z-index: 60; top: calc(100% + 6px); left: 0; right: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 16px 32px -12px rgba(20, 26, 36, 0.25); text-transform: none; letter-spacing: 0; }
+.rt-tzp-pop { position: absolute; z-index: 60; top: calc(100% + 6px); left: 0; right: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 12px; background: #fff; box-shadow: 0 16px 32px -12px rgba(20, 26, 36, 0.25), 0 0 0 1px #e1e5eb; text-transform: none; letter-spacing: 0; }
 .rt-tzp-search { height: 34px; font-size: 13.5px; }
 .rt-tzp-list { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; scrollbar-width: thin; }
 .rt-tzp-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
-.rt-tzp-item:hover { background: #f4f7fc; }
-.rt-tzp-item.on { background: #e6ecf3; color: #1e3a6e; }
+.rt-tzp-item:hover { background: #f5f6f8; }
+.rt-tzp-item.on { background: #f5f6f8; font-weight: 600; }
 .rt-tzp-item span { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .rt-tzp-item small { font-size: 11.5px; color: #8b93a1; font-weight: 500; }
 .rt-tzp-item em { flex: none; font-style: normal; font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .rt-tzp-none { margin: 6px 8px; font-size: 13px; font-weight: 500; color: #8b93a1; }
-
-/* Under the next call (6 Oct): Prep notes | Meeting notes, one at a time, with a word on who sees which. */
-.rt-notes-tabs { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 0 0 10px 10px; }
-.rt-notes-tabs small { font-size: 12px; color: #8b93a1; }
-.rt-past.bare { max-width: none; padding: 0; gap: 0; }
-/* Prep notes and meeting notes are one box of one height, so the toggle swaps the words and nothing else moves. */
-.rt-notes-box { height: 152px; min-height: 152px; }
-
-/* A call the client asked for (9 Oct). */
-.rt-ask { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 12px 14px 12px 16px; border-radius: 14px; background: #eef3fc; box-shadow: inset 0 0 0 1px rgba(47, 111, 214, 0.25); }
-.rt-ask-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.rt-ask-text b { font-size: 13.5px; font-weight: 800; color: #141a24; }
-.rt-ask-text span { font-size: 13px; font-weight: 600; color: #3b4a66; }

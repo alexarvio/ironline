@@ -16,6 +16,7 @@ import AppAccessButton from "./AppAccessButton";
 import type { NeedView } from "../loaders";
 import type { ClientAccess } from "../../../lib/access-actions";
 import { dayMonth } from "../../../lib/dayMonth";
+import { Sep } from "../Sep";
 
 // The calmer Home tab, as a draft on real data, in the Training draft's
 // sheet. Where the coach lands for a client: who this is and where they are,
@@ -177,7 +178,8 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
             <section className="rd-session open rn-card">
               <div className="rn-card-head">
                 <h2>
-                  Keeping up <span title={eng.since ? `Counted from ${dayMonth(eng.since)}, their first day` : undefined}>· last {eng.days} days</span>
+                  Keeping up<Sep />
+                  <span title={eng.since ? `Counted from ${dayMonth(eng.since)}, their first day` : undefined}>last {eng.days} days</span>
                 </h2>
                 {/* What counts for this client (12 Oct): the coach's pick, at least one. */}
                 <DropdownMenu modal={false}>
@@ -240,7 +242,8 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
           <section className="rd-session open rn-card">
             <div className="rn-card-head">
               <h2>
-                Needs you <span>· {needs.length ? `${needs.length} open item${needs.length === 1 ? "" : "s"}` : `nothing is waiting on you for ${firstName}`}</span>
+                Needs you<Sep />
+                <span>{needs.length ? `${needs.length} open item${needs.length === 1 ? "" : "s"}` : `nothing is waiting on you for ${firstName}`}</span>
               </h2>
               {needs.length > 0 && (
                 <button type="button" className="rd-btn" onClick={() => setMsg(true)}>
@@ -433,7 +436,13 @@ function NoteCard({ text, savedLabel, onSave }: { text: string; savedLabel: stri
     <section className="rd-session open rn-card rh-info">
       <div className="rn-card-head">
         <h2>
-          Coach note {savedLabel && <span>· {savedLabel}</span>}
+          Coach note
+          {savedLabel && (
+            <>
+              <Sep />
+              <span>{savedLabel}</span>
+            </>
+          )}
         </h2>
         {!editing && (
           <button type="button" className="rd-ex-btn rh-edit" onClick={() => setEditing(true)}>

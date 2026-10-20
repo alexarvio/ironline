@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDownIcon } from "../../components/icons";
+import { Sep } from "./Sep";
 import "./phase-goals.css";
 
 // The coach's note to the client on a tab (Nutrition, Training), the one
@@ -57,7 +58,10 @@ export default function CoachNoteCard({ firstName, note, what, save }: { firstNa
       {changed && (
         <div className="rd-pending">
           <span className="rd-pending-count">1</span>
-          <span className="rd-pending-text">change to the note · {firstName} sees it on {what}</span>
+          <span className="rd-pending-text">
+            change to the note<Sep />
+            {firstName} sees it on {what}
+          </span>
           <button type="button" className="rd-pending-ghost" onClick={() => setText(note)}>
             Discard
           </button>

@@ -25,6 +25,7 @@ import { MonthRange } from "../MonthRange";
 import { dayMonth } from "../../../lib/dayMonth";
 import { phaseDays, phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import { SortableItem, SortableList } from "../Sortable";
+import { Sep, SepJoin } from "../Sep";
 import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
 
 // The calmer Plan tab, as a draft on real data, in the Training draft's
@@ -126,7 +127,7 @@ const rgbOf = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
   return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
 };
-function TrackIcon({ track, size = 20 }: { track: PhaseTrack; size?: number }) {
+export function TrackIcon({ track, size = 20 }: { track: PhaseTrack; size?: number }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d={TRACK_ICON[track]} />
@@ -475,7 +476,23 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                               {/* Nothing in it yet (20 Oct, Alex): a warning sign, what is missing on hover. Not on a past phase. */}
                               {p.gap && state !== "past" && <GapSign text={p.gap} />}
                               {/* Its state in words on the bar (30 Sep), in the state's colours (20 Oct, Alex): Live green, Scheduled blue, Draft peach. */}
-                              {state === "draft" ? <span className="rq-bar-pill" style={stateTagStyle(state)}>Draft</span> : state === "live" ? <span className="rq-bar-pill" style={stateTagStyle(state)}><b>Live</b> · week {weeksBetween(sp.s, thisWeek) + 1} of {total}</span> : state === "scheduled" ? <span className="rq-bar-pill" style={stateTagStyle(state)}><b>Scheduled</b> · starts {shortDate(sp.s)}</span> : null}
+                              {state === "draft" ? (
+                                <span className="rq-bar-pill" style={stateTagStyle(state)}>
+                                  Draft
+                                </span>
+                              ) : state === "live" ? (
+                                <span className="rq-bar-pill" style={stateTagStyle(state)}>
+                                  <b>Live</b>
+                                  <Sep />
+                                  week {weeksBetween(sp.s, thisWeek) + 1} of {total}
+                                </span>
+                              ) : state === "scheduled" ? (
+                                <span className="rq-bar-pill" style={stateTagStyle(state)}>
+                                  <b>Scheduled</b>
+                                  <Sep />
+                                  starts {shortDate(sp.s)}
+                                </span>
+                              ) : null}
                             </div>
                           );
                         })}
@@ -501,7 +518,21 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           <div className="rd-btn-group" role="group" aria-label="Which goals">
             {(["open", "done", "all"] as const).map((f) => (
               <button key={f} type="button" className={filter === f ? "on" : ""} aria-pressed={filter === f} onClick={() => setFilter(f)}>
-                {f === "open" ? `Open${openCount ? ` · ${openCount}` : ""}` : f === "done" ? "Done" : "All"}
+                {f === "open" ? (
+                  <>
+                    Open
+                    {openCount ? (
+                      <>
+                        <Sep />
+                        {openCount}
+                      </>
+                    ) : null}
+                  </>
+                ) : f === "done" ? (
+                  "Done"
+                ) : (
+                  "All"
+                )}
               </button>
             ))}
           </div>
@@ -583,7 +614,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
             <div className="rd-pending">
               <span className="rd-pending-count">{goalChanges}</span>
               <span className="rd-pending-text">
-                {[...(order ? ["order changed"] : []), ...Object.entries(pendingDone).map(([id, d]) => `${goals.find((g) => g.id === Number(id))?.text ?? "goal"} ${d ? "marked done" : "reopened"}`)].join(" · ")}
+                <SepJoin parts={[...(order ? ["order changed"] : []), ...Object.entries(pendingDone).map(([id, d]) => `${goals.find((g) => g.id === Number(id))?.text ?? "goal"} ${d ? "marked done" : "reopened"}`)]} />
               </span>
               <button
                 type="button"
@@ -1061,7 +1092,15 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
           <div className="npd-dates">
             {/* Typed or picked (21 Oct, Alex: typing the dates was missed): a click arms that end in the calendar, the field takes 05/10/2026. */}
             <div className={`npd-date${picking === "start" ? " arm" : ""}${startLocked ? " locked" : ""}`} onClick={() => !startLocked && setPicking("start")}>
-              <span className="npd-date-head">Starts{startLocked ? " · fixed" : ""}</span>
+              <span className="npd-date-head">
+                Starts
+                {startLocked ? (
+                  <>
+                    <Sep />
+                    fixed
+                  </>
+                ) : null}
+              </span>
               <DateText value={from} min={startLocked ? undefined : earliest} onChange={(d) => setStart(d)} label="Start date" disabled={startLocked} onFocus={() => setPicking("start")} />
             </div>
             <span className="npd-arrow" aria-hidden="true">

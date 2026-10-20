@@ -10,6 +10,7 @@ import { groupColour } from "../../../lib/muscleGroups";
 import { assignVideoToExerciseAction, createLibraryExerciseAction, saveExerciseSubstitutesAction, saveExerciseVariationsAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryItem, LibraryVideo } from "./load";
 import { useAutosave } from "./useAutosave";
+import { Sep, SepJoin } from "../Sep";
 
 // The exercise editor (14 Oct, "all on one page"): what opens when a coach
 // clicks an exercise in the Library. The New phase and New event dialogs'
@@ -509,7 +510,10 @@ export default function ExerciseEditor({
                   <>
                     <span className="exm-poster large" aria-hidden="true" />
                     <span className="exm-chip top-left">{pendingUpload.name}</span>
-                    <span className="exm-uploading">Saved · reading it back…</span>
+                    <span className="exm-uploading">
+                      Saved<Sep />
+                      reading it back…
+                    </span>
                   </>
                 ) : demo ? (
                   <>
@@ -525,7 +529,10 @@ export default function ExerciseEditor({
                 ) : (
                   <>
                     <b>Drop a video here</b>
-                    <small>MP4 or MOV · up to 128 MB</small>
+                    <small>
+                      MP4 or MOV<Sep />
+                      up to 128 MB
+                    </small>
                     <button type="button" className="exm-upload-btn" disabled={!!uploading} onClick={() => fileInput.current?.click()}>
                       Upload from computer
                     </button>
@@ -1025,7 +1032,16 @@ export default function ExerciseEditor({
                     searchPos &&
                     createPortal(
                     <div className="exm-dropdown" role="listbox" style={{ left: searchPos.x, top: searchPos.y, width: searchPos.w, maxHeight: searchPos.h }}>
-                      <span className="exm-mini">{q.trim() ? "Results" : `Suggested · ${groups.find((g) => g.slug === group)?.label ?? group}`}</span>
+                      <span className="exm-mini">
+                        {q.trim() ? (
+                          "Results"
+                        ) : (
+                          <>
+                            Suggested<Sep />
+                            {groups.find((g) => g.slug === group)?.label ?? group}
+                          </>
+                        )}
+                      </span>
                       {candidates.map((x, k) => {
                         const c = groupColour(x.group);
                         return (
@@ -1068,7 +1084,7 @@ export default function ExerciseEditor({
         <footer className="exm-foot">
           {save.state === "error" ? (
             <small className="exm-err">
-              Couldn&rsquo;t save ·{" "}
+              Couldn&rsquo;t save<Sep />
               <button type="button" className="exm-textbtn" onClick={save.retry}>
                 Retry
               </button>
@@ -1090,8 +1106,7 @@ export default function ExerciseEditor({
                   <span className="exm-lightbox-text">
                     <b>{preview.name}</b>
                     <small>
-                      {previewSeconds != null ? `${fmtDuration(previewSeconds)} · ` : ""}
-                      {preview.usedBy.length ? `On ${preview.usedBy.map((u) => u.name).join(", ")}` : "Not used yet"}
+                      <SepJoin parts={[previewSeconds != null && fmtDuration(previewSeconds), preview.usedBy.length ? `On ${preview.usedBy.map((u) => u.name).join(", ")}` : "Not used yet"]} />
                     </small>
                   </span>
                   {demo === preview.path ? (

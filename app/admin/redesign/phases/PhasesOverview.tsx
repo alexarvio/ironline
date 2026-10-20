@@ -17,6 +17,7 @@ import { TRACK_LABEL } from "../../phaseChrome";
 import { PhaseDialog, phaseForm } from "../plan/PlanDraft";
 import { EventDialog } from "../plan/EventsCard";
 import DatePick from "../DatePick";
+import { Sep } from "../Sep";
 import type { OverviewClient, PhasesOverviewData } from "./load";
 import {
   addDays,
@@ -204,7 +205,10 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
       {soonRows.length > 0 && (
         <section className="pov-soon" aria-label="Ending soon">
           <div className="pov-soon-head">
-            <span className="pov-soon-eyebrow">Ending soon · {soonRows.length}</span>
+            <span className="pov-soon-eyebrow">
+              Ending soon<Sep />
+              {soonRows.length}
+            </span>
             <span className="pov-soon-rule">Last two weeks, nothing planned after</span>
           </div>
           <ul className="pov-soon-list">
@@ -242,7 +246,10 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
         <header className="pov-card-head">
           <div className="pov-view" role="radiogroup" aria-label="Which clients">
             <button type="button" role="radio" aria-checked={prefs.view === "all"} className={prefs.view === "all" ? "on" : ""} onClick={() => setPrefs((p) => ({ ...p, view: "all" }))}>
-              All clients · {clients.length}
+              <span>
+                All clients<Sep />
+                {clients.length}
+              </span>
             </button>
             <button type="button" role="radio" aria-checked={prefs.view === "attention"} className={prefs.view === "attention" ? "on" : ""} onClick={() => setPrefs((p) => ({ ...p, view: "attention" }))}>
               Needs attention <b className="pov-count">{attention.length}</b>
@@ -280,7 +287,8 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
             ))}
             {todayIn && (
               <span className="pov-today-pill" style={{ left: `${todayX * 100}%` }}>
-                Today · {dayMonth(today)}
+                Today<Sep />
+                {dayMonth(today)}
               </span>
             )}
           </div>
@@ -541,7 +549,15 @@ function ClientBlock({
                             <EventIcon kind={e.kind} size={18} />
                           </span>
                           {/* Repeating (19 Oct): one stretch, the days beside the name. */}
-                          <span className="pov-ev-label">{e.repeat ? `${e.title} · ${repeatDays(e.repeat.days)}` : e.title}</span>
+                          <span className="pov-ev-label">
+                            {e.title}
+                            {e.repeat ? (
+                              <>
+                                <Sep />
+                                {repeatDays(e.repeat.days)}
+                              </>
+                            ) : null}
+                          </span>
                         </button>
                       </span>
                     );

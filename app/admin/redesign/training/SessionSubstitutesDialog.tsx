@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { createLibraryExerciseAction } from "../library/actions";
 import type { Library } from "./TrainingDraft";
+import { Sep } from "../Sep";
 
 // A session's substitutes for one exercise (15 Oct), in the admin hairline
 // style since 20 Oct (Alex: no explanations, facts only). The library's
@@ -129,7 +130,9 @@ export default function SessionSubstitutesDialog({
         </button>
       </div>
       <DialogDescription className="sbh-what">
-        {row.name} · {session}
+        {row.name}
+        <Sep />
+        {session}
       </DialogDescription>
 
       {/* From the library: read-only. */}
@@ -255,7 +258,16 @@ export default function SessionSubstitutesDialog({
             </label>
             {open && (
               <div id="sbh-listbox" className="sbh-drop" role="listbox" onMouseDown={(e) => e.preventDefault()}>
-                <span className="sbh-drop-label">{q.trim() ? "Results" : `Suggested · ${groupLabel}`}</span>
+                <span className="sbh-drop-label">
+                  {q.trim() ? (
+                    "Results"
+                  ) : (
+                    <>
+                      Suggested<Sep />
+                      {groupLabel}
+                    </>
+                  )}
+                </span>
                 {candidates.map((x, i) => (
                   <button key={x.id} type="button" role="option" aria-selected={i === cursor} className={`sbh-opt${i === cursor ? " on" : ""}`} onMouseEnter={() => setCursor(i)} onClick={() => add(x)}>
                     <span>{x.name}</span>

@@ -24,6 +24,7 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../..
 import { dayMonth } from "../../../lib/dayMonth";
 import { groupColour } from "../../../lib/categoryColors";
 import { defaultSummary, type MetricSummary } from "../../../lib/metricSummary";
+import { Sep, SepJoin } from "../Sep";
 
 // The Lifestyle tab, built as Training is (21 Oct, Alex): the phase's name
 // to click and type, its state tag as the menu of what can be done with it,
@@ -413,7 +414,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             {phaseId != null &&
               (failed ? (
                 <span className="trn-allsaved failed" role="alert">
-                  Not saved ·{" "}
+                  Not saved<Sep />
                   <button type="button" onClick={() => void run()}>
                     Retry
                   </button>
@@ -1122,7 +1123,12 @@ function CheckinTable({ view, whole, summaryOf, onReply }: { view: LoggedValues;
               </span>
               <em style={{ color: m.colour }}>
                 {m.categoryLabel}
-                {m.unit ? ` · ${m.unit}` : ""}
+                {m.unit ? (
+                  <>
+                    <Sep />
+                    {m.unit}
+                  </>
+                ) : null}
               </em>
             </span>
           );
@@ -1184,11 +1190,7 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
                 </span>
               </span>
               <span className="rm-summary">
-                {filled
-                  .slice(0, 4)
-                  .map((x) => `${x.m.name} ${withUnit(x.v, x.m.unit)}`)
-                  .join(" · ") || "Nothing submitted"}
-                {filled.length > 4 ? ` · +${filled.length - 4}` : ""}
+                <SepJoin parts={[...(filled.length ? filled.slice(0, 4).map((x) => `${x.m.name} ${withUnit(x.v, x.m.unit)}`) : ["Nothing submitted"]), filled.length > 4 && `+${filled.length - 4}`]} />
               </span>
               <span className={`rls-vs ${state.cls}`}>{state.text}</span>
               {/* The row's one action: a message about this check-in (on hover), not a menu. */}
@@ -1362,12 +1364,23 @@ function MetricGraph({ metric: m, points, rangeSwitch = null }: { metric: Logged
           {n((shown ?? last).value)}
           {tail && <small>{tail.trim()}</small>}
         </span>
-        <span className="rm-graph-when">{shown ? shown.label : `Latest · ${last.label}`}</span>
+        <span className="rm-graph-when">
+          {shown ? (
+            shown.label
+          ) : (
+            <>
+              Latest<Sep />
+              {last.label}
+            </>
+          )}
+        </span>
         <span className="rm-graph-stats">
           <span className={`rm-graph-delta${tone}`}>{seen.length < 2 ? "One reading" : `${delta > 0 ? "+" : ""}${n(delta)}${tail} since ${first.label}`}</span>
           <span>
             Average {n(avg)}
-            {tail} · {seen.length} of {points.length} logged
+            {tail}
+            <Sep />
+            {seen.length} of {points.length} logged
           </span>
         </span>
       </div>

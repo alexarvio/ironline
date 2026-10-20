@@ -5,6 +5,7 @@ import { DialogContent, DialogDescription, DialogTitle } from "../../../componen
 import Link from "next/link";
 import { variationIdeas } from "../../../lib/variationIdeas";
 import { dayMonth } from "../../../lib/dayMonth";
+import { Sep, SepJoin } from "../Sep";
 
 // Which variation of an exercise the client does on this session (15 Oct),
 // in the shared pop-up language: Standard and the library's variations as
@@ -159,7 +160,11 @@ export default function VariationDialog({
             <DialogDescription className="vrp-context">
               <span className="vrp-pill">{exerciseName}</span>
               <span className="vrp-meta">
-                {session} · {firstName} · Week {week}
+                {session}
+                <Sep />
+                {firstName}
+                <Sep />
+                Week {week}
               </span>
             </DialogDescription>
           </div>
@@ -200,7 +205,9 @@ export default function VariationDialog({
                         <b>{o.name}</b>
                         {now && <span className="vrp-now">Now</span>}
                       </span>
-                      <small>{o.last ? `Last ${kg(o.last.weight)} × ${o.last.reps} · ${shortDate(o.last.date)} · own weight history` : "Not done yet · starts fresh"}</small>
+                      <small>
+                        <SepJoin parts={o.last ? [`Last ${kg(o.last.weight)} × ${o.last.reps}`, shortDate(o.last.date), "own weight history"] : ["Not done yet", "starts fresh"]} />
+                      </small>
                     </span>
                     <span className={`vrp-radio${on ? " on" : ""}`} aria-hidden="true">
                       {on && (

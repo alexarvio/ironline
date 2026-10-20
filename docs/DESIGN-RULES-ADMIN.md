@@ -4,7 +4,8 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 
 ## 1. Voice: facts, no explanations
 - No sentences explaining what a feature is or how it works. No hint lines under fields, no footer hints ("Only you see a draft until it is sent."), no "optional" tags, no info banners.
-- At most one quiet fact line under a title: `3 weeks · 9/11 – 29/11`, `Bar Tricep Pushdown · Upper — push`. A tab without one keeps no empty room for it (21 Oct, Alex): `rd-head bare` on Home, Plan, Progress pictures, Meetings and Invoices.
+- At most one quiet fact line under a title: `3 weeks | 9/11 – 29/11`, `Bar Tricep Pushdown | Upper — push`. A tab without one keeps no empty room for it (21 Oct, Alex): `rd-head bare` on Home, Plan, Progress pictures, Meetings and Invoices.
+- Two facts on one line are parted by a short drawn upright bar, never a middle dot (21 Oct, Alex): `Sep` / `SepJoin` (`app/admin/redesign/Sep.tsx`, `.rd-sep` in training/draft.css), which drops empty parts so no bar is left over. A typed "|" is too faint. Tooltips, aria labels, placeholders, toasts and saved text keep plain words.
 - A real problem is a short fact plus its fix button: `Overlaps Health, 19 Oct – 15 Nov.` [Start Mon 16 Nov].
 - Buttons say the action, one word when it can: Save, Delete, Remove, Add, Copy, Schedule it. Not "Save new dates", not "Add as copy of Week 1".
 - Empty states are one or two words: `None yet`, `No gyms yet`.
@@ -26,6 +27,8 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - Lifestyle is one beige everywhere, admin and client (21 Oct): `#a08a5c` for marks and text, `#efede6` behind. Never amber, orange or grey for lifestyle. (The Lifestyle tab's metric groups have their own colours in `app/lib/categoryColors.ts`; those are groups of metrics, not the track.)
 
 ## 4. Pop-ups: one pattern
+- Opening or closing a pop-up never moves the page (21 Oct, Alex): the admin keeps its scrollbar, and the scroll lock's stand-in margin is cancelled in app/globals.css. Don't add a lock of your own.
+- A field in a `.dlh` card is `.dlh-line` (a clean line) under a `.dlh-label`.
 - Use the `.dlh` card (`training/trn.css`) or, for pop-ups with a calendar, `.npd` (`plan/phase-dialog.css`). Use the existing components before writing a new one: `ConfirmDialog`, `RemoveDialog`, `DeletePhaseDialog`, `DeleteSessionDialog` (training), `MoveDialog`, `PhaseDialog`, `ScheduleDialog`.
 - Card: white, radius 20, padding 20/20/16, shadow `0 30px 60px -24px rgba(16,24,40,.35)` plus a 1px `#E1E5EB` ring, no border. No gradients, glows, washes, big header icons, coloured header bands or chips in navy/indigo fills.
 - Head: title 18px/600 and a round ghost ✕ (28px, `#8b93a1`). Tags or one fact line under it.
@@ -60,6 +63,8 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 
 ## 8. Lists, rows and tables
 - Training sessions: separate white cards (radius 18, hairline, 8px apart), no numbers, the whole row opens it, ⋯ shows on hover only.
+- A cardio row is a row like an exercise's (21 Oct, Alex): + Cardio is the search alone; the pick lands in the cardio table with its time ready to type. Time, Pace, Incline and Distance sit under the exercise figure columns (Sets, kg, Reps, the fourth), the note under Note, each a clean line typed in place with no sample figures; a bare number gets its unit on save ("20" → "20 min"), anything else stays as typed. The name opens Rename only.
+- An icon beside words in a button or pill is lifted half a pixel (`translate: 0 -0.5px`) to meet Archivo's capitals (21 Oct, Alex); measured, it sat 0.6px low.
 - Row actions in general show on hover only.
 - A setting that changes how the week's sessions read sits on the week's line, beside them, not in the programme's ··· menu (21 Oct, Alex): KG/LBS and Columns. Everything on that line is 36px.
 - Table heads: white, small caps, no line between a row's head and its column heads, hairlines between rows.
@@ -76,7 +81,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - A bar on a timeline is outlined in the colour it is now (its track or kind at half strength); a draft's outline is dashed.
 
 ## 9. Saving
-- The Training, Lifestyle, Nutrition and Plan tabs autosave (Lifestyle and Nutrition since 21 Oct): one status per tab, right after the title and its state tag (21 Oct, Alex: title, chevron, state, status), 13px (`✓ All changes saved` / `Saving…` / `Not saved · Retry`), none per section or row. A change shows at once; typed figures go a moment after the typing stops; a row just added is faded until its save comes back, in the place the saved list will have it (a new supplement goes once it has a name and the row is left). Other tabs still use the pending bar; ask Alex before switching another tab to autosave. The queue is `useSaveQueue` (app/admin/redesign/useSaveQueue.ts).
+- The Training, Lifestyle, Nutrition, Plan and Progress pictures tabs autosave (Lifestyle, Nutrition and Progress pictures since 21 Oct; a sheet's four notes are read by the client, so they keep their Cancel / Save): one status per tab, right after the title and its state tag (21 Oct, Alex: title, chevron, state, status), 13px (`✓ All changes saved` / `Saving…` / `Not saved · Retry`), none per section or row. A change shows at once; typed figures go a moment after the typing stops; a row just added is faded until its save comes back, in the place the saved list will have it (a new supplement goes once it has a name and the row is left). Other tabs still use the pending bar; ask Alex before switching another tab to autosave. The queue is `useSaveQueue` (app/admin/redesign/useSaveQueue.ts).
 - Nothing on the client's screen changes before the coach (or client) confirms: a sheet with Done applies on Done.
 - A name typed in place shows the moment Enter is pressed, never the old one while it saves (21 Oct, Alex).
 
@@ -85,6 +90,8 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - Each section's title (20px/600) and its status on the page, its controls on the right; the content in one white card (radius 18, hairline).
 - Adding to a list is the exercise search: one bar with an ink edge, the list floating under it (six rows, Create pinned at its foot), the bar staying for the next pick. Lifestyle's metrics have no time of day: every metric is asked all day.
 - Lifestyle's tracked metrics are rows (Metric, Group, Last), not pills (21 Oct, Alex tried pills and went back). + Metric under them opens a dropdown with the search bar at its top, so the card never changes while adding.
+- Meetings is built as the track tabs are (21 Oct): Training's header (Schedule a meeting, ⋯), Next call / Also scheduled / Past calls as section titles on the page over hairline cards, the date tile light numerals on a hairline (never a filled block), the topic a clean line. Prep notes, Meeting notes and the Summary are notes that save (rule 4): no box, Cancel / Save once typed. Schedule a meeting is an `.npd` pop-up (kind of call as tiles, the month on the left); the link and complete pop-ups are `.dlh`.
+- Progress pictures (21 Oct, Alex) wears the same header: `{First}'s pictures`, the open sheet as a rust tag (`WEEK 3 OPEN`, else a grey `NEXT 28/10`), the save status; `n sheets | every week | since 19/10`; a Sheet setup pill (angles · rhythm) that folds the setup open (Schedule: Starts, Repeat capsule, instructions on a clean line; Angles: rows with a grip, rename in place, ⋯ on hover, + Angle's floating search) and ⋯. Under it the sheet in focus (its photos, `This sheet | vs Week 1`, weight, phase tags, Remind and an ink Comment, the four notes with Cancel / Save), then All sheets as one table (a bar an angle, weight and change, phase tags, a state pill); a row puts its sheet in focus. Everything but the notes autosaves.
 - Nutrition's + Item works the same (21 Oct, Alex): the search over preset supplements (`app/lib/supplementPresets.ts`, by group, each with a usual dose and time), the chevron to browse the groups, and Create your own (name, quantity, timing). A pick is saved at once. The section has no count under its title.
 
 ## 10. Timeline (Plan)

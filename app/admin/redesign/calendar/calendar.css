@@ -81,6 +81,8 @@
 .cdg-pill-time { flex: none; font-weight: 800; font-variant-numeric: tabular-nums; }
 .cdg-pill-title { flex: none; max-width: 100%; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
 .cdg-pill-sub { min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; opacity: 0.85; }
+/* The line's gap already parts the bar from the title. */
+.cdg-pill-sub > .rd-sep:first-child { margin-left: 0; }
 .cdg-pill-line small { margin-left: auto; flex: none; padding-left: 6px; font-size: 11px; font-weight: 600; opacity: 0.75; font-variant-numeric: tabular-nums; }
 .cdg-pill.tiny .cdg-pill-line { font-size: 11px; }
 .cdg-pill.tiny .cdg-pill-line small { display: none; }

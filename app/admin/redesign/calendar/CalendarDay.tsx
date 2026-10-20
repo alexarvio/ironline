@@ -5,6 +5,7 @@ import { Dialog } from "../../../components/ui/dialog";
 import { ChevronDownIcon } from "../../../components/icons";
 import { entryColors, type Category } from "../palette";
 import EntryDialog, { type EntryClient, type Open } from "./EntryDialog";
+import { Sep } from "../Sep";
 
 // The Calendar's chosen day, hour by hour, and the dialog that adds to it or
 // changes an entry. Every entry is a pill in its category's colour, on one
@@ -145,7 +146,12 @@ function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[
         <span className="cdg-pill-line">
           {when && <b className="cdg-pill-time">{when}</b>}
           <span className="cdg-pill-title">{title}</span>
-          {!tall && sub && <span className="cdg-pill-sub">· {sub}</span>}
+          {!tall && sub && (
+            <span className="cdg-pill-sub">
+              <Sep />
+              {sub}
+            </span>
+          )}
           {!tall && !e.allDay && <small>{lengthLabel(e.durationMinutes)}</small>}
         </span>
         {tall && (

@@ -7,6 +7,7 @@ import { DialogContent, DialogDescription, DialogTitle } from "../../../componen
 import { markVideoSeenAction, replyToMediaAction, sendFormReviewAction } from "../../../lib/actions";
 import { pathOf, simplify, SIZES, STROKE, UNDERLAY, UNDERLAY_COLOR, unitFor, worthKeeping, type Pt, type Shape, type Tool } from "./shapes";
 import { MAX_SECONDS, recordingSupported, useReviewRecorder, type Corner } from "./useReviewRecorder";
+import { Sep, SepJoin } from "../Sep";
 
 // The coach's media review (12 Oct, design 18a): one modal for every photo or
 // video a client sends from an exercise, in place of the plain pop-up. A dark
@@ -667,8 +668,15 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
           <span className="mrv-head-main">
             <b>{review.client.name}</b>
             <small>
-              {review.exercise.name} · {review.media.length} {item.kind === "photo" ? (review.media.length === 1 ? "photo" : "photos") : review.media.length === 1 ? "video" : "videos"}
-              {review.sentAt ? ` · ${hhmm(review.sentAt)}` : ""}
+              {review.exercise.name}
+              <Sep />
+              {review.media.length} {item.kind === "photo" ? (review.media.length === 1 ? "photo" : "photos") : review.media.length === 1 ? "video" : "videos"}
+              {review.sentAt ? (
+                <>
+                  <Sep />
+                  {hhmm(review.sentAt)}
+                </>
+              ) : null}
             </small>
           </span>
           <button type="button" className="mrv-close" onClick={askClose} aria-label="Close">
@@ -682,7 +690,11 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
               <section className="mrv-ctx">
                 <div className="mrv-ctx-row">
                   <span className="mrv-eyebrow">
-                    {review.exercise.session.toUpperCase()} · WK {review.exercise.week} · DAY {review.exercise.day}
+                    {review.exercise.session.toUpperCase()}
+                    <Sep />
+                    WK {review.exercise.week}
+                    <Sep />
+                    DAY {review.exercise.day}
                   </span>
                   <span className={`mrv-req${review.requested ? " asked" : ""}`}>{review.requested ? "You asked for this" : "Sent unasked"}</span>
                 </div>
@@ -713,7 +725,12 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                   <span className="mrv-msg-col">
                     <small>
                       {first}
-                      {review.clientMessage.at ? ` · ${hhmm(review.clientMessage.at)}` : ""}
+                      {review.clientMessage.at ? (
+                        <>
+                          <Sep />
+                          {hhmm(review.clientMessage.at)}
+                        </>
+                      ) : null}
                     </small>
                     <span className="mrv-bubble theirs">{review.clientMessage.text}</span>
                   </span>
@@ -725,7 +742,9 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                   <div key={m.id} className={`mrv-msg ${m.mine ? "mine" : "theirs"}`}>
                     <span className="mrv-msg-col">
                       <small>
-                        {m.mine ? "You" : first} · {hhmm(m.at)}
+                        {m.mine ? "You" : first}
+                        <Sep />
+                        {hhmm(m.at)}
                       </small>
                       <span className={`mrv-bubble ${m.mine ? "mine" : "theirs"}`}>{m.text}</span>
                     </span>
@@ -733,7 +752,10 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                 ) : (
                   <div key={m.id} className="mrv-msg mine">
                     <span className="mrv-msg-col">
-                      <small>You · {hhmm(m.at)}</small>
+                      <small>
+                        You<Sep />
+                        {hhmm(m.at)}
+                      </small>
                       <button type="button" className="mrv-review" onClick={() => setStageReview(m.url)} aria-label="Play your form review on the stage">
                         <span className="mrv-review-row">
                           <span className="mrv-review-thumb">
@@ -746,7 +768,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                             <span className="mrv-review-eyebrow">FORM REVIEW</span>
                             <b>{m.durationMs != null ? clock(m.durationMs / 1000) : "Video"}</b>
                             <small>
-                              {m.annotations != null ? `${m.annotations} drawing${m.annotations === 1 ? "" : "s"} · ` : ""}voice
+                              <SepJoin parts={[m.annotations != null && `${m.annotations} drawing${m.annotations === 1 ? "" : "s"}`, "voice"]} />
                             </small>
                           </span>
                         </span>
@@ -797,7 +819,11 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
               <section className="mrv-ctx">
                 <div className="mrv-ctx-row">
                   <span className="mrv-eyebrow">
-                    {review.exercise.session.toUpperCase()} · WK {review.exercise.week} · DAY {review.exercise.day}
+                    {review.exercise.session.toUpperCase()}
+                    <Sep />
+                    WK {review.exercise.week}
+                    <Sep />
+                    DAY {review.exercise.day}
                   </span>
                   <span className={`mrv-req${review.requested ? " asked" : ""}`}>{review.requested ? "You asked for this" : "Sent unasked"}</span>
                 </div>
@@ -828,7 +854,12 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                   <span className="mrv-msg-col">
                     <small>
                       {first}
-                      {review.clientMessage.at ? ` · ${hhmm(review.clientMessage.at)}` : ""}
+                      {review.clientMessage.at ? (
+                        <>
+                          <Sep />
+                          {hhmm(review.clientMessage.at)}
+                        </>
+                      ) : null}
                     </small>
                     <span className="mrv-bubble theirs">{review.clientMessage.text}</span>
                   </span>
@@ -859,7 +890,14 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                 <section className="mrv-card live">
                   <span className={`mrv-live-status ${recorder.state}`}>
                     <i aria-hidden="true" />
-                    {recorder.state === "recording" ? (micOn && !recorder.micDenied ? "RECORDING · MIC ON" : "RECORDING · MIC OFF") : "PAUSED"}
+                    {recorder.state === "recording" ? (
+                      <span>
+                        RECORDING<Sep />
+                        {micOn && !recorder.micDenied ? "MIC ON" : "MIC OFF"}
+                      </span>
+                    ) : (
+                      "PAUSED"
+                    )}
                   </span>
                   <span className={`mrv-timer${nearEnd ? " warn" : ""}`}>{clock(recorder.secs)}</span>
                   <span className="mrv-live-btns">
@@ -883,11 +921,13 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                   <div className="mrv-done-row">
                     <video className="mrv-done-thumb" src={recorder.preview} playsInline preload="metadata" onClick={(e) => (e.currentTarget.paused ? void e.currentTarget.play() : e.currentTarget.pause())} aria-label="Play the recording" />
                     <span className="mrv-review-text dark">
-                      <span className="mrv-review-eyebrow navy">FORM REVIEW · READY</span>
+                      <span className="mrv-review-eyebrow navy">
+                        FORM REVIEW<Sep />
+                        READY
+                      </span>
                       <b className="big">{clock(recorder.secs)}</b>
                       <small>
-                        {drawn} drawing{drawn === 1 ? "" : "s"} · {micOn && !recorder.micDenied ? "voice" : "no voice"}
-                        {camOn && camStream ? " · camera" : ""}
+                        <SepJoin parts={[`${drawn} drawing${drawn === 1 ? "" : "s"}`, micOn && !recorder.micDenied ? "voice" : "no voice", camOn && camStream && "camera"]} />
                       </small>
                     </span>
                   </div>
@@ -922,7 +962,9 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                   Camera {camOn ? "on" : "off"}
                 </button>
               </div>
-              <p className="mrv-keys">P pen · A arrow · L line · O circle · [ ] size · Z undo · Space play/pause</p>
+              <p className="mrv-keys">
+                <SepJoin parts={["P pen", "A arrow", "L line", "O circle", "[ ] size", "Z undo", "Space play/pause"]} />
+              </p>
             </div>
           </div>
         )}

@@ -5,6 +5,7 @@ import type React from "react";
 import { ChevronRightIcon, CompassIcon } from "../../../components/icons";
 import type { DraftRogue } from "./TrainingDraft";
 import { dayMonth } from "../../../lib/dayMonth";
+import { SepJoin } from "../Sep";
 
 // The client's rogue sessions under the week's own (19 Oct, Alex): workouts
 // they made themselves, off the plan. Built from the session card's own parts
@@ -16,8 +17,8 @@ import { dayMonth } from "../../../lib/dayMonth";
 type Cols = { sets: boolean; weight: boolean; reps: boolean; rpe: boolean; tempo: boolean; rest: boolean };
 
 const num = (n: number | null) => (n == null ? "–" : String(Math.round(n * 100) / 100));
-/** "60" when every set is the same, else each in turn: "60 · 65 · 70". */
-const each = (xs: (number | null)[]) => (xs.length === 0 ? "–" : xs.every((x) => x === xs[0]) ? num(xs[0]) : xs.map(num).join(" · "));
+/** "60" when every set is the same, else each in turn: 60 | 65 | 70. */
+const each = (xs: (number | null)[]) => (xs.length === 0 ? "–" : xs.every((x) => x === xs[0]) ? num(xs[0]) : <SepJoin parts={xs.map(num)} />);
 /** The figure columns the week shows, in their order, as the planned sessions draw them. */
 const FIGURES: (keyof Cols)[] = ["sets", "weight", "reps", "rpe", "tempo", "rest"];
 /** After the figures: note, what the client did, 7 days, 30 days, ⋯. */
@@ -48,7 +49,9 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
                   {count} {count === 1 ? "exercise" : "exercises"}
                 </small>
               </span>
-              <span className="trn-rg-when">{[r.started && dayMonth(r.started), r.duration != null && `${r.duration} min`].filter(Boolean).join(" · ")}</span>
+              <span className="trn-rg-when">
+                <SepJoin parts={[r.started && dayMonth(r.started), r.duration != null && `${r.duration} min`]} />
+              </span>
               <span className={`trn-state ${r.ended ? "good" : "live"}`}>{r.ended ? "Completed" : "In progress"}</span>
               <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : r.id)} aria-expanded={isOpen} aria-label={isOpen ? "Fold rogue session" : "Open rogue session"}>
                 <span className={`trn-chev${isOpen ? " open" : ""}`} aria-hidden="true">
@@ -85,7 +88,7 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
                   </div>
                 ))}
                 {r.cardio.map((c) => {
-                  const bits = [c.time && `${c.time} min`, c.distance && `${c.distance} km`, c.pace && `${c.pace} km/h`, c.incline && `${c.incline}% incline`].filter(Boolean).join(" · ");
+                  const bits = [c.time && `${c.time} min`, c.distance && `${c.distance} km`, c.pace && `${c.pace} km/h`, c.incline && `${c.incline}% incline`].filter(Boolean);
                   return (
                     <div key={`c${c.id}`} className="rd-row cardio">
                       <div className="rd-row-main static" style={grid}>
@@ -94,7 +97,7 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
                           {c.name} <small className="rg-tag">Cardio</small>
                         </span>
                         <span className="rg-fig rg-span" style={{ gridColumn: `3 / span ${Math.max(1, shown.length)}` }}>
-                          {bits || (c.done ? "Done" : "Not logged")}
+                          {bits.length ? <SepJoin parts={bits} /> : c.done ? "Done" : "Not logged"}
                         </span>
                       </div>
                     </div>

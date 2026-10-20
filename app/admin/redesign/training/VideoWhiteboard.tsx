@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type React from "react";
+import { Sep } from "../Sep";
 
 // The whiteboard reply (9 Oct): the client's clip plays under a drawing
 // layer; the coach presses Record, talks, pauses where it matters, draws a
@@ -421,7 +422,13 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
             <video className="wb-preview" src={preview} controls playsInline />
             <p className="rd-dlg-hint">
               {fmt(secs)} recorded
-              {isMp4 ? "" : ` · converted for ${firstName}'s phone after it goes up`}. Not right? Record it again.
+              {isMp4 ? null : (
+                <>
+                  <Sep />
+                  converted for {firstName}&apos;s phone after it goes up
+                </>
+              )}
+              . Not right? Record it again.
             </p>
           </>
         ) : (
