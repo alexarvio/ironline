@@ -9,20 +9,20 @@ import CoachMark from "./CoachMark";
 import FitTitle from "./FitTitle";
 import ProgressCompare from "./ProgressCompare";
 import PhotoDeck from "./PhotoDeck";
-import PhotoPeriodHistoryRow, { NOTE_LABELS, type HistoryNote } from "./PhotoPeriodHistoryRow";
+import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
 
 // Deliberately does not import from ../lib/queries (a "use client" file
 // importing queries.ts breaks the dev server); page.tsx builds these props.
 
-type Slot = { id: number; label: string; src: string | null };
+type Slot = { id: number; label: string; src: string | null; /** The coach's word on how to take it (21 Oct). */ hint?: string | null };
 
 export type ProgressPicturesProps = {
   clientId: number;
   /** The sheet open today, with every angle it asks for and the coach's
       note on how to take them. */
-  openSheet: { period: string; title: string; openedLabel: string; slots: Slot[]; instructions: string | null; note: HistoryNote } | null;
+  openSheet: { period: string; title: string; openedLabel: string; slots: Slot[]; instructions: string | null } | null;
   /** Earlier sheets, newest first. */
-  earlier: { period: string; title: string; photos: { slotId: number; label: string; src: string | null }[]; note: HistoryNote }[];
+  earlier: { period: string; title: string; photos: { slotId: number; label: string; src: string | null }[] }[];
   /** "June": the month the oldest earlier sheet opened. */
   earlierSince: string | null;
   /** "7 Oct": when the next sheet opens. */
@@ -130,7 +130,6 @@ export default function ProgressPicturesScreen({
                   key={s.period}
                   title={s.title}
                   photos={s.photos}
-                  note={s.note}
                   open={openPast === s.period}
                   onToggle={() => setOpenPast((p) => (p === s.period ? null : s.period))}
                 />
@@ -280,7 +279,6 @@ function OpenSheet({
         <PhotoPeriodHistoryRow
           title={sheet.title}
           photos={sheet.slots.map((s) => ({ slotId: s.id, label: s.label, src: s.src }))}
-          note={sheet.note}
           open={sentOpen}
           onToggle={() => setSentOpen((o) => !o)}
           metaExtra={justSaved ? "just sent" : "sent"}
@@ -377,19 +375,6 @@ function OpenSheet({
               )}
             </div>
           )}
-
-          {/* The coach's notes on this sheet, once they have written some. */}
-          {NOTE_LABELS.some(({ key }) => sheet.note[key].trim()) && (
-            <div className="pp-app-notes">
-              <span className="pp-app-notes-label">What your coach said</span>
-              {NOTE_LABELS.filter(({ key }) => sheet.note[key].trim()).map(({ key, label }) => (
-                <div key={key}>
-                  <div className="pp-app-note-label">{label}</div>
-                  <div className="pp-app-note-text">{sheet.note[key]}</div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
@@ -398,7 +383,8 @@ function OpenSheet({
           <div className="pp-app-sheet" role="dialog" aria-modal="true" aria-label={`Add ${picking.label}`} onClick={(e) => e.stopPropagation()}>
             <div className="pp-app-sheet-head">
               <span className="pp-app-sheet-title">{picking.label}</span>
-              <span className="pp-app-sheet-sub">Only your coach sees this.</span>
+              {/* The coach's word on how to take this one, when there is one (21 Oct, Alex). */}
+              <span className="pp-app-sheet-sub">{picking.hint || "Only your coach sees this."}</span>
             </div>
             {[
               { label: "Take a photo", capture: true },

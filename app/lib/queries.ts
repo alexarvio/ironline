@@ -4188,7 +4188,7 @@ export function listMetricPeriods(metricDefinitionIds: number[], limit = 500): s
 // 1, anything) — not a fixed set. The client uploads one photo per slot per
 // week; uploading again the same week replaces that week's photo.
 
-export type PhotoSlot = { id: number; client_id: number; label: string; order_index: number; paused?: boolean };
+export type PhotoSlot = { id: number; client_id: number; label: string; order_index: number; paused?: boolean; /** How to take it, shown to the client as they add it (21 Oct). */ hint?: string };
 export type PhotoUpload = {
   id: number;
   slot_id: number;
@@ -4354,24 +4354,32 @@ export function listPhotoSlots(clientId: number): PhotoSlot[] {
     .sort((a, b) => a.order_index - b.order_index);
 }
 
-export function addPhotoSlot(clientId: number, label: string) {
+export function addPhotoSlot(clientId: number, label: string, hint?: string): number {
   const data = getData();
   // After the last one, whatever removals left gaps in the numbers.
   const mine = data.photo_slots.filter((s) => s.client_id === clientId);
+  const id = allocId("photo_slots");
   data.photo_slots.push({
-    id: allocId("photo_slots"),
+    id,
     client_id: clientId,
     label,
     order_index: Math.max(-1, ...mine.map((s) => s.order_index)) + 1,
+    ...(hint?.trim() ? { hint: hint.trim() } : {}),
   });
   persist();
+  return id;
 }
 
-export function updatePhotoSlot(id: number, label: string) {
+/** An angle's name, and its instruction when one is given (empty takes it off). */
+export function updatePhotoSlot(id: number, label: string, hint?: string) {
   const data = getData();
   const slot = data.photo_slots.find((s) => s.id === id);
   if (slot) {
     slot.label = label;
+    if (hint !== undefined) {
+      if (hint.trim()) slot.hint = hint.trim();
+      else delete slot.hint;
+    }
     persist();
   }
 }

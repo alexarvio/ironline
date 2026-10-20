@@ -1328,6 +1328,69 @@ export async function savePhotoScheduleAction(
   revalidatePath("/client");
 }
 
+/** Sheet setup in one save (21 Oct, Alex: a pop-up, Cancel / Save, as a phase's). Angles in their order;
+ *  id null is a new one. `removed` carries the photo count the coach confirmed for each angle that goes: if the client
+ *  has sent more since, nothing is saved and the count comes back, so no photo goes unconfirmed. */
+export type PhotoSetup = {
+  startDate: string;
+  cadence: string;
+  instructions: string;
+  angles: { id: number | null; label: string; hint: string; paused: boolean }[];
+  removed: { id: number; photos: number }[];
+};
+export async function savePhotoSetupAction(clientId: number, setup: PhotoSetup): Promise<{ ok: true } | { ok: false; error: string; recount?: { id: number; photos: number }[] }> {
+  if (!Number.isInteger(clientId) || !setup || !Array.isArray(setup.angles) || !(await coachForClient(clientId))) return { ok: false, error: "Not allowed" };
+  const cadence = (["weekly", "biweekly", "monthly", "sixweekly"] as const).find((c) => c === setup.cadence);
+  const startDate = /^\d{4}-\d{2}-\d{2}$/.test(setup.startDate) ? setup.startDate : null;
+  if (!cadence || (setup.startDate && !startDate)) return { ok: false, error: "Check the start date" };
+  const labels = setup.angles.map((a) => String(a.label ?? "").trim().slice(0, 40));
+  if (labels.some((l) => !l)) return { ok: false, error: "Every angle needs a name" };
+  if (new Set(labels.map((l) => l.toLowerCase())).size !== labels.length) return { ok: false, error: "Two angles have the same name" };
+  const mine = new Map(listPhotoSlots(clientId).map((s) => [s.id, s]));
+  // Only this client's angles, and only with the photos the coach was shown.
+  const removed = (setup.removed ?? []).filter((r) => mine.has(r.id) && !setup.angles.some((a) => a.id === r.id));
+  // One short, and every removed angle's count goes back, so one more round settles it.
+  const counts = removed.map((r) => ({ id: r.id, photos: listPhotoUploads([r.id]).length }));
+  if (counts.some((c, i) => c.photos > Math.max(0, Number(removed[i].photos) || 0))) return { ok: false, error: "New photos came in since", recount: counts };
+
+  // The schedule, and the client's note when its words change (one note a day of its own).
+  const wordsFor = (c: keyof typeof CADENCE_WORDS, start: string | null, instr: string) => `Every ${CADENCE_WORDS[c]}${start ? ` from ${dayMonth(start)}` : ""}${instr.trim() ? ", with instructions" : ""}`;
+  const before = wordsFor(getPhotoCadence(clientId), getPhotoStartDate(clientId), getPhotoInstructions(clientId) ?? "");
+  setPhotoCadence(clientId, cadence);
+  setPhotoStartDate(clientId, startDate);
+  setPhotoInstructions(clientId, String(setup.instructions ?? "").slice(0, 600));
+  const words = wordsFor(cadence, startDate, String(setup.instructions ?? ""));
+  if (words !== before) noteChange(clientId, `Changed your progress pictures: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
+
+  // The angles: gone, changed, new, then the order as listed.
+  const said: string[] = [];
+  for (const r of removed) {
+    said.push(`Removed ${mine.get(r.id)!.label}`);
+    removePhotoSlot(r.id);
+  }
+  const order: number[] = [];
+  setup.angles.forEach((a, i) => {
+    const label = labels[i];
+    const hint = String(a.hint ?? "").trim().slice(0, 200);
+    const was = a.id != null ? mine.get(a.id) : undefined;
+    if (was) {
+      if (was.label !== label || (was.hint ?? "") !== hint) updatePhotoSlot(was.id, label, hint);
+      if (!!was.paused !== !!a.paused) setPhotoSlotPaused(was.id, !!a.paused);
+      order.push(was.id);
+    } else {
+      const id = addPhotoSlot(clientId, label, hint);
+      if (a.paused) setPhotoSlotPaused(id, true);
+      said.push(`Added a ${label} picture`);
+      order.push(id);
+    }
+  });
+  reorderPhotoSlots(clientId, order);
+  if (said.length) noteChange(clientId, `Changed your progress pictures: ${said.join(", ")}`, { tab: "home", label: "See your tasks", key: "photos", detail: said.join(", ") });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return { ok: true };
+}
+
 export async function savePhotoPeriodNoteAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   if (!(await coachForClient(clientId))) return;

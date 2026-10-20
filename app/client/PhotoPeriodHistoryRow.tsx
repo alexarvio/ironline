@@ -6,25 +6,14 @@ import PhotoDeck from "./PhotoDeck";
 import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
 
 type Photo = { slotId: number; label: string; src: string | null };
-export type HistoryNote = { shape: string; strengths: string; improvements: string; next_steps: string };
-
-export const NOTE_LABELS: { key: keyof HistoryNote; label: string }[] = [
-  { key: "shape", label: "Shape" },
-  { key: "strengths", label: "What's strong" },
-  // "We", as the coach's own field reads: a shared next step, not a list of
-  // what is wrong with how someone looks.
-  { key: "improvements", label: "What we can improve" },
-  { key: "next_steps", label: "Next steps" },
-];
 
 // Read-only view of one earlier photo sheet on the Progress pictures screen.
 // Collapsed it is the title and counts; open, a row per photo (tap one for
-// full screen) and whatever the coach wrote about them, empty fields skipped.
+// full screen). The coach's comments on a sheet come in the chat, linked to it (21 Oct).
 // The screen owns which row is open, so only one is at a time.
 export default function PhotoPeriodHistoryRow({
   title,
   photos,
-  note,
   open,
   onToggle,
   metaExtra,
@@ -33,7 +22,6 @@ export default function PhotoPeriodHistoryRow({
 }: {
   title: string;
   photos: Photo[];
-  note: HistoryNote;
   open: boolean;
   onToggle: () => void;
   /** A word after the counts, e.g. "sent" for the sheet open now. */
@@ -43,7 +31,6 @@ export default function PhotoPeriodHistoryRow({
   /** Every angle of the sheet open now is in (17 Oct, Alex): a green ring with a tick, and the count in green. */
   done?: boolean;
 }) {
-  const notes = NOTE_LABELS.filter(({ key }) => note[key].trim());
   const inCount = photos.filter((p) => p.src).length;
   // The photo open full screen, as an index into the sent ones.
   const [viewing, setViewing] = useState<number | null>(null);
@@ -89,7 +76,6 @@ export default function PhotoPeriodHistoryRow({
           <span className="pp-app-past-meta">
             {done ? <b className="pp-app-past-done">All {photos.length} sent</b> : <>{inCount} of {photos.length}</>}
             {!done && metaExtra && ` · ${metaExtra}`}
-            {notes.length > 0 && " · coach replied"}
           </span>
         </span>
         <span className={`pp-app-past-chevron${open ? " open" : ""}`} aria-hidden="true">
@@ -107,17 +93,6 @@ export default function PhotoPeriodHistoryRow({
             items={photos.map((p) => ({ key: p.slotId, label: p.label, src: p.src ?? null, state: p.src ? null : "Not sent", tone: p.src ? null : ("muted" as const), action: p.src ? "View" : null }))}
           />
 
-          {notes.length > 0 && (
-            <div className="pp-app-notes">
-              <span className="pp-app-notes-label">What your coach said</span>
-              {notes.map(({ key, label }) => (
-                <div key={key}>
-                  <div className="pp-app-note-label">{label}</div>
-                  <div className="pp-app-note-text">{note[key]}</div>
-                </div>
-              ))}
-            </div>
-          )}
           {footer}
         </div>
       )}

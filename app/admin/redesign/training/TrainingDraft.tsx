@@ -1523,7 +1523,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               <span className="rd-cell rd-notecol">
                                 <input className="rd-cell-box" value={c.notes} onChange={(ev) => editCardio(c.id, { notes: ev.target.value })} placeholder="Add a note" aria-label={`Note on ${c.name}`} maxLength={300} />
                               </span>
-                              <span className="rd-did">{c.done ? <span className="rd-set up">Done</span> : <em>{week.state === "ahead" ? "" : "Not done"}</em>}</span>
+                              <span className="rd-did">{c.done ? <span className="trn-state good">Done</span> : <em>{week.state === "ahead" ? "" : "Not done"}</em>}</span>
                               <span />
                               <span />
                               <span className="rd-row-more">

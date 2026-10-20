@@ -771,6 +771,8 @@ type PhotoSlot = {
   // A paused angle is left off new sheets but still shows on the sheets it
   // was already part of. Missing on older rows, which means asking.
   paused?: boolean;
+  /** How to take this one (21 Oct, Alex): shown to the client when they add it. Kept in the row's extra jsonb. */
+  hint?: string;
 };
 // "period" is the start-date of whatever bucket the coach's chosen upload
 // cadence puts this photo in — a Monday for weekly/biweekly, the 1st of the

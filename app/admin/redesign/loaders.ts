@@ -41,7 +41,6 @@ import {
   listMessageLinkTargets,
   getPhotoCadence,
   getPhotoInstructions,
-  getPhotoPeriodNote,
   getPhotoStartDate,
   getProgramCurrentWeekIndex,
   getStoredNutritionPlan,
@@ -79,7 +78,7 @@ import {
   sessionAnswers,
   getWorkoutQuestions,
 } from "../../lib/queries";
-import { phaseCovers, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
+import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
 import type { CardioMove, DraftProgram, Library } from "./training/TrainingDraft";
 import type { DraftNutrition } from "./nutrition/NutritionDraft";
 import type { DraftMeasurements } from "./measurements/MeasurementsDraft";
@@ -661,10 +660,32 @@ export function loadPictures(clientId: number): DraftPictures {
     const last = inside[inside.length - 1];
     return last ? Math.round(last.value * 10) / 10 : null;
   };
-  // The Plan tab's phases that covered the day a sheet opened: Lifestyle, Training, Nutrition (as the Plan's lanes run).
+  // The Plan tab's phases that ran while a sheet was open (from the day it opened to the day before the next,
+  // or today for the newest), so one that began mid-week counts (21 Oct, Alex): Lifestyle, Training, Nutrition, as the Plan's lanes run.
   const trackOrder = ["lifestyle", "training", "nutrition"] as const;
   const phases = listClientPhases(clientId).filter((p) => !p.draft);
-  const phasesOn = (day: string) => trackOrder.flatMap((track) => phases.filter((p) => p.track === track && phaseCovers(p.start_week, p.end_week, day)).map((p) => ({ track, name: p.name })));
+  const dayBefore = (iso: string) => {
+    const d = new Date(`${iso}T12:00:00`);
+    d.setDate(d.getDate() - 1);
+    return localDateStr(d);
+  };
+  // A sheet's own stretch: a week, two, a month or six from the day it opened (never past the next sheet).
+  // Monthly opens on the start's day of the month, clamped in shorter months (as the sheets themselves: 31 Jan, 28 Feb, 31 Mar).
+  const sheetEnd = (from: string) => {
+    if (cadence === "monthly") {
+      const [y, m] = from.split("-").map(Number);
+      const day = Number((startDate ?? from).slice(8, 10));
+      return dayBefore(localDateStr(new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()))));
+    }
+    const d = new Date(`${from}T12:00:00`);
+    d.setDate(d.getDate() + (cadence === "biweekly" ? 14 : cadence === "sixweekly" ? 42 : 7));
+    return dayBefore(localDateStr(d));
+  };
+  const phasesIn = (from: string, newer: string | undefined) => {
+    const end = sheetEnd(from);
+    const to = newer && dayBefore(newer) < end ? dayBefore(newer) : end;
+    return trackOrder.flatMap((track) => phases.filter((p) => p.track === track && p.start_week <= to && phaseLastDay(p.end_week) >= from).map((p) => ({ id: p.id, track, name: p.name })));
+  };
 
   const sheets = periods.map((period, i) => {
     const cells = slots
@@ -675,7 +696,6 @@ export function loadPictures(clientId: number): DraftPictures {
       });
     const inCount = cells.filter((c) => c.src).length;
     const number = periods.length - i;
-    const note = getPhotoPeriodNote(clientId, period);
     return {
       period,
       title: `${PERIOD_UNIT[cadence]} ${number}`,
@@ -685,10 +705,8 @@ export function loadPictures(clientId: number): DraftPictures {
       inCount,
       total: cells.length,
       cells,
-      note: { shape: note.shape, strengths: note.strengths, improvements: note.improvements, next_steps: note.next_steps },
-      savedLabel: note.saved_at ? stampDayTime(note.saved_at) : null,
       weight: weightFor(period, periods[i - 1]),
-      phases: phasesOn(period),
+      phases: phasesIn(period, periods[i - 1]),
     };
   });
 
@@ -702,7 +720,7 @@ export function loadPictures(clientId: number): DraftPictures {
     since: startDate ?? periods[periods.length - 1] ?? null,
     remindedToday,
     instructions: getPhotoInstructions(clientId) ?? "",
-    slots: slots.map((s) => ({ id: s.id, label: s.label, paused: !!s.paused, count: uploads.filter((u) => u.slot_id === s.id).length })),
+    slots: slots.map((s) => ({ id: s.id, label: s.label, hint: s.hint ?? "", paused: !!s.paused, count: uploads.filter((u) => u.slot_id === s.id).length })),
     sheets,
   };
 }

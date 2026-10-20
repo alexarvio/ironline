@@ -73,7 +73,6 @@ import {
   monthlyCheckInAskedToday,
   getPhotoCadence,
   getPhotoInstructions,
-  getPhotoPeriodNote,
   getPublishedWeek,
   listClients,
   meetingProvider,
@@ -1253,10 +1252,6 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
   const uploads = listPhotoUploads(slots.map((s) => s.id));
   const srcFor = (slotId: number, period: string) =>
     uploads.find((u) => u.slot_id === slotId && u.period === period)?.file_path ?? null;
-  const noteFor = (period: string) => {
-    const n = getPhotoPeriodNote(CLIENT_ID, period);
-    return { shape: n.shape, strengths: n.strengths, improvements: n.improvements, next_steps: n.next_steps };
-  };
 
   const openPeriod = active.length > 0 ? photoSheetFor(CLIENT_ID, today) : null;
   const earlier = listPhotoPeriods(slots.map((s) => s.id))
@@ -1268,7 +1263,6 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
       photos: slots
         .filter((s) => !s.paused || srcFor(s.id, period))
         .map((s) => ({ slotId: s.id, label: s.label, src: srcFor(s.id, period) })),
-      note: noteFor(period),
     }));
   const oldest = earlier[earlier.length - 1];
   const next = active.length > 0 ? upcomingPhotoSheets(CLIENT_ID, today, 1)[0] : null;
@@ -1280,10 +1274,8 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
           period: openPeriod,
           title: sheetTitle(openPeriod, cadence),
           openedLabel: fmtShortDate(openPeriod),
-          slots: active.map((s) => ({ id: s.id, label: s.label, src: srcFor(s.id, openPeriod) })),
+          slots: active.map((s) => ({ id: s.id, label: s.label, hint: s.hint ?? null, src: srcFor(s.id, openPeriod) })),
           instructions: getPhotoInstructions(CLIENT_ID),
-          // The coach's notes on the sheet open now, as soon as they write them.
-          note: noteFor(openPeriod),
         }
       : null,
     earlier,

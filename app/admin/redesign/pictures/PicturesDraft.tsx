@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addPhotoSlotAction, remindProgressPicturesAction, removePhotoAngleAction, reorderPhotoSlotsAction, savePhotoPeriodNoteAction, savePhotoScheduleAction, sendChatMessageAction, setPhotoSlotPausedAction, updatePhotoSlotAction } from "../../../lib/actions";
+import { remindProgressPicturesAction, savePhotoSetupAction, sendChatMessageAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import type { PhaseTrack } from "../../../lib/db";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { SepJoin } from "../Sep";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
-import { CameraIcon, ChatIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PencilIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CameraIcon, ChatIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { MessageDialog, useClickAway } from "../training/TrainingDraft";
 import { GripIcon } from "../training/TrainingParts";
 import { TrackIcon } from "../plan/PlanDraft";
-import DatePick from "../DatePick";
+import DateText from "../DateText";
+import { MonthRange } from "../MonthRange";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
@@ -25,17 +26,18 @@ import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
 // The Progress pictures tab (21 Oct, Alex), built as Training's header:
 //
 // - Header: the client's pictures, the open sheet (or the next one) as a tag,
-//   the save status; the facts under it; Sheet setup and ⋯ on the right.
-// - Sheet setup (folded under its pill): when sheets open, how often, how to
-//   take them, and the angles asked for. Every change saves itself.
-// - The sheet in focus: its photos (or two sheets side by side), the weigh-in,
-//   the plan's phases, Remind and Comment, and the coach's four notes.
-// - All sheets: one row a sheet, newest first; a row puts it in focus.
+//   the save status; Sheet setup and ⋯ on the right.
+// - Sheet setup: a pop-up, as a phase's: the month, the start, the rhythm, the
+//   instructions, and the angles, each with a word on how to take it. Save.
+// - The newest sheet alone: its photos (empty places while it is open), the
+//   weigh-in, the plan's phases, Remind, and a comment for the client that
+//   goes to the chat, linked to the sheet (no notes of its own).
+//   Compare opens the same angle from the sheets picked, side by side.
+// - All sheets: a log, a row a sheet, newest first; a row opens Compare on it.
 
 export type Cadence = "weekly" | "biweekly" | "monthly" | "sixweekly";
 export type Cell = { slotId: number; label: string; src: string | null; shot: string | null; shotDay: string | null };
-export type Note = { shape: string; strengths: string; improvements: string; next_steps: string };
-export type SheetPhase = { track: PhaseTrack; name: string };
+export type SheetPhase = { id: number; track: PhaseTrack; name: string };
 export type Sheet = {
   period: string;
   title: string;
@@ -45,17 +47,16 @@ export type Sheet = {
   inCount: number;
   total: number;
   cells: Cell[];
-  note: Note;
-  savedLabel: string | null;
   weight: number | null;
-  /** Every non-draft phase the sheet's day fell in: Lifestyle, Training, Nutrition. */
+  /** Every non-draft phase that ran while the sheet was open: Lifestyle, Training, Nutrition. */
   phases: SheetPhase[];
 };
 export type DraftPictures = {
   cadence: Cadence;
   startDate: string | null;
   instructions: string;
-  slots: { id: number; label: string; paused: boolean; count: number }[];
+  /** The angles asked for, in order; hint: how to take it, shown to the client as they add it (21 Oct). */
+  slots: { id: number; label: string; hint: string; paused: boolean; count: number }[];
   sheets: Sheet[];
   /** The next day a sheet opens, while an angle is asked for. */
   nextSheet: string | null;
@@ -65,11 +66,8 @@ export type DraftPictures = {
   remindedToday: boolean;
 };
 
-type Slot = DraftPictures["slots"][number];
-type Schedule = { startDate: string; cadence: Cadence; instructions: string };
-type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "photo"; period: string; slotId: number } | { kind: "removeAngle"; slot: Slot } | null;
+type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "photo"; period: string; slotId: number } | { kind: "setup" } | { kind: "compare"; periods: string[] } | null;
 
-const QUIET_MS = 800;
 const ROWS_SHOWN = 12;
 const REPEATS: { value: Cadence; label: string }[] = [
   { value: "weekly", label: "Week" },
@@ -77,16 +75,8 @@ const REPEATS: { value: Cadence; label: string }[] = [
   { value: "monthly", label: "Month" },
   { value: "sixweekly", label: "6 weeks" },
 ];
-const EVERY: Record<Cadence, string> = { weekly: "every week", biweekly: "every 2 weeks", monthly: "every month", sixweekly: "every 6 weeks" };
 const RHYTHM: Record<Cadence, string> = { weekly: "weekly", biweekly: "every 2 weeks", monthly: "monthly", sixweekly: "every 6 weeks" };
 const SUGGESTED = ["Front relaxed", "Front flexed", "Back", "Back flexed", "Side left", "Side right", "Legs"];
-const NOTE_FIELDS: { name: keyof Note; label: string }[] = [
-  { name: "shape", label: "Shape" },
-  { name: "strengths", label: "What's strong" },
-  { name: "improvements", label: "What we can improve" },
-  { name: "next_steps", label: "Next steps" },
-];
-const sameNote = (a: Note, b: Note) => NOTE_FIELDS.every((f) => a[f.name].trim() === b[f.name].trim());
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const fd = (o: Record<string, string | number | null | undefined>) => {
   const f = new FormData();
@@ -96,6 +86,7 @@ const fd = (o: Record<string, string | number | null | undefined>) => {
 /** A sheet's state in words and its tone: Complete green, open rust, the rest grey. */
 const stateOf = (sh: Sheet): { text: string; tone: "good" | "open" | "quiet" } =>
   sh.complete ? { text: "Complete", tone: "good" } : sh.live ? { text: sh.inCount === 0 ? "Open" : `${sh.inCount} of ${sh.total} in`, tone: "open" } : { text: `${sh.total - sh.inCount} missing`, tone: "quiet" };
+const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const kgChange = (d: number) => `${d > 0 ? "+" : "−"}${Math.abs(d).toFixed(1)} kg`;
 
 type Props = { clientId: number; firstName: string; plan: DraftPictures };
@@ -107,183 +98,34 @@ export default function PicturesDraft(props: Props) {
 
 function Pictures({ clientId, firstName, plan }: Props) {
   const router = useRouter();
-  // The re-read after a save, until it lands: a copy on screen from before the save mustn't be taken for it.
-  const [refreshing, startRefresh] = useTransition();
+  const [, startRefresh] = useTransition();
   const reRead = () => startRefresh(() => router.refresh());
   const q = useSaveQueue(reRead);
-
-  // ---- Schedule: the day and the rhythm save at once, the instructions a moment after typing stops.
-  const savedSchedule: Schedule = { startDate: plan.startDate ?? "", cadence: plan.cadence, instructions: plan.instructions };
-  const [sched, setSched] = useState(savedSchedule);
-  const schedNow = useRef(sched);
-  useEffect(() => {
-    schedNow.current = sched;
-  });
-  const [typing, setTyping] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sendSchedule = () => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-    setTyping(false);
-    const x = schedNow.current;
-    q.save(async () => {
-      await savePhotoScheduleAction(clientId, { startDate: x.startDate, cadence: x.cadence, instructions: x.instructions });
-      return true;
-    });
-  };
-  const changeSchedule = (patch: Partial<Schedule>, quiet = false) => {
-    const next = { ...schedNow.current, ...patch };
-    schedNow.current = next;
-    setSched(next);
-    if (!quiet) return sendSchedule();
-    setTyping(true);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(sendSchedule, QUIET_MS);
-  };
-
-  // ---- Angles: changed on screen at once, saved behind it. A new one is faded until the re-read gives it its number.
-  const [slots, setSlots] = useState(plan.slots);
-  const tempIds = useRef(0);
-  const nameTaken = (label: string, except?: number) => slots.some((s) => s.id !== except && s.label.trim().toLowerCase() === label.trim().toLowerCase());
-  const addAngle = (label: string) => {
-    const v = label.trim();
-    if (!v || nameTaken(v)) return;
-    tempIds.current += 1;
-    setSlots((prev) => [...prev, { id: -tempIds.current, label: v, paused: false, count: 0 }]);
-    q.save(async () => {
-      await addPhotoSlotAction(fd({ clientId, label: v }));
-      return true;
-    });
-  };
-  const renameAngle = (s: Slot, label: string) => {
-    setSlots((prev) => prev.map((x) => (x.id === s.id ? { ...x, label } : x)));
-    q.save(async () => {
-      await updatePhotoSlotAction(fd({ id: s.id, label }));
-      return true;
-    });
-  };
-  const pauseAngle = (s: Slot) => {
-    const paused = !s.paused;
-    setSlots((prev) => prev.map((x) => (x.id === s.id ? { ...x, paused } : x)));
-    q.save(async () => {
-      await setPhotoSlotPausedAction(s.id, paused);
-      return true;
-    });
-  };
-  // The photos the confirm showed go with it, no more: when the client has uploaded since the page was read,
-  // nothing goes and the confirm asks again with the real count (the re-read puts the row back).
-  const removeAngle = (s: Slot) => {
-    setSlots((prev) => prev.filter((x) => x.id !== s.id));
-    q.save(async () => {
-      const r = await removePhotoAngleAction(s.id, s.count);
-      if (r && !r.removed) setDlg({ kind: "removeAngle", slot: { ...s, count: r.count } });
-      return true;
-    });
-  };
-  // No drag while a new angle waits for its number (its place would be lost).
-  const canDrag = !slots.some((s) => s.id < 0);
-  const moveAngles = (ids: (number | string)[]) => {
-    if (!canDrag) return;
-    const next = ids.map((id) => slots.find((s) => s.id === id)).filter((s): s is Slot => !!s);
-    setSlots(next);
-    q.save(async () => {
-      await reorderPhotoSlotsAction(clientId, next.map((s) => s.id));
-      return true;
-    });
-  };
-  const [renaming, setRenaming] = useState<number | null>(null);
-  const [adding, setAdding] = useState(false);
-  // Keyboard focus that would otherwise fall to the page: back on + Angle after its list closes with Esc or ×,
-  // back on the angle's name after a rename ends with Enter or Esc, kept in the rename field when ⋯ › Rename opens it.
-  const setupRef = useRef<HTMLElement>(null);
-  const addBtn = useRef<HTMLButtonElement>(null);
-  const refocusAdd = useRef(false);
-  const refocusName = useRef<number | null>(null);
-  const renamePicked = useRef(false);
-  const closeAdd = (refocus: boolean) => {
-    refocusAdd.current = refocus;
-    setAdding(false);
-  };
-  useEffect(() => {
-    if (adding || !refocusAdd.current) return;
-    refocusAdd.current = false;
-    addBtn.current?.focus();
-  }, [adding]);
-  useEffect(() => {
-    if (renaming != null || refocusName.current == null) return;
-    const id = refocusName.current;
-    refocusName.current = null;
-    setupRef.current?.querySelector<HTMLButtonElement>(`[data-angle="${id}"]`)?.focus();
-  }, [renaming]);
-
   const [dlg, setDlg] = useState<Dlg>(null);
+  const close = () => setDlg(null);
 
-  // ---- Notes on a sheet: what was last sent, until the re-read brings it back; and what is typed and not yet
-  // saved, a draft a sheet, so putting another sheet in focus keeps it.
-  const [sentNotes, setSentNotes] = useState<Record<string, Note>>({});
-  const [noteDrafts, setNoteDrafts] = useState<Record<string, Note>>({});
-  const savedNote = (sh: Sheet) => sentNotes[sh.period] ?? sh.note;
-  const unsavedNote = plan.sheets.some((sh) => noteDrafts[sh.period] && !sameNote(noteDrafts[sh.period], savedNote(sh)));
-  const dropDraft = (period: string) =>
-    setNoteDrafts((prev) => {
-      const next = { ...prev };
-      delete next[period];
-      return next;
-    });
+  // ---- A comment typed on the sheet, not sent yet: leaving the page asks first.
+  const [commentTyped, setCommentTyped] = useState(false);
+  useHoldWhile(q.saving || q.failed || commentTyped);
 
-  // What is saved comes back with the page's re-read and replaces the screen's copy, by content,
-  // never while a change waits, saves, failed or its re-read is on its way (that would undo it on screen).
-  // The instructions stay as typed when the saved copy only lost their trailing space or line (the server trims).
-  const setupKey = JSON.stringify([plan.cadence, plan.startDate, plan.instructions, plan.slots, plan.sheets.map((s) => [s.period, s.note])]);
-  const [seenSetup, setSeenSetup] = useState(setupKey);
-  if (seenSetup !== setupKey && !typing && !q.saving && !q.failed && !refreshing) {
-    setSeenSetup(setupKey);
-    setSched((s) => ({ ...savedSchedule, instructions: s.instructions.trim() === savedSchedule.instructions.trim() ? s.instructions : savedSchedule.instructions }));
-    setSlots(plan.slots);
-    setSentNotes({});
-  }
-
-  // Leaving the tab with instructions typed: they go now.
-  useEffect(
-    () => () => {
-      if (timer.current) sendSchedule();
-    },
-    // Unmount only; the refs hold what is current.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
-  useHoldWhile(typing || q.saving || q.failed || unsavedNote);
-
-  // ---- Sheets: one in focus, on its own or beside another.
+  // ---- Sheets, newest first. The top of the tab is the newest alone (21 Oct, Alex): the one open now, or the last one.
   const sheets = plan.sheets;
-  const chrono = [...sheets].reverse();
-  const openSheet = sheets.find((x) => x.live) ?? null;
-  const fallback = openSheet ?? sheets[0] ?? null;
-  const [selP, setSelP] = useState<string | null>(fallback?.period ?? null);
-  const sel = sheets.find((x) => x.period === selP) ?? fallback;
-  const [vs, setVs] = useState(false);
-  const [cmpP, setCmpP] = useState<string | null>(null);
-  const cmp = sel && sheets.length > 1 ? (sheets.find((x) => x.period === cmpP && x.period !== sel.period) ?? chrono.find((x) => x.period !== sel.period) ?? null) : null;
-  const comparing = vs && !!cmp;
+  const latest = sheets[0] ?? null;
+  const oldest = sheets[sheets.length - 1] ?? null;
   const [all, setAll] = useState(false);
-  const focusRef = useRef<HTMLElement>(null);
-  const focusHead = useRef<HTMLHeadingElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
-  // A row puts its sheet in focus: the keyboard goes up with the scroll, to the sheet's title.
-  const focusOn = (period: string) => {
-    setSelP(period);
-    const still = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    requestAnimationFrame(() => {
-      focusHead.current?.focus({ preventScroll: true });
-      focusRef.current?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
-    });
-  };
   const showAll = () => {
     setAll(true);
     requestAnimationFrame(() => tableRef.current?.querySelectorAll<HTMLButtonElement>(".rp-trow")[ROWS_SHOWN]?.focus());
   };
+  // Compare: the first sheet beside the newest; from a row, that sheet beside the newest.
+  const openCompare = (period?: string) => {
+    if (!latest) return;
+    const other = period && period !== latest.period ? period : oldest && oldest.period !== latest.period ? oldest.period : null;
+    setDlg({ kind: "compare", periods: other ? [other, latest.period] : [latest.period] });
+  };
   const [remindedNow, setRemindedNow] = useState<string | null>(null);
-  const reminded = !!sel && sel.live && (plan.remindedToday || remindedNow === sel.period);
+  const reminded = !!latest && latest.live && (plan.remindedToday || remindedNow === latest.period);
   const remind = (sh: Sheet) => {
     setRemindedNow(sh.period);
     q.save(async () => {
@@ -292,66 +134,48 @@ function Pictures({ clientId, firstName, plan }: Props) {
     });
   };
 
-  // ---- Setup panel: folded under its pill; open at first when nothing is asked for yet.
-  const [setupOpen, setSetupOpen] = useState(plan.slots.length === 0);
-  const setupId = useId();
-  const active = slots.filter((s) => !s.paused).length;
-
-  const close = () => setDlg(null);
+  const active = plan.slots.filter((s) => !s.paused).length;
   // Messaging slides the chat in from the right (ChatPanel); outside the shell, the message dialog.
   const openChat = useOpenChat();
   const message = (label: string, link: MessageLink) => (openChat ? openChat({ area: "Lifestyle", label, link }) : setDlg({ kind: "message", label, link }));
-  const comment = (sh: Sheet) => message(`Progress pictures · ${sh.title}, ${sh.dateLabel}`, { kind: "photos", period: sh.period });
   const photoSheet = dlg?.kind === "photo" ? (sheets.find((x) => x.period === dlg.period) ?? null) : null;
-
-  // The header's facts, the dates last.
-  const meta = [sheets.length > 0 ? plural(sheets.length, "sheet") : null, slots.length > 0 ? EVERY[sched.cadence] : null, plan.since ? `since ${dayMonth(plan.since)}` : null].filter((x): x is string => !!x);
-  const repeats = REPEATS.filter((r) => r.value !== "sixweekly" || plan.cadence === "sixweekly" || sched.cadence === "sixweekly");
   const shownRows = all ? sheets : sheets.slice(0, ROWS_SHOWN);
-  const cols = Math.max(1, sel?.cells.length ?? 0);
+  const cols = Math.max(1, latest?.cells.length ?? 0);
 
   return (
     <div className="rd trn rls rp">
-      {/* ---- Header, as Training's. */}
+      {/* ---- Header, as Training's; no fact line (21 Oct, Alex). */}
       <header className="trn-head">
         <div className="trn-head-main">
           <span className="trn-eyebrow">Progress pictures</span>
           <div className="trn-name-row">
             <h1 className="trn-name">{firstName}&rsquo;s pictures</h1>
-            {openSheet ? (
-              <span className="trn-status rp-tag open">{openSheet.title} open</span>
+            {latest?.live ? (
+              <span className="trn-status rp-tag open">{latest.title} open</span>
             ) : plan.nextSheet ? (
               <span className="trn-status rp-tag next">Next {dayMonth(plan.nextSheet)}</span>
             ) : null}
             {q.failed ? (
               <span className="trn-allsaved failed" role="alert">
-                Not saved ·{" "}
+                Not saved{" "}
                 <button type="button" onClick={q.retry}>
                   Retry
                 </button>
               </span>
             ) : (
-              <span className={`trn-allsaved${q.saving || typing ? " saving" : ""}`} role="status">
-                {q.saving || typing ? "Saving…" : "All changes saved"}
+              <span className={`trn-allsaved${q.saving ? " saving" : ""}`} role="status">
+                {q.saving ? "Saving…" : "All changes saved"}
               </span>
             )}
           </div>
-          {meta.length > 0 && (
-            <span className="trn-meta">
-              {meta.map((m, i) => (
-                <span key={m} className={i > 0 ? "trn-meta-part" : undefined}>
-                  {m}
-                </span>
-              ))}
-            </span>
-          )}
         </div>
         <div className="trn-head-actions">
-          <button type="button" className={`rp-setup-btn${setupOpen ? " on" : ""}`} aria-expanded={setupOpen} aria-controls={setupId} onClick={() => setSetupOpen((o) => !o)}>
+          {/* Sheet setup is a pop-up, as a phase's (21 Oct, Alex): the calendar, the rhythm, the instructions and the angles. */}
+          <button type="button" className="rp-setup-btn" aria-haspopup="dialog" onClick={() => setDlg({ kind: "setup" })}>
             <SlidersIcon />
             Sheet setup
             <small>
-              <SepJoin parts={[plural(active, "angle"), RHYTHM[sched.cadence]]} />
+              <SepJoin parts={[plural(active, "angle"), RHYTHM[plan.cadence]]} />
             </small>
           </button>
           <DropdownMenu modal={false}>
@@ -367,173 +191,30 @@ function Pictures({ clientId, firstName, plan }: Props) {
         </div>
       </header>
 
-      {/* ---- Sheet setup: when, how often, how, and which angles. Every change saves itself. */}
-      {setupOpen && (
-        <section ref={setupRef} id={setupId} className="rp-setup" aria-label="Sheet setup">
-          <div className="rp-col">
-            <h3>Schedule</h3>
-            <div className="rp-field">
-              <span className="rp-label">Starts</span>
-              <DatePick value={sched.startDate} onChange={(v) => changeSchedule({ startDate: v })} label="Starts" clearable className="rp-start" />
-            </div>
-            <div className="rp-field">
-              <span className="rp-label" id={`${setupId}-repeat`}>
-                Repeat
-              </span>
-              <div className="rd-btn-group" role="radiogroup" aria-labelledby={`${setupId}-repeat`}>
-                {repeats.map((r) => (
-                  <button key={r.value} type="button" role="radio" aria-checked={sched.cadence === r.value} className={sched.cadence === r.value ? "on" : ""} onClick={() => sched.cadence !== r.value && changeSchedule({ cadence: r.value })}>
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <label className="rp-field">
-              <span className="rp-label">Instructions for {firstName}</span>
-              <GrowText className="rp-line rp-instr" value={sched.instructions} maxLength={600} onChange={(v) => changeSchedule({ instructions: v }, true)} placeholder="Morning, before breakfast. Same spot and light each time…" />
-            </label>
-          </div>
-          <div className="rp-col">
-            <h3>Angles</h3>
-            <div className="rp-angles">
-              <SortableList ids={slots.map((s) => s.id)} label="angle" onMove={moveAngles}>
-                {slots.map((s) => {
-                  const incoming = s.id < 0;
-                  const last = sheets.find((sh) => sh.cells.some((c) => c.slotId === s.id && c.src));
-                  return (
-                    <SortableItem key={s.id} id={s.id} className={`rp-angle${s.paused ? " paused" : ""}${incoming ? " trn-incoming" : ""}`}>
-                      {(grip) => (
-                        <>
-                          <span className="rd-grip trn-grip rp-grip" {...(canDrag ? grip : {})}>
-                            <GripIcon />
-                          </span>
-                          {renaming === s.id ? (
-                            <AngleRename
-                              initial={s.label}
-                              taken={(v) => nameTaken(v, s.id)}
-                              onDone={(v, byKey) => {
-                                if (byKey) refocusName.current = s.id;
-                                setRenaming(null);
-                                if (v != null && v !== s.label) renameAngle(s, v);
-                              }}
-                            />
-                          ) : (
-                            <button type="button" className="rp-angle-name" data-angle={s.id} onClick={() => !incoming && setRenaming(s.id)} title="Rename" aria-label={`Rename ${s.label}`}>
-                              {s.label}
-                            </button>
-                          )}
-                          <span className="rp-angle-sub">
-                            {s.paused && <em>Paused</em>}
-                            {s.count > 0 ? <SepJoin parts={[plural(s.count, "photo"), last && `last ${last.title}`]} /> : s.paused ? null : "None yet"}
-                          </span>
-                          <span className="rp-angle-more">
-                            {!incoming && (
-                              <DropdownMenu modal={false}>
-                                <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${s.label}`}>
-                                  <MoreIcon />
-                                </DropdownMenuTrigger>
-                                {/* After Rename the field keeps the focus: only then the menu doesn't hand it back to ⋯ as it closes. */}
-                                <DropdownMenuContent
-                                  align="end"
-                                  className="pb-menu"
-                                  onCloseAutoFocus={(e) => {
-                                    if (!renamePicked.current) return;
-                                    renamePicked.current = false;
-                                    e.preventDefault();
-                                  }}
-                                >
-                                  <DropdownMenuItem
-                                    onSelect={() => {
-                                      renamePicked.current = true;
-                                      setRenaming(s.id);
-                                    }}
-                                  >
-                                    <PencilIcon /> Rename
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onSelect={() => pauseAngle(s)}>
-                                    {s.paused ? <PlayIcon /> : <PauseIcon />} {s.paused ? "Resume" : "Pause"}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "removeAngle", slot: s })}>
-                                    <TrashIcon /> Remove
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </span>
-                        </>
-                      )}
-                    </SortableItem>
-                  );
-                })}
-              </SortableList>
-              {adding ? (
-                <AddAngle have={slots.map((s) => s.label.trim().toLowerCase())} onAdd={addAngle} onClose={closeAdd} />
-              ) : (
-                <button ref={addBtn} type="button" className="rp-add-angle" onClick={() => setAdding(true)}>
-                  <PlusIcon /> Angle
-                </button>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {!sel ? (
+      {!latest ? (
         <div className="rp-card rp-empty">No sheets yet</div>
       ) : (
         <>
-          {/* ---- The sheet in focus. */}
-          <section ref={focusRef} className="rp-focus" aria-label={sel.title}>
+          {/* ---- The newest sheet: what came in (empty places while it is open), the weigh-in, the phases, the notes. */}
+          <section className="rp-focus" aria-label={latest.title}>
             <div className="rp-selhead">
-              <h2 ref={focusHead} tabIndex={-1}>
-                {sel.title}
-              </h2>
-              <span className="rp-selmeta">
-                <SepJoin parts={[sel.dateLabel, stateOf(sel).text]} />
-              </span>
-              {sheets.length > 1 && cmp && (
+              <h2>{latest.title}</h2>
+              <span className="rp-selmeta">{latest.dateLabel}</span>
+              {sheets.length > 1 && (
                 <div className="rp-selright">
-                  <div className="rd-btn-group" role="radiogroup" aria-label="Show">
-                    <button type="button" role="radio" aria-checked={!vs} className={!vs ? "on" : ""} onClick={() => setVs(false)}>
-                      This sheet
-                    </button>
-                    <button type="button" role="radio" aria-checked={vs} className={vs ? "on" : ""} onClick={() => setVs(true)}>
-                      vs {cmp.title}
-                    </button>
-                  </div>
-                  {/* The sheet compared with is named once, in the capsule; this only picks another. */}
-                  {vs && (
-                    <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger className="trn-btn rp-cmp" aria-label={`Compare with ${cmp.title}`}>
-                        <ChevronDownIcon />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="pb-menu">
-                        {chrono
-                          .filter((x) => x.period !== sel.period)
-                          .map((x) => (
-                            <DropdownMenuCheckboxItem key={x.period} checked={x.period === cmp.period} onCheckedChange={() => setCmpP(x.period)}>
-                              {x.title} <small className="rp-menu-date">{x.dateLabel}</small>
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                  <button type="button" className="trn-btn rp-cmp-btn" aria-haspopup="dialog" onClick={() => openCompare()}>
+                    <CompareIcon /> Compare
+                  </button>
                 </div>
               )}
             </div>
             <div className="rp-card rp-sheet">
-              {/* Tiles stay a sensible size: capped across, and side by side (vs) four slots a row at most. */}
-              <div className={`rp-grid${comparing ? " vs" : ""}`} style={{ "--rp-cols": comparing ? Math.min(cols, 4) : cols, "--rp-cols-narrow": Math.min(cols, comparing ? 2 : 3) } as React.CSSProperties}>
-                {sel.cells.map((c) => {
-                  const status = c.src ? "in" : sel.live ? "waiting" : "missing";
-                  const other = comparing && cmp ? (cmp.cells.find((x) => x.slotId === c.slotId) ?? null) : null;
+              <div className="rp-grid" style={{ "--rp-cols": cols, "--rp-cols-narrow": Math.min(cols, 3) } as React.CSSProperties}>
+                {latest.cells.map((c) => {
+                  const status = c.src ? "in" : latest.live ? "waiting" : "missing";
                   return (
                     <div key={c.slotId} className="rp-slot">
-                      <div className={`rp-tiles${comparing ? " vs" : ""}`}>
-                        {comparing && cmp && <Tile cell={other} sheet={cmp} label={c.label} tag={cmp.title} emptyText={`No ${cmp.title}`} onOpen={(slotId) => setDlg({ kind: "photo", period: cmp.period, slotId })} />}
-                        <Tile cell={c} sheet={sel} label={c.label} tag={comparing ? sel.title : c.shotDay} emptyText={sel.live ? "Waiting" : "Missing"} onOpen={(slotId) => setDlg({ kind: "photo", period: sel.period, slotId })} />
-                      </div>
+                      <Tile cell={c} sheet={latest} label={c.label} tag={c.shotDay} emptyText={latest.live ? "Waiting" : "Missing"} onOpen={(slotId) => setDlg({ kind: "photo", period: latest.period, slotId })} />
                       <div className="rp-cap">
                         <b>{c.label}</b>
                         <span className={`rp-cap-state ${status}`}>{status === "in" ? "In" : status === "waiting" ? "Waiting" : "Missing"}</span>
@@ -545,48 +226,37 @@ function Pictures({ clientId, firstName, plan }: Props) {
               <div className="rp-foot">
                 <span className="rp-weight">
                   <span className="rp-label">Weight</span>
-                  <b>{sel.weight == null ? "—" : `${sel.weight} kg`}</b>
+                  <b>{latest.weight == null ? "—" : `${latest.weight} kg`}</b>
                 </span>
                 <span className="rp-div" aria-hidden="true" />
                 <span className="rp-phases">
-                  <PhaseTags phases={sel.phases} />
+                  <PhaseTags phases={latest.phases} />
                 </span>
-                <span className="rp-acts">
-                  {/* Reminded keeps the focus (aria-disabled, not disabled): the keyboard isn't dropped to the page. */}
-                  {sel.live && !sel.complete && (
-                    <button type="button" className="rp-pill" aria-disabled={reminded || undefined} onClick={() => !reminded && remind(sel)}>
+                {/* Reminded keeps the focus (aria-disabled, not disabled): the keyboard isn't dropped to the page. */}
+                {latest.live && !latest.complete && (
+                  <span className="rp-acts">
+                    <button type="button" className="rp-pill" aria-disabled={reminded || undefined} onClick={() => !reminded && remind(latest)}>
                       {reminded ? "Reminded" : `Remind ${firstName}`}
                     </button>
-                  )}
-                  <button type="button" className="rp-pill ink" onClick={() => comment(sel)}>
-                    Comment
-                  </button>
-                </span>
+                  </span>
+                )}
               </div>
-              <SheetNotes
-                saved={savedNote(sel)}
-                value={noteDrafts[sel.period] ?? savedNote(sel)}
-                onChange={(note) => {
-                  const period = sel.period;
-                  const saved = savedNote(sel);
-                  // A draft only while it differs from what is saved, letter for letter.
-                  if (NOTE_FIELDS.every((f) => note[f.name] === saved[f.name])) dropDraft(period);
-                  else setNoteDrafts((prev) => ({ ...prev, [period]: note }));
-                }}
-                onSave={(note) => {
-                  const period = sel.period;
-                  setSentNotes((prev) => ({ ...prev, [period]: note }));
-                  dropDraft(period);
-                  q.save(async () => {
-                    await savePhotoPeriodNoteAction(fd({ clientId, period, ...note }));
-                    return true;
-                  });
+              {/* A comment on the sheet goes to the chat, linked to it (21 Oct, Alex): no notes of its own. */}
+              <SheetComment
+                firstName={firstName}
+                onTyped={setCommentTyped}
+                onSend={async (text) => {
+                  const f = fd({ clientId, text });
+                  f.set("link", JSON.stringify({ kind: "photos", period: latest.period }));
+                  await sendChatMessageAction(f);
+                  reRead();
+                  toast.success("Sent", { description: `In the chat, linked to ${latest.title}.` });
                 }}
               />
             </div>
           </section>
 
-          {/* ---- All sheets, newest first. */}
+          {/* ---- All sheets, newest first: a log, the rows together as every log in the app (21 Oct, Alex). A row opens Compare on it. */}
           <section className="rls-section">
             <div className="trn-weekhead">
               <div>
@@ -602,13 +272,9 @@ function Pictures({ clientId, firstName, plan }: Props) {
                 <span className="end">State</span>
               </div>
               {shownRows.map((sh) => {
-                const i = sheets.indexOf(sh);
-                const before = sheets.slice(i + 1).find((x) => x.weight != null);
-                const change = sh.weight != null && before?.weight != null ? Math.round((sh.weight - before.weight) * 10) / 10 : null;
                 const st = stateOf(sh);
-                const on = sh.period === sel.period;
                 return (
-                  <button key={sh.period} type="button" className={`rp-trow${on ? " on" : ""}`} aria-current={on ? "true" : undefined} aria-label={`${sh.title}, ${sh.dateLabel}, ${sh.inCount} of ${sh.total} photos, ${st.text}`} onClick={() => focusOn(sh.period)}>
+                  <button key={sh.period} type="button" className="rp-trow" aria-label={`${sh.title}, ${sh.dateLabel}, ${sh.inCount} of ${sh.total} photos, ${st.text}. Compare`} onClick={() => openCompare(sh.period)}>
                     <span className="rp-tsheet">
                       <b>{sh.title}</b>
                       <small>{sh.dateLabel}</small>
@@ -618,10 +284,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
                         <i key={c.slotId} className={c.src ? "in" : ""} />
                       ))}
                     </span>
-                    <span className="rp-tweight">
-                      {sh.weight == null ? <span className="none">—</span> : `${sh.weight} kg`}
-                      {change != null && Math.abs(change) >= 0.05 && <small>{kgChange(change)}</small>}
-                    </span>
+                    {/* The weigh-in alone: a change is Compare's to show (21 Oct, Alex). */}
+                    <span className="rp-tweight">{sh.weight == null ? <span className="none">—</span> : `${sh.weight} kg`}</span>
                     <span className="rp-phases">{sh.phases.length > 0 ? <PhaseTags phases={sh.phases} small /> : <span className="none">—</span>}</span>
                     <span className="rp-tstate">
                       <span className={`trn-state${st.tone === "good" ? " good" : st.tone === "open" ? " warn" : ""}`}>{st.text}</span>
@@ -656,22 +320,308 @@ function Pictures({ clientId, firstName, plan }: Props) {
           />
         )}
         {dlg?.kind === "photo" && photoSheet && <PhotoDialog sheet={photoSheet} sheets={sheets} slotId={dlg.slotId} onMove={(period, slotId) => setDlg({ kind: "photo", period, slotId })} />}
-        {dlg?.kind === "removeAngle" && (
-          <RemoveAngleDialog
-            slot={dlg.slot}
+        {dlg?.kind === "setup" && (
+          <SetupDialog
+            clientId={clientId}
             firstName={firstName}
-            onClose={close}
-            onRemove={() => {
-              const s = dlg.slot;
+            plan={plan}
+            onSaved={() => {
               close();
-              removeAngle(s);
+              reRead();
             }}
           />
         )}
+        {dlg?.kind === "compare" && <CompareDialog sheets={sheets} initial={dlg.periods} />}
       </Dialog>
     </div>
   );
 }
+
+/** Sheet setup, as a phase's pop-up (21 Oct, Alex): the month on the left, the start date (typed or picked), how often a
+ *  sheet opens and the instructions on the right; under them the angles, each with a word on how to take it.
+ *  Cancel / Save: nothing reaches the client before Save. Removing an angle with photos asks for a tick first. */
+type AngleDraft = { key: number; id: number | null; label: string; hint: string; paused: boolean; count: number };
+function SetupDialog({ clientId, firstName, plan, onSaved }: { clientId: number; firstName: string; plan: DraftPictures; onSaved: () => void }) {
+  const today = isoOf(new Date());
+  const startAngles = (): AngleDraft[] => plan.slots.map((s) => ({ key: s.id, id: s.id, label: s.label, hint: s.hint, paused: s.paused, count: s.count }));
+  const [start, setStart] = useState(plan.startDate ?? "");
+  const [cadence, setCadence] = useState<Cadence>(plan.cadence);
+  const [instructions, setInstructions] = useState(plan.instructions);
+  const [angles, setAngles] = useState<AngleDraft[]>(startAngles);
+  const [cursor, setCursor] = useState((plan.startDate || today).slice(0, 7));
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Photo counts the server came back with (sent since the page was read), kept across rounds: the tick asks again with them.
+  const [recount, setRecount] = useState<Record<number, number>>({});
+  const newKey = useRef(0);
+  const addRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const removed = plan.slots.filter((s) => !angles.some((a) => a.id === s.id)).map((s) => ({ id: s.id, label: s.label, photos: Math.max(recount[s.id] ?? 0, s.count) }));
+  const doomed = removed.filter((r) => r.photos > 0);
+  const doomedCount = doomed.reduce((t, r) => t + r.photos, 0);
+  // The tick is for these photos alone: another angle removed, or more photos counted, and it asks again.
+  const doomedKey = doomed.map((d) => `${d.id}:${d.photos}`).join(",");
+  const [agreedFor, setAgreedFor] = useState<string | null>(null);
+  const agreed = agreedFor === doomedKey;
+  const names = angles.map((a) => a.label.trim().toLowerCase());
+  const blank = angles.some((a) => !a.label.trim());
+  const twin = angles.find((a, i) => !!a.label.trim() && names.indexOf(a.label.trim().toLowerCase()) !== i) ?? null;
+  const shape = (xs: AngleDraft[]) => JSON.stringify(xs.map((a) => [a.id, a.label.trim(), a.hint.trim(), a.paused]));
+  const changed = start !== (plan.startDate ?? "") || cadence !== plan.cadence || instructions.trim() !== plan.instructions.trim() || shape(angles) !== shape(startAngles());
+  const ok = changed && !blank && !twin && (doomedCount === 0 || agreed) && !saving;
+  const repeats = REPEATS.filter((r) => r.value !== "sixweekly" || plan.cadence === "sixweekly");
+  const edit = (key: number, f: Partial<AngleDraft>) => setAngles((xs) => xs.map((a) => (a.key === key ? { ...a, ...f } : a)));
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    const r = await savePhotoSetupAction(clientId, {
+      startDate: start,
+      cadence,
+      instructions: instructions.trim(),
+      angles: angles.map((a) => ({ id: a.id, label: a.label.trim(), hint: a.hint.trim(), paused: a.paused })),
+      removed: removed.map((x) => ({ id: x.id, photos: x.photos })),
+    }).catch(() => ({ ok: false as const, error: "Not saved: check the connection and try again." }));
+    setSaving(false);
+    if (r.ok) return onSaved();
+    setError(r.error);
+    if ("recount" in r && r.recount) {
+      const fresh = r.recount;
+      setRecount((prev) => ({ ...prev, ...Object.fromEntries(fresh.map((x) => [x.id, x.photos])) }));
+    }
+  };
+  // Remove: the focus goes to the next angle's name, or + Angle when none is left.
+  const removeAngle = (key: number) => {
+    const at = angles.findIndex((x) => x.key === key);
+    const next = angles[at + 1] ?? angles[at - 1] ?? null;
+    setAngles((xs) => xs.filter((x) => x.key !== key));
+    requestAnimationFrame(() => {
+      const el = next ? listRef.current?.querySelector<HTMLInputElement>(`[data-angle="${next.key}"]`) : null;
+      (el ?? addRef.current)?.focus();
+    });
+  };
+  return (
+    <DialogContent
+      className="npd rp-setupdlg"
+      style={{ "--npd-c": "#141a24", "--npd-rgb": "20,26,36" } as React.CSSProperties}
+      // Esc while an angle is lifted from the keyboard cancels the drag alone, not the pop-up and what was typed in it.
+      onEscapeKeyDown={(e) => {
+        if ((e.target as Element | null)?.closest?.('[aria-roledescription="sortable"][aria-pressed="true"]')) e.preventDefault();
+      }}
+    >
+      <div className="npd-head">
+        <DialogTitle className="npd-title">Sheet setup</DialogTitle>
+        <span className="npd-tools">
+          <DialogClose className="npd-x" aria-label="Close">
+            ✕
+          </DialogClose>
+        </span>
+      </div>
+      <DialogDescription className="sr-only">When {firstName}&rsquo;s sheets open, how to take them, and the angles asked for</DialogDescription>
+
+      <div className="npd-cols">
+        <MonthRange
+          from={start}
+          to={start}
+          onPick={(d) => setStart(d)}
+          planned={[]}
+          cursor={cursor}
+          setCursor={setCursor}
+          today={today}
+          plain
+          legend={null}
+        />
+        <div className="npd-side">
+          <div className="npd-dates">
+            <div className="npd-date arm">
+              <span className="npd-date-head">Starts</span>
+              <DateText
+                value={start}
+                onChange={(v) => {
+                  setStart(v);
+                  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) setCursor(v.slice(0, 7));
+                }}
+                label="Starts"
+              />
+            </div>
+            {/* No start: the sheets follow the calendar again. */}
+            {start && (
+              <button type="button" className="rp-clear" onClick={() => setStart("")}>
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="npd-field">
+            <span className="npd-label" id="rp-repeat-label">
+              Repeat
+            </span>
+            <div className="npd-seg" role="radiogroup" aria-labelledby="rp-repeat-label">
+              {repeats.map((r) => (
+                <button key={r.value} type="button" role="radio" aria-checked={cadence === r.value} className={cadence === r.value ? "on" : ""} onClick={() => setCadence(r.value)}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="npd-field">
+            <span className="npd-label">Instructions for {firstName}</span>
+            <GrowText className="npd-line npd-grow" value={instructions} maxLength={600} onChange={setInstructions} placeholder="Morning, before breakfast. Same spot and light each time…" />
+          </label>
+        </div>
+      </div>
+
+      {/* ---- The angles: drag to reorder, the name and a word on how to take it typed in place, ⋯ to pause or remove. */}
+      <div className="npd-field rp-anglesfield">
+        <span className="npd-label">Angles</span>
+        {angles.length > 0 && (
+          <div ref={listRef}>
+          <SortableList ids={angles.map((a) => a.key)} label="angle" onMove={(ids) => setAngles(ids.map((k) => angles.find((a) => a.key === k)).filter((a): a is AngleDraft => !!a))}>
+            {angles.map((a) => (
+              <SortableItem key={a.key} id={a.key} className={`rp-arow${a.paused ? " paused" : ""}`}>
+                {(grip) => (
+                  <>
+                    <span className="rp-agrip" {...grip}>
+                      <GripIcon />
+                    </span>
+                    <input className="rp-aname" data-angle={a.key} value={a.label} onChange={(e) => edit(a.key, { label: e.target.value })} maxLength={40} aria-label="Angle" aria-invalid={!a.label.trim() || twin?.key === a.key || undefined} />
+                    <input className="rp-ahint" value={a.hint} onChange={(e) => edit(a.key, { hint: e.target.value })} maxLength={200} placeholder="Add an instruction" aria-label={`How to take ${a.label || "this angle"}`} />
+                    {a.paused && <em className="rp-apaused">Paused</em>}
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger className="rp-amore" aria-label={`More for ${a.label || "this angle"}`}>
+                        <MoreIcon />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="pb-menu">
+                        <DropdownMenuItem onSelect={() => edit(a.key, { paused: !a.paused })}>
+                          {a.paused ? <PlayIcon /> : <PauseIcon />} {a.paused ? "Resume" : "Pause"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={() => removeAngle(a.key)}>
+                          <TrashIcon /> Remove
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
+              </SortableItem>
+            ))}
+          </SortableList>
+          </div>
+        )}
+        {adding ? (
+          <AddAngle
+            have={angles.map((a) => a.label.trim().toLowerCase())}
+            onAdd={(label) => {
+              newKey.current += 1;
+              setAngles((xs) => [...xs, { key: -newKey.current, id: null, label, hint: "", paused: false, count: 0 }]);
+            }}
+            onClose={(refocus) => {
+              setAdding(false);
+              if (refocus) requestAnimationFrame(() => addRef.current?.focus());
+            }}
+          />
+        ) : (
+          <button ref={addRef} type="button" className="rp-add" onClick={() => setAdding(true)}>
+            <PlusIcon /> Angle
+          </button>
+        )}
+        {(blank || twin) && <p className="rp-afact">{blank ? "Every angle needs a name." : `Two angles are called ${twin!.label.trim()}.`}</p>}
+      </div>
+
+      {/* Removing an angle takes its photos with it: a tick first (design rules 4). */}
+      {doomedCount > 0 && (
+        <button type="button" role="checkbox" aria-checked={agreed} className="dlh-ack rp-ack" onClick={() => setAgreedFor(agreed ? null : doomedKey)}>
+          <span className={`dlh-box${agreed ? " on" : ""}`} aria-hidden="true">
+            {agreed ? "✓" : ""}
+          </span>
+          Delete {firstName}&rsquo;s {plural(doomedCount, "photo")} of {doomed.map((d) => d.label).join(", ")} too
+        </button>
+      )}
+      <div className="npd-foot">
+        {error && <span className="rp-err">{error}</span>}
+        <DialogClose className="npd-cancel">Cancel</DialogClose>
+        <button type="button" className="npd-save" disabled={!ok} onClick={() => void save()}>
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </DialogContent>
+  );
+}
+
+/** Compare (21 Oct, Alex): pick the sheets (up to four) and an angle; each sheet's photo of that angle side by side,
+ *  oldest first, each with its weigh-in and the change from the first one weighed. */
+function CompareDialog({ sheets, initial }: { sheets: Sheet[]; initial: string[] }) {
+  const chrono = [...sheets].reverse();
+  const [picked, setPicked] = useState<string[]>(initial);
+  const shown = chrono.filter((s) => picked.includes(s.period));
+  // The angles any sheet has, in the newest sheet's order first.
+  const angles: { slotId: number; label: string }[] = [];
+  for (const s of sheets) for (const c of s.cells) if (!angles.some((a) => a.slotId === c.slotId)) angles.push({ slotId: c.slotId, label: c.label });
+  const [slot, setSlot] = useState<number | null>(angles[0]?.slotId ?? null);
+  const base = shown.find((s) => s.weight != null) ?? null;
+  const toggle = (p: string) => setPicked((xs) => (xs.includes(p) ? (xs.length > 1 ? xs.filter((x) => x !== p) : xs) : xs.length >= 4 ? xs : [...xs, p]));
+  return (
+    <DialogContent className="dlh rp-cmpdlg">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Compare</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <DialogDescription className="sr-only">The same angle from the sheets picked, side by side, with the weigh-ins</DialogDescription>
+      <div className="rp-cmp-weeks" role="group" aria-label="Sheets, up to four">
+        {chrono.map((s) => {
+          const on = picked.includes(s.period);
+          return (
+            <button key={s.period} type="button" className={`rp-wk${on ? " on" : ""}`} aria-pressed={on} disabled={!on && picked.length >= 4} onClick={() => toggle(s.period)}>
+              {s.title}
+            </button>
+          );
+        })}
+      </div>
+      {angles.length > 1 && (
+        <div className="rd-btn-group rp-cmp-angles" role="radiogroup" aria-label="Angle">
+          {angles.map((a) => (
+            <button key={a.slotId} type="button" role="radio" aria-checked={slot === a.slotId} className={slot === a.slotId ? "on" : ""} onClick={() => setSlot(a.slotId)}>
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="rp-cmp-cols" style={{ "--rp-n": shown.length } as React.CSSProperties}>
+        {shown.map((s) => {
+          const c = s.cells.find((x) => x.slotId === slot) ?? null;
+          const change = base && s !== base && base.weight != null && s.weight != null ? Math.round((s.weight - base.weight) * 10) / 10 : null;
+          return (
+            <figure key={s.period} className="rp-cmp-col">
+              <div className="rp-cmp-photo">
+                {c?.src ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+                  <img src={c.src} alt={`${c.label}, ${s.title}`} />
+                ) : (
+                  <span className="rp-hole">
+                    <CameraIcon />
+                    <span>No photo</span>
+                  </span>
+                )}
+              </div>
+              <figcaption>
+                <span className="rp-cmp-name">
+                  <b>{s.title}</b>
+                  <small>{s.dateLabel}</small>
+                </span>
+                <span className="rp-cmp-kg">
+                  {s.weight == null ? "—" : `${s.weight} kg`}
+                  {change != null && Math.abs(change) >= 0.05 && <em>{kgChange(change)}</em>}
+                </span>
+              </figcaption>
+            </figure>
+          );
+        })}
+      </div>
+    </DialogContent>
+  );
+}
+
 
 /** One photo in the focus card, or the empty place for it; a click opens it big. */
 function Tile({ cell, sheet, label, tag, emptyText, onOpen }: { cell: Cell | null; sheet: Sheet; label: string; tag: string | null; emptyText: string; onOpen: (slotId: number) => void }) {
@@ -699,7 +649,7 @@ function PhaseTags({ phases, small = false }: { phases: SheetPhase[]; small?: bo
   return (
     <>
       {phases.map((p) => (
-        <span key={`${p.track}-${p.name}`} className={`rp-phase${small ? " sm" : ""}`} style={{ color: TRACK_PALETTE[p.track].ink, background: TRACK_PALETTE[p.track].tint }} title={`${TRACK_LABEL[p.track]} · ${p.name}`}>
+        <span key={p.id} className={`rp-phase${small ? " sm" : ""}`} style={{ color: TRACK_PALETTE[p.track].ink, background: TRACK_PALETTE[p.track].tint }} title={`${TRACK_LABEL[p.track]} · ${p.name}`}>
           <TrackIcon track={p.track} size={small ? 10 : 11} />
           <span>{p.name}</span>
         </span>
@@ -716,9 +666,10 @@ function fitText(el: HTMLTextAreaElement | null) {
 }
 
 /** A textarea on a clean line that grows with its words; fitted again when it is shown or its width changes. */
-function GrowText({ value, onChange, className, placeholder, maxLength, label }: { value: string; onChange: (v: string) => void; className?: string; placeholder?: string; maxLength?: number; label?: string }) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useLayoutEffect(() => fitText(ref.current), [value]);
+function GrowText({ value, onChange, className, placeholder, maxLength, label, textRef }: { value: string; onChange: (v: string) => void; className?: string; placeholder?: string; maxLength?: number; label?: string; /** The textarea, for a caller that focuses it. */ textRef?: React.RefObject<HTMLTextAreaElement | null> }) {
+  const own = useRef<HTMLTextAreaElement>(null);
+  const ref = textRef ?? own;
+  useLayoutEffect(() => fitText(ref.current), [value, ref]);
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof ResizeObserver === "undefined") return;
@@ -730,60 +681,8 @@ function GrowText({ value, onChange, className, placeholder, maxLength, label }:
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [ref]);
   return <textarea ref={ref} rows={1} className={className} value={value} maxLength={maxLength} placeholder={placeholder} aria-label={label} onChange={(e) => onChange(e.target.value)} />;
-}
-
-/** An angle's name typed in place: Enter or a click away keeps it, Esc leaves it. Empty or taken is refused,
- *  with the fact under it, and the field stays open (a click away too) until it is fixed or Esc. */
-function AngleRename({ initial, taken, onDone }: { initial: string; taken: (v: string) => boolean; onDone: (v: string | null, byKey: boolean) => void }) {
-  const [v, setV] = useState(initial);
-  const [fact, setFact] = useState<string | null>(null);
-  const check = (x: string) => (!x ? "Needs a name." : taken(x) ? `${x} is already an angle.` : null);
-  // Once only: Enter or Esc closes the field, and the blur that follows mustn't count again.
-  const settled = useRef(false);
-  const done = (x: string | null, byKey: boolean) => {
-    if (settled.current) return;
-    settled.current = true;
-    onDone(x, byKey);
-  };
-  return (
-    <span className="rp-angle-edit">
-      <input
-        className="rp-angle-input"
-        value={v}
-        autoFocus
-        maxLength={40}
-        onChange={(e) => {
-          setV(e.target.value);
-          setFact(null);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") done(null, true);
-          if (e.key === "Enter") {
-            const x = v.trim();
-            const why = check(x);
-            if (why) setFact(why);
-            else done(x, true);
-          }
-        }}
-        onBlur={() => {
-          if (settled.current) return;
-          const x = v.trim();
-          const why = check(x);
-          if (why) setFact(why);
-          else done(x, false);
-        }}
-        aria-label="Angle name"
-        aria-invalid={!!fact}
-      />
-      {fact && (
-        <span className="rp-angle-fact" role="alert">
-          {fact}
-        </span>
-      )}
-    </span>
-  );
 }
 
 /** + Angle's dropdown, as + Item's on Nutrition: the search at its top, the usual angles, and one of your own pinned at the foot. */
@@ -793,7 +692,45 @@ function AddAngle({ have, onAdd, onClose }: { have: string[]; onAdd: (label: str
   const [cursor, setCursor] = useState(0);
   const box = useRef<HTMLInputElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
+  const listBox = useRef<HTMLDivElement | null>(null);
+  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
+  const listRef = useCallback((el: HTMLDivElement | null) => {
+    listBox.current = el;
+    setScrollEl(el);
+  }, []);
   useClickAway(wrap, () => onClose(false));
+  // The row under the arrows stays in view inside the list's own scroll.
+  useEffect(() => {
+    listBox.current?.querySelector<HTMLElement>(".rd-addrow-item.on")?.scrollIntoView({ block: "nearest" });
+  }, [cursor]);
+  // The list floats outside Sheet setup (portalled), where the pop-up's scroll lock cancels the wheel and a finger
+  // (both land on the document, where React listens too, so stopping them there can't help): the list scrolls itself.
+  useEffect(() => {
+    const el = scrollEl;
+    if (!el) return;
+    let y = 0;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      el.scrollTop += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    };
+    const onStart = (e: TouchEvent) => {
+      y = e.touches[0]?.clientY ?? 0;
+    };
+    const onMove = (e: TouchEvent) => {
+      const now = e.touches[0]?.clientY ?? y;
+      el.scrollTop += y - now;
+      y = now;
+      if (e.cancelable) e.preventDefault();
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+    };
+  }, [scrollEl]);
   const needle = q.trim().toLowerCase();
   const list = SUGGESTED.filter((x) => !needle || x.toLowerCase().includes(needle)).map((x) => ({ label: x, taken: have.includes(x.toLowerCase()) }));
   // A name of the coach's own already on the list: said so, not offered again.
@@ -810,13 +747,13 @@ function AddAngle({ have, onAdd, onClose }: { have: string[]; onAdd: (label: str
     <div ref={wrap} className="rd-addrow rp-addrow">
       <Popover open onOpenChange={() => {}}>
         <PopoverAnchor asChild>
-          <button type="button" className="rp-add-angle on" onClick={() => onClose(true)} aria-expanded="true">
+          <button type="button" className="rp-add on" onClick={() => onClose(true)} aria-expanded="true">
             <PlusIcon /> Angle
           </button>
         </PopoverAnchor>
         <PopoverContent
           className="rd-addpop rls-findpop rp-findpop"
-          align="center"
+          align="start"
           sideOffset={6}
           onOpenAutoFocus={(e) => {
             e.preventDefault();
@@ -862,7 +799,7 @@ function AddAngle({ have, onAdd, onClose }: { have: string[]; onAdd: (label: str
             </button>
           </div>
           {(list.length > 0 || ownTaken) && (
-            <div className="rd-addpop-scroll" role="listbox" aria-label="Angles">
+            <div ref={listRef} className="rd-addpop-scroll" role="listbox" aria-label="Angles">
               {list.map((m, i) => (
                 <button key={m.label} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}${m.taken ? " taken" : ""}`} disabled={m.taken} onMouseEnter={() => setCursor(i)} onClick={() => pick(m.label)}>
                   {m.label}
@@ -888,72 +825,58 @@ function AddAngle({ have, onAdd, onClose }: { have: string[]; onAdd: (label: str
   );
 }
 
-/** The coach's four notes on a sheet, each on a clean line. Cancel and Save show once something differs from what is saved.
- *  The draft lives with the tab (a draft a sheet), so another sheet in focus doesn't lose it. */
-function SheetNotes({ saved, value: v, onChange, onSave }: { saved: Note; value: Note; onChange: (note: Note) => void; onSave: (note: Note) => void }) {
-  const changed = !sameNote(v, saved);
+/** A comment on the sheet (21 Oct, Alex): the words on the page, no box; a line, Cancel and Send once something is typed.
+ *  Send puts it in the chat with the client, linked to the sheet. */
+function SheetComment({ firstName, onTyped, onSend }: { firstName: string; onTyped: (typed: boolean) => void; onSend: (text: string) => Promise<void> }) {
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  // The words as they are now, read after a send comes back.
+  const now = useRef("");
+  const box = useRef<HTMLTextAreaElement>(null);
+  const typed = !!text.trim();
+  const set = (v: string) => {
+    now.current = v;
+    setText(v);
+    onTyped(!!v.trim());
+  };
+  // Cancel and Send take their buttons away: the focus goes back to the comment, not the top of the page.
+  const refocus = () => requestAnimationFrame(() => box.current?.focus());
+  const send = async () => {
+    if (!typed || sending) return;
+    setSending(true);
+    const sent = text.trim();
+    try {
+      await onSend(sent);
+      // Words added while it was sending stay, unsent.
+      set(now.current.trim() === sent ? "" : now.current);
+      refocus();
+    } catch {
+      toast.error("Not sent", { description: "Check the connection, then Send again." });
+    } finally {
+      setSending(false);
+    }
+  };
   return (
-    <div className="rp-notes">
-      <div className="rp-notes-grid">
-        {NOTE_FIELDS.map((f) => (
-          <label key={f.name} className="rp-note">
-            <span className="rp-label">{f.label}</span>
-            <GrowText className="rp-line" value={v[f.name]} maxLength={2000} onChange={(x) => onChange({ ...v, [f.name]: x })} />
-          </label>
-        ))}
-      </div>
-      {changed && (
-        <div className="rp-notes-foot">
-          <button type="button" className="rp-cancel" onClick={() => onChange(saved)}>
+    <div className="rp-comment">
+      <GrowText textRef={box} className={`rp-line rp-comment-line${typed ? " typed" : ""}`} value={text} maxLength={2000} onChange={set} placeholder={`Add a comment for ${firstName}`} label={`Comment for ${firstName}`} />
+      {typed && (
+        <div className="rp-comment-foot">
+          <button
+            type="button"
+            className="rp-cancel"
+            onClick={() => {
+              set("");
+              refocus();
+            }}
+          >
             Cancel
           </button>
-          <button type="button" className="rp-save" onClick={() => onSave(v)}>
-            Save
+          <button type="button" className="rp-save" disabled={sending} onClick={() => void send()}>
+            {sending ? "Sending…" : "Send"}
           </button>
         </div>
       )}
     </div>
-  );
-}
-
-/** Removing an angle: its photos go with it, so a tick first when it has any. */
-function RemoveAngleDialog({ slot, firstName, onRemove, onClose }: { slot: Slot; firstName: string; onRemove: () => void; onClose: () => void }) {
-  const [agreed, setAgreed] = useState(false);
-  const cancel = useRef<HTMLButtonElement>(null);
-  const has = slot.count > 0;
-  return (
-    <DialogContent
-      className="dlh"
-      role="alertdialog"
-      onOpenAutoFocus={(ev) => {
-        ev.preventDefault();
-        setTimeout(() => cancel.current?.focus(), 60);
-      }}
-    >
-      <div className="dlh-head">
-        <DialogTitle className="dlh-title">Remove {slot.label}?</DialogTitle>
-        <button type="button" className="dlh-x" onClick={onClose} aria-label="Close">
-          ✕
-        </button>
-      </div>
-      <DialogDescription className="dlh-what">{has ? `${firstName} is no longer asked for it, and its ${plural(slot.count, "photo")} are permanently deleted. It can’t be undone.` : `${firstName} is no longer asked for it.`}</DialogDescription>
-      {has && (
-        <button type="button" role="checkbox" aria-checked={agreed} className="dlh-ack" onClick={() => setAgreed((x) => !x)}>
-          <span className={`dlh-box${agreed ? " on" : ""}`} aria-hidden="true">
-            {agreed ? "✓" : ""}
-          </span>
-          Delete {firstName}&rsquo;s {slot.label} photos too
-        </button>
-      )}
-      <div className="dlh-foot">
-        <button ref={cancel} type="button" className="dlh-cancel" onClick={onClose}>
-          Cancel
-        </button>
-        <button type="button" className="dlh-delete" disabled={has && !agreed} onClick={onRemove}>
-          Remove
-        </button>
-      </div>
-    </DialogContent>
   );
 }
 
@@ -1042,6 +965,16 @@ function PhotoDialog({ sheet, sheets, slotId, onMove }: { sheet: Sheet; sheets: 
         </div>
       )}
     </DialogContent>
+  );
+}
+
+/** Compare's mark: two frames side by side. */
+function CompareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="7.5" height="14" rx="1.5" />
+      <rect x="13.5" y="5" width="7.5" height="14" rx="1.5" />
+    </svg>
   );
 }
 
