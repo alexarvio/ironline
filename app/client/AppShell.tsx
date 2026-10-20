@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransition, type SyntheticEvent } from "react";
+import { useRouter } from "next/navigation";
 import { markCoachNotesReadAction } from "../lib/actions";
 import { logoutAction } from "../lib/auth-actions";
 import { BellIcon, CalendarIcon, ChevronLeftIcon, GearIcon, MenuIcon, ChatIcon, ReceiptIcon } from "../components/icons";
@@ -51,6 +52,16 @@ export type AppTab = {
 };
 
 type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | "meetings" | "invoices" | "settings" | "events" | null;
+/** The screens the coach's phone preview can be asked for (21 Oct): the three tabs, and the pushed screens. */
+export type PhoneScreen = "home" | "training" | "nutrition" | "checkin" | "photos" | "messages" | "food" | "meetings" | "invoices" | "events";
+const PHONE_TABS = new Set<string>(["home", "training", "nutrition"]);
+/** What the admin's panel posts to the preview: a screen to show, or to read the page again after a save. */
+export type PhoneMessage = { norcoach: "phone"; screen?: PhoneScreen; refresh?: boolean };
+// Taps, keys and form posts stop at the frame in the preview; the wheel still scrolls.
+const stopEvent = (e: SyntheticEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+};
 
 // The active bottom tab lives in sessionStorage, not just React state. A full
 // page load — a form that posts before hydration finishes on a slow phone, a
@@ -128,6 +139,7 @@ export default function AppShell({
   initialPush = null,
   initialTab = null,
   preview = null,
+  readOnly = false,
   settingsContent = null,
   chatUnread = false,
   events = null,
@@ -138,6 +150,10 @@ export default function AppShell({
   settingsContent?: ReactNode;
   /** Something from the coach in the chat not yet read: the dot on the Messages tab. */
   chatUnread?: boolean;
+  /** The coach's phone preview (21 Oct), in the admin's panel: the app as the client sees it, read-only. Nothing can be
+      tapped and nothing is written (no read marks, no tab memory, no push or health sync); the admin says which screen
+      to show and when to read the page again (PhoneMessage). */
+  readOnly?: boolean;
   /** A coach looking at this client's app: whose it is, and the others to switch to. */
   preview?: { current: { id: number; name: string }; clients: { id: number; name: string }[] } | null;
   clientName: string;
@@ -166,25 +182,30 @@ export default function AppShell({
   meetings?: MeetingsProps | null;
   /** The coach's invoices that reached the client; null, none yet (the menu leaves the row out). */
   invoices?: InvoicesProps | null;
-  /** A screen to open on arrival: a lock-screen notification's link (/client?open=invoices). */
-  initialPush?: "invoices" | null;
+  /** A screen to open on arrival: a lock-screen notification's link (/client?open=invoices), or the preview's screen. */
+  initialPush?: Exclude<PhoneScreen, "home" | "training" | "nutrition"> | null;
   /** The tab the client was on (its cookie), so the server draws that one. */
   initialTab?: string | null;
 }) {
   const storedTab = useSyncExternalStore(subscribeTab, readTab, () => initialTab);
-  const activeId = storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
-  const setActiveId = (id: string) => writeTab(id);
+  // The preview keeps its tab to itself: the coach's own tab memory (storage, cookie) is the coach's.
+  const [ownTab, setOwnTab] = useState(initialTab);
+  const tabNow = readOnly ? ownTab : storedTab;
+  const activeId = tabNow && tabs.some((t) => t.id === tabNow) ? tabNow : tabs[0]?.id;
+  const setActiveId = (id: string) => (readOnly ? setOwnTab(id) : writeTab(id));
   // The food diary stays open across a reload (a deploy landing mid-session
   // reloads the page), the way the tab does: read from storage until the
   // client chooses otherwise. The other pushed views start closed, since
   // they hang off something on the tab underneath.
   const storedPush = useSyncExternalStore(subscribePush, readPush, () => null);
-  const [chosenPush, setChosenPush] = useState<PushView | undefined>(initialPush && invoices ? initialPush : undefined);
-  // The link has done its job: a reload opens the app as usual.
+  // A pushed screen opens only when this client has it (no diary, no Food; no invoices, no Invoices).
+  const canPush = (v: PushView) => !(v === "invoices" && !invoices) && !(v === "food" && !foodDiary) && !(v === "meetings" && !meetings) && !(v === "events" && !events);
+  const [chosenPush, setChosenPush] = useState<PushView | undefined>(initialPush && canPush(initialPush) ? initialPush : undefined);
+  // The link has done its job: a reload opens the app as usual. (The preview keeps its address: it is read again in place.)
   useEffect(() => {
-    if (initialPush) window.history.replaceState(null, "", "/client");
-  }, [initialPush]);
-  const pushView: PushView = chosenPush !== undefined ? chosenPush : storedPush === "food" && foodDiary ? "food" : null;
+    if (initialPush && !readOnly) window.history.replaceState(null, "", "/client");
+  }, [initialPush, readOnly]);
+  const pushView: PushView = chosenPush !== undefined ? chosenPush : !readOnly && storedPush === "food" && foodDiary ? "food" : null;
   // The event Events opens on, from a notification (10 Oct); cleared when the screen closes.
   const [eventFocus, setEventFocus] = useState<number | null>(null);
   const openEventsAt = events
@@ -203,6 +224,7 @@ export default function AppShell({
     : null;
   const setPushView = (v: PushView) => {
     setChosenPush(v);
+    if (readOnly) return;
     try {
       if (v === "food") window.sessionStorage.setItem(PUSH_KEY, "food");
       else window.sessionStorage.removeItem(PUSH_KEY);
@@ -229,6 +251,8 @@ export default function AppShell({
   const openMessages = (about?: MessageAbout) => {
     setMessageAbout(about && "link" in about ? about : null);
     setPushView("messages");
+    // The client reading them, not a coach looking.
+    if (readOnly) return;
     startTransition(() => {
       markCoachNotesReadAction(clientId);
     });
@@ -244,6 +268,7 @@ export default function AppShell({
   // The phone's timezone, for the server: Home's greeting and a call's time
   // are drawn in it from the first paint instead of changing a moment later.
   useEffect(() => {
+    if (readOnly) return;
     try {
       const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (zone) document.cookie = `ironline_tz=${encodeURIComponent(zone)}; path=/; max-age=31536000; samesite=lax`;
@@ -344,6 +369,40 @@ export default function AppShell({
   // Back on a pushed screen: to the chat when that is where it came from.
   const backFrom = (v: NonNullable<typeof chatReturn>) => () => (chatReturn === v ? backToChat() : setPushView(null));
 
+  // The preview, told by the admin's panel which screen to show (it follows the coach's tab), and to read the page
+  // again after a save: in place, so the screen keeps its scroll. Only from this site's own pages.
+  const router = useRouter();
+  useEffect(() => {
+    if (!readOnly) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      const m = e.data as PhoneMessage | null;
+      if (m?.norcoach !== "phone") return;
+      if (m.refresh) router.refresh();
+      const s = m.screen;
+      if (!s) return;
+      if (PHONE_TABS.has(s)) {
+        setChosenPush(null);
+        setOwnTab(s);
+        setScrolled((scrollers.current[s]?.scrollTop ?? 0) > 4);
+        return;
+      }
+      if (s === "checkin") setCheckInSection("daily");
+      if (s === "photos") setPhotosPeriod(null);
+      if (s === "food") {
+        setFoodDate(null);
+        setFoodMeal(null);
+      }
+      if (canPush(s as PushView)) setChosenPush(s as PushView);
+    };
+    window.addEventListener("message", onMessage);
+    // Listening now: the panel sends the screen it wants (it may have changed while this loaded).
+    window.parent?.postMessage({ norcoach: "phone-ready" }, window.location.origin);
+    return () => window.removeEventListener("message", onMessage);
+    // canPush reads which screens this client has; re-armed when that changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readOnly, router, !!invoices, !!foodDiary, !!meetings, !!events]);
+
   const pushedLayer =
     pushView === "checkin" ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -441,9 +500,12 @@ export default function AppShell({
   return (
     <CoachIdentityProvider value={{ name: coachMessages.coachName, photoPath: coachAvatarPath }}>
       <LinkProvider value={openLink}>
-      <HealthAutoSync />
-      <NativePush />
-      <div className={`phone-frame${preview ? " previewing" : ""}`}>
+      {!readOnly && <HealthAutoSync />}
+      {!readOnly && <NativePush />}
+      <div
+        className={`phone-frame${preview ? " previewing" : ""}${readOnly ? " phone-readonly" : ""}`}
+        {...(readOnly ? { onClickCapture: stopEvent, onPointerDownCapture: stopEvent, onMouseDownCapture: stopEvent, onKeyDownCapture: stopEvent, onSubmitCapture: stopEvent, onDragStartCapture: stopEvent, onContextMenuCapture: stopEvent } : {})}
+      >
         {preview && <PreviewBar current={preview.current} clients={preview.clients} />}
         <div className="app-screen app-stack">
           {/* The tab stays mounted under a pushed view, so closing the view

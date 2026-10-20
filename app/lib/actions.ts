@@ -1543,7 +1543,13 @@ export async function removeVideoReplyAction(id: number) {
 }
 
 // The client opened their coach's reply.
+/** A client's read marks are theirs (21 Oct): a coach looking at their app (the phone preview, View client app) never sets one. */
+async function coachLooking() {
+  return (await getSessionUser())?.role === "coach";
+}
+
 export async function markVideoReplySeenAction(id: number) {
+  if (await coachLooking()) return;
   const owner = getClientIdForVideoRequest(Number(id));
   if (owner == null) return;
   await requireClientAccess(owner);
@@ -2515,7 +2521,7 @@ export async function editMealCommentAction(clientId: number, messageId: number,
 // tapping one both marks it read and navigates, and a form that unmounts as
 // the view changes is a bad place to be mid-submit.
 export async function markNotificationReadAction(id: number) {
-  if (!id) return;
+  if (!id || (await coachLooking())) return;
   const owner = getClientIdForNotification(id);
   if (owner == null || !(await canAccessClient(owner))) return;
   markNotificationRead(id);
@@ -2523,6 +2529,7 @@ export async function markNotificationReadAction(id: number) {
 }
 
 export async function markCoachNotesReadAction(clientId: number) {
+  if (await coachLooking()) return;
   const id = await requireClientAccess(clientId);
   if (!id) return;
   markCoachNotesRead(id);
@@ -2530,6 +2537,7 @@ export async function markCoachNotesReadAction(clientId: number) {
 }
 
 export async function markAllNotificationsReadAction(formData: FormData) {
+  if (await coachLooking()) return;
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   if (!clientId) return;
   markAllNotificationsRead(clientId);
@@ -2876,7 +2884,7 @@ export async function setCardioDoneAction(entryId: number, done: boolean) {
 }
 
 export async function markExerciseNoteReadAction(assignmentId: number) {
-  if (!assignmentId) return;
+  if (!assignmentId || (await coachLooking())) return;
   const owner = getClientIdForAssignment(assignmentId);
   if (owner == null || !(await canAccessClient(owner))) return;
   markExerciseNoteRead(assignmentId);
@@ -2884,6 +2892,7 @@ export async function markExerciseNoteReadAction(assignmentId: number) {
 }
 
 export async function markReportOpenedAction(id: number) {
+  if (await coachLooking()) return;
   const owner = getClientIdForReport(id);
   if (owner == null || !(await canAccessClient(owner))) return;
   markReportOpened(id);

@@ -4310,6 +4310,19 @@ a.cd-entry:hover { border-color: var(--accent); }
   }
 }
 
+/* The coach's phone preview (21 Oct): the app read-only in the admin's panel. Nothing reads as tappable; the wheel
+   scrolls, with no desktop scrollbar on a phone's screen. */
+.phone-frame.phone-readonly,
+.phone-frame.phone-readonly * {
+  cursor: default !important;
+}
+.phone-frame.phone-readonly * {
+  scrollbar-width: none;
+}
+.phone-frame.phone-readonly *::-webkit-scrollbar {
+  display: none;
+}
+
 /* ---- A coach previewing a client's app (1 Oct): whose app it is, and a
    switch to another client. Above the phone on a wide screen; a thin strip
    over the full-screen app on a small one. ---- */

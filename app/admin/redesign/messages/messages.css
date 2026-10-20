@@ -325,3 +325,33 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
 .rm .cmg-open.static { background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #141a24; }
 .rm .cmg-file { background: #f5f6f8; }
 .rm .cmg-file-text b { font-weight: 600; color: #141a24; }
+
+/* ---- The client's phone (21 Oct, Alex: "so the coach is not completely blind"): a second tab under the chat's, and
+   the same panel showing their app, read-only (PhonePreview.tsx). The tab on screen is ink, the other white with a
+   hairline; closed, the chat's stays ink and the phone's white. */
+.rd-chattab.rd-phonetab { top: 72px; }
+.rd-phonetab, .rd-chattab.off { background: #fff; color: #141a24; box-shadow: inset 0 0 0 1px #dce1e8; }
+.rd-phonetab:hover, .rd-phonetab:focus-visible, .rd-chattab.off:hover, .rd-chattab.off:focus-visible { background: #f5f6f8; }
+.rd-phonetab.on { background: #141a24; color: #fff; box-shadow: none; }
+.rd-phonetab.on:hover, .rd-phonetab.on:focus-visible { background: #262e3b; }
+.rd-panelpart { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.rd-panelpart[hidden] { display: none; }
+.rd-phone { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 16px; }
+.rd-phone-head { flex: none; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.rd-phone-head .rd-title { flex: 1; min-width: 0; margin: 0; overflow: hidden; font-size: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.rd-phone-head .rm-panel-x { margin-left: 0; }
+/* Which screen: a white pill that opens the list (the floating menu, never a <select>). */
+.rd-phone-pick { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px 0 14px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
+.rd-phone-pick svg { width: 14px; height: 14px; color: #8b93a1; }
+.rd-phone-pick:hover, .rd-phone-pick[data-state="open"] { box-shadow: inset 0 0 0 1px #141a24; }
+.rd-phone-pick:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
+/* The phone, as large as the panel allows: the app at an iPhone's size inside a thin ink edge, scaled to fit. */
+.rd-phone-stage { flex: 1; min-height: 0; display: flex; align-items: flex-start; justify-content: center; }
+.rd-phone-device { position: relative; flex: none; }
+.rd-phone-scale { position: absolute; top: 0; left: 0; box-sizing: border-box; padding: 7px; border-radius: 56px; background: #141a24; transform-origin: 0 0; }
+.rd-phone-screen { display: block; width: 393px; height: 852px; border: 0; border-radius: 49px; background: #f5f5f5; }
+/* Under ?look=hairline (html.look-hl .rd-chattab paints the tab ink) the white tab stays white. */
+html.look-hl .rd-chattab.rd-phonetab, html.look-hl .rd-chattab.off { background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; }
+html.look-hl .rd-chattab.rd-phonetab:hover, html.look-hl .rd-chattab.rd-phonetab:focus-visible, html.look-hl .rd-chattab.off:hover, html.look-hl .rd-chattab.off:focus-visible { background: #f5f6f8; }
+html.look-hl .rd-chattab.rd-phonetab.on { background: #141a24; box-shadow: none; }
+html.look-hl .rd-chattab.rd-phonetab.on:hover, html.look-hl .rd-chattab.rd-phonetab.on:focus-visible { background: #262e3b; }

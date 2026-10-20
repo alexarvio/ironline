@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useState, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChatIcon } from "../../components/icons";
 import { OpenChatContext, type OpenChat } from "./ChatPanel";
@@ -19,6 +19,8 @@ import { chatDraftThreadAction, chatListAction } from "./messages/actions";
 import ChatList, { ChatsBack, type DockChat } from "./ChatList";
 import InvoicesDraft from "./invoices/InvoicesDraft";
 import RedesignRail from "./RedesignRail";
+import PhonePreview, { SCREEN_FOR_TAB } from "./PhonePreview";
+import type { PhoneScreen } from "../../client/AppShell";
 import type { DraftInvoices, RailData } from "./loaders";
 
 // The redesign drafts on one page: the rail on the left, and Training,
@@ -44,6 +46,8 @@ export type RedesignTab = PageTab | "messages";
 type ChatState = { mounted: boolean; open: boolean; about: DraftLink | null; opened: number; focus: number | null };
 /** What the chat panel shows (21 Oct, Alex): this client's thread, every chat, or another client's thread, the page staying put. */
 type ChatView = "own" | "list" | "other";
+/** The panel shows the chat, or the client's phone (21 Oct, Alex: the coach sees what the client sees). */
+type PanelMode = "chat" | "phone";
 const CHAT_LIST_POLL_MS = 15000;
 const firstOf = (name: string) => name.split(" ")[0];
 
@@ -110,8 +114,10 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   useEffect(() => {
     mountedRef.current = chat.mounted;
   }, [chat.mounted]);
+  const [mode, setMode] = useState<PanelMode>("chat");
   const openChat = useCallback((about?: Parameters<OpenChat>[0], focus: number | null = null) => {
     // Opened from the page (its tab, a reply), it is this client's thread.
+    setMode("chat");
     setView("own");
     picking.current = null;
     const next = (c: ChatState) => ({ mounted: true, open: true, about: about ? { ...about, gone: false } : null, opened: c.opened + 1, focus });
@@ -123,12 +129,25 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
       requestAnimationFrame(() => requestAnimationFrame(() => setChat(next)));
     }
   }, []);
+  // The phone (21 Oct): mounted on its first opening, then kept, so it is read again in place rather than loaded anew.
+  const [phoneMounted, setPhoneMounted] = useState(false);
+  const openPhone = () => {
+    setMode("phone");
+    setPhoneMounted(true);
+    if (mountedRef.current) setChat((c) => ({ ...c, open: true }));
+    else {
+      // In closed first, then open a frame later, so even the first one slides.
+      mountedRef.current = true;
+      setChat((c) => ({ ...c, mounted: true }));
+      requestAnimationFrame(() => requestAnimationFrame(() => setChat((c) => ({ ...c, open: true }))));
+    }
+  };
   // The chat tab's dot: the chat reads its own thread now, not the page, so
   // opening it clears the dot here, until a newer message from the client.
   const newestFromClient = messages.messages.find((m) => !m.mine)?.id ?? null;
   const [seenNewest, setSeenNewest] = useState<number | null>(null);
   // Seen only while this client's own thread is on screen (not All chats, not another client's thread).
-  if (chat.open && view === "own" && seenNewest !== newestFromClient) setSeenNewest(newestFromClient);
+  if (chat.open && mode === "chat" && view === "own" && seenNewest !== newestFromClient) setSeenNewest(newestFromClient);
   const chatDot = !!messages.unread && seenNewest !== newestFromClient;
   const panelRef = useRef<HTMLElement>(null);
   // Every chat, asked for on opening and every 15 s while open (as the thread polls).
@@ -138,11 +157,11 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
       .catch(() => {});
   }, []);
   useEffect(() => {
-    if (!chat.open) return;
+    if (!chat.open || mode !== "chat") return;
     pullChats();
     const id = setInterval(pullChats, CHAT_LIST_POLL_MS);
     return () => clearInterval(id);
-  }, [chat.open, pullChats]);
+  }, [chat.open, mode, pullChats]);
   const inOther = view === "other" && other != null && otherThread?.id === other.id;
   const shownId = view === "own" ? clientId : inOther ? other.id : null;
   const isUnread = (c: DockChat) => c.unread && (c.last?.at ?? 0) > (seenAt[c.id] ?? 0);
@@ -188,7 +207,8 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   // rd-frame attribute below), so nothing sits behind it.
   useEffect(() => {
     if (!chat.open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("[role=dialog]") && closeChat();
+    // An Escape something else already used (a menu in the panel, the phone's screen picker) closes that alone.
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !e.defaultPrevented && !document.querySelector("[role=dialog]") && closeChat();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [chat.open]);
@@ -198,6 +218,8 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
     setSeenClient(clientId);
     setTab(pageTab(initialTab));
     setChat({ mounted: false, open: false, about: null, opened: 0, focus: null });
+    setMode("chat");
+    setPhoneMounted(false);
     setView("own");
     setOther(null);
     // The page's client now: their thread is the page's own, never a second copy behind it.
@@ -256,6 +278,18 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
     [clientId, openChat]
   );
   const openTab = useCallback((t: string) => show(t as RedesignTab), [show]);
+  // The phone follows the coach's tab (the screen a change made there shows on); a pick in the panel holds until the next tab.
+  const [phoneScreen, setPhoneScreen] = useState<PhoneScreen>(SCREEN_FOR_TAB[tab] ?? "home");
+  // Per client too: a screen picked for one client never opens the next one's phone.
+  const phoneFor = `${clientId}:${tab}`;
+  const [phoneTab, setPhoneTab] = useState(phoneFor);
+  if (phoneTab !== phoneFor) {
+    setPhoneTab(phoneFor);
+    setPhoneScreen(SCREEN_FOR_TAB[tab] ?? "home");
+  }
+  // A new object each time the page is read again (after any save): the phone reads again too.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the data, not used inside: its identity is the signal
+  const phoneStamp = useMemo(() => ({}), [home, training, nutrition, measurements, pictures, meetings, plan, invoices, messages]);
   // A track with no phase and nothing set up yet opens on one button,
   // "Create a … phase" (NoPhase). Anything already there (targets, logs,
   // metrics) keeps the usual screen, phase or not.
@@ -276,7 +310,8 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           ))}
         </nav>
         <div hidden={tab !== "home"}>
-          <HomeTab clientId={clientId} firstName={firstName} home={home} onOpenTab={openTab} />
+          {/* Keyed per client: Home's own state (What counts, rows marked read, the filter) is one client's. */}
+          <HomeTab key={clientId} clientId={clientId} firstName={firstName} home={home} onOpenTab={openTab} />
         </div>
         <div hidden={tab !== "training"}>
           {training.draft ? (
@@ -310,12 +345,32 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           client: it slides the chat out. A dot while there is something from
           them not opened yet. */}
       {/* It stays out while the chat is open (12 Oct), on the panel's edge, and closes it. */}
-      <button type="button" className={`rd-chattab${chat.open ? " open" : ""}`} onClick={() => (chat.open ? closeChat() : openChat())} aria-label={chat.open ? "Close the chat" : `Chat with ${firstName}${chatDot ? ", new message" : ""}`} title={chat.open ? "Close the chat" : `Chat with ${firstName}`} aria-expanded={chat.open}>
+      {/* With the phone on screen the chat's tab turns white (the one showing is ink) and brings the chat back. */}
+      <button
+        type="button"
+        className={`rd-chattab${chat.open ? " open" : ""}${chat.open && mode === "phone" ? " off" : ""}`}
+        onClick={() => (!chat.open ? openChat() : mode === "chat" ? closeChat() : setMode("chat"))}
+        aria-label={chat.open && mode === "chat" ? "Close the chat" : `Chat with ${firstName}${chatDot ? ", new message" : ""}`}
+        title={chat.open && mode === "chat" ? "Close the chat" : `Chat with ${firstName}`}
+        aria-expanded={chat.open && mode === "chat"}
+      >
         <ChatIcon />
         {chatDot && <i className="rd-chattab-dot" aria-hidden="true" />}
       </button>
+      {/* The client's phone (21 Oct): under the chat's tab, the same panel, their app as they see it. */}
+      <button
+        type="button"
+        className={`rd-chattab rd-phonetab${chat.open ? " open" : ""}${chat.open && mode === "phone" ? " on" : ""}`}
+        onClick={() => (chat.open && mode === "phone" ? closeChat() : openPhone())}
+        aria-label={chat.open && mode === "phone" ? `Close ${firstName}'s app` : `${firstName}'s app`}
+        title={chat.open && mode === "phone" ? `Close ${firstName}'s app` : `${firstName}'s app`}
+        aria-expanded={chat.open && mode === "phone"}
+      >
+        <PhoneIcon />
+      </button>
       {chat.mounted && (
-        <aside ref={panelRef} className={`rd-chatpanel rd-chatdock${chat.open ? " open" : ""}`} aria-label={view === "own" ? `Chat with ${firstName}` : inOther ? `Chat with ${firstOf(other.name)}` : "Chats"} aria-hidden={!chat.open} inert={chat.open ? undefined : true}>
+        <aside ref={panelRef} className={`rd-chatpanel rd-chatdock${chat.open ? " open" : ""}`} aria-label={mode === "phone" ? `${firstName}'s app` : view === "own" ? `Chat with ${firstName}` : inOther ? `Chat with ${firstOf(other.name)}` : "Chats"} aria-hidden={!chat.open} inert={chat.open ? undefined : true}>
+          <div className="rd-panelpart" hidden={mode !== "chat"}>
           {/* All chats (21 Oct, Alex): the list, or a way back to it over a thread. */}
           {view === "own" || inOther ? (
             <ChatsBack unread={othersUnread} onClick={toChatList} />
@@ -324,11 +379,17 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
             <ChatList chats={chats} title={view === "other" && other ? `Opening ${firstOf(other.name)}…` : "Chats"} here={clientId} isUnread={isUnread} onPick={(c) => void pickChat(c)} onClose={closeChat} autoFocus />
           )}
           <div className="rd-chatview own" hidden={view !== "own"}>
-            <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} active={chat.open && view === "own"} panel={{ about: chat.about, opened: chat.opened, onClose: closeChat, focus: chat.focus }} />
+            <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} active={chat.open && mode === "chat" && view === "own"} panel={{ about: chat.about, opened: chat.opened, onClose: closeChat, focus: chat.focus }} />
           </div>
           {otherThread && otherThread.id !== clientId && (
             <div className="rd-chatview other" hidden={!inOther}>
-              <MessagesDraft key={otherThread.id} clientId={otherThread.id} firstName={firstOf(otherThread.name)} plan={otherThread.plan} active={chat.open && inOther} panel={{ about: null, opened: otherOpened, onClose: closeChat, focus: null }} />
+              <MessagesDraft key={otherThread.id} clientId={otherThread.id} firstName={firstOf(otherThread.name)} plan={otherThread.plan} active={chat.open && mode === "chat" && inOther} panel={{ about: null, opened: otherOpened, onClose: closeChat, focus: null }} />
+            </div>
+          )}
+          </div>
+          {phoneMounted && (
+            <div className="rd-panelpart" hidden={mode !== "phone"}>
+              <PhonePreview key={clientId} clientId={clientId} firstName={firstName} screen={phoneScreen} onScreen={setPhoneScreen} stamp={phoneStamp} active={chat.open && mode === "phone"} onClose={closeChat} />
             </div>
           )}
         </aside>
@@ -336,5 +397,15 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
       <Toaster />
     </div>
     </OpenChatContext.Provider>
+  );
+}
+
+/** A phone, in the icons' hand (a stroke, round ends). */
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
+      <path d="M10.5 18.5h3" />
+    </svg>
   );
 }

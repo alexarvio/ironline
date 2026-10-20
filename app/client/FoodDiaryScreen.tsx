@@ -195,6 +195,12 @@ export default function FoodDiaryScreen({
     [router]
   );
   const [date, setDate] = useState(initial.date);
+  // A newer read of the page (the coach's phone preview reads again after a save): today's diary follows it.
+  const [seenInitial, setSeenInitial] = useState(initial);
+  if (seenInitial !== initial) {
+    setSeenInitial(initial);
+    if (date === initial.date) setDiary(initial);
+  }
   const [loading, startLoad] = useTransition();
   const load = (d: string) =>
     startLoad(async () => {

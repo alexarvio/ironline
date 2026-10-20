@@ -117,7 +117,7 @@ import { clerkOn } from "../lib/clerk";
 import MyDetailsCard from "./MyDetailsCard";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ProgramNote from "./ProgramNote";
-import AppShell, { AppTab } from "./AppShell";
+import AppShell, { AppTab, type PhoneScreen } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
 import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import { defaultPhaseCover } from "../lib/phaseCovers";
@@ -162,6 +162,9 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // grants coaches access to anyone; for a client the parameter is ignored.
 // PreviewBar's cookie (a client module's constant reads as a reference here, not the string).
 const PREVIEW_COOKIE = "ironline_preview";
+// The screens the phone preview can open on (AppShell's PhoneScreen), and which of them are tabs.
+const PHONE_SCREENS = new Set<string>(["home", "training", "nutrition", "checkin", "photos", "messages", "food", "meetings", "invoices", "events"]);
+const PHONE_TAB_SCREENS = new Set<string>(["home", "training", "nutrition"]);
 
 async function resolveClientId(raw: string | undefined): Promise<number | null> {
   const user = await getSessionUser();
@@ -1291,25 +1294,30 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
 export default async function ClientPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string; open?: string }>;
+  searchParams: Promise<{ client?: string; open?: string; phone?: string; screen?: string }>;
 }) {
   const params = await searchParams;
   const CLIENT_ID = await resolveClientId(params.client);
-  // Who is in the app (9 Oct): this one, on the client app (a coach previewing counts as the coach).
-  touchPresence(await getSessionUser(), "Client app");
+  // The coach's phone preview (21 Oct): ?phone=1 from the admin's panel draws this client's app read-only on the
+  // screen it names (AppShell readOnly). A coach only; for a client the parameters are ignored.
+  const phone = params.phone === "1" && (await getSessionUser())?.role === "coach";
+  const phoneScreen = phone && PHONE_SCREENS.has(params.screen ?? "") ? (params.screen as PhoneScreen) : "home";
+  // Who is in the app (9 Oct): this one, on the client app (a coach previewing counts as the coach). Not the preview:
+  // the coach is on the admin, looking.
+  if (!phone) touchPresence(await getSessionUser(), "Client app");
   // The phone's timezone and the tab it was on, from cookies AppShell sets:
   // the page is drawn as the phone will show it, so nothing jumps on load.
   const jar = await cookies();
   const tzCookie = decodeURIComponent(jar.get("ironline_tz")?.value ?? "");
   const phoneTz = tzCookie && isTimezone(tzCookie) ? tzCookie : null;
-  const initialTab = jar.get("ironline_tab")?.value ?? null;
+  const initialTab = phone ? (PHONE_TAB_SCREENS.has(phoneScreen) ? phoneScreen : "home") : jar.get("ironline_tab")?.value ?? null;
   // Only the client themselves sees their private "My notes", never a coach
   // previewing the app.
   const viewer = await getSessionUser();
   const viewerIsClient = viewer?.role === "client";
   // A coach sees whose app this is, and can switch to another of theirs.
   const preview =
-    viewer?.role === "coach" && CLIENT_ID != null
+    viewer?.role === "coach" && CLIENT_ID != null && !phone
       ? { current: { id: CLIENT_ID, name: getClient(CLIENT_ID)?.name ?? "" }, clients: listClients(viewer.id).map((c) => ({ id: c.id, name: c.name })) }
       : null;
   if (CLIENT_ID == null) {
@@ -1554,8 +1562,9 @@ export default async function ClientPage({
       foodPictures={bannerPictures(CLIENT_ID, "nutrition")}
       meetings={meetings}
       invoices={invoices}
-      initialPush={params.open === "invoices" ? "invoices" : null}
+      initialPush={phone ? (PHONE_TAB_SCREENS.has(phoneScreen) ? null : (phoneScreen as Exclude<PhoneScreen, "home" | "training" | "nutrition">)) : params.open === "invoices" ? "invoices" : null}
       initialTab={initialTab}
+      readOnly={phone}
     />
   );
 }
