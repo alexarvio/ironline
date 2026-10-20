@@ -73,8 +73,9 @@
 /* One row a day; the row itself opens the day. */
 .rn-day .rd-row-main { border-radius: 10px; }
 .rn-day.open > .rd-row-main { background: #fafbfd; }
-.rn-day > .rd-row-main:focus { outline: none; }
-.rn-day > .rd-row-main:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #c9d5e6; }
+/* One ring for every row that opens (Nutrition's days, Lifestyle's check-ins, past calls, the call rows): ink, round the
+   whole row while its button (.rd-row-hit) has the keyboard. */
+.rn-day > .rd-row-main:has(> .rd-ex .rd-row-hit:focus-visible) { outline: 2px solid #141a24; outline-offset: -2px; }
 .rn-vs { font-size: 12.5px; white-space: nowrap; }
 .rn-vs.up { background: #dff3ea; color: #1b7a4b; }
 .rn-vs.down { background: #fdf3ee; color: #b3471d; }
@@ -156,7 +157,6 @@
 .rd.rnt .rn-vs { padding: 3px 10px; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px #e1e5eb; font-weight: 600; color: #5b6474; }
 .rd.rnt .rn-vs.up { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.35); color: #2f7a3f; }
 .rd.rnt .rn-vs.down { box-shadow: inset 0 0 0 1px rgba(180, 35, 24, 0.3); color: #b42318; }
-.rd.rnt .rn-day > .rd-row-main:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #c9cfd8; }
 .rd.rnt .rn-day .rd-row-more .rd-btn.ghost:hover, .rd.rnt .rn-shot:hover { background: #f5f6f8; color: #141a24; }
 .rd.rnt .rn-shot { color: #5b6474; }
 .rd.rnt .rn-meal-name { font-weight: 600; }

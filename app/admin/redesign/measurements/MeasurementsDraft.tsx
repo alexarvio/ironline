@@ -1161,11 +1161,11 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
   const [open, setOpen] = useState<string | null>(null);
   const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
   // No rhythm column (21 Oct): the section's toggle already says which (say a thing once).
-  const grid = { gridTemplateColumns: "20px 150px minmax(240px, 1fr) 112px 32px", columnGap: 24 } as const;
+  // No empty column before the date (21 Oct, Alex: it left a gap at the card's edge); the chevron sits after the date.
+  const grid = { gridTemplateColumns: "150px minmax(240px, 1fr) 112px 32px", columnGap: 24 } as const;
   return (
     <div className="rd-rows">
       <div className="rd-cols" aria-hidden="true" style={grid}>
-        <span />
         <span>Date</span>
         <span>Logged</span>
         <span>State</span>
@@ -1180,12 +1180,14 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
         const label = `${CAD[cadence].label} check-in · ${whenOf(p.key, p.label)}`;
         return (
           <div key={p.key} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
-            <div className="rd-row-main" style={grid} onClick={() => setOpen((x) => (x === p.key ? null : p.key))} role="button" tabIndex={0} aria-expanded={isOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen((x) => (x === p.key ? null : p.key)))}>
-              <span />
+            {/* A click anywhere opens it; for the keyboard the date is the button, the note and the message its siblings. */}
+            <div className="rd-row-main" style={grid} onClick={() => setOpen((x) => (x === p.key ? null : p.key))}>
               <span className="rd-ex">
                 <span className="rd-ex-name">
-                  {p.label}
-                  <Fold open={isOpen} />
+                  <button type="button" className="rd-row-hit" aria-expanded={isOpen}>
+                    {p.label}
+                    <Fold open={isOpen} />
+                  </button>
                   {note && <NoteBubble text={note} onReply={() => onReply(p.key)} />}
                 </span>
               </span>
@@ -1195,7 +1197,7 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
               <span className={`rls-vs ${state.cls}`}>{state.text}</span>
               {/* The row's one action: a message about this check-in (on hover), not a menu. */}
               <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
-                <button type="button" className="trn-row-more" onClick={() => onMessage(label)} aria-label={`Message about ${p.label}`} title="Message about this check-in">
+                <button type="button" className="rd-btn ghost sm" onClick={() => onMessage(label)} aria-label={`Message about ${p.label}`} title="Message about this check-in">
                   <ChatIcon />
                 </button>
               </span>

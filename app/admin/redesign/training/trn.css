@@ -45,6 +45,8 @@
 
 /* ---- Header */
 .rd.trn .trn-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; min-height: 76px; }
+/* A header without a fact line keeps no room for one (21 Oct, Alex): Progress pictures, Meetings. */
+.rd.trn .trn-head.bare { min-height: 0; }
 .rd.trn .trn-eyebrow { line-height: 16px; }
 .rd.trn .trn-head-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .rd.trn .trn-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--trn-muted); }

@@ -5,25 +5,28 @@
 /* The box: the thread fills it, the bar is docked at its foot. Its height is
    set in MessagesDraft to reach the foot of the window. */
 .rm-chat { display: flex; flex-direction: column; height: calc(100dvh - 250px); min-height: 420px; overflow: hidden; }
-.rm-thread { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 18px 20px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent; background: #f7f9fc; border-radius: 16px 16px 0 0; }
+/* The admin's colours (21 Oct, Alex: "it's still like blue"): one white card with a hairline edge, no shadow. */
+.rm .rm-chat.rd-session { border: 1px solid #e1e5eb; border-radius: 18px; box-shadow: none; }
+.rm-thread { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 18px 20px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #e1e5eb transparent; background: #fff; }
 /* A short thread sits at the foot, by the box, as in any messenger. */
 .rm-thread-inner { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
-.rm-avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; overflow: hidden; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; font-size: 15px; font-weight: 800; }
+.rm-avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #141a24; font-size: 15px; font-weight: 500; }
 .rm-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .rm-day { display: flex; flex-direction: column; gap: 8px; }
-.rm-day-label { align-self: center; padding: 2px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; }
+.rm-day-label { align-self: center; padding: 2px 0; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .rm-bubble-row { display: flex; }
 .rm-bubble-row.mine { justify-content: flex-end; }
 .rm-bubble-row.theirs { justify-content: flex-start; }
-.rm-bubble { position: relative; display: flex; flex-direction: column; gap: 5px; max-width: 68%; padding: 8px 12px 7px; border: 1px solid #e3e7ed; border-radius: 16px 16px 16px 4px; background: #fff; }
-.rm-bubble-row.mine .rm-bubble { border-radius: 16px 16px 4px 16px; border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
-.rm-bubble-row.new .rm-bubble { box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.14); }
+/* The client's words white with a hairline; the coach's on a neutral tint, ink, never a filled block of colour. */
+.rm-bubble { position: relative; display: flex; flex-direction: column; gap: 5px; max-width: 68%; padding: 8px 12px 7px; border: 1px solid #e1e5eb; border-radius: 16px 16px 16px 4px; background: #fff; color: #141a24; }
+.rm-bubble-row.mine .rm-bubble { border-radius: 16px 16px 4px 16px; border-color: #eef0f3; background: #eef0f3; color: #141a24; }
+.rm-bubble-row.new .rm-bubble { box-shadow: 0 0 0 3px rgba(20, 26, 36, 0.08); }
 .rm-bubble-text { font-size: 14px; font-weight: 500; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 /* The time in the bubble's corner: floated, so it sits on the last line of
    the words when there is room and drops under them when there isn't. */
 .rm-bubble-body { display: block; }
 .rm-meta { float: right; display: inline-flex; align-items: center; gap: 3px; margin: 8px -2px -3px 14px; font-size: 10.5px; font-weight: 600; line-height: 1; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rm-bubble-row.mine .rm-meta { color: rgba(255, 255, 255, 0.65); }
+.rm-bubble-row.mine .rm-meta { color: #8b93a1; }
 .rm-meta-pin svg { width: 11px; height: 11px; }
 .rm-bubble-line { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
 .rm-bubble-line.end { justify-content: flex-end; }
@@ -31,97 +34,122 @@
 /* The chevron: in the top corner, over the words, on hover (WhatsApp's). */
 .rm-chev { position: absolute; top: 4px; right: 4px; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; padding: 0; border: 0; border-radius: 8px; background: linear-gradient(to left, #fff 60%, rgba(255, 255, 255, 0)); color: #5b6474; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
 .rm-chev svg { width: 14px; height: 14px; }
-.rm-bubble-row.mine .rm-chev { background: linear-gradient(to left, #1e3a6e 60%, rgba(30, 58, 110, 0)); color: rgba(255, 255, 255, 0.85); }
+.rm-bubble-row.mine .rm-chev { background: linear-gradient(to left, #eef0f3 60%, rgba(238, 240, 243, 0)); color: #5b6474; }
 .rm-bubble:hover .rm-chev, .rm-chev[data-state="open"], .rm-chev:focus-visible { opacity: 1; }
 .rm-menu-reacts { display: flex; gap: 2px; padding: 2px; }
 .rm-menu-reacts .rm-react-pick { justify-content: center; width: 32px; height: 32px; padding: 0; font-size: 17px; }
 .rm-empty { margin: auto; padding: 24px; font-size: 13.5px; text-align: center; color: #8b93a1; }
 
 /* What a message points at. */
-.rm-link { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 28px; padding: 0 6px 0 10px; border-radius: 999px; background: #e6ecf3; font-size: 12.5px; font-weight: 600; color: #1e3a6e; }
+.rm-link { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 28px; padding: 0 6px 0 10px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 12.5px; font-weight: 600; color: #141a24; }
 .rm-link > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rm-link.sent { height: 24px; padding: 0 10px; font-size: 12px; align-self: flex-start; }
-.rm-bubble-row.mine .rm-link.sent { background: rgba(255, 255, 255, 0.16); color: #fff; }
-.rm-link.gone { background: #eef0f3; color: #8b93a1; }
+.rm-bubble-row.mine .rm-link.sent { background: #fff; color: #141a24; }
+.rm-link.gone { background: #eef0f3; box-shadow: none; color: #8b93a1; }
 a.rm-link.open { text-decoration: none; cursor: pointer; }
-a.rm-link.open:hover { background: #d9e2ee; }
-.rm-bubble-row.mine a.rm-link.open:hover { background: rgba(255, 255, 255, 0.26); }
+a.rm-link.open:hover { background: #f5f6f8; }
+.rm-bubble-row.mine a.rm-link.open:hover { background: #f5f6f8; }
 .rm-link.gone em { font-style: normal; font-size: 11px; color: #b3471d; }
 .rm-link-x { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 15px; line-height: 1; color: #5b6474; cursor: pointer; }
-.rm-link-x:hover { background: #fff; color: #141a24; }
-/* The Link to… dialog: areas across, a week and a search, then headed groups. */
-.rm-linkdlg { max-width: 520px; }
-.rm-linkdlg-tools { display: flex; align-items: center; gap: 8px; }
-.rm-linkdlg-tools .rd-picker.rm-week { flex: none; width: auto; min-width: 150px; height: 38px; }
-.rm-linkdlg-search { flex: 1; min-width: 0; }
-.rm-linkdlg-list { max-height: 320px; }
+.rm-link-x:hover { background: #f5f6f8; color: #141a24; }
+/* The Link to… pop-up (21 Oct: the .dlh card): areas as the capsule, the week and the search as clean lines, then headed groups. */
+.dlh.dlh.rm-linkdlg { width: min(520px, 100vw - 32px); max-height: calc(100vh - 48px); }
+.rm-linkdlg .dlh-seg { margin-top: 2px; }
+.rm-linkdlg-tools { display: flex; align-items: center; gap: 12px; }
+.rm-linkdlg-search.rd-addrow-search { flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; background: transparent; box-shadow: none; outline: none; font-size: 15px; font-weight: 500; color: #141a24; }
+.rm-linkdlg-search.rd-addrow-search:focus { border-bottom-color: #141a24; }
+.rm-linkdlg-search.rd-addrow-search::placeholder { color: #98a2b3; }
+.rm-linkdlg-tools .rd-picker.rm-week { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: none; width: auto; min-width: 150px; height: 40px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; background: transparent; box-shadow: none; outline: none; font-size: 15px; font-weight: 500; color: #141a24; cursor: pointer; }
+.rm-linkdlg-tools .rd-picker.rm-week:focus-visible, .rm-linkdlg-tools .rd-picker.rm-week[data-state="open"] { border-bottom-color: #141a24; box-shadow: none; }
+.rm-linkdlg-tools .rd-picker.rm-week svg { width: 16px; height: 16px; color: #8b93a1; }
+/* The week's menu is portalled outside the card; styled only while this pop-up is open. */
+body:has(.rm-linkdlg) .rd-picker-menu [data-slot="dropdown-menu-item"] { font-weight: 500; }
+body:has(.rm-linkdlg) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background: #f5f6f8; color: #141a24; font-weight: 600; }
+.rm-linkdlg .rm-linkdlg-list { max-height: 320px; margin-top: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.rm-linkdlg .rd-addrow-item { font-weight: 500; }
+.rm-linkdlg .rd-addrow-item:hover { background: #f5f6f8; }
+.rm-linkdlg .rd-menu-head { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
 .rm-linkdlg-group { display: flex; flex-direction: column; }
-.rm-linkdlg-group + .rm-linkdlg-group { margin-top: 6px; border-top: 1px solid #eceff3; padding-top: 6px; }
-.rm-linkdlg-head { font-weight: 700; }
+.rm-linkdlg-group + .rm-linkdlg-group { margin-top: 6px; padding-top: 6px; }
+.rm-linkdlg .rm-linkdlg-head { font-weight: 600; }
 .rm-linkdlg-head small { letter-spacing: 0; text-transform: none; font-weight: 500; }
-.rm-linkdlg-ex { justify-content: flex-start; gap: 0; padding-left: 24px; font-weight: 500; color: #313851; }
+.rm-linkdlg .rm-linkdlg-ex { justify-content: flex-start; gap: 0; padding-left: 24px; font-weight: 500; color: #3a4250; }
 .rm-linkdlg-ex::before { content: ""; width: 5px; height: 5px; margin-right: 8px; border-radius: 999px; background: #c3c9d2; }
 
 /* The bar. */
-.rm-bar { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-top: 1px solid #eceff3; background: #fff; border-radius: 0 0 16px 16px; }
+.rm-bar { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; background: #fff; }
 .rm-bar .rm-link { align-self: flex-start; }
 .rm-bar-row { display: flex; align-items: flex-end; gap: 8px; }
 .rm-linkbtn { width: 40px; height: 40px; flex: none; border-radius: 999px; }
 .rm-linkbtn svg { width: 17px; height: 17px; }
 .rm-linkbtn:disabled { opacity: 0.4; cursor: default; }
-.rm-box { flex: 1; min-width: 0; min-height: 40px; max-height: 140px; margin: 0; padding: 10px 14px; border: 1px solid #dfe3e8; border-radius: 20px; background: #fbfbfc; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.45; color: #141a24; resize: none; overflow-y: auto; box-sizing: border-box; }
-.rm-box:focus { outline: none; border-color: #2f5d8f; background: #fff; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
-.rm-box::placeholder { color: #b0b6c0; }
+/* The box: white with a hairline, ink while typing; no coloured ring. */
+.rm-box { flex: 1; min-width: 0; min-height: 40px; max-height: 140px; margin: 0; padding: 10px 14px; border: 1px solid #e1e5eb; border-radius: 20px; background: #fff; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.45; color: #141a24; resize: none; overflow-y: auto; box-sizing: border-box; }
+.rm-box:focus { outline: none; border-color: #141a24; background: #fff; box-shadow: none; }
+.rm-box::placeholder { color: #98a2b3; }
 .rm-send { height: 40px; padding: 0 18px; border-radius: 20px; }
+/* Send is the one ink pill; + and the mic are quiet ghosts (doubled up so the shared navy .rd-btn.primary never wins, whatever loads last). */
+.rm .rm-bar .rd-btn.primary { border-color: #141a24; background: #141a24; color: #fff; }
+.rm .rm-bar .rd-btn.primary:hover { border-color: #262e3b; background: #262e3b; }
+.rm .rm-bar .rd-btn.primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(20, 26, 36, 0.18); }
+.rm .rm-bar .rd-btn.ghost:not(.recording) { color: #5b6474; }
+.rm .rm-bar .rd-btn.ghost:not(.recording):hover, .rm .rm-bar .rd-btn.ghost:not(.recording)[data-state="open"] { background: #f5f6f8; color: #141a24; }
+.rm .rm-bar .rd-btn.ghost:not(.recording):focus-visible { outline: 2px solid #141a24; outline-offset: 2px; color: #141a24; }
+.rm .rm-bar .rd-btn, .rm .rm-bar .vr-time { font-weight: 600; }
+/* Recording a voice message: rust, the one live thing in the bar. */
+.rm .rm-bar .rm-mic.recording { width: auto; gap: 6px; padding: 0 12px; border-color: #b3471d; background: #fdf3ee; color: #b3471d; }
+.rm .rm-bar .vr-dot { background: #b3471d; }
 
 /* Reactions hang off the bubble's foot; the coach's pins sit at the top of the box. */
 .rm-bubble-wrap { display: flex; flex-direction: column; max-width: 68%; }
 .rm-bubble-wrap .rm-bubble { max-width: none; }
 .rm-reacts { position: relative; z-index: 1; display: flex; align-items: center; gap: 4px; margin: -6px 8px 0; }
 .rm-bubble-row.mine .rm-reacts { align-self: flex-end; }
-.rm-react { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; font: inherit; font-size: 13px; line-height: 1; }
-.rm-react.mine { border-color: #1e3a6e; background: #e6ecf3; cursor: pointer; }
+.rm-react { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid #e1e5eb; border-radius: 999px; background: #fff; font: inherit; font-size: 13px; line-height: 1; }
+.rm-react.mine { border-color: #141a24; background: #fff; cursor: pointer; }
 .rm-react-pick { width: 30px; height: 30px; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 17px; line-height: 1; cursor: pointer; }
-.rm-react-pick:hover { background: #f4f6fa; }
-.rm-react-pick.on { background: #e6ecf3; }
+.rm-react-pick:hover { background: #f5f6f8; }
+.rm-react-pick.on { background: #fff; box-shadow: inset 0 0 0 1px #141a24; }
 .rm-edit { display: flex; flex-direction: column; gap: 6px; min-width: 260px; }
-.rm-edit-box { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 10px; background: rgba(255, 255, 255, 0.12); font: inherit; font-size: 14px; line-height: 1.45; color: #fff; resize: vertical; }
-.rm-edit-box:focus { outline: none; border-color: #fff; }
+/* Rewording in place: the words on a clean line, ink while typing; Cancel in words, Save a small ink pill. */
+.rm-edit-box { width: 100%; box-sizing: border-box; padding: 6px 0 7px; border: 0; border-bottom: 1px solid #c9cfd8; border-radius: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.45; color: #141a24; resize: vertical; }
+.rm-edit-box:focus { outline: none; border-bottom-color: #141a24; }
 .rm-edit-actions { display: flex; justify-content: flex-end; gap: 6px; }
-.rm-mini { height: 26px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: inherit; cursor: pointer; }
-.rm-mini.primary { background: #fff; border-color: #fff; color: #1e3a6e; }
-.rm-mini:disabled { opacity: 0.5; cursor: default; }
+.rm-mini { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.rm-mini:hover { color: #141a24; }
+.rm-mini.primary { background: #141a24; color: #fff; }
+.rm-mini:disabled { opacity: 0.45; cursor: default; }
 /* Pinned: one slim bar over the thread, one pin at a time (WhatsApp's). */
-.rm-pinbar { flex: none; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 20px; border: 0; border-bottom: 1px solid #eceff3; background: #fff; border-radius: 16px 16px 0 0; font: inherit; text-align: left; color: #313851; cursor: pointer; }
-.rm-pinbar:hover { background: #f7f9fc; }
-.rm-pinbar + .rm-thread { border-radius: 0; }
+.rm-pinbar { flex: none; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 20px; border: 0; border-bottom: 1px solid #eef0f3; background: #fff; font: inherit; text-align: left; color: #3a4250; cursor: pointer; }
+.rm-pinbar:hover { background: #f5f6f8; }
 .rm-pinbar-marks { flex: none; display: flex; flex-direction: column; gap: 2px; align-self: stretch; justify-content: center; }
-.rm-pinbar-marks i { display: block; width: 3px; height: 8px; border-radius: 2px; background: #dfe3e8; }
-.rm-pinbar-marks i.on { background: #1e3a6e; }
+.rm-pinbar-marks i { display: block; width: 3px; height: 8px; border-radius: 2px; background: #e1e5eb; }
+.rm-pinbar-marks i.on { background: #141a24; }
 .rm-pinbar-pin { flex: none; display: inline-flex; color: #8b93a1; }
 .rm-pinbar-pin svg { width: 16px; height: 16px; }
 .rm-pinbar-kind { flex: none; font-size: 14px; }
 .rm-pinbar-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 500; }
-.rm-pinbar-count { flex: none; font-size: 11px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rm-pinbar-count { flex: none; font-size: 11px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
 /* The message a pin jumped to, lit for a moment. */
-.rm-bubble-row.flash .rm-bubble { box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.35); transition: box-shadow 0.3s; }
+.rm-bubble-row.flash .rm-bubble { box-shadow: 0 0 0 2px rgba(20, 26, 36, 0.3); transition: box-shadow 0.3s; }
 /* A picture, a video, a voice message or a file in a bubble. */
 .rm-bubble.media { padding: 6px 6px 8px; }
 .rm-bubble.media .rm-bubble-body, .rm-bubble.media .rm-bubble-line, .rm-bubble.media .rm-edit { margin-left: 8px; margin-right: 8px; }
 .rm-media-img, .rm-media-video { display: block; width: 100%; max-width: 280px; border-radius: 12px; }
 .rm-media-video { background: #000; }
 .rm-media-audio { display: block; width: 240px; max-width: 100%; height: 36px; }
-.rm-media-file { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin: 4px 8px; padding: 8px 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #f4f7fc; font-size: 13.5px; font-weight: 700; color: #1e3a6e; text-decoration: none; }
+.rm-media-file { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin: 4px 8px; padding: 8px 12px; border: 1px solid #e1e5eb; border-radius: 12px; background: #fff; font-size: 13.5px; font-weight: 600; color: #141a24; text-decoration: none; }
 .rm-media-file span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rm-bubble-row.mine .rm-media-file { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
+.rm-media-file svg { color: #5b6474; }
+.rm-bubble-row.mine .rm-media-file { background: #fff; border-color: #e1e5eb; color: #141a24; }
 
-.rm-mic.recording { width: auto; gap: 6px; padding: 0 12px; border-color: #b3471d; background: #fdf3ee; color: #b3471d; }
 
 /* The link on a message as a round dot on the bubble's top corner, like the
    client's app (25 Sep): top-left on the coach's (right-hand) bubbles,
    top-right on the client's; hovering it shows what it opens. */
 .rm-bubble.linked { margin-top: 12px; }
-.rm-linkdot { position: absolute; top: -13px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; color: #1e3a6e; box-shadow: 0 0 0 3px #f7f8fb; text-decoration: none; cursor: pointer; }
+.rm-linkdot { position: absolute; top: -13px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid #e1e5eb; border-radius: 999px; background: #fff; color: #141a24; box-shadow: 0 0 0 3px #fff; text-decoration: none; cursor: pointer; }
+a.rm-linkdot:hover, a.rm-linkdot:focus-visible { outline: none; border-color: #141a24; }
 .rm-bubble-row.mine .rm-linkdot { left: -11px; }
 .rm-bubble-row.theirs .rm-linkdot { right: -11px; }
 .rm-linkdot.gone { color: #8b93a1; cursor: default; }
@@ -143,7 +171,7 @@ a.rm-link.open:hover { background: #d9e2ee; }
 .rm-pinbar-wrap { position: relative; flex: none; }
 .rm-pinbar-wrap .rm-pinbar { padding-right: 56px; }
 .rm-pinbar-x { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 999px; background: transparent; font-size: 20px; line-height: 1; color: #8b93a1; cursor: pointer; }
-.rm-pinbar-x:hover { background: #f1f3f7; color: #141a24; }
+.rm-pinbar-x:hover { background: #f5f6f8; color: #141a24; }
 
 /* Pictures hold a shape while they load, so the thread doesn't shift (25 Sep). */
 .rm-media-img { aspect-ratio: auto 4 / 3; object-fit: cover; }
@@ -151,14 +179,18 @@ a.rm-link.open:hover { background: #d9e2ee; }
 /* ---- The chat sliding in from the right (1 Oct, ChatPanel.tsx): opened to
    reply to what the client said, over whichever tab is open; × or Esc
    slides it away. The same chat as the Messages tab, at the panel's height. */
-.rd-chatpanel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; width: min(460px, 100vw); display: flex; flex-direction: column; background: #f4f6f9; box-shadow: -18px 0 40px -18px rgba(8, 31, 92, 0.35); transform: translateX(105%); transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.28s; visibility: hidden; }
+/* The page grey, a hairline edge; a soft neutral shadow only where it lies over the page (narrow windows). */
+.rd-chatpanel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; width: min(460px, 100vw); display: flex; flex-direction: column; background: #f5f6f8; box-shadow: -1px 0 0 #e1e5eb, -24px 0 48px -32px rgba(16, 24, 40, 0.28); font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; transform: translateX(105%); transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.28s; visibility: hidden; }
+@media (min-width: 1100px) { .rd-chatpanel { box-shadow: -1px 0 0 #e1e5eb; } }
 .rd-chatpanel.open { transform: none; visibility: visible; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
 .rd-chatpanel .rm-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 16px 16px 12px; max-width: none; margin: 0; }
 .rd-chatpanel .rm-panel > .rd-head { flex: none; display: flex; align-items: center; margin-bottom: 10px; }
 .rd-chatpanel .rm-panel .rd-title { font-size: 20px; }
 .rd-chatpanel .rm-panel .rm-chat { flex: 1; min-height: 0; height: auto !important; }
-.rm-panel-x { order: 2; margin-left: auto; width: 34px; height: 34px; border: 0; border-radius: 999px; background: #e6ecf3; font: inherit; font-size: 20px; line-height: 1; color: #1e3a6e; cursor: pointer; }
-.rm-panel-x:hover { background: #d8e1ec; }
+/* Close: a round ghost ×, grey, ink on hover. */
+.rm-panel-x { order: 2; margin-left: auto; width: 32px; height: 32px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 20px; line-height: 1; color: #8b93a1; cursor: pointer; }
+.rm-panel-x:hover { background: #eef0f3; color: #141a24; }
+.rm-panel-x:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; color: #141a24; }
 /* The chat open: the page narrows by the panel's width, so the two sit side by side (9 Oct). Narrow windows keep the overlay. */
 /* The window keeps its scrollbar gutter whether or not the page is long enough to scroll (9 Oct): the panel is fixed to the right edge, and a scrollbar coming and going between tabs shifted it by its width. */
 html:has(.rd-frame) { scrollbar-gutter: stable; }
@@ -173,7 +205,7 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
    words. The box is exactly one line tall, so no scroll arrows show in it. */
 .rm-box { line-height: 20px; overflow-y: hidden; scrollbar-width: thin; }
 .rm-plus svg { width: 20px; height: 20px; }
-.rm-plus[data-state="open"] { background: #e6ecf3; color: #1e3a6e; }
+.rm-plus[data-state="open"] { background: #f5f6f8; color: #141a24; }
 .rm-plus-menu [role="menuitem"] svg { width: 17px; height: 17px; }
 .rm-send { width: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; }
 .rm-send svg { width: 18px; height: 18px; }
@@ -181,14 +213,13 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
 /* ---- Replying to one message (2 Oct, as WhatsApp): it, quoted, over the
    box while writing; and at the top of the reply once sent, a tap away
    from the message it answers. */
-.rm-quote { display: flex; flex-direction: column; gap: 1px; width: 100%; min-width: 0; margin: 0 0 6px; padding: 6px 10px; border: 0; border-left: 3px solid #2f5d8f; border-radius: 8px; background: rgba(30, 58, 110, 0.07); font: inherit; text-align: left; cursor: pointer; }
-.rm-quote b { font-size: 12px; font-weight: 700; color: #2f5d8f; }
+/* Who said it is in its words (You / the client), so no colour: a 2px line on the left, ink for the coach's own, grey for the client's. */
+.rm-quote { display: flex; flex-direction: column; gap: 1px; width: 100%; min-width: 0; margin: 0 0 6px; padding: 6px 10px; border: 0; border-left: 2px solid #c9cfd8; border-radius: 6px; background: rgba(20, 26, 36, 0.04); font: inherit; text-align: left; cursor: pointer; }
+.rm-quote b { font-size: 12px; font-weight: 600; color: #5b6474; }
 .rm-quote span { font-size: 13px; font-weight: 500; line-height: 1.35; color: #5b6474; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: pre-wrap; }
-.rm-quote.mine { border-left-color: #1b7a4b; }
-.rm-quote.mine b { color: #1b7a4b; }
-.rm-bubble-row.mine .rm-quote { background: rgba(255, 255, 255, 0.14); border-left-color: rgba(255, 255, 255, 0.7); }
-.rm-bubble-row.mine .rm-quote b { color: #fff; }
-.rm-bubble-row.mine .rm-quote span { color: rgba(255, 255, 255, 0.82); }
+.rm-quote.mine { border-left-color: #141a24; }
+.rm-quote.mine b { color: #141a24; }
+.rm-bubble-row.mine .rm-quote { background: rgba(255, 255, 255, 0.7); }
 .rm-quote.static { cursor: default; margin: 0; }
 .rm-replying { display: flex; align-items: center; gap: 8px; }
 .rm-replying .rm-quote { flex: 1; }
@@ -196,22 +227,24 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
 /* Reply, easy to find (2 Oct): an arrow beside each bubble while its row is
    hovered, on the open side (right of theirs, left of yours). */
 .rm-bubble-wrap { position: relative; }
-.rm-replybtn { position: absolute; top: 50%; width: 30px; height: 30px; margin-top: -15px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
+.rm-replybtn { position: absolute; top: 50%; width: 30px; height: 30px; margin-top: -15px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #5b6474; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
 .rm-replybtn svg { width: 16px; height: 16px; }
 .rm-bubble-row.theirs .rm-replybtn { right: -38px; }
 .rm-bubble-row.mine .rm-replybtn { left: -38px; }
 .rm-bubble-row:hover .rm-replybtn, .rm-replybtn:focus-visible { opacity: 1; }
-.rm-replybtn:hover { background: #d8e1ec; }
+.rm-replybtn:hover { background: #f5f6f8; color: #141a24; }
 @media (hover: none) { .rm-replybtn { opacity: 0.7; } }
 
 /* ---- The chat's tab on the right edge (2 Oct): Messages is no longer a tab
    of its own; this sticks out from behind the window on every client screen
    and slides the chat out. A dot: something from the client not opened. */
-.rd-chattab { position: fixed; right: 0; top: 50%; z-index: 55; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 9px 14px 11px; border: 0; border-radius: 14px 0 0 14px; background: #1e3a6e; color: #fff; font: inherit; font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; box-shadow: -6px 0 18px -6px rgba(8, 31, 92, 0.45); transform: translate(4px, -50%); transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s; }
-.rd-chattab:hover, .rd-chattab:focus-visible { transform: translate(0, -50%); background: #2f5d8f; }
+/* Ink, no shadow (21 Oct): the admin's one action colour; the unread dot rust, as the rail's, ringed white. */
+.rd-chattab { position: fixed; right: 0; top: 50%; z-index: 55; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 9px 14px 11px; border: 0; border-radius: 14px 0 0 14px; background: #141a24; color: #fff; font: inherit; font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; cursor: pointer; box-shadow: none; transform: translate(4px, -50%); transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s; }
+.rd-chattab:hover, .rd-chattab:focus-visible { transform: translate(0, -50%); background: #262e3b; }
+.rd-chattab:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
 .rd-chattab svg { width: 18px; height: 18px; }
 .rd-chattab span { writing-mode: vertical-rl; transform: rotate(180deg); text-transform: uppercase; }
-.rd-chattab-dot { position: absolute; top: 8px; left: 7px; width: 9px; height: 9px; border-radius: 999px; background: #f0a35b; box-shadow: 0 0 0 2px #1e3a6e; }
+.rd-chattab-dot { position: absolute; top: 8px; left: 7px; width: 8px; height: 8px; border-radius: 999px; background: #b3471d; box-shadow: 0 0 0 2px #fff; }
 .rd-chattab.hidden { opacity: 0; pointer-events: none; transform: translate(100%, -50%); }
 /* Up on the tabs' row, the icon alone (2 Oct): level with Home … Invoices,
    and there on every scroll. */
@@ -224,36 +257,46 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
 .rm .rd-head .rm-media-btn { order: 1; margin-left: auto; }
 .rm-panel .rd-head .rm-panel-x { margin-left: 8px; }
 
-/* The chat dock (12 Oct, ChatDock.tsx): the panel on the screens without a
-   client, opening on the list of chats as WhatsApp lays it out; a thread
-   has a way back above it. */
+/* The chat's list (12 Oct, ChatDock.tsx; ChatList.tsx since 21 Oct, also
+   inside a client's chat as All chats): the panel opens on it on the screens
+   without a client; a thread has a way back above it. The admin's hairline
+   voice: the head as the thread's, a white search pill, the rows together in
+   one white card, names 600, the rest grey 500, unread a rust dot. */
 .rd-chatdock { display: flex; flex-direction: column; }
-.rd-dock-back { flex: none; align-self: flex-start; margin: 12px 16px 0; padding: 4px 8px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
-.rd-dock-back:hover { background: #e9edf3; }
+.rd-dock-back { flex: none; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; margin: 12px 12px 0; padding: 4px 10px 4px 4px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.rd-dock-back svg { width: 16px; height: 16px; }
+.rd-dock-back:hover { background: #eef0f3; color: #141a24; }
+.rd-dock-back:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; color: #141a24; }
+.rd-dock-back-n { margin-left: 4px; font-size: 12px; font-weight: 600; color: #b3471d; font-variant-numeric: tabular-nums; }
 .rd-chatdock .rm-panel { padding-top: 4px; }
-.rd-dock-list { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 20px 0 0; background: #fff; }
-.rd-dock-head { flex: none; display: flex; align-items: center; margin: 0 20px 12px; }
-.rd-dock-head .rd-title { font-size: 22px; }
-.rd-dock-search { flex: none; height: 40px; margin: 0 20px 8px; padding: 0 14px; border: 0; border-radius: 10px; background: #f0f2f5; font: inherit; font-size: 14px; color: #141a24; }
-.rd-dock-search:focus { outline: 2px solid #1e3a6e; outline-offset: -2px; }
-/* No scrollbar (it still scrolls), and the rows run edge to edge with the same room either side. */
-.rd-dock-rows { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; }
+/* This client's thread waits behind the list and other chats, as it was. */
+.rd-chatview { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.rd-chatview[hidden] { display: none; }
+.rd-dock-list { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 16px 16px 12px; }
+.rd-dock-list > .rd-dock-head { flex: none; display: flex; align-items: center; margin-bottom: 10px; }
+.rd-dock-head .rd-title { font-size: 20px; }
+.rd-dock-search { flex: none; height: 38px; margin: 0 0 10px; padding: 0 14px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; }
+.rd-dock-search::placeholder { color: #98a2b3; }
+.rd-dock-search:focus { outline: none; box-shadow: inset 0 0 0 1px #141a24; }
+/* No scrollbar (it still scrolls). */
+.rd-dock-rows { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; padding: 6px; border: 1px solid #e1e5eb; border-radius: 18px; background: #fff; }
 .rd-dock-rows::-webkit-scrollbar { display: none; }
-.rd-dock-row { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 14px; min-height: 76px; padding: 10px 20px; border: 0; background: none; font: inherit; text-align: left; color: #141a24; cursor: pointer; position: relative; }
-.rd-dock-row::after { content: ""; position: absolute; left: 82px; right: 20px; bottom: 0; border-bottom: 1px solid #eef1f5; }
-.rd-dock-row:last-child::after { display: none; }
+.rd-dock-row { flex: none; display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 12px; min-height: 58px; padding: 8px 10px; border: 0; border-radius: 12px; background: none; font: inherit; text-align: left; color: #141a24; cursor: pointer; }
 .rd-dock-row:hover { background: #f5f6f8; }
-.rd-dock-avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; overflow: hidden; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; font-size: 17px; font-weight: 800; }
+.rd-dock-row:focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
+.rd-dock-avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #5b6474; font-size: 13px; font-weight: 500; }
 .rd-dock-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.rd-dock-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* The client the page is on: a ring round the face, as the rail marks the open client. */
+.rd-dock-row.here .rd-dock-avatar { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #141a24; color: #141a24; }
+.rd-dock-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .rd-dock-top, .rd-dock-bottom { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.rd-dock-top b { flex: 1; min-width: 0; font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rd-dock-bottom small { flex: 1; min-width: 0; font-size: 14px; color: #667085; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rd-dock-when { flex: none; font-size: 12px; color: #8b93a1; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.rd-dock-row.unread .rd-dock-when { color: #d9822b; font-weight: 700; }
-.rd-dock-row.unread .rd-dock-bottom small { color: #141a24; font-weight: 600; }
-.rd-dock-dot { flex: none; width: 10px; height: 10px; border-radius: 999px; background: #f0a35b; }
-.rd-dock-empty { margin: 0; padding: 16px 20px; font-size: 14px; color: #8b93a1; }
+.rd-dock-top b { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-dock-bottom small { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 500; color: #8b93a1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-dock-when { flex: none; font-size: 12px; font-weight: 500; color: #8b93a1; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rd-dock-row.unread .rd-dock-when { color: #141a24; font-weight: 600; }
+.rd-dock-row.unread .rd-dock-bottom small { color: #3a4250; }
+.rd-dock-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; background: #b3471d; }
+.rd-dock-empty { margin: 0; padding: 12px 10px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 
 /* Under every dialog, menu and popover (12 Oct): at 60 the panel covered the
    + menu and the link dialog it opens, so they seemed to do nothing. */
@@ -267,5 +310,18 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
 /* The link over the box, easy to take away before sending (12 Oct): a round
    × that reads as a button, not a stray character. */
 .rm-link { height: 30px; padding-right: 4px; }
-.rm-link .rm-link-x { width: 22px; height: 22px; margin-left: 2px; background: rgba(30, 58, 110, 0.12); color: #1e3a6e; font-size: 15px; font-weight: 700; }
-.rm-link .rm-link-x:hover { background: #1e3a6e; color: #fff; }
+.rm-link .rm-link-x { width: 22px; height: 22px; margin-left: 2px; background: #eef0f3; color: #5b6474; font-size: 15px; font-weight: 600; }
+.rm-link .rm-link-x:hover { background: #141a24; color: #fff; }
+
+/* Photos, videos and files (ChatMediaGallery, shared with the client's app) in the admin's voice inside the coach's chat (21 Oct). */
+.rm .cmg-head b { font-weight: 600; color: #141a24; }
+.rm .cmg-back { background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #141a24; }
+.rm .cmg-back:hover { background: #f5f6f8; }
+.rm .cmg-tabs { background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; }
+.rm .cmg-tabs button { font-weight: 500; color: #5b6474; }
+.rm .cmg-tabs button.on { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; }
+.rm .cmg-tabs small { font-weight: 500; color: inherit; opacity: 0.7; }
+.rm .cmg-empty, .rm .cmg-file-text small { color: #8b93a1; }
+.rm .cmg-open.static { background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #141a24; }
+.rm .cmg-file { background: #f5f6f8; }
+.rm .cmg-file-text b { font-weight: 600; color: #141a24; }

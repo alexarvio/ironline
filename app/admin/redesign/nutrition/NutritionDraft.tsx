@@ -454,10 +454,11 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   } as const;
   // No Vs target column (21 Oct, Alex); the day's kind as one-width pills.
   const lGrid = {
-    gridTemplateColumns: "20px 120px 84px 84px minmax(200px, 1fr) 32px",
+    gridTemplateColumns: "120px 84px 84px minmax(200px, 1fr) 32px",
   } as const;
   const mGrid = {
-    gridTemplateColumns: "20px minmax(160px, 1fr) 84px 72px 72px 72px 32px",
+    // No leading column (21 Oct): the meals start under the day's date.
+    gridTemplateColumns: "minmax(160px, 1fr) 84px 72px 72px 72px 32px",
   } as const;
 
   return (
@@ -776,7 +777,6 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
           {view.days.length > 0 && (
             <div className="rd-rows">
               <div className="rd-cols" aria-hidden="true" style={lGrid}>
-                <span />
                 <span>Date</span>
                 <span>Logged</span>
                 <span className="rnt-daycol">Day</span>
@@ -1277,12 +1277,14 @@ function Split({ p, c, f }: { p: number; c: number; f: number }) {
 function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMessage }: { day: LoggedDay; open: boolean; grid: React.CSSProperties; mealGrid: React.CSSProperties; commentsOn: (d: string, m: LoggedMeal) => MealComment[]; onToggle: () => void; onShot: (meal: string) => void; onMessage: () => void }) {
   return (
     <div id={`day-${day.date}`} className={`rd-row rn-day${open ? " open" : ""}`}>
-      <div className="rd-row-main" style={grid} onClick={onToggle} role="button" tabIndex={0} aria-expanded={open} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onToggle())}>
-        <span />
+      {/* The row opens on a click anywhere; for the keyboard the date is the button (no controls nested in a button). */}
+      <div className="rd-row-main" style={grid} onClick={onToggle}>
         <span className="rd-ex">
           <span className="rd-ex-name">
-            {fmtDay(day.date)}
-            <Fold open={open} />
+            <button type="button" className="rd-row-hit" aria-expanded={open}>
+              {fmtDay(day.date)}
+              <Fold open={open} />
+            </button>
           </span>
           {day.note && <small title={day.note}>{day.note}</small>}
         </span>
@@ -1302,7 +1304,6 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
       {open && (
         <div className="rn-meals">
           <div className="rd-cols rn-mcols" aria-hidden="true" style={mealGrid}>
-            <span />
             <span>Meal</span>
             <span>Kcal</span>
             <span className="p">Protein</span>
@@ -1313,7 +1314,6 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
           {day.meals.map((m) => (
             <div key={m.id} className="rn-meal">
               <div className="rn-meal-head" style={mealGrid}>
-                <span />
                 <span className="rn-meal-name">{m.label}</span>
                 <span className="rd-num">{n(m.kcal)}</span>
                 <span className="rd-num">{m.protein} g</span>
@@ -1331,7 +1331,6 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
               </div>
               {m.foods.map((food, i) => (
                 <div key={i} className="rn-food" style={mealGrid}>
-                  <span />
                   <span className="rn-food-name">
                     {food.name}
                     <small>{food.quantity}</small>

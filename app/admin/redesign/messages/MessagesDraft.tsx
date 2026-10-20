@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ChevronDownIcon, PinIcon } from "../../../components/icons";
 import Picker from "../Picker";
@@ -13,7 +13,7 @@ import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMess
 import type { MessageLink } from "../../../lib/messageLinks";
 import type { LinkTargets } from "../../../lib/queries";
 import { ConfirmDialog } from "../training/TrainingDraft";
-import { Sep } from "../Sep";
+import { Sep, SepJoin } from "../Sep";
 
 // The Messages tab in the redesign's sheet: one chat box, and unlike the
 // other drafts it is real. Everything here sends and saves through the same
@@ -312,14 +312,14 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
               <a className="rm-linkdot" href={m.link.href} aria-label={`Open ${m.link.label}`}>
                 <LinkGlyph />
                 <span className="rm-linkdot-tip" aria-hidden="true">
-                  {m.link.label}
+                  <LinkLabel label={m.link.label} />
                 </span>
               </a>
             ) : (
               <span className={`rm-linkdot${m.link.gone ? " gone" : ""}`} tabIndex={0} aria-label={m.link.gone ? `${m.link.label}: the client can't open this any more` : m.link.label}>
                 <LinkGlyph />
                 <span className="rm-linkdot-tip" aria-hidden="true">
-                  {m.link.label}
+                  <LinkLabel label={m.link.label} />
                   {m.link.gone && (
                     <>
                       <Sep />
@@ -470,7 +470,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
         >
           <div ref={threadInner} className="rm-thread-inner">
           {days.length === 0 ? (
-            <p className="rm-empty">Nothing yet. What you write lands on {firstName}&rsquo;s Home, and they answer from their app.</p>
+            <p className="rm-empty">No messages yet</p>
           ) : (
             days.map((d) => (
               <div key={d.day} className="rm-day">
@@ -487,7 +487,9 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
           {link && (
             <span className="rm-link">
               <LinkGlyph />
-              <span>{link.label}</span>
+              <span>
+                <LinkLabel label={link.label} />
+              </span>
               <button type="button" className="rm-link-x" onClick={() => setLink(null)} aria-label="Remove the link" title="Remove the link">
                 ×
               </button>
@@ -657,12 +659,15 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
   const groups = week ? week.sessions.map((s) => ({ s, rows: s.exercises.filter((x) => hit(x.name)), whole: hit(s.title) })).filter((g) => g.whole || g.rows.length > 0) : [];
 
   return (
-    <DialogContent className="rd-dlg rm-linkdlg">
-      <DialogHeader>
-        <DialogTitle>Link to…</DialogTitle>
-        <DialogDescription>One thing in {firstName}&rsquo;s app. They tap the message and land on it.</DialogDescription>
-      </DialogHeader>
-      <div className="rd-btn-group rq-groups" role="group" aria-label="Which area">
+    // The admin's one pop-up (.dlh, 21 Oct): title and ✕, the areas as a capsule, no line explaining it.
+    <DialogContent className="dlh rm-linkdlg" aria-describedby={undefined}>
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Link to…</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <div className="dlh-seg" role="group" aria-label={`Which area of ${firstName}'s app`}>
         {areas.map((a) => (
           <button key={a.id} type="button" className={area === a.id ? "on" : ""} aria-pressed={area === a.id} disabled={a.empty} onClick={() => setArea(a.id)}>
             {a.label}
@@ -691,7 +696,7 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
                 ))}
               </div>
             ))}
-            {groups.length === 0 && <p className="rd-addrow-hint">Nothing in {week.label} matches that.</p>}
+            {groups.length === 0 && <p className="rd-addrow-hint">No match</p>}
           </>
         )}
         {area === "nutrition" && (
@@ -734,9 +739,9 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
           </>
         )}
       </div>
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-      </DialogFooter>
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel">Cancel</DialogClose>
+      </div>
     </DialogContent>
   );
 }
@@ -757,6 +762,11 @@ function Media({ media }: { media: DraftMedia }) {
     );
   // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
   return <img className="rm-media-img" src={media.path} alt="" />;
+}
+
+/** A link's label as written ("Squat · Upper, Week 2"), its parts parted by the drawn bar (21 Oct). */
+function LinkLabel({ label }: { label: string }) {
+  return <SepJoin parts={label.split(" · ")} />;
 }
 
 function LinkGlyph() {

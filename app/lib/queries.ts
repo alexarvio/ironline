@@ -10570,6 +10570,8 @@ export type WorkspaceMeeting = {
   notes: { id: number; text: string; createdAt: string }[];
   /** Set on a repeating call: the series it belongs to. */
   seriesId: number | null;
+  /** What kind of call (9 Oct): a call with none is a Check-in. */
+  kind: "checkin" | "review" | "other";
 };
 
 export function getMeetingsWorkspaceData(clientId: number) {
@@ -10592,6 +10594,7 @@ export function getMeetingsWorkspaceData(clientId: number) {
     summaryTitle: m.summary_title ?? "",
     notes: listMeetingNotes(m.id).map((n) => ({ id: n.id, text: n.text, createdAt: n.created_at })),
     seriesId: m.series_id ?? null,
+    kind: m.meeting_type ?? "checkin",
   });
   const mine = listMeetings(clientId);
   const scheduled = mine.filter((m) => m.status === "scheduled" && m.date >= today).sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));

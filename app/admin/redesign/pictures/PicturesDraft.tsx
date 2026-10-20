@@ -182,7 +182,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
   return (
     <div className="rd trn rls rp">
       {/* ---- Header, as Training's; no fact line (21 Oct, Alex). */}
-      <header className="trn-head">
+      <header className="trn-head bare">
         <div className="trn-head-main">
           <span className="trn-eyebrow">Progress pictures</span>
           <div className="trn-name-row">

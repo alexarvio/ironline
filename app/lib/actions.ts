@@ -2154,6 +2154,11 @@ export async function updateMeetingAction(formData: FormData) {
   if (formData.has("meetingNotes")) patch.meeting_notes = String(formData.get("meetingNotes") ?? "");
   if (formData.has("summary")) patch.summary = String(formData.get("summary") ?? "").trim() || null;
   if (formData.has("summaryTitle")) patch.summary_title = String(formData.get("summaryTitle") ?? "").trim().slice(0, 80) || null;
+  // The kind of call, changed on Reschedule (21 Oct).
+  if (formData.has("meetingType")) {
+    const t = String(formData.get("meetingType") ?? "");
+    if (isMeetingTypeId(t)) patch.meeting_type = t;
+  }
   if (formData.has("date")) {
     const date = String(formData.get("date") ?? "");
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) patch.date = date;

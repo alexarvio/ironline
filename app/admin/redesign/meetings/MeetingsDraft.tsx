@@ -3,13 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addEventFromMeetingNoteAction, addMeetingAction, completeMeetingAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
-import { MEETING_TYPES, type MeetingTypeId } from "../../../lib/meetingTypes";
+import { MEETING_TYPES, meetingTypeOf, type MeetingTypeId } from "../../../lib/meetingTypes";
 import { agreedPoints } from "../../../lib/meetingDates";
 import type React from "react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, ChatIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, CheckIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
@@ -59,6 +59,8 @@ export type DraftMeeting = {
   goals: DraftGoal[];
   /** Set on a repeating call: the series it belongs to. */
   seriesId: number | null;
+  /** What kind of call (9 Oct): Check-in, Review or Other. */
+  kind: MeetingTypeId;
 };
 export type DraftDot = { date: string; time: string; durationMinutes: number; name: string; topic: string; mine: boolean; completed: boolean };
 export type DraftMeetings = {
@@ -110,6 +112,35 @@ const inDaysLabel = (today: string, date: string) => {
   return n <= 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`;
 };
 const STATUS: Record<DraftMeeting["status"], { text: string; cls: string }> = { scheduled: { text: "Scheduled", cls: "" }, completed: { text: "Completed", cls: "up" }, "no-show": { text: "No-show", cls: "down" }, cancelled: { text: "Cancelled", cls: "" } };
+/** A call's title (21 Oct, Alex): the recap's title once written, else the topic, else its kind ("Review call"). */
+const titleOf = (m: { summaryTitle: string; topic: string; kind: MeetingTypeId }) => m.summaryTitle.trim() || m.topic.trim() || `${meetingTypeOf(m.kind).label} call`;
+
+/** The title with the kind after it; with no title of its own, the kind's name faint (the tag would say it twice). */
+function CallTitle({ m }: { m: { summaryTitle: string; topic: string; kind: MeetingTypeId } }) {
+  const own = m.summaryTitle.trim() || m.topic.trim();
+  return own ? (
+    <>
+      {own}
+      <KindTag kind={m.kind} />
+    </>
+  ) : (
+    <span className="rt-untitled">{titleOf(m)}</span>
+  );
+}
+
+/** The kind of call as a tag in its colour (21 Oct, Alex: it showed nowhere): the tint behind, the icon and word in it. */
+function KindTag({ kind }: { kind: MeetingTypeId }) {
+  const t = meetingTypeOf(kind);
+  return (
+    <span className="rt-kind" style={{ color: t.color, background: `rgba(${t.rgb}, 0.12)` }}>
+      <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={t.icon} />
+      </svg>
+      {t.label}
+    </span>
+  );
+}
+
 const providerOf = (link: string) => {
   try {
     const host = new URL(link.trim()).hostname.toLowerCase();
@@ -151,8 +182,6 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
     setMeetings([...(plan.upcoming ? [plan.upcoming] : []), ...plan.alsoScheduled, ...plan.past]);
   }
   const [dlg, setDlg] = useState<Dlg>(null);
-  // Under the next call, one box at a time (6 Oct): prep notes and meeting notes are the coach's own; the summary is what the client gets on Home.
-  const [notesTab, setNotesTab] = useState<"prep" | "meeting" | "summary">("prep");
   // Messaging slides the chat in from the right (ChatPanel, 2 Oct).
   const openChat = useOpenChat();
   const close = () => setDlg(null);
@@ -169,18 +198,152 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
   const upcoming = scheduled[0] ?? null;
   const also = scheduled.slice(1);
   const past = meetings.filter((m) => !(m.status === "scheduled" && m.date >= today)).sort((a, b) => (a.date < b.date ? 1 : -1));
-  const [openPast, setOpenPast] = useState<number | null>(past[0]?.id ?? null);
+  // None open at first (21 Oct, Alex): a row opens when it is clicked.
+  const [openPast, setOpenPast] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState(upcoming?.date ?? today);
   // The month's dots: what came from the server, with what was done here on top.
   const dots: DraftDot[] = [...plan.dots.filter((d) => !d.mine || meetings.some((m) => m.date === d.date && m.time === d.time && m.status !== "cancelled")), ...meetings.filter((m) => m.id < 0 && m.status !== "cancelled").map((m) => ({ date: m.date, time: m.time, durationMinutes: m.durationMinutes, name: firstName, topic: m.topic, mine: true, completed: m.status === "completed" }))];
 
-  const pGrid = { gridTemplateColumns: "20px 140px minmax(200px, 1fr) 130px 32px", columnGap: 24 } as const;
+  // ---- A call still to come, as the next call shows it (21 Oct, Alex: an Also scheduled row opens on the same): its title
+  // typed in place, when, its link, and the notes one at a time. In a row the tile, the eyebrow and when are the row's own.
+  const [tabs, setTabs] = useState<Record<number, "prep" | "meeting" | "summary">>({});
+  const [openAlso, setOpenAlso] = useState<number | null>(null);
+  const savedTopic = (id: number) => [plan.upcoming, ...plan.alsoScheduled, ...plan.past].find((x) => x?.id === id)?.topic ?? "";
+  const aGrid = { gridTemplateColumns: "44px minmax(200px, 1fr) auto 90px 32px", columnGap: 24 } as const;
+  const callBody = (m: DraftMeeting) => {
+    const tab = tabs[m.id] ?? "prep";
+    return (
+      <>
+        <div className="rt-band">
+          <div className="rt-band-main">
+            <input
+              className="rt-topic"
+              value={m.topic}
+              onChange={(e) => patchMeeting(m.id, { topic: e.target.value })}
+              onBlur={() => m.topic.trim() !== savedTopic(m.id) && act(() => updateMeetingAction(fd({ id: m.id, topic: m.topic.trim() })), `Topic: ${m.topic.trim() || "Check-in call"}`)}
+              onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
+              placeholder="Topic"
+              aria-label="Topic"
+            />
+          </div>
+          <div className="rt-band-right">
+            {m.link ? (
+              <>
+                <a className="trn-pill" href={m.link} target="_blank" rel="noopener noreferrer">
+                  <PlayIcon /> Join {m.provider}
+                </a>
+                <span className="rt-host">
+                  {m.host}
+                  <button type="button" onClick={() => setDlg({ kind: "link", meetingId: m.id })}>
+                    Edit
+                  </button>
+                </span>
+              </>
+            ) : (
+              <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "link", meetingId: m.id })}>
+                <PlusIcon /> Add a link
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="rt-body">
+          {/* Prep notes and meeting notes are the coach's own; the summary is what the client gets on Home once the call is completed. */}
+          <div className="rt-notes-tabs">
+            <div className="rd-btn-group" role="radiogroup" aria-label="Notes">
+              {(["prep", "meeting", "summary"] as const).map((t) => (
+                <button key={t} type="button" role="radio" className={tab === t ? "on" : ""} aria-checked={tab === t} onClick={() => setTabs((x) => ({ ...x, [m.id]: t }))}>
+                  {t === "prep" ? "Prep notes" : t === "meeting" ? "Meeting notes" : `Summary for ${firstName}`}
+                </button>
+              ))}
+            </div>
+          </div>
+          {tab === "prep" ? (
+            <PrepNotes
+              key={`p${m.id}`}
+              value={m.prepNotes}
+              onSave={(v) => {
+                patchMeeting(m.id, { prepNotes: v });
+                act(() => updateMeetingAction(fd({ id: m.id, prepNotes: v })), "Prep notes");
+              }}
+            />
+          ) : tab === "meeting" ? (
+            <PrepNotes
+              key={`m${m.id}`}
+              label="Meeting notes"
+              value={m.meetingNotes}
+              onSave={(v) => {
+                patchMeeting(m.id, { meetingNotes: v });
+                act(() => updateMeetingAction(fd({ id: m.id, meetingNotes: v })), "Meeting notes");
+              }}
+            />
+          ) : (
+            <PastBody
+              key={`s${m.id}`}
+              bare
+              m={m}
+              firstName={firstName}
+              onPatch={(f) => {
+                patchMeeting(m.id, f);
+                if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: m.id, summary: f.summary ?? m.summary, summaryTitle: f.summaryTitle ?? m.summaryTitle })));
+              }}
+              onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: m.id, text: line, date: m.date })), `Added to ${firstName}'s events: ${line}`)}
+            />
+          )}
+        </div>
+      </>
+    );
+  };
+
+  // A call still to come as a row (21 Oct, Alex): the date tile, its title with the chevron after it, its facts in grey,
+  // how soon, ⋯; open, the call's body under it. The next call and Also scheduled are both this.
+  const [nextOpen, setNextOpen] = useState(true);
+  const callRow = (m: DraftMeeting, isOpen: boolean, toggle: () => void) => (
+    <div key={m.id} className={`rd-row rt-arow${isOpen ? " open" : ""}`}>
+      {/* A click anywhere opens it; for the keyboard the title is the button, ⋯ its sibling (no controls nested in a button). */}
+      <div className="rd-row-main" style={aGrid} onClick={toggle}>
+        <span className="rt-tile">
+          <small>{monthCap(m.date)}</small>
+          <b>{dayNum(m.date)}</b>
+        </span>
+        <span className="rd-ex">
+          <span className="rd-ex-name rt-call">
+            <button type="button" className="rd-row-hit" aria-expanded={isOpen}>
+              <CallTitle m={m} />
+              <Fold open={isOpen} />
+            </button>
+          </span>
+        </span>
+        <span className="rt-facts">
+          <SepJoin parts={[m.time ? `${m.time} – ${endTime(m.time, m.durationMinutes)} ${zoneOf(m)}` : null, `${m.durationMinutes} min`, m.link ? m.provider : null]} />
+        </span>
+        <span className="rd-num quiet">{inDaysLabel(today, m.date)}</span>
+        <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${m.topic || "call"}`}>
+              <MoreIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="pb-menu">
+              <DropdownMenuItem onSelect={() => setDlg({ kind: "schedule", date: m.date, reschedule: m })}>
+                <CalendarIcon /> Reschedule
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "delete", meetingId: m.id })}>
+                <TrashIcon /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </span>
+      </div>
+      {isOpen && <div className="rt-rowbody">{callBody(m)}</div>}
+    </div>
+  );
+  const pGrid = { gridTemplateColumns: "150px minmax(200px, 1fr) 130px 32px", columnGap: 24 } as const;
 
   return (
     // Built as the track tabs are (21 Oct, Alex): Training's header, each section's title on the page and its content in one hairline card.
     <div className="rd trn rls rt">
       {/* ---- Header. */}
-      <header className="trn-head">
+      <header className="trn-head bare">
         <div className="trn-head-main">
           <span className="trn-eyebrow">Meetings</span>
           <div className="trn-name-row">
@@ -188,8 +351,9 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
           </div>
         </div>
         <div className="trn-head-actions">
-          <button type="button" className="trn-btn primary rt-head-btn" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null })}>
-            <PlusIcon /> Schedule a meeting
+          {/* White pills, as Training's Phase goals and Note (21 Oct, Alex: the black ones were heavy). */}
+          <button type="button" className="trn-pill" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null })}>
+            <CalendarIcon /> Schedule a meeting
           </button>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="trn-more" aria-label="More for meetings">
@@ -213,8 +377,8 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
               <SepJoin parts={[`“${plan.request.about}”`, plan.request.whenSuits]} />
             </span>
           </span>
-          <button type="button" className="trn-btn primary" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null, topic: plan.request!.about })}>
-            <PlusIcon /> Schedule a call
+          <button type="button" className="trn-pill" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null, topic: plan.request!.about })}>
+            <CalendarIcon /> Schedule a call
           </button>
         </section>
       )}
@@ -226,118 +390,20 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
               <h2>Next call</h2>
             </div>
             <div className="trn-weekhead-actions">
-              {/* The one button that commits, then the rest under ⋯ (6 Oct: Reschedule moved in beside Delete, so the menu has two things in it). */}
-              <button type="button" className="trn-btn primary" onClick={() => setDlg({ kind: "complete", meetingId: upcoming.id })}>
-                Mark completed
+              {/* The one button that commits; Reschedule and Delete are the row's ⋯, as on every call. */}
+              <button type="button" className="trn-pill" onClick={() => setDlg({ kind: "complete", meetingId: upcoming.id })}>
+                <CheckIcon /> Mark completed
               </button>
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className="trn-more" aria-label="More for the next call">
-                  <MoreIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="pb-menu">
-                  <DropdownMenuItem onSelect={() => setDlg({ kind: "schedule", date: upcoming.date, reschedule: upcoming })}>
-                    <CalendarIcon /> Reschedule
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "delete", meetingId: upcoming.id })}>
-                    <TrashIcon /> Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
-          <div className="rls-card rt-card">
-            <div className="rt-band">
-              <span className="rt-tile">
-                <small>{monthCap(upcoming.date)}</small>
-                <b>{dayNum(upcoming.date)}</b>
-              </span>
-              <div className="rt-band-main">
-                <span className="rt-eyebrow">
-                  <SepJoin parts={["Upcoming", inDaysLabel(today, upcoming.date)]} />
-                </span>
-                <input
-                  className="rt-topic"
-                  value={upcoming.topic}
-                  onChange={(e) => patchMeeting(upcoming.id, { topic: e.target.value })}
-                  onBlur={() => upcoming.topic.trim() !== (plan.upcoming?.topic ?? "") && act(() => updateMeetingAction(fd({ id: upcoming.id, topic: upcoming.topic.trim() })), `Topic: ${upcoming.topic.trim() || "Check-in call"}`)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
-                  placeholder="Topic"
-                  aria-label="Topic"
-                />
-                <span className="rt-when">
-                  <SepJoin parts={[dayMonth(upcoming.date), upcoming.time ? `${upcoming.time} – ${endTime(upcoming.time, upcoming.durationMinutes)} ${zoneOf(upcoming)}` : null, `${upcoming.durationMinutes} min`]} />
-                </span>
-              </div>
-              <div className="rt-band-right">
-                {upcoming.link ? (
-                  <>
-                    <a className="trn-btn primary" href={upcoming.link} target="_blank" rel="noopener noreferrer">
-                      <PlayIcon /> Join {upcoming.provider}
-                    </a>
-                    <span className="rt-host">
-                      {upcoming.host}
-                      <button type="button" onClick={() => setDlg({ kind: "link", meetingId: upcoming.id })}>
-                        Edit
-                      </button>
-                    </span>
-                  </>
-                ) : (
-                  <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "link", meetingId: upcoming.id })}>
-                    <PlusIcon /> Add a link
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="rt-body">
-              {/* Prep notes and meeting notes are the coach's own; the summary is what the client gets on Home once the call is completed. */}
-              <div className="rt-notes-tabs">
-                <div className="rd-btn-group" role="radiogroup" aria-label="Notes">
-                  {(["prep", "meeting", "summary"] as const).map((t) => (
-                    <button key={t} type="button" role="radio" className={notesTab === t ? "on" : ""} aria-checked={notesTab === t} onClick={() => setNotesTab(t)}>
-                      {t === "prep" ? "Prep notes" : t === "meeting" ? "Meeting notes" : `Summary for ${firstName}`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {notesTab === "prep" ? (
-                <PrepNotes
-                  key={upcoming.id}
-                  value={upcoming.prepNotes}
-                  onSave={(v) => {
-                    patchMeeting(upcoming.id, { prepNotes: v });
-                    act(() => updateMeetingAction(fd({ id: upcoming.id, prepNotes: v })), "Prep notes");
-                  }}
-                />
-              ) : notesTab === "meeting" ? (
-                <PrepNotes
-                  key={`m${upcoming.id}`}
-                  label="Meeting notes"
-                  value={upcoming.meetingNotes}
-                  onSave={(v) => {
-                    patchMeeting(upcoming.id, { meetingNotes: v });
-                    act(() => updateMeetingAction(fd({ id: upcoming.id, meetingNotes: v })), "Meeting notes");
-                  }}
-                />
-              ) : (
-                <PastBody
-                  key={upcoming.id}
-                  bare
-                  m={upcoming}
-                  firstName={firstName}
-                  onPatch={(f) => {
-                    patchMeeting(upcoming.id, f);
-                    if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: upcoming.id, summary: f.summary ?? upcoming.summary, summaryTitle: f.summaryTitle ?? upcoming.summaryTitle })));
-                  }}
-                  onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: upcoming.id, text: line, date: upcoming.date })), `Added to ${firstName}'s events: ${line}`)}
-                />
-              )}
-            </div>
+          {/* The same row as Also scheduled (21 Oct, Alex: the two exactly alike), open at first. */}
+          <div className="rls-card rt-card rt-calls">
+            <div className="rd-rows">{callRow(upcoming, nextOpen, () => setNextOpen((o) => !o))}</div>
           </div>
         </section>
       )}
 
-      {/* ---- Also scheduled. */}
+      {/* ---- Also scheduled: a row a call; it opens on what the next call has (21 Oct, Alex): its title to type, its link, its notes. */}
       {also.length > 0 && (
         <section className="rls-section">
           <div className="trn-weekhead">
@@ -345,42 +411,9 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
               <h2>Also scheduled</h2>
             </div>
           </div>
-          <div className="rls-card rt-card">
+          <div className="rls-card rt-card rt-calls">
             <div className="rd-rows">
-              {also.map((m) => (
-                <div key={m.id} className="rd-row">
-                  <div className="rd-row-main static" style={pGrid}>
-                    <span />
-                    <span className="rt-tile sm">
-                      <small>{monthCap(m.date)}</small>
-                      <b>{dayNum(m.date)}</b>
-                    </span>
-                    <span className="rd-ex">
-                      <span className="rd-ex-name">{m.topic || "Check-in call"}</span>
-                      <small>
-                        <SepJoin parts={[dayMonth(m.date), m.time ? `${m.time} – ${endTime(m.time, m.durationMinutes)} ${zoneOf(m)}` : null, `${m.durationMinutes} min`, m.provider]} />
-                      </small>
-                    </span>
-                    <span className="rd-num quiet">{inDaysLabel(today, m.date)}</span>
-                    <span className="rd-row-more">
-                      <DropdownMenu modal={false}>
-                        <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${m.topic || "call"}`}>
-                          <MoreIcon />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="pb-menu">
-                          <DropdownMenuItem onSelect={() => setDlg({ kind: "schedule", date: m.date, reschedule: m })}>
-                            <CalendarIcon /> Reschedule
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "delete", meetingId: m.id })}>
-                            <TrashIcon /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </span>
-                  </div>
-                </div>
-              ))}
+              {also.map((m) => callRow(m, openAlso === m.id, () => setOpenAlso((x) => (x === m.id ? null : m.id))))}
             </div>
           </div>
         </section>
@@ -399,7 +432,6 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
           ) : (
             <div className="rd-rows">
               <div className="rd-cols" aria-hidden="true" style={pGrid}>
-                <span />
                 <span>Date</span>
                 <span>Call</span>
                 <span>Status</span>
@@ -410,15 +442,19 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                 const st = STATUS[m.status];
                 return (
                   <div key={m.id} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
-                    <div className="rd-row-main" style={pGrid} onClick={() => setOpenPast((x) => (x === m.id ? null : m.id))} role="button" tabIndex={0} aria-expanded={isOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpenPast((x) => (x === m.id ? null : m.id)))}>
-                      <span />
+                    {/* A click anywhere opens it; for the keyboard the date is the button, ⋯ its sibling. */}
+                    <div className="rd-row-main" style={pGrid} onClick={() => setOpenPast((x) => (x === m.id ? null : m.id))}>
                       <span className="rd-ex">
-                        <span className="rd-ex-name">{dateCol(m.date)}</span>
+                        <span className="rd-ex-name rt-date">
+                          <button type="button" className="rd-row-hit" aria-expanded={isOpen}>
+                            {dateCol(m.date)}
+                            <Fold open={isOpen} />
+                          </button>
+                        </span>
                       </span>
                       <span className="rd-ex">
-                        <span className="rd-ex-name">
-                          {m.topic || "Check-in call"}
-                          <Fold open={isOpen} />
+                        <span className="rd-ex-name rt-call">
+                          <CallTitle m={m} />
                         </span>
                       </span>
                       <span>
@@ -485,8 +521,8 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
             today={today}
             onSave={(v) => {
               if (dlg.reschedule) {
-                patchMeeting(dlg.reschedule.id, { ...v, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" });
-                act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `Moved to ${dayMonth(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
+                patchMeeting(dlg.reschedule.id, { ...v, kind: v.meetingType, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" });
+                act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", meetingType: v.meetingType })), `Moved to ${dayMonth(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
               } else {
                 act(
                   () => addMeetingAction(fd({ clientId, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", repeatWeeks: v.repeatWeeks, count: v.count, meetingType: v.meetingType })),
@@ -578,9 +614,10 @@ function PastBody({ m, firstName, onPatch, bare, onAddEvent }: { m: DraftMeeting
   const [recap, setRecap] = useState(m.summary);
   // The title starts as the call's name (the Meetings screen's subheading), unless the coach wrote one.
   const [title, setTitle] = useState(m.summaryTitle || m.topic || "Check-in call");
-  const changed = recap.trim() !== m.summary.trim() || title.trim() !== (m.summaryTitle || m.topic || "Check-in call").trim();
+  // Bare (a call still to come) has no title field: the recap title keeps following the topic, so it is never compared or sent.
+  const changed = recap.trim() !== m.summary.trim() || (!bare && title.trim() !== (m.summaryTitle || m.topic || "Check-in call").trim());
   const save = () => {
-    onPatch({ summary: recap.trim(), summaryTitle: title.trim() });
+    onPatch(bare ? { summary: recap.trim() } : { summary: recap.trim(), summaryTitle: title.trim() });
     savedToast(`Summary · ${dayMonth(m.date)}`);
   };
   const cancel = () => {
@@ -694,7 +731,7 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
   });
   const [duration, setDuration] = useState(reschedule?.durationMinutes ?? 30);
   // What kind of call (9 Oct): the client's Meetings screen colours it by this.
-  const [mtype, setMtype] = useState<MeetingTypeId>("checkin");
+  const [mtype, setMtype] = useState<MeetingTypeId>(reschedule?.kind ?? "checkin");
   const [topic, setTopic] = useState(reschedule?.topic ?? initialTopic);
   const [link, setLink] = useState(reschedule?.link ?? "");
   // A new call can repeat: every 1, 2 or 4 weeks, this many times (0: once).
@@ -705,7 +742,7 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
   const linkOk = link.trim() === "" || providerOf(link) != null;
   const kind = MEETING_TYPES.find((t) => t.id === mtype) ?? MEETING_TYPES[0];
   return (
-    <DialogContent className="npd rt-npd" style={{ "--npd-c": reschedule ? "#141a24" : kind.color, "--npd-rgb": reschedule ? "20,26,36" : kind.rgb } as React.CSSProperties}>
+    <DialogContent className="npd rt-npd" style={{ "--npd-c": kind.color, "--npd-rgb": kind.rgb } as React.CSSProperties}>
       <div className="npd-head">
         <DialogTitle className="npd-title">{reschedule ? `Reschedule ${reschedule.topic || "the call"}` : "Schedule a meeting"}</DialogTitle>
         <span className="npd-tools">
@@ -716,21 +753,19 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
       </div>
       <DialogDescription className="sr-only">{reschedule ? "A new day and time for the call" : "The day, time and length of a new call"}</DialogDescription>
 
-      {!reschedule && (
-        <div className="npd-field">
-          <span className="npd-label">Kind of call</span>
-          <div className="npd-tiles" role="radiogroup" aria-label="Kind of call">
-            {MEETING_TYPES.map((t) => (
-              <button key={t.id} type="button" role="radio" aria-checked={mtype === t.id} className={`npd-tile${mtype === t.id ? " on" : ""}`} style={{ "--tc": t.color } as React.CSSProperties} onClick={() => setMtype(t.id)}>
-                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d={t.icon} />
-                </svg>
-                {t.label}
-              </button>
-            ))}
-          </div>
+      <div className="npd-field">
+        <span className="npd-label">Kind of call</span>
+        <div className="npd-tiles" role="radiogroup" aria-label="Kind of call">
+          {MEETING_TYPES.map((t) => (
+            <button key={t.id} type="button" role="radio" aria-checked={mtype === t.id} className={`npd-tile${mtype === t.id ? " on" : ""}`} style={{ "--tc": t.color } as React.CSSProperties} onClick={() => setMtype(t.id)}>
+              <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d={t.icon} />
+              </svg>
+              {t.label}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       <label className="npd-field">
         <span className="npd-label">Topic</span>

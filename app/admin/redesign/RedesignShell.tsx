@@ -15,6 +15,8 @@ import HomeDraft, { type DraftHome } from "./home/HomeDraft";
 import NoProgramme from "./training/NoProgramme";
 import NoPhase from "./NoPhase";
 import MessagesDraft, { type DraftLink, type DraftMessages } from "./messages/MessagesDraft";
+import { chatDraftThreadAction, chatListAction } from "./messages/actions";
+import ChatList, { ChatsBack, type DockChat } from "./ChatList";
 import InvoicesDraft from "./invoices/InvoicesDraft";
 import RedesignRail from "./RedesignRail";
 import type { DraftInvoices, RailData } from "./loaders";
@@ -40,6 +42,10 @@ const TABS = [
 type PageTab = (typeof TABS)[number]["key"];
 export type RedesignTab = PageTab | "messages";
 type ChatState = { mounted: boolean; open: boolean; about: DraftLink | null; opened: number; focus: number | null };
+/** What the chat panel shows (21 Oct, Alex): this client's thread, every chat, or another client's thread, the page staying put. */
+type ChatView = "own" | "list" | "other";
+const CHAT_LIST_POLL_MS = 15000;
+const firstOf = (name: string) => name.split(" ")[0];
 
 // Every tab stays mounted (what was typed on one survives a switch), so a
 // page read used to redraw all eight, hidden ones too, after any save: a
@@ -85,6 +91,19 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   // so each one sets what the reply is about (and the message to land on).
   const [chat, setChat] = useState<ChatState>({ mounted: false, open: false, about: null, opened: 0, focus: null });
   const closeChat = () => setChat((c) => ({ ...c, open: false }));
+  // All chats (21 Oct, Alex): the panel can show every chat and another
+  // client's thread, so someone else writing is answered without leaving
+  // this client's page. This client's thread stays mounted behind (what was
+  // typed in it survives); the list asks for itself while the panel is open.
+  const [view, setView] = useState<ChatView>("own");
+  const [chats, setChats] = useState<DockChat[] | null>(null);
+  const [other, setOther] = useState<DockChat | null>(null);
+  // The last other client's thread stays mounted behind too (hidden), so a reply half-typed to them survives All chats.
+  const [otherThread, setOtherThread] = useState<{ id: number; name: string; plan: DraftMessages } | null>(null);
+  const [otherOpened, setOtherOpened] = useState(0);
+  const picking = useRef<number | null>(null);
+  // When each chat was last left on screen: a dot stays off until something newer.
+  const [seenAt, setSeenAt] = useState<Record<number, number>>({});
   // The same function for the life of the page (2 Oct): it reaches every tab
   // through OpenChatContext, and a new one each render redrew them all.
   const mountedRef = useRef(false);
@@ -92,6 +111,9 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
     mountedRef.current = chat.mounted;
   }, [chat.mounted]);
   const openChat = useCallback((about?: Parameters<OpenChat>[0], focus: number | null = null) => {
+    // Opened from the page (its tab, a reply), it is this client's thread.
+    setView("own");
+    picking.current = null;
     const next = (c: ChatState) => ({ mounted: true, open: true, about: about ? { ...about, gone: false } : null, opened: c.opened + 1, focus });
     if (mountedRef.current) setChat(next);
     else {
@@ -105,9 +127,62 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   // opening it clears the dot here, until a newer message from the client.
   const newestFromClient = messages.messages.find((m) => !m.mine)?.id ?? null;
   const [seenNewest, setSeenNewest] = useState<number | null>(null);
-  if (chat.open && seenNewest !== newestFromClient) setSeenNewest(newestFromClient);
+  // Seen only while this client's own thread is on screen (not All chats, not another client's thread).
+  if (chat.open && view === "own" && seenNewest !== newestFromClient) setSeenNewest(newestFromClient);
   const chatDot = !!messages.unread && seenNewest !== newestFromClient;
   const panelRef = useRef<HTMLElement>(null);
+  // Every chat, asked for on opening and every 15 s while open (as the thread polls).
+  const pullChats = useCallback(() => {
+    chatListAction()
+      .then(setChats)
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!chat.open) return;
+    pullChats();
+    const id = setInterval(pullChats, CHAT_LIST_POLL_MS);
+    return () => clearInterval(id);
+  }, [chat.open, pullChats]);
+  const inOther = view === "other" && other != null && otherThread?.id === other.id;
+  const shownId = view === "own" ? clientId : inOther ? other.id : null;
+  const isUnread = (c: DockChat) => c.unread && (c.last?.at ?? 0) > (seenAt[c.id] ?? 0);
+  const othersUnread = (chats ?? []).filter((c) => c.id !== shownId && isUnread(c)).length;
+  const toChatList = () => {
+    if (shownId != null) setSeenAt((s) => ({ ...s, [shownId]: Date.now() }));
+    picking.current = null;
+    setView("list");
+    pullChats();
+  };
+  const pickChat = async (c: DockChat) => {
+    setSeenAt((s) => ({ ...s, [c.id]: Date.now() }));
+    if (c.id === clientId) {
+      picking.current = null;
+      setView("own");
+      // The list goes, so the keyboard lands in this client's box (no `opened` bump: that would reset the link set).
+      requestAnimationFrame(() => panelRef.current?.querySelector<HTMLTextAreaElement>(".rd-chatview.own .rm-box")?.focus({ preventScroll: true }));
+      return;
+    }
+    // The thread kept behind shows at once, with its reply and link, and takes the keyboard; what is new comes in under it.
+    const kept = otherThread?.id === c.id;
+    picking.current = c.id;
+    setOther(c);
+    setView("other");
+    if (kept) requestAnimationFrame(() => panelRef.current?.querySelector<HTMLTextAreaElement>(".rd-chatview.other .rm-box")?.focus({ preventScroll: true }));
+    const plan = await chatDraftThreadAction(c.id).catch(() => null);
+    if (picking.current !== c.id) return;
+    if (kept) {
+      if (plan) setOtherThread({ id: c.id, name: c.name, plan });
+      return;
+    }
+    if (!plan) {
+      // Not theirs to open (or the call failed): back on the list.
+      setOther(null);
+      return;
+    }
+    setOtherThread({ id: c.id, name: c.name, plan });
+    // A new thread lands on its newest message with the box ready.
+    setOtherOpened((n) => n + 1);
+  };
   // Open, it stays open (9 Oct): across tabs, through clicks on the page.
   // Only Escape and its own X close it. The page makes room beside it (the
   // rd-frame attribute below), so nothing sits behind it.
@@ -123,6 +198,10 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
     setSeenClient(clientId);
     setTab(pageTab(initialTab));
     setChat({ mounted: false, open: false, about: null, opened: 0, focus: null });
+    setView("own");
+    setOther(null);
+    // The page's client now: their thread is the page's own, never a second copy behind it.
+    setOtherThread((t) => (t?.id === clientId ? null : t));
   }
   // The address asks for the chat: /messages, or ?chat=<message> from the
   // feed or Home (the page under it is what the message is about). It opens
@@ -236,8 +315,22 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
         {chatDot && <i className="rd-chattab-dot" aria-hidden="true" />}
       </button>
       {chat.mounted && (
-        <aside ref={panelRef} className={`rd-chatpanel${chat.open ? " open" : ""}`} aria-label={`Chat with ${firstName}`} aria-hidden={!chat.open} inert={chat.open ? undefined : true}>
-          <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} active={chat.open} panel={{ about: chat.about, opened: chat.opened, onClose: closeChat, focus: chat.focus }} />
+        <aside ref={panelRef} className={`rd-chatpanel rd-chatdock${chat.open ? " open" : ""}`} aria-label={view === "own" ? `Chat with ${firstName}` : inOther ? `Chat with ${firstOf(other.name)}` : "Chats"} aria-hidden={!chat.open} inert={chat.open ? undefined : true}>
+          {/* All chats (21 Oct, Alex): the list, or a way back to it over a thread. */}
+          {view === "own" || inOther ? (
+            <ChatsBack unread={othersUnread} onClick={toChatList} />
+          ) : (
+            // Mounted only from ‹ All chats: the keyboard lands in its search.
+            <ChatList chats={chats} title={view === "other" && other ? `Opening ${firstOf(other.name)}…` : "Chats"} here={clientId} isUnread={isUnread} onPick={(c) => void pickChat(c)} onClose={closeChat} autoFocus />
+          )}
+          <div className="rd-chatview own" hidden={view !== "own"}>
+            <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} active={chat.open && view === "own"} panel={{ about: chat.about, opened: chat.opened, onClose: closeChat, focus: chat.focus }} />
+          </div>
+          {otherThread && otherThread.id !== clientId && (
+            <div className="rd-chatview other" hidden={!inOther}>
+              <MessagesDraft key={otherThread.id} clientId={otherThread.id} firstName={firstOf(otherThread.name)} plan={otherThread.plan} active={chat.open && inOther} panel={{ about: null, opened: otherOpened, onClose: closeChat, focus: null }} />
+            </div>
+          )}
         </aside>
       )}
       <Toaster />
