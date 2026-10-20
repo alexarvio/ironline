@@ -1095,14 +1095,18 @@ function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: 
       </DialogDescription>
       <div className="mvd-rows">
         {rows.map((r) => (
-          // No arrows (21 Oct, Alex): the new value in the track's ink, the old one after it, struck through.
+          // Two columns, no arrows (21 Oct, Alex): what it was, struck through, then the new value in the track's ink.
           <div key={r.label} className={`mvd-row${r.was === r.now ? " same" : ""}`}>
             <span className="mvd-label">{r.label}</span>
-            <span className="mvd-now">{r.now}</span>
-            {r.was !== r.now && (
-              <s className="mvd-was" aria-label={`was ${r.was}`}>
-                {r.was}
-              </s>
+            {r.was === r.now ? (
+              <span className="mvd-now">{r.now}</span>
+            ) : (
+              <>
+                <s className="mvd-was" aria-label={`was ${r.was}`}>
+                  {r.was}
+                </s>
+                <span className="mvd-now">{r.now}</span>
+              </>
             )}
           </div>
         ))}
