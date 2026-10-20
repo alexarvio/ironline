@@ -96,8 +96,7 @@
 .rd.pln .rq-track { gap: 7px; height: auto; padding: 0; border-radius: 0; background: none; font-size: 12.5px; font-weight: 600; color: #141a24; }
 .rd.pln .rq-track-ic { display: inline-flex; }
 /* A phase's outline in the colour it is now (20 Oct, Alex): its track while live, blue while scheduled, at half strength
-   (set inline from phaseChrome); a draft keeps its dashed peach edge. Event bars stay quiet until pointed at. */
-.rd.pln .rq-evbar:not(:hover):not(.dragging) { border-color: transparent !important; }
+   (set inline from phaseChrome); a draft keeps its dashed peach edge. An event bar is outlined the same way, in its kind's colour. */
 /* A past event opens to be read, it doesn't drag (20 Oct, Alex). */
 .rd.pln .rq-evbar.past, .rd.pln .rq-pin.past, .rd.pln .rq-pin.past i { cursor: pointer; }
 /* A phase with nothing in it yet (20 Oct, Alex): the warn rust sign before the state pill, the message floating over on hover. */
@@ -233,14 +232,18 @@ body:has(.npd.rq-dlg) .rdp-pop .rdp-foot .rd-btn.ghost.wide { font-weight: 600; 
 .rq-evlog { padding: 4px 10px 8px; border-top: 1px solid #eceff3; }
 .rq-evlog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px 10px 14px; }
 .rq-evlog-empty { margin: 0; padding: 8px 14px 12px; font-size: 13px; color: #8b93a1; }
-.rd-row-main.rq-evrow, .rq-evrow { display: grid; grid-template-columns: 150px 110px minmax(0, 1fr) 110px; column-gap: 16px; align-items: center; cursor: pointer; }
+/* One line a row (20 Oct, Alex): when, the kind, the title, its note in a column of its own, where it stands. */
+.rd-row-main.rq-evrow, .rq-evrow { display: grid; grid-template-columns: 150px 108px minmax(0, 1fr) minmax(0, 1.4fr) 110px; column-gap: 16px; align-items: center; cursor: pointer; }
 .rq-evrow:hover { background: #fafbfd; }
 .rq-evrow-when { display: flex; flex-direction: column; gap: 1px; font-variant-numeric: tabular-nums; }
-.rq-evrow-when b { font-size: 13px; font-weight: 600; color: #141a24; }
+.rq-evrow-when b { display: flex; align-items: baseline; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; }
+/* Two dates breathe (20 Oct, Alex): a faint arrow with air either side. */
+.rq-evrow-when b i { margin: 0 9px; font-style: normal; font-weight: 500; color: #98a2b3; }
 .rq-evrow-when small { font-size: 11px; font-weight: 500; color: #8b93a1; }
-.rq-evrow-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.rq-evrow-main b { font-size: 14px; font-weight: 600; color: #141a24; }
-.rq-evrow-main small { font-size: 12.5px; font-weight: 500; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rq-evrow-main { display: flex; align-items: center; min-width: 0; }
+.rq-evrow-main b { min-width: 0; font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rq-evrow-main .rq-ev-by { flex: none; }
+.rq-evrow-note { min-width: 0; font-size: 12.5px; font-weight: 500; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rq-evrow-rel { font-size: 12px; font-weight: 600; color: #8b93a1; text-align: right; white-space: nowrap; }
 .rq-evrow-rel.coming { color: #141a24; }
 .rq-ev-past .rq-evrow-main b { color: #5b6474; }
@@ -253,7 +256,8 @@ body:has(.npd.rq-dlg) .rdp-pop .rdp-foot .rd-btn.ghost.wide { font-weight: 600; 
 .rq-evlog-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px 4px; font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .rq-ev-tools { display: flex; align-items: center; gap: 10px; }
 
-.rq-evrow .rq-state { justify-content: center; justify-self: start; min-width: 90px; }
+/* Every kind's pill the same width, whatever its word (20 Oct, Alex). */
+.rq-evrow .rq-state { justify-content: center; justify-self: stretch; box-sizing: border-box; padding: 0 6px; }
 
 .rq-bar-pill b { font-weight: 600; }
 /* An event the client added from their Home (7 Oct): said on its log row. */

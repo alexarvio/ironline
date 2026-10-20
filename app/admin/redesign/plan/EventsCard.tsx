@@ -251,8 +251,14 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
       return { ...g, laneCount: Math.max(1, lanes.length) };
     });
 
-  // The log: every event, newest first; past ones are what slid off the grid.
-  const sorted = [...events].sort((a, b) => (a.start > b.start ? -1 : 1));
+  // The log: what is on or coming, newest first, then what is over, the latest ended first (20 Oct, Alex:
+  // a trip still on sits above a supplement that ended last week, though it started earlier).
+  const sorted = [...events].sort((a, b) => {
+    const pa = a.end < today, pb = b.end < today;
+    if (pa !== pb) return pa ? 1 : -1;
+    if (pa && a.end !== b.end) return a.end > b.end ? -1 : 1;
+    return a.start > b.start ? -1 : 1;
+  });
   const listed = sorted.filter((e) => (show === "all" ? true : show === "coming" ? e.end >= today : e.end < today));
   const PAGE = 10;
   const pages = Math.max(1, Math.ceil(listed.length / PAGE));
@@ -370,7 +376,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                           key={e.id}
                           type="button"
                           className={`rq-evbar${past ? " past" : ""}${dragging ? " dragging" : ""}`}
-                          style={{ left: `${p.left}%`, width: `${p.width}%`, top: `${10 + lane * 40}px`, background: k.tint, color: k.ink, borderColor: k.line }}
+                          style={{ left: `${p.left}%`, width: `${p.width}%`, top: `${10 + lane * 40}px`, background: k.tint, color: k.ink, borderColor: `rgba(${rgbOf(k.ink)}, 0.5)` }}
                           onPointerDown={(ev) => {
                             if (past || (ev.target as HTMLElement).closest(".rq-bar-edge")) return;
                             beginDrag(ev, e, "move");
@@ -433,19 +439,27 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                 <div key={e.id} className={`rd-row${past ? " rq-ev-past" : ""}`}>
                   <button type="button" className="rd-row-main rq-evrow" onClick={() => setDlg({ event: e })}>
                     <span className="rq-evrow-when">
-                      <b>{e.repeat ? `${dayMonth(e.start)} → ${e.repeat.until ? dayMonth(e.end) : "no end"}` : e.start === e.end ? dayMonth(e.start) : `${dayMonth(e.start)} → ${dayMonth(e.end)}`}</b>
+                      {/* Two dates get room between them (20 Oct, Alex): a faint arrow with air either side. */}
+                      <b>
+                        {dayMonth(e.start)}
+                        {(e.repeat || e.start !== e.end) && (
+                          <>
+                            <i aria-hidden="true">→</i>
+                            {e.repeat && !e.repeat.until ? "no end" : dayMonth(e.end)}
+                          </>
+                        )}
+                      </b>
                       {e.repeat && <small>{repeatWords(e.repeat, { until: false })}</small>}
                     </span>
                     <span className="rq-state" style={{ background: k.tint, color: k.ink }}>
                       {k.label}
                     </span>
                     <span className="rq-evrow-main">
-                      <b>
-                        {e.title}
-                        {e.byClient && <span className="rq-ev-by">From client</span>}
-                      </b>
-                      {e.note && <small>{e.note}</small>}
+                      <b>{e.title}</b>
+                      {e.byClient && <span className="rq-ev-by">From client</span>}
                     </span>
+                    {/* The note on the same line, in its own column (20 Oct, Alex), so every row is one line high. */}
+                    <span className="rq-evrow-note">{e.note}</span>
                     <span className={`rq-evrow-rel${past ? "" : " coming"}`}>{standing(today, e)}</span>
                   </button>
                 </div>
@@ -690,24 +704,27 @@ export function EventDialog({ today, event, cats, initialStart, initialKind, rea
               </>
             )}
           </div>
-          {/* The repeat's days and its words keep their room in every shape, so the pop-up never changes height (20 Oct, Alex). */}
-          <div className="npd-repeat" style={{ visibility: shape === "repeat" ? "visible" : "hidden" }} aria-hidden={shape !== "repeat"}>
-            <div className="evr-days" role="group" aria-label="On these days">
-              {WEEKDAY_LETTERS.map((l, i) => (
-                <button key={i} type="button" className={days.includes(i + 1) ? "on" : ""} aria-pressed={days.includes(i + 1)} aria-label={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][i]} onClick={() => toggleDay(i + 1)} tabIndex={shape === "repeat" ? 0 : -1}>
-                  {l}
-                </button>
-              ))}
+          {/* The note sits right under the dates (20 Oct, Alex); the repeat's days come in between only when it repeats.
+              The month on the left stays the tallest thing, so the pop-up keeps its height in every shape. */}
+          {shape === "repeat" && (
+            <div className="npd-repeat">
+              <div className="evr-days" role="group" aria-label="On these days">
+                {WEEKDAY_LETTERS.map((l, i) => (
+                  <button key={i} type="button" className={days.includes(i + 1) ? "on" : ""} aria-pressed={days.includes(i + 1)} aria-label={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][i]} onClick={() => toggleDay(i + 1)}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <p className="npd-repeat-says">
+                <span>{days.length ? repeatWords({ days, until }) : ""}</span>
+                {until && (
+                  <button type="button" className="npd-act" onClick={() => setUntil(null)}>
+                    No end
+                  </button>
+                )}
+              </p>
             </div>
-            <p className="npd-repeat-says">
-              <span>{days.length ? repeatWords({ days, until }) : ""}</span>
-              {until && (
-                <button type="button" className="npd-act" onClick={() => setUntil(null)} tabIndex={shape === "repeat" ? 0 : -1}>
-                  No end
-                </button>
-              )}
-            </p>
-          </div>
+          )}
           <label className="npd-field">
             <span className="npd-label">Note</span>
             <textarea className="npd-line" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
