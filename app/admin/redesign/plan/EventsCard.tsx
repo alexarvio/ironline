@@ -125,7 +125,14 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
       router.refresh();
       if (said) toast.success(said);
     });
-  const [dlg, setDlg] = useState<{ event: PlanEvent | null } | null>(null);
+  const [dlg, setDlg] = useState<{ event: PlanEvent | null; /** A new one from an empty spot clicked: its day and its lane's kind. */ start?: string; kind?: string | null } | null>(null);
+  // An empty spot on the grid is a way in (20 Oct, Alex): the day under the pointer in its week's column, the lane's kind.
+  const addAt = (week: string, ev: React.MouseEvent<HTMLElement>, kind?: string | null) => {
+    if (justDragged.current || drag) return;
+    const r = ev.currentTarget.getBoundingClientRect();
+    const day = Math.max(0, Math.min(6, Math.floor(((ev.clientX - r.left) / Math.max(1, r.width)) * 7)));
+    setDlg({ event: null, start: addDays(week, day), kind });
+  };
   // Dragging on the grid (12 Oct), as the phases: a bar moves whole, or by
   // either edge; a pin moves. Nothing saves on its own: letting go opens a
   // dialog saying what changes, and Move saves it.
@@ -301,7 +308,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                 <div className="rq-tl-clip">
                   <div ref={lanesRef} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: "repeat(1, 40px)" }}>
                     {weeks.map((w, i) => (
-                      <span key={w} className="rq-cell" style={{ gridColumn: i + 1, gridRow: "1 / span 1" }} />
+                      <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: "1 / span 1" }} role="button" tabIndex={-1} aria-label={`New event in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev)} />
                     ))}
                     <button type="button" className="rq-empty" style={{ gridColumn: `${nowIdx + 1} / span ${Math.min(count - nowIdx, 8)}`, gridRow: 1 }} onClick={() => setDlg({ event: null })}>
                       None yet <b>+ Add</b>
@@ -323,7 +330,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                 <div className="rq-tl-clip">
                   <div ref={gi === 0 ? lanesRef : undefined} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${g.laneCount}, 40px)` }} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
                     {weeks.map((w, i) => (
-                      <span key={w} className="rq-cell" style={{ gridColumn: i + 1, gridRow: `1 / span ${g.laneCount}` }} />
+                      <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: `1 / span ${g.laneCount}` }} role="button" tabIndex={-1} aria-label={`New ${g.chrome.label.toLowerCase()} in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev, g.id)} />
                     ))}
                     {g.events.map((e) => {
                       const p = place(e);
@@ -463,6 +470,8 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
             today={today}
             event={dlg.event}
             cats={cats}
+            initialStart={dlg.start}
+            initialKind={dlg.kind}
             onSave={(v) => {
               const was = dlg.event;
               setDlg(null);
@@ -482,10 +491,10 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
 
 // ---- One event: what kind, what to call it, a moment or a stretch, and a note.
 /** Also opened from the Phases overview (14 Oct), on the day clicked there. */
-export function EventDialog({ today, event, cats, initialStart, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; /** A new event opens on this day. */ initialStart?: string; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
+export function EventDialog({ today, event, cats, initialStart, initialKind, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; /** A new event opens on this day. */ initialStart?: string; /** A new event from a lane: that lane's kind (null for "Event"). */ initialKind?: string | null; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
   // The six types the client's sheet has (10 Oct); the coach's own categories went, so both sides speak the same six.
-  // A new event starts on Trip, the first tile (14 Oct).
-  const [kind, setKind] = useState<string | null>(event ? event.kind : "trip");
+  // A new event starts on Trip, the first tile (14 Oct), or on the kind of the lane it was clicked on (20 Oct).
+  const [kind, setKind] = useState<string | null>(event ? event.kind : initialKind !== undefined ? initialKind : "trip");
   const [title, setTitle] = useState(event?.title ?? "");
   // Repeats (19 Oct, Alex: sports twice a week): on these weekdays from its start, until a day or with no end.
   const [shape, setShape] = useState<"event" | "period" | "repeat">(event?.repeat ? "repeat" : event ? (event.start === event.end ? "event" : "period") : "event");

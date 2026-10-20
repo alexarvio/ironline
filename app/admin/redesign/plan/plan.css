@@ -21,9 +21,10 @@
 .rq-week.now b { color: #141a24; }
 .rq-week.now small { color: #141a24; }
 .rq-tl-body { position: relative; }
-.rq-now { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px solid #141a24; z-index: 3; pointer-events: none; }
+.rq-now { position: absolute; top: 0; bottom: 0; width: 1.5px; margin-left: -0.75px; background: #141a24; z-index: 3; pointer-events: none; }
 /* The dot on the now line: black, pulsing (20 Oct, Alex). */
-.rq-now::before { content: ""; position: absolute; top: -2px; left: -4.75px; width: 8px; height: 8px; border-radius: 999px; background: #141a24; box-shadow: 0 0 0 0 rgba(20, 26, 36, 0.4); animation: rq-now-pulse 2s ease-out infinite; }
+/* Centred on the line whatever the screen (20 Oct, Alex: it sat a little off): half way across it, pulled back by half its own width. */
+.rq-now::before { content: ""; position: absolute; top: -2px; left: 50%; transform: translateX(-50%); width: 8px; height: 8px; border-radius: 999px; background: #141a24; box-shadow: 0 0 0 0 rgba(20, 26, 36, 0.4); animation: rq-now-pulse 2s ease-out infinite; }
 @keyframes rq-now-pulse { 0% { box-shadow: 0 0 0 0 rgba(20, 26, 36, 0.4); } 70% { box-shadow: 0 0 0 7px rgba(20, 26, 36, 0); } 100% { box-shadow: 0 0 0 0 rgba(20, 26, 36, 0); } }
 @media (prefers-reduced-motion: reduce) { .rq-now::before { animation: none; } }
 .rq-tl-label { display: flex; align-items: center; padding: 0 8px 0 10px; }
