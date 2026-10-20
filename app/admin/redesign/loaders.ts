@@ -10,6 +10,7 @@ import {
   clientAttention,
   getActivityFeed,
   getAssignmentsForDay,
+  laterSameSlotSessions,
   getClientProfile,
   phaseCheckInDays,
   chatQuote,
@@ -375,7 +376,12 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     const setsLogged = rows.reduce((t, r) => t + r.logged.length + (r.swapInfo?.sets.length ?? 0), 0);
     const gym = rows.flatMap((r) => [...r.logged, ...(r.swapInfo?.sets ?? [])]).find((l) => l.gym)?.gym ?? null;
     const duration = d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null;
-    return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })) };
+    // The later weeks "Also delete it from" would reach (20 Oct, Alex: it offered weeks that never had this session): the same slot, nothing logged.
+    const laterWeeks = laterSameSlotSessions(d.id)
+      .map((id) => getData().program_days.find((x) => x.id === id)?.week_number)
+      .filter((n): n is number => n != null)
+      .map((n) => n - program.start_week + 1);
+    return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })), laterWeeks };
   });
 
   // The client's rogue sessions (19 Oct, Alex): workouts of their own, off

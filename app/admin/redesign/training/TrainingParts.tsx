@@ -196,7 +196,7 @@ export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName:
 
 type Week = DraftProgram["weeks"][number];
 
-export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onAdd }: { weeks: Week[]; viewIdx: number; dateOf: (index: number) => string | null; hrefFor: (index: number) => string; isLocal: (index: number) => boolean; onShow: (index: number) => void; onAdd: () => void }) {
+export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onAdd, addFrom }: { weeks: Week[]; viewIdx: number; dateOf: (index: number) => string | null; hrefFor: (index: number) => string; isLocal: (index: number) => boolean; onShow: (index: number) => void; /** null: a blank week; else the week it copies. */ onAdd: (from: number | null) => void; /** The weeks offered to copy, first the one before the new week. */ addFrom: { index: number; sessions: number }[] }) {
   return (
     // One row: up to 8 weeks share it evenly with + Week; more, and the rail scrolls sideways.
     <div className={`trn-rail${weeks.length > 8 ? " scroll" : ""}`} role="tablist" aria-label="Weeks" style={{ "--trn-cards": weeks.length + 1 } as React.CSSProperties}>
@@ -248,15 +248,29 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
           </Link>
         );
       })}
-      <button type="button" className="trn-week add" onClick={onAdd}>
-        <span className="trn-week-top">
-          <span className="trn-week-name">+ Week</span>
-        </span>
-        <span className="trn-bars" aria-hidden="true" />
-        <span className="trn-week-foot">
-          <span>{dateOf(weeks.length + 1) ?? "Add one"}</span>
-        </span>
-      </button>
+      {/* + Week opens a white menu whose choice is the action (20 Oct, Alex: the pop-up was too black): Blank, or a copy of the week before it, or of the one on screen. */}
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger className="trn-week add">
+          <span className="trn-week-top">
+            <span className="trn-week-name">+ Week</span>
+          </span>
+          <span className="trn-bars" aria-hidden="true" />
+          <span className="trn-week-foot">
+            <span>{dateOf(weeks.length + 1) ?? "Add one"}</span>
+          </span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="pb-menu trn-addweek-menu">
+          <DropdownMenuItem onSelect={() => onAdd(null)}>Blank</DropdownMenuItem>
+          {addFrom.map((w) => (
+            <DropdownMenuItem key={w.index} onSelect={() => onAdd(w.index)}>
+              Copy Week {w.index}
+              <small className="rd-menu-inuse">
+                {w.sessions} {w.sessions === 1 ? "session" : "sessions"}
+              </small>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

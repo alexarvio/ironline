@@ -34,7 +34,6 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
       <div className="trn-rogue-label">
         <CompassIcon size={14} />
         <span>Rogue sessions</span>
-        <em>· done outside the plan this week</em>
       </div>
       {items.map((r) => {
         const isOpen = open === r.id;

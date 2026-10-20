@@ -97,7 +97,7 @@ export type DraftRow = {
 };
 /** swap: what the client did instead; alternatives: what the coach offers (names, with a note). */
 export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean; swap?: string | null; alternatives?: { name: string; note: string }[] };
-export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[] };
+export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[]; /** The later weeks (screen index) with this session's slot and nothing logged in it: what "Also delete it from" reaches. */ laterWeeks?: number[] };
 /** A workout the client ended, with what they answered on ending it (the answers feed). */
 export type DraftAnswered = { dayId: number; weekIdx: number; weekLabel: string; name: string; ended: string; duration: number | null; gym: string | null; note: string | null; answers: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[] };
 /** A rogue session as the coach sees it: when, how long, and what was logged. */
@@ -165,6 +165,14 @@ const MAX_SESSIONS = 7;
 /** The clock, for autosave's pauses (kept out of render). */
 const nowMs = () => Date.now();
 const MAX_COLS = 6;
+/** Weeks in as few words as they take: "week 5", "weeks 5–6", "weeks 4 and 6", "weeks 2, 4 and 6". */
+const weeksWords = (indexes: number[]) => {
+  const ws = [...indexes].sort((a, b) => a - b);
+  if (ws.length === 0) return "";
+  if (ws.length === 1) return `week ${ws[0]}`;
+  if (ws.every((w, i) => i === 0 || w === ws[i - 1] + 1)) return `weeks ${ws[0]}–${ws[ws.length - 1]}`;
+  return `weeks ${ws.slice(0, -1).join(", ")} and ${ws[ws.length - 1]}`;
+};
 
 type AddedExercise = { kind: "exercise"; exerciseId: number | null; /** The exercise's variation picked with it; its name is already in `name`. */ variationId?: number | null; name: string; sets: number | string; reps: string; kg: number | null; rpe?: string; tempo?: string; rest?: string; note?: string };
 type AddedCardio = { kind: "cardio"; name: string; time: string; pace: string; incline: string; distance: string; note: string };
@@ -200,7 +208,6 @@ type Dlg =
   | { kind: "newProgram" }
   | { kind: "note" }
   | { kind: "removeWeek" }
-  | { kind: "addWeek" }
   | { kind: "deletePhase" }
   | null;
 
@@ -233,9 +240,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // values, and resetting on those collapsed panels and threw work away.
   const sessionsKey = JSON.stringify(program.sessions);
   const [seenProgram, setSeenProgram] = useState(sessionsKey);
+  // Sessions being added: shown at once (20 Oct, Alex: Add session waited for the save and the page's read), until the read brings the real ones.
+  const [incoming, setIncoming] = useState(0);
   if (seenProgram !== sessionsKey) {
     setSeenProgram(sessionsKey);
     setSessions(program.sessions);
+    setIncoming(0);
   }
   const inUse = {
     rpe: sessions.some((x) => x.rows.some((r) => r.rpe != null)),
@@ -680,7 +690,23 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // An empty week copies nothing (copyProgramWeek), so it is never offered as a source.
   const copyable = (i: number) => (weeks.find((w) => w.index === i)?.trained.length ?? 0) > 0 && !sameWeeks(i, viewIdx);
   const copyFromChoices = weeks.filter((w) => w.index !== viewIdx && copyable(w.index));
-  const forwardChanges = later.some((w) => !sameWeeks(w.index, viewIdx));
+  // Copy forward reaches only the later weeks that differ (20 Oct, Alex: "Copy to weeks 4–6" when week 4 was already the same).
+  const forwardTo = later.filter((w) => !sameWeeks(w.index, viewIdx));
+  const forwardChanges = forwardTo.length > 0;
+  const forwardLabel = weeksWords(forwardTo.map((w) => w.index));
+  // + Week's menu (20 Oct, Alex: the add-week pop-up was too black): Blank, or a copy of the week before the new one, or of the one on screen; added at once.
+  const addWeek = (from: number | null) => {
+    const n = weeks.length + 1;
+    startTransition(async () => {
+      await addProgramWeekAction(fd({ clientId, programId: program.id, copyFrom: from }));
+      savedToast(`Week ${n} added${from ? `, a copy of Week ${from}` : ""}`);
+      router.push(`${window.location.pathname}?client=${clientId}&tab=training&program=${program.id}&week=${n}`, { scroll: false });
+    });
+  };
+  const lastWeek = weeks[weeks.length - 1];
+  const addFrom = [lastWeek, viewIdx !== lastWeek?.index ? weeks.find((w) => w.index === viewIdx) : undefined]
+    .filter((w): w is (typeof weeks)[number] => !!w && w.trained.length > 0)
+    .map((w) => ({ index: w.index, sessions: w.trained.length }));
 
   return (
     <div className={`rd trn${program.status === "past" ? " rd-past" : ""}`}>
@@ -862,7 +888,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         hrefFor={(index) => `/admin/redesign/training?client=${clientId}&program=${program.id}&week=${index}`}
         isLocal={isLocal}
         onShow={showWeek}
-        onAdd={() => setDlg({ kind: "addWeek" })}
+        onAdd={addWeek}
+        addFrom={addFrom}
       />
 
       {/* ---- The week's sessions. */}
@@ -917,7 +944,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           {/* Build one week, fill the rest in one go (20 Oct, Alex). */}
           {later.length > 0 && sessions.length > 0 && forwardChanges && (
             <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyForward" })}>
-              <CopyIcon /> Copy to {later.length === 1 ? `week ${later[0].index}` : `weeks ${later[0].index}–${later[later.length - 1].index}`}
+              <CopyIcon /> Copy to {forwardLabel}
             </button>
           )}
           {/* KG / LBS beside the sessions it changes (20 Oct, Alex: it was in the programme's header). */}
@@ -990,6 +1017,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     {rows.length} {rows.length === 1 ? "exercise" : "exercises"}
                     {s.cardio.length ? ` · ${s.cardio.length} cardio` : ""}
                   </small>
+                  {/* The fold beside the title (20 Oct, Alex); the row's far end is the ··· menu. */}
+                  <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : s.id)} aria-expanded={isOpen} aria-label={isOpen ? `Fold ${name}` : `Open ${name}`}>
+                    <span className={`trn-chev${isOpen ? " open" : ""}`} aria-hidden="true">
+                      <ChevronRightIcon />
+                    </span>
+                  </button>
                 </span>
                 {/* What wants the coach: the client's note, a video, extra sets, a swap. */}
                 <span className="trn-row-flags">
@@ -1058,11 +1091,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : s.id)} aria-expanded={isOpen} aria-label={isOpen ? `Fold ${name}` : `Open ${name}`}>
-                  <span className={`trn-chev${isOpen ? " open" : ""}`} aria-hidden="true">
-                    <ChevronRightIcon />
-                  </span>
-                </button>
               </div>
 
               {isOpen && (
@@ -1523,13 +1551,37 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           );
         })}
         </SortableList>
-        {sessions.length < MAX_SESSIONS ? (
+        {Array.from({ length: incoming }, (_, i) => (
+          <section key={`incoming-${i}`} className="rd-session trn-incoming" aria-busy="true">
+            <div className="rd-session-head trn-row">
+              <span className="rd-grip trn-grip" aria-hidden="true">
+                <GripIcon />
+              </span>
+              <span className="trn-row-name">
+                <b>Session {sessions.length + i + 1}</b>
+                <small>0 exercises</small>
+              </span>
+            </div>
+          </section>
+        ))}
+        {sessions.length + incoming < MAX_SESSIONS ? (
           <button
             type="button"
             className="trn-add"
             onClick={() => {
-              const n = sessions.length + 1;
-              act(() => addSessionAction(fd({ clientId, week: weekNo(viewIdx) })), `Session ${n} added`);
+              const n = sessions.length + incoming + 1;
+              setIncoming((k) => k + 1);
+              act(async () => {
+                try {
+                  const r: unknown = await addSessionAction(fd({ clientId, week: weekNo(viewIdx) }));
+                  // Refused: the placeholder goes; act says why.
+                  if ((r && typeof r === "object" && "ok" in r && (r as { ok: boolean }).ok === false) || (typeof r === "string" && r)) setIncoming(0);
+                  return r;
+                } catch (e) {
+                  setIncoming(0);
+                  throw e;
+                }
+              }, `Session ${n} added`);
             }}
           >
             + Add session
@@ -1773,20 +1825,21 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           />
         )}
 
-        {dlg?.kind === "copyForward" && later.length > 0 && (
+        {dlg?.kind === "copyForward" && forwardTo.length > 0 && (
           <ConfirmDialog
-            title={`Copy ${week.label} to ${later.length === 1 ? `week ${later[0].index}` : `weeks ${later[0].index}–${later[later.length - 1].index}`}?`}
+            title={`Copy ${week.label} to ${forwardLabel}?`}
             description="Their sessions are replaced. Nothing logged is touched."
             confirm="Copy"
             onConfirm={() => {
               const from = weekNo(viewIdx);
-              const targets = later.map((w) => weekNo(w.index));
+              const targets = forwardTo.map((w) => weekNo(w.index));
               const label = week.label;
+              const toWords = forwardLabel;
               close();
               act(async () => {
                 await settle(Object.keys(pendingRef.current).map(Number));
                 for (const to of targets) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to }));
-              }, `${label} copied to ${laterLabel}`);
+              }, `${label} copied to ${toWords}`);
             }}
           />
         )}
@@ -1870,7 +1923,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 lastLoggedAt={gone.ended}
                 hasUploads={gone.rows.some((r) => !!r.video?.src)}
                 sessionsAfter={sessions.filter((x) => x.number > gone.number).map((x) => x.number)}
-                laterLabel={later.length === 0 ? "" : later.length === 1 ? `week ${later[0].index}` : `weeks ${later[0].index}–${later[later.length - 1].index}`}
+                // Only the later weeks that have this session, unlogged (20 Oct, Alex); none, and there is no tick.
+                laterLabel={weeksWords(gone.laterWeeks ?? [])}
                 onDelete={async (alsoLater) => {
                   const more = await removeSessionAction(fd({ programDayId: gone.id, alsoLater: alsoLater ? 1 : null }));
                   close();
@@ -1924,26 +1978,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               />
             );
           })()
-        )}
-
-        {dlg?.kind === "addWeek" && (
-          <AddWeekDialog
-            next={weeks.length + 1}
-            date={weekStart(weeks.length + 1) && dayMonth(weekStart(weeks.length + 1)!)}
-            source={week}
-            sessionCount={sessions.length}
-            onAdd={(copy) => {
-              const n = weeks.length + 1;
-              const label = week.label;
-              const from = viewIdx;
-              close();
-              startTransition(async () => {
-                await addProgramWeekAction(fd({ clientId, programId: program.id, copyFrom: copy ? from : null }));
-                savedToast(`Week ${n} added${copy ? `, a copy of ${label}` : ""}`);
-                router.push(`${window.location.pathname}?client=${clientId}&tab=training&program=${program.id}&week=${n}`, { scroll: false });
-              });
-            }}
-          />
         )}
 
         {/* Scheduling is not editing dates (20 Oct, Alex): the week it starts and the time it goes live; the length stays as built. */}
@@ -2110,6 +2144,8 @@ function SessionName({ value, onChange }: { value: string; onChange: (v: string)
       value={draft}
       autoFocus
       maxLength={40}
+      // As wide as the name, so what follows it doesn't move while it is typed (20 Oct, Alex).
+      size={Math.max(draft.length, 6)}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => {
         setEditing(false);
@@ -3019,38 +3055,6 @@ export function ConfirmDialog({ title, description, confirm, danger, tick, onCon
         <DialogClose className="dlh-cancel">Cancel</DialogClose>
         <button type="button" className={danger ? "dlh-delete" : "dlh-go"} onClick={() => onConfirm(also)} autoFocus>
           {confirm}
-        </button>
-      </div>
-    </DialogContent>
-  );
-}
-
-/** A new week at the end: blank, or a copy of the week on screen. */
-function AddWeekDialog({ next, date, source, sessionCount, onAdd }: { next: number; date: string | null; source: { label: string }; sessionCount: number; onAdd: (copy: boolean) => void }) {
-  const [copy, setCopy] = useState(sessionCount > 0);
-  // In the hairline style, no explanations (20 Oct, Alex): the title, the day it starts, Blank or a copy as one capsule.
-  return (
-    <DialogContent className="dlh">
-      <div className="dlh-head">
-        <DialogTitle className="dlh-title">Add Week {next}</DialogTitle>
-        <DialogClose className="dlh-x" aria-label="Close">
-          ✕
-        </DialogClose>
-      </div>
-      {date && <DialogDescription className="dlh-what">Starts {date}</DialogDescription>}
-      <div className="dlh-seg" role="radiogroup" aria-label="What the week starts with">
-        <button type="button" role="radio" aria-checked={!copy} className={!copy ? "on" : ""} onClick={() => setCopy(false)}>
-          Blank
-        </button>
-        <button type="button" role="radio" aria-checked={copy} className={copy ? "on" : ""} disabled={sessionCount === 0} onClick={() => setCopy(true)}>
-          Copy {source.label}
-          {sessionCount > 0 && <small> · {sessionCount} {sessionCount === 1 ? "session" : "sessions"}</small>}
-        </button>
-      </div>
-      <div className="dlh-foot">
-        <DialogClose className="dlh-cancel">Cancel</DialogClose>
-        <button type="button" className="dlh-go" onClick={() => onAdd(copy)} autoFocus>
-          Add week
         </button>
       </div>
     </DialogContent>

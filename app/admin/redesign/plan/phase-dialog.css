@@ -31,8 +31,9 @@
 .npd.npd .npd-meta { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #98a2b3; white-space: nowrap; }
 
 /* Track: a segmented capsule, the chosen one ink. */
-.npd.npd .npd-seg { display: flex; width: min(420px, 100%); height: 36px; margin-top: 6px; padding: 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
-.npd.npd .npd-seg button { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding: 0 8px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; cursor: pointer; }
+/* 4px of air between the chosen option and the capsule's edge, on every capsule (20 Oct, Alex). */
+.npd.npd .npd-seg { display: flex; gap: 2px; width: min(420px, 100%); height: 36px; margin-top: 6px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.npd.npd .npd-seg button { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 28px; padding: 0 8px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; cursor: pointer; }
 .npd.npd .npd-seg button svg { flex: none; }
 .npd.npd .npd-seg button:hover { color: #141a24; }
 .npd.npd .npd-seg button:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }

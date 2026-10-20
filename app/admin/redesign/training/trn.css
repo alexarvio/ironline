@@ -61,7 +61,7 @@
 .rd.trn .trn-meta { font-size: 13.5px; font-weight: 500; color: var(--trn-sec); }
 .rd.trn .trn-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rd.trn .trn-head-actions .rd-btn { height: 36px; border-radius: 999px; }
-.rd.trn .trn-unit { display: inline-flex; height: 36px; padding: 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); box-sizing: border-box; }
+.rd.trn .trn-unit { display: inline-flex; height: 36px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); box-sizing: border-box; }
 .rd.trn .trn-unit button { min-width: 44px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--trn-sec); cursor: pointer; }
 .rd.trn .trn-unit button.on { background: var(--trn-navy); color: #fff; }
 .rd.trn .trn-more { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); color: var(--trn-ink); cursor: pointer; }
@@ -138,7 +138,13 @@
 .rd.trn .trn-row-name { display: flex; align-items: baseline; gap: 10px; flex: 1; min-width: 0; }
 .rd.trn .trn-row-name > b { overflow: hidden; font-size: 15px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .rd.trn .trn-row-name > small { flex: none; font-size: 13px; font-weight: 500; color: var(--trn-muted); }
-.rd.trn .trn-row-name .rd-session-name { font-size: 15px; font-weight: 600; }
+/* The name the same box shut or open (20 Oct, Alex: "0 exercises" moved when a session opened): no padding round the open one's button, the field as wide as its text. */
+.rd.trn .trn-row-name .rd-session-name { margin: 0; padding: 0; border-radius: 0; font-size: 15px; font-weight: 600; line-height: inherit; }
+.rd.trn .trn-row-name .rd-session-name:hover { text-decoration: underline; text-decoration-color: var(--trn-line); text-underline-offset: 4px; }
+.rd.trn .trn-row-name .rd-session-name-box { width: auto; height: auto; margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--trn-ink); border-radius: 0; font-size: 15px; font-weight: 600; line-height: inherit; }
+/* The fold beside the title, the ··· at the row's end. */
+.rd.trn .trn-row-name .trn-row-toggle { align-self: center; width: 24px; height: 24px; margin-left: -4px; border-radius: 999px; }
+.rd.trn .trn-row-name .trn-row-toggle:hover { background: var(--trn-page); }
 .rd.trn .trn-row-flags { display: inline-flex; align-items: center; gap: 4px; }
 .rd.trn .trn-row-flags .rd-tag.note { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 24px; padding: 0; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px var(--trn-line); color: var(--trn-sec); }
 .rd.trn .trn-row-flags .rd-tag.note svg { width: 14px; height: 14px; }
@@ -150,6 +156,8 @@
 .rd.trn .trn-list .rd-session.open > .rd-rows { border-top: 0; }
 .rd.trn .trn-add { display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; border: 1px dashed #c9cfd8; border-radius: 18px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--trn-ink); cursor: pointer; }
 .rd.trn .trn-add:hover { border-color: var(--trn-ink); }
+/* A session being added (20 Oct): there at once, quiet and not yet clickable until the save comes back. */
+.rd.trn .trn-incoming { opacity: 0.55; pointer-events: none; }
 .rd.trn .trn-full { margin: 0; padding: 14px; border: 1px dashed #c9cfd8; border-radius: 18px; text-align: center; }
 
 /* ---- Autosave: one status, on the week's line */
@@ -205,7 +213,7 @@
 /* Delete as red words, no pill (20 Oct, Alex). */
 .dlh-delete { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #b42318; cursor: pointer; }
 .dlh-delete:hover { background: #fdf1ef; }
-.dlh-seg { display: flex; height: 36px; margin-top: 6px; padding: 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.dlh-seg { display: flex; gap: 2px; height: 36px; margin-top: 6px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
 .dlh-seg > button { flex: 1; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; white-space: nowrap; }
 .dlh-seg > button small { font-size: 12px; font-weight: 500; opacity: 0.75; }
 .dlh-seg > button.on { background: #141a24; color: #fff; }
