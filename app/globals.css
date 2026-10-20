@@ -20424,3 +20424,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .fa-kind:disabled { opacity: 0.55; cursor: default; }
 /* The compass in the rogue session row's dashed ring (19 Oct). */
 .tr-body .tr-row-tile.free { display: inline-flex; align-items: center; justify-content: center; color: #5b6474; }
+/* No line between the phase cards and the coach's latest right under them (21 Oct, Alex). Events and Meetings keep theirs. */
+.hm-body > .hm-latest-note::before { content: none; }
+.hm-body > .hm-latest-note { padding-top: 6px; }
