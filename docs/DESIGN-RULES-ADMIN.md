@@ -46,6 +46,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 ## 6. Dropdowns and search
 - A list floats over the page (`Popover` / absolute). It never pushes the page down or stretches a card.
 - Six rows, then it scrolls inside. A Create / Use row stays pinned at its foot, outside the scroll.
+- Create your own (an exercise, a metric) opens in that same floating panel (21 Oct, Alex): a small caps label, the name and its group on clean lines, Cancel in words and an ink Add. The card under it never stretches, and no line explains where it lands.
 - The list is as wide as its field, and a search field is only as wide as its list (560px max), not the whole row.
 - Never the browser's own `<datalist>` or `<select>` list. Use `Picker` or the floating list; a plain `+ Add` that opens a menu when the choices are fixed.
 

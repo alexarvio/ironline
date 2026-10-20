@@ -853,7 +853,8 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
     setBrowse(false);
     box.current?.focus();
   };
-  const open = !creating && (showPacks || (!!pack && !needle) || !!needle);
+  // Creating one floats in the same panel (21 Oct, Alex): the card never stretches for it.
+  const open = creating || showPacks || (!!pack && !needle) || !!needle;
   const pop = useRef<HTMLDivElement>(null);
   useEffect(() => {
     pop.current?.querySelector(".rd-addrow-item.on")?.scrollIntoView({ block: "nearest" });
@@ -933,7 +934,25 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
             if (wrap.current?.contains(e.target as Node)) e.preventDefault();
           }}
         >
-          {showPacks && (
+          {creating && (
+            <CreateMetric
+              groups={groups}
+              initial={q.trim()}
+              taken={(name) => have.includes(name.toLowerCase())}
+              onCreate={(name, unit, group) => {
+                setCreating(false);
+                onAdd(name, unit, group);
+                setQ("");
+                setBrowse(false);
+                box.current?.focus();
+              }}
+              onCancel={() => {
+                setCreating(false);
+                box.current?.focus();
+              }}
+            />
+          )}
+          {!creating && showPacks && (
             <>
               <div className="rd-addpop-scroll" role="listbox" aria-label="Groups">
                 {library.map((p) => (
@@ -948,7 +967,7 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
               </button>
             </>
           )}
-          {packNow && !needle && (
+          {!creating && packNow && !needle && (
             <>
               <button type="button" className="rd-addrow-back" onClick={() => setPack(null)}>
                 ‹ All groups
@@ -958,7 +977,7 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
               </div>
             </>
           )}
-          {needle && (
+          {!creating && needle && (
             <>
               {list.length > 0 && (
                 <div className="rd-addpop-scroll" role="listbox" aria-label="Metrics">
@@ -974,29 +993,11 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
           )}
         </PopoverContent>
       </Popover>
-      {creating && (
-        <CreateMetric
-          groups={groups}
-          initial={q.trim()}
-          taken={(name) => have.includes(name.toLowerCase())}
-          onCreate={(name, unit, group) => {
-            setCreating(false);
-            onAdd(name, unit, group);
-            setQ("");
-            setBrowse(false);
-            box.current?.focus();
-          }}
-          onCancel={() => {
-            setCreating(false);
-            box.current?.focus();
-          }}
-        />
-      )}
     </div>
   );
 }
 
-/** A metric of your own: its name, unit and the group it sits under. */
+/** A metric of your own, in the search's floating panel (21 Oct, Alex): its name, unit and group on clean lines; Cancel and Add. */
 function CreateMetric({ groups, initial, taken, onCreate, onCancel }: { groups: DraftMeasurements["groups"]; initial: string; taken: (name: string) => boolean; onCreate: (name: string, unit: string, group: string) => void; onCancel: () => void }) {
   const [name, setName] = useState(initial);
   const [unit, setUnit] = useState("");
@@ -1008,19 +1009,22 @@ function CreateMetric({ groups, initial, taken, onCreate, onCancel }: { groups: 
   const dup = taken(name.trim());
   const ok = name.trim().length > 0 && !dup;
   return (
-    <div className="rd-create rls-create" onKeyDown={(e) => (e.key === "Escape" ? onCancel() : e.key === "Enter" && ok ? onCreate(name.trim(), unit.trim(), group) : null)}>
-      <div className="rd-create-row">
-        <input ref={first} className="rd-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Metric" maxLength={60} aria-label="Metric" />
-        <input className="rd-input rm-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit" maxLength={12} aria-label="Unit" />
+    <div className="rd-addpop-create" onKeyDown={(e) => (e.key === "Escape" ? onCancel() : e.key === "Enter" && ok ? onCreate(name.trim(), unit.trim(), group) : null)}>
+      <span className="rd-addpop-label">New metric</span>
+      <div className="rd-addpop-row">
+        <input ref={first} value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" maxLength={60} aria-label="Metric" />
+        <input className="unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit" maxLength={12} aria-label="Unit" />
         <Picker value={group} onChange={setGroup} label="Group" options={groups.map((g) => ({ value: g.key, label: g.label }))} />
-        <button type="button" className="trn-btn ghost" onClick={onCancel}>
+      </div>
+      {dup && <p className="rd-addpop-warn">{name.trim()} is already on the list.</p>}
+      <div className="rd-addpop-foot">
+        <button type="button" className="rd-addpop-cancel" onClick={onCancel}>
           Cancel
         </button>
-        <button type="button" className="trn-btn primary" disabled={!ok} onClick={() => onCreate(name.trim(), unit.trim(), group)}>
+        <button type="button" className="rd-addpop-go" disabled={!ok} onClick={() => onCreate(name.trim(), unit.trim(), group)}>
           Add
         </button>
       </div>
-      {dup && <p className="rls-create-warn">{name.trim()} is already on the list.</p>}
     </div>
   );
 }

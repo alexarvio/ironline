@@ -146,7 +146,8 @@
 .rd.trn.rls > .trn-head { margin-bottom: -4px; }
 .rd.rls .rls-section { display: flex; flex-direction: column; gap: 12px; }
 .rd.rls .rls-section > .trn-weekhead { margin-bottom: 0; }
-.rd.rls .rls-card { position: relative; padding: 2px 0 8px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; }
+/* A real 1px edge, not an inset shadow (21 Oct, Alex): a row's white was painting over the hairline at its ends. */
+.rd.rls .rls-card { position: relative; padding: 2px 0 8px; border: 1px solid #e1e5eb; border-radius: 18px; background: #fff; overflow: hidden; }
 .rd.rls .trn-weekhead-actions .trn-btn svg { width: 14px; height: 14px; color: #8b93a1; }
 
 /* Tracked metrics: column heads in small caps, a row a metric with a hairline between, ··· on hover. */
@@ -179,13 +180,6 @@
 .rd.rls .rls-addrow .rd-addrow-search { border: 0; box-shadow: none; font-weight: 500; }
 .rd.rls .rls-addrow .rd-addrow-chev:hover, .rd.rls .rls-addrow .rd-addrow-chev.open { background: #f5f6f8; color: #141a24; }
 .rd-addpop .rd-addrow-item.taken, .rd-addpop .rd-addrow-item.taken:hover { background: none; color: #b0b6c0; }
-.rd.rls .rls-create { padding: 10px 0 2px; }
-.rd.rls .rls-create .rd-input { height: 38px; padding: 0 12px; border: 1px solid #dce1e8; border-radius: 10px; box-shadow: none; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; outline: none; }
-.rd.rls .rls-create .rd-input:focus { border-color: #141a24; box-shadow: none; }
-.rd.rls .rls-create .rm-unit { flex: 0 0 110px; }
-.rd.rls .rls-create .rd-picker { height: 38px; border: 1px solid #dce1e8; border-radius: 10px; }
-.rd.rls .rls-create .rd-picker[data-state="open"], .rd.rls .rls-create .rd-picker:focus-visible { border-color: #141a24; box-shadow: none; }
-.rd.rls .rls-create-warn { margin: 6px 0 0; font-size: 12.5px; font-weight: 500; color: #b42318; }
 body:has(.rd.rls) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background: #f5f6f8; color: #141a24; }
 
 /* Check-ins: the table, graph or feed inside the card, in the same ink. */

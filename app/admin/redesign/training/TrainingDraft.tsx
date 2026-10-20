@@ -2376,7 +2376,8 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
   // stretches the session, six rows show and the rest scroll, and Create
   // stays pinned at its foot. In a layer of its own, so the session's
   // sideways-scrolling table can't clip it.
-  const open = !creating && (showGroups || (!!group && !needle) || !!needle);
+  // Creating one floats in the same panel (21 Oct, Alex): the session never stretches for it either.
+  const open = creating || showGroups || (!!group && !needle) || !!needle;
   const pop = useRef<HTMLDivElement>(null);
   useEffect(() => {
     pop.current?.querySelector(".rd-addrow-item.on")?.scrollIntoView({ block: "nearest" });
@@ -2449,7 +2450,25 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
             if (wrap.current?.contains(e.target as Node)) e.preventDefault();
           }}
         >
-          {showGroups && (
+          {creating && (
+            <CreateExercise
+              library={library}
+              initial={q.trim()}
+              onCreate={async (name, group) => {
+                setCreating(false);
+                const f = new FormData();
+                f.set("name", name);
+                f.set("muscleGroup", group);
+                const made = await addExerciseToLibraryAction(f);
+                if (made) pick(made.name, made.id);
+              }}
+              onCancel={() => {
+                setCreating(false);
+                box.current?.focus();
+              }}
+            />
+          )}
+          {!creating && showGroups && (
             <>
               <div className="rd-addpop-scroll" role="listbox" aria-label="Groups">
                 {library.map((g) => (
@@ -2464,7 +2483,7 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
               </button>
             </>
           )}
-          {group && !needle && (
+          {!creating && group && !needle && (
             <>
               <button type="button" className="rd-addrow-back" onClick={() => setGroup(null)}>
                 ‹ All groups
@@ -2478,7 +2497,7 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
               </div>
             </>
           )}
-          {needle && (
+          {!creating && needle && (
             <>
               {list.length > 0 && (
                 <div className="rd-addpop-scroll" role="listbox" aria-label="Exercises">
@@ -2497,30 +2516,12 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
           )}
         </PopoverContent>
       </Popover>
-      {creating && (
-        <CreateExercise
-          library={library}
-          initial={q.trim()}
-          onCreate={async (name, group) => {
-            setCreating(false);
-            const f = new FormData();
-            f.set("name", name);
-            f.set("muscleGroup", group);
-            const made = await addExerciseToLibraryAction(f);
-            if (made) pick(made.name, made.id);
-          }}
-          onCancel={() => {
-            setCreating(false);
-            box.current?.focus();
-          }}
-        />
-      )}
     </div>
   );
 }
 
-/** Creating an exercise of your own: a name and its group. It goes to the
- *  library (yours, not every coach's) and onto the session. */
+/** Creating an exercise of your own, in the search's floating panel (21 Oct, Alex: it stretched the session):
+ *  a name and its group on clean lines, Cancel and Add. It goes to the library (yours) and onto the session. */
 function CreateExercise({ library, initial, onCreate, onCancel }: { library: Library; initial: string; onCreate: (name: string, group: string) => void; onCancel: () => void }) {
   const [name, setName] = useState(initial);
   const [group, setGroup] = useState(library[0]?.slug ?? "other");
@@ -2530,19 +2531,20 @@ function CreateExercise({ library, initial, onCreate, onCancel }: { library: Lib
   }, []);
   const ok = name.trim().length > 0;
   return (
-    <div className="rd-create" onKeyDown={(e) => (e.key === "Escape" ? onCancel() : e.key === "Enter" && ok ? onCreate(name.trim(), group) : null)}>
-      <span className="rd-eyebrow">Create your own exercise</span>
-      <div className="rd-create-row">
-        <input ref={first} className="rd-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Exercise name" maxLength={60} />
+    <div className="rd-addpop-create" onKeyDown={(e) => (e.key === "Escape" ? onCancel() : e.key === "Enter" && ok ? onCreate(name.trim(), group) : null)}>
+      <span className="rd-addpop-label">New exercise</span>
+      <div className="rd-addpop-row">
+        <input ref={first} value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" maxLength={60} aria-label="Exercise name" />
         <Picker value={group} onChange={setGroup} label="Muscle group" options={library.map((g) => ({ value: g.slug, label: g.label, hint: `${g.exercises.length}` }))} />
-        <button type="button" className="rd-btn" onClick={onCancel}>
+      </div>
+      <div className="rd-addpop-foot">
+        <button type="button" className="rd-addpop-cancel" onClick={onCancel}>
           Cancel
         </button>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onCreate(name.trim(), group)}>
-          Add to library and session
+        <button type="button" className="rd-addpop-go" disabled={!ok} onClick={() => onCreate(name.trim(), group)}>
+          Add
         </button>
       </div>
-      <p className="rd-addrow-hint">Lands in your library under {library.find((g) => g.slug === group)?.label ?? "Other"}, so it is there next time.</p>
     </div>
   );
 }

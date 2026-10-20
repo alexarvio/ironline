@@ -184,6 +184,26 @@
 .rd-addpop .rd-addrow-item.create.solo { margin-top: 0; padding-top: 0; border-top: 0; border-radius: 8px; }
 .rd-addpop .rd-addrow-item.create svg { width: 14px; height: 14px; }
 .rd-addpop .rd-addrow-back { flex: none; padding: 8px 10px; font-weight: 600; color: #5b6474; }
+/* Create your own (an exercise, a metric), in the same floating panel (21 Oct, Alex: inline it stretched the card):
+   a small caps label, clean lines to type on, the group picker as a line too, Cancel in words and an ink Add. */
+.rd-addpop-create { display: flex; flex-direction: column; gap: 10px; padding: 8px 8px 4px; }
+.rd-addpop-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.rd-addpop-row { display: flex; align-items: flex-end; gap: 14px; }
+.rd-addpop-row input { flex: 1; min-width: 0; height: 38px; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; background: none; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; outline: none; box-shadow: none; }
+.rd-addpop-row input.unit { flex: 0 0 96px; }
+.rd-addpop-row input:focus { border-bottom-color: #141a24; }
+.rd-addpop-row input::placeholder { color: #98a2b3; }
+.rd-addpop-row .rd-picker { flex: 0 0 150px; height: 38px; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; background: none; box-shadow: none; font-size: 15px; font-weight: 500; }
+.rd-addpop-row .rd-picker:hover { border-bottom-color: #c5ccd8; }
+.rd-addpop-row .rd-picker[data-state="open"], .rd-addpop-row .rd-picker:focus-visible { border-bottom-color: #141a24; box-shadow: none; outline: none; }
+.rd-addpop-warn { margin: 0; font-size: 12.5px; font-weight: 500; color: #b42318; }
+.rd-addpop-foot { display: flex; justify-content: flex-end; gap: 2px; }
+.rd-addpop-cancel { height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.rd-addpop-cancel:hover { color: #141a24; }
+.rd-addpop-go { height: 34px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13.5px; font-weight: 600; color: #fff; cursor: pointer; }
+.rd-addpop-go:disabled { opacity: 0.4; cursor: default; }
+/* Its group picker's menu in the same ink, while a panel is open. */
+body:has(.rd-addpop) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background: #f5f6f8; color: #141a24; }
 
 /* ---- Schedule pop-up (ScheduleDialog, on the phase pop-up's npd styles) */
 .npd.sch.sch { width: min(680px, 100vw - 32px); }
