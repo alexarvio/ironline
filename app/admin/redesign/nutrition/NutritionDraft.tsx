@@ -11,7 +11,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { CalendarIcon, CameraIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { LoggedDay, LoggedDaysView, LoggedMeal, MealComment } from "../../../lib/queries";
-import { ConfirmDialog, DeletePhaseDialog, MessageDialog, fmtDate, stateLabel } from "../training/TrainingDraft";
+import { ConfirmDialog, DeletePhaseDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
+import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
+import { SUPPLEMENT_PRESETS, type SupplementGroup, type SupplementPreset } from "../../../lib/supplementPresets";
 import { GoalsNotePills, GripIcon } from "../training/TrainingParts";
 import { stateTagStyle } from "../../phaseChrome";
 import PhaseDatesDialog from "../PhaseDatesDialog";
@@ -30,8 +32,9 @@ import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
 // - Daily targets: the kcal as a ring, protein, carbs and fat typed in for
 //   training and rest days (or one set for every day), a water goal. Saved a
 //   moment after the typing stops; the section's line says so.
-// - Supplements: one row an item. A saved row saves a moment after typing
-//   stops; a new one once it has a name and the row is left. Removing asks.
+// - Supplements: one row an item, added from + Item's dropdown (a preset or
+//   the coach's own) and saved at once. A row saves a moment after typing
+//   stops. Removing asks.
 // - What the client logged: four figures, then one row a day, twenty to a
 //   page. A day opens into its meals and their foods; a camera on a meal
 //   opens the picture, where the coach can leave a comment.
@@ -228,7 +231,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   const [day, setDay] = useState<"training" | "rest">("training");
   const shown = t.same ? "training" : day;
 
-  // ---- Supplements: a saved row saves a moment after typing stops; a new one once it has a name and the row is left.
+  // ---- Supplements: a saved row saves a moment after typing stops; a new one, from + Item's dropdown, at once.
   const [supps, setSupps] = useState(plan.supplements);
   // As last sent: what the next change is told apart from.
   const [suppSent, setSuppSent] = useState(plan.supplements);
@@ -306,9 +309,15 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
     setSuppSent((prev) => [...prev, s]);
     sendSupps({ added: [s] });
   };
-  const addRow = () => {
+  // A pick from + Item's dropdown (21 Oct, Alex): a preset with its dose and time, or one of the coach's own. Saved at once,
+  // faded at the foot of the list until the re-read gives it its number.
+  const [adding, setAdding] = useState(false);
+  const addSupp = (x: { name: string; quantity: string; timing: string }) => {
     tempIds.current += 1;
-    setSupps((prev) => [...prev, { id: -tempIds.current, name: "", quantity: "", timing: "", notes: "" }]);
+    const s: DraftSupplement = { id: -tempIds.current, name: x.name, quantity: x.quantity, timing: x.timing, notes: "" };
+    setSupps((prev) => [...prev, s]);
+    setSuppSent((prev) => [...prev, s]);
+    sendSupps({ added: [s] });
   };
   const removeSupp = (s: DraftSupplement) => {
     setSupps((prev) => prev.filter((x) => x.id !== s.id));
@@ -448,7 +457,6 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   const mGrid = {
     gridTemplateColumns: "20px minmax(160px, 1fr) 84px 72px 72px 72px 32px",
   } as const;
-  const named_ = supps.filter((s) => s.name.trim()).length;
 
   return (
     <div className={`rd trn rls rnt${plan.status === "past" ? " rd-past" : ""}`}>
@@ -677,9 +685,6 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
         <div className="trn-weekhead">
           <div>
             <h2>Supplements</h2>
-            <span>
-              {named_} {named_ === 1 ? "item" : "items"}
-            </span>
           </div>
         </div>
         <div className="rls-card">
@@ -735,9 +740,14 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
               </SortableItem>
             ))}
           </SortableList>
-          <button type="button" className="rls-add" onClick={addRow}>
-            <PlusIcon /> Item
-          </button>
+          {/* + Item opens a dropdown with the search at its top, as + Metric (21 Oct, Alex): presets by group, or your own. */}
+          {adding ? (
+            <AddSuppRow have={supps.map((s) => s.name.trim().toLowerCase())} onAdd={addSupp} onClose={() => setAdding(false)} />
+          ) : (
+            <button type="button" className="rls-add" onClick={() => setAdding(true)}>
+              <PlusIcon /> Item
+            </button>
+          )}
         </div>
       </section>
 
@@ -967,6 +977,215 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
 }
 
 /** One editable figure: reads as a figure, types like a box. */
+type Preset = SupplementPreset & { group: string; taken: boolean };
+
+/** + Item's dropdown (21 Oct, Alex), as Lifestyle's + Metric: the search at its top, the chevron to browse the groups, and Create your own. */
+function AddSuppRow({ have, onAdd, onClose }: { have: string[]; onAdd: (x: SupplementPreset) => void; onClose: () => void }) {
+  const [q, setQ] = useState("");
+  const [browse, setBrowse] = useState(false);
+  const [pack, setPack] = useState<string | null>(null);
+  const [cursor, setCursor] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const box = useRef<HTMLInputElement>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+  const pop = useRef<HTMLDivElement>(null);
+  useClickAway(wrap, onClose);
+  const needle = q.trim().toLowerCase();
+  const itemOf = (g: SupplementGroup, i: SupplementPreset): Preset => ({ ...i, group: g.label, taken: have.includes(i.name.toLowerCase()) });
+  const matches: Preset[] = needle ? SUPPLEMENT_PRESETS.flatMap((g) => g.items.filter((i) => i.name.toLowerCase().includes(needle)).map((i) => itemOf(g, i))) : [];
+  const packNow = pack ? SUPPLEMENT_PRESETS.find((g) => g.id === pack) : undefined;
+  const list = needle ? matches : packNow ? packNow.items.map((i) => itemOf(packNow, i)) : [];
+  const showPacks = !needle && browse && !pack;
+  const exact = needle && (matches.some((m) => m.name.toLowerCase() === needle) || have.includes(needle));
+  const open = creating || showPacks || (!!pack && !needle) || !!needle;
+  useEffect(() => {
+    pop.current?.querySelector(".rd-addrow-item.on")?.scrollIntoView({ block: "nearest" });
+  }, [cursor, open]);
+  const pick = (m: Preset) => {
+    if (m.taken) return;
+    onAdd({ name: m.name, quantity: m.quantity, timing: m.timing });
+    setQ("");
+    setCursor(0);
+    setPack(null);
+    setBrowse(false);
+    box.current?.focus();
+  };
+  const row = (m: Preset, i: number, hint: "group" | "dose") => (
+    <button key={`${m.group}-${m.name}`} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}${m.taken ? " taken" : ""}`} disabled={m.taken} onMouseEnter={() => setCursor(i)} onClick={() => pick(m)}>
+      {m.name}
+      <small>{m.taken ? "On the list" : hint === "group" ? m.group : m.quantity}</small>
+    </button>
+  );
+  return (
+    <div ref={wrap} className="rd-addrow rls-addrow">
+      <Popover open onOpenChange={() => {}}>
+        <PopoverAnchor asChild>
+          <button type="button" className="rls-add on" onClick={onClose} aria-expanded="true">
+            <PlusIcon /> Item
+          </button>
+        </PopoverAnchor>
+        <PopoverContent
+          ref={pop}
+          className="rd-addpop rls-findpop"
+          align="start"
+          sideOffset={6}
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            box.current?.focus();
+          }}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            if (wrap.current?.contains(e.target as Node)) e.preventDefault();
+          }}
+        >
+          <div className={`rd-addrow-bar${open ? " open" : ""}`}>
+            <input
+              ref={box}
+              className="rd-addrow-search"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setCursor(0);
+                setPack(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  if (pack) setPack(null);
+                  else if (browse) setBrowse(false);
+                  else onClose();
+                }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  if (!needle && !browse) setBrowse(true);
+                  setCursor((c) => Math.min(c + 1, Math.max(0, list.length - 1)));
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setCursor((c) => Math.max(c - 1, 0));
+                }
+                if (e.key === "Enter") {
+                  if (list[cursor] && !list[cursor].taken) pick(list[cursor]);
+                  else if (needle && !exact) setCreating(true);
+                }
+              }}
+              placeholder={packNow ? `${packNow.label} · type to narrow` : "Search supplements"}
+              aria-label="Search supplements"
+            />
+            <button
+              type="button"
+              className={`rd-addrow-chev${browse ? " open" : ""}`}
+              onClick={() => {
+                setBrowse((o) => !o);
+                setPack(null);
+                box.current?.focus();
+              }}
+              aria-label={browse ? "Hide groups" : "Browse by group"}
+              aria-expanded={browse}
+            >
+              <ChevronDownIcon />
+            </button>
+            <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
+              ×
+            </button>
+          </div>
+          {creating && (
+            <CreateSupp
+              initial={q.trim()}
+              taken={(name) => have.includes(name.toLowerCase())}
+              onCreate={(x) => {
+                setCreating(false);
+                onAdd(x);
+                setQ("");
+                setBrowse(false);
+                box.current?.focus();
+              }}
+              onCancel={() => {
+                setCreating(false);
+                box.current?.focus();
+              }}
+            />
+          )}
+          {!creating && showPacks && (
+            <>
+              <div className="rd-addpop-scroll" role="listbox" aria-label="Groups">
+                {SUPPLEMENT_PRESETS.map((g) => (
+                  <button key={g.id} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => setPack(g.id)}>
+                    {g.label}
+                    <small>{g.items.length}</small>
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="rd-addrow-item create" onClick={() => setCreating(true)}>
+                <PlusIcon /> Create your own
+              </button>
+            </>
+          )}
+          {!creating && packNow && !needle && (
+            <>
+              <button type="button" className="rd-addrow-back" onClick={() => setPack(null)}>
+                ‹ All groups
+              </button>
+              <div className="rd-addpop-scroll" role="listbox" aria-label={packNow.label}>
+                {list.map((m, i) => row(m, i, "dose"))}
+              </div>
+            </>
+          )}
+          {!creating && needle && (
+            <>
+              {list.length > 0 && (
+                <div className="rd-addpop-scroll" role="listbox" aria-label="Supplements">
+                  {list.map((m, i) => row(m, i, "group"))}
+                </div>
+              )}
+              {!exact && (
+                <button type="button" className={`rd-addrow-item create${list.length === 0 ? " on solo" : ""}`} onClick={() => setCreating(true)}>
+                  <PlusIcon /> Create &ldquo;{q.trim()}&rdquo; as your own
+                </button>
+              )}
+            </>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+/** A supplement of the coach's own, in the dropdown's panel: its name on a line, quantity and timing beside each other; Cancel and Add. */
+function CreateSupp({ initial, taken, onCreate, onCancel }: { initial: string; taken: (name: string) => boolean; onCreate: (x: SupplementPreset) => void; onCancel: () => void }) {
+  const [name, setName] = useState(initial);
+  const [quantity, setQuantity] = useState("");
+  const [timing, setTiming] = useState("");
+  const first = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    first.current?.focus();
+  }, []);
+  const dup = taken(name.trim());
+  const ok = name.trim().length > 0 && !dup;
+  const go = () => onCreate({ name: name.trim(), quantity: quantity.trim(), timing: timing.trim() });
+  return (
+    <div className="rd-addpop-create" onKeyDown={(e) => (e.key === "Escape" ? onCancel() : e.key === "Enter" && ok ? go() : null)}>
+      <span className="rd-addpop-label">New supplement</span>
+      <div className="rd-addpop-row">
+        <input ref={first} value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" maxLength={60} aria-label="Supplement" />
+      </div>
+      <div className="rd-addpop-row fill">
+        <input value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="Quantity" maxLength={30} aria-label="Quantity" />
+        <input value={timing} onChange={(e) => setTiming(e.target.value)} placeholder="Timing" maxLength={40} aria-label="Timing" />
+      </div>
+      {dup && <p className="rd-addpop-warn">{name.trim()} is already on the list.</p>}
+      <div className="rd-addpop-foot">
+        <button type="button" className="rd-addpop-cancel" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="button" className="rd-addpop-go" disabled={!ok} onClick={go}>
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Box({ value, onChange, label, placeholder, unit, strong, quiet, autoFocus, readOnly }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string; unit?: string; strong?: boolean; quiet?: boolean; autoFocus?: boolean; readOnly?: boolean }) {
   return (
     <span className={`rd-cell rn-box${unit ? " unit" : ""}${strong ? " strong" : ""}${quiet ? " quiet" : ""}`}>

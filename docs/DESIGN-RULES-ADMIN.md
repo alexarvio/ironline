@@ -46,7 +46,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 ## 6. Dropdowns and search
 - A list floats over the page (`Popover` / absolute). It never pushes the page down or stretches a card.
 - Six rows, then it scrolls inside. A Create / Use row stays pinned at its foot, outside the scroll.
-- Create your own (an exercise, a metric) opens in that same floating panel (21 Oct, Alex): a small caps label, the name and its group on clean lines, Cancel in words and an ink Add. The card under it never stretches, and no line explains where it lands.
+- Create your own (an exercise, a metric, a supplement) opens in that same floating panel (21 Oct, Alex): a small caps label, the name and its group on clean lines, Cancel in words and an ink Add. The card under it never stretches, and no line explains where it lands.
 - The list is as wide as its field, and a search field is only as wide as its list (560px max), not the whole row.
 - Never the browser's own `<datalist>` or `<select>` list. Use `Picker` or the floating list; a plain `+ Add` that opens a menu when the choices are fixed.
 
@@ -85,6 +85,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - Each section's title (20px/600) and its status on the page, its controls on the right; the content in one white card (radius 18, hairline).
 - Adding to a list is the exercise search: one bar with an ink edge, the list floating under it (six rows, Create pinned at its foot), the bar staying for the next pick. Lifestyle's metrics have no time of day: every metric is asked all day.
 - Lifestyle's tracked metrics are rows (Metric, Group, Last), not pills (21 Oct, Alex tried pills and went back). + Metric under them opens a dropdown with the search bar at its top, so the card never changes while adding.
+- Nutrition's + Item works the same (21 Oct, Alex): the search over preset supplements (`app/lib/supplementPresets.ts`, by group, each with a usual dose and time), the chevron to browse the groups, and Create your own (name, quantity, timing). A pick is saved at once. The section has no count under its title.
 
 ## 10. Timeline (Plan)
 - Phase bars: the grab handles at both ends show while the pointer is on the bar, darker on the end itself.
