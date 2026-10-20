@@ -320,11 +320,10 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               <button type="button" className="rd-btn ghost" onClick={() => setBack((b) => b + 4)} aria-label="Earlier" title="Earlier">
                 <ChevronLeftIcon />
               </button>
-              {back > 0 && (
-                <button type="button" className="rd-btn ghost rq-today" onClick={() => setBack(0)}>
-                  Today
-                </button>
-              )}
+              {/* Always there (21 Oct, Alex), so the arrows never move under the pointer; at today it rests, greyed. */}
+              <button type="button" className="rd-btn ghost rq-today" disabled={back === 0} onClick={() => setBack(0)}>
+                Today
+              </button>
               <button type="button" className="rd-btn ghost" disabled={back === 0} onClick={() => setBack((b) => Math.max(0, b - 4))} aria-label="Later" title="Later">
                 <ChevronRightIcon />
               </button>
