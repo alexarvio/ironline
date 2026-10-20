@@ -324,11 +324,6 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
     <section className="trn-check" aria-labelledby="trn-check-h">
       <div className="trn-check-head">
         <h2 id="trn-check-h">After-workout check</h2>
-        {answers.length > 0 && (
-          <span className="trn-muted">
-            {answers.length} {answers.length === 1 ? "workout" : "workouts"}
-          </span>
-        )}
         {!full && sugs.length > 0 && (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="trn-q-plus">+ Add</DropdownMenuTrigger>
