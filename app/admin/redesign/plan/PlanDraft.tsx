@@ -14,7 +14,7 @@ import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MoreIcon, PlusIcon,
 import type { GoalEditorOptions, PlanGoalRow, PlanPhaseRow, PlanProgramOption } from "../../../lib/queries";
 import type { GoalTracking } from "../../../lib/goalView";
 import type { PhaseTrack } from "../../../lib/db";
-import { phaseChrome, phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL, TRACK_PALETTE, type PhaseState } from "../../phaseChrome";
+import { phaseChrome, phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL, type PhaseState } from "../../phaseChrome";
 import { ConfirmDialog, DeletePhaseDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DateText from "../DateText";
@@ -107,10 +107,11 @@ const isoWeek = (day: string) => {
 };
 const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10));
 
+/** Lifestyle, Training, Nutrition (20 Oct, Alex): the order of the lanes, the track tiles and the client's tabs. */
 const TRACKS: { id: PhaseTrack; label: string }[] = [
-  { id: "nutrition", label: "Nutrition" },
-  { id: "training", label: "Training" },
   { id: "lifestyle", label: "Lifestyle" },
+  { id: "training", label: "Training" },
+  { id: "nutrition", label: "Nutrition" },
 ];
 // The track tiles in the New phase dialog (10 Oct), laid out like the client's
 // New event sheet: an icon on a tinted tile, the chosen one filled.
@@ -143,7 +144,7 @@ const WIN_KEY = "rq-plan-window";
 const SHOW_GOALS = false;
 const KIND_LABEL: Record<PlanGoalRow["kind"], string> = { metric: "Metric", exercise: "Exercise", habit: "Habit", none: "Text" };
 
-type Dlg = { kind: "phase"; phase: PlanPhaseRow | null; track?: PhaseTrack } | { kind: "move"; id: number; start: string; end: string } | { kind: "deletePhase"; id: number } | { kind: "goal"; goal: PlanGoalRow | null } | { kind: "removeGoal"; id: number } | null;
+type Dlg = { kind: "phase"; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase from an empty week clicked on its lane. */ start?: string } | { kind: "move"; id: number; start: string; end: string } | { kind: "deletePhase"; id: number } | { kind: "goal"; goal: PlanGoalRow | null } | { kind: "removeGoal"; id: number } | null;
 
 export default function PlanDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftPlan }) {
   const { today, thisWeek, intoWeek } = plan;
@@ -308,7 +309,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
       </header>
 
       {/* ---- Phases. */}
-      <section className="rd-session open rn-card">
+      {/* As Training's weeks (20 Oct, Alex): the heading and its controls on the page, the timeline in a white card under them. */}
+      <section className="pln-section">
         <div className="rn-card-head">
           <h2>Phases</h2>
           <div className="rq-ev-tools">
@@ -337,6 +339,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
             </button>
           </div>
         </div>
+        <div className="pln-card">
         <div className="rq-tl-scroll">
           <div className="rq-tl" style={{ minWidth: Math.round(count * 63) }}>
             <div className="rq-tl-row">
@@ -392,18 +395,34 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                   laneOf.set(p.id, li);
                 });
                 const laneCount = Math.max(1, lanes.length);
-                const pal = TRACK_PALETTE[t.id];
                 return (
                   <div key={t.id} className="rq-tl-row">
                     <div className="rq-tl-label">
-                      <span className="rq-track" style={{ background: pal.tint, color: pal.ink }}>
+                      {/* The track's icon in its colour, its name in ink (20 Oct, Alex): no tinted pill. */}
+                      <span className="rq-track">
+                        <span className="rq-track-ic" style={{ color: TRACK_ACCENT[t.id] }}>
+                          <TrackIcon track={t.id} size={14} />
+                        </span>
                         {t.label}
                       </span>
                     </div>
                     <div className="rq-tl-clip">
                       <div className="rq-tl-grid rq-lanes" style={{ ...cols, gridTemplateRows: `repeat(${laneCount}, 44px)` }} ref={t.id === "nutrition" ? areaRef : undefined} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
+                        {/* An empty week on a lane is a way in (20 Oct, Alex): a click opens New phase on this track, from that week. Bars sit over it. */}
                         {weeks.map((w, i) => (
-                          <span key={w} className="rq-cell" style={{ gridColumn: i + 1, gridRow: `1 / span ${laneCount}` }} />
+                          <span
+                            key={w}
+                            className="rq-cell add"
+                            style={{ gridColumn: i + 1, gridRow: `1 / span ${laneCount}` }}
+                            role="button"
+                            tabIndex={-1}
+                            aria-label={`New ${t.label.toLowerCase()} phase from ${shortDate(w)}`}
+                            title={`${t.label} · ${shortDate(w)}`}
+                            onClick={() => {
+                              if (drag || justDragged.current) return;
+                              setDlg({ kind: "phase", phase: null, track: t.id, start: w });
+                            }}
+                          />
                         ))}
                         {mine.length === 0 && nowIdx < count && (
                           <button type="button" className="rq-empty" style={{ gridColumn: `${nowIdx + 1} / span ${Math.min(count - nowIdx, 8)}`, gridRow: 1 }} onClick={() => setDlg({ kind: "phase", phase: null, track: t.id })}>
@@ -422,7 +441,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                           return (
                             <div
                               key={p.id}
-                              className={`rq-bar${trained ? " fixed" : ""}${sp.clippedStart ? " clip-start" : ""}${sp.clippedEnd ? " clip-end" : ""}${drag?.id === p.id ? " dragging" : ""}`}
+                              className={`rq-bar is-${state}${trained ? " fixed" : ""}${sp.clippedStart ? " clip-start" : ""}${sp.clippedEnd ? " clip-end" : ""}${drag?.id === p.id ? " dragging" : ""}`}
                               style={{ gridColumn: `${sp.a + 1} / span ${shownW}`, gridRow: (laneOf.get(p.id) ?? 0) + 1, paddingLeft: `calc(14px + ${(Math.max(0, shift - sp.a) / shownW) * 100}%)`, background: chrome.band, color: chrome.edge, borderColor: chrome.line, borderStyle: chrome.dashed ? "dashed" : "solid" }}
                               onPointerDown={(e) => {
                                 if ((e.target as HTMLElement).closest(".rq-bar-edge")) return;
@@ -456,6 +475,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               })}
             </div>
           </div>
+        </div>
         </div>
       </section>
 
@@ -598,6 +618,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
             thisWeek={thisWeek}
             phase={dlg.phase}
             track={dlg.track}
+            initialStart={dlg.start}
             others={phases}
             programs={plan.programs}
             onDelete={dlg.phase ? () => setDlg({ kind: "deletePhase", id: dlg.phase!.id }) : undefined}

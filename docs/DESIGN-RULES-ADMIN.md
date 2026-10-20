@@ -63,6 +63,8 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - A summary lives in the column head (`ENJOYMENT  AVG 8`), never as a fake row of data.
 - A change from → to: two columns, the old value struck through in grey, the new one in the track's accent. No arrows.
 - NOW on the week rail: the word in black with a green pulse on its left. No pill.
+- NOW on a timeline (Plan, Events): an ink line with a black dot on top that pulses (20 Oct, Alex).
+- The tracks always run Lifestyle, Training, Nutrition (20 Oct, Alex): the Plan's lanes, the track tiles, the client tabs.
 - Use the width (20 Oct, Alex): a section with little in it is one row: its title, its items and add on the left, its summary and fold on the right (the After-workout check). Never a title line, a pill line and a fold line stacked in a wide card.
 
 ## 9. Saving

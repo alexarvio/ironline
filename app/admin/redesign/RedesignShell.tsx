@@ -27,9 +27,10 @@ import type { DraftInvoices, RailData } from "./loaders";
 const TABS = [
   { key: "home", label: "Home" },
   { key: "plan", label: "Plan" },
+  // Lifestyle, Training, Nutrition (20 Oct, Alex), the Plan's lane order.
+  { key: "measurements", label: "Lifestyle" },
   { key: "training", label: "Training" },
   { key: "nutrition", label: "Nutrition" },
-  { key: "measurements", label: "Lifestyle" },
   { key: "pictures", label: "Progress pictures" },
   { key: "meetings", label: "Meetings" },
   { key: "invoices", label: "Invoices" },

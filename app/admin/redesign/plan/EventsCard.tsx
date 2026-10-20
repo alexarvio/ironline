@@ -247,7 +247,8 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
   };
 
   return (
-    <section className="rd-session open rn-card">
+    // As the Phases above (20 Oct, Alex): the heading on the page, the grid and its log in one white card.
+    <section className="pln-section">
       <div className="rn-card-head">
         <h2>Events</h2>
         <div className="rq-ev-tools">
@@ -264,6 +265,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
         </div>
       </div>
 
+      <div className="pln-card">
       {/* The same grid as the phases: months, weeks, and the events on one row of lanes. */}
       <div className="rq-tl-scroll">
         <div className="rq-tl" style={{ minWidth: Math.round(win * 63) }}>
@@ -311,7 +313,10 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
             {groups.map((g, gi) => (
               <div key={g.id ?? "none"} className="rq-tl-row">
                 <div className="rq-tl-label">
-                  <span className="rq-track" style={{ background: g.chrome.tint, color: g.chrome.ink }}>
+                  <span className="rq-track">
+                    <span className="rq-track-ic" style={{ color: g.chrome.ink }}>
+                      <KindIcon id={g.id} size={14} />
+                    </span>
                     {g.chrome.label}
                   </span>
                 </div>
@@ -430,6 +435,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
             <Pager className="rq-evlog-foot" page={at} pages={pages} from={from} shown={onPage.length} total={listed.length} label="Log pages" onPage={setPage} />
           </div>
         )}
+      </div>
       </div>
 
       {/* Let go after a drag: what changes, and a yes before it saves. */}
