@@ -81,7 +81,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - The header: the phase's name to click and type (Enter or a click away saves, Esc leaves it), ▾ beside it to switch phase, the state tag as the menu of what can be done; one fact line (`4 weeks · 19/10 – 29/11 · week 1 of 6`); on the right Phase goals and Note to {client} as pills (one pop-over), then ⋯ (Message, Edit dates, New phase, Delete phase). No goals row across the page.
 - Each section's title (20px/600) and its status on the page, its controls on the right; the content in one white card (radius 18, hairline).
 - Adding to a list is the exercise search: one bar with an ink edge, the list floating under it (six rows, Create pinned at its foot), the bar staying for the next pick. Lifestyle's metrics have no time of day: every metric is asked all day.
-- Lifestyle's tracked metrics are pills side by side (21 Oct, Alex), not rows: the name, its unit, its group in the group's colour (small caps); the grip and ··· on hover; no last figure (the check-ins below have it). + Metric at the end of the line opens a dropdown with the search bar at its top, so the card never changes while adding.
+- Lifestyle's tracked metrics are rows (Metric, Group, Last), not pills (21 Oct, Alex tried pills and went back). + Metric under them opens a dropdown with the search bar at its top, so the card never changes while adding.
 
 ## 10. Timeline (Plan)
 - Phase bars: the grab handles at both ends show while the pointer is on the bar, darker on the end itself.

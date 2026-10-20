@@ -147,32 +147,30 @@
 .rd.rls .rls-section { display: flex; flex-direction: column; gap: 12px; }
 .rd.rls .rls-section > .trn-weekhead { margin-bottom: 0; }
 /* A real 1px edge, not an inset shadow (21 Oct, Alex): a row's white was painting over the hairline at its ends. */
-.rd.rls .rls-card { position: relative; padding: 2px 0 8px; border: 1px solid #e1e5eb; border-radius: 18px; background: #fff; }
-.rd.rls .rls-card:has(.rls-pills), .rd.rls .rls-card:has(> .rls-empty) { padding: 0; }
+.rd.rls .rls-card { position: relative; padding: 2px 0 8px; border: 1px solid #e1e5eb; border-radius: 18px; background: #fff; overflow: hidden; }
 .rd.rls .trn-weekhead-actions .trn-btn svg { width: 14px; height: 14px; color: #8b93a1; }
 
-/* Tracked metrics as pills side by side (21 Oct, Alex: with the last figure gone the rows were near empty):
-   white capsules with a hairline, the name and unit, the group in its colour in small caps; the grip and ··· show
-   on hover; + Metric at the end of the line, the search bar taking its place. */
-.rd.rls .rls-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 14px 13px; }
-.rd.rls .rls-pills-none { padding: 0 6px; font-size: 13px; font-weight: 500; color: #8b93a1; }
-.rd.rls .rls-pill { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 2px 0 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; white-space: nowrap; }
-.rd.rls .rls-pill:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
-.rd.rls .rls-pill.rd-sorting { z-index: 3; box-shadow: 0 14px 32px -12px rgba(16, 24, 40, 0.35), inset 0 0 0 1px #c5ccd8; }
-.rd.rls .rls-pill-grip { display: inline-flex; justify-content: center; width: 14px; color: #c5ccd8; cursor: grab; opacity: 0; transition: opacity 0.12s; }
-.rd.rls .rls-pill:hover .rls-pill-grip, .rd.rls .rls-pill-grip:focus-visible { opacity: 1; }
-.rd.rls .rls-pill-grip:hover { color: #5b6474; }
-.rd.rls .rls-pill-grip svg { width: 14px; height: 14px; }
-.rd.rls .rls-pill b { font-size: 14px; font-weight: 600; color: #141a24; }
-.rd.rls .rls-pill small { margin-left: -2px; font-size: 12.5px; font-weight: 500; color: #8b93a1; }
-.rd.rls .rls-pill em { margin-left: 3px; font-style: normal; font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
-.rd.rls .rls-more { display: inline-flex; }
-.rd.rls .rls-pill .trn-row-more { width: 28px; height: 28px; opacity: 0; transition: opacity 0.12s; }
-.rd.rls .rls-pill:hover .trn-row-more, .rd.rls .rls-pill .trn-row-more[data-state="open"], .rd.rls .rls-pill .trn-row-more:focus-visible { opacity: 1; }
-.rd.rls .rls-add { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }
+/* Tracked metrics: column heads in small caps, a row a metric with a hairline between, ··· on hover. */
+.rd.rls .rls-cols { display: grid; align-items: center; min-height: 36px; padding: 4px 10px 0; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.rd.rls .rls-row { position: relative; border-top: 1px solid #eef0f3; background: #fff; }
+.rd.rls .rls-row:hover { background: #fafbfc; }
+.rd.rls .rls-row.rd-sorting { z-index: 3; border-top-color: transparent; border-radius: 12px; box-shadow: 0 14px 32px -12px rgba(16, 24, 40, 0.35), 0 0 0 1px #e1e5eb; }
+.rd.rls .rls-row-main { display: grid; align-items: center; min-height: 52px; padding: 0 10px; }
+.rd.rls .rls-row-main .trn-grip svg { width: 14px; height: 14px; }
+.rd.rls .rls-name { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.rd.rls .rls-name b { min-width: 0; overflow: hidden; font-size: 14.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rls .rls-name small { flex: none; font-size: 12.5px; font-weight: 500; color: #8b93a1; }
+/* The group's pill, one width down the column whatever its word. */
+.rd.rls .rls-group { display: inline-flex; align-items: center; justify-content: center; justify-self: stretch; height: 24px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; color: #3a4250; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rd.rls .rls-last { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 14px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rd.rls .rls-last small { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.rd.rls .rls-last.none { font-size: 13px; font-weight: 500; color: #98a2b3; }
+.rd.rls .rls-more { display: flex; justify-content: flex-end; }
+.rd.rls .rls-row .trn-row-more { opacity: 0; transition: opacity 0.12s; }
+.rd.rls .rls-row:hover .trn-row-more, .rd.rls .rls-row .trn-row-more[data-state="open"], .rd.rls .rls-row .trn-row-more:focus-visible { opacity: 1; }
+.rd.rls .rls-add { display: inline-flex; align-items: center; gap: 6px; height: 36px; margin: 6px 0 0 8px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }
 .rd.rls .rls-add:hover { background: #f5f6f8; }
 .rd.rls .rls-add svg { width: 14px; height: 14px; }
-@media (prefers-reduced-motion: reduce) { .rd.rls .rls-pill-grip, .rd.rls .rls-pill .trn-row-more { transition: none; } }
 .rd.rls .rls-empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 4px 18px; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
 .rd.rls .rls-none { margin: 0; padding: 14px 18px 6px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 

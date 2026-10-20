@@ -321,6 +321,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const openChat = useOpenChat();
   const message = (v: { label: string; link: MessageLink }) => (openChat ? openChat({ area: "Lifestyle", label: v.label, link: v.link }) : setDlg({ kind: "message", ...v }));
   const close = () => setDlg(null);
+  const grid = { gridTemplateColumns: "20px minmax(200px, 1.4fr) 128px minmax(160px, 1fr) 32px", columnGap: 20 } as const;
   const goLive = () => {
     if (!phaseId) return;
     // Live, or why not (5 Oct: a blocked one used to say "is live" anyway).
@@ -510,25 +511,42 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               </button>
             </div>
           ) : (
-            // A pill a metric, side by side (21 Oct, Alex): with the last figure gone (the check-ins below have it),
-            // rows across the page were near empty. The name, its unit, its group in the group's colour; the grip
-            // and ··· on hover; + Metric at the end of the line opens the search there.
-            <SortableList ids={shown.map((m) => m.id)} label="metric" onMove={moveShown} layout="wrap">
-              <div className="rls-pills">
-                {shown.length === 0 && !adding && <span className="rls-pills-none">None yet</span>}
+            <>
+              {shown.length > 0 && (
+                <div className="rls-cols" aria-hidden="true" style={grid}>
+                  <span />
+                  <span>Metric</span>
+                  <span>Group</span>
+                  <span>Last</span>
+                  <span />
+                </div>
+              )}
+              <SortableList ids={shown.map((m) => m.id)} label="metric" onMove={moveShown}>
                 {shown.map((m) => {
                   // Just added: there, faded and still, until the save gives it its number.
                   const incoming = m.id < 0;
                   return (
-                    <SortableItem key={m.id} id={m.id} className={`rls-pill${incoming ? " trn-incoming" : ""}`}>
+                    <SortableItem key={m.id} id={m.id} className={`rls-row${incoming ? " trn-incoming" : ""}`}>
                       {(grip) => (
-                        <>
-                          <span className="rls-pill-grip" {...(canDrag ? grip : {})}>
+                        <div className="rls-row-main" style={grid}>
+                          <span className="rd-grip trn-grip" {...(canDrag ? grip : {})}>
                             <GripIcon />
                           </span>
-                          <b>{m.name}</b>
-                          {m.unit && <small>{m.unit}</small>}
-                          <em style={{ color: groupColour(m.groupKey).hex }}>{m.groupLabel}</em>
+                          <span className="rls-name">
+                            <b>{m.name}</b>
+                            {m.unit && <small>{m.unit}</small>}
+                          </span>
+                          <span className="rls-group" style={{ background: m.tint, color: groupColour(m.groupKey).hex }}>
+                            {m.groupLabel}
+                          </span>
+                          {m.last ? (
+                            <span className="rls-last">
+                              {withUnit(m.last.value, m.unit)}
+                              <small>{m.last.when}</small>
+                            </span>
+                          ) : (
+                            <span className="rls-last none">None yet</span>
+                          )}
                           <span className="rls-more">
                             {!incoming && (
                               <DropdownMenu modal={false}>
@@ -553,20 +571,21 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                               </DropdownMenu>
                             )}
                           </span>
-                        </>
+                        </div>
                       )}
                     </SortableItem>
                   );
                 })}
-                {adding ? (
-                  <AddMetricRow library={plan.library} groups={plan.groups} have={rows.map((r) => r.name.toLowerCase())} onAdd={addMetric} onClose={() => setAdding(false)} />
-                ) : (
-                  <button type="button" className="rls-add" onClick={() => setAdding(true)}>
-                    <PlusIcon /> Metric
-                  </button>
-                )}
-              </div>
-            </SortableList>
+              </SortableList>
+              {/* + Metric opens a dropdown with the search at its top (21 Oct, Alex): the card never stretches while adding. */}
+              {adding ? (
+                <AddMetricRow library={plan.library} groups={plan.groups} have={rows.map((r) => r.name.toLowerCase())} onAdd={addMetric} onClose={() => setAdding(false)} />
+              ) : (
+                <button type="button" className="rls-add" onClick={() => setAdding(true)}>
+                  <PlusIcon /> Metric
+                </button>
+              )}
+            </>
           )}
         </div>
       </section>
