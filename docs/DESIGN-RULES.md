@@ -1,6 +1,6 @@
 # NorCoach client app · design rules
 
-Read this before touching any client screen. One hero language, one everyday language, nothing else.
+Read this before touching any client screen. One hero language, one everyday language, nothing else. (The coach admin has its own: `docs/DESIGN-RULES-ADMIN.md`.)
 
 ## 1. Two languages, no third
 - **Hero**: the phase cards on Home only. Full-bleed photo, dark glass panel, white type. Nothing else may look like this.
