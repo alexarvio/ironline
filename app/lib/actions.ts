@@ -3031,16 +3031,24 @@ export async function deployPhaseNowAction(id: number): Promise<string | null> {
 // The phase dialog's buttons for a draft: what was changed in the dialog is
 // saved and the draft goes out, in one step — on its dates (scheduled, or
 // live if its week has come), or now from this week.
-export async function saveAndSchedulePhaseAction(formData: FormData) {
+/** The form action (the old phase pop-up posts to it): schedules, says nothing. */
+export async function saveAndSchedulePhaseAction(formData: FormData): Promise<void> {
+  await saveAndSchedulePhaseOrSayWhyAction(formData);
+}
+
+/** Scheduled, or why not: an empty phase is saved but doesn't go out (20 Oct: the Plan's toast said "scheduled" anyway). */
+export async function saveAndSchedulePhaseOrSayWhyAction(formData: FormData): Promise<string | null> {
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
-  if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
+  if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return "That phase no longer exists.";
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
   saveObjectivesFrom(id, formData);
-  // The edits are kept; an empty draft just doesn't go out.
-  if (!phaseEmptyReason(id)) schedulePhase(id, fields.name, fields.start, fields.end, fields.exact);
+  // The edits are kept; an empty draft just doesn't go out, and says why (20 Oct: the toast said "scheduled" anyway).
+  const empty = phaseEmptyReason(id);
+  if (!empty) schedulePhase(id, fields.name, fields.start, fields.end, fields.exact);
   revalidatePath("/admin");
   revalidatePath("/client");
+  return empty;
 }
 
 export async function saveAndDeployPhaseNowAction(formData: FormData): Promise<string | null> {

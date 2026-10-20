@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../../../lib/phaseCovers";
 import Link from "next/link";
-import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, duplicateClientPhaseAction, removeClientGoalAction, deletePhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, cancelProgramScheduleAction, unschedulePhaseAction, duplicateClientPhaseAction, removeClientGoalAction, deletePhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseOrSayWhyAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
@@ -622,6 +622,22 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
             others={phases}
             programs={plan.programs}
             onDelete={dlg.phase ? () => setDlg({ kind: "deletePhase", id: dlg.phase!.id }) : undefined}
+            onUnschedule={
+              dlg.phase
+                ? () => {
+                    const p = dlg.phase!;
+                    close();
+                    // A training phase's programme carries its schedule; any other phase is itself the draft again.
+                    act(async () => {
+                      if (p.program) {
+                        const f = new FormData();
+                        f.set("programId", String(p.program.id));
+                        await cancelProgramScheduleAction(f);
+                      } else await unschedulePhaseAction(p.id);
+                    }, `${p.name} is a draft again`);
+                  }
+                : undefined
+            }
             onDuplicate={
               dlg.phase
                 ? () => {
@@ -654,7 +670,14 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                   if (why) toast.error(`${v.name} isn't live yet`, { description: why });
                   else savedToast(`${v.name} is live`);
                 });
-              else act(() => saveAndSchedulePhaseAction(fd), `${v.name} scheduled for ${fmtDay(v.start)}`);
+              else
+                // Scheduled, or why not (20 Oct: an empty one said "scheduled" anyway).
+                start(async () => {
+                  const why = await saveAndSchedulePhaseOrSayWhyAction(fd);
+                  router.refresh();
+                  if (why) toast.error(`${v.name} isn't scheduled yet`, { description: why });
+                  else savedToast(`${v.name} scheduled for ${fmtDay(v.start)}`);
+                });
             }}
           />
         )}
@@ -835,7 +858,7 @@ export function gridFor(win: number, thisWeek: string, intoWeek: number, /** Wee
   return { first, count, weeks, nowIdx, months, cols, nowLeft, shift };
 }
 
-export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTrack, lockTrack = false, initialStart, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase opens on this day (the Phases overview: the day after the one ending). */ initialStart?: string; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null; goals: string[] }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean; goals: string[] }) => void }) {
+export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, initialStart, others, programs, onSave, onDelete, onDuplicate, onSend, onUnschedule }: { clientId: number; firstName: string; /** A scheduled phase back to a draft (its state tag's menu). */ onUnschedule?: () => void; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase opens on this day (the Phases overview: the day after the one ending). */ initialStart?: string; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null; goals: string[] }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean; goals: string[] }) => void }) {
   const editing = !!phase;
   // The phase's goals (19 Oct), one a line, the same three the tab's Goals pill edits.
   // Three slots, as the client's Home shows them under the phase (20 Oct, Alex); folded behind its chevron until opened.
@@ -943,6 +966,48 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
   const loose = programs.filter((p) => !p.linked);
   const linkedProgram = programChoice !== "new" ? programs.find((p) => p.id === Number(programChoice)) ?? null : null;
 
+  // The state tag is where its actions live (20 Oct, Alex: make it live from here, as on Training): a draft
+  // is scheduled or made live, a scheduled one made live now or sent back to draft. Each asks first, and saves the edits with it.
+  const [going, setGoing] = useState<"live" | "schedule" | "draft" | null>(null);
+  const startHasCome = from <= today;
+  const actionable = editing && (state === "draft" || state === "scheduled");
+  const running = others.find((o) => o.id !== phase?.id && o.track === track && !(o.draft || o.program?.status === "draft") && o.start_week <= today && addDays(o.end_week, 6) >= today);
+  if (going && phase) {
+    const called = name.trim() || phase.name;
+    // Going live today ends the phase running on the track the day before (a training one, before this week's Monday).
+    const endsOn = shortDate(track === "training" ? addDays(mondayOf(today), -1) : addDays(today, -1));
+    const t =
+      going === "live"
+        ? { title: `Make ${called} live?`, what: `${firstName} sees it from today.${running ? ` ${running.name} ends ${endsOn}.` : ""}`, go: "Make it live" }
+        : going === "schedule"
+          ? { title: `Schedule ${called}?`, what: `${firstName} sees it from ${shortDate(startWeek)}.`, go: "Schedule it" }
+          : { title: "Back to draft?", what: `${called} stops being scheduled.`, go: "Back to draft" };
+    return (
+      <DialogContent className="dlh">
+        <div className="dlh-head">
+          <DialogTitle className="dlh-title">{t.title}</DialogTitle>
+          <DialogClose className="dlh-x" aria-label="Close">
+            ✕
+          </DialogClose>
+        </div>
+        <DialogDescription className="dlh-what">{t.what}</DialogDescription>
+        <div className="dlh-foot">
+          <button type="button" className="dlh-cancel" onClick={() => setGoing(null)}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="dlh-go"
+            autoFocus
+            onClick={() => (going === "draft" ? onUnschedule?.() : onSend({ name: called, track, start: startWeek, end: endWeek, now: going === "live", goals: goalLines }))}
+          >
+            {t.go}
+          </button>
+        </div>
+      </DialogContent>
+    );
+  }
+
   // In the admin hairline style (20 Oct, Alex): a title and one quiet line of
   // facts (track · state), clean-line fields, the calendar in ink, the dates as
   // two hairline capsules, no explanations; a clash says what is in the way
@@ -976,9 +1041,28 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
           <TrackIcon track={track} size={12} />
           {TRACK_LABEL[track]}
         </span>
-        <span className="npd-state" style={stateTagStyle(state)}>
-          {STATE_LABEL[state]}
-        </span>
+        {actionable ? (
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="npd-state npd-state-btn" style={stateTagStyle(state)} aria-label={`${STATE_LABEL[state]}: change`} disabled={!ok}>
+              {STATE_LABEL[state]}
+              <ChevronDownIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="pb-menu">
+              {state === "draft" ? (
+                <DropdownMenuItem onSelect={() => setGoing(startHasCome ? "live" : "schedule")}>{startHasCome ? "Make it live" : "Schedule it"}</DropdownMenuItem>
+              ) : (
+                <>
+                  <DropdownMenuItem onSelect={() => setGoing("live")}>Make it live now</DropdownMenuItem>
+                  {onUnschedule && <DropdownMenuItem onSelect={() => setGoing("draft")}>Back to draft</DropdownMenuItem>}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span className="npd-state" style={stateTagStyle(state)}>
+            {STATE_LABEL[state]}
+          </span>
+        )}
       </DialogDescription>
       {!editing && !lockTrack && (
         <div className="npd-field">

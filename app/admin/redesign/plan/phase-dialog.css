@@ -199,6 +199,11 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 /* ---- The event pop-up on the same pattern (20 Oct): eight categories four across, the When capsule over the dates,
    the repeat's days and words in a room that is always kept, a quiet "From client" fact tag. */
 .npd.npd .npd-tiles.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* A draft's or scheduled phase's tag is its menu (20 Oct, Alex): its state colours, a chevron, a ring in its colour on hover or open. */
+.npd.npd .npd-state-btn { gap: 4px; border: 0; font-family: inherit; cursor: pointer; }
+.npd.npd .npd-state-btn svg { width: 11px; height: 11px; }
+.npd.npd .npd-state-btn:hover, .npd.npd .npd-state-btn[data-state="open"] { box-shadow: inset 0 0 0 1px currentColor; }
+.npd.npd .npd-state-btn:disabled { cursor: default; opacity: 0.6; }
 .npd.npd .npd-from { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 11.5px; font-weight: 600; color: #5b6474; }
 .npd.npd .npd-when { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
 .npd.npd .npd-when .npd-seg { width: 100%; }
