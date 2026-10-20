@@ -181,3 +181,6 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 .npd.npd .npd-date .rdt.rdt { width: 100%; height: auto; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; outline: none; font: inherit; font-size: 14.5px; font-weight: 500; color: #141a24; }
 .npd.npd .npd-date .rdt.rdt:disabled { color: #8b93a1; opacity: 1; }
 .npd.npd .npd-date .rdt.bad { color: #b42318; }
+/* One line of text in the capsule (21 Oct): the shared .rdt field is 34px tall and pushed the label into the capsule's edge. */
+.npd.npd .npd-date input.rdt.rdt { flex: none !important; height: 20px !important; min-height: 0 !important; line-height: 20px; }
+.npd.npd .npd-date { gap: 2px; }

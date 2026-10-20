@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 // A date typed, beside a calendar that is clicked: the field reads
-// 21/09/2026 and takes 21/09/2026, 21.9.2026, 21092026 or 2026-09-21. A
+// 21/09/2026 and takes digits only, the slashes filling in (21092026), or a pasted 2026-09-21. A
 // whole real date is handed on the moment it is complete; anything else is
 // left as typed until the field is left, when it shows the day it holds.
 
@@ -24,6 +24,23 @@ export const typedDate = (raw: string): string | null => {
   return isoOf(date);
 };
 
+/**
+ * As it is typed (21 Oct, Alex): digits only, the slashes put in by
+ * themselves, so 0811 reads 08/11/ and 08112026 reads 08/11/2026. Deleting
+ * leaves the slash out, so a backspace isn't undone. A pasted 2026-11-08
+ * becomes 08/11/2026.
+ */
+export const maskDate = (raw: string, previous: string): string => {
+  const iso = /^\s*(\d{4})-(\d{1,2})-(\d{1,2})\s*$/.exec(raw);
+  if (iso) return `${iso[3].padStart(2, "0")}/${iso[2].padStart(2, "0")}/${iso[1]}`;
+  const d = raw.replace(/\D/g, "").slice(0, 8);
+  const deleting = raw.length < previous.length;
+  const parts = [d.slice(0, 2), d.slice(2, 4), d.slice(4)].filter(Boolean);
+  let out = parts.join("/");
+  if (!deleting && (d.length === 2 || d.length === 4)) out += "/";
+  return out;
+};
+
 export default function DateText({ value, onChange, label, disabled = false, onFocus }: { value: string; onChange: (iso: string) => void; label: string; disabled?: boolean; /** Arms this end in the calendar beside it. */ onFocus?: () => void }) {
   // What is being typed; null shows the day the field holds.
   const [typing, setTyping] = useState<string | null>(null);
@@ -41,8 +58,9 @@ export default function DateText({ value, onChange, label, disabled = false, onF
       aria-invalid={bad || undefined}
       onFocus={onFocus}
       onChange={(e) => {
-        setTyping(e.target.value);
-        const day = typedDate(e.target.value);
+        const next = maskDate(e.target.value, text);
+        setTyping(next);
+        const day = typedDate(next);
         if (day) onChange(day);
       }}
       onBlur={() => setTyping(null)}
