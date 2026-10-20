@@ -53,12 +53,14 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 ## 7. Dates
 - A date in words is day/month numerals (20 Oct, Alex): `Scheduled · starts 9/11`, `5/10 – 2/11`, `Start 16/11`. Never `9 Nov` or `Mon 9 Nov` in a pill, a fact line, a note, a button or a toast; the year only when it isn't this one (`9/11/2027`). Grids keep their month names: the timeline's axis (`9 Nov` under `NOV`), the week rail, calendars. One helper writes them, server and screen alike: `dayMonth` (`app/lib/dayMonth.ts`); no local copies.
 - Every date field, everywhere (20 Oct, Alex): typed or picked, always both. `DateText`: digits only, slashes fill in (0811 → 08/11/), dd/mm/yyyy, a pasted 2026-11-08 is turned round. A single date is `DatePick` (the typed field with the calendar on its icon); a range is two `DateText` boxes beside `MonthRange`. Never `<input type="date">`, never a calendar-only picker, never a date shown as words where it can be set.
+- The month calendar beside the dates (`MonthRange`: phase, event, schedule pop-ups) steps a month with its arrows and a week per wheel or trackpad scroll (21 Oct, Alex); the month named is the one the six weeks mostly show, and picking a day doesn't move them.
 - The format lives in `DateText` alone, so a coach setting (dd/mm/yyyy or yyyy-mm-dd, to come) switches every field at once. Don't format a typed date anywhere else.
 - Phase dates: no earlier than a year back (`min`). Every phase runs in whole Monday-to-Sunday weeks, Lifestyle and Nutrition too (21 Oct, Alex); the dates snap, and no sentence explains it. Make it live now starts a phase this week's Monday.
 
 ## 8. Lists, rows and tables
 - Training sessions: separate white cards (radius 18, hairline, 8px apart), no numbers, the whole row opens it, ⋯ shows on hover only.
 - Row actions in general show on hover only.
+- A setting that changes how the week's sessions read sits on the week's line, beside them, not in the programme's ··· menu (21 Oct, Alex): KG/LBS and Columns. Everything on that line is 36px.
 - Table heads: white, small caps, no line between a row's head and its column heads, hairlines between rows.
 - Status pills: hairline capsules. Completed green, In progress ink, Not started grey, and Not started only on the current week and past weeks, never on weeks still to come.
 - A summary lives in the column head (`ENJOYMENT  AVG 8`), never as a fake row of data. The Lifestyle check-ins table too (21 Oct, Alex): each metric's head says `CHANGE +1.2 (+2%)` (weight, body fat, measurements: the unit kg, %, cm decides) or `AVG 7.4` (sleep, resting HR, steps, water, /10 scales); the coach switches it in the metric's ··· menu.

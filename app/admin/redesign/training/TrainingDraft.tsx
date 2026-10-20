@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
 import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, deletePhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
@@ -815,67 +815,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               <DropdownMenuItem onSelect={() => setDlg({ kind: "gyms" })}>
                 <DumbbellIcon /> Client gyms
               </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <ColumnsIcon /> Columns shown
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="pb-menu rd-colmenu">
-                  {/* Exercises | Cardio across the top; one side's columns at a time. */}
-                  <div className="rd-coltabs" role="tablist" onKeyDown={(e) => e.stopPropagation()}>
-                    {(["exercises", "cardio"] as const).map((k) => (
-                      <button key={k} type="button" role="tab" aria-selected={colTab === k} className={colTab === k ? "on" : ""} onClick={() => setColTab(k)}>
-                        {k === "exercises" ? "Exercises" : "Cardio"}
-                      </button>
-                    ))}
-                  </div>
-                  {colTab === "exercises" ? (
-                    <>
-                      {(
-                        [
-                          ["sets", "Sets"],
-                          ["weight", "Weight"],
-                          ["reps", "Reps"],
-                          ["rpe", "RPE"],
-                          ["tempo", "Tempo"],
-                          ["rest", "Rest"],
-                        ] as const
-                      ).map(([k, label]) => (
-                        <DropdownMenuCheckboxItem
-                          key={k}
-                          checked={cols[k]}
-                          disabled={(!cols[k] && onCount >= MAX_COLS) || (k in inUse && inUse[k as keyof typeof inUse])}
-                          onCheckedChange={(v) => setCols((c) => ({ ...c, [k]: !!v }))}
-                          onSelect={(e) => e.preventDefault()}
-                        >
-                          {label}
-                          {k in inUse && inUse[k as keyof typeof inUse] && <small className="rd-menu-inuse">in use</small>}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={() => draftOnly("Custom column")}>
-                        <PlusIcon /> Custom column
-                      </DropdownMenuItem>
-                      <p className="rd-menu-hint">{MAX_COLS} at a time. Notes always show under the name.</p>
-                    </>
-                  ) : (
-                    <>
-                      {(
-                        [
-                          ["time", "Time"],
-                          ["pace", "Pace"],
-                          ["incline", "Incline"],
-                          ["distance", "Distance"],
-                        ] as const
-                      ).map(([k, label]) => (
-                        <DropdownMenuCheckboxItem key={k} checked={ccols[k]} onCheckedChange={(v) => setCcols((c) => ({ ...c, [k]: !!v }))} onSelect={(e) => e.preventDefault()}>
-                          {label}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                      <p className="rd-menu-hint">What a cardio row shows under its name.</p>
-                    </>
-                  )}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
               <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>
                 <CalendarIcon /> Edit dates
               </DropdownMenuItem>
@@ -961,6 +900,67 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               <CopyIcon /> Copy to {forwardLabel}
             </button>
           )}
+          {/* Which columns the week's tables show, beside KG/LBS (21 Oct, Alex: it was in the programme's ··· menu). */}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="trn-btn" aria-label="Columns shown">
+              <ColumnsIcon /> Columns
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="pb-menu rd-colmenu">
+                  {/* Exercises | Cardio across the top; one side's columns at a time. */}
+                  <div className="rd-coltabs" role="tablist" onKeyDown={(e) => e.stopPropagation()}>
+                    {(["exercises", "cardio"] as const).map((k) => (
+                      <button key={k} type="button" role="tab" aria-selected={colTab === k} className={colTab === k ? "on" : ""} onClick={() => setColTab(k)}>
+                        {k === "exercises" ? "Exercises" : "Cardio"}
+                      </button>
+                    ))}
+                  </div>
+                  {colTab === "exercises" ? (
+                    <>
+                      {(
+                        [
+                          ["sets", "Sets"],
+                          ["weight", "Weight"],
+                          ["reps", "Reps"],
+                          ["rpe", "RPE"],
+                          ["tempo", "Tempo"],
+                          ["rest", "Rest"],
+                        ] as const
+                      ).map(([k, label]) => (
+                        <DropdownMenuCheckboxItem
+                          key={k}
+                          checked={cols[k]}
+                          disabled={(!cols[k] && onCount >= MAX_COLS) || (k in inUse && inUse[k as keyof typeof inUse])}
+                          onCheckedChange={(v) => setCols((c) => ({ ...c, [k]: !!v }))}
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          {label}
+                          {k in inUse && inUse[k as keyof typeof inUse] && <small className="rd-menu-inuse">in use</small>}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => draftOnly("Custom column")}>
+                        <PlusIcon /> Custom column
+                      </DropdownMenuItem>
+                      <p className="rd-menu-hint">{MAX_COLS} at a time</p>
+                    </>
+                  ) : (
+                    <>
+                      {(
+                        [
+                          ["time", "Time"],
+                          ["pace", "Pace"],
+                          ["incline", "Incline"],
+                          ["distance", "Distance"],
+                        ] as const
+                      ).map(([k, label]) => (
+                        <DropdownMenuCheckboxItem key={k} checked={ccols[k]} onCheckedChange={(v) => setCcols((c) => ({ ...c, [k]: !!v }))} onSelect={(e) => e.preventDefault()}>
+                          {label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </>
+                  )}
+            </DropdownMenuContent>
+          </DropdownMenu>
           {/* KG / LBS beside the sessions it changes (20 Oct, Alex: it was in the programme's header). */}
           <div className="trn-unit" role="radiogroup" aria-label="Unit">
             {(["kg", "lbs"] as const).map((u) => (

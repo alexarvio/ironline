@@ -749,11 +749,46 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
 
 /** Six rows of a month, the picked weeks tinted in the phase's own colours, other phases on the track as a grey mark. */
 export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, today, plain = false, legend = "New phase" }: { from: string; to: string; onPick: (day: string) => void; chrome: ReturnType<typeof phaseChrome>; planned: { name: string; from: string; to: string; draft?: boolean }[]; cursor: string; setCursor: (m: string) => void; today: string; /** No colours of its own (20 Oct): the hairline phase dialog draws the range from its CSS. */ plain?: boolean; /** What the range is called under the month; null for none (an event's range needs no key). */ legend?: string | null }) {
-  const [y, mo] = cursor.split("-").map(Number);
-  const first = new Date(y, mo - 1, 1);
-  const gridStart = mondayOf(isoOf(first));
+  // Six weeks on screen from `view.start`. The arrows step a month; the wheel or a trackpad over the days steps a
+  // week at a time (21 Oct, Alex). A day picked (the parent moves `cursor` to its month) leaves the weeks where they
+  // are while that month is still on screen; a date typed further off brings its month up.
+  const monthStart = (c: string) => mondayOf(`${c}-01`);
+  const [view, setView] = useState({ cursor, start: monthStart(cursor) });
+  let gridStart = view.start;
+  if (view.cursor !== cursor) {
+    const mid = `${cursor}-15`;
+    gridStart = mid >= view.start && mid <= addDays(view.start, 41) ? view.start : monthStart(cursor);
+    setView({ cursor, start: gridStart });
+  }
   const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
-  const move = (n: number) => setCursor(isoOf(new Date(y, mo - 1 + n, 1)).slice(0, 7));
+  // The month named in the head, and the days that are dark: the one the middle of the six weeks falls in.
+  const first = (() => {
+    const mid = parse(addDays(gridStart, 17));
+    return new Date(mid.getFullYear(), mid.getMonth(), 1);
+  })();
+  const mo = first.getMonth() + 1;
+  const move = (n: number) => {
+    const c = isoOf(new Date(first.getFullYear(), first.getMonth() + n, 1)).slice(0, 7);
+    setCursor(c);
+    setView({ cursor: c, start: monthStart(c) });
+  };
+  const gridRef = useRef<HTMLDivElement>(null);
+  const wheel = useRef(0);
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      // A trackpad sends many small deltas: a week per 40px or so; a mouse notch is one week.
+      wheel.current += e.deltaY;
+      if (Math.abs(wheel.current) < 40) return;
+      const step = wheel.current > 0 ? 1 : -1;
+      wheel.current = 0;
+      setView((v) => ({ ...v, start: addDays(v.start, step * 7) }));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
   // What a day is to the new phase (15 Oct): taken by another phase on the track, in the new range, both (an overlap), or free.
   const kindOf = (x: string) => {
     const b = planned.some((p) => x >= p.from && x <= p.to);
@@ -773,7 +808,7 @@ export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCurso
           </button>
         </span>
       </div>
-      <div className="rdd-cal-grid">
+      <div ref={gridRef} className="rdd-cal-grid">
         {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
           <span key={i} className="rdd-dow">
             {d}
