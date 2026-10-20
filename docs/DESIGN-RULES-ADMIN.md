@@ -54,6 +54,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - A date in words is day/month numerals (20 Oct, Alex): `Scheduled · starts 9/11`, `5/10 – 2/11`, `Start 16/11`. Never `9 Nov` or `Mon 9 Nov` in a pill, a fact line, a note, a button or a toast; the year only when it isn't this one (`9/11/2027`). Grids keep their month names: the timeline's axis (`9 Nov` under `NOV`), the week rail, calendars. One helper writes them, server and screen alike: `dayMonth` (`app/lib/dayMonth.ts`); no local copies.
 - Every date field, everywhere (20 Oct, Alex): typed or picked, always both. `DateText`: digits only, slashes fill in (0811 → 08/11/), dd/mm/yyyy, a pasted 2026-11-08 is turned round. A single date is `DatePick` (the typed field with the calendar on its icon); a range is two `DateText` boxes beside `MonthRange`. Never `<input type="date">`, never a calendar-only picker, never a date shown as words where it can be set.
 - The month calendar beside the dates (`MonthRange`: phase, event, schedule pop-ups) steps a month with its arrows and a week per wheel or trackpad scroll (21 Oct, Alex); the month named is the one the six weeks mostly show, and picking a day doesn't move them.
+- One calendar (21 Oct, Alex): every month a coach picks on is `MonthRange` (`app/admin/redesign/MonthRange.tsx`, styles `month-range.css`): the phase pop-up's, the event pop-up's, Dates / Schedule, every `DatePick` (one day: from = to), the meeting scheduler. Six weeks; ‹ › step a month, the wheel or trackpad steps a week. Ink and grey; a colour only where it marks a category (the phase pop-up's track, the event's kind, via `--npd-c`). Never a month grid of its own.
 - The format lives in `DateText` alone, so a coach setting (dd/mm/yyyy or yyyy-mm-dd, to come) switches every field at once. Don't format a typed date anywhere else.
 - Phase dates: no earlier than a year back (`min`). Every phase runs in whole Monday-to-Sunday weeks, Lifestyle and Nutrition too (21 Oct, Alex); the dates snap, and no sentence explains it. Make it live now starts a phase this week's Monday.
 
@@ -92,6 +93,6 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - An empty week on a lane is a way in: a + on hover, a click opens New phase on that track from that week.
 
 ## 11. Before you build
-- Search for an existing pattern first: `.dlh`, `.npd`, `ConfirmDialog`, `Picker`, `DateText`, `dayMonth`, the floating add-row list (`rd-addpop`), `trn-btn`, `trn-state`, `stateChip`, `TRACK_ACCENT`.
+- Search for an existing pattern first: `.dlh`, `.npd`, `ConfirmDialog`, `Picker`, `DateText`, `MonthRange`, `dayMonth`, the floating add-row list (`rd-addpop`), `trn-btn`, `trn-state`, `stateChip`, `TRACK_ACCENT`.
 - Don't add a CSS file for a pop-up that fits `.dlh`. Don't hardcode a track colour; take it from `phaseChrome.ts`.
 - Check the result against this file before saying it's done.

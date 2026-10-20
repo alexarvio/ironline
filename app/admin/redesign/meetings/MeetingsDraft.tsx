@@ -9,8 +9,9 @@ import type React from "react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DateText from "../DateText";
+import { MonthRange } from "../MonthRange";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
 import { allTimezones, SERVER_TZ, tzShort, zonedToUtc } from "../../../lib/timezones";
 import TimezonePicker from "./TimezonePicker";
@@ -641,54 +642,42 @@ function PastBody({ m, firstName, onPatch, bare, onAddEvent }: { m: DraftMeeting
   );
 }
 
-/** The month at a glance: this client's calls, everyone else's, and the picked day's bookings under it. */
+/** The month at a glance: this client's calls, everyone else's, and the picked day's bookings under it. The phase pop-up's
+ *  calendar (MonthRange, 21 Oct, Alex: one calendar, a week per wheel step), the picked day in ink, the calls as dots. */
 function MiniCalendar({ today, selected, dots, onPick }: { today: string; selected: string; dots: DraftDot[]; onPick: (d: string) => void }) {
-  const [cursor, setCursor] = useState(() => selected.slice(0, 7));
-  const [y, mo] = cursor.split("-").map(Number);
-  const first = new Date(y, mo - 1, 1);
-  const lead = (first.getDay() + 6) % 7;
-  const count = new Date(y, mo, 0).getDate();
-  const cells: (string | null)[] = [...Array<null>(lead).fill(null), ...Array.from({ length: count }, (_, i) => isoOf(new Date(y, mo - 1, i + 1)))];
-  // Always six rows, so the month never changes height as it turns.
-  while (cells.length < 42) cells.push(null);
-  const shift = (n: number) => setCursor(isoOf(new Date(y, mo - 1 + n, 1)).slice(0, 7));
+  const [cursor, setCursor] = useState(() => (selected || today).slice(0, 7));
+  // A day typed into the Date field brings its month up (a click on the month leaves the weeks where they are).
+  const [shown, setShown] = useState(selected);
+  if (shown !== selected) {
+    setShown(selected);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(selected)) setCursor(selected.slice(0, 7));
+  }
   const byDate = new Map<string, DraftDot[]>();
   dots.forEach((d) => byDate.set(d.date, [...(byDate.get(d.date) ?? []), d]));
   const onDay = [...(byDate.get(selected) ?? [])].sort((a, b) => (a.time < b.time ? -1 : 1));
   return (
     <div className="rt-cal">
-      <div className="rt-cal-head">
-        <b>{first.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</b>
-        <span className="rt-cal-nav">
-          <button type="button" className="rd-btn ghost sm" onClick={() => shift(-1)} aria-label="Previous month">
-            <ChevronLeftIcon />
-          </button>
-          <button type="button" className="rd-btn ghost sm next" onClick={() => shift(1)} aria-label="Next month">
-            <ChevronLeftIcon />
-          </button>
-        </span>
-      </div>
-      <div className="rt-cal-grid">
-        {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-          <span key={i} className="rt-cal-dow">
-            {d}
-          </span>
-        ))}
-        {cells.map((d, i) =>
-          d ? (
-            <button key={i} type="button" className={`rt-cal-cell${d === today ? " today" : ""}${d === selected ? " selected" : ""}${d < today ? " past" : ""}`} onClick={() => onPick(d)} aria-pressed={d === selected}>
-              {Number(d.slice(8))}
-              <span className="rt-cal-dots" aria-hidden="true">
-                {(byDate.get(d) ?? []).slice(0, 3).map((x, j) => (
-                  <i key={j} className={x.mine ? "mine" : ""} />
-                ))}
-              </span>
-            </button>
-          ) : (
-            <span key={i} />
-          ),
-        )}
-      </div>
+      <MonthRange
+        from={selected}
+        to={selected}
+        onPick={onPick}
+        planned={[]}
+        cursor={cursor}
+        setCursor={setCursor}
+        today={today}
+        plain
+        legend={null}
+        marks={(d) => {
+          const list = byDate.get(d);
+          return list?.length ? (
+            <span className="rt-cal-dots">
+              {list.slice(0, 3).map((x, j) => (
+                <i key={j} className={x.mine ? "mine" : ""} />
+              ))}
+            </span>
+          ) : null;
+        }}
+      />
       <div className="rt-day">
         <div className="rt-day-head">
           <span>{dayHead(selected)}</span>

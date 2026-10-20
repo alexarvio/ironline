@@ -58,33 +58,20 @@
 .rt-note-add .rd-input { flex: 1; }
 .rt-empty { margin: 0; padding: 8px 10px; font-size: 12.5px; color: #8b93a1; }
 
-/* The month at a glance, with the picked day's bookings under it. */
+/* The month at a glance (MonthRange, month-range.css), with the picked day's bookings under it. */
 .rt-cal { padding: 0 14px 14px; }
-.rt-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0 8px; }
-.rt-cal-head b { font-size: 14px; font-weight: 700; color: #141a24; }
-.rt-cal-nav { display: flex; gap: 2px; }
-.rt-cal-nav .rd-btn.ghost.sm svg { width: 14px; height: 14px; }
-.rt-cal-nav .rd-btn.ghost.sm.next svg { transform: rotate(180deg); }
-/* Six rows of one height, whatever the month, so paging through the year never moves a thing. */
-.rt-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 40px; gap: 2px; }
-.rt-cal-dow { padding: 4px 0; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; }
-.rt-cal-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: 40px; border: 1px solid transparent; border-radius: 9px; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #313851; cursor: pointer; font-variant-numeric: tabular-nums; }
-.rt-cal-cell:hover { background: #f4f6fa; }
-.rt-cal-cell.today { border-color: #1e3a6e; color: #1e3a6e; }
-.rt-cal-cell.selected { background: #1e3a6e; color: #fff; }
-.rt-cal-cell.past { color: #b0b6c0; }
-.rt-cal-cell.selected.past { color: rgba(255, 255, 255, 0.7); }
+/* A day's calls as dots under its number (MonthRange's marks): this client's in ink, everyone else's grey; white on the picked day. */
 .rt-cal-dots { display: flex; gap: 2px; height: 5px; }
 .rt-cal-dots i, .rt-legend i { display: block; width: 5px; height: 5px; border-radius: 999px; background: #c3c9d2; }
-.rt-cal-dots i.mine, .rt-legend i.mine { background: #2f5d8f; }
+.rt-cal-dots i.mine, .rt-legend i.mine { background: #141a24; }
 .rt-cal-dots i.done, .rt-legend i.done { background: #1b7a4b; }
-.rt-cal-cell.selected .rt-cal-dots i { background: rgba(255, 255, 255, 0.6); }
-.rt-cal-cell.selected .rt-cal-dots i.mine, .rt-cal-cell.selected .rt-cal-dots i.done { background: #fff; }
-.rt-day { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eceff3; }
+.rdd-cell.in.start .rt-cal-dots i { background: rgba(255, 255, 255, 0.55); }
+.rdd-cell.in.start .rt-cal-dots i.mine, .rdd-cell.in.start .rt-cal-dots i.done { background: #fff; }
+.rt-day { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eef0f3; }
 .rt-day-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; color: #141a24; }
 .rt-day-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #5b6474; }
-.rt-day-row b { font-weight: 600; color: #313851; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rt-day-row.mine b { color: #1e3a6e; }
+.rt-day-row b { font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rt-day-row.mine b { color: #141a24; }
 .rt-day-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rt-legend { display: flex; gap: 12px; margin-top: 10px; font-size: 11px; color: #8b93a1; }
 .rt-legend span { display: inline-flex; align-items: center; gap: 5px; }
@@ -104,10 +91,10 @@
 .rt-cols { display: block; }
 .rt-dlg { max-width: 760px; }
 .rt-dlg .rdd-cols { grid-template-columns: minmax(0, 1.1fr) minmax(240px, 0.9fr); }
-.rt-dlg-cal { padding: 12px; border-radius: 12px; background: #f4f7fc; }
+/* No panel round the month (21 Oct): the same calendar as the phase pop-up's. */
+.rt-dlg-cal { min-width: 0; }
 .rt-dlg-cal .rt-cal { padding: 0; }
 /* The month and the day under it keep one height whatever is on them. */
-.rt-cal-grid { user-select: none; }
 .rt-day { min-height: 118px; }
 .rt-day-list { display: flex; flex-direction: column; gap: 6px; max-height: 72px; overflow-y: auto; scrollbar-width: thin; }
 /* The bar under a note, flush with the card it sits in. */

@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { MonthRange } from "../plan/PlanDraft";
-import type React from "react";
-import { phaseChrome, TRACK_PALETTE } from "../../phaseChrome";
+import { MonthRange } from "../MonthRange";
 import { addDays, mondayOf } from "../phases/timeline";
 import DateText from "../DateText";
 import { dayMonth } from "../../../lib/dayMonth";
@@ -13,6 +11,8 @@ import { dayMonth } from "../../../lib/dayMonth";
 // already has, but when it goes live. The coach picks the week it starts
 // (training runs Monday to Sunday) and the time on that Monday; the length
 // stays what was built. Drawn in the phase pop-up's hairline style (npd).
+// Its month in ink (21 Oct, Alex: colour only where it marks a category; a
+// programme is always training, so its range is neutral).
 
 /** Day/month, as every date in words (20 Oct, Alex). */
 const short = dayMonth;
@@ -48,7 +48,7 @@ export default function ScheduleDialog({
   const ok = !clash && !past && /^\d{2}:\d{2}$/.test(time);
 
   return (
-    <DialogContent className="npd sch" style={{ "--npd-c": TRACK_PALETTE.training.ink, "--npd-rgb": "58, 51, 144" } as React.CSSProperties}>
+    <DialogContent className="npd sch">
       <div className="npd-head">
         <div>
           <DialogTitle className="npd-title">Schedule {name}</DialogTitle>
@@ -69,7 +69,6 @@ export default function ScheduleDialog({
             setStart(m);
             setCursor(m.slice(0, 7));
           }}
-          chrome={phaseChrome("training", "scheduled")}
           planned={others}
           cursor={cursor}
           setCursor={setCursor}

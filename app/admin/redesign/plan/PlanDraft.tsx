@@ -21,6 +21,7 @@ import { ConfirmDialog, DeletePhaseDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DateText from "../DateText";
 import DatePick from "../DatePick";
+import { MonthRange } from "../MonthRange";
 import { dayMonth } from "../../../lib/dayMonth";
 import { phaseDays, phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import { SortableItem, SortableList } from "../Sortable";
@@ -100,7 +101,6 @@ const shortDate = dayMonth;
 const fmtDay = shortDate;
 /** The timeline's axis keeps the month's name under its month heads; a screen reader gets the whole day. */
 const axisDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-const spokenDay = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 const monthName = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short" });
 const isoWeek = (day: string) => {
   const thursday = parse(addDays(mondayOf(day), 3));
@@ -747,123 +747,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
 
 // ---- The phase dialog: track, name, dates on a month, and for training the programme behind it.
 
-/** Six rows of a month, the picked weeks tinted in the phase's own colours, other phases on the track as a grey mark. */
-export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, today, plain = false, legend = "New phase" }: { from: string; to: string; onPick: (day: string) => void; chrome: ReturnType<typeof phaseChrome>; planned: { name: string; from: string; to: string; draft?: boolean }[]; cursor: string; setCursor: (m: string) => void; today: string; /** No colours of its own (20 Oct): the hairline phase dialog draws the range from its CSS. */ plain?: boolean; /** What the range is called under the month; null for none (an event's range needs no key). */ legend?: string | null }) {
-  // Six weeks on screen from `view.start`. The arrows step a month; the wheel or a trackpad over the days steps a
-  // week at a time (21 Oct, Alex). A day picked (the parent moves `cursor` to its month) leaves the weeks where they
-  // are while that month is still on screen; a date typed further off brings its month up.
-  const monthStart = (c: string) => mondayOf(`${c}-01`);
-  const [view, setView] = useState({ cursor, start: monthStart(cursor) });
-  let gridStart = view.start;
-  if (view.cursor !== cursor) {
-    const mid = `${cursor}-15`;
-    gridStart = mid >= view.start && mid <= addDays(view.start, 41) ? view.start : monthStart(cursor);
-    setView({ cursor, start: gridStart });
-  }
-  const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
-  // The month named in the head, and the days that are dark: the one the middle of the six weeks falls in.
-  const first = (() => {
-    const mid = parse(addDays(gridStart, 17));
-    return new Date(mid.getFullYear(), mid.getMonth(), 1);
-  })();
-  const mo = first.getMonth() + 1;
-  const move = (n: number) => {
-    const c = isoOf(new Date(first.getFullYear(), first.getMonth() + n, 1)).slice(0, 7);
-    setCursor(c);
-    setView({ cursor: c, start: monthStart(c) });
-  };
-  const gridRef = useRef<HTMLDivElement>(null);
-  const wheel = useRef(0);
-  useEffect(() => {
-    const el = gridRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      // A trackpad sends many small deltas: a week per 40px or so; a mouse notch is one week.
-      wheel.current += e.deltaY;
-      if (Math.abs(wheel.current) < 40) return;
-      const step = wheel.current > 0 ? 1 : -1;
-      wheel.current = 0;
-      setView((v) => ({ ...v, start: addDays(v.start, step * 7) }));
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, []);
-  // What a day is to the new phase (15 Oct): taken by another phase on the track, in the new range, both (an overlap), or free.
-  const kindOf = (x: string) => {
-    const b = planned.some((p) => x >= p.from && x <= p.to);
-    const r = !!from && !!to && x >= from && x <= to;
-    return b && r ? "overlap" : r ? "new" : b ? "taken" : "free";
-  };
-  return (
-    <div className="rdd-cal">
-      <div className="rdd-cal-head">
-        <b>{first.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</b>
-        <span className="rdd-cal-nav">
-          <button type="button" className="rd-btn ghost sm" onClick={() => move(-1)} aria-label="Previous month">
-            <ChevronLeftIcon />
-          </button>
-          <button type="button" className="rd-btn ghost sm next" onClick={() => move(1)} aria-label="Next month">
-            <ChevronLeftIcon />
-          </button>
-        </span>
-      </div>
-      <div ref={gridRef} className="rdd-cal-grid">
-        {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-          <span key={i} className="rdd-dow">
-            {d}
-          </span>
-        ))}
-        {/* Taken days as grey stripes, the new phase solid at its ends and tinted between, an overlap in red stripes (15 Oct). Runs read as bars per week row. */}
-        {days.map((d, i) => {
-          const inR = !!from && !!to && d >= from && d <= to;
-          const busy = planned.find((p) => d >= p.from && d <= p.to);
-          const kind = kindOf(d);
-          const col = i % 7;
-          const prevSame = col > 0 && kindOf(days[i - 1]) === kind;
-          const nextSame = col < 6 && kindOf(days[i + 1]) === kind;
-          const run = kind === "free" ? "" : !prevSame && !nextSame ? " run-one" : !prevSame ? " run-start" : !nextSame ? " run-end" : " run-mid";
-          const edge = d === from || d === to;
-          const overlap = kind === "overlap";
-          const tip = busy ? `${busy.name} · ${shortDate(busy.from)} – ${shortDate(busy.to)}${busy.draft ? " · draft" : ""}` : undefined;
-          return (
-            <button
-              key={d}
-              type="button"
-              className={`rdd-cell${d === today ? " today" : ""}${inR && !overlap ? " in" : ""}${overlap ? " overlap" : kind === "taken" ? " taken" : ""}${d === from ? " start" : ""}${d === to ? " end" : ""}${run}${parse(d).getMonth() !== mo - 1 ? " past" : ""}`}
-              style={!plain && inR && !overlap ? { background: edge ? chrome.edge : `rgba(${rgbOf(chrome.edge)}, 0.12)`, color: edge ? "#fff" : chrome.edge } : undefined}
-              onClick={() => onPick(d)}
-              aria-label={`${spokenDay(d)}, ${overlap ? `overlaps ${busy!.name}` : inR ? "in new phase" : busy ? `taken by ${busy.name}` : "free"}`}
-              aria-pressed={edge}
-              title={tip}
-            >
-              {Number(d.slice(8))}
-            </button>
-          );
-        })}
-      </div>
-      {(planned.length > 0 || (!!from && !!to && legend != null)) && (
-        <div className="rdd-legend" aria-hidden="true">
-          {planned.length > 0 && (
-            <span>
-              <i className="taken" /> {planned.length === 1 ? `${planned[0].name} (taken)` : "Taken by other phases"}
-            </span>
-          )}
-          {!!from && !!to && legend != null && (
-            <span>
-              <i className={plain ? "new" : undefined} style={plain ? undefined : { background: chrome.edge }} /> {legend}
-            </span>
-          )}
-          {days.some((d) => kindOf(d) === "overlap") && (
-            <span>
-              <i className="overlap" /> Overlap
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+/** The month a phase's dates are picked on: the one calendar in the admin, in its own module (MonthRange.tsx) since 21 Oct; still exported from here for its callers. */
+export { MonthRange };
 
 /**
  * The week grid for a window: last week for context, this week in the second

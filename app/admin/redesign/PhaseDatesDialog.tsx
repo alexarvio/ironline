@@ -3,8 +3,8 @@
 import "./phase-dates.css";
 import { useState } from "react";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../components/ui/dialog";
-import { ChevronLeftIcon, ChevronRightIcon } from "../../components/icons";
 import DateText from "./DateText";
+import { MonthRange } from "./MonthRange";
 import { dayMonth } from "../../lib/dayMonth";
 
 // When a programme or phase reaches the client: a month to click the dates
@@ -13,8 +13,10 @@ import { dayMonth } from "../../lib/dayMonth";
 // are on its rail, so only its start is picked and the end follows. A
 // nutrition or lifestyle phase has both ends open, in whole weeks too (21 Oct).
 // In the admin hairline style (20 Oct, Alex): the title, one quiet line of
-// the length and the dates, the name and the dates as clean lines, the month
-// in ink and grey. No explanations. Classes are pdh-, in phase-dates.css.
+// the length and the dates, the name and the dates as clean lines. The month
+// is the phase pop-up's MonthRange (21 Oct, Alex: one calendar, scrolling a
+// week per wheel step), in ink and grey: these are dates, not a category, so
+// no track colour. No explanations. Classes are pdh-, in phase-dates.css.
 
 const DAY = 86400000;
 const parse = (d: string) => new Date(`${d}T00:00:00`);
@@ -27,7 +29,6 @@ const shift = (d: string, days: number) => {
 const mondayOf = (d: string) => shift(d, -((parse(d).getDay() + 6) % 7));
 const sundayOf = (d: string) => shift(mondayOf(d), 6);
 const weeksBetween = (start: string, end: string) => Math.max(1, Math.round((parse(end).getTime() - parse(start).getTime() + DAY) / (7 * DAY)));
-const fmt = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 const today = () => isoOf(new Date());
 
 export default function PhaseDatesDialog({
@@ -94,14 +95,6 @@ export default function PhaseDatesDialog({
     }
   };
 
-  const [y, mo] = cursor.split("-").map(Number);
-  const first = new Date(y, mo - 1, 1);
-  const lead = (first.getDay() + 6) % 7;
-  const count = new Date(y, mo, 0).getDate();
-  const cells: (string | null)[] = [...Array<null>(lead).fill(null), ...Array.from({ length: count }, (_, i) => isoOf(new Date(y, mo - 1, i + 1)))];
-  // Always six rows, so the month never changes height as it turns.
-  while (cells.length < 42) cells.push(null);
-  const move = (n: number) => setCursor(isoOf(new Date(y, mo - 1 + n, 1)).slice(0, 7));
   const length = weeksBetween(from, to);
   const lengthLabel = `${length} ${length === 1 ? "week" : "weeks"}`;
   const ok = (!name || nm.trim().length > 0) && from <= to;
@@ -121,42 +114,8 @@ export default function PhaseDatesDialog({
         </label>
       )}
       <div className="pdh-cols">
-        <div className="pdh-cal">
-          <div className="pdh-cal-head">
-            <b>{first.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</b>
-            <span className="pdh-cal-nav">
-              <button type="button" className="pdh-nav" onClick={() => move(-1)} aria-label="Previous month">
-                <ChevronLeftIcon />
-              </button>
-              <button type="button" className="pdh-nav" onClick={() => move(1)} aria-label="Next month">
-                <ChevronRightIcon />
-              </button>
-            </span>
-          </div>
-          <div className="pdh-grid">
-            {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-              <span key={i} className="pdh-dow">
-                {d}
-              </span>
-            ))}
-            {cells.map((d, i) =>
-              d ? (
-                <button
-                  key={i}
-                  type="button"
-                  className={`pdh-cell${d === now ? " today" : ""}${d >= from && d <= to ? " in" : ""}${d === from ? " start" : ""}${d === to ? " end" : ""}${d < now ? " past" : ""}`}
-                  onClick={() => pick(d)}
-                  aria-label={fmt(d)}
-                  aria-pressed={d === from || d === to}
-                >
-                  {Number(d.slice(8))}
-                </button>
-              ) : (
-                <span key={i} />
-              )
-            )}
-          </div>
-        </div>
+        {/* The phase pop-up's month, neutral (plain, no key): the picked weeks in ink on a grey band. */}
+        <MonthRange from={from} to={to} onPick={pick} planned={[]} cursor={cursor} setCursor={setCursor} today={now} plain legend={null} />
         {/* With both ends open, the end the next click sets has its label in ink (no "click a day" line). */}
         <div className="pdh-fields">
           <label className={`pdh-field${!fixed && picking === "start" ? " armed" : ""}`}>

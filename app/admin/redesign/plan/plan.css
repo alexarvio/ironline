@@ -138,7 +138,6 @@
 .npd.rq-dlg.rq-pick { overflow: visible; }
 
 .rq-state { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
-.rdd-cell { position: relative; }
 
 /* The list and section switch Messages' Link to… dialog borrows (rq-things, rq-groups; the goal dialog no longer uses them). */
 .rq-things { max-height: 240px; overflow-y: auto; scrollbar-width: thin; margin-top: 4px; }
@@ -196,18 +195,6 @@
 .npd.npd .rq-sentence .rd-picker.rq-daypick:focus-within { border-bottom-color: #141a24; }
 .npd.npd .rq-sentence .rd-picker.rq-daypick .rdt { font-size: 15px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
 .npd.npd .rq-sentence .rd-picker.rq-daypick .rdt.bad { color: #b42318; }
-/* Its calendar is portalled outside the card: while the goal dialog is open, the chosen day in ink, not navy. */
-body:has(.npd.rq-dlg) .rdp-pop.rdp-pop { border: 0; border-radius: 14px; box-shadow: 0 24px 40px -16px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; }
-body:has(.npd.rq-dlg) .rdp-pop .rdd-cal-head b { font-weight: 600; }
-body:has(.npd.rq-dlg) .rdp-pop .rdd-dow { font-weight: 600; color: #98a2b3; }
-body:has(.npd.rq-dlg) .rdp-pop .rdd-cell { font-weight: 500; color: #141a24; }
-body:has(.npd.rq-dlg) .rdp-pop .rdd-cell.past { color: #c5ccd8; }
-body:has(.npd.rq-dlg) .rdp-pop .rdd-cell:hover { border-radius: 10px; background: #f5f6f8; }
-body:has(.npd.rq-dlg) .rdp-pop .rdd-cell.today { border-radius: 10px; box-shadow: inset 0 0 0 1px #141a24; color: #141a24; }
-body:has(.npd.rq-dlg) .rdp-pop .rdd-cell.start.end { border-radius: 10px; background: #141a24; color: #fff; font-weight: 600; }
-body:has(.npd.rq-dlg) .rdp-pop .rdd-cell.start.end:hover { background: #262e3b; }
-body:has(.npd.rq-dlg) .rdp-pop .rdp-foot { border-top-color: #eef0f3; }
-body:has(.npd.rq-dlg) .rdp-pop .rdp-foot .rd-btn.ghost.wide { font-weight: 600; color: #5b6474; }
 @media (prefers-reduced-motion: reduce) {
   .npd.npd .rq-blank, .npd.npd .rq-sentence .rd-picker.rq-daypick { transition: none; }
 }

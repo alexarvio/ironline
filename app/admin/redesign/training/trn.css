@@ -160,6 +160,11 @@
 .rd.trn .trn-row-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; }
 .rd.trn .trn-row-toggle:hover .trn-chev { color: var(--trn-ink); }
 .rd.trn .trn-list .rd-session.open > .rd-rows { border-top: 0; }
+/* A session table's fields as clean lines (21 Oct, Alex: no box): the text where it stands, as wide as what is
+   typed (or its placeholder), a line under it on hover, ink while typing. */
+.rd.trn .trn-list .rd-row .rd-cell-box { align-self: flex-start; width: auto; min-width: 3ch; max-width: 100%; height: 30px; margin-left: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; box-shadow: none; field-sizing: content; }
+.rd.trn .trn-list .rd-row .rd-cell-box:hover { border-bottom-color: #e1e5eb; background: none; }
+.rd.trn .trn-list .rd-row .rd-cell-box:focus, .rd.trn .trn-list .rd-row .rd-cell-box:focus:hover { border-bottom-color: #141a24; background: none; box-shadow: none; caret-color: #141a24; }
 .rd.trn .trn-add { display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; border: 1px dashed #c9cfd8; border-radius: 18px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--trn-ink); cursor: pointer; }
 .rd.trn .trn-add:hover { border-color: var(--trn-ink); }
 /* A session being added (20 Oct): there at once, quiet and not yet clickable until the save comes back. */
