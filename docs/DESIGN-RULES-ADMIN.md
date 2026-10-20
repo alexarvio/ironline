@@ -36,7 +36,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - Phase goals: three bullet lines (a dot and a clean line each), folded behind a chevron row with the count. Never a textarea.
 
 ## 5. Choices and toggles
-- Two or three short options: a capsule (36px, hairline `#DCE1E8`, 4px of air between the chosen one and the edge), the chosen one ink with white text. KG/LBS, the time window, the phase switcher's Live/Scheduled/Draft/Past.
+- Two or three short options: a capsule (36px, white, hairline `#DCE1E8`, 4px of air between the chosen one and the edge, 13px words), the chosen one ink with white text. KG/LBS, the time window, the phase switcher's Live/Scheduled/Draft/Past. One rule for every tab (21 Oct, Alex): `.rd-btn-group` in `measurements/measurements.css`; no per-tab copies.
 - The one exception (20 Oct, Alex): the client tabs (Home, Plan, Training…) are a grey track with the tab on screen a white pill, its words in ink (never blue).
 - A choice that is the action itself is a menu, not a capsule and a button (20 Oct, Alex): + Week opens Blank / Copy Week 6 / Copy Week 3, and a pick adds the week.
 - Picking a category, track or type with icons: tiles across the whole row, equal widths, white with a hairline, the icon in its colour, the chosen tile filled ink. Event categories and the phase Track picker.

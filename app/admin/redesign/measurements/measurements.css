@@ -17,8 +17,8 @@
 /* The metrics card's right side: the check-in day, then Daily / Weekly / Monthly. */
 .rm-card-tools { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-left: auto; }
 /* How many metrics each rhythm asks for. */
-.rm-cad-count { margin-left: 6px; font-size: 11px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.rd-btn-group .on .rm-cad-count { color: inherit; opacity: 0.7; }
+.rm-cad-count { margin-left: 6px; font-size: 11.5px; font-weight: 600; color: #98a2b3; font-variant-numeric: tabular-nums; }
+.rd-btn-group .on .rm-cad-count { color: rgba(255, 255, 255, 0.65); }
 /* The 1st to the 28th: a short scroll rather than a menu the height of the page. */
 .rm-monthdays { max-height: 280px; overflow-y: auto; }
 
@@ -98,10 +98,12 @@
 .rm-graph-axis { position: relative; height: 16px; margin-left: 52px; }
 .rm-graph-axis span { position: absolute; transform: translateX(-50%); font-size: 11px; color: #8b93a1; white-space: nowrap; }
 .rm-graph-empty { margin: 0; padding: 40px 0; text-align: center; font-size: 13px; color: #8b93a1; }
-.rd-btn-group { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: #eef0f3; }
-.rd-btn-group button { height: 26px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 600; color: #5b6474; cursor: pointer; }
-/* The chosen option in ink, white words, on every toggle (21 Oct, Alex: not blue). */
-.rd-btn-group button.on { background: #141a24; color: #fff; box-shadow: none; }
+/* The one toggle, on every tab (21 Oct, Alex): a white capsule, 36px, a hairline, 4px of air round the
+   chosen option, which is ink with white words (never blue). Plan and Lifestyle had their own copies; gone. */
+.rd-btn-group { display: inline-flex; align-items: center; gap: 2px; height: 36px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.rd-btn-group button { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 500; color: #5b6474; white-space: nowrap; cursor: pointer; }
+.rd-btn-group button:hover:not(.on) { color: #141a24; }
+.rd-btn-group button.on { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; }
 
 /* Notes from the client: date, which check-in, the words, a reply. */
 .rm-note-text { font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #313851; white-space: pre-wrap; min-width: 0; }
@@ -145,12 +147,6 @@
 .rd.rls .rls-section { display: flex; flex-direction: column; gap: 12px; }
 .rd.rls .rls-section > .trn-weekhead { margin-bottom: 0; }
 .rd.rls .rls-card { position: relative; padding: 2px 0 8px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; }
-/* The capsule: white, a hairline, 4px of air round the chosen one, which is ink. */
-.rd.rls .rd-btn-group { height: 36px; padding: 4px; gap: 2px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
-.rd.rls .rd-btn-group button { height: 28px; padding: 0 12px; font-size: 13px; font-weight: 500; color: #5b6474; }
-.rd.rls .rd-btn-group button.on { background: #141a24; color: #fff; font-weight: 600; }
-.rd.rls .rd-btn-group .rm-cad-count { margin-left: 6px; font-size: 11.5px; font-weight: 600; color: #98a2b3; opacity: 1; }
-.rd.rls .rd-btn-group .on .rm-cad-count { color: rgba(255, 255, 255, 0.65); }
 .rd.rls .trn-weekhead-actions .trn-btn svg { width: 14px; height: 14px; color: #8b93a1; }
 
 /* Tracked metrics: column heads in small caps, a row a metric with a hairline between, ··· on hover. */

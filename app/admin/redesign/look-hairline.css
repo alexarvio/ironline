@@ -94,6 +94,3 @@ html.look-hl .rh-avatar { background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb;
 html.look-hl .rd-page [role="tablist"] { background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; border-radius: 999px; }
 html.look-hl .rd-page [role="tablist"] [role="tab"] { border-radius: 999px; font-weight: 500; color: #5b6474; box-shadow: none; }
 html.look-hl .rd-page [role="tablist"] [role="tab"][data-state="active"] { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; }
-html.look-hl .rd-btn-group { background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; border-radius: 999px; }
-html.look-hl .rd-btn-group > button { border-radius: 999px; font-weight: 500; color: #5b6474; box-shadow: none; }
-html.look-hl .rd-btn-group > button.on { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; }

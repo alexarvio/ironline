@@ -75,10 +75,6 @@
 .rd.pln .rd-btn.ghost.sm { width: 28px; height: 28px; }
 .rd.pln .rd-btn.ghost.rq-today { width: auto; padding: 0 12px; }
 .rd.pln .rd-btn:disabled { opacity: 0.35; cursor: default; }
-/* Two to four short options: a capsule, the chosen one ink (§5). */
-.rd.pln .rd-btn-group { height: 36px; padding: 4px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
-.rd.pln .rd-btn-group button { height: 28px; font-weight: 500; color: #5b6474; }
-.rd.pln .rd-btn-group button.on { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; }
 /* The goals table: white small caps heads, no navy on a hovered name, one-word empty states. */
 .rd.pln .rd-cols { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
 .rd.pln .rd-ex-btn:hover { color: #141a24; text-decoration-color: #c9cfd8; }
