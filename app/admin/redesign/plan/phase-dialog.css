@@ -184,3 +184,11 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 /* One line of text in the capsule (21 Oct): the shared .rdt field is 34px tall and pushed the label into the capsule's edge. */
 .npd.npd .npd-date input.rdt.rdt { flex: none !important; height: 20px !important; min-height: 0 !important; line-height: 20px; }
 .npd.npd .npd-date { gap: 2px; }
+
+/* The track as tiles across the row (21 Oct, Alex: as the event categories): the icon in the track's colour (--tc), the chosen tile filled in ink. */
+.npd.npd .npd-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.npd.npd .npd-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; height: 60px; padding: 0; border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; font-size: 12.5px; font-weight: 500; color: #141a24; cursor: pointer; }
+.npd.npd .npd-tile svg { color: var(--tc); }
+.npd.npd .npd-tile:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
+.npd.npd .npd-tile.on { background: #141a24; box-shadow: none; color: #fff; font-weight: 600; }
+.npd.npd .npd-tile.on svg { color: #fff; }

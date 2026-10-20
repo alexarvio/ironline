@@ -41,12 +41,13 @@ export const maskDate = (raw: string, previous: string): string => {
   return out;
 };
 
-export default function DateText({ value, onChange, label, disabled = false, onFocus }: { value: string; onChange: (iso: string) => void; label: string; disabled?: boolean; /** Arms this end in the calendar beside it. */ onFocus?: () => void }) {
+export default function DateText({ value, onChange, label, disabled = false, onFocus, min }: { value: string; onChange: (iso: string) => void; label: string; disabled?: boolean; /** Arms this end in the calendar beside it. */ onFocus?: () => void; /** The earliest day it takes (yyyy-mm-dd); an earlier one reads as wrong and isn't handed on. */ min?: string }) {
   // What is being typed; null shows the day the field holds.
   const [typing, setTyping] = useState<string | null>(null);
   const text = typing ?? shown(value);
   const complete = typing != null && typing.replace(/[^0-9]/g, "").length >= 8;
-  const bad = complete && !typedDate(typing);
+  const okDay = (d: string | null) => !!d && (!min || d >= min);
+  const bad = complete && !okDay(typedDate(typing));
   return (
     <input
       className={`rd-input rdt${bad ? " bad" : ""}`}
@@ -61,7 +62,7 @@ export default function DateText({ value, onChange, label, disabled = false, onF
         const next = maskDate(e.target.value, text);
         setTyping(next);
         const day = typedDate(next);
-        if (day) onChange(day);
+        if (day && okDay(day)) onChange(day);
       }}
       onBlur={() => setTyping(null)}
       onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}

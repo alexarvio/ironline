@@ -850,8 +850,10 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
   const movedAlt = !byDay && moved && !overlap ? { side: moved.side, day: addDays(moved.to, moved.side === "start" ? 7 : -7), instead: true } : null;
   const fix = weekClash ? { ...weekClash, instead: false } : movedAlt && (movedAlt.side === "start" ? movedAlt.day <= to : movedAlt.day > from) ? movedAlt : null;
 
+  // A phase can be put in the past (it started a while ago), but not further back than a year (21 Oct, Alex: 2022 went in).
+  const earliest = addDays(today, -365);
   const setStart = (d: string) => {
-    if (startLocked) return;
+    if (startLocked || d < earliest) return;
     const s = byDay ? d : mondayOf(d);
     setWeeksText(null);
     setMoved(s !== d ? { side: "start", picked: d, to: s } : null);
@@ -860,6 +862,7 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
     setCursor(s.slice(0, 7));
   };
   const setEnd = (d: string) => {
+    if (d < earliest) return;
     const e = byDay ? d : addDays(mondayOf(d), 6);
     if (e < from) return setStart(d);
     setWeeksText(null);
@@ -948,10 +951,11 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
       {!editing && !lockTrack && (
         <div className="npd-field">
           <span className="npd-label">Track</span>
-          <div className="npd-seg" role="radiogroup" aria-label="Track">
+          {/* Tiles across the row, as the event categories (21 Oct, Alex): each track's icon in its colour, the chosen one filled. */}
+          <div className="npd-tiles" role="radiogroup" aria-label="Track">
             {TRACKS.map((t) => (
-              <button key={t.id} type="button" role="radio" aria-checked={track === t.id} className={track === t.id ? "on" : undefined} onClick={() => setTrack(t.id)}>
-                <TrackIcon track={t.id} size={14} />
+              <button key={t.id} type="button" role="radio" aria-checked={track === t.id} className={`npd-tile${track === t.id ? " on" : ""}`} style={{ "--tc": TRACK_ACCENT[t.id] } as React.CSSProperties} onClick={() => setTrack(t.id)}>
+                <TrackIcon track={t.id} size={18} />
                 {t.label}
               </button>
             ))}
@@ -1002,7 +1006,7 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
             {/* Typed or picked (21 Oct, Alex: typing the dates was missed): a click arms that end in the calendar, the field takes 05/10/2026. */}
             <div className={`npd-date${picking === "start" ? " arm" : ""}${startLocked ? " locked" : ""}`} onClick={() => !startLocked && setPicking("start")}>
               <span className="npd-date-head">Starts{startLocked ? " · fixed" : ""}</span>
-              <DateText value={from} onChange={(d) => setStart(d)} label="Start date" disabled={startLocked} onFocus={() => setPicking("start")} />
+              <DateText value={from} min={startLocked ? undefined : earliest} onChange={(d) => setStart(d)} label="Start date" disabled={startLocked} onFocus={() => setPicking("start")} />
             </div>
             <span className="npd-arrow" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -1012,7 +1016,7 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
             <div className={`npd-date${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")}>
               <span className="npd-date-head">Ends</span>
               {/* A training phase ends on its week's Sunday, so that is the day shown. */}
-              <DateText value={byDay ? to : savedTo} onChange={(d) => setEnd(d)} label="End date" onFocus={() => setPicking("end")} />
+              <DateText value={byDay ? to : savedTo} min={earliest} onChange={(d) => setEnd(d)} label="End date" onFocus={() => setPicking("end")} />
             </div>
           </div>
           {/* Type the weeks and the end follows; pick the end and the weeks follow. An uneven span shows its length beside it. */}
