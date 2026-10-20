@@ -11864,6 +11864,8 @@ export type LoggedDaysView = {
   windowDays: number;
   avgKcal: number | null;
   avgProtein: number | null;
+  avgCarbs: number | null;
+  avgFat: number | null;
   /** Logged days within ±200 kcal of their target, and how many had one. */
   onTarget: number;
   judged: number;
@@ -11935,6 +11937,8 @@ export function getLoggedDays(clientId: number, from: string, to: string): Logge
     windowDays: span,
     avgKcal: avg(days.map((d) => d.kcal)),
     avgProtein: avg(days.map((d) => d.protein)),
+    avgCarbs: avg(days.map((d) => d.carbs)),
+    avgFat: avg(days.map((d) => d.fat)),
     onTarget: judged.filter((d) => Math.abs(d.kcal - (d.target as number)) <= 200).length,
     judged: judged.length,
   };

@@ -140,7 +140,7 @@
 /* No tint behind a row being typed in (21 Oct, Alex): the words and their line alone, as the title's rename. */
 .rd.rnt .rls-row:hover { background: none; }
 /* The log's four figures, plain on the card: small caps over the figure, no tinted tiles. */
-.rd.rnt .rn-stats { padding: 6px 8px 8px; }
+.rd.rnt .rn-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 6px 8px 8px; }
 .rd.rnt .rn-stats > div { padding: 8px 10px; background: none; }
 .rd.rnt .rn-stats small { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
 .rd.rnt .rn-stats span { font-weight: 500; }

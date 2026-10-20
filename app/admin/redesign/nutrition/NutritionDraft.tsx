@@ -94,7 +94,6 @@ const addDays = (day: string, k: number) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
-const ON_TARGET = 200;
 const PAGE = 20;
 // A typed change waits this long for the next keystroke before it goes.
 const QUIET_MS = 800;
@@ -368,17 +367,22 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
       value: view.avgKcal != null ? n(view.avgKcal) : "–",
       unit: "kcal a day",
     },
-    {
-      label: "On target",
-      value: view.judged ? `${view.onTarget} of ${view.judged}` : "–",
-      unit: `within ±${ON_TARGET} kcal`,
-      warn: view.judged > 0 && view.onTarget < view.judged / 2,
-    },
+    // The three macros' averages, not On target (21 Oct, Alex).
     {
       label: "Average protein",
       value: view.avgProtein != null ? String(view.avgProtein) : "–",
       unit: proteinTarget ? `g a day · target ${proteinTarget}` : "g a day",
       warn: proteinTarget != null && view.avgProtein != null && view.avgProtein < proteinTarget - 20,
+    },
+    {
+      label: "Average carbs",
+      value: view.avgCarbs != null ? String(view.avgCarbs) : "–",
+      unit: "g a day",
+    },
+    {
+      label: "Average fat",
+      value: view.avgFat != null ? String(view.avgFat) : "–",
+      unit: "g a day",
     },
   ];
 
