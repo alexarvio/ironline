@@ -198,12 +198,13 @@ export default function HomeHub({
             ownCovers={cardCovers}
           />
         )}
+        {/* The coach's latest right under the phases (21 Oct, a coach's feedback, Alex: always here, no jumping). */}
+        <LatestActivityCard a={latestActivity} coach={coach} />
         {progressPics && <TodaysTasks pics={progressPics} />}
         {/* What is coming up in their life (7 Oct): a trip, an injury, something started. Theirs to add; the coach's listed too. Above the coach's latest (9 Oct). */}
         {/* The timeline row (15 Oct) once there is anything at all; else the old card's empty state. */}
         {/* The timeline row always (17 Oct): with nothing logged it is just Today, "Nothing on", like the Events screen. */}
         <EventsTimelineCard events={events} today={today} />
-        <LatestActivityCard a={latestActivity} coach={coach} />
         {upcoming ? (
           <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />
         ) : (
