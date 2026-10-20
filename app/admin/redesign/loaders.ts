@@ -98,6 +98,14 @@ const weekPrint = (parts: unknown) => {
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
   return `${s.length.toString(36)}.${(h >>> 0).toString(36)}`;
 };
+// A value as the screen shows it, for weekPrint (20 Oct, Alex: Week 4 was Week 3 and still offered "Copy week 3 here"):
+// "" and none alike, 8 and "8" alike, a weight to the half kilo as the Training tab rounds it.
+const shownText = (v: unknown) => (v == null ? null : String(v).trim() || null);
+const shownNum = (v: unknown) => (v == null || String(v).trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+const shownKg = (v: unknown) => {
+  const n = shownNum(v);
+  return n == null ? null : Math.round(n * 2) / 2;
+};
 
 /** The client asked for, else the demo client, else one with a programme, else the first. */
 export function pickClient(coachId: number, asked: string | undefined) {
@@ -198,13 +206,33 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     void over;
     // What a copy of this week would carry (copyProgramWeek): each session's name and its exercises' prescriptions.
     // Two weeks with the same print need no "Copy week N here" (20 Oct, Alex).
+    // Read as shown, not as stored (20 Oct, Alex: Week 4 was Week 3 and still offered it): a gym's weight as its lane
+    // shows it (none is the plain weight, {} is none), [] and no alternatives alike, only the ones still in the library;
+    // the note's kind, shown nowhere, left out. Sessions in their order.
     const print = weekPrint(
       days.map((d) => [
-        d.day_of_week,
-        d.label ?? "",
+        shownText(d.label),
         [...getAssignmentsForDay(d.id)]
           .sort((a, b) => a.order_index - b.order_index)
-          .map((a) => [a.exercise_id, a.custom_name ?? null, a.variation_id ?? null, a.sets, a.reps, a.target_weight_kg, a.rpe_target, a.rest_seconds, a.tempo, a.distance ?? null, a.time ?? null, a.notes ?? null, a.note_kind ?? null, a.alternatives ?? null, a.demo_hidden ?? false, a.gym_targets ? Object.entries(a.gym_targets).map(([g, t]) => [g, t.kg]).sort() : null]),
+          .map((a) => [
+            a.exercise_id,
+            a.variation_id ?? null,
+            shownText(a.custom_name),
+            shownNum(a.sets),
+            shownText(a.reps),
+            shownKg(a.target_weight_kg),
+            gymRows.map((g) => shownKg(a.gym_targets?.[g.id]?.kg ?? a.target_weight_kg)),
+            shownNum(a.rpe_target),
+            shownNum(a.rest_seconds),
+            shownText(a.tempo),
+            shownText(a.distance),
+            shownText(a.time),
+            shownText(a.notes),
+            (a.alternatives ?? []).filter((x) => libName.has(x.exercise_id)).map((x) => [x.exercise_id, shownText(x.note)]),
+            !!a.demo_hidden,
+            !!a.library_substitutes_off,
+            [...(a.library_substitutes_hidden ?? [])].sort((x, y) => x - y),
+          ]),
       ]),
     );
     return {

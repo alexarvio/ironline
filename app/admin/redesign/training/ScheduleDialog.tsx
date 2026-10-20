@@ -6,14 +6,18 @@ import { MonthRange } from "../plan/PlanDraft";
 import type React from "react";
 import { phaseChrome, TRACK_PALETTE } from "../../phaseChrome";
 import { addDays, mondayOf } from "../phases/timeline";
+import DateText from "../DateText";
 
 // Scheduling a built programme (20 Oct, Alex): not its dates, which it
 // already has, but when it goes live. The coach picks the week it starts
 // (training runs Monday to Sunday) and the time on that Monday; the length
 // stays what was built. Drawn in the phase pop-up's hairline style (npd).
 
-const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-const short = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+/** Day/month, as every date in words (20 Oct, Alex). */
+const short = (iso: string) => {
+  const x = new Date(`${iso}T00:00:00`);
+  return `${x.getDate()}/${x.getMonth() + 1}${x.getFullYear() !== new Date().getFullYear() ? `/${x.getFullYear()}` : ""}`;
+};
 
 export default function ScheduleDialog({
   name,
@@ -75,24 +79,29 @@ export default function ScheduleDialog({
           plain
         />
         <div className="npd-side">
-          <div className="npd-field">
-            <span className="npd-label">Goes live</span>
-            <span className="sch-when">{day(start)}</span>
+          {/* Typed or picked, as every date (20 Oct, Alex); a typed day lands on its week's Monday. */}
+          <div className="npd-dates">
+            <div className="npd-date arm">
+              <span className="npd-date-head">Goes live</span>
+              <DateText
+                value={start}
+                onChange={(d) => {
+                  const m = mondayOf(d);
+                  setStart(m);
+                  setCursor(m.slice(0, 7));
+                }}
+                label="Week it goes live"
+              />
+            </div>
           </div>
           <label className="npd-field">
             <span className="npd-label">At</span>
             <input className="npd-line sch-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Time it goes live" />
           </label>
-          {clash && (
-            <p className="npd-note bad" role="alert">
-              Overlaps {clash.name}, {short(clash.from)} – {short(clash.to)}.
-            </p>
-          )}
-          {past && !clash && (
-            <p className="npd-note bad" role="alert">
-              That week has passed.
-            </p>
-          )}
+          {/* Always there, so the pop-up keeps its height whether or not something is wrong. */}
+          <p className={`npd-note${clash || past ? " bad" : ""}`} role={clash || past ? "alert" : undefined}>
+            <span>{clash ? `Overlaps ${clash.name}, ${short(clash.from)} – ${short(clash.to)}.` : past ? "That week has passed." : " "}</span>
+          </p>
         </div>
       </div>
       <div className="npd-foot">

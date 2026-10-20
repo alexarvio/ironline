@@ -13,25 +13,28 @@
 .rq-tl-row { display: grid; grid-template-columns: 108px minmax(0, 1fr); align-items: stretch; }
 .rq-tl-clip { position: relative; overflow: hidden; }
 .rq-tl-grid { display: grid; align-items: stretch; }
-.rq-month { padding: 4px 8px 2px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; border-left: 1px solid #eceff3; }
+/* The axis in the admin's language (20 Oct): small caps months, 600 numerals, the current week and the now line in ink, a green pulse on the line's head (DESIGN-RULES-ADMIN §8: NOW is ink with a green pulse). */
+.rq-month { padding: 4px 8px 2px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; border-left: 1px solid #eef0f3; }
 .rq-week { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 0 8px; border-left: 1px solid #f1f3f6; }
-.rq-week b { font-size: 12px; font-weight: 700; color: #5b6474; font-variant-numeric: tabular-nums; }
-.rq-week small { font-size: 10.5px; color: #b0b6c0; white-space: nowrap; }
-.rq-week.now b { color: #1e3a6e; }
-.rq-week.now small { color: #2f5d8f; }
+.rq-week b { font-size: 12px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.rq-week small { font-size: 10.5px; font-weight: 500; color: #98a2b3; white-space: nowrap; }
+.rq-week.now b { color: #141a24; }
+.rq-week.now small { color: #141a24; }
 .rq-tl-body { position: relative; }
-.rq-now { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid #1e3a6e; z-index: 3; pointer-events: none; }
-.rq-now::before { content: ""; position: absolute; top: -2px; left: -5px; width: 8px; height: 8px; border-radius: 999px; background: #1e3a6e; }
+.rq-now { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px solid #141a24; z-index: 3; pointer-events: none; }
+.rq-now::before { content: ""; position: absolute; top: -2px; left: -4.75px; width: 8px; height: 8px; border-radius: 999px; background: #2f7a3f; box-shadow: 0 0 0 0 rgba(47, 122, 63, 0.45); animation: rq-now-pulse 2s ease-out infinite; }
+@keyframes rq-now-pulse { 0% { box-shadow: 0 0 0 0 rgba(47, 122, 63, 0.45); } 70% { box-shadow: 0 0 0 7px rgba(47, 122, 63, 0); } 100% { box-shadow: 0 0 0 0 rgba(47, 122, 63, 0); } }
+@media (prefers-reduced-motion: reduce) { .rq-now::before { animation: none; } }
 .rq-tl-label { display: flex; align-items: center; padding: 0 8px 0 10px; }
-.rq-track { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+.rq-track { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
 .rq-lanes { position: relative; padding: 6px 0; }
 .rq-cell { border-left: 1px solid #f1f3f6; min-height: 38px; }
 .rq-empty { display: flex; align-items: center; margin: 4px 0; padding: 0 12px; border: 1px dashed #c3c9d2; border-radius: 10px; background: none; font: inherit; font-size: 12.5px; color: #8b93a1; cursor: pointer; z-index: 1; }
-.rq-empty b { color: #2f5d8f; margin-left: 4px; }
-.rq-empty:hover { border-color: #8b93a1; color: #313851; }
+.rq-empty b { color: #141a24; font-weight: 600; margin-left: 4px; }
+.rq-empty:hover { border-color: #8b93a1; color: #141a24; }
 .rq-bar { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; margin: 3px 1px; padding: 0 12px 0 14px; border: 1px solid; border-radius: 10px; font: inherit; text-align: left; cursor: grab; user-select: none; overflow: hidden; min-width: 0; }
 .rq-bar.fixed { cursor: pointer; }
-.rq-bar.dragging { opacity: 0.85; box-shadow: 0 8px 24px -12px rgba(8, 31, 92, 0.5); }
+.rq-bar.dragging { opacity: 0.85; box-shadow: 0 8px 24px -12px rgba(16, 24, 40, 0.35); }
 .rq-bar.clip-start { border-left: 0; border-radius: 0 10px 10px 0; margin-left: 0; }
 .rq-bar.clip-end { border-right: 0; border-radius: 10px 0 0 10px; margin-right: 0; }
 .rq-bar-elapsed { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(20, 26, 36, 0.06); pointer-events: none; }
@@ -43,7 +46,7 @@
 .rq-bar:hover .rq-bar-edge::after, .rq-evbar:hover .rq-bar-edge::after { opacity: 0.35; }
 .rq-bar .rq-bar-edge:hover::after, .rq-evbar .rq-bar-edge:hover::after { opacity: 0.7; }
 .rq-bar-main { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; padding: 4px 0; }
-.rq-bar-name { font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rq-bar-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rq-bar-meta { font-size: 10.5px; font-weight: 500; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rq-bar-pill { position: relative; flex: none; padding: 2px 8px; border-radius: 999px; background: #fff; font-size: 10.5px; font-weight: 500; white-space: nowrap; }
 .rq-legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 6px 24px 14px; font-size: 11.5px; color: #8b93a1; }
@@ -55,24 +58,52 @@
 .rq-legend i.done { background: rgba(20, 26, 36, 0.12); }
 .rq-legend i.now { width: 2px; height: 12px; background: #1e3a6e; border-radius: 0; }
 
+/* ---- The Plan tab in the admin's hairline language (20 Oct; DESIGN-RULES-ADMIN): scoped to .rd.pln
+   as trn.css scopes Training, so the other tabs keep their look until they get theirs. Flat white panels
+   with a hairline, no drop shadow; 600 type; white hairline pills; the chosen option ink; no navy. */
+.rd.pln .rd-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+/* The header as Training's, to the pixel (20 Oct, Alex: switching tabs jumped): 26/600 at 1.2, so what follows starts at the same height. */
+.rd.pln .rd-title { font-weight: 600; line-height: 32px; color: #141a24; }
+.rd.pln .rd-session.open.rn-card { border-radius: 18px; box-shadow: inset 0 0 0 1px #e1e5eb; }
+.rd.pln .rn-card-head h2 { font-weight: 600; }
+.rd.pln .rd-btn { height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font-size: 13px; font-weight: 600; color: #141a24; }
+.rd.pln .rd-btn:hover { box-shadow: inset 0 0 0 1px #c5ccd8; background: #fff; }
+.rd.pln .rd-btn.ghost { width: 34px; padding: 0; background: none; box-shadow: none; color: #5b6474; }
+.rd.pln .rd-btn.ghost:hover, .rd.pln .rd-btn.ghost[data-state="open"] { background: #f5f6f8; color: #141a24; }
+.rd.pln .rd-btn.ghost.sm { width: 28px; height: 28px; }
+.rd.pln .rd-btn.ghost.rq-today { width: auto; padding: 0 12px; }
+.rd.pln .rd-btn:disabled { opacity: 0.35; cursor: default; }
+/* Two to four short options: a capsule, the chosen one ink (§5). */
+.rd.pln .rd-btn-group { height: 34px; padding: 3px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.rd.pln .rd-btn-group button { height: 28px; font-weight: 500; color: #5b6474; }
+.rd.pln .rd-btn-group button.on { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; }
+/* The goals table: white small caps heads, no navy on a hovered name, one-word empty states. */
+.rd.pln .rd-cols { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.rd.pln .rd-ex-btn:hover { color: #141a24; text-decoration-color: #c9cfd8; }
+.rd.pln .rd-full { font-size: 13px; font-weight: 500; color: #8b93a1; }
+.rd.pln .rd-session.add.rm-additem { height: 44px; padding: 0; border: 1px dashed #c9cfd8; border-radius: 14px; font-size: 13px; font-weight: 600; color: #141a24; }
+.rd.pln .rd-session.add.rm-additem:hover { border-color: #141a24; }
+
 /* Goals: the mark, the goal and its rule, what it tracks, where it stands. */
 .rq-mark { display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: #c3c9d2; }
-.rq-mark.on { background: #1b7a4b; }
-.rq-mark.off { background: #b3471d; }
-.rq-mark.done { background: #1e3a6e; }
+/* No navy (20 Oct): done is the success green, on track a green ring, off track the warn rust. */
+.rq-mark.on { background: none; box-shadow: inset 0 0 0 2px #2f7a3f; }
+.rq-mark.off { background: #b8471f; }
+.rq-mark.done { background: #2f7a3f; }
 
 
-.rq-mark.queued { box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.18); }
+.rq-mark.queued { box-shadow: 0 0 0 3px rgba(20, 26, 36, 0.14); }
+.rq-mark.on.queued { box-shadow: inset 0 0 0 2px #2f7a3f, 0 0 0 3px rgba(20, 26, 36, 0.14); }
 .rd-row.done .rd-ex-name { color: #8b93a1; text-decoration: line-through; }
-.rq-live { font-size: 14px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rq-live.green { color: #1b7a4b; }
-.rq-live.orange { color: #b3471d; }
+.rq-live { font-size: 14px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rq-live.green { color: #2f7a3f; }
+.rq-live.orange { color: #b8471f; }
 .rq-live.none, .rq-live.muted { color: #8b93a1; font-weight: 500; }
 .rq-pct { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .rq-pct i { display: block; flex: 1; height: 6px; border-radius: 999px; background: #eceff3; overflow: hidden; }
-.rq-pct i b { display: block; height: 100%; border-radius: 999px; background: #1e3a6e; }
-.rq-pct.green i b { background: #1b7a4b; }
-.rq-pct.orange i b { background: #b3471d; }
+.rq-pct i b { display: block; height: 100%; border-radius: 999px; background: #141a24; }
+.rq-pct.green i b { background: #2f7a3f; }
+.rq-pct.orange i b { background: #b8471f; }
 .rq-pct small { font-size: 11.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .rq-setin { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 13px; font-weight: 600; color: #313851; }
 .rq-setin small { font-size: 11px; font-weight: 500; color: #8b93a1; }
@@ -82,66 +113,45 @@
 .rq-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .rq-grid .span2 { grid-column: 1 / -1; }
 .rq-grid .rd-picker { flex: none; width: 100%; }
-.rq-helper { margin: 0; padding: 10px 12px; border-radius: 10px; background: #f4f7fc; font-size: 12.5px; line-height: 1.5; color: #313851; }
-.rq-dlg { max-width: 660px; }
+/* GoalDialog is the .npd card (21 Oct): its width, and while picking, its floating list may hang over its edge. */
+.npd.rq-dlg.rq-dlg { width: min(600px, 100vw - 32px); }
+.npd.rq-dlg.rq-pick { overflow: visible; }
 
-/* The phase dialog: the track, the dates, and for training the programme behind it. */
-.rq-phase-dlg { max-width: 800px; }
-/* The New phase dialog after the client's New event sheet (10 Oct): a track pill in the title, track tiles, the dates as two pills with an arrow. */
-.rq-track-pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px 0 8px; border-radius: 999px; background: var(--c); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 0.02em; text-transform: none; box-shadow: 0 6px 12px -6px rgba(var(--rgb), 0.9); transition: background 0.3s ease, box-shadow 0.3s ease; }
-.rq-phase-dlg .rq-tiles .evs-type { height: 62px; font-size: 12px; }
-.rq-phase-dlg .rq-tiles .evs-type-disc { width: 26px; height: 26px; }
-.rq-dates .evs-date { border: 0; font: inherit; text-align: left; background: rgba(var(--rgb), 0.07); box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.16); transition: box-shadow 0.2s ease, background 0.2s ease; }
-.rq-dates .evs-date .evs-date-head { color: var(--c); }
-.rq-dates .evs-date.arm { box-shadow: inset 0 0 0 2px var(--c), 0 8px 16px -12px rgba(var(--rgb), 0.8); background: #fff; }
-.rq-dates .evs-date.locked { opacity: 0.6; cursor: default; }
-.rq-dates .evs-arrow { color: var(--c); }
-/* The dates on one line each (14 Oct): "Sun 15 Nov" was wrapping in the Ends box. */
-.rq-dates .evs-date { padding: 0 12px; }
-.rq-dates .evs-date.ends { padding-left: 18px; }
-.rq-dates .evs-date b { white-space: nowrap; font-size: 13.5px; }
-.rq-phase-dlg .rdd-cols { grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr); }
-.rq-state { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.rq-overlap { margin: 0; min-height: 18px; font-size: 12px; line-height: 1.45; color: #b3471d; }
-/* Training clash: one click to the nearest week that fits. */
-.rq-fix { display: block; margin-top: 6px; padding: 4px 10px; border: 1px solid #e3b9a6; border-radius: 8px; background: #fdf3ee; color: #b3471d; font: inherit; font-weight: 700; cursor: pointer; }
-.rq-fix:hover { background: #fae6dc; }
-.rdd-picking { min-height: 18px; }
-.rd-dlg .rq-title-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+.rq-state { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 .rdd-cell { position: relative; }
-/* Days of the next or last month fade, band and all, so the month shown ends where it ends. */
-.rq-phase-dlg .rdd-cell.past { opacity: 0.35; }
-.rq-phase-dlg .rdd-cell.past.start, .rq-phase-dlg .rdd-cell.past.end { opacity: 0.7; }
-.rq-wide { width: 100%; flex: none; }
 
-/* The goal dialog, rebuilt: the thing to watch, the sentence with blanks, the client's card. */
+/* The list and section switch Messages' Link to… dialog borrows (rq-things, rq-groups; the goal dialog no longer uses them). */
 .rq-things { max-height: 240px; overflow-y: auto; scrollbar-width: thin; margin-top: 4px; }
-.rq-thing { display: flex; align-items: center; gap: 10px; min-height: 34px; }
-.rq-thing .rd-pill { font-size: 13px; padding: 5px 12px; letter-spacing: 0; text-transform: none; }
-.rq-thing small { font-size: 12.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #8b93a1; }
-.rq-change { margin-left: auto; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #2f5d8f; }
-.rq-sentence { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 38px; font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #141a24; }
-.rq-word { font-size: 15px; font-weight: 600; color: #313851; }
-.rq-blank { height: 36px; padding: 0 10px; border: 1px solid #dfe3e8; border-radius: 9px; background: #fff; font: inherit; font-size: 15px; font-weight: 700; color: #1e3a6e; text-align: center; font-variant-numeric: tabular-nums; }
-.rq-blank:focus { outline: none; border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
-.rq-sentence .rd-picker.rq-inline { flex: none; width: auto; height: 36px; padding: 0 8px 0 12px; font-size: 15px; font-weight: 700; color: #1e3a6e; }
-.rq-sentence .rdp-field.rq-inline-date { flex: none; width: auto; height: 36px; font-size: 14px; font-weight: 700; color: #1e3a6e; }
-.rq-preview { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: #f4f7fc; }
-.rq-preview > small { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
-.rq-preview > b { font-size: 15px; font-weight: 700; color: #141a24; }
-.rq-preview .rq-pct small { color: #5b6474; }
-.rq-preview-hint { font-size: 12.5px; color: #8b93a1; }
-.rq-words { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin-bottom: 8px; padding: 10px 14px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; text-align: left; cursor: pointer; }
-.rq-words:hover { border-color: #2f5d8f; }
-.rq-words-main { display: flex; flex-direction: column; gap: 2px; }
-.rq-words b { font-size: 14px; font-weight: 700; letter-spacing: 0; text-transform: none; color: #141a24; }
-.rq-words small { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #8b93a1; }
-.rq-words svg { width: 16px; height: 16px; color: #2f5d8f; }
+/* The goal dialog on .npd (21 Oct, Alex): doubled .npd out-ranks phase-dialog.css's clean-line picker and the shared inputs. */
+/* Watching: the thing as plain words, its fact in grey, Change as a text action. */
+.npd.npd .rq-thing { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.npd.npd .rq-thing-name { min-width: 0; font-size: 15px; font-weight: 500; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.npd.npd .rq-thing small { flex: none; font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.npd.npd .rq-change { flex: none; margin: 0 -10px 0 auto; height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.npd.npd .rq-change:hover { color: #141a24; }
+.npd.npd .rq-change:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+/* Target: the sentence, its words in body grey and its blanks as clean lines in ink at 600. */
+.npd.npd .rq-sentence { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-height: 40px; margin-top: 4px; font-size: 15px; font-weight: 500; color: #3a4250; }
+.npd.npd .rq-word { font-size: 15px; font-weight: 500; color: #3a4250; }
+.npd.npd .rq-blank { flex: none; height: 36px; margin: 0; padding: 0 2px; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: transparent; box-shadow: none; font: inherit; font-size: 15px; font-weight: 600; color: #141a24; text-align: center; font-variant-numeric: tabular-nums; box-sizing: border-box; transition: border-color 0.15s; }
+.npd.npd .rq-blank:focus { border-bottom-color: #141a24; box-shadow: none; }
+.npd.npd .rq-sentence .rd-picker.rq-inline { flex: none; width: auto; height: 36px; gap: 6px; padding: 0 2px; font-weight: 600; color: #141a24; }
+.npd.npd .rq-sentence .rd-picker.rq-inline svg { width: 14px; height: 14px; }
+.npd.npd .rq-by-date { font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+/* The client's card: a quiet grey box, the small-caps label, the goal at 600. */
+.npd.npd .rq-preview { display: flex; flex-direction: column; gap: 6px; margin-top: 18px; padding: 12px 14px; border-radius: 14px; background: #f5f6f8; }
+.npd.npd .rq-preview > small { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.npd.npd .rq-preview > b { font-size: 15px; font-weight: 600; color: #141a24; overflow-wrap: anywhere; }
+.npd.npd .rq-preview .rq-pct i { background: #e1e5eb; }
+.npd.npd .rq-preview .rq-pct small { color: #5b6474; }
+/* Plain goal: one white hairline row, its + in grey. */
+.npd.npd .rq-words { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; height: 44px; margin-top: 8px; padding: 0 14px; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
+.npd.npd .rq-words:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
+.npd.npd .rq-words:focus-visible { outline: none; background: #f5f6f8; }
+.npd.npd .rq-words svg { flex: none; width: 16px; height: 16px; color: #5b6474; }
 .rq-groups { display: flex; width: 100%; margin: 8px 0 2px; }
 .rq-groups button { flex: 1; text-align: center; }
-.rq-group { display: flex; flex-direction: column; }
 .rq-things .rd-menu-head { margin: 8px 10px 2px; }
-.rq-by-date { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
 .rq-tracks { font-size: 13px; font-weight: 600; color: #313851; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rq-tracks.none, .rq-by.none { color: #8b93a1; font-weight: 500; }
 .rq-by { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 13px; font-weight: 600; color: #313851; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -149,95 +159,85 @@
 .rq-by small.green { color: #1b7a4b; }
 .rq-by small.orange { color: #b3471d; }
 .rq-set { font-size: 13px; font-weight: 500; color: #5b6474; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rq-search { display: block; width: 100%; }
+/* The goal dialog's find (21 Oct, Alex): the section capsule, the search as a clean line, and its matches
+   floating under it (six rows, then they scroll), over the card's edge rather than stretching it. */
+.npd.npd .npd-seg.rq-seg { width: 100%; margin-top: 10px; }
+.npd.npd .rq-find { position: relative; }
+.npd.npd .rq-find > .npd-line { margin-top: 6px; }
+.npd.npd .rq-pop { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; right: 0; display: flex; flex-direction: column; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; }
+.npd.npd .rq-pop-scroll { display: flex; flex-direction: column; max-height: calc(6 * 38px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
+.npd.npd .rq-pop-item { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 38px; margin: 0; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
+.npd.npd .rq-pop-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.npd.npd .rq-pop-item:hover, .npd.npd .rq-pop-item:focus-visible { outline: none; background: #f5f6f8; }
+.npd.npd .rq-pop-item small { flex: none; font-size: 12px; font-weight: 500; color: #98a2b3; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.npd.npd .rq-pop-none { margin: 0; padding: 10px; font-size: 13px; font-weight: 500; color: #8b93a1; }
+/* A deadline of its own: the shared DatePick, typed (dd/mm/yyyy, the slashes fill in) on a clean line or picked from its icon (20 Oct, Alex). */
+.npd.npd .rq-sentence .rd-picker.rq-daypick { flex: none; width: 150px; height: 36px; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; background: none; gap: 4px; transition: border-color 0.15s; }
+.npd.npd .rq-sentence .rd-picker.rq-daypick:focus-within { border-bottom-color: #141a24; }
+.npd.npd .rq-sentence .rd-picker.rq-daypick .rdt { font-size: 15px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
+.npd.npd .rq-sentence .rd-picker.rq-daypick .rdt.bad { color: #b42318; }
+/* Its calendar is portalled outside the card: while the goal dialog is open, the chosen day in ink, not navy. */
+body:has(.npd.rq-dlg) .rdp-pop.rdp-pop { border: 0; border-radius: 14px; box-shadow: 0 24px 40px -16px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; }
+body:has(.npd.rq-dlg) .rdp-pop .rdd-cal-head b { font-weight: 600; }
+body:has(.npd.rq-dlg) .rdp-pop .rdd-dow { font-weight: 600; color: #98a2b3; }
+body:has(.npd.rq-dlg) .rdp-pop .rdd-cell { font-weight: 500; color: #141a24; }
+body:has(.npd.rq-dlg) .rdp-pop .rdd-cell.past { color: #c5ccd8; }
+body:has(.npd.rq-dlg) .rdp-pop .rdd-cell:hover { border-radius: 10px; background: #f5f6f8; }
+body:has(.npd.rq-dlg) .rdp-pop .rdd-cell.today { border-radius: 10px; box-shadow: inset 0 0 0 1px #141a24; color: #141a24; }
+body:has(.npd.rq-dlg) .rdp-pop .rdd-cell.start.end { border-radius: 10px; background: #141a24; color: #fff; font-weight: 600; }
+body:has(.npd.rq-dlg) .rdp-pop .rdd-cell.start.end:hover { background: #262e3b; }
+body:has(.npd.rq-dlg) .rdp-pop .rdp-foot { border-top-color: #eef0f3; }
+body:has(.npd.rq-dlg) .rdp-pop .rdp-foot .rd-btn.ghost.wide { font-weight: 600; color: #5b6474; }
+@media (prefers-reduced-motion: reduce) {
+  .npd.npd .rq-blank, .npd.npd .rq-sentence .rd-picker.rq-daypick { transition: none; }
+}
 
 /* Events: bars for a stretch, pins for a moment, on the phases' grid; the log under it. */
 .rq-evlanes { position: relative; }
 .rq-evbar { position: absolute; z-index: 2; display: flex; flex-direction: column; justify-content: center; gap: 1px; height: 32px; padding: 0 10px; border: 1px solid; border-radius: 9px; font: inherit; text-align: left; cursor: pointer; overflow: hidden; box-sizing: border-box; }
-.rq-evbar b { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+.rq-evbar b { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
 .rq-evbar small { font-size: 10px; font-weight: 600; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-.rq-evbar:hover { box-shadow: 0 6px 18px -10px rgba(8, 31, 92, 0.5); }
+/* No shadows on the page (20 Oct): a hovered bar takes a full-strength edge instead. */
 .rq-evbar.past, .rq-pin.past { opacity: 0.55; }
 .rq-pin { position: absolute; z-index: 2; display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 8px 0 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; white-space: nowrap; }
 .rq-pin i { flex: none; width: 10px; height: 10px; margin-left: -5px; border-radius: 999px; box-shadow: 0 0 0 3px #fff; }
 .rq-pin-text { display: flex; flex-direction: column; line-height: 1.2; }
-.rq-pin-text b { font-size: 12px; font-weight: 700; color: #141a24; }
+.rq-pin-text b { font-size: 12px; font-weight: 600; color: #141a24; }
 .rq-pin-text small { font-size: 10px; font-weight: 600; color: #8b93a1; }
-.rq-pin:hover .rq-pin-text b { text-decoration: underline; text-decoration-color: #c9d5e6; text-underline-offset: 3px; }
+.rq-pin:hover .rq-pin-text b { text-decoration: underline; text-decoration-color: #c9cfd8; text-underline-offset: 3px; }
 .rq-evlog { padding: 4px 10px 8px; border-top: 1px solid #eceff3; }
 .rq-evlog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px 10px 14px; }
 .rq-evlog-empty { margin: 0; padding: 8px 14px 12px; font-size: 13px; color: #8b93a1; }
 .rd-row-main.rq-evrow, .rq-evrow { display: grid; grid-template-columns: 150px 110px minmax(0, 1fr) 110px; column-gap: 16px; align-items: center; cursor: pointer; }
 .rq-evrow:hover { background: #fafbfd; }
 .rq-evrow-when { display: flex; flex-direction: column; gap: 1px; font-variant-numeric: tabular-nums; }
-.rq-evrow-when b { font-size: 13px; font-weight: 700; color: #141a24; }
+.rq-evrow-when b { font-size: 13px; font-weight: 600; color: #141a24; }
 .rq-evrow-when small { font-size: 11px; font-weight: 500; color: #8b93a1; }
 .rq-evrow-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rq-evrow-main b { font-size: 14px; font-weight: 600; color: #141a24; }
 .rq-evrow-main small { font-size: 12.5px; font-weight: 500; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rq-evrow-rel { font-size: 12px; font-weight: 600; color: #8b93a1; text-align: right; white-space: nowrap; }
-.rq-evrow-rel.coming { color: #1d5a94; }
+.rq-evrow-rel.coming { color: #141a24; }
 .rq-ev-past .rq-evrow-main b { color: #5b6474; }
-/* The event dialog is the phase dialog's twin (26 Sep): same width, same columns. */
-.rq-ev-dlg { max-width: 800px; }
-/* Eight types, four across (19 Oct). */
-.rq-ev-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.rq-ev-tiles .evs-type { height: 62px; font-size: 12px; }
-/* The title field takes the category's colour once one is picked, as the client's sheet does. */
-.rq-ev-dlg .rd-field input.rq-what.ring { border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--c); background: rgba(var(--rgb), 0.04); }
-.rq-ev-dlg .rd-field input.rq-what.ring:focus { box-shadow: inset 0 0 0 1.5px var(--c), 0 0 0 3px rgba(var(--rgb), 0.14); }
-/* The right column runs as tall as the calendar; the note takes what is left. */
-.rq-ev-dlg .rdd-cols { align-items: stretch; }
-.rq-ev-dlg .rdd-fields { display: flex; flex-direction: column; }
-.rq-ev-dlg .rq-note { flex: 1; display: flex; flex-direction: column; }
-.rq-ev-dlg .rq-note textarea { flex: 1; min-height: 64px; resize: none; }
-.rq-when-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.rq-when-head .evs-seg { text-transform: none; letter-spacing: 0; }
-.rq-dates span.evs-date { cursor: default; }
-.rq-ev-dlg .rdd-cols { grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr); }
-.rq-ev-dlg .rdd-fields .rq-groups button { padding: 0 10px; }
-.rq-ev-dlg .rdd-fields textarea { min-height: 64px; }
-.rq-ev-dlg .rd-dlg-hint { letter-spacing: 0; text-transform: none; font-weight: 500; }
 
-/* The event dialog's dates: two boxes on one line, their labels level, the length under both. */
-.rq-ev-dates { align-items: start; }
-.rq-ev-dates .rd-field { flex: 1; min-width: 0; }
-.rq-ev-dates .rdp-field { width: 100%; }
-.rq-ev-len { display: block; margin-top: -8px; }
 /* The log folds: a row with a chevron, the filters only when open, ten a page. */
 .rq-evlog-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 6px 8px 6px 4px; border: 0; border-radius: 8px; background: none; font: inherit; cursor: pointer; }
-.rq-evlog-toggle:hover { background: #f4f6fa; }
+.rq-evlog-toggle:hover { background: #f5f6f8; }
 .rq-evlog-toggle small { font-size: 12px; font-weight: 500; color: #8b93a1; }
 .rq-evlog:not(.open) { padding-bottom: 4px; }
 .rq-evlog-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px 4px; font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .rq-ev-tools { display: flex; align-items: center; gap: 10px; }
 
-/* Categories in the event dialog: a dot of colour on each chip, and the row to make your own. */
-.rq-cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; }
-.rq-cat-own { display: flex; gap: 14px; margin-top: 2px; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
-.rq-cat-own .rd-ex-btn { color: #2f5d8f; }
-.rq-cat-own .rd-ex-btn.danger { color: #a32d2d; }
-.rq-cat-edit { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; margin-top: 6px; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #f7f9fc; }
-.rq-cat-edit .rd-input { grid-column: 1 / -1; height: 36px; }
-.rq-cat-colors { display: inline-flex; gap: 6px; }
-.rq-cat-color { width: 22px; height: 22px; padding: 0; border: 2px solid #fff; border-radius: 999px; box-shadow: 0 0 0 1px #dfe3e8; cursor: pointer; }
-.rq-cat-color.on { box-shadow: 0 0 0 2px #141a24; }
-.rq-cat-edit-actions { display: inline-flex; gap: 6px; justify-self: end; }.rq-evrow .rq-state { justify-content: center; justify-self: start; min-width: 90px; }
+.rq-evrow .rq-state { justify-content: center; justify-self: start; min-width: 90px; }
 
-/* Open in its tab: a proper button at the top right (30 Sep), the footer's Open gone. */
-.rd-dlg .rq-title-row .rq-open { display: inline-flex; align-items: center; margin-left: auto; margin-right: 0; letter-spacing: 0; text-transform: none; text-decoration: none; white-space: nowrap; }
 .rq-bar-pill b { font-weight: 600; }
-/* The phase's length typed as weeks: the same box as the dates above it. */
-.rq-phase-dlg input.rq-weeks { font-variant-numeric: tabular-nums; }
 /* An event the client added from their Home (7 Oct): said on its log row. */
-.rq-ev-by { margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: #e6ecf3; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #1e3a6e; vertical-align: 1px; }
+.rq-ev-by { margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 11px; font-weight: 600; color: #5b6474; vertical-align: 1px; }
 
 /* Events drag as the phases do (12 Oct): a bar by its body or either edge, a pin whole. */
 .rq-evbar, .rq-pin { touch-action: none; }
 .rq-evbar { cursor: grab; }
 .rq-pin i { cursor: grab; }
 .rq-evbar.dragging, .rq-pin.dragging { cursor: grabbing; opacity: 0.85; z-index: 4; }
-.rq-evbar.dragging { box-shadow: 0 8px 24px -12px rgba(8, 31, 92, 0.5); }
+.rq-evbar.dragging { box-shadow: 0 8px 24px -12px rgba(16, 24, 40, 0.35); }
 .rq-evbar .rq-bar-edge { width: 8px; }
-/* Room for the dates on the right (14 Oct): the Ends box no longer wraps. */
-.rq-phase-dlg .rdd-cols { grid-template-columns: minmax(0, 1fr) minmax(250px, 0.9fr); }

@@ -166,9 +166,9 @@
 .cal-entry-box.ends .cal-entry-box-head { color: #8b93a1; }
 .cal-entry-box-val { font-size: 14.5px; font-weight: 800; font-variant-numeric: tabular-nums; color: #141a24; }
 .cal-entry-box-val.input { width: 100%; padding: 0; border: 0; outline: none; background: none; font: inherit; font-size: 14.5px; font-weight: 800; color: #141a24; }
-/* The day box: the date picker's trigger stretched invisibly over the box, its own look gone. */
-.cal-entry .rdp-field.cal-entry-daypick { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 15px; background: none; box-shadow: none !important; color: transparent; font-size: 0; }
-.cal-entry .rdp-field.cal-entry-daypick svg, .cal-entry .rdp-field.cal-entry-daypick span { display: none; }
+/* The day box: the date typed in the box itself, the calendar on its icon (20 Oct, Alex: every date field typed or picked). */
+.cal-entry .rdp-field.cal-entry-daypick { width: 100%; height: 22px; padding: 0; border: 0; background: none; box-shadow: none !important; gap: 6px; }
+.cal-entry .rdp-field.cal-entry-daypick .rdt { font-size: 14.5px; font-weight: 600; color: #141a24; }
 .cal-entry-times { z-index: 60; width: 200px; padding: 0 0 6px; background: #fff; }
 .cal-entry-timelist { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; padding: 0 6px; }
 .cal-entry-time { height: 36px; padding: 0 10px; border: 0; border-radius: 9px; background: none; font: inherit; font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; color: #141a24; text-align: left; cursor: pointer; }

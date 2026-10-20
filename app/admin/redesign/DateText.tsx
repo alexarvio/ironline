@@ -6,6 +6,9 @@ import { useState } from "react";
 // 21/09/2026 and takes digits only, the slashes filling in (21092026), or a pasted 2026-09-21. A
 // whole real date is handed on the moment it is complete; anything else is
 // left as typed until the field is left, when it shows the day it holds.
+// Every date field in the admin is this one (20 Oct, Alex), so the format
+// lives here alone: a coach setting (dd/mm/yyyy or yyyy-mm-dd) will switch
+// shown, maskDate and typedDate below and nothing else.
 
 const parse = (d: string) => new Date(`${d}T00:00:00`);
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -41,7 +44,7 @@ export const maskDate = (raw: string, previous: string): string => {
   return out;
 };
 
-export default function DateText({ value, onChange, label, disabled = false, onFocus, min }: { value: string; onChange: (iso: string) => void; label: string; disabled?: boolean; /** Arms this end in the calendar beside it. */ onFocus?: () => void; /** The earliest day it takes (yyyy-mm-dd); an earlier one reads as wrong and isn't handed on. */ min?: string }) {
+export default function DateText({ value, onChange, label, disabled = false, onFocus, min, placeholder = "dd/mm/yyyy" }: { value: string; onChange: (iso: string) => void; label: string; disabled?: boolean; /** Arms this end in the calendar beside it. */ onFocus?: () => void; /** The earliest day it takes (yyyy-mm-dd); an earlier one reads as wrong and isn't handed on. */ min?: string; /** What an empty field says ("No end" for a repeat with no last day). */ placeholder?: string }) {
   // What is being typed; null shows the day the field holds.
   const [typing, setTyping] = useState<string | null>(null);
   const text = typing ?? shown(value);
@@ -54,7 +57,7 @@ export default function DateText({ value, onChange, label, disabled = false, onF
       value={text}
       disabled={disabled}
       inputMode="numeric"
-      placeholder="dd/mm/yyyy"
+      placeholder={placeholder}
       aria-label={label}
       aria-invalid={bad || undefined}
       onFocus={onFocus}

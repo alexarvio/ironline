@@ -6,6 +6,7 @@ import { renameClientAction, saveClientCardAction } from "../lib/actions";
 import type { OverviewInfoRow, OverviewPanel } from "../lib/queries";
 import PanelSection from "./PanelSection";
 import { ageFrom, DEFAULT_DIAL, GenderPills, InfoRow, PhoneInput, Suffixed } from "./InfoRow";
+import DatePick from "./redesign/DatePick";
 
 // Member info and Coaching info — the client card, as two collapsible
 // sections of the client panel.
@@ -366,7 +367,9 @@ function MemberFields({ card, focus, onRename }: { card: Card; focus: string | n
     <div className="nc-grid">
       <Field label="Name" name="name" value={card.name} required focus={focus} onBlur={onRename} full />
       <InfoRow label="Birthdate" aside={age != null ? `${age} years old` : null}>
-        <input className="nc-input" name="birthdate" type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} autoFocus={focus === "birthdate"} />
+        {/* Typed or picked, as every date (20 Oct, Alex); posted under its name. */}
+        <DatePick value={birthdate} onChange={setBirthdate} label="Birthdate" clearable className="nc-input nc-date" />
+        <input type="hidden" name="birthdate" value={birthdate} />
       </InfoRow>
       <InfoRow label="Gender" as="div">
         <GenderPills name="gender" value={gender} onChange={setGender} />
@@ -411,6 +414,7 @@ function Field({
   /** Spans both columns. */
   full?: boolean;
 }) {
+  if (type === "date") return <DateField label={label} name={name} value={value} full={full} />;
   const input = (
     <input
       className="nc-input"
@@ -427,6 +431,17 @@ function Field({
   return (
     <InfoRow label={label} full={full}>
       {suffix ? <Suffixed unit={suffix}>{input}</Suffixed> : input}
+    </InfoRow>
+  );
+}
+
+/** A date row of the card: typed or picked (20 Oct, Alex: every date field is the same), posted under its name. */
+function DateField({ label, name, value, full }: { label: string; name: string; value: string; full: boolean }) {
+  const [day, setDay] = useState(value);
+  return (
+    <InfoRow label={label} full={full}>
+      <DatePick value={day} onChange={setDay} label={label} clearable className="nc-input nc-date" />
+      <input type="hidden" name={name} value={day} />
     </InfoRow>
   );
 }

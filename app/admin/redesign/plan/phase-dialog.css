@@ -69,7 +69,9 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"].on { backgro
 body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font-size: 12px; font-weight: 500; color: #98a2b3; }
 
 /* The note: a clash in red with its fix as a small hairline capsule; a moved day in grey. */
-.npd.npd .npd-note { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 18px; margin: 16px 0 0; font-size: 13px; font-weight: 500; line-height: 1.45; color: #5b6474; }
+/* One height whatever it says (20 Oct, Alex: switching Training to Nutrition made the pop-up jump): room for two lines and the fix button, always. */
+.npd.npd .npd-note { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; height: calc(2 * 1.45em + 8px + 28px); margin: 16px 0 0; font-size: 13px; font-weight: 500; line-height: 1.45; color: #5b6474; }
+.npd.npd .npd-note > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .npd.npd .npd-note.bad { color: #b42318; }
 .npd.npd .npd-fix { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
 .npd.npd .npd-fix:hover, .npd.npd .npd-fix:focus-visible { outline: none; background: #f5f6f8; }
@@ -192,5 +194,18 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 .npd.npd .npd-tile:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
 .npd.npd .npd-tile.on { background: #141a24; box-shadow: none; color: #fff; font-weight: 600; }
 .npd.npd .npd-tile.on svg { color: #fff; }
+
+/* ---- The event pop-up on the same pattern (20 Oct): eight categories four across, the When capsule over the dates,
+   the repeat's days and words in a room that is always kept, a quiet "From client" fact tag. */
+.npd.npd .npd-tiles.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.npd.npd .npd-from { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 11.5px; font-weight: 600; color: #5b6474; }
+.npd.npd .npd-when { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.npd.npd .npd-when .npd-seg { width: 100%; }
+.npd.npd .npd-repeat { margin-top: 12px; }
+.npd.npd .npd-repeat .evr-days { margin: 0; }
+.npd.npd .npd-repeat-says { display: flex; align-items: center; gap: 10px; min-height: 28px; margin: 6px 0 0; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.npd.npd .npd-act { height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #5b6474; cursor: pointer; }
+.npd.npd .npd-act:hover, .npd.npd .npd-act:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.npd.npd .npd-side > .npd-field:last-child textarea.npd-line { min-height: 44px; }
 /* Starts / Ends as rounded boxes, not capsules (21 Oct, Alex preferred the live shape). */
 .npd.npd .npd-date { border-radius: 12px; padding: 0 14px; }

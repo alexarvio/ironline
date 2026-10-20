@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { checkLoginEmailAction, createClientWithLoginAction } from "../lib/actions";
 import { ageFrom, DEFAULT_DIAL, GenderPills, InfoRow, PhoneInput, Suffixed } from "./InfoRow";
+import DatePick from "./redesign/DatePick";
 
 // New client: the Member info card, the same rows (InfoRow) the coach edits
 // later. No login yet: the coach builds the client's plan first, then gives
@@ -166,7 +167,7 @@ export default function NewClientDialog({ onClose, preview = null, clerk = false
                 <input className="nc-input" value={draft.lastName} onChange={(e) => set("lastName", e.target.value)} placeholder="Arvio" autoComplete="off" maxLength={40} />
               </InfoRow>
               <InfoRow label="Birthdate" aside={form.age != null ? `${form.age} years old` : null}>
-                <input className="nc-input" type="date" value={draft.birthdate} onChange={(e) => set("birthdate", e.target.value)} />
+                <DatePick value={draft.birthdate} onChange={(v) => set("birthdate", v)} label="Birthdate" clearable className="nc-input nc-date" />
               </InfoRow>
               <InfoRow label="Gender" as="div">
                 <GenderPills value={draft.gender} onChange={(v) => set("gender", v)} />

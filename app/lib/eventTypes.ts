@@ -29,7 +29,8 @@ export const EVENT_TYPES: EventType[] = [
   { id: "family", label: "Family", color: "#7a3e8e", rgb: "122,62,142", icon: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 11a2.5 2.5 0 1 0 0-5M17.5 14.2c2 .6 3.5 2.9 3.5 5.8", placeholder: "e.g. Sister's wedding" },
   { id: "supplement", label: "Supplement", color: "#1f7a4d", rgb: "31,122,77", icon: "M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7zM8.5 8.5l7 7", fill: "M3.5 13.5l5-5 7 7-5 5a4.95 4.95 0 0 1-7-7z", placeholder: "e.g. Creatine, 5 g a day", oneDay: true },
   // Training back beside Sports (19 Oct): slate, so it is never read as the indigo training phase.
-  { id: "training", label: "Training", color: "#4a6079", rgb: "74,96,121", icon: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11", placeholder: "e.g. Gym closed, home workouts only" },
+  // Training's one purple, as everywhere else (20 Oct, Alex: it was a slate blue here).
+  { id: "training", label: "Training", color: "#3a3390", rgb: "58,51,144", icon: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11", placeholder: "e.g. Gym closed, home workouts only" },
   // Sports (19 Oct, Alex): football, padel, tennis; rose.
   { id: "sports", label: "Sports", color: "#a3366b", rgb: "163,54,107", icon: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM5.6 5.6c2.4 2.4 3.4 4.4 3.4 6.4s-1 4-3.4 6.4M18.4 5.6C16 8 15 10 15 12s1 4 3.4 6.4", placeholder: "e.g. Football season, Sunday padel" },
   { id: "other", label: "Other", color: "#7a8290", rgb: "122,130,144", icon: "M4 6h16v14H4zM4 10h16M9 3v4M15 3v4", placeholder: "e.g. Wedding" },

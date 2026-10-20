@@ -46,7 +46,6 @@ const toMin = (t: string) => {
 const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 const lengthLabel = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : `${m / 60} h`);
 const longDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
-const shortDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 const SLOTS = Array.from({ length: ((22 - 5) * 60) / 15 + 1 }, (_, i) => hhmm(5 * 60 + i * 15));
 /** "1530", "15.30", "3pm" and "15:30" all read as 15:30. */
 function parseTime(raw: string): string | null {
@@ -360,10 +359,8 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
           <div className="cal-entry-boxes">
             <span className="cal-entry-box">
               <span className="cal-entry-box-head">Day</span>
+              {/* Typed or picked, as every date field (20 Oct, Alex). */}
               <DatePick value={date} onChange={setDate} label={`Day, ${date ? longDate(date) : "none"}`} className="cal-entry-daypick" />
-              <span className="cal-entry-box-val" aria-hidden="true">
-                {date ? shortDate(date) : "Pick a day"}
-              </span>
             </span>
             {allDay ? (
               <>

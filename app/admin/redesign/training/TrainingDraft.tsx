@@ -2082,7 +2082,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
 /** The word on a session's state pill, for sizing its column: "" when it has none. */
 
 export const stateLabel = (s: string) => (s === "live" ? "Live" : s === "past" ? "Past" : s === "scheduled" ? "Scheduled" : "Draft");
-export const fmtDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+/** A date in words is day/month (20 Oct, Alex: "starts 9/11", not "9 Nov"); a year only when it isn't this one. Training, Nutrition and Lifestyle headers share it. */
+export const fmtDate = (iso: string) => {
+  const x = new Date(`${iso.slice(0, 10)}T00:00:00`);
+  return `${x.getDate()}/${x.getMonth() + 1}${x.getFullYear() !== new Date().getFullYear() ? `/${x.getFullYear()}` : ""}`;
+};
 
 /** The session's name, typed into in place; Enter or blur keeps it, Esc puts it back. */
 function SessionName({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -2126,7 +2130,7 @@ function SessionName({ value, onChange }: { value: string; onChange: (v: string)
 }
 
 /** Deleting a phase and its programme: what goes, and a tick when the client's logged sessions go with it. */
-function DeletePhaseDialog({ name, logged, firstName, onDelete, onClose }: { name: string; logged: number; firstName: string; onDelete: () => void; onClose: () => void }) {
+export function DeletePhaseDialog({ name, logged, firstName, onDelete, onClose }: { name: string; logged: number; firstName: string; onDelete: () => void; onClose: () => void }) {
   const [agreed, setAgreed] = useState(false);
   const cancel = useRef<HTMLButtonElement>(null);
   return (

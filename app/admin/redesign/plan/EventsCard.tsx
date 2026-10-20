@@ -7,10 +7,10 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { addClientEventAction, deleteClientEventAction, updateClientEventAction } from "../../../lib/actions";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { ChevronDownIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
+import { ChevronDownIcon, PlusIcon } from "../../../components/icons";
 import { gridFor, MonthRange } from "./PlanDraft";
-import { paletteOf } from "../palette";
+import DateText from "../DateText";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
 
 // The New event dialog after the client's sheet and the phase dialog (10 Oct):
@@ -63,7 +63,11 @@ const addDays = (d: string, n: number) => {
 };
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
 const shortDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-const longDate = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+/** A date in words is day/month (20 Oct, Alex: 9/11, not Mon 9 Nov); a year only when it isn't this one. */
+const longDate = (d: string) => {
+  const x = parse(d);
+  return `${x.getDate()}/${x.getMonth() + 1}${x.getFullYear() !== new Date().getFullYear() ? `/${x.getFullYear()}` : ""}`;
+};
 
 /** "in 3 weeks", "in 5 days", "today", "2 days ago", "6 weeks ago". */
 const relative = (today: string, d: string) => {
@@ -258,7 +262,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
             ))}
           </div>
           <button type="button" className="rd-btn" onClick={() => setDlg({ event: null })}>
-            <PlusIcon /> Add event
+            <PlusIcon /> Add
           </button>
         </div>
       </div>
@@ -301,7 +305,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                       <span key={w} className="rq-cell" style={{ gridColumn: i + 1, gridRow: "1 / span 1" }} />
                     ))}
                     <button type="button" className="rq-empty" style={{ gridColumn: `${nowIdx + 1} / span ${Math.min(count - nowIdx, 8)}`, gridRow: 1 }} onClick={() => setDlg({ event: null })}>
-                      Nothing on the horizon <b>+ add</b>
+                      None yet <b>+ Add</b>
                     </button>
                   </div>
                 </div>
@@ -332,7 +336,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                         setDlg({ event: e });
                       };
                       return single ? (
-                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }} onPointerDown={(ev) => beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${longDate(e.start)} · ${standing(today, e)} · click to edit · drag to move`}>
+                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }} onPointerDown={(ev) => beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${longDate(e.start)} · ${standing(today, e)}`}>
                           <i style={{ background: k.ink }} />
                           <span className="rq-pin-text">
                             <b>{e.title}</b>
@@ -352,7 +356,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                             beginDrag(ev, e, "move");
                           }}
                           onClick={open}
-                          title={`${e.title} · ${e.repeat ? `${repeatWords(e.repeat, { until: false })} · ` : ""}${longDate(e.start)} → ${e.repeat && !e.repeat.until ? "no end" : longDate(e.end)} · ${standing(today, e)} · click to edit · drag to move, or an edge to stretch`}
+                          title={`${e.title} · ${e.repeat ? `${repeatWords(e.repeat, { until: false })} · ` : ""}${longDate(e.start)} → ${e.repeat && !e.repeat.until ? "no end" : longDate(e.end)} · ${standing(today, e)}`}
                         >
                           <span className="rq-bar-edge left" onPointerDown={(ev) => beginDrag(ev, e, "start")} onClick={(ev) => ev.stopPropagation()} />
                           <span className="rq-bar-edge right" onPointerDown={(ev) => beginDrag(ev, e, "end")} onClick={(ev) => ev.stopPropagation()} />
@@ -398,7 +402,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
           )}
         </div>
         {!logOpen ? null : listed.length === 0 ? (
-          <p className="rq-evlog-empty">{events.length === 0 ? "No events yet. Add the first: a trip, an injury, the day they started something." : "Nothing of that kind."}</p>
+          <p className="rq-evlog-empty">{events.length === 0 ? "None yet" : "None"}</p>
         ) : (
           <div className="rd-rows">
             {onPage.map((e) => {
@@ -417,7 +421,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                     <span className="rq-evrow-main">
                       <b>
                         {e.title}
-                        {e.byClient && <span className="rq-ev-by">from the client</span>}
+                        {e.byClient && <span className="rq-ev-by">From client</span>}
                       </b>
                       {e.note && <small>{e.note}</small>}
                     </span>
@@ -493,8 +497,8 @@ export function EventDialog({ today, event, cats, initialStart, onSave, onDelete
   // The calendar: which month shows, and which end a click sets (a period).
   const [cursor, setCursor] = useState(start.slice(0, 7));
   const [picking, setPicking] = useState<"start" | "end">("start");
-  // Blue until a category is picked (grey on the calendar could not be seen), then that category's colour.
-  const cal = kind ? k : paletteOf("blue");
+  // Ink until a category is picked, then that category's colour (the calendar draws it from --npd-c; never navy).
+  const cal = kind ? k : { tint: "rgba(20, 26, 36, 0.08)", ink: "#141a24", line: "#c9cfd8" };
   const calChrome = { band: cal.tint, edge: cal.ink, soft: cal.tint, line: cal.line, chipBg: cal.tint, chipInk: cal.ink, dashed: false };
   const pickAs = (which: "start" | "end", d: string) => {
     if (which === "start" || d < start) {
@@ -530,144 +534,165 @@ export function EventDialog({ today, event, cats, initialStart, onSave, onDelete
   };
   const ok = title.trim().length > 0 && !!start && endOk && (shape !== "repeat" || days.length > 0);
   const placeholder = isEventTypeId(kind) ? eventTypeOf(kind).placeholder : "What happened, or will";
-  return (
-    <DialogContent className="rd-dlg rq-ev-dlg">
-      <DialogHeader>
-        <DialogTitle>
-          <span className="rq-title-row">
-            {event ? event.title : "New event"}
-            <span className="rq-track-pill" style={{ "--c": k.ink, "--rgb": rgbOf(k.ink) } as React.CSSProperties}>
-              <KindIcon id={kind} size={13} />
-              {k.label}
-            </span>
-          </span>
-        </DialogTitle>
-        {/* No line under the title (10 Oct): the tiles say it. The description stays for screen readers only. */}
-        <DialogDescription className="sr-only">What happened, which kind, and when.</DialogDescription>
-        {event?.byClient && <p className="rq-helper">Added by the client from their Home. What you change here they see too.</p>}
-      </DialogHeader>
+  // Deleting asks first (20 Oct, Alex: nothing destructive on one click).
+  const [confirming, setConfirming] = useState(false);
+  // The category's colour on its tag and its range; ink until one is picked.
+  const ink = kind ? k.ink : "#141a24";
+  // Typed as well as picked (20 Oct, Alex: the dates couldn't be typed). A start past the end takes the end with it, and a repeat's last day goes, so the dates never cross.
+  const typeStart = (d: string) => {
+    setStart(d);
+    if (end < d) setEnd(d);
+    if (until && until < d) setUntil(null);
+    setCursor(d.slice(0, 7));
+  };
+  const typeEnd = (d: string) => {
+    setEnd(d);
+    setCursor(d.slice(0, 7));
+  };
+  const typeUntil = (d: string) => {
+    setUntil(d);
+    setCursor(d.slice(0, 7));
+  };
 
-      <div className="rd-field">
-        <span>Category</span>
-        <div className="evs-types rq-tiles rq-ev-tiles" role="radiogroup" aria-label="Category">
+  if (confirming && event)
+    return (
+      <DialogContent className="dlh" role="alertdialog">
+        <div className="dlh-head">
+          <DialogTitle className="dlh-title">Delete {event.title}?</DialogTitle>
+          <DialogClose className="dlh-x" aria-label="Close">
+            ✕
+          </DialogClose>
+        </div>
+        <DialogDescription className="dlh-what">This permanently deletes the event. It can&rsquo;t be undone.</DialogDescription>
+        <div className="dlh-foot">
+          <button type="button" className="dlh-cancel" onClick={() => setConfirming(false)} autoFocus>
+            Cancel
+          </button>
+          <button type="button" className="dlh-delete" onClick={onDelete}>
+            Delete
+          </button>
+        </div>
+      </DialogContent>
+    );
+
+  // The phase pop-up's pattern (20 Oct, Alex): title and tags, the category as tiles, a clean line for the words,
+  // the month on the left with the dates typed or picked on the right, Cancel in words and one black pill.
+  return (
+    <DialogContent className="npd" style={{ "--npd-c": ink, "--npd-rgb": rgbOf(ink) } as React.CSSProperties}>
+      <div className="npd-head">
+        <DialogTitle className="npd-title">{event ? event.title : "New event"}</DialogTitle>
+        <span className="npd-tools">
+          <DialogClose className="npd-x" aria-label="Close">
+            ✕
+          </DialogClose>
+        </span>
+      </div>
+      <DialogDescription className="npd-tags">
+        <span className="npd-track">
+          <KindIcon id={kind} size={12} />
+          {k.label}
+        </span>
+        {event?.byClient && <span className="npd-from">From client</span>}
+      </DialogDescription>
+
+      <div className="npd-field">
+        <span className="npd-label">Category</span>
+        <div className="npd-tiles four" role="radiogroup" aria-label="Category">
           {EVENT_TYPES.map((x) => (
-            <button key={x.id} type="button" role="radio" aria-checked={kind === x.id} className={`evs-type${kind === x.id ? " on" : ""}`} style={{ "--tc": x.color, "--trgb": x.rgb } as React.CSSProperties} onClick={() => setKind(kind === x.id ? null : x.id)}>
-              <span className="evs-type-disc">
-                <KindIcon id={x.id} />
-              </span>
+            <button key={x.id} type="button" role="radio" aria-checked={kind === x.id} className={`npd-tile${kind === x.id ? " on" : ""}`} style={{ "--tc": x.color } as React.CSSProperties} onClick={() => setKind(kind === x.id ? null : x.id)}>
+              <KindIcon id={x.id} size={18} />
               {x.label}
             </button>
           ))}
         </div>
       </div>
 
-      <label className="rd-field">
-        <span>What&rsquo;s happening</span>
-        <input className={kind ? "rq-what ring" : "rq-what"} style={kind ? ({ "--c": k.ink, "--rgb": rgbOf(k.ink) } as React.CSSProperties) : undefined} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={placeholder} maxLength={80} autoFocus={!event} />
+      <label className="npd-field">
+        <span className="npd-label">What&rsquo;s happening</span>
+        <input className="npd-line" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={placeholder} maxLength={80} autoFocus={!event} />
       </label>
 
-      {/* The phase dialog's layout (26 Sep): the month to click on the left,
-          in the category's colour, the dates as fields on the right. A
-          timestamp is one day; a period takes a click for its first day and
-          one for its last, as a phase does. */}
-      <div className="rdd-cols">
-        <MonthRange from={start} to={shape === "event" ? start : shape === "repeat" ? until ?? start : end} onPick={pick} chrome={calChrome} planned={[]} cursor={cursor} setCursor={setCursor} today={today} />
-        <div className="rdd-fields">
-          <div className="rd-field">
-            <span className="rq-when-head">
-              When
-              <span className="evs-seg" role="group" aria-label="A timestamp or a period">
-                <button type="button" className={shape === "period" ? "on" : ""} aria-pressed={shape === "period"} onClick={() => setShape("period")}>
-                  Date range
-                </button>
-                <button type="button" className={shape === "event" ? "on" : ""} aria-pressed={shape === "event"} onClick={() => setShape("event")}>
-                  One day
-                </button>
-                <button type="button" className={shape === "repeat" ? "on" : ""} aria-pressed={shape === "repeat"} onClick={() => setShape("repeat")}>
-                  Repeats
-                </button>
-              </span>
-            </span>
-            <div className="evs-dates rq-dates" style={{ "--c": cal.ink, "--rgb": rgbOf(cal.ink) } as React.CSSProperties}>
-              {shape === "repeat" ? (
-                <>
-                  <button type="button" className={`evs-date${picking === "start" ? " arm" : ""}`} onClick={() => setPicking("start")} aria-pressed={picking === "start"}>
-                    <span className="evs-date-head">STARTS</span>
-                    <b>{start === today ? "Today" : longDate(start)}</b>
-                  </button>
-                  <span className="evs-arrow" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14M13 6l6 6-6 6" />
-                    </svg>
-                  </span>
-                  <button type="button" className={`evs-date ends${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")} aria-pressed={picking === "end"}>
-                    <span className="evs-date-head">UNTIL</span>
-                    <b>{until ? longDate(until) : "No end"}</b>
-                  </button>
-                </>
-              ) : shape === "event" ? (
-                <span className="evs-date arm">
-                  <span className="evs-date-head">DATE</span>
-                  <b>{start === today ? "Today" : longDate(start)}</b>
-                </span>
-              ) : (
-                <>
-                  <button type="button" className={`evs-date${picking === "start" ? " arm" : ""}`} onClick={() => setPicking("start")} aria-pressed={picking === "start"}>
-                    <span className="evs-date-head">STARTS</span>
-                    <b>{start === today ? "Today" : longDate(start)}</b>
-                  </button>
-                  <span className="evs-arrow" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14M13 6l6 6-6 6" />
-                    </svg>
-                  </span>
-                  <button type="button" className={`evs-date ends${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")} aria-pressed={picking === "end"}>
-                    <span className="evs-date-head">ENDS</span>
-                    <b>{longDate(end)}</b>
-                  </button>
-                </>
-              )}
+      <div className="npd-cols">
+        <MonthRange from={start} to={shape === "event" ? start : shape === "repeat" ? until ?? start : end} onPick={pick} chrome={calChrome} planned={[]} cursor={cursor} setCursor={setCursor} today={today} plain legend={null} />
+        <div className="npd-side">
+          <div className="npd-when">
+            <span className="npd-label">When</span>
+            <div className="npd-seg" role="group" aria-label="One day, a stretch, or repeating">
+              <button type="button" className={shape === "event" ? "on" : ""} aria-pressed={shape === "event"} onClick={() => setShape("event")}>
+                One day
+              </button>
+              <button type="button" className={shape === "period" ? "on" : ""} aria-pressed={shape === "period"} onClick={() => setShape("period")}>
+                Range
+              </button>
+              <button type="button" className={shape === "repeat" ? "on" : ""} aria-pressed={shape === "repeat"} onClick={() => setShape("repeat")}>
+                Repeats
+              </button>
             </div>
-            {shape === "repeat" && (
-              <div className="evr-days" role="group" aria-label="On these days">
-                {WEEKDAY_LETTERS.map((l, i) => (
-                  <button key={i} type="button" className={days.includes(i + 1) ? "on" : ""} aria-pressed={days.includes(i + 1)} aria-label={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][i]} onClick={() => toggleDay(i + 1)}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            )}
-            {shape === "repeat" && (
-              <p className="evr-says">
-                {days.length ? repeatWords({ days, until }) : "Pick the days it happens."}
-                {until && (
-                  <button type="button" className="evr-noend" onClick={() => setUntil(null)}>
-                    No end
-                  </button>
-                )}
-              </p>
-            )}
-            {!endOk && <p className="rdd-picking">Ends before it starts.</p>}
           </div>
-          <label className="rd-field rq-note">
-            <span>Note</span>
-            <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="What it means for the plan, for you alone." />
+          <div className="npd-dates">
+            {shape === "event" ? (
+              <div className="npd-date arm">
+                <span className="npd-date-head">Date</span>
+                <DateText value={start} onChange={typeStart} label="Date" />
+              </div>
+            ) : (
+              <>
+                <div className={`npd-date${picking === "start" ? " arm" : ""}`} onClick={() => setPicking("start")}>
+                  <span className="npd-date-head">Starts</span>
+                  <DateText value={start} onChange={typeStart} label="Start date" onFocus={() => setPicking("start")} />
+                </div>
+                <span className="npd-arrow" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </span>
+                <div className={`npd-date${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")}>
+                  <span className="npd-date-head">{shape === "repeat" ? "Until" : "Ends"}</span>
+                  {shape === "repeat" ? (
+                    <DateText value={until ?? ""} min={start} onChange={typeUntil} label="Last day" placeholder="No end" onFocus={() => setPicking("end")} />
+                  ) : (
+                    <DateText value={end} min={start} onChange={typeEnd} label="End date" onFocus={() => setPicking("end")} />
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          {/* The repeat's days and its words keep their room in every shape, so the pop-up never changes height (20 Oct, Alex). */}
+          <div className="npd-repeat" style={{ visibility: shape === "repeat" ? "visible" : "hidden" }} aria-hidden={shape !== "repeat"}>
+            <div className="evr-days" role="group" aria-label="On these days">
+              {WEEKDAY_LETTERS.map((l, i) => (
+                <button key={i} type="button" className={days.includes(i + 1) ? "on" : ""} aria-pressed={days.includes(i + 1)} aria-label={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][i]} onClick={() => toggleDay(i + 1)} tabIndex={shape === "repeat" ? 0 : -1}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            <p className="npd-repeat-says">
+              <span>{days.length ? repeatWords({ days, until }) : ""}</span>
+              {until && (
+                <button type="button" className="npd-act" onClick={() => setUntil(null)} tabIndex={shape === "repeat" ? 0 : -1}>
+                  No end
+                </button>
+              )}
+            </p>
+          </div>
+          <label className="npd-field">
+            <span className="npd-label">Note</span>
+            <textarea className="npd-line" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
           </label>
         </div>
       </div>
 
-      <DialogFooter>
+      <div className="npd-foot">
         {event && (
-          <button type="button" className="rd-btn danger" onClick={onDelete}>
-            <TrashIcon /> Remove
+          <button type="button" className="npd-delete" onClick={() => setConfirming(true)}>
+            Delete
           </button>
         )}
-        <span className="rd-dlg-hint grow" />
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ kind, title: title.trim(), start, end: shape === "event" ? start : shape === "repeat" ? until ?? start : end, note: note.trim(), repeat: shape === "repeat" ? { days, until } : null })}>
-          {event ? "Save" : "Add event"}
+        <DialogClose className="npd-cancel">Cancel</DialogClose>
+        <button type="button" className="npd-save" disabled={!ok} onClick={() => onSave({ kind, title: title.trim(), start, end: shape === "event" ? start : shape === "repeat" ? until ?? start : end, note: note.trim(), repeat: shape === "repeat" ? { days, until } : null })}>
+          {event ? "Save" : "Add"}
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }
@@ -684,43 +709,46 @@ function MoveEventDialog({ event: e, start, end, cats, onCancel, onSave }: { eve
         { label: "End", was: longDate(e.end), now: longDate(end) },
         { label: "Length", was: len(e.start, e.end), now: len(start, end) },
       ];
+  // The phase's move pop-up, for an event (20 Oct, Alex): its category as a tinted tag, what it was struck through, the new value in its colour; no arrows, no sentences.
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>
-          <span className="rq-title-row">
-            Move {e.title}
-            <span className="rq-track-pill" style={{ "--c": k.ink, "--rgb": rgbOf(k.ink) } as React.CSSProperties}>
-              <KindIcon id={e.kind} size={13} />
-              {k.label}
-            </span>
-          </span>
-        </DialogTitle>
-        <DialogDescription>{e.byClient ? "The client added this event; they see the new dates too." : "Nothing saves until you say so."}</DialogDescription>
-      </DialogHeader>
-      <div className="rd-rows">
+    <DialogContent className="dlh mvd" style={{ "--mv": k.ink, "--mv-rgb": rgbOf(k.ink) } as React.CSSProperties}>
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Move {e.title}</DialogTitle>
+        <button type="button" className="dlh-x" onClick={onCancel} aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <DialogDescription className="mvd-tags">
+        <span className="mvd-track">
+          <KindIcon id={e.kind} size={12} />
+          {k.label}
+        </span>
+      </DialogDescription>
+      <div className="mvd-rows">
         {rows.map((r) => (
-          <div key={r.label} className="rd-row">
-            <div className="rd-row-main static" style={{ gridTemplateColumns: "80px minmax(0, 1fr) 20px minmax(0, 1fr)", columnGap: 12 }}>
-              <span className="rd-cols" style={{ padding: 0 }}>
-                {r.label}
-              </span>
-              <span className={`rd-num${r.was === r.now ? "" : " quiet"}`}>{r.was}</span>
-              <span className="rd-num quiet">{r.was === r.now ? "" : "→"}</span>
-              <span className="rd-num">{r.was === r.now ? "" : r.now}</span>
-            </div>
+          <div key={r.label} className={`mvd-row${r.was === r.now ? " same" : ""}`}>
+            <span className="mvd-label">{r.label}</span>
+            {r.was === r.now ? (
+              <span className="mvd-now">{r.now}</span>
+            ) : (
+              <>
+                <s className="mvd-was" aria-label={`was ${r.was}`}>
+                  {r.was}
+                </s>
+                <span className="mvd-now">{r.now}</span>
+              </>
+            )}
           </div>
         ))}
       </div>
-      <DialogFooter>
-        <span className="rd-dlg-hint grow" />
-        <button type="button" className="rd-btn" onClick={onCancel}>
+      <div className="dlh-foot">
+        <button type="button" className="dlh-cancel" onClick={onCancel}>
           Cancel
         </button>
-        <button type="button" className="rd-btn primary" onClick={onSave}>
-          Move event
+        <button type="button" className="dlh-go" onClick={onSave} autoFocus>
+          Save
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }

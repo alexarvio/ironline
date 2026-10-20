@@ -9,13 +9,13 @@ import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../../../lib/phaseC
 import Link from "next/link";
 import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, duplicateClientPhaseAction, removeClientGoalAction, deletePhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { GoalEditorOptions, PlanGoalRow, PlanPhaseRow, PlanProgramOption } from "../../../lib/queries";
 import type { GoalTracking } from "../../../lib/goalView";
 import type { PhaseTrack } from "../../../lib/db";
 import { phaseChrome, phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL, TRACK_PALETTE, type PhaseState } from "../../phaseChrome";
-import { ConfirmDialog } from "../training/TrainingDraft";
+import { ConfirmDialog, DeletePhaseDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DateText from "../DateText";
 import DatePick from "../DatePick";
@@ -92,8 +92,15 @@ const addDays = (d: string, n: number) => {
 const addWeeks = (monday: string, n: number) => addDays(monday, n * 7);
 const weeksBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / (7 * DAY));
 const mondayOf = (d: string) => addDays(d, -((parse(d).getDay() + 6) % 7));
-const shortDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-const fmtDay = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+/** A date in words is day/month (20 Oct, Alex: "starts 9/11", not "starts 9 Nov"); a year only when it isn't this one. */
+const shortDate = (d: string) => {
+  const x = parse(d);
+  return `${x.getDate()}/${x.getMonth() + 1}${x.getFullYear() !== new Date().getFullYear() ? `/${x.getFullYear()}` : ""}`;
+};
+const fmtDay = shortDate;
+/** The timeline's axis keeps the month's name under its month heads; a screen reader gets the whole day. */
+const axisDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const spokenDay = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 const monthName = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short" });
 const isoWeek = (day: string) => {
   const thursday = parse(addDays(mondayOf(day), 3));
@@ -290,7 +297,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   const openCount = goals.filter((g) => !g.done).length;
 
   return (
-    <div className="rd">
+    // pln: the Plan tab in the admin's hairline language (20 Oct), scoped in plan.css as trn is for Training.
+    <div className="rd pln">
       {/* ---- Header. */}
       <header className="rd-head">
         <div className="rd-head-main">
@@ -325,7 +333,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               ))}
             </div>
             <button type="button" className="rd-btn" onClick={() => setDlg({ kind: "phase", phase: null })}>
-              <PlusIcon /> Add phase
+              <PlusIcon /> Add
             </button>
           </div>
         </div>
@@ -352,7 +360,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                     {weeks.map((w, i) => (
                       <span key={w} className={`rq-week${i === nowIdx ? " now" : ""}`}>
                         <b>W{isoWeek(w)}</b>
-                        <small>{shortDate(w)}</small>
+                        <small>{axisDate(w)}</small>
                       </span>
                     ))}
                   </div>
@@ -399,7 +407,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                         ))}
                         {mine.length === 0 && nowIdx < count && (
                           <button type="button" className="rq-empty" style={{ gridColumn: `${nowIdx + 1} / span ${Math.min(count - nowIdx, 8)}`, gridRow: 1 }} onClick={() => setDlg({ kind: "phase", phase: null, track: t.id })}>
-                            No phase planned <b>+ add</b>
+                            None yet <b>+ Add</b>
                           </button>
                         )}
                         {mine.map((p) => {
@@ -425,7 +433,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                                 if (justDragged.current || drag) return;
                                 setDlg({ kind: "phase", phase: p });
                               }}
-                              title={trained ? `${p.name} · the client trained in this programme, so its start stays; drag the right edge to change the end` : `${p.name} · click to edit · drag to move`}
+                              title={`${p.name} · ${shortDate(p.start_week)} – ${shortDate(addDays(p.end_week, 6))}`}
                             >
                               {elapsed > 0 && <span className="rq-bar-elapsed" style={{ width: `${(elapsed / shownW) * 100}%` }} />}
                               {!sp.clippedStart && !trained && <span className="rq-bar-edge left" onPointerDown={(e) => beginDrag(e, p, "start")} onClick={(e) => e.stopPropagation()} />}
@@ -479,7 +487,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               <span />
             </div>
           )}
-          {shown.length === 0 && <p className="rd-full">{filter === "done" ? "Nothing closed yet." : `No goals yet. Add the first one; ${firstName} sees them on Home.`}</p>}
+          {shown.length === 0 && <p className="rd-full">{filter === "done" ? "None done" : "None yet"}</p>}
           <SortableList ids={shown.map((g) => g.id)} label="goal" onMove={moveGoals}>
           {shown.map((g) => {
             const isDone = doneOf(g);
@@ -521,11 +529,11 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                         <MoreIcon />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="pb-menu">
-                        <DropdownMenuItem onSelect={() => setDlg({ kind: "goal", goal: g })}>Edit goal</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "goal", goal: g })}>Edit</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => toggleDone(g)}>{isDone ? "Reopen" : "Mark done"}</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "removeGoal", id: g.id })}>
-                          <TrashIcon /> Remove goal
+                          <TrashIcon /> Remove
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -537,13 +545,13 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           })}
           </SortableList>
           <button type="button" className="rd-session add rm-additem" onClick={() => setDlg({ kind: "goal", goal: null })}>
-            + Add goal
+            + Add
           </button>
           {goalChanges > 0 && (
             <div className="rd-pending">
               <span className="rd-pending-count">{goalChanges}</span>
               <span className="rd-pending-text">
-                {[...(order ? ["order changed"] : []), ...Object.entries(pendingDone).map(([id, d]) => `${goals.find((g) => g.id === Number(id))?.text ?? "goal"} ${d ? "marked done" : "reopened"}`)].join(" · ")} · {firstName} sees the same list on Home
+                {[...(order ? ["order changed"] : []), ...Object.entries(pendingDone).map(([id, d]) => `${goals.find((g) => g.id === Number(id))?.text ?? "goal"} ${d ? "marked done" : "reopened"}`)].join(" · ")}
               </span>
               <button
                 type="button"
@@ -633,13 +641,14 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           close();
           act(() => updateClientPhaseAction(phaseForm({ id: p.id, name: p.name, track: p.track, start: dlg.start, end: dlg.end })), `${p.name}: ${shortDate(dlg.start)} – ${shortDate(addDays(dlg.end, 6))}`);
         }} />}
+        {/* Training's delete pop-up (20 Oct): a tick first when the client's logged sessions go with the programme. */}
         {dlg?.kind === "deletePhase" && phases.find((p) => p.id === dlg.id) && (
-          <ConfirmDialog
-            title={`Delete ${phases.find((p) => p.id === dlg.id)!.name}?`}
-            description="This permanently deletes the phase. It can't be undone."
-            confirm="Delete phase"
-            danger
-            onConfirm={() => {
+          <DeletePhaseDialog
+            name={phases.find((p) => p.id === dlg.id)!.name}
+            logged={phases.find((p) => p.id === dlg.id)!.program?.loggedWeeks.length ?? 0}
+            firstName={firstName}
+            onClose={close}
+            onDelete={() => {
               const id = dlg.id;
               setPhases((prev) => prev.filter((p) => p.id !== id));
               close();
@@ -668,9 +677,9 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
         )}
         {dlg?.kind === "removeGoal" && (
           <ConfirmDialog
-            title="Remove this goal?"
-            description={`It comes off ${firstName}'s Home and the Meetings tab. Marking it done keeps it in the record instead.`}
-            confirm="Remove goal"
+            title={`Remove ${goals.find((g) => g.id === dlg.id)?.text ?? "this goal"}?`}
+            description="This permanently deletes the goal. It can't be undone."
+            confirm="Remove"
             danger
             onConfirm={() => {
               const id = dlg.id;
@@ -690,7 +699,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
 // ---- The phase dialog: track, name, dates on a month, and for training the programme behind it.
 
 /** Six rows of a month, the picked weeks tinted in the phase's own colours, other phases on the track as a grey mark. */
-export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, today, plain = false }: { from: string; to: string; onPick: (day: string) => void; chrome: ReturnType<typeof phaseChrome>; planned: { name: string; from: string; to: string; draft?: boolean }[]; cursor: string; setCursor: (m: string) => void; today: string; /** No colours of its own (20 Oct): the hairline phase dialog draws the range from its CSS. */ plain?: boolean }) {
+export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, today, plain = false, legend = "New phase" }: { from: string; to: string; onPick: (day: string) => void; chrome: ReturnType<typeof phaseChrome>; planned: { name: string; from: string; to: string; draft?: boolean }[]; cursor: string; setCursor: (m: string) => void; today: string; /** No colours of its own (20 Oct): the hairline phase dialog draws the range from its CSS. */ plain?: boolean; /** What the range is called under the month; null for none (an event's range needs no key). */ legend?: string | null }) {
   const [y, mo] = cursor.split("-").map(Number);
   const first = new Date(y, mo - 1, 1);
   const gridStart = mondayOf(isoOf(first));
@@ -740,7 +749,7 @@ export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCurso
               className={`rdd-cell${d === today ? " today" : ""}${inR && !overlap ? " in" : ""}${overlap ? " overlap" : kind === "taken" ? " taken" : ""}${d === from ? " start" : ""}${d === to ? " end" : ""}${run}${parse(d).getMonth() !== mo - 1 ? " past" : ""}`}
               style={!plain && inR && !overlap ? { background: edge ? chrome.edge : `rgba(${rgbOf(chrome.edge)}, 0.12)`, color: edge ? "#fff" : chrome.edge } : undefined}
               onClick={() => onPick(d)}
-              aria-label={`${fmtDay(d)}, ${overlap ? `overlaps ${busy!.name}` : inR ? "in new phase" : busy ? `taken by ${busy.name}` : "free"}`}
+              aria-label={`${spokenDay(d)}, ${overlap ? `overlaps ${busy!.name}` : inR ? "in new phase" : busy ? `taken by ${busy.name}` : "free"}`}
               aria-pressed={edge}
               title={tip}
             >
@@ -749,16 +758,16 @@ export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCurso
           );
         })}
       </div>
-      {(planned.length > 0 || (!!from && !!to)) && (
+      {(planned.length > 0 || (!!from && !!to && legend != null)) && (
         <div className="rdd-legend" aria-hidden="true">
           {planned.length > 0 && (
             <span>
               <i className="taken" /> {planned.length === 1 ? `${planned[0].name} (taken)` : "Taken by other phases"}
             </span>
           )}
-          {!!from && !!to && (
+          {!!from && !!to && legend != null && (
             <span>
-              <i className={plain ? "new" : undefined} style={plain ? undefined : { background: chrome.edge }} /> New phase
+              <i className={plain ? "new" : undefined} style={plain ? undefined : { background: chrome.edge }} /> {legend}
             </span>
           )}
           {days.some((d) => kindOf(d) === "overlap") && (
@@ -1028,8 +1037,9 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
             </span>
           </label>
           {/* The same days as a phase on another track, so the two run in tandem. */}
-          {matchable.length > 0 && (
-            <div className="npd-field">
+          {/* Its room is kept on every track (20 Oct, Alex: no jump when the track changes); hidden where nothing can be matched. */}
+          {others.some((o) => o.id !== phase?.id && addDays(o.end_week, 6) >= today) && (
+            <div className="npd-field" style={{ visibility: matchable.length > 0 ? "visible" : "hidden" }} aria-hidden={matchable.length === 0}>
               <span className="npd-label">Same dates as</span>
               <Picker
                 value={matched}
@@ -1068,7 +1078,7 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
         )}
         <DialogClose className="npd-cancel">Cancel</DialogClose>
         <button type="button" className="npd-save" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: endWeek, programId: linkedProgram?.id ?? null, goals: goalLines })}>
-          {editing ? "Save" : "Create draft"}
+          {editing ? "Save" : "Add"}
         </button>
       </div>
     </DialogContent>
@@ -1140,6 +1150,12 @@ function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: 
 
 type Kind = PlanGoalRow["kind"];
 type Thing = { id: string; kind: Kind; tab: Kind; name: string; hint: string; unit?: string; metricKey?: string; exerciseId?: number; habitId?: number; now?: number | null; series?: { date: string; value: number }[]; best?: { weight: number; reps: number } | null };
+/** The goal dialog's sections, as its capsule reads them. */
+const GOAL_SECTIONS: [Kind, string][] = [
+  ["exercise", "Exercises"],
+  ["metric", "Nutrition"],
+  ["habit", "Lifestyle"],
+];
 
 function GoalDialog({ firstName, goal, options, phases, today, onSave }: { firstName: string; goal: PlanGoalRow | null; options: GoalEditorOptions; phases: PlanPhaseRow[]; today: string; onSave: (v: { text: string; kind: Kind; rule: string; tracking: GoalTracking | null; by: string | null; tracks: string | null }) => void }) {
   const t = goal?.tracking ?? null;
@@ -1159,14 +1175,15 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
       })
       .map((m) => {
         const latest = m.series[m.series.length - 1];
-        return { id: `m:${m.key}`, kind: "metric" as Kind, tab: (m.group === "nutrition" ? "metric" : "habit") as Kind, name: m.name, unit: m.unit, metricKey: m.key, now: latest?.value ?? null, series: m.series, hint: latest ? `now ${fmtNum(latest.value)}${m.unit ? ` ${m.unit}` : ""}` : "nothing logged yet" };
+        // Facts, two words when empty (21 Oct, Alex: no explanations).
+        return { id: `m:${m.key}`, kind: "metric" as Kind, tab: (m.group === "nutrition" ? "metric" : "habit") as Kind, name: m.name, unit: m.unit, metricKey: m.key, now: latest?.value ?? null, series: m.series, hint: latest ? `now ${fmtNum(latest.value)}${m.unit ? ` ${m.unit}` : ""}` : "None yet" };
       }),
     ...options.exercises.map((e) => {
       const sets = e.sets.filter((s) => s.weight != null && s.reps != null);
       const best = [...sets].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || (b.reps ?? 0) - (a.reps ?? 0))[0];
-      return { id: `e:${e.id}`, kind: "exercise" as Kind, tab: "exercise" as Kind, name: e.name, unit: "kg", exerciseId: e.id, best: best ? { weight: best.weight!, reps: best.reps! } : null, hint: best ? `best ${fmtNum(best.weight!)} × ${best.reps}` : "no sets logged yet" };
+      return { id: `e:${e.id}`, kind: "exercise" as Kind, tab: "exercise" as Kind, name: e.name, unit: "kg", exerciseId: e.id, best: best ? { weight: best.weight!, reps: best.reps! } : null, hint: best ? `best ${fmtNum(best.weight!)} × ${best.reps}` : "No sets yet" };
     }),
-    ...options.habits.map((h) => ({ id: `h:${h.id}`, kind: "habit" as Kind, tab: "habit" as Kind, name: `${h.name} · days a week`, habitId: h.id, hint: "daily check-in, as a habit" })),
+    ...options.habits.map((h) => ({ id: `h:${h.id}`, kind: "habit" as Kind, tab: "habit" as Kind, name: `${h.name} · days a week`, habitId: h.id, hint: "Daily check-in" })),
   ];
   const fromTracking = (): Thing | null => {
     if (!t) return null;
@@ -1179,6 +1196,12 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
   const needle = q.trim().toLowerCase();
   const [section, setSection] = useState<Kind>("exercise");
   const matches = things.filter((x) => !needle || x.name.toLowerCase().includes(needle));
+  // The section's matches float under the search (21 Oct, Alex: a list floats, six rows then it
+  // scrolls, and never stretches the card). It opens on typing, a click in the search or a
+  // section; it shuts on a pick, Escape, or a click anywhere else.
+  const shownThings = matches.filter((x) => x.tab === section);
+  const [listOpen, setListOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // The blanks in the sentence.
   const [dir, setDir] = useState<"<=" | ">=">(t?.kind === "metric" ? t.op : t?.kind === "habit" ? t.op : "<=");
@@ -1189,7 +1212,7 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
   const ends = phases
     .filter((p) => addDays(p.end_week, 6) >= today)
     .sort((a, b) => a.start_week.localeCompare(b.start_week) || a.end_week.localeCompare(b.end_week))
-    .map((p) => ({ id: p.id, name: p.name, date: addDays(p.end_week, 6), live: p.start_week <= today }));
+    .map((p) => ({ id: p.id, name: p.name, date: addDays(p.end_week, 6) }));
   const endOf = (id: number) => ends.find((e) => e.id === id) ?? null;
   const savedBy = t?.kind === "metric" ? t.byDate : null;
   const savedPhase = savedBy ? (ends.find((e) => e.date === savedBy) ?? null) : null;
@@ -1217,6 +1240,7 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
   const pick = (x: Thing | "words") => {
     setThing(x);
     setQ("");
+    setListOpen(false);
     setTouched(false);
     if (x === "words") return;
     if (x.kind === "metric" && x.now != null && !target) setTarget(fmtNum(Math.round(x.now)));
@@ -1265,7 +1289,7 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
     if (!th || !tracking) return null;
     if (tracking.kind === "metric") {
       const now = th.now;
-      if (now == null) return { now: "nothing logged yet", pct: 0, tone: "muted" as const };
+      if (now == null) return { now: "None yet", pct: 0, tone: "muted" as const };
       const reached = dir === "<=" ? now <= tracking.target : now >= tracking.target;
       const start = th.series?.[0]?.value ?? now;
       const span = Math.abs(start - tracking.target) || 1;
@@ -1273,7 +1297,7 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
       return { now: `now ${fmtNum(now)}${unit ? ` ${unit}` : ""}`, pct, tone: reached ? ("green" as const) : ("orange" as const) };
     }
     if (tracking.kind === "exercise") {
-      if (!th.best) return { now: "no sets logged yet", pct: 0, tone: "muted" as const };
+      if (!th.best) return { now: "No sets yet", pct: 0, tone: "muted" as const };
       const reached = th.best.weight >= tracking.weight && th.best.reps >= tracking.reps;
       return { now: `best ${fmtNum(th.best.weight)} × ${th.best.reps}`, pct: reached ? 100 : Math.max(0, Math.min(99, Math.round((th.best.weight / tracking.weight) * 100))), tone: reached ? ("green" as const) : ("orange" as const) };
     }
@@ -1283,74 +1307,108 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
   const blank = (value: string, set: (v: string) => void, width: number, label: string) => <input className="rq-blank" style={{ width }} inputMode="decimal" value={value} onChange={(e) => set(e.target.value)} aria-label={label} />;
 
   return (
-    <DialogContent className="rd-dlg rq-dlg">
-      <DialogHeader>
-        <DialogTitle>{goal ? "Edit goal" : "New goal"}</DialogTitle>
-        {/* The title says it all; the description is for screen readers only. */}
-        <DialogDescription hidden>Pick what to watch, say the target, and {firstName} gets a card that keeps itself up to date.</DialogDescription>
-      </DialogHeader>
+    // On the phase pop-up's pattern (21 Oct, Alex): the .npd card, a title and the ghost ✕, small-caps
+    // labels over clean lines, Cancel as words and one black pill. While the thing is being picked the
+    // card lets its floating list hang over its edge (rq-pick); Escape shuts that list first.
+    <DialogContent
+      className={`npd rq-dlg${thing == null ? " rq-pick" : ""}`}
+      onEscapeKeyDown={(e) => {
+        if (!listOpen) return;
+        e.preventDefault();
+        setListOpen(false);
+      }}
+    >
+      <div className="npd-head">
+        <DialogTitle className="npd-title">{goal ? "Edit goal" : "New goal"}</DialogTitle>
+        <span className="npd-tools">
+          <DialogClose className="npd-x" aria-label="Close">
+            ✕
+          </DialogClose>
+        </span>
+      </div>
+      {/* The title says it all; the description is for screen readers only. */}
+      <DialogDescription hidden>Pick what to watch, say the target, and {firstName} gets a card that keeps itself up to date.</DialogDescription>
 
-      {/* 1. What to watch. */}
+      {/* 1. What to watch: a plain goal, or one of the things the client logs, by section or by name. */}
       {thing == null ? (
-        <div className="rd-field">
-          <span>What to watch</span>
-          {/* Words first: a goal needs nothing behind it. Then what the client logs, in three groups. */}
+        <div className="npd-field">
+          <span className="npd-label">What to watch</span>
           <button type="button" className="rq-words" onClick={() => pick("words")}>
-            <span className="rq-words-main">
-              <b>A plain goal</b>
-              <small>No tracking; you tick it off when it is done.</small>
-            </span>
+            Plain goal
             <PlusIcon />
           </button>
-          <input className="rd-addrow-search rq-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Or track it against something: weight, bench press, sleep…" autoFocus aria-label="What to watch" />
-          <div className="rd-btn-group rq-groups" role="group" aria-label="Which group">
-            {(
-              [
-                ["exercise", "Exercises"],
-                ["metric", "Nutrition"],
-                ["habit", "Lifestyle"],
-              ] as [typeof section, string][]
-            ).map(([k, label]) => (
-              <button key={k} type="button" className={section === k ? "on" : ""} aria-pressed={section === k} onClick={() => setSection(k)}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="rd-addrow-list rq-things" role="listbox">
-            {(
-              [
-                ["exercise", "Exercises"],
-                ["metric", "Nutrition"],
-                ["habit", "Lifestyle"],
-              ] as [Kind, string][]
-            )
-              .filter(([k]) => section === k)
-              .map(([k, label]) => {
-                const rows = matches.filter((x) => x.tab === k);
-                if (rows.length === 0) return null;
-                return (
-                  <div key={k} className="rq-group">
-                    <span className="rd-menu-head">{label}</span>
-                    {rows.map((x) => (
-                      <button key={x.id} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick(x)}>
-                        {x.name}
+          <div
+            className="rq-find"
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setListOpen(false);
+            }}
+          >
+            {/* The section as the hairline capsule, the chosen one ink; a press keeps the search focused. */}
+            <div className="npd-seg rq-seg" role="group" aria-label="Which group" onMouseDown={(e) => e.preventDefault()}>
+              {GOAL_SECTIONS.map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  className={section === k ? "on" : ""}
+                  aria-pressed={section === k}
+                  onClick={() => {
+                    setSection(k);
+                    setListOpen(true);
+                    searchRef.current?.focus();
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <input
+              ref={searchRef}
+              className="npd-line"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setListOpen(true);
+              }}
+              onClick={() => setListOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key !== "ArrowDown") return;
+                e.preventDefault();
+                setListOpen(true);
+              }}
+              placeholder="Search"
+              autoFocus
+              role="combobox"
+              aria-expanded={listOpen}
+              aria-controls={listOpen && shownThings.length > 0 ? "rq-find-list" : undefined}
+              aria-label="What to watch"
+            />
+            {listOpen && (
+              <div className="rq-pop" onMouseDown={(e) => e.preventDefault()}>
+                {shownThings.length > 0 ? (
+                  <div className="rq-pop-scroll" id="rq-find-list" role="listbox" aria-label={GOAL_SECTIONS.find(([k]) => k === section)?.[1]}>
+                    {shownThings.map((x) => (
+                      <button key={x.id} type="button" role="option" aria-selected={false} className="rq-pop-item" onClick={() => pick(x)}>
+                        <span>{x.name}</span>
                         <small>{x.hint}</small>
                       </button>
                     ))}
                   </div>
-                );
-              })}
-            {matches.filter((x) => x.tab === section).length === 0 && <p className="rd-addrow-hint">Nothing {firstName} logs matches that.</p>}
+                ) : (
+                  <p className="rq-pop-none">No matches</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       ) : (
-        <div className="rd-field">
-          <span>Watching</span>
+        <div className="npd-field">
+          <span className="npd-label">Watching</span>
+          {/* The thing as plain words, its one fact beside it, Change as a text action (21 Oct, Alex: no chip). */}
           <div className="rq-thing">
-            <span className="rd-pill">{thing === "words" ? "Nothing · a plain goal" : thing.name}</span>
+            <span className="rq-thing-name">{thing === "words" ? "Plain goal" : thing.name}</span>
             {thing !== "words" && <small>{thing.hint}</small>}
-            <button type="button" className="rd-ex-btn rq-change" onClick={() => setThing(null)}>
-              change
+            <button type="button" className="rq-change" onClick={() => setThing(null)}>
+              Change
             </button>
           </div>
         </div>
@@ -1358,8 +1416,8 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
 
       {/* 2. The target, as a sentence with blanks. */}
       {th && (
-        <div className="rd-field">
-          <span>Target</span>
+        <div className="npd-field">
+          <span className="npd-label">Target</span>
           <div className="rq-sentence">
             {th.kind === "metric" && (
               <>
@@ -1373,12 +1431,14 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
                   label="Deadline"
                   className="rq-inline"
                   options={[
-                    ...ends.map((e) => ({ value: `p:${e.id}`, label: `End of ${e.name}`, hint: `${shortDate(e.date)}${e.live ? " · live" : ""}` })),
-                    { value: "date", label: "A date…", hint: "Pick a day" },
+                    // The phase's end day alone (21 Oct, Alex): no raw state word, no hint to pick.
+                    ...ends.map((e) => ({ value: `p:${e.id}`, label: `End of ${e.name}`, hint: shortDate(e.date) })),
+                    { value: "date", label: "A date…" },
                     { value: "none", label: "No deadline" },
                   ]}
                 />
-                {byMode === "date" && <DatePick value={byDate} onChange={setByDate} label="By" className="rq-inline-date" />}
+                {/* Typed or picked (21 Oct, Alex): the day as dd/mm/yyyy on a clean line, the calendar behind its icon. */}
+                {byMode === "date" && <DatePick value={byDate} onChange={setByDate} label="Deadline date" className="rq-daypick" />}
                 {byPhase && <small className="rq-by-date">{shortDate(byPhase.date)}</small>}
               </>
             )}
@@ -1415,9 +1475,10 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
       {/* 3. The words, and the card the client gets. */}
       {thing != null && (
         <>
-          <label className="rd-field">
-            <span>{thing === "words" ? "Goal" : "How it reads"}</span>
+          <label className="npd-field">
+            <span className="npd-label">{thing === "words" ? "Goal" : "How it reads"}</span>
             <input
+              className="npd-line"
               value={shownText}
               onChange={(e) => {
                 setTouched(true);
@@ -1428,29 +1489,28 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
               autoFocus={thing === "words"}
             />
           </label>
+          {/* The client's card: the goal and, once the blanks are filled, where it stands. No hint lines (21 Oct, Alex). */}
           <div className="rq-preview" aria-label={`${firstName}'s card`}>
             <small>On {firstName}&rsquo;s Home</small>
             <b>{shownText.trim() || "…"}</b>
-            {preview ? (
+            {preview && (
               <span className={`rq-pct ${preview.tone}`}>
                 <i>
                   <b style={{ width: `${preview.pct}%` }} />
                 </i>
                 <small>{preview.now}</small>
               </span>
-            ) : (
-              <span className="rq-preview-hint">{thing === "words" ? `${firstName} ticks it off when it is done; you can too.` : "Fill the blanks to see where it stands."}</span>
             )}
           </div>
         </>
       )}
 
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ text: shownText.trim(), kind: th?.kind ?? "none", rule, tracking, by: tracking?.kind === "metric" ? byRow : tracking ? "ongoing" : null, tracks: th ? th.name : null })}>
-          {goal ? "Save" : "Add goal"}
+      <div className="npd-foot">
+        <DialogClose className="npd-cancel">Cancel</DialogClose>
+        <button type="button" className="npd-save" disabled={!ok} onClick={() => onSave({ text: shownText.trim(), kind: th?.kind ?? "none", rule, tracking, by: tracking?.kind === "metric" ? byRow : tracking ? "ongoing" : null, tracks: th ? th.name : null })}>
+          {goal ? "Save" : "Add"}
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }
