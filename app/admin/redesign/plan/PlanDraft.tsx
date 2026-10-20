@@ -10,6 +10,7 @@ import Link from "next/link";
 import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, cancelProgramScheduleAction, unschedulePhaseAction, duplicateClientPhaseAction, removeClientGoalAction, deletePhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseOrSayWhyAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
+import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { GoalEditorOptions, PlanGoalRow, PlanPhaseRow, PlanProgramOption } from "../../../lib/queries";
 import type { GoalTracking } from "../../../lib/goalView";
@@ -463,6 +464,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                                   {total} {total === 1 ? "week" : "weeks"}
                                 </span>
                               </span>
+                              {/* Nothing in it yet (20 Oct, Alex): a warning sign, what is missing on hover. Not on a past phase. */}
+                              {p.gap && state !== "past" && <GapSign text={p.gap} />}
                               {/* Its state in words on the bar (30 Sep), in the state's colours (20 Oct, Alex): Live green, Scheduled blue, Draft peach. */}
                               {state === "draft" ? <span className="rq-bar-pill" style={stateTagStyle(state)}>Draft</span> : state === "live" ? <span className="rq-bar-pill" style={stateTagStyle(state)}><b>Live</b> · week {weeksBetween(sp.s, thisWeek) + 1} of {total}</span> : state === "scheduled" ? <span className="rq-bar-pill" style={stateTagStyle(state)}><b>Scheduled</b> · starts {shortDate(sp.s)}</span> : null}
                             </div>
@@ -1200,6 +1203,37 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   );
 }
 
+
+/** A phase with nothing in it yet (20 Oct, Alex): a small warning sign on its bar, what it lacks on hover or focus.
+ *  The message floats (a popover) because a bar clips what is inside it; pressing the sign never starts a drag. */
+function GapSign({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        <span
+          className="rq-gap"
+          tabIndex={0}
+          role="img"
+          aria-label={text}
+          onPointerEnter={() => setOpen(true)}
+          onPointerLeave={() => setOpen(false)}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+            <path d="M12 9v4M12 17h.01" />
+          </svg>
+        </span>
+      </PopoverAnchor>
+      <PopoverContent side="top" sideOffset={8} className="rq-gap-tip" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
+        {text}
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 /** A finished drag waits here: the dates as they were and as they will be. In the hairline style
  *  (21 Oct, Alex) with the track's colour: its name in a tinted capsule, the new dates in its ink;

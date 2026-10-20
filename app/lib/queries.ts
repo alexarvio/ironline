@@ -8413,6 +8413,19 @@ export function phaseEmptyReason(phaseId: number): string | null {
   const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : null;
   const isDraft = program ? program.status !== "deployed" && !program.scheduled_at : !!phase.draft;
   if (!isDraft) return null;
+  return phaseContentGap(phaseId);
+}
+
+/**
+ * What a phase still lacks for the client, whatever its state (20 Oct: the
+ * Plan's warning sign on a bar): no sessions, no targets, no metrics asked.
+ * Null when it has content. phaseEmptyReason is this, for drafts only.
+ */
+export function phaseContentGap(phaseId: number): string | null {
+  const data = getData();
+  const phase = data.client_phases.find((p) => p.id === phaseId);
+  if (!phase) return null;
+  const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : null;
   if (phase.track === "training") return program ? programEmptyReason(program.id) : "Nothing in it yet: add its sessions on the Training tab first.";
   if (phase.track === "nutrition") {
     // Its own targets, training or rest day; or none of its own and the
@@ -10498,6 +10511,8 @@ export type PlanPhaseRow = {
   program: { id: number; status: PlanProgramStatus; totalWeeks: number; loggedWeeks: number[] } | null;
   /** A draft with nothing in it yet, and so nothing to send out: why. */
   emptyReason: string | null;
+  /** What it still lacks for the client, in any state: the Plan's warning sign on its bar (20 Oct). */
+  gap: string | null;
   /** The coach's goals for it (up to three), for the phase dialog's Phase goals box. */
   objectives?: string[];
 };
@@ -10542,6 +10557,7 @@ export function getPlanData(clientId: number) {
         ? { id: program.id, status: programStatus(program), totalWeeks: program.total_weeks, loggedWeeks: programLoggedWeekIndexes(program.id) }
         : null,
       emptyReason: phaseEmptyReason(p.id),
+      gap: phaseContentGap(p.id),
       objectives: p.objectives ?? [],
     };
   });

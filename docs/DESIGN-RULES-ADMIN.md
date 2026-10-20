@@ -74,6 +74,8 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 ## 10. Timeline (Plan)
 - Phase bars: the grab handles at both ends show while the pointer is on the bar, darker on the end itself.
 - ‹ › step back into the past a month at a time; Today comes back.
+- A phase with nothing in it yet (no sessions, no targets, no metrics asked) wears a small rust warning sign before its state pill; hovering it says what is missing (20 Oct, Alex). Not on a past phase.
+- An empty week on a lane is a way in: a + on hover, a click opens New phase on that track from that week.
 
 ## 11. Before you build
 - Search for an existing pattern first: `.dlh`, `.npd`, `ConfirmDialog`, `Picker`, `DateText`, `dayMonth`, the floating add-row list (`rd-addpop`), `trn-btn`, `trn-state`, `stateChip`, `TRACK_ACCENT`.

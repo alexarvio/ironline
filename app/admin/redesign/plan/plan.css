@@ -97,6 +97,10 @@
 /* Quieter bars: the tint says the track, the pill the state; only a draft keeps its dashed edge. */
 .rd.pln .rq-bar:not(.is-draft) { border-color: transparent !important; }
 .rd.pln .rq-evbar:not(:hover):not(.dragging) { border-color: transparent !important; }
+/* A phase with nothing in it yet (20 Oct, Alex): the warn rust sign before the state pill, the message floating over on hover. */
+.rd.pln .rq-gap { position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; color: #b8471f; cursor: default; }
+.rd.pln .rq-gap:hover, .rd.pln .rq-gap:focus-visible { outline: none; background: rgba(184, 71, 31, 0.1); }
+.rq-gap-tip.rq-gap-tip { width: auto; max-width: 260px; padding: 9px 12px; border: 0; border-radius: 12px; background: #fff; box-shadow: 0 16px 32px -16px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; font-size: 12.5px; font-weight: 500; line-height: 1.4; color: #141a24; pointer-events: none; }
 /* An empty week on a lane is a way in (20 Oct, Alex): a + on hover, a click opens New phase from that week. */
 .rd.pln .rq-cell.add { position: relative; cursor: pointer; }
 .rd.pln .rq-cell.add:hover { background: rgba(20, 26, 36, 0.035); }
