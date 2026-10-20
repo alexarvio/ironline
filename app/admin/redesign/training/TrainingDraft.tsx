@@ -202,6 +202,7 @@ type Dlg =
   | { kind: "removeRow"; sessionId: number; rowId: number }
   | { kind: "removeCardio"; sessionId: number; cardioId: number }
   | { kind: "deploy" }
+  | { kind: "liveNow" }
   | { kind: "backToDraft" }
   | { kind: "dates" }
   | { kind: "gyms" }
@@ -755,7 +756,15 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="pb-menu">
                   {program.status === "draft" ? (
-                    <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>{startHasCome ? "Make it live" : "Schedule it"}</DropdownMenuItem>
+                    startHasCome ? (
+                      <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Make it live</DropdownMenuItem>
+                    ) : (
+                      // A draft starting later: on its start, or this week instead (20 Oct, Alex).
+                      <>
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Schedule it</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "liveNow" })}>Make it live now</DropdownMenuItem>
+                      </>
+                    )
                   ) : (
                     <>
                       <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Make it live now</DropdownMenuItem>
@@ -2014,6 +2023,19 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               const now = program.status === "scheduled" || startHasCome;
               close();
               act(() => (now ? deployProgramAction(fd({ programId: program.id })) : scheduleProgramDeployAction(fd({ programId: program.id, date: program.startDate, time: "09:00" }))), now ? `${program.name} is live` : `${program.name} scheduled`);
+            }}
+          />
+        )}
+
+        {/* A draft that starts later, out this week instead of on its start (20 Oct, Alex). */}
+        {dlg?.kind === "liveNow" && program.status === "draft" && (
+          <ConfirmDialog
+            title="Make it live now"
+            description={`Live this week instead of ${program.startDate ? fmtDate(program.startDate) : "its start"}.`}
+            confirm="Make it live"
+            onConfirm={() => {
+              close();
+              act(() => deployProgramAction(fd({ programId: program.id })), `${program.name} is live`);
             }}
           />
         )}

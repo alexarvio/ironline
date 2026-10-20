@@ -1049,7 +1049,15 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="pb-menu">
               {state === "draft" ? (
-                <DropdownMenuItem onSelect={() => setGoing(startHasCome ? "live" : "schedule")}>{startHasCome ? "Make it live" : "Schedule it"}</DropdownMenuItem>
+                startHasCome ? (
+                  <DropdownMenuItem onSelect={() => setGoing("live")}>Make it live</DropdownMenuItem>
+                ) : (
+                  // A draft starting later: on its start, or today instead (20 Oct, Alex).
+                  <>
+                    <DropdownMenuItem onSelect={() => setGoing("schedule")}>Schedule it</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setGoing("live")}>Make it live now</DropdownMenuItem>
+                  </>
+                )
               ) : (
                 <>
                   <DropdownMenuItem onSelect={() => setGoing("live")}>Make it live now</DropdownMenuItem>
