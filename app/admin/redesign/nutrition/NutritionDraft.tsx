@@ -410,8 +410,9 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   const sGrid = {
     gridTemplateColumns: "20px minmax(160px, 1.3fr) 120px 140px minmax(160px, 1.6fr) 32px",
   } as const;
+  // No Vs target column (21 Oct, Alex); the day's kind as one-width pills.
   const lGrid = {
-    gridTemplateColumns: "20px 120px 84px 96px 150px minmax(200px, 1fr) 32px",
+    gridTemplateColumns: "20px 120px 84px 84px minmax(200px, 1fr) 32px",
   } as const;
   const mGrid = {
     gridTemplateColumns: "20px minmax(160px, 1fr) 84px 72px 72px 72px 32px",
@@ -730,8 +731,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                 <span />
                 <span>Date</span>
                 <span>Logged</span>
-                <span>Day</span>
-                <span>Vs target</span>
+                <span className="rnt-daycol">Day</span>
                 <span>Protein · carbs · fat</span>
                 <span />
               </div>
@@ -1014,8 +1014,6 @@ function Split({ p, c, f }: { p: number; c: number; f: number }) {
 
 
 function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMessage }: { day: LoggedDay; open: boolean; grid: React.CSSProperties; mealGrid: React.CSSProperties; commentsOn: (d: string, m: LoggedMeal) => MealComment[]; onToggle: () => void; onShot: (meal: string) => void; onMessage: () => void }) {
-  const diff = day.target != null ? day.kcal - day.target : null;
-  const onTarget = diff != null && Math.abs(diff) <= ON_TARGET;
   return (
     <div id={`day-${day.date}`} className={`rd-row rn-day${open ? " open" : ""}`}>
       <div className="rd-row-main" style={grid} onClick={onToggle} role="button" tabIndex={0} aria-expanded={open} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onToggle())}>
@@ -1027,12 +1025,7 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
           {day.note && <small title={day.note}>{day.note}</small>}
         </span>
         <span className="rd-num">{n(day.kcal)}</span>
-        <span>
-          <span className={`rd-pill${day.isTraining ? "" : " quiet"}`}>{day.isTraining ? "Training" : "Rest"}</span>
-        </span>
-        <span>
-          <span className={`rd-set rn-vs${diff == null ? "" : onTarget ? " up" : " down"}`}>{diff == null ? "No target" : onTarget ? "On target" : `${diff > 0 ? "+" : "−"}${n(Math.abs(diff))} kcal`}</span>
-        </span>
+        <span className={`rd-pill rnt-daypill${day.isTraining ? "" : " quiet"}`}>{day.isTraining ? "Training" : "Rest"}</span>
         <span className="rn-macros" title={`${day.protein} g protein · ${day.carbs} g carbs · ${day.fat} g fat`}>
           <Split p={day.protein * 4} c={day.carbs * 4} f={day.fat * 9} />
         </span>
