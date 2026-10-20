@@ -165,7 +165,9 @@
 .rd.trn .trn-full { margin: 0; padding: 14px; border: 1px dashed #c9cfd8; border-radius: 18px; text-align: center; }
 
 /* ---- Autosave: one status, on the week's line */
-.rd.trn .trn-allsaved { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--trn-line); font-weight: 500; color: var(--trn-green); }
+/* Parted from the count by the same upright line as the header's facts (21 Oct, Alex: the hairline was barely there). */
+.rd.trn .trn-allsaved { position: relative; margin-left: 10px; padding-left: 11.5px; font-weight: 500; color: var(--trn-green); }
+.rd.trn .trn-allsaved::after { content: ""; position: absolute; left: 0; top: 50%; width: 1.5px; height: 12px; margin-top: -6px; border-radius: 1px; background: #b0b7c3; }
 .rd.trn .trn-allsaved::before { content: "✓ "; }
 .rd.trn .trn-allsaved.saving { color: var(--trn-muted); }
 .rd.trn .trn-allsaved.saving::before { content: none; }

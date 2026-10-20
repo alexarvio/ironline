@@ -317,8 +317,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const logPaged = { ...logShown, periods: logShown.periods.slice((logPageNow - 1) * PAGE, logPageNow * PAGE) };
   // The client's note on a check-in sits by its date (a bubble); Reply there is a message linked to that check-in.
   const replyTo = (period: string) => message({ label: `${CAD[logCadence].label} check-in · ${whenOf(period, logShown.periods.find((p) => p.key === period)?.label ?? period)}`, link: { kind: "checkin", section: logCadence, period } });
-  const done = (v: LoggedValues) => (v.metrics.length === 0 ? 0 : v.periods.filter((p) => v.metrics.some((m) => v.values[`${m.id}:${p.key}`] != null)).length);
-  const asked = (v: LoggedValues) => (v.metrics.length === 0 ? 0 : v.periods.length);
 
   const [dlg, setDlg] = useState<Dlg>(null);
   // Messaging about a check-in, a metric or a note slides the chat in from
@@ -413,10 +411,20 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               ))}
           </div>
           {plan.startDate && (
+            // The facts parted by a thin upright line, not a dot (21 Oct, Alex), as the metrics' line under it.
             <span className="trn-meta">
-              {plan.weeks} {plan.weeks === 1 ? "week" : "weeks"} · {fmtDate(plan.startDate)}
-              {lastDay && ` – ${fmtDate(lastDay)}`}
-              {plan.weekIdx != null && ` · week ${plan.weekIdx} of ${plan.weeks}`}
+              <span>
+                {plan.weeks} {plan.weeks === 1 ? "week" : "weeks"}
+              </span>
+              <span className="trn-meta-part">
+                {fmtDate(plan.startDate)}
+                {lastDay && ` – ${fmtDate(lastDay)}`}
+              </span>
+              {plan.weekIdx != null && (
+                <span className="trn-meta-part">
+                  week {plan.weekIdx} of {plan.weeks}
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -605,7 +613,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         <div className="trn-weekhead">
           <div>
             <h2>Check-ins</h2>
-            <span>{asked(view) ? `${done(view)} of ${asked(view)} ${CAD[logCadence].recent}` : `No ${logCadence} metrics`}</span>
           </div>
           <div className="trn-weekhead-actions">
             {show !== "graph" && hasAll && (
