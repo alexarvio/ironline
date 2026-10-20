@@ -235,6 +235,10 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
             !!a.library_substitutes_off,
             [...(a.library_substitutes_hidden ?? [])].sort((x, y) => x - y),
           ]),
+        // Its cardio too, now that a week's copy carries it (20 Oct, Alex).
+        [...listCardioForDay(d.id)]
+          .sort((a, b) => a.order_index - b.order_index)
+          .map((c) => [shownText(c.name), shownText(c.time), shownText(c.distance), shownText(c.pace), shownText(c.incline), shownText(c.notes), (c.alternatives ?? []).map((x) => [shownText(x.name), shownText(x.note)])]),
       ]),
     );
     return {

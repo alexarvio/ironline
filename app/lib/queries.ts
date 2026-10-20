@@ -1338,8 +1338,10 @@ export function copyProgramWeek(clientId: number, fromWeek: number, toWeek: numb
     const dest = sessionAt(clientId, toWeek, src.day_of_week, true);
     if (!dest) continue;
     // A session the client has logged on keeps what they did: replacing its rows would strand their sets (20 Oct).
+    // Ticked cardio counts as logged too, now that cardio comes along.
     const destRows = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === dest.id).map((wa) => wa.id));
-    if (data.set_logs.some((l) => destRows.has(l.workout_assignment_id))) continue;
+    const destCardio = new Set((data.cardio_entries ?? []).filter((c) => c.program_day_id === dest.id).map((c) => c.id));
+    if (data.set_logs.some((l) => destRows.has(l.workout_assignment_id)) || (data.cardio_logs ?? []).some((l) => destCardio.has(l.cardio_entry_id))) continue;
     dest.label = src.label;
     // Replace rather than append, so copying twice doesn't double the day.
     const replacedIds = [...destRows];
@@ -1363,6 +1365,13 @@ export function copyProgramWeek(clientId: number, fromWeek: number, toWeek: numb
           workout_assignment_id: id,
         });
       }
+    }
+
+    // Cardio is part of the session too (20 Oct, Alex: a week's copy left it behind): the target's own goes (nothing ticked,
+    // checked above) and the source's prescription comes, without the client's swap.
+    data.cardio_entries = (data.cardio_entries ?? []).filter((c) => c.program_day_id !== dest.id);
+    for (const c of data.cardio_entries.filter((c) => c.program_day_id === src.id).sort((a, b) => a.order_index - b.order_index)) {
+      data.cardio_entries.push({ ...c, swap: undefined, id: allocId("cardio_entries"), program_day_id: dest.id });
     }
   }
   persist();

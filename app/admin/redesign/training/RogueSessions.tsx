@@ -25,15 +25,16 @@ const TAIL = 5;
 
 export default function RogueSessions({ items, firstName, grid, cols, unit, minW, kgOf }: { items: DraftRogue[]; firstName: string; grid: React.CSSProperties; cols: Cols; unit: string; minW: number; /** Kg into what the coach is reading in. */ kgOf: (kg: number | null) => number | null }) {
   const [open, setOpen] = useState<number | null>(null);
-  if (items.length === 0) return null;
   const shown = FIGURES.filter((k) => cols[k]);
   const label: Record<keyof Cols, string> = { sets: "Sets", weight: unit, reps: "Reps", rpe: "RPE", tempo: "Tempo", rest: "Rest" };
   return (
     <div className="rg trn-rogue">
-      {/* The compass by the heading; slim rows of their own under the week's card (19 Oct restructure). */}
+      {/* The compass by the heading; slim rows of their own under the week's card (19 Oct restructure).
+          Always there (20 Oct, Alex), with "None this week" on its line when the client did none. */}
       <div className="trn-rogue-label">
         <CompassIcon size={14} />
         <span>Rogue sessions</span>
+        {items.length === 0 && <em>None this week</em>}
       </div>
       {items.map((r) => {
         const isOpen = open === r.id;

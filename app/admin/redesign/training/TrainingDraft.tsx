@@ -1828,7 +1828,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         {dlg?.kind === "copyForward" && forwardTo.length > 0 && (
           <ConfirmDialog
             title={`Copy ${week.label} to ${forwardLabel}?`}
-            description="Their sessions are replaced. Nothing logged is touched."
+            // Said plainly (20 Oct, Alex: "what does this mean?").
+            description={`${forwardLabel.charAt(0).toUpperCase()}${forwardLabel.slice(1)} ${forwardTo.length === 1 ? "becomes" : "become"} ${week.label}, cardio included. Sessions with logged sets stay as they are.`}
             confirm="Copy"
             onConfirm={() => {
               const from = weekNo(viewIdx);
@@ -1846,7 +1847,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         {dlg?.kind === "copyWeek" && (
           <ConfirmDialog
             title={`Copy Week ${dlg.from} here`}
-            description="Replaces this week's sessions. Nothing logged is touched."
+            description={`This week becomes Week ${dlg.from}, cardio included. Sessions with logged sets stay as they are.`}
             confirm="Copy week"
             tick={laterLabel ? "Also apply to the rest of the programme" : null}
             onConfirm={(also) => {
