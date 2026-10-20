@@ -6187,6 +6187,8 @@ export type HomeAction = {
   /** The newest thing behind it (epoch ms), when newer than `at`: a later
       message in the same unanswered run. Marked as read before this, it comes back. */
   latest?: number;
+  /** The detail is the client's own words (a message, a note), shown in quotes; otherwise it is the app's. */
+  quote?: boolean;
 };
 
 /** Needs-you items that are a standing state rather than one thing: marked as
@@ -6258,6 +6260,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
       group: "reply",
       title: unanswered.length === 1 ? "A message waiting for your reply" : `${unanswered.length} messages waiting for your reply`,
       detail: words || `Sent ${mediaWords(oldest.media_type)}.`,
+      quote: !!words,
       tab: "messages",
       at: stampMs(oldest.created_at),
       latest: stampMs(newest.created_at),
@@ -6376,7 +6379,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
     // Nor a note on a check-in (12 Oct): those read in Activity and on
     // Measurements; in Start here they were most of the noise.
     if (!e.note || e.category === "messages" || e.category === "measurements") continue;
-    actions.push({ id: `read-${e.id}`, tone: "note", group: "check", title: e.text.charAt(0).toUpperCase() + e.text.slice(1), detail: e.note, tab: e.tab, at: e.at, eventId: e.id });
+    actions.push({ id: `read-${e.id}`, tone: "note", group: "check", title: e.text.charAt(0).toUpperCase() + e.text.slice(1), detail: e.note, quote: !!e.note, tab: e.tab, at: e.at, eventId: e.id });
   }
   // Gone quiet: nothing at all logged for a while.
   const last = all[0]?.at ?? null;

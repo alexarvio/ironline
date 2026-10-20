@@ -40,7 +40,6 @@ html.look-hl .rd-nav button.on { background: #141a24; color: #fff; font-weight: 
 /* ---- Heading */
 html.look-hl .rd-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
 html.look-hl .rd-title { font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
-html.look-hl .rh-since { font-weight: 500; color: #8b93a1; }
 
 /* ---- Buttons: white pills with a hairline, the one main action ink */
 html.look-hl .rd-btn { border-radius: 999px; border-color: #e1e5eb; background: #fff; color: #141a24; font-weight: 600; box-shadow: none; }
@@ -59,38 +58,16 @@ html.look-hl .rn-card-head h2,
 html.look-hl .rn-card-head h3,
 html.look-hl .rd-session-name { font-weight: 600; color: #141a24; }
 
-/* ---- The figure strip on Home: labels small and grey, figures 600 in ink */
-html.look-hl .rh-stat + .rh-stat { border-left: 1px solid #e1e5eb; }
-html.look-hl .rh-stat-label { background: none; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
-html.look-hl .rh-stat-body b,
-html.look-hl .rh-stat-body strong { font-weight: 600; color: #141a24; }
-html.look-hl .rh-stat-body small,
-html.look-hl .rh-stat-body span { font-weight: 500; }
-
-/* ---- Keeping up: thin bars, the words at 500 */
-html.look-hl .rh-score-track { height: 4px; background: #e1e5eb; }
-html.look-hl .rh-score-name { font-weight: 500; color: #141a24; }
-html.look-hl .rh-score-pct { font-weight: 600; }
-html.look-hl .rh-score-detail { font-weight: 500; color: #8b93a1; }
-html.look-hl .rh-score-word { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
-
 /* ---- Rows: hairlines between them, text at 500, the time in the secondary grey */
 html.look-hl .rd-rows > .rd-row { border-color: #e1e5eb; }
-html.look-hl .rh-row-main b,
-html.look-hl .rh-row-main strong { font-weight: 600; color: #141a24; }
-html.look-hl .rh-row-main { font-weight: 500; color: #141a24; }
-html.look-hl .rh-when { font-weight: 500; color: #8b93a1; }
 
-/* ---- Status and category marks: the colour as a thin ring and its words, no tinted fill */
-html.look-hl .rh-tone,
-html.look-hl .rh-cat { border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px currentColor; font-weight: 600; letter-spacing: 0.08em; }
+/* ---- Status marks: no tinted fill */
 html.look-hl .rd-pill.quiet { background: none; box-shadow: inset 0 0 0 1px #e1e5eb; font-weight: 500; color: #5b6474; }
 
 /* ---- Avatars: a hairline ring on the page grey; the open client's in ink */
 html.look-hl .rr-row.active .rr-avatar { background: #141a24; box-shadow: none; color: #fff; }
-html.look-hl .rh-avatar { background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #141a24; font-weight: 500; }
 
-/* ---- Segmented filters (the shared tabs, e.g. Activity's): white with a hairline, the chosen one ink */
+/* ---- Segmented filters (the shared tabs): white with a hairline, the chosen one ink */
 html.look-hl .rd-page [role="tablist"] { background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; border-radius: 999px; }
 html.look-hl .rd-page [role="tablist"] [role="tab"] { border-radius: 999px; font-weight: 500; color: #5b6474; box-shadow: none; }
 html.look-hl .rd-page [role="tablist"] [role="tab"][data-state="active"] { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; }

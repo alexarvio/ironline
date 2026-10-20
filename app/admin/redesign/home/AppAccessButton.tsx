@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { LockIcon } from "../../../components/icons";
 import { newTempPassword } from "../../NewClientDialog";
 import { clientAccessAction, setClientTempPasswordAction, type ClientAccess } from "../../../lib/access-actions";
@@ -13,7 +13,15 @@ import { clientAccessAction, setClientTempPasswordAction, type ClientAccess } fr
 // they chose their own password, and sets a new temporary one when they
 // can't get in. Passwords are stored scrambled, so the one given can't be
 // read back; a new one is shown here once, to copy or email.
-export default function AppAccessButton({ clientId, firstName, initial }: { clientId: number; firstName: string; /** Read with the page, so the button shows at once with no round trip. */ initial: ClientAccess | null }) {
+export default function AppAccessButton({
+  clientId,
+  firstName,
+  initial,
+}: {
+  clientId: number;
+  firstName: string;
+  /** Read with the page, so the button shows at once with no round trip. */ initial: ClientAccess | null;
+}) {
   const [access, setAccess] = useState<ClientAccess | null>(initial);
   const [shown, setShown] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -60,92 +68,121 @@ export default function AppAccessButton({ clientId, firstName, initial }: { clie
   const copy = (text: string) =>
     navigator.clipboard.writeText(text).then(
       () => toast.success("Copied"),
-      () => toast.error("Couldn't copy")
+      () => toast.error("Couldn't copy"),
     );
 
   return (
     <>
-      <button type="button" className="rd-btn" onClick={open}>
+      {/* A white pill with an icon, as the header's others (design rules 9b). */}
+      <button type="button" className="trn-pill" onClick={open}>
         <LockIcon /> {hasLogin ? "App access" : "Give app access"}
       </button>
       <Dialog open={shown} onOpenChange={(o) => !o && setShown(false)}>
         {shown && (
-          <DialogContent className="rd-dlg rh-dlg">
-            <DialogHeader>
-              <DialogTitle>App access</DialogTitle>
-              <DialogDescription hidden>How {firstName} signs in to the app.</DialogDescription>
-            </DialogHeader>
-            <div className="rh-dlg-body">
-              <section className="rd-session open rn-card rh-info">
-                <div className="rn-card-head">
-                  <h2>{firstName}</h2>
-                  {hasLogin && !editing && !access.codes && (
-                    <button type="button" className="rd-ex-btn rh-edit" onClick={edit}>
-                      New password
-                    </button>
-                  )}
+          <DialogContent
+            className="dlh rh-access"
+            // Nothing to type yet: focus on the card itself, so no ring on ✕ and Tab goes on inside (a field that is there takes it through autoFocus).
+            onOpenAutoFocus={(e) => {
+              if (editing) return;
+              e.preventDefault();
+              (e.currentTarget as HTMLElement).focus({ preventScroll: true });
+            }}
+          >
+            <div className="dlh-head">
+              <DialogTitle className="dlh-title">App access</DialogTitle>
+              <DialogClose className="dlh-x" aria-label="Close">
+                ✕
+              </DialogClose>
+            </div>
+            <DialogDescription className="sr-only">How {firstName} signs in to the app</DialogDescription>
+            {/* The facts, label and value, a row each. */}
+            {(hasLogin || !editing) && (
+              <dl className="rh-facts">
+                <div>
+                  <dt>Signs in as</dt>
+                  <dd className={hasLogin ? "" : "none"}>{access.email ?? "No login yet"}</dd>
                 </div>
-                <dl className="rh-info-rows">
-                  <div className="rh-info-row">
-                    <dt>Signs in as</dt>
-                    <dd className={hasLogin ? "" : "empty"}>{access.email ?? "No login yet"}</dd>
-                  </div>
-                  {hasLogin && (
-                    <div className="rh-info-row">
-                      <dt>{access.codes ? "Signs in with" : "Password"}</dt>
-                      <dd className={access.signedUp ? "good" : ""}>{access.codes ? "An email code" : access.signedUp ? "Their own" : "Temporary, not changed yet"}</dd>
-                    </div>
-                  )}
-                  {given && (
-                    <div className="rh-info-row">
-                      <dt>Temporary password</dt>
-                      <dd className="rh-access-given">
-                        <code>{given}</code>
-                        <button type="button" className="rd-ex-btn rh-edit" onClick={() => copy(`Email: ${access.email}\nPassword: ${given}`)}>
-                          Copy
-                        </button>
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-
-                {editing && (
-                  <div className="rh-note-edit rh-access-edit">
-                    {/* The redesign's fields (rd-field). No Cancel: a click
-                        outside the dialog closes it. The dice inside the
-                        password box rolls another; the button sits on its row. */}
-                    {/* No login yet and no email on the card: ask for it here
-                        (it goes on the card too, as the login's address). */}
-                    {!hasLogin && (
-                      <label className="rd-field">
-                        Email
-                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email" autoFocus={!email} />
-                      </label>
-                    )}
-                    <div className="rh-access-row">
-                      <label className="rd-field rh-access-pw">
-                        Temporary password
-                        <span className="rh-access-pw-box">
-                          <input value={password} onChange={(e) => setPasswordText(e.target.value)} minLength={8} spellCheck={false} autoComplete="off" />
-                          <button type="button" className="rh-access-roll" onClick={() => setPasswordText(newTempPassword())} aria-label="Another password" title="Another">
-                            <DiceIcon />
-                          </button>
-                        </span>
-                      </label>
-                      <button type="button" className="rd-btn primary rh-access-go" onClick={save} disabled={busy || password.length < 8 || (!hasLogin && !email.trim())}>
-                        {busy ? "Saving…" : hasLogin ? "Set password" : "Give access"}
-                      </button>
-                    </div>
-                    {access.mailReady && (
-                      <label className="rh-access-check">
-                        <input type="checkbox" checked={send} onChange={(e) => setSend(e.target.checked)} /> Email it to {firstName}
-                      </label>
-                    )}
-                    {error && <p className="rh-access-error">{error}</p>}
+                {hasLogin && (
+                  <div>
+                    <dt>{access.codes ? "Signs in with" : "Password"}</dt>
+                    <dd className={access.signedUp && !access.codes ? "good" : ""}>{access.codes ? "An email code" : access.signedUp ? "Their own" : "Temporary, not changed yet"}</dd>
                   </div>
                 )}
-              </section>
-            </div>
+                {given && (
+                  <div>
+                    <dt>Temporary password</dt>
+                    <dd className="rh-access-given">
+                      <code>{given}</code>
+                      <button
+                        type="button"
+                        className="rh-textact"
+                        onClick={() =>
+                          copy(`Email: ${access.email}
+Password: ${given}`)
+                        }
+                      >
+                        Copy
+                      </button>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            )}
+
+            {editing && (
+              <>
+                {/* No login yet: the email it is made for (it goes on the card too, as the login's address). */}
+                {!hasLogin && (
+                  <label className="rh-field">
+                    <span className="dlh-label">Email</span>
+                    <input className="dlh-line" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email" autoFocus={!email} />
+                  </label>
+                )}
+                {/* The password on a clean line, the dice at its end to roll another. */}
+                <label className="rh-field">
+                  <span className="dlh-label">Temporary password</span>
+                  <span className="rh-access-pw">
+                    <input className="dlh-line" value={password} onChange={(e) => setPasswordText(e.target.value)} minLength={8} spellCheck={false} autoComplete="off" />
+                    <button type="button" className="rh-access-roll" onClick={() => setPasswordText(newTempPassword())} aria-label="Another password" title="Another">
+                      <DiceIcon />
+                    </button>
+                  </span>
+                </label>
+                {access.mailReady && (
+                  <button type="button" className="dlh-ack" role="checkbox" aria-checked={send} onClick={() => setSend((x) => !x)}>
+                    <span className={`dlh-box ink${send ? " on" : ""}`} aria-hidden="true">
+                      {send ? "✓" : ""}
+                    </span>
+                    Email it to {firstName}
+                  </button>
+                )}
+                {error && <p className="dlh-error">{error}</p>}
+              </>
+            )}
+
+            {editing ? (
+              <div className="dlh-foot">
+                {hasLogin ? (
+                  <button type="button" className="dlh-cancel" onClick={() => setEditing(false)}>
+                    Cancel
+                  </button>
+                ) : (
+                  <DialogClose className="dlh-cancel">Cancel</DialogClose>
+                )}
+                <button type="button" className="dlh-go" onClick={save} disabled={busy || password.length < 8 || (!hasLogin && !email.trim())}>
+                  {busy ? "Saving…" : hasLogin ? "Set password" : "Give access"}
+                </button>
+              </div>
+            ) : (
+              hasLogin &&
+              !access.codes && (
+                <div className="dlh-foot">
+                  <button type="button" className="dlh-go" onClick={edit}>
+                    New password
+                  </button>
+                </div>
+              )
+            )}
           </DialogContent>
         )}
       </Dialog>

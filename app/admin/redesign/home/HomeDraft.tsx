@@ -1,35 +1,35 @@
 "use client";
 
 import Pager from "../Pager";
-import { useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { deleteClientConfirmedAction, dismissHomeActionAction, saveCoachNoteAction, sendChatMessageAction, setEngagementPartsAction } from "../../../lib/actions";
 import { useOpenChat } from "../ChatPanel";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import ClientCardEditor from "../../ClientCardEditor";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { AccountIcon, ChatIcon, TrashIcon } from "../../../components/icons";
-import type { ClientEngagement, HomeAction, OverviewPanel } from "../../../lib/queries";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
+import { AccountIcon, CalendarIcon, CameraIcon, ChatIcon, CheckIcon, ChevronDownIcon, MoreIcon, PhasesIcon, ReceiptIcon, TrashIcon } from "../../../components/icons";
+import type { ClientEngagement, HomeAction, OverviewInfoRow, OverviewPanel } from "../../../lib/queries";
 import { MessageDialog } from "../training/TrainingDraft";
 import AppAccessButton from "./AppAccessButton";
 import type { NeedView } from "../loaders";
 import type { ClientAccess } from "../../../lib/access-actions";
 import { dayMonth } from "../../../lib/dayMonth";
-import { Sep } from "../Sep";
+import { SepJoin } from "../Sep";
+import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
+import type { PhaseTrack } from "../../../lib/db";
+import { TrackIcon } from "../plan/PlanDraft";
 
-// The calmer Home tab, as a draft on real data, in the Training draft's
-// sheet. Where the coach lands for a client: who this is and where they are,
-// then what needs the coach and what the client has been doing, with the
-// facts about them on a rail beside it.
+// The client's Home (21 Oct, Alex: rebuilt as the track tabs are, root "rd trn rls rh"): Training's header, the six
+// figures in one hairline card, then each section's title on the page over its card.
 //
-// - The top: face, name, and the six figures the coach checks first.
-// - Keeping up: one score, and the three behaviours it is the mean of.
-// - Needs you: the reasons behind the rail's dot, each leading to its tab.
+// - The header: face, name, how long they have been a client; App access, Details and Message as white pills, ⋯ to delete.
+// - Keeping up: one score, and the behaviours it is the mean of.
+// - Needs you: what is waiting on the coach, a row each, leading to the thing; Reply and ✓ on hover.
 // - Activity: what they did, one kind at a time, a page at a time.
-// - The rail: member info, coaching info, and the coach's own note.
-// Nothing here saves: every action ends in a toast. A row that leads to a
-// tab does open that tab, in the drafts.
+// Details is a pop-up: member info, coaching info and the coach's own note.
 
 /** href: the thing itself (a session, a food day, an invoice), from feedHref. */
 export type DraftEvent = { id: string; category: string; text: string; note: string | null; when: string; tab: string; href: string | null };
@@ -50,14 +50,30 @@ export type DraftHome = {
   access: ClientAccess;
 };
 
-const draftOnly = (what: string) => toast(what, { description: "Not in the redesign yet: the old tab still does this." });
 const savedToast = (what: string) => toast.success("Saved", { description: what });
 
-// The live tabs' ids, as the drafts name them.
-const DRAFT_TAB: Record<string, string> = { plan: "plan", training: "training", nutrition: "nutrition", measurements: "measurements", meetings: "meetings", photos: "pictures", messages: "messages" };
-const TAB_LABEL: Record<string, string> = { plan: "Plan", training: "Training", nutrition: "Nutrition", measurements: "Lifestyle", meetings: "Meetings", photos: "Progress pictures", messages: "Messages" };
-const TONE_LABEL: Record<HomeAction["tone"], string> = { urgent: "Urgent", due: "Due", note: "To read" };
-const CATEGORY_LABEL: Record<string, string> = { training: "Training", nutrition: "Nutrition", measurements: "Lifestyle", notes: "Note", billing: "Invoice", messages: "Message" };
+// The tabs' ids, as the shell names them.
+const DRAFT_TAB: Record<string, string> = {
+  plan: "plan",
+  training: "training",
+  nutrition: "nutrition",
+  measurements: "measurements",
+  meetings: "meetings",
+  photos: "pictures",
+  messages: "messages",
+  invoices: "invoices",
+  billing: "invoices",
+};
+const TONE: Record<HomeAction["tone"], { text: string; cls: string }> = { urgent: { text: "Urgent", cls: "bad" }, due: { text: "Due", cls: "warn" }, note: { text: "To read", cls: "live" } };
+// The tab that deals with a Needs-you row, as a tag: a track's in its colour (design rules 3), the rest grey.
+const TRACK_OF: Record<string, PhaseTrack> = { training: "training", nutrition: "nutrition", measurements: "lifestyle" };
+const OTHER_TAG: Record<string, { label: string; icon: ReactNode }> = {
+  meetings: { label: "Meetings", icon: <CalendarIcon /> },
+  photos: { label: "Pictures", icon: <CameraIcon /> },
+  messages: { label: "Chat", icon: <ChatIcon /> },
+  invoices: { label: "Invoices", icon: <ReceiptIcon /> },
+  plan: { label: "Plan", icon: <PhasesIcon /> },
+};
 // Activity is read one kind at a time; every source category has a home here.
 const FILTERS = [
   // A call asked for, an event added, a note on the programme: words from the
@@ -71,9 +87,29 @@ const FILTERS = [
 type FilterId = (typeof FILTERS)[number]["id"];
 const PAGE = 12;
 const tone = (pct: number) => (pct >= 80 ? "good" : pct >= 50 ? "mid" : "low");
+/** A line the server writes with "a · b": its parts, for a bar between them (design rules 1). Never cut inside “…”:
+    the client's own words (an event called "Trip · Rome") stay whole. */
+const parts = (s: string) => {
+  const out: string[] = [];
+  let depth = 0;
+  let from = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "“") depth++;
+    else if (s[i] === "”") depth = Math.max(0, depth - 1);
+    else if (depth === 0 && s.startsWith(" · ", i)) {
+      out.push(s.slice(from, i));
+      from = i + 3;
+      i += 2;
+    }
+  }
+  out.push(s.slice(from));
+  return out.map((p) => p.trim()).filter(Boolean);
+};
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+/** The card's dates as every date in words is written (design rules 7): 25/5, 12/3/1994. */
+const dated = (rows: OverviewInfoRow[]) => rows.map((r) => (ISO_DAY.test(r.value) ? { ...r, value: dayMonth(r.value) } : r));
 
 export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { clientId: number; firstName: string; home: DraftHome; onOpenTab: (tab: string) => void }) {
-  const [msg, setMsg] = useState(false);
   const router = useRouter();
   const [, startTransition] = useTransition();
   // Every save goes to the server, then the page re-reads; what is on screen follows.
@@ -88,23 +124,31 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
     for (const [k, v] of Object.entries(o)) if (v != null) f.set(k, String(v));
     return f;
   };
-  // The facts about them, and the coach's note: a click away, not on the page.
+  const openChat = useOpenChat();
+  const [msg, setMsg] = useState(false);
+  // Message opens the chat panel on their thread, as on every tab; outside the shell, a message pop-up.
+  const message = () => (openChat ? openChat() : setMsg(true));
   const [details, setDetails] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const openChat = useOpenChat();
+  const [photo, setPhoto] = useState(false);
+  const panel = useMemo(() => ({ ...home.panel, memberInfo: dated(home.panel.memberInfo), coachingInfo: dated(home.panel.coachingInfo) }), [home.panel]);
+
   // Keeping up's pick, ahead of the server's answer, so the ticks move at once.
-  const [parts, setParts] = useState<string[] | null>(null);
-  const chosenParts = parts ?? home.engagement.chosen;
+  const [picked, setPicked] = useState<string[] | null>(null);
+  const chosenParts = picked ?? home.engagement.chosen;
   const toggleSpart = (id: string) => {
     const next = chosenParts.includes(id) ? chosenParts.filter((x) => x !== id) : [...chosenParts, id];
     if (next.length === 0) return;
-    setParts(next);
+    setPicked(next);
     act(() => setEngagementPartsAction(clientId, next));
   };
+  const eng = home.engagement;
+  const shift = eng.overall == null || eng.previous == null ? null : eng.overall - eng.previous;
+
   // Marked as read: gone at once, the server catching up behind.
   const [done, setDone] = useState<Set<string>>(() => new Set());
   const needs = home.actions.filter((a) => !done.has(a.id));
-  const [photo, setPhoto] = useState(false);
+
   const [filter, setFilter] = useState<FilterId>(FILTERS[0].id);
   const [page, setPage] = useState(1);
   const holds = FILTERS.find((f) => f.id === filter)!.holds as readonly string[];
@@ -117,23 +161,31 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
     setFilter(id);
     setPage(1);
   };
-  const go = (tab: string | null) => {
-    if (!tab) return;
-    const t = DRAFT_TAB[tab];
+  const go = (e: DraftEvent) => {
+    if (e.href) return router.push(e.href);
+    const t = DRAFT_TAB[e.tab];
     if (t) onOpenTab(t);
-    else draftOnly(TAB_LABEL[tab] ?? tab);
   };
-  const eng = home.engagement;
-  const shift = eng.overall == null || eng.previous == null ? null : eng.overall - eng.previous;
+
+  const needGrid = { gridTemplateColumns: "minmax(0, 1fr) 128px 84px 92px", columnGap: 16 } as const;
+  const actGrid = { gridTemplateColumns: "130px minmax(0, 1fr)", columnGap: 24 } as const;
 
   return (
-    <div className="rd rh">
-      <header className="rd-head bare">
-        <div className="rd-head-main">
-          <span className="rd-eyebrow">Home</span>
-          <h1 className="rd-title rh-title">
-            {/* The full name, here alone; the face opens large. */}
-            <button type="button" className="rh-avatar" onClick={() => home.avatarPath && setPhoto(true)} title={home.avatarPath ? "See the photo" : undefined} aria-label={home.avatarPath ? `${home.name}'s photo` : undefined} disabled={!home.avatarPath}>
+    <div className="rd trn rls rh">
+      {/* ---- Header: Training's, with the face before the name. No fact line, so no room kept for one. */}
+      <header className="trn-head bare">
+        <div className="trn-head-main">
+          <span className="trn-eyebrow">Home</span>
+          <div className="trn-name-row">
+            {/* The face opens large. */}
+            <button
+              type="button"
+              className="rh-avatar"
+              onClick={() => home.avatarPath && setPhoto(true)}
+              title={home.avatarPath ? "See the photo" : undefined}
+              aria-label={home.avatarPath ? `${home.name}'s photo` : undefined}
+              disabled={!home.avatarPath}
+            >
               {home.avatarPath ? (
                 // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
                 <img src={home.avatarPath} alt="" />
@@ -141,247 +193,282 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
                 home.initial
               )}
             </button>
-            {home.name}
-            {home.clientSince && <small className="rh-since">{home.clientSince}</small>}
-          </h1>
+            <h1 className="trn-name">{home.name}</h1>
+            {home.clientSince && <span className="rh-since">{home.clientSince}</span>}
+          </div>
         </div>
-        <div className="rd-head-actions">
+        <div className="trn-head-actions">
+          {/* White pills with an icon, as every tab's own actions (design rules 9b). */}
           <AppAccessButton key={clientId} clientId={clientId} firstName={firstName} initial={home.access} />
-          <button type="button" className="rd-btn" onClick={() => setDetails(true)}>
+          <button type="button" className="trn-pill" onClick={() => setDetails(true)}>
             <AccountIcon /> Details
           </button>
-          <button type="button" className="rd-btn primary" onClick={() => setMsg(true)}>
+          <button type="button" className="trn-pill" onClick={message}>
             <ChatIcon /> Message
           </button>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="trn-more" aria-label={`More for ${firstName}`}>
+              <MoreIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="pb-menu">
+              <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(true)}>
+                <TrashIcon /> Delete {firstName}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
-      <div className="rh-cols">
-        <div className="rh-main">
-          {/* ---- The figures the coach checks first. The phases live on Plan, not here. */}
-          <section className="rd-session open rn-card rh-glance">
-            <div className="rh-stats">
-              {home.snapshot.map((s) => (
-                <div key={s.label} className="rh-stat">
-                  <span className="rh-stat-label">{s.label}</span>
-                  <span className="rh-stat-body">
-                    <b className={s.attention ? "warn" : ""}>{s.value}</b>
-                    {s.suffix && <small>{s.suffix}</small>}
+      {/* ---- The figures the coach checks first, in one hairline card. */}
+      <section className="rls-card rh-figs" aria-label="At a glance">
+        {home.snapshot.map((s) => (
+          <div key={s.label} className="rh-fig">
+            <span className="rh-fig-label">{s.label}</span>
+            <b className={s.attention ? "warn" : ""}>{s.value}</b>
+            {s.suffix && (
+              <small>
+                <SepJoin parts={parts(s.suffix)} />
+              </small>
+            )}
+          </div>
+        ))}
+      </section>
+
+      {/* ---- Keeping up: one score, the behaviours it is the mean of. */}
+      {eng.options.some((o) => o.available) && (
+        <section className="rls-section">
+          <div className="trn-weekhead">
+            <div>
+              <h2>Keeping up</h2>
+              <span title={eng.since ? `Counted from ${dayMonth(eng.since)}, their first day` : undefined}>Last {eng.days} days</span>
+            </div>
+            <div className="trn-weekhead-actions">
+              {/* What counts for this client (12 Oct): the coach's pick, at least one. */}
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger className="trn-pill">
+                  What counts <ChevronDownIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="pb-menu">
+                  <div className="rh-parts-label">Counted in {firstName}&rsquo;s score</div>
+                  {eng.options.map((o) => (
+                    <DropdownMenuCheckboxItem
+                      key={o.id}
+                      checked={chosenParts.includes(o.id)}
+                      disabled={!o.available || (chosenParts.length === 1 && chosenParts.includes(o.id))}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        toggleSpart(o.id);
+                      }}
+                    >
+                      <span className="rh-part-opt">
+                        {o.label}
+                        {o.why && <small>{o.why}</small>}
+                      </span>
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          <div className="rls-card rh-board">
+            <div className="rh-score">
+              <Dial pct={eng.overall} />
+              <span className="rh-score-word">Overall</span>
+              {shift != null && (
+                <span className={`rh-trend ${shift > 0 ? "up" : shift < 0 ? "down" : "flat"}`}>
+                  {shift === 0 ? `Level with the ${eng.days} days before` : `${shift > 0 ? "▲" : "▼"} ${Math.abs(shift)}% vs the ${eng.days} days before`}
+                </span>
+              )}
+            </div>
+            <div className="rh-parts">
+              {eng.parts.map((p) => (
+                <div key={p.id} className="rh-part">
+                  <span className="rh-part-name">{p.label}</span>
+                  <span className="rh-part-pct">{p.pct}%</span>
+                  <span className="rh-part-track">
+                    <span className={`rh-part-fill ${tone(p.pct)}`} style={{ width: `${Math.max(0, Math.min(100, p.pct))}%` }} />
+                  </span>
+                  <span className="rh-part-detail">
+                    <SepJoin parts={[p.detail, p.note]} />
                   </span>
                 </div>
               ))}
             </div>
-          </section>
+          </div>
+        </section>
+      )}
 
-          {/* ---- Keeping up: one score, three behaviours. */}
-          {eng.options.some((o) => o.available) && (
-            <section className="rd-session open rn-card">
-              <div className="rn-card-head">
-                <h2>
-                  Keeping up<Sep />
-                  <span title={eng.since ? `Counted from ${dayMonth(eng.since)}, their first day` : undefined}>last {eng.days} days</span>
-                </h2>
-                {/* What counts for this client (12 Oct): the coach's pick, at least one. */}
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="rd-btn">What counts</DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="pb-menu">
-                    <div className="rh-parts-label">Counted in {firstName}&rsquo;s score</div>
-                    {eng.options.map((o) => (
-                      <DropdownMenuCheckboxItem
-                        key={o.id}
-                        checked={chosenParts.includes(o.id)}
-                        disabled={!o.available || (chosenParts.length === 1 && chosenParts.includes(o.id))}
-                        onSelect={(e) => {
-                          e.preventDefault();
-                          toggleSpart(o.id);
-                        }}
-                      >
-                        <span className="rh-part-opt">
-                          {o.label}
-                          {o.why && <small>{o.why}</small>}
-                        </span>
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <div className="rh-board">
-                <div className="rh-score">
-                  <Dial pct={eng.overall ?? 0} />
-                  <span className="rh-score-word">Overall</span>
-                  {shift == null ? (
-                    <span className="rh-trend flat">nothing to compare yet</span>
-                  ) : shift === 0 ? (
-                    <span className="rh-trend flat">level with the {eng.days} days before</span>
-                  ) : (
-                    <span className={`rh-trend ${shift > 0 ? "up" : "down"}`}>
-                      {shift > 0 ? "▲" : "▼"} {Math.abs(shift)}% vs the {eng.days} days before
-                    </span>
-                  )}
-                </div>
-                <div className="rh-rows">
-                  {eng.parts.map((p) => (
-                    <div key={p.id} className="rh-score-row">
-                      <span className="rh-score-name">{p.label}</span>
-                      <span className="rh-score-pct">{p.pct}%</span>
-                      <span className="rh-score-track">
-                        <span className={`rh-score-fill ${tone(p.pct)}`} style={{ width: `${Math.max(0, Math.min(100, p.pct))}%` }} />
+      {/* ---- Needs you: what is waiting on the coach. A click opens the thing (12 Oct); on hover, Reply opens the chat
+          about it, and ✓ marks it read so it leaves. */}
+      <section className="rls-section">
+        <div className="trn-weekhead">
+          <div>
+            <h2>Needs you</h2>
+            {needs.length > 0 && <span>{needs.length} open</span>}
+          </div>
+        </div>
+        <div className="rls-card rh-card">
+          {needs.length === 0 ? (
+            <p className="rls-none">All clear</p>
+          ) : (
+            <div className="rh-rows">
+              {needs.map((a) => {
+                const t = TONE[a.tone];
+                // The title semi-bold; the rest of it and the detail grey after it, parted by bars. The client's own words in quotes.
+                const [head, ...rest] = parts(a.title);
+                const grey = [...rest, ...(a.detail ? (a.quote ? [`“${a.detail}”`] : parts(a.detail)) : [])];
+                return (
+                  <div key={a.id} className="rls-row rh-row">
+                    {/* A click anywhere opens it; for the keyboard the title is the button, the actions its siblings. */}
+                    <div className="rls-row-main" style={needGrid} onClick={() => router.push(a.open)}>
+                      <span className="rh-what">
+                        <button type="button" className="rd-row-hit rh-what-title">
+                          {head}
+                        </button>
+                        {grey.length > 0 && (
+                          <span className={`rh-what-note${a.quote ? " quote" : ""}`}>
+                            <SepJoin parts={grey} />
+                          </span>
+                        )}
                       </span>
-                      <span className="rh-score-detail">
-                        {p.detail}
-                        {p.note && <em>{p.note}</em>}
+                      <span>{a.tab && <TabTag tab={a.tab} />}</span>
+                      <span>
+                        <span className={`trn-state rh-state ${t.cls}`}>{t.text}</span>
                       </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* ---- Needs you: why the rail's dot is on. */}
-          <section className="rd-session open rn-card">
-            <div className="rn-card-head">
-              <h2>
-                Needs you<Sep />
-                <span>{needs.length ? `${needs.length} open item${needs.length === 1 ? "" : "s"}` : `nothing is waiting on you for ${firstName}`}</span>
-              </h2>
-              {needs.length > 0 && (
-                <button type="button" className="rd-btn" onClick={() => setMsg(true)}>
-                  Nudge {firstName}
-                </button>
-              )}
-            </div>
-            {needs.length > 0 ? (
-              <div className="rd-rows">
-                {/* A click opens the thing itself (12 Oct); on hover, Reply opens
-                    the chat about it, and ✓ marks it read so it leaves. */}
-                {needs.map((a) => (
-                  <div key={a.id} className="rd-row rh-need">
-                    <button type="button" className="rd-row-main rh-row" onClick={() => router.push(a.open)}>
-                      <span className={`rh-tone ${a.tone}`}>{TONE_LABEL[a.tone]}</span>
-                      <span className="rh-row-main">
-                        <b>{a.title}</b>
-                        <small className={a.tone === "note" ? "quote" : ""}>{a.detail}</small>
-                      </span>
-                      {a.tab && <span className="rd-pill quiet">{TAB_LABEL[a.tab] ?? a.tab}</span>}
-                    </button>
-                    <span className="rh-need-acts">
-                      {a.reply && openChat && (
+                      <span className="rh-acts" onClick={(e) => e.stopPropagation()}>
+                        {a.reply && openChat && (
+                          <button
+                            type="button"
+                            className="rh-reply"
+                            onClick={() => {
+                              const r = a.reply!;
+                              openChat(r.link ? { area: r.area, label: r.label, link: r.link } : null, r.focus);
+                            }}
+                          >
+                            Reply
+                          </button>
+                        )}
                         <button
                           type="button"
-                          className="rd-btn sm"
+                          className="trn-row-more rh-done"
                           onClick={() => {
-                            const r = a.reply!;
-                            openChat(r.link ? { area: r.area, label: r.label, link: r.link } : null, r.focus);
+                            setDone((d) => new Set(d).add(a.id));
+                            act(() => dismissHomeActionAction(clientId, a.id));
                           }}
-                          title={`Reply to ${firstName} about this`}
+                          aria-label="Mark as read"
+                          title="Mark as read"
                         >
-                          <ChatIcon /> Reply
+                          <CheckIcon />
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        className="rd-btn ghost sm rh-need-done"
-                        onClick={() => {
-                          setDone((d) => new Set(d).add(a.id));
-                          act(() => dismissHomeActionAction(clientId, a.id));
-                        }}
-                        aria-label="Mark as read"
-                        title="Mark as read"
-                      >
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M5 12.5l4.5 4.5L19 7.5" />
-                        </svg>
-                      </button>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="rh-empty">All clear.</p>
-            )}
-          </section>
-
-          {/* ---- Activity: a history, one kind at a time. */}
-          <section className="rd-session open rn-card">
-            <div className="rn-card-head">
-              <h2>Activity</h2>
-              <div className="rd-btn-group" role="group" aria-label="Which kind">
-                {FILTERS.map((f) => (
-                  <button key={f.id} type="button" className={filter === f.id ? "on" : ""} aria-pressed={filter === f.id} onClick={() => pick(f.id)}>
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {shown.length > 0 ? (
-              <div className="rd-rows">
-                {shown.map((e) => (
-                  <div key={e.id} className="rd-row">
-                    <button type="button" className="rd-row-main rh-row" onClick={() => (e.href ? router.push(e.href) : go(e.tab))}>
-                      <span className={`rh-cat ${e.category}`}>{CATEGORY_LABEL[e.category] ?? e.category}</span>
-                      <span className="rh-row-main">
-                        <b>{e.text.charAt(0).toUpperCase() + e.text.slice(1)}</b>
-                        {e.note && <small className="quote">{e.note}</small>}
                       </span>
-                      <span className="rh-when">{e.when}</span>
-                    </button>
+                    </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="rh-empty">{home.events.length ? "Nothing of that kind yet." : "Nothing logged yet."}</p>
-            )}
-            <Pager className="rh-foot" page={at} pages={pages} from={from} shown={shown.length} total={matching.length} label="Activity pages" onPage={setPage} />
-          </section>
+                );
+              })}
+            </div>
+          )}
         </div>
+      </section>
 
-      </div>
+      {/* ---- Activity: what they did, one kind at a time. A log (design rules 8): the date the light part, the thing
+          semi-bold, the rest in grey after it on the one line. A row opens the thing on its tab. */}
+      <section className="rls-section">
+        <div className="trn-weekhead">
+          <div>
+            <h2>Activity</h2>
+          </div>
+          <div className="trn-weekhead-actions">
+            <div className="rd-btn-group" role="group" aria-label="Which kind">
+              {FILTERS.map((f) => (
+                <button key={f.id} type="button" className={filter === f.id ? "on" : ""} aria-pressed={filter === f.id} onClick={() => pick(f.id)}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="rls-card rh-card">
+          {shown.length === 0 ? (
+            <p className="rls-none">None yet</p>
+          ) : (
+            <div className="rh-rows">
+              {shown.map((e) => {
+                const [head, ...rest] = parts(e.text.charAt(0).toUpperCase() + e.text.slice(1));
+                return (
+                  <div key={e.id} className="rls-row rh-row">
+                    <div className="rls-row-main" style={actGrid} onClick={() => go(e)}>
+                      <span className="rh-when">
+                        <SepJoin parts={parts(e.when)} />
+                      </span>
+                      <span className="rh-what">
+                        <button type="button" className="rd-row-hit rh-what-title">
+                          {head}
+                        </button>
+                        {(rest.length > 0 || e.note) && (
+                          <span className="rh-what-note">
+                            <SepJoin parts={[...rest, e.note ? `“${e.note}”` : null]} />
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <Pager className="rh-foot" page={at} pages={pages} from={from} shown={shown.length} total={matching.length} label="Activity pages" onPage={setPage} />
+        </div>
+      </section>
 
-      {/* The facts and the note, together, when asked for. */}
-      {/* Non-modal: the card editor opens its form in a layer of its own, which a modal dialog would lock out. */}
+      {/* ---- Details: the card and the coach's note. Non-modal: the card's Edit opens its form in a layer of its own,
+          which a modal dialog would lock out. */}
+      {/* Non-modal draws no scrim of its own: the page dims behind it as behind every pop-up; a click on it closes Details. */}
+      {details && createPortal(<div className="rh-scrim" aria-hidden="true" />, document.body)}
       <Dialog open={details} modal={false} onOpenChange={(o) => !o && setDetails(false)}>
         {details && (
-          <DialogContent className="rd-dlg rh-dlg">
-            <DialogHeader>
-              <DialogTitle>{home.name}</DialogTitle>
-              <DialogDescription hidden>Member info, coaching info and your note about {firstName}.</DialogDescription>
-            </DialogHeader>
-            <div className="rh-dlg-body">
-              {/* The old tab's card editor, as is: member info and coaching info, each with an Edit. */}
-              <ClientCardEditor clientId={clientId} panel={home.panel} chrome="rail" />
-              <NoteCard text={home.coachNote.text} savedLabel={home.coachNote.savedLabel} onSave={(v) => act(() => saveCoachNoteAction(clientId, v), "Coach note")} />
-              {/* Last, and quiet (12 Oct): the one thing here that cannot be undone. */}
-              <div className="rh-delete">
-                <button
-                  type="button"
-                  className="rd-btn danger ghost"
-                  onClick={() => {
-                    setDetails(false);
-                    setDeleting(true);
-                  }}
-                >
-                  <TrashIcon /> Delete {firstName}
-                </button>
-              </div>
+          <DialogContent
+            className="dlh rh-details"
+            // Focus on the card itself (no ring on a button), so the next Tab goes on inside it, not to the page.
+            onOpenAutoFocus={(e) => {
+              e.preventDefault();
+              (e.currentTarget as HTMLElement).focus({ preventScroll: true });
+            }}
+            // Esc in the card's own edit pop-up closes that alone, not Details with it.
+            onEscapeKeyDown={(e) => {
+              if (document.querySelector(".cc-dialog")) e.preventDefault();
+            }}
+          >
+            <div className="dlh-head">
+              <DialogTitle className="dlh-title">{home.name}</DialogTitle>
+              <DialogClose className="dlh-x" aria-label="Close">
+                ✕
+              </DialogClose>
+            </div>
+            <DialogDescription className="sr-only">Member info, coaching info and your note about {firstName}</DialogDescription>
+            <div className="rh-details-body">
+              <ClientCardEditor clientId={clientId} panel={panel} chrome="rail" look="hairline" />
+              <CoachNote text={home.coachNote.text} savedLabel={home.coachNote.savedLabel} onSave={(v) => act(() => saveCoachNoteAction(clientId, v), "Coach note")} />
             </div>
           </DialogContent>
         )}
       </Dialog>
 
-      {/* Deleting: what goes, what stays, and their name typed to be sure. */}
+      {/* Deleting: what goes, and their name typed to be sure. */}
       <Dialog open={deleting} onOpenChange={(o) => !o && setDeleting(false)}>
-        {deleting && <DeleteClientDialog clientId={clientId} name={home.name} onCancel={() => setDeleting(false)} />}
+        {deleting && <DeleteClientDialog clientId={clientId} name={home.name} firstName={firstName} />}
       </Dialog>
 
       {/* The photo, large. */}
       <Dialog open={photo} onOpenChange={(o) => !o && setPhoto(false)}>
         {photo && home.avatarPath && (
-          <DialogContent className="rd-dlg rh-photodlg">
-            <DialogHeader>
-              <DialogTitle hidden>{home.name}</DialogTitle>
-              <DialogDescription hidden>{home.name}&rsquo;s profile photo.</DialogDescription>
-            </DialogHeader>
+          <DialogContent className="dlh rh-photodlg">
+            <div className="dlh-head">
+              <DialogTitle className="dlh-title">{home.name}</DialogTitle>
+              <DialogClose className="dlh-x" aria-label="Close">
+                ✕
+              </DialogClose>
+            </div>
+            <DialogDescription className="sr-only">{home.name}&rsquo;s profile photo</DialogDescription>
             {/* eslint-disable-next-line @next/next/no-img-element -- client-uploaded file */}
             <img className="rh-photo" src={home.avatarPath} alt={`${home.name}'s photo`} />
           </DialogContent>
@@ -404,94 +491,109 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
   );
 }
 
+/** The tab that deals with a Needs-you row: a track's tag in its colour, the rest grey; one width down the column. */
+function TabTag({ tab }: { tab: string }) {
+  const track = TRACK_OF[tab];
+  if (track)
+    return (
+      <span className="rh-tag" style={{ color: TRACK_PALETTE[track].ink, background: TRACK_PALETTE[track].tint }}>
+        <TrackIcon track={track} size={12} />
+        {TRACK_LABEL[track]}
+      </span>
+    );
+  const o = OTHER_TAG[tab];
+  if (!o) return null;
+  return (
+    <span className="rh-tag grey">
+      {o.icon}
+      {o.label}
+    </span>
+  );
+}
+
 // The overall, as one dial.
-const STROKE = 10;
-const SIZE = 128;
+const STROKE = 7;
+const SIZE = 112;
 const R = (SIZE - STROKE) / 2;
 const C = 2 * Math.PI * R;
-function Dial({ pct }: { pct: number }) {
-  const filled = (Math.max(0, Math.min(100, pct)) / 100) * C;
+/** null: nothing to count yet (what the coach picked can't be counted for this client): an empty ring and a dash, no colour. */
+function Dial({ pct }: { pct: number | null }) {
+  const filled = pct == null ? 0 : (Math.max(0, Math.min(100, pct)) / 100) * C;
   return (
     <div className="rh-dial" style={{ width: SIZE, height: SIZE }}>
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} aria-hidden="true">
         <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
-          <circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke="#eceff3" strokeWidth={STROKE} />
-          <circle className={`rh-dial-arc ${tone(pct)}`} cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" strokeWidth={STROKE} strokeLinecap="round" strokeOpacity={filled > 0.5 ? 1 : 0} style={{ strokeDasharray: `${filled} ${C}` }} />
+          <circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke="#eef0f3" strokeWidth={STROKE} />
+          <circle
+            className={`rh-dial-arc${pct == null ? "" : ` ${tone(pct)}`}`}
+            cx={SIZE / 2}
+            cy={SIZE / 2}
+            r={R}
+            fill="none"
+            strokeWidth={STROKE}
+            strokeLinecap="round"
+            strokeOpacity={filled > 0.5 ? 1 : 0}
+            style={{ strokeDasharray: `${filled} ${C}` }}
+          />
         </g>
       </svg>
-      <span className="rh-dial-figure">
-        {Math.round(pct)}
-        <small>%</small>
+      <span className={`rh-dial-figure${pct == null ? " none" : ""}`}>
+        {pct == null ? (
+          "–"
+        ) : (
+          <>
+            {Math.round(pct)}
+            <small>%</small>
+          </>
+        )}
       </span>
     </div>
   );
 }
 
-// The coach's own note, theirs alone, edited in place.
-function NoteCard({ text, savedLabel, onSave }: { text: string; savedLabel: string | null; onSave: (text: string) => void }) {
+// The coach's own note, theirs alone: a note that saves (design rules 4). No line until something is typed; then the
+// line, Cancel and Save.
+function CoachNote({ text, savedLabel, onSave }: { text: string; savedLabel: string | null; onSave: (text: string) => void }) {
   const [saved, setSaved] = useState(text);
   const [draft, setDraft] = useState(text);
-  const [editing, setEditing] = useState(false);
+  const typed = draft.trim() !== saved.trim();
   return (
-    <section className="rd-session open rn-card rh-info">
-      <div className="rn-card-head">
-        <h2>
-          Coach note
-          {savedLabel && (
-            <>
-              <Sep />
-              <span>{savedLabel}</span>
-            </>
-          )}
-        </h2>
-        {!editing && (
-          <button type="button" className="rd-ex-btn rh-edit" onClick={() => setEditing(true)}>
-            {saved ? "Edit" : "Add"}
+    <section className="rh-note">
+      <span className="dlh-label">
+        <SepJoin parts={["Coach note", savedLabel && saved ? savedLabel : null]} />
+      </span>
+      <textarea className={`rh-note-text${typed ? " typed" : ""}`} value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} placeholder="Add a note" aria-label="Coach note" />
+      {typed && (
+        <div className="rh-note-foot">
+          <button type="button" className="dlh-cancel" onClick={() => setDraft(saved)}>
+            Cancel
           </button>
-        )}
-      </div>
-      {editing ? (
-        <div className="rh-note-edit">
-          <textarea className="rh-note-box" value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} autoFocus placeholder="Only you see this." aria-label="Coach note" />
-          <div className="rh-note-actions">
-            <button
-              type="button"
-              className="rd-btn"
-              onClick={() => {
-                setDraft(saved);
-                setEditing(false);
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="rd-btn primary"
-              disabled={draft.trim() === saved.trim()}
-              onClick={() => {
-                setSaved(draft.trim());
-                setEditing(false);
-                onSave(draft.trim());
-              }}
-            >
-              Save
-            </button>
-          </div>
+          <button
+            type="button"
+            className="dlh-go"
+            onClick={() => {
+              setSaved(draft.trim());
+              setDraft(draft.trim());
+              onSave(draft.trim());
+            }}
+          >
+            Save
+          </button>
         </div>
-      ) : (
-        <p className={`rh-note${saved ? "" : " empty"}`}>{saved || "Nothing yet. A standing note about this client, for you alone."}</p>
       )}
     </section>
   );
 }
 
-// ---- Delete a client: everything of theirs goes, their invoices stay.
-function DeleteClientDialog({ clientId, name, onCancel }: { clientId: number; name: string; onCancel: () => void }) {
+// ---- Delete a client: everything of theirs goes, their invoices stay. Their name typed to be sure.
+function DeleteClientDialog({ clientId, name, firstName }: { clientId: number; name: string; firstName: string }) {
   const router = useRouter();
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, start] = useTransition();
   const ok = typed.trim().toLowerCase() === name.trim().toLowerCase();
+  // Opened from the ⋯ menu: the field takes the keyboard a beat after the dialog's own focus move (as DeleteSessionDialog).
+  const field = useRef<HTMLInputElement>(null);
   const go = () =>
     start(async () => {
       const err = await deleteClientConfirmedAction(clientId, typed);
@@ -500,16 +602,26 @@ function DeleteClientDialog({ clientId, name, onCancel }: { clientId: number; na
       router.push("/admin/redesign/feed");
     });
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>Delete {name}?</DialogTitle>
-        <DialogDescription>
-          Their login, programmes, logged sets, check-ins, measurements, photos, meetings, chat and notes go, and cannot be brought back. Their invoices stay, under their name, as the law asks.
-        </DialogDescription>
-      </DialogHeader>
-      <label className="rd-field">
-        <span>Type their name to confirm</span>
+    <DialogContent
+      className="dlh"
+      onOpenAutoFocus={(e) => {
+        e.preventDefault();
+        setTimeout(() => field.current?.focus(), 60);
+      }}
+    >
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Delete {name}?</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <DialogDescription className="dlh-note">
+        This permanently deletes {firstName}&rsquo;s login, programmes, logged sets, check-ins, photos, meetings and chat. It can&rsquo;t be undone. Their invoices stay.
+      </DialogDescription>
+      <label className="rh-field">
+        <span className="dlh-label">Type their name</span>
         <input
+          className="dlh-line"
           value={typed}
           onChange={(e) => {
             setTyped(e.target.value);
@@ -517,20 +629,19 @@ function DeleteClientDialog({ clientId, name, onCancel }: { clientId: number; na
           }}
           onKeyDown={(e) => e.key === "Enter" && ok && !busy && go()}
           placeholder={name}
-          autoFocus
+          ref={field}
           autoComplete="off"
         />
       </label>
-      {error && <p className="rh-delete-error">{error}</p>}
-      <DialogFooter>
-        <span className="rd-dlg-hint grow" />
-        <button type="button" className="rd-btn" onClick={onCancel} disabled={busy}>
+      {error && <p className="dlh-error">{error}</p>}
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel" disabled={busy}>
           Cancel
+        </DialogClose>
+        <button type="button" className="dlh-delete" onClick={go} disabled={!ok || busy}>
+          {busy ? "Deleting…" : "Delete"}
         </button>
-        <button type="button" className="rd-btn danger" onClick={go} disabled={!ok || busy}>
-          {busy ? "Deleting…" : "Delete for good"}
-        </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }

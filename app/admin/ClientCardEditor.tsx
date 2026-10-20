@@ -49,6 +49,7 @@ export default function ClientCardEditor({
   panel,
   onboarding = false,
   chrome = "panel",
+  look,
 }: {
   clientId: number;
   panel: OverviewPanel;
@@ -59,7 +60,10 @@ export default function ClientCardEditor({
       edit mode, with a line saying why — onboarding is not a separate wizard,
       it is this same card being filled in for the first time. */
   onboarding?: boolean;
+  /** "hairline": the redesign's look (21 Oct), on Home's Details: the rows and the edit pop-up in ink and hairlines. */
+  look?: "hairline";
 }) {
+  const hl = look === "hairline";
   const [editing, setEditing] = useState<Record<Which, boolean>>({ member: onboarding, coaching: onboarding });
   const [focus, setFocus] = useState<string | null>(null);
   const [, startRename] = useTransition();
@@ -120,11 +124,9 @@ export default function ClientCardEditor({
         <Field label="Starting weight" name="starting_weight_kg" value={card.starting_weight_kg} type="number" step="0.1" suffix="kg" focus={focus} />
       </div>
       {/* Named, not hidden: a coach looking for "current week" here should
-          find out where it comes from rather than assume it's missing. */}
-      <p className="ad-field-note">
-        Plan, current week and current weight follow the live programme and the client&rsquo;s own check-ins.
-        They can&rsquo;t be typed here.
-      </p>
+          find out where it comes from rather than assume it's missing.
+          Not in the redesign's look, which explains nothing (design rules 1). */}
+      {!hl && <p className="ad-field-note">Plan, current week and current weight follow the live programme and the client&rsquo;s own check-ins. They can&rsquo;t be typed here.</p>}
     </>
   );
 
@@ -132,13 +134,7 @@ export default function ClientCardEditor({
 
   return (
     <>
-      <Section
-        chrome={chrome}
-        onboarding={onboarding}
-        title="Member info"
-        hint={`${filled} of ${panel.memberInfo.length} filled`}
-        onEdit={() => edit("member")}
-      >
+      <Section chrome={chrome} hl={hl} onboarding={onboarding} title="Member info" hint={`${filled} of ${panel.memberInfo.length} filled`} onEdit={() => edit("member")}>
         {editing.member && !inDialog ? (
           <CardForm clientId={clientId} card={card} keys={MEMBER_KEYS} cancelLabel={onboarding ? "Skip for now" : "Cancel"} onDone={() => done("member")}>
             {memberFields}
@@ -155,14 +151,7 @@ export default function ClientCardEditor({
         )}
       </Section>
 
-      <Section
-        chrome={chrome}
-        onboarding={onboarding}
-        title="Coaching info"
-        hint={`${set} of ${panel.coachingInfo.length} set`}
-        defaultOpen
-        onEdit={() => edit("coaching")}
-      >
+      <Section chrome={chrome} hl={hl} onboarding={onboarding} title="Coaching info" hint={`${set} of ${panel.coachingInfo.length} set`} defaultOpen onEdit={() => edit("coaching")}>
         {editing.coaching && !inDialog ? (
           <CardForm clientId={clientId} card={card} keys={COACHING_KEYS} cancelLabel={onboarding ? "Skip for now" : "Cancel"} onDone={() => done("coaching")}>
             {coachingFields}
@@ -180,12 +169,12 @@ export default function ClientCardEditor({
       </Section>
 
       {inDialog && editing.member && (
-        <CardDialog title="Member info" clientId={clientId} card={card} keys={MEMBER_KEYS} onDone={() => done("member")}>
+        <CardDialog hl={hl} title="Member info" clientId={clientId} card={card} keys={MEMBER_KEYS} onDone={() => done("member")}>
           {memberFields}
         </CardDialog>
       )}
       {inDialog && editing.coaching && (
-        <CardDialog title="Coaching info" clientId={clientId} card={card} keys={COACHING_KEYS} onDone={() => done("coaching")}>
+        <CardDialog hl={hl} title="Coaching info" clientId={clientId} card={card} keys={COACHING_KEYS} onDone={() => done("coaching")}>
           {coachingFields}
         </CardDialog>
       )}
@@ -199,6 +188,7 @@ export default function ClientCardEditor({
 // whether the coach had it open.
 function Section({
   chrome,
+  hl,
   onboarding,
   title,
   hint,
@@ -207,6 +197,7 @@ function Section({
   children,
 }: {
   chrome: "panel" | "rail";
+  hl: boolean;
   onboarding: boolean;
   title: string;
   hint: string;
@@ -216,7 +207,7 @@ function Section({
 }) {
   if (chrome === "rail") {
     return (
-      <section className="ch-card ch-rail-card">
+      <section className={`ch-card ch-rail-card${hl ? " ch-hl" : ""}`}>
         <div className="ch-rail-head">
           <span className="ch-label">{title}</span>
           <button type="button" className="ch-edit" onClick={onEdit}>
@@ -241,21 +232,7 @@ function Section({
 // box around it: transparent at rest, outlined on hover, white on focus.
 // Seven boxed inputs stacked in a narrow card read as a form to be survived;
 // this reads as the card itself, with the values now typeable.
-function CardDialog({
-  title,
-  clientId,
-  card,
-  keys,
-  onDone,
-  children,
-}: {
-  title: string;
-  clientId: number;
-  card: Card;
-  keys: CardKey[];
-  onDone: () => void;
-  children: ReactNode;
-}) {
+function CardDialog({ hl, title, clientId, card, keys, onDone, children }: { hl: boolean; title: string; clientId: number; card: Card; keys: CardKey[]; onDone: () => void; children: ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onDone();
     document.addEventListener("keydown", onKey);
@@ -264,11 +241,11 @@ function CardDialog({
 
   return createPortal(
     <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onDone()}>
-      <div className="pb-modal cc-dialog" role="dialog" aria-modal="true" aria-label={title}>
+      <div className={`pb-modal cc-dialog${hl ? " cc-hl" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="cc-dialog-head">
           <span className="ch-label">{title}</span>
           <button type="button" className="cc-dialog-x" onClick={onDone} aria-label="Close">
-            ×
+            {hl ? "✕" : "×"}
           </button>
         </div>
         <CardForm clientId={clientId} card={card} keys={keys} cancelLabel="Cancel" onDone={onDone}>
@@ -276,7 +253,7 @@ function CardDialog({
         </CardForm>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
 
@@ -307,21 +284,7 @@ function InfoRows({ rows, onAdd }: { rows: OverviewInfoRow[]; onAdd: (field: str
 // section's fields ride along as their saved values rather than blanking.
 // The action runs inside a transition so edit mode closes AFTER the save
 // resolves; flipping state on click unmounted the form mid-submit before.
-function CardForm({
-  clientId,
-  card,
-  keys,
-  cancelLabel,
-  onDone,
-  children,
-}: {
-  clientId: number;
-  card: Card;
-  keys: CardKey[];
-  cancelLabel: string;
-  onDone: () => void;
-  children: ReactNode;
-}) {
+function CardForm({ clientId, card, keys, cancelLabel, onDone, children }: { clientId: number; card: Card; keys: CardKey[]; cancelLabel: string; onDone: () => void; children: ReactNode }) {
   const [saving, startSaving] = useTransition();
   return (
     <form
