@@ -159,7 +159,6 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
   const [drag, setDrag] = useState<Drag | null>(null);
   const [moveDlg, setMoveDlg] = useState<{ id: number; start: string; end: string } | null>(null);
   const justDragged = useRef(false);
-  const [show, setShow] = useState<"coming" | "past" | "all">("all");
   // The log folds away under the grid; open, it is ten to a page.
   const [logOpen, setLogOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -259,24 +258,16 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
       return { ...g, laneCount: Math.max(1, lanes.length) };
     });
 
-  // The log: what is on or coming, newest first, then what is over, the latest ended first (20 Oct, Alex:
-  // a trip still on sits above a supplement that ended last week, though it started earlier).
-  const sorted = [...events].sort((a, b) => {
-    const pa = a.end < today, pb = b.end < today;
-    if (pa !== pb) return pa ? 1 : -1;
-    if (pa && a.end !== b.end) return a.end > b.end ? -1 : 1;
-    return a.start > b.start ? -1 : 1;
-  });
-  const listed = sorted.filter((e) => (show === "all" ? true : show === "coming" ? e.end >= today : e.end < today));
+  // The log keeps only what is over (21 Oct, Alex): what is on or coming is on the grid above.
+  // The latest ended first, so a supplement stopped last week sits above a trip that ended a month ago.
+  const listed = events
+    .filter((e) => e.end < today)
+    .sort((a, b) => (a.end !== b.end ? (a.end > b.end ? -1 : 1) : a.start > b.start ? -1 : 1));
   const PAGE = 10;
   const pages = Math.max(1, Math.ceil(listed.length / PAGE));
   const at = Math.min(page, pages);
   const from = (at - 1) * PAGE;
   const onPage = listed.slice(from, from + PAGE);
-  const pick = (id: typeof show) => {
-    setShow(id);
-    setPage(1);
-  };
 
   return (
     // As the Phases above (20 Oct, Alex): the heading on the page, the grid and its log in one white card.
@@ -411,7 +402,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
         </div>
       </div>
 
-      {/* ---- The log: every event, past ones included. */}
+      {/* ---- The log: the events that are over, nothing else (21 Oct, Alex). */}
       <div className={`rq-evlog${logOpen ? " open" : ""}`}>
         <div className="rq-evlog-head">
           <button type="button" className="rq-evlog-toggle" onClick={() => setLogOpen((o) => !o)} aria-expanded={logOpen}>
@@ -420,31 +411,15 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
             </span>
             <span className="rd-eyebrow">Log</span>
           </button>
-          {logOpen && (
-            <div className="rd-btn-group" role="group" aria-label="Which events">
-              {(
-                [
-                  ["all", "All"],
-                  ["coming", "Coming"],
-                  ["past", "Past"],
-                ] as const
-              ).map(([id, label]) => (
-                <button key={id} type="button" className={show === id ? "on" : ""} aria-pressed={show === id} onClick={() => pick(id)}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
         {!logOpen ? null : listed.length === 0 ? (
-          <p className="rq-evlog-empty">{events.length === 0 ? "None yet" : "None"}</p>
+          <p className="rq-evlog-empty">None yet</p>
         ) : (
           <div className="rd-rows">
             {onPage.map((e) => {
               const k = chromeOf(cats, e.kind);
-              const past = e.end < today;
               return (
-                <div key={e.id} className={`rd-row${past ? " rq-ev-past" : ""}`}>
+                <div key={e.id} className="rd-row">
                   <button type="button" className="rd-row-main rq-evrow" onClick={() => setDlg({ event: e })}>
                     <span className="rq-evrow-when">
                       {/* Two dates get room between them (20 Oct, Alex): a faint arrow with air either side. */}
@@ -464,13 +439,13 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                     <span className="rq-state" style={{ background: k.tint, color: k.ink }}>
                       {k.label}
                     </span>
+                    {/* The note runs on right after the title (21 Oct, Alex), so every row is one line high. */}
                     <span className="rq-evrow-main">
                       <b>{e.title}</b>
                       {e.byClient && <span className="rq-ev-by">From client</span>}
+                      {e.note && <span className="rq-evrow-note">{e.note}</span>}
                     </span>
-                    {/* The note on the same line, in its own column (20 Oct, Alex), so every row is one line high. */}
-                    <span className="rq-evrow-note">{e.note}</span>
-                    <span className={`rq-evrow-rel${past ? "" : " coming"}`}>{standing(today, e)}</span>
+                    <span className="rq-evrow-rel">{standing(today, e)}</span>
                   </button>
                 </div>
               );

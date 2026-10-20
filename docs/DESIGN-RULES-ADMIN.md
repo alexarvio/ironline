@@ -66,7 +66,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - NOW on a timeline (Plan, Events): an ink line with a black dot on top that pulses (20 Oct, Alex).
 - The tracks always run Lifestyle, Training, Nutrition (20 Oct, Alex): the Plan's lanes, the track tiles, the client tabs.
 - Use the width (20 Oct, Alex): a section with little in it is one row: its title, its items and add on the left, its summary and fold on the right (the After-workout check). Never a title line, a pill line and a fold line stacked in a wide card.
-- A log (the Events log, 20 Oct, Alex): one line a row; a note goes in its own column to the right, never under the title. What is on or coming first, newest first; what is over last, the latest ended first.
+- A log (the Events log, 20 Oct, Alex): one line a row; a note runs on right after the title in grey (21 Oct), never under it. It keeps only what is over (21 Oct), the latest ended first, with no filter; what is on or coming lives on the grid above.
 - Pills down a column (a category, a kind) are all one width, the word centred, whatever its length.
 - Two dates in a row (`14/10 → 5/11`) get air: a faint grey arrow with room either side.
 - A bar on a timeline is outlined in the colour it is now (its track or kind at half strength); a draft's outline is dashed.

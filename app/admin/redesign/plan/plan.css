@@ -232,8 +232,8 @@ body:has(.npd.rq-dlg) .rdp-pop .rdp-foot .rd-btn.ghost.wide { font-weight: 600; 
 .rq-evlog { padding: 4px 10px 8px; border-top: 1px solid #eceff3; }
 .rq-evlog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px 10px 14px; }
 .rq-evlog-empty { margin: 0; padding: 8px 14px 12px; font-size: 13px; color: #8b93a1; }
-/* One line a row (20 Oct, Alex): when, the kind, the title, its note in a column of its own, where it stands. */
-.rd-row-main.rq-evrow, .rq-evrow { display: grid; grid-template-columns: 150px 108px minmax(0, 1fr) minmax(0, 1.4fr) 110px; column-gap: 16px; align-items: center; cursor: pointer; }
+/* One line a row (20 Oct, Alex): when, the kind, the title with its note right after it (21 Oct), where it stands. */
+.rd-row-main.rq-evrow, .rq-evrow { display: grid; grid-template-columns: 150px 108px minmax(0, 1fr) 110px; column-gap: 16px; align-items: center; cursor: pointer; }
 .rq-evrow:hover { background: #fafbfd; }
 .rq-evrow-when { display: flex; flex-direction: column; gap: 1px; font-variant-numeric: tabular-nums; }
 .rq-evrow-when b { display: flex; align-items: center; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; }
@@ -241,12 +241,11 @@ body:has(.npd.rq-dlg) .rdp-pop .rdp-foot .rd-btn.ghost.wide { font-weight: 600; 
 .rq-evrow-when b i { display: inline-flex; margin: 0 9px; color: #98a2b3; }
 .rq-evrow-when small { font-size: 11px; font-weight: 500; color: #8b93a1; }
 .rq-evrow-main { display: flex; align-items: center; min-width: 0; }
-.rq-evrow-main b { min-width: 0; font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rq-evrow-main b { flex: 0 1 auto; min-width: 0; font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rq-evrow-main .rq-ev-by { flex: none; }
-.rq-evrow-note { min-width: 0; font-size: 12.5px; font-weight: 500; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Short of room, the note gives way before the title. */
+.rq-evrow-note { flex: 0 100 auto; min-width: 0; margin-left: 14px; font-size: 12.5px; font-weight: 500; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rq-evrow-rel { font-size: 12px; font-weight: 600; color: #8b93a1; text-align: right; white-space: nowrap; }
-.rq-evrow-rel.coming { color: #141a24; }
-.rq-ev-past .rq-evrow-main b { color: #5b6474; }
 
 /* The log folds: a row with a chevron, the filters only when open, ten a page. */
 .rq-evlog-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 6px 8px 6px 4px; border: 0; border-radius: 8px; background: none; font: inherit; cursor: pointer; }
