@@ -44,9 +44,13 @@
 .rm-td.date .rm-notebtn { margin-left: auto; }
 .rm-td.now { color: #141a24; }
 .rm-td.none { color: #c3c9d2; font-weight: 500; }
-.rm-td.change { border-top: 1px solid #dfe3e8; font-size: 13px; color: #5b6474; }
-.rm-td.change.up { color: #1b7a4b; }
-.rm-td.change.down { color: #b3471d; }
+/* Each column's summary in its head (21 Oct, Alex): "WEIGHT  CHANGE +1.2 (+2%)", "HOURS OF SLEEP  AVG 7.4"; the figure in ink,
+   a change green or red when the metric says which way is good. */
+.rm-th-top { display: flex; align-items: baseline; gap: 10px; }
+.rm-th-sum { color: #8b93a1; white-space: nowrap; }
+.rm-th-sum b { margin-left: 3px; font-weight: 600; letter-spacing: 0.02em; color: #141a24; }
+.rm-th-sum.up b { color: #2f7a3f; }
+.rm-th-sum.down b { color: #b42318; }
 
 /* Feed: one row a period, the values as tiles when it opens. */
 .rm-summary { font-size: 13px; color: #5b6474; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

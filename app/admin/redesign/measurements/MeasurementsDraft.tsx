@@ -4,11 +4,11 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { addClientPhaseAction, applyMetricChangesAction, deletePhaseAction, deployPhaseNowAction, saveAndSchedulePhaseOrSayWhyAction, sendChatMessageAction, setCheckInDayAction, setMonthlyCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientPhaseAction, applyMetricChangesAction, deletePhaseAction, deployPhaseNowAction, saveAndSchedulePhaseOrSayWhyAction, sendChatMessageAction, setCheckInDayAction, setMetricSummaryAction, setMonthlyCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChartIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { LoggedMetric, LoggedValues } from "../../../lib/queries";
 import { ConfirmDialog, DeletePhaseDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
 import { GoalsNotePills, GripIcon } from "../training/TrainingParts";
@@ -23,6 +23,7 @@ import Pager from "../Pager";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { dayMonth } from "../../../lib/dayMonth";
 import { groupColour } from "../../../lib/categoryColors";
+import { defaultSummary, type MetricSummary } from "../../../lib/metricSummary";
 
 // The Lifestyle tab, built as Training is (21 Oct, Alex): the phase's name
 // to click and type, its state tag as the menu of what can be done with it,
@@ -39,7 +40,7 @@ import { groupColour } from "../../../lib/categoryColors";
 
 type State = "live" | "past" | "scheduled" | "draft";
 type Cadence = "daily" | "weekly" | "monthly";
-export type DraftMetric = { id: number; name: string; unit: string; frequency: Cadence; groupKey: string; groupLabel: string; tint: string; last: { value: number; when: string } | null };
+export type DraftMetric = { id: number; name: string; unit: string; frequency: Cadence; groupKey: string; groupLabel: string; tint: string; /** Change or average in the check-ins head (21 Oct). */ summary: MetricSummary; last: { value: number; when: string } | null };
 export type DraftMeasurements = {
   id: number;
   /** The plan behind the tab (10 Oct): today, this week, every phase and programme, for the New phase dialog the Plan tab has. */
@@ -222,7 +223,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       return i < 0 ? plan.groups.length : i;
     };
     tempIds.current += 1;
-    const made: DraftMetric = { id: -tempIds.current, name, unit, frequency: cadence, groupKey: g.key, groupLabel: g.label, tint: g.tint, last: null };
+    const made: DraftMetric = { id: -tempIds.current, name, unit, frequency: cadence, groupKey: g.key, groupLabel: g.label, tint: g.tint, summary: defaultSummary(name, unit), last: null };
     setRows((prev) => {
       if (customOrder) return [...prev, made];
       const at = prev.findIndex((r) => rank(r.groupKey) > rank(g.key));
@@ -233,6 +234,11 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const moveTo = (m: DraftMetric, c: Cadence) => {
     setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, frequency: c } : r)));
     saveMetrics({ cadence: [{ id: m.id, value: c }] });
+  };
+  // Change or average in the check-ins table's head: on screen at once, saved behind it.
+  const setSummary = (m: DraftMetric, s: MetricSummary) => {
+    setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, summary: s } : r)));
+    save(() => setMetricSummaryAction(m.id, s));
   };
   const removeMetric = (m: DraftMetric) => {
     setRows((prev) => prev.filter((r) => r.id !== m.id));
@@ -563,6 +569,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                                       <CalendarIcon /> Ask {c} instead
                                     </DropdownMenuItem>
                                   ))}
+                                  {/* What sums it up in the check-ins table's head (21 Oct, Alex). */}
+                                  <DropdownMenuItem onSelect={() => setSummary(m, m.summary === "change" ? "average" : "change")}>
+                                    <ChartIcon /> {m.summary === "change" ? "Show the average" : "Show the change"}
+                                  </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "remove", metric: m })}>
                                     <TrashIcon /> Remove
@@ -624,7 +634,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           ) : view.metrics.length === 0 ? (
             <p className="rls-none">None yet</p>
           ) : show === "table" ? (
-            <CheckinTable view={logPaged} onReply={replyTo} />
+            <CheckinTable view={logPaged} whole={logShown} summaryOf={(m) => rows.find((r) => r.id === m.id)?.summary ?? m.summary} onReply={replyTo} />
           ) : show === "graph" ? (
             <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
           ) : (
@@ -1062,16 +1072,24 @@ function NoteBubble({ text, onReply }: { text: string; onReply: () => void }) {
   );
 }
 
-function CheckinTable({ view, onReply }: { view: LoggedValues; onReply: (period: string) => void }) {
+function CheckinTable({ view, whole, summaryOf, onReply }: { view: LoggedValues; /** Every period in the range shown, all pages: what each head sums up. */ whole: LoggedValues; summaryOf: (m: LoggedMetric) => MetricSummary; onReply: (period: string) => void }) {
   const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
-  const change = (m: LoggedMetric) => {
-    const seen = view.periods.map((p) => valueFor(m.id, p.key)).filter((v): v is number => v != null);
+  // Each column sums itself up in its head (21 Oct, Alex; rules §8: a summary lives in the column head, never a row
+  // of data): its change from the first day shown to the last (weight), or its average (sleep, resting HR).
+  const summary = (m: LoggedMetric) => {
+    const seen = whole.periods.map((p) => whole.values[`${m.id}:${p.key}`]).filter((v): v is number => v != null);
+    if (summaryOf(m) === "average") {
+      if (seen.length === 0) return null;
+      const avg = seen.reduce((a, b) => a + b, 0) / seen.length;
+      // Whole numbers once it is in the hundreds (steps), a decimal below (7.4 h).
+      return { label: "Avg", text: n(Math.abs(avg) >= 100 ? Math.round(avg) : Math.round(avg * 10) / 10), tone: "" };
+    }
     if (seen.length < 2) return null;
     const [newest, oldest] = [seen[0], seen[seen.length - 1]];
     const delta = Math.round((newest - oldest) * 10) / 10;
     const pct = oldest === 0 ? null : Math.round((delta / Math.abs(oldest)) * 100);
     const tone = m.goodDirection === "none" || delta === 0 ? "" : (m.goodDirection === "down") === delta < 0 ? " up" : " down";
-    return { text: `${delta > 0 ? "+" : ""}${n(delta)}${pct != null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}`, tone };
+    return { label: "Change", text: `${delta > 0 ? "+" : ""}${n(delta)}${pct != null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}`, tone };
   };
   return (
     <div className="rm-scroll">
@@ -1079,15 +1097,25 @@ function CheckinTable({ view, onReply }: { view: LoggedValues; onReply: (period:
         <span className="rm-th" style={{ paddingLeft: 10 }}>
           Date
         </span>
-        {view.metrics.map((m) => (
-          <span key={m.id} className="rm-th">
-            {m.name}
-            <em style={{ color: m.colour }}>
-              {m.categoryLabel}
-              {m.unit ? ` · ${m.unit}` : ""}
-            </em>
-          </span>
-        ))}
+        {view.metrics.map((m) => {
+          const s = summary(m);
+          return (
+            <span key={m.id} className="rm-th">
+              <span className="rm-th-top">
+                <span className="rm-th-name">{m.name}</span>
+                {s && (
+                  <span className={`rm-th-sum${s.tone}`}>
+                    {s.label} <b>{s.text}</b>
+                  </span>
+                )}
+              </span>
+              <em style={{ color: m.colour }}>
+                {m.categoryLabel}
+                {m.unit ? ` · ${m.unit}` : ""}
+              </em>
+            </span>
+          );
+        })}
         {view.periods.map((p, i) => (
           <div key={p.key} className="contents">
             <span className={`rm-td date${i === 0 ? " now" : ""}`}>
@@ -1104,15 +1132,6 @@ function CheckinTable({ view, onReply }: { view: LoggedValues; onReply: (period:
             })}
           </div>
         ))}
-        <span className="rm-td date change">Change</span>
-        {view.metrics.map((m) => {
-          const c = change(m);
-          return (
-            <span key={m.id} className={`rm-td change${c ? c.tone : " none"}`}>
-              {c ? c.text : "—"}
-            </span>
-          );
-        })}
       </div>
     </div>
   );

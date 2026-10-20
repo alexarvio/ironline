@@ -61,7 +61,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - Row actions in general show on hover only.
 - Table heads: white, small caps, no line between a row's head and its column heads, hairlines between rows.
 - Status pills: hairline capsules. Completed green, In progress ink, Not started grey, and Not started only on the current week and past weeks, never on weeks still to come.
-- A summary lives in the column head (`ENJOYMENT  AVG 8`), never as a fake row of data.
+- A summary lives in the column head (`ENJOYMENT  AVG 8`), never as a fake row of data. The Lifestyle check-ins table too (21 Oct, Alex): each metric's head says `CHANGE +1.2 (+2%)` (weight, body fat, measurements: the unit kg, %, cm decides) or `AVG 7.4` (sleep, resting HR, steps, water, /10 scales); the coach switches it in the metric's ··· menu.
 - A change from → to: two columns, the old value struck through in grey, the new one in the track's accent. No arrows.
 - NOW on the week rail: the word in black with a green pulse on its left. No pill.
 - NOW on a timeline (Plan, Events): an ink line with a black dot on top that pulses (20 Oct, Alex).

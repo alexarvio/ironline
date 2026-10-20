@@ -711,6 +711,9 @@ type MetricDefinition = {
   // day (steps), or the evening (energy). Absent: guessed from the name
   // (metricAskAt), 28 Sep.
   ask_at?: MetricAskAt;
+  // What sums it up on the coach's check-ins table: the change over the days
+  // shown, or their average (21 Oct). Absent: the unit decides (metricSummary).
+  summary?: "change" | "average";
   // The lifestyle phase that asks for this metric. Absent on everything
   // written before phases owned metrics: those are the client's standing
   // set, asked for whatever phase is running, so nothing was lost when this

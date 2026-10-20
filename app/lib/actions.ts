@@ -311,6 +311,7 @@ import {
   setCoachNote,
   setMetricDirection,
   setMetricAskAt,
+  setMetricSummary,
   setWarmupSets,
   setClientProgramNote,
   searchFoods,
@@ -968,6 +969,16 @@ export async function addMetricsFromLibraryAction(formData: FormData) {
  * The tracked-metrics draft, applied in one go (MetricsPending): removals,
  * daily / weekly switches, then what was added. True when it landed.
  */
+// What sums a metric up on the coach's check-ins table, change or average
+// (21 Oct): the coach's view only, so the client hears nothing of it.
+export async function setMetricSummaryAction(id: number, summary: "change" | "average"): Promise<boolean> {
+  if (!Number.isInteger(id) || (summary !== "change" && summary !== "average")) return false;
+  if (!(await coachForClient(clientIdForMetricDefinition(id)))) return false;
+  setMetricSummary(id, summary);
+  revalidatePath("/admin");
+  return true;
+}
+
 export async function applyMetricChangesAction(input: {
   clientId: number;
   phaseId: number | null;

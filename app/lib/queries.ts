@@ -15,6 +15,7 @@ import { countryOf, invoicingFor } from "./countries";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 import { metricAskAt, metricFromWorkout } from "./metricAskAt";
+import { metricSummary, type MetricSummary } from "./metricSummary";
 import { DEFAULT_WORKOUT_QUESTIONS, MAX_QUESTION_LENGTH, MAX_WORKOUT_QUESTIONS } from "./workoutQuestions";
 import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
@@ -11954,6 +11955,8 @@ export type LoggedMetric = {
   /** The category's own colour, for the column head. */
   colour: string;
   goodDirection: "up" | "down" | "none";
+  /** What sums it up in its column head (21 Oct): its change over the days shown, or their average. */
+  summary: MetricSummary;
 };
 export type LoggedPeriod = { key: string; label: string };
 export type LoggedValues = {
@@ -11992,6 +11995,7 @@ export function getLoggedValues(
       categoryLabel: g.label,
       colour: colourOfGroup(g.key),
       goodDirection: m.good_direction ?? "none",
+      summary: metricSummary(m),
     };
   });
 
@@ -12069,6 +12073,14 @@ export function setMetricAskAt(id: number, askAt: MetricAskAt) {
   const m = getData().metric_definitions.find((x) => x.id === id);
   if (!m) return;
   m.ask_at = askAt;
+  persist();
+}
+
+/** The coach's pick of what sums a metric up on the check-ins table (21 Oct): its change or its average. */
+export function setMetricSummary(id: number, summary: "change" | "average") {
+  const m = getData().metric_definitions.find((x) => x.id === id);
+  if (!m) return;
+  m.summary = summary;
   persist();
 }
 
