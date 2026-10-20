@@ -1062,12 +1062,14 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
   );
 }
 
-/** A finished drag waits here: the dates as they were and as they will be. */
+/** A finished drag waits here: the dates as they were and as they will be. In the hairline style
+ *  (21 Oct, Alex) with the track's colour: its name in a tinted capsule, the new dates in its ink;
+ *  a draft keeps its peach state chip. */
 function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: PlanPhaseRow; start: string; end: string; today: string; onCancel: () => void; onSave: () => void }) {
   const isDraft = p.draft || p.program?.status === "draft";
   const state = phaseStateOf({ draft: isDraft, startWeek: start, endWeek: end, today });
   const chrome = phaseChrome(p.track, state);
-  const wasLive = phaseStateOf({ draft: isDraft, startWeek: p.start_week, endWeek: p.end_week, today }) === "live";
+  const ink = TRACK_PALETTE[p.track].ink;
   const last = (monday: string) => fmtDay(addDays(monday, 6));
   const rows = [
     { label: "Start", was: fmtDay(p.start_week), now: fmtDay(start) },
@@ -1075,41 +1077,42 @@ function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: 
     { label: "Length", was: phaseLengthLabel(p.start_week, p.end_week), now: phaseLengthLabel(start, end) },
   ];
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>
-          <span className="rq-title-row">
-            Move {p.name}
-            <span className="rq-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
-              {STATE_LABEL[state]}
-            </span>
-          </span>
-        </DialogTitle>
-        <DialogDescription>{p.program ? "The training programme moves with it." : `${TRACK_LABEL[p.track]} phase.`}</DialogDescription>
-      </DialogHeader>
-      <div className="rd-rows">
+    <DialogContent className="dlh mvd" style={{ "--mv": ink, "--mv-rgb": rgbOf(ink) } as React.CSSProperties}>
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Move {p.name}</DialogTitle>
+        <button type="button" className="dlh-x" onClick={onCancel} aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <DialogDescription className="mvd-tags">
+        <span className="mvd-track">
+          <TrackIcon track={p.track} size={12} />
+          {TRACK_LABEL[p.track]}
+        </span>
+        <span className="mvd-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
+          {STATE_LABEL[state]}
+        </span>
+      </DialogDescription>
+      <div className="mvd-rows">
         {rows.map((r) => (
-          <div key={r.label} className="rd-row">
-            <div className="rd-row-main static" style={{ gridTemplateColumns: "80px minmax(0, 1fr) 20px minmax(0, 1fr)", columnGap: 12 }}>
-              <span className="rd-cols" style={{ padding: 0 }}>
-                {r.label}
-              </span>
-              <span className={`rd-num${r.was === r.now ? "" : " quiet"}`}>{r.was}</span>
-              <span className="rd-num quiet">{r.was === r.now ? "" : "→"}</span>
-              <span className="rd-num">{r.was === r.now ? "" : r.now}</span>
-            </div>
+          <div key={r.label} className="mvd-row">
+            <span className="mvd-label">{r.label}</span>
+            <span className="mvd-was">{r.was}</span>
+            <span className="mvd-arrow" aria-hidden="true">
+              {r.was === r.now ? "" : "→"}
+            </span>
+            <span className="mvd-now">{r.was === r.now ? "" : r.now}</span>
           </div>
         ))}
       </div>
-      <DialogFooter>
-        <span className="rd-dlg-hint grow">{wasLive ? "This phase is live: the client's app changes as soon as you save." : ""}</span>
-        <button type="button" className="rd-btn" onClick={onCancel}>
+      <div className="dlh-foot">
+        <button type="button" className="dlh-cancel" onClick={onCancel}>
           Cancel
         </button>
-        <button type="button" className="rd-btn primary" onClick={onSave} autoFocus>
+        <button type="button" className="dlh-go" onClick={onSave} autoFocus>
           Save new dates
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }
