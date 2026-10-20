@@ -1038,8 +1038,11 @@ function CreateMetric({ groups, initial, taken, onCreate, onCancel }: { groups: 
   return (
     <div className="rd-addpop-create" onKeyDown={(e) => (e.key === "Escape" ? onCancel() : e.key === "Enter" && ok ? onCreate(name.trim(), unit.trim(), group) : null)}>
       <span className="rd-addpop-label">New metric</span>
+      {/* The name on a line of its own (21 Oct, Alex: it was squeezed by the unit and group beside it). */}
       <div className="rd-addpop-row">
         <input ref={first} value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" maxLength={60} aria-label="Metric" />
+      </div>
+      <div className="rd-addpop-row">
         <input className="unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit" maxLength={12} aria-label="Unit" />
         <Picker value={group} onChange={setGroup} label="Group" options={groups.map((g) => ({ value: g.key, label: g.label }))} />
       </div>
