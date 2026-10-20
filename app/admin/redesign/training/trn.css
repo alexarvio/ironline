@@ -181,6 +181,9 @@
 .rd.trn .trn-allsaved.failed { color: #b42318; }
 .rd.trn .trn-allsaved.failed::before { content: none; }
 .rd.trn .trn-allsaved.failed button { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: inherit; text-decoration: underline; cursor: pointer; }
+/* In the title's row, after the state tag (21 Oct, Alex): no divider before it, the facts' size, not the title's. */
+.rd.trn .trn-name-row .trn-allsaved { margin-left: 0; padding-left: 0; font-size: 13px; line-height: 1; white-space: nowrap; }
+.rd.trn .trn-name-row .trn-allsaved::after { display: none; }
 /* A row just added, until the server gives it its number. */
 .rd.trn .rd-row.trn-landing { opacity: 0.55; pointer-events: none; }
 

@@ -781,6 +781,19 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             ) : (
               <span className={`trn-status ${program.status}`} style={stateTagStyle(program.status)}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
             )}
+            {/* Every change saves itself (20 Oct); the status sits beside the title and its tag (21 Oct, Alex), as on Lifestyle and Nutrition. */}
+            {weekFailed ? (
+              <span className="trn-allsaved failed" role="alert">
+                Not saved ·{" "}
+                <button type="button" onClick={retry}>
+                  Retry
+                </button>
+              </span>
+            ) : (
+              <span className={`trn-allsaved${weekSaving ? " saving" : ""}`} role="status">
+                {weekSaving ? "Saving…" : "All changes saved"}
+              </span>
+            )}
           </div>
           {/* The facts parted by a short upright line, not a dot (21 Oct, Alex); the dates last. */}
           <span className="trn-meta">
@@ -860,19 +873,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           <span>
             {/* No date here (20 Oct, Alex): the week rail above already dates every week. */}
             {week.trained.filter(Boolean).length} of {week.trained.length} sessions done
-            {/* Every change saves itself (20 Oct): the week says so. */}
-            {weekFailed ? (
-              <span className="trn-allsaved failed" role="alert">
-                Not saved ·{" "}
-                <button type="button" onClick={retry}>
-                  Retry
-                </button>
-              </span>
-            ) : (
-              <span className={`trn-allsaved${weekSaving ? " saving" : ""}`} role="status">
-                {weekSaving ? "Saving…" : "All changes saved"}
-              </span>
-            )}
           </span>
         </div>
         <div className="trn-weekhead-actions">

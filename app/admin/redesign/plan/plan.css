@@ -252,3 +252,9 @@
 .rq-evbar.dragging, .rq-pin.dragging { cursor: grabbing; opacity: 0.85; z-index: 4; }
 .rq-evbar.dragging { box-shadow: 0 8px 24px -12px rgba(16, 24, 40, 0.35); }
 .rq-evbar .rq-bar-edge { width: 8px; }
+
+/* The save status beside the title (21 Oct, Alex), as Training's: green with a tick, grey while saving. */
+.rd.pln .rd-title .pln-allsaved { font-size: 13px; font-weight: 500; line-height: 1; letter-spacing: 0; white-space: nowrap; color: #2f7a3f; }
+.rd.pln .rd-title .pln-allsaved::before { content: "✓ "; }
+.rd.pln .rd-title .pln-allsaved.saving { color: #8b93a1; }
+.rd.pln .rd-title .pln-allsaved.saving::before { content: none; }

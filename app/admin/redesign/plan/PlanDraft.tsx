@@ -151,7 +151,9 @@ type Dlg = { kind: "phase"; phase: PlanPhaseRow | null; track?: PhaseTrack; /** 
 export default function PlanDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftPlan }) {
   const { today, thisWeek, intoWeek } = plan;
   const router = useRouter();
-  const [, start] = useTransition();
+  const [planSaving, start] = useTransition();
+  // The Events card's saves too, for the one status beside the title (21 Oct, Alex).
+  const [eventsSaving, setEventsSaving] = useState(false);
   // Every save goes to the server, then the page re-reads; what is on screen
   // is a working copy that follows the server's answer.
   const act = (fn: () => Promise<unknown>, said?: string) =>
@@ -306,7 +308,13 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
       <header className="rd-head bare">
         <div className="rd-head-main">
           <span className="rd-eyebrow">Plan</span>
-          <h1 className="rd-title">{firstName}&rsquo;s plan</h1>
+          <h1 className="rd-title">
+            {firstName}&rsquo;s plan
+            {/* Every change saves as it is made; the status beside the title (21 Oct, Alex), as on Training, Lifestyle and Nutrition. */}
+            <span className={`pln-allsaved${planSaving || eventsSaving ? " saving" : ""}`} role="status">
+              {planSaving || eventsSaving ? "Saving…" : "All changes saved"}
+            </span>
+          </h1>
         </div>
       </header>
 
@@ -483,7 +491,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
       </section>
 
       {/* ---- Events: life around the plan, on the same weeks. */}
-      <EventsCard clientId={clientId} events={plan.events} categories={plan.eventCategories} today={today} thisWeek={thisWeek} intoWeek={intoWeek} windows={WINDOWS} />
+      <EventsCard clientId={clientId} events={plan.events} categories={plan.eventCategories} today={today} thisWeek={thisWeek} intoWeek={intoWeek} windows={WINDOWS} onSaving={setEventsSaving} />
 
       {/* ---- Goals: off the Plan tab for now (20 Oct, Alex); the code stays for when they come back. */}
       {SHOW_GOALS && (

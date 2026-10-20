@@ -409,6 +409,20 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                   {plan.status === "past" ? "Ended" : stateLabel(plan.status)}
                 </span>
               ))}
+            {/* Every change saves itself (21 Oct); the status beside the title and its tag (Alex), as on Training and Nutrition. */}
+            {phaseId != null &&
+              (failed ? (
+                <span className="trn-allsaved failed" role="alert">
+                  Not saved ·{" "}
+                  <button type="button" onClick={() => void run()}>
+                    Retry
+                  </button>
+                </span>
+              ) : (
+                <span className={`trn-allsaved${saving ? " saving" : ""}`} role="status">
+                  {saving ? "Saving…" : "All changes saved"}
+                </span>
+              ))}
           </div>
           {plan.startDate && (
             // The facts parted by a thin upright line, not a dot (21 Oct, Alex), as the metrics' line under it.
@@ -466,20 +480,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             <h2>Tracked metrics</h2>
             <span>
               {shown.length} {CAD[cadence].label.toLowerCase()} {shown.length === 1 ? "metric" : "metrics"}
-              {/* Every change saves itself (21 Oct, as Training): the line says so. */}
-              {phaseId != null &&
-                (failed ? (
-                  <span className="trn-allsaved failed" role="alert">
-                    Not saved ·{" "}
-                    <button type="button" onClick={() => void run()}>
-                      Retry
-                    </button>
-                  </span>
-                ) : (
-                  <span className={`trn-allsaved${saving ? " saving" : ""}`} role="status">
-                    {saving ? "Saving…" : "All changes saved"}
-                  </span>
-                ))}
             </span>
           </div>
           <div className="trn-weekhead-actions">

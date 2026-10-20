@@ -105,10 +105,12 @@ export type EventsCardProps = {
   intoWeek: number;
   /** The 3 / 6 / 9 / 12 month choices. The card keeps its own choice (10 Oct), apart from the phases'. */
   windows: readonly { months: number; weeks: number }[];
+  /** Told when its saves start and end, for the one status beside the plan's title. */
+  onSaving?: (busy: boolean) => void;
 };
 const EV_WIN_KEY = "rq-events-window";
 
-export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows }: EventsCardProps) {
+export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, onSaving }: EventsCardProps) {
   const router = useRouter();
   // What is on screen lives here, so a move or an edit shows the moment it is saved (20 Oct, Alex: a dragged trip
   // jumped back to its old length until the save came back). The page's re-read replaces it whenever its content changes.
@@ -136,7 +138,10 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
     } catch {}
   };
   const { count, weeks, nowIdx, months, cols, nowLeft } = gridFor(win, thisWeek, intoWeek);
-  const [, start] = useTransition();
+  const [busy, start] = useTransition();
+  useEffect(() => {
+    onSaving?.(busy);
+  }, [busy, onSaving]);
   // Every save goes to the server and the page re-reads; the card holds no copy.
   const act = (fn: () => Promise<unknown>, said?: string) =>
     start(async () => {
