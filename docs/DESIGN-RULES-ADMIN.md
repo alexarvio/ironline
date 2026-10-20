@@ -21,7 +21,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - How a track colour appears: a tinted tag (background `rgba(accent, .12)`, text and icon in the accent), a tile's icon, the new value in a change, a calendar range (band `rgba(accent, .10)`, first and last day solid). Never a big filled block.
 - States, via `stateChip()` in `plan/PlanDraft.tsx`: **Live is green** `#2f7a3f` on `rgba(47,122,63,.12)` on every track (never the track's own colour); Scheduled and Draft (peach) keep their `phaseChrome`; Past is grey.
 - A phase's pop-ups show both tags under the title: `[icon Training] [LIVE]`.
-- **Open decision:** lifestyle is beige in the admin, amber `#a8761f` on the client Events screen and `#d98a1c` on the client check-in calendar. Unify once Alex picks.
+- Lifestyle is one beige everywhere, admin and client (21 Oct): `#a08a5c` for marks and text, `#efede6` behind. Never amber, orange or grey for lifestyle. (The Lifestyle tab's metric groups have their own colours in `app/lib/categoryColors.ts`; those are groups of metrics, not the track.)
 
 ## 4. Pop-ups: one pattern
 - Use the `.dlh` card (`training/trn.css`) or, for pop-ups with a calendar, `.npd` (`plan/phase-dialog.css`). Use the existing components before writing a new one: `ConfirmDialog`, `RemoveDialog`, `DeletePhaseDialog`, `DeleteSessionDialog` (training), `MoveDialog`, `PhaseDialog`, `ScheduleDialog`.

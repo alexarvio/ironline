@@ -13016,7 +13016,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 
 .hm-track-tag.nutrition { color: #2E7D32; }
 .hm-track-tag.training  { color: #3a3390; }
-.hm-track-tag.lifestyle { color: #4a4a45; }
+.hm-track-tag.lifestyle { color: #a08a5c; }
 
 /* The cards fold out under the chevron beside the greeting. */
 .hm-phases-fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.42s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s; }
@@ -13072,7 +13072,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 
 .hm-track-left.nutrition { color: #2E7D32; }
 .hm-track-left.training  { color: #3a3390; }
-.hm-track-left.lifestyle { color: #4a4a45; }
+.hm-track-left.lifestyle { color: #a08a5c; }
 
 .hm-track-bar {
   height: 6px;
@@ -13088,7 +13088,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-track-bar-fill { height: 100%; border-radius: 999px; }
 .hm-track-bar.nutrition .hm-track-bar-fill { background: #1d7a70; }
 .hm-track-bar.training .hm-track-bar-fill  { background: #3a3390; }
-.hm-track-bar.lifestyle .hm-track-bar-fill { background: #4a4a45; }
+.hm-track-bar.lifestyle .hm-track-bar-fill { background: #a08a5c; }
 
 
 /* ---- Client: Progress pictures screen (pp-app-*) ----
@@ -16515,7 +16515,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-lt-badge.video svg { width: 10px; height: 10px; }
 .hm-lt-badge.training { background: #7B5CFF; }
 .hm-lt-badge.nutrition { background: #12B76A; }
-.hm-lt-badge.lifestyle { background: #B59A6A; }
+.hm-lt-badge.lifestyle { background: #a08a5c; }
 .hm-lt-badge.checkin { background: #19C3B1; }
 .hm-lt-badge.photos { background: #FF6B6B; }
 .hm-lt-badge.message { background: #00897B; }

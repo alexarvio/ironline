@@ -29,7 +29,7 @@ export const TRACKS: PhaseTrack[] = ["lifestyle", "training", "nutrition"];
 /** The tracks' colours, the Plan tab's (phaseChrome TRACK_PALETTE): a pale tint for a bar, its ink for the words and a line for the edge. */
 /** `solid` fills a pill, a segment, a button: the ink for training and nutrition, a beige for lifestyle (its ink is a grey-brown that read as mud, 14 Oct). */
 export const TRACK_COLOR: Record<PhaseTrack, { c: string; rgb: string; tint: string; line: string; solid: string }> = {
-  lifestyle: { c: "#4a4a45", rgb: "176,154,98", tint: "#efede6", line: "#cfcbbd", solid: "#b09a62" },
+  lifestyle: { c: "#4a4a45", rgb: "160,138,92", tint: "#efede6", line: "#cfcbbd", solid: "#a08a5c" },
   training: { c: "#3a3390", rgb: "58,51,144", tint: "#e6e4fa", line: "#b9b4ec", solid: "#3a3390" },
   nutrition: { c: "#1d7a70", rgb: "29,122,112", tint: "#dff1ef", line: "#9fd3cd", solid: "#1d7a70" },
 };

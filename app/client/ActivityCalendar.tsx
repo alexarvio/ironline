@@ -23,7 +23,7 @@ export type ActivityDay = {
 const PARTS = [
   { id: "training", label: "Training", colour: "#1E3A5F" },
   { id: "nutrition", label: "Nutrition", colour: "#2E7D32" },
-  { id: "lifestyle", label: "Check-ins", colour: "#d98a1c" },
+  { id: "lifestyle", label: "Check-ins", colour: "#a08a5c" },
 ] as const;
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

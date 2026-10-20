@@ -24,7 +24,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 
 ## 4. Colour
 - One colour per category, everywhere (see `app/lib/eventTypes.ts`, `notificationTypes.ts`, `phases/timeline.ts`):
-  training indigo `#3a3390` · nutrition teal `#1d7a70` · lifestyle amber `#a8761f` · trip `#2f5d8f` · supplement `#1f7a4d` · health `#b8471f` · work `#5b6472` · pictures rust `#b8471f` · meeting blue `#2f6fd6`.
+  training indigo `#3a3390` · nutrition teal `#1d7a70` · lifestyle beige `#a08a5c` (tint `#efede6`; 21 Oct: one beige everywhere, not amber or grey) · trip `#2f5d8f` · supplement `#1f7a4d` · health `#b8471f` · work `#5b6472` · pictures rust `#b8471f` · meeting blue `#2f6fd6`.
 - A colour appears as a thin ring, an icon, a label or a 2px line. Never as a filled block behind text.
 - Tints: `rgba(rgb, .12)` at most. Past things go grey (`grayscale(1)`) and fade to 30–45%; future things keep their colour at ~55%; the live or focused one is at 100%.
 

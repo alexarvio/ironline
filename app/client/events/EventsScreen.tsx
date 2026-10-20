@@ -35,7 +35,7 @@ const FLAG = "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"
 const PHASES = {
   training: { label: "Training phase", color: "#3a3390", rgb: "58,51,144", icon: FLAG },
   nutrition: { label: "Nutrition phase", color: "#1d7a70", rgb: "29,122,112", icon: FLAG },
-  lifestyle: { label: "Lifestyle phase", color: "#a8761f", rgb: "168,118,31", icon: FLAG },
+  lifestyle: { label: "Lifestyle phase", color: "#a08a5c", rgb: "160,138,92", icon: FLAG },
 };
 type Chrome = { label: string; color: string; rgb: string; icon: string };
 const chromeOf = (e: HomeEvent): Chrome => {
