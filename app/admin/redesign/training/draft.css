@@ -77,7 +77,8 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 /* The button that opens such a row (its title and chevron): no look of its own, the row's click does the same and the
    ring goes round the whole row (nutrition.css, meetings.css). Controls in the row stay its siblings, never inside it. */
 .rd-row-hit { display: inline-flex; align-items: inherit; gap: inherit; min-width: 0; max-width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-@supports selector(:has(*)) { .rd-row-hit:focus-visible { outline: none; } }
+/* Keyboard focus on a row that opens: its title underlined, quietly (21 Oct, Alex: a ring round the row read as a box). */
+.rd-row-hit:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
 /* The answers feed folded under the workout questionnaire (9 Oct). */
 .rm-answers { margin-top: 10px; padding-top: 6px; border-top: 1px solid #eef1f5; }
 .rm-answers-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 4px 8px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; text-align: left; cursor: pointer; }
