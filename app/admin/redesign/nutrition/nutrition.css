@@ -134,9 +134,9 @@
 .rd.rnt .rn-box.strong .rd-cell-box { font-weight: 600; }
 /* A supplement's fields as clean lines (21 Oct, Alex: the box ran the column's width and past the text's start):
    starting where the text does, as wide as what is typed, a line under it on hover, ink while typing. */
-.rd.rnt .rls-row .rd-cell-box { width: auto; min-width: 9ch; max-width: 100%; height: 30px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; field-sizing: content; }
-.rd.rnt .rls-row .rd-cell-box:hover { border-bottom-color: #e1e5eb; background: none; }
-.rd.rnt .rls-row .rd-cell-box:focus, .rd.rnt .rls-row .rd-cell-box:focus:hover { border-bottom-color: #141a24; background: none; caret-color: #141a24; }
+.rd.rnt .rls-row .rd-cell-box, .rd.rnt .rn-targets .rd-cell-box { width: auto; min-width: 9ch; max-width: 100%; height: 30px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; field-sizing: content; }
+.rd.rnt .rls-row .rd-cell-box:hover, .rd.rnt .rn-targets .rd-cell-box:hover { border-bottom-color: #e1e5eb; background: none; }
+.rd.rnt .rls-row .rd-cell-box:focus, .rd.rnt .rls-row .rd-cell-box:focus:hover, .rd.rnt .rn-targets .rd-cell-box:focus, .rd.rnt .rn-targets .rd-cell-box:focus:hover { border-bottom-color: #141a24; background: none; caret-color: #141a24; }
 /* No tint behind a row being typed in (21 Oct, Alex): the words and their line alone, as the title's rename. */
 .rd.rnt .rls-row:hover { background: none; }
 /* The log's four figures, plain on the card: small caps over the figure, no tinted tiles. */
@@ -162,3 +162,8 @@
 .rd.rnt .rn-meal-name { font-weight: 600; }
 .rd.rnt .rn-said { background: #f5f6f8; }
 .rd.rnt .rn-said b { font-weight: 600; color: #5b6474; }
+.rd.rnt .rn-stats b em { margin-left: 6px; font-size: 13px; font-style: normal; font-weight: 500; letter-spacing: 0; color: #8b93a1; }
+/* The targets' figures as clean lines too (21 Oct, Alex): the unit right after the figure (235 g), no box. */
+.rd.rnt .rn-targets .rn-box { gap: 4px; }
+.rd.rnt .rn-targets .rn-box em { margin-left: 0; }
+.rd.rnt .rn-targets .rd-cell-box { min-width: 3ch; }

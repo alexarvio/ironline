@@ -359,19 +359,19 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
     {
       label: "Days logged",
       value: String(view.days.length),
-      unit: view.windowDays ? `of ${view.windowDays} in this phase` : "in this phase",
+      unit: "",
       warn: view.windowDays > 0 && view.days.length < view.windowDays * 0.6,
     },
     {
       label: "Average intake",
       value: view.avgKcal != null ? n(view.avgKcal) : "–",
-      unit: "kcal a day",
+      unit: "kcal",
     },
     // The three macros' averages, not On target (21 Oct, Alex).
     {
       label: "Average protein",
       value: view.avgProtein != null ? String(view.avgProtein) : "–",
-      unit: proteinTarget ? `g a day · target ${proteinTarget}` : "g a day",
+      unit: "g a day",
       warn: proteinTarget != null && view.avgProtein != null && view.avgProtein < proteinTarget - 20,
     },
     {
@@ -724,8 +724,11 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             {stats.map((s) => (
               <div key={s.label}>
                 <small>{s.label}</small>
-                <b className={s.warn ? "warn" : ""}>{s.value}</b>
-                <span>{s.unit}</span>
+                {/* The unit beside the figure, no line under it (21 Oct, Alex): 3 · 2,956 kcal · 178 g a day. */}
+                <b className={s.warn ? "warn" : ""}>
+                  {s.value}
+                  {s.unit && s.value !== "–" && <em>{s.unit}</em>}
+                </b>
               </div>
             ))}
           </div>
