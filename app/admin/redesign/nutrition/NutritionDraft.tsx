@@ -490,6 +490,18 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                   {plan.status === "past" ? "Ended" : stateLabel(plan.status)}
                 </span>
               ))}
+            {/* One status for the whole tab, beside the title and its tag (21 Oct, Alex): the targets' saves and the supplements'. */}
+            {phaseId != null && (
+              <SaveStatus
+                busy={targetsWaiting || targetsQ.saving || suppWaiting || suppQ.saving}
+                failed={targetsQ.failed || suppQ.failed}
+                onRetry={() => {
+                  if (targetsQ.failed) targetsQ.retry();
+                  if (suppQ.failed) suppQ.retry();
+                }}
+                solo
+              />
+            )}
           </div>
           {plan.startDate && (
             // The facts parted by a short upright line, the dates last (21 Oct, as Lifestyle).
@@ -559,9 +571,6 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
         <div className="trn-weekhead">
           <div>
             <h2>Daily targets</h2>
-            <span>
-              <SaveStatus busy={targetsWaiting || targetsQ.saving} failed={targetsQ.failed} onRetry={targetsQ.retry} solo />
-            </span>
           </div>
           <div className="trn-weekhead-actions">
             {/* Kept in its place when hidden, so the tick beside it never moves. */}
@@ -641,7 +650,6 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             <h2>Supplements</h2>
             <span>
               {named_} {named_ === 1 ? "item" : "items"}
-              <SaveStatus busy={suppWaiting || suppQ.saving} failed={suppQ.failed} onRetry={suppQ.retry} />
             </span>
           </div>
         </div>
