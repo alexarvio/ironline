@@ -1042,7 +1042,7 @@ function CreateMetric({ groups, initial, taken, onCreate, onCancel }: { groups: 
       <div className="rd-addpop-row">
         <input ref={first} value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" maxLength={60} aria-label="Metric" />
       </div>
-      <div className="rd-addpop-row">
+      <div className="rd-addpop-row fill">
         <input className="unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit" maxLength={12} aria-label="Unit" />
         <Picker value={group} onChange={setGroup} label="Group" options={groups.map((g) => ({ value: g.key, label: g.label }))} />
       </div>
