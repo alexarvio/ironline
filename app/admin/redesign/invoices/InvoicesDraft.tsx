@@ -66,7 +66,7 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
 
   return (
     <div className="rd riv">
-      <header className="rd-head">
+      <header className="rd-head bare">
         <div className="rd-head-main">
           <span className="rd-eyebrow">Invoices</span>
           <h1 className="rd-title">{firstName}&rsquo;s invoices</h1>

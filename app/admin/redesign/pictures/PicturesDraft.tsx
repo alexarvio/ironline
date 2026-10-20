@@ -141,7 +141,7 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
   return (
     <div className="rd">
       {/* ---- Header. */}
-      <header className="rd-head">
+      <header className="rd-head bare">
         <div className="rd-head-main">
           <span className="rd-eyebrow">Progress pictures</span>
           <h1 className="rd-title">

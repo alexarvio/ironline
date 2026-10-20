@@ -177,7 +177,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
   return (
     <div className="rd">
       {/* ---- Header. */}
-      <header className="rd-head">
+      <header className="rd-head bare">
         <div className="rd-head-main">
           <span className="rd-eyebrow">Meetings</span>
           <h1 className="rd-title">{firstName}&rsquo;s calls</h1>

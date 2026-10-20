@@ -127,7 +127,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
 
   return (
     <div className="rd rh">
-      <header className="rd-head">
+      <header className="rd-head bare">
         <div className="rd-head-main">
           <span className="rd-eyebrow">Home</span>
           <h1 className="rd-title rh-title">

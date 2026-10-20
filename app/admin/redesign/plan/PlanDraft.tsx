@@ -303,7 +303,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
     // pln: the Plan tab in the admin's hairline language (20 Oct), scoped in plan.css as trn is for Training.
     <div className="rd pln">
       {/* ---- Header. */}
-      <header className="rd-head">
+      <header className="rd-head bare">
         <div className="rd-head-main">
           <span className="rd-eyebrow">Plan</span>
           <h1 className="rd-title">{firstName}&rsquo;s plan</h1>

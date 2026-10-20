@@ -4,7 +4,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 
 ## 1. Voice: facts, no explanations
 - No sentences explaining what a feature is or how it works. No hint lines under fields, no footer hints ("Only you see a draft until it is sent."), no "optional" tags, no info banners.
-- At most one quiet fact line under a title: `3 weeks · 9/11 – 29/11`, `Bar Tricep Pushdown · Upper — push`.
+- At most one quiet fact line under a title: `3 weeks · 9/11 – 29/11`, `Bar Tricep Pushdown · Upper — push`. A tab without one keeps no empty room for it (21 Oct, Alex): `rd-head bare` on Home, Plan, Progress pictures, Meetings and Invoices.
 - A real problem is a short fact plus its fix button: `Overlaps Health, 19 Oct – 15 Nov.` [Start Mon 16 Nov].
 - Buttons say the action, one word when it can: Save, Delete, Remove, Add, Copy, Schedule it. Not "Save new dates", not "Add as copy of Week 1".
 - Empty states are one or two words: `None yet`, `No gyms yet`.
