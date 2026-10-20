@@ -100,8 +100,19 @@ export type EventsCardProps = {
 };
 const EV_WIN_KEY = "rq-events-window";
 
-export default function EventsCard({ clientId, events, categories: cats, today, thisWeek, intoWeek, windows }: EventsCardProps) {
+export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows }: EventsCardProps) {
   const router = useRouter();
+  // What is on screen lives here, so a move or an edit shows the moment it is saved (20 Oct, Alex: a dragged trip
+  // jumped back to its old length until the save came back). The page's re-read replaces it whenever its content changes.
+  const serverKey = JSON.stringify(serverEvents);
+  const [events, setEvents] = useState(serverEvents);
+  const [seenKey, setSeenKey] = useState(serverKey);
+  if (seenKey !== serverKey) {
+    setSeenKey(serverKey);
+    setEvents(serverEvents);
+  }
+  // Over and done (20 Oct, Alex: a past event isn't editable any more): ended before today; a repeat only once its last day has gone.
+  const isPast = (e: PlanEvent) => (e.repeat ? e.repeat.until != null && e.repeat.until < today : e.end < today);
   // Its own window, remembered in the browser; the server renders 3 months and the saved choice follows after the first paint.
   const [win, setWinState] = useState(windows[0]?.weeks ?? 13);
   useEffect(() => {
@@ -322,7 +333,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                 <div className="rq-tl-label">
                   <span className="rq-track">
                     <span className="rq-track-ic" style={{ color: g.chrome.ink }}>
-                      <KindIcon id={g.id} size={14} />
+                      <KindIcon id={g.id} size={16} />
                     </span>
                     {g.chrome.label}
                   </span>
@@ -336,7 +347,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                       const p = place(e);
                       const k = chromeOf(cats, e.kind);
                       const single = e.start === e.end;
-                      const past = e.end < today;
+                      const past = isPast(e);
                       const lane = laneOf.get(e.id) ?? 0;
                       const shown = { ...e, ...live(e) };
                       const dragging = drag?.id === e.id;
@@ -345,7 +356,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                         setDlg({ event: e });
                       };
                       return single ? (
-                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }} onPointerDown={(ev) => beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${dayMonth(e.start)} · ${standing(today, e)}`}>
+                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }} onPointerDown={(ev) => !past && beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${dayMonth(e.start)} · ${standing(today, e)}`}>
                           <i style={{ background: k.ink }} />
                           <span className="rq-pin-text">
                             <b>{e.title}</b>
@@ -361,14 +372,15 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                           className={`rq-evbar${past ? " past" : ""}${dragging ? " dragging" : ""}`}
                           style={{ left: `${p.left}%`, width: `${p.width}%`, top: `${6 + lane * 40}px`, background: k.tint, color: k.ink, borderColor: k.line }}
                           onPointerDown={(ev) => {
-                            if ((ev.target as HTMLElement).closest(".rq-bar-edge")) return;
+                            if (past || (ev.target as HTMLElement).closest(".rq-bar-edge")) return;
                             beginDrag(ev, e, "move");
                           }}
                           onClick={open}
                           title={`${e.title} · ${e.repeat ? `${repeatWords(e.repeat, { until: false })} · ` : ""}${dayMonth(e.start)} → ${e.repeat && !e.repeat.until ? "no end" : dayMonth(e.end)} · ${standing(today, e)}`}
                         >
-                          <span className="rq-bar-edge left" onPointerDown={(ev) => beginDrag(ev, e, "start")} onClick={(ev) => ev.stopPropagation()} />
-                          <span className="rq-bar-edge right" onPointerDown={(ev) => beginDrag(ev, e, "end")} onClick={(ev) => ev.stopPropagation()} />
+                          {/* A past one has no handles: it can't be moved or stretched. */}
+                          {!past && <span className="rq-bar-edge left" onPointerDown={(ev) => beginDrag(ev, e, "start")} onClick={(ev) => ev.stopPropagation()} />}
+                          {!past && <span className="rq-bar-edge right" onPointerDown={(ev) => beginDrag(ev, e, "end")} onClick={(ev) => ev.stopPropagation()} />}
                           <b>{e.title}</b>
                           <small>
                             {/* Repeating (19 Oct): the days it comes back on, not a length. */}
@@ -457,6 +469,8 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
             onSave={() => {
               const e = events.find((x) => x.id === moveDlg.id)!;
               const { start, end } = moveDlg;
+              // On screen at its new dates at once; the save follows (20 Oct, Alex: it jumped back for a second).
+              setEvents((prev) => prev.map((x) => (x.id === e.id ? { ...x, start, end } : x)));
               setMoveDlg(null);
               act(() => updateClientEventAction(clientId, e.id, { kind: e.kind, title: e.title, start, end, note: e.note }), `${e.title}: ${start === end ? dayMonth(start) : `${dayMonth(start)} → ${dayMonth(end)}`}`);
             }}
@@ -472,13 +486,17 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
             cats={cats}
             initialStart={dlg.start}
             initialKind={dlg.kind}
+            readOnly={!!dlg.event && isPast(dlg.event)}
             onSave={(v) => {
               const was = dlg.event;
+              // An edit shows at once, as a move does; a new one comes with the page's re-read (it needs its id).
+              if (was) setEvents((prev) => prev.map((x) => (x.id === was.id ? { ...x, ...v } : x)));
               setDlg(null);
               act(() => (was ? updateClientEventAction(clientId, was.id, v) : addClientEventAction(clientId, v)), `Event: ${v.title}`);
             }}
             onDelete={() => {
               const was = dlg.event!;
+              setEvents((prev) => prev.filter((x) => x.id !== was.id));
               setDlg(null);
               act(() => deleteClientEventAction(clientId, was.id), "Event removed");
             }}
@@ -491,7 +509,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
 
 // ---- One event: what kind, what to call it, a moment or a stretch, and a note.
 /** Also opened from the Phases overview (14 Oct), on the day clicked there. */
-export function EventDialog({ today, event, cats, initialStart, initialKind, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; /** A new event opens on this day. */ initialStart?: string; /** A new event from a lane: that lane's kind (null for "Event"). */ initialKind?: string | null; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
+export function EventDialog({ today, event, cats, initialStart, initialKind, readOnly = false, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; /** A new event opens on this day. */ initialStart?: string; /** A new event from a lane: that lane's kind (null for "Event"). */ initialKind?: string | null; /** A past event: shown, not changed (20 Oct, Alex). */ readOnly?: boolean; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
   // The six types the client's sheet has (10 Oct); the coach's own categories went, so both sides speak the same six.
   // A new event starts on Trip, the first tile (14 Oct), or on the kind of the lane it was clicked on (20 Oct).
   const [kind, setKind] = useState<string | null>(event ? event.kind : initialKind !== undefined ? initialKind : "trip");
@@ -605,8 +623,11 @@ export function EventDialog({ today, event, cats, initialStart, initialKind, onS
           {k.label}
         </span>
         {event?.byClient && <span className="npd-from">From client</span>}
+        {readOnly && <span className="npd-from">Past</span>}
       </DialogDescription>
 
+      {/* A past event is shown as it was and can't be changed (20 Oct, Alex): every field below is disabled. */}
+      <fieldset className="npd-ro" disabled={readOnly}>
       <div className="npd-field">
         <span className="npd-label">Category</span>
         <div className="npd-tiles four" role="radiogroup" aria-label="Category">
@@ -693,17 +714,24 @@ export function EventDialog({ today, event, cats, initialStart, initialKind, onS
           </label>
         </div>
       </div>
+      </fieldset>
 
       <div className="npd-foot">
-        {event && (
-          <button type="button" className="npd-delete" onClick={() => setConfirming(true)}>
-            Delete
-          </button>
+        {readOnly ? (
+          <DialogClose className="npd-cancel">Close</DialogClose>
+        ) : (
+          <>
+            {event && (
+              <button type="button" className="npd-delete" onClick={() => setConfirming(true)}>
+                Delete
+              </button>
+            )}
+            <DialogClose className="npd-cancel">Cancel</DialogClose>
+            <button type="button" className="npd-save" disabled={!ok} onClick={() => onSave({ kind, title: title.trim(), start, end: shape === "event" ? start : shape === "repeat" ? until ?? start : end, note: note.trim(), repeat: shape === "repeat" ? { days, until } : null })}>
+              {event ? "Save" : "Add"}
+            </button>
+          </>
         )}
-        <DialogClose className="npd-cancel">Cancel</DialogClose>
-        <button type="button" className="npd-save" disabled={!ok} onClick={() => onSave({ kind, title: title.trim(), start, end: shape === "event" ? start : shape === "repeat" ? until ?? start : end, note: note.trim(), repeat: shape === "repeat" ? { days, until } : null })}>
-          {event ? "Save" : "Add"}
-        </button>
       </div>
     </DialogContent>
   );

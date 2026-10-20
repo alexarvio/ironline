@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import type { PhaseTrack } from "../../../lib/db";
 import { stateTagStyle, TRACK_LABEL } from "../../phaseChrome";
+import { TRAINING_ICON } from "../../../lib/eventTypes";
 import type { OverviewClient } from "./load";
 import { daysBetween, daysLeft, nextOnTrack, phaseState, phaseStatus, prevOnTrack, dayMonth, TRACK_COLOR, weekIndexOf, weekSegments, weeksOf, type OverviewPhase, type PhaseState } from "./timeline";
 
@@ -18,7 +19,7 @@ import { daysBetween, daysLeft, nextOnTrack, phaseState, phaseStatus, prevOnTrac
 
 const TRACK_ICON: Record<PhaseTrack, string> = {
   lifestyle: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z",
-  training: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11",
+  training: TRAINING_ICON,
   nutrition: "M5 19c0-8 6-14 14-14 0 8-6 14-14 14zM5 19l7-7",
 };
 const first = (name: string) => name.split(" ")[0];

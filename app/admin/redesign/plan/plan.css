@@ -95,9 +95,11 @@
 /* Lane labels: the track's (or event kind's) icon in its colour, the name in ink; no tinted pill. */
 .rd.pln .rq-track { gap: 7px; height: auto; padding: 0; border-radius: 0; background: none; font-size: 12.5px; font-weight: 600; color: #141a24; }
 .rd.pln .rq-track-ic { display: inline-flex; }
-/* Quieter bars: the tint says the track, the pill the state; only a draft keeps its dashed edge. */
-.rd.pln .rq-bar:not(.is-draft) { border-color: transparent !important; }
+/* A phase's outline in the colour it is now (20 Oct, Alex): its track while live, blue while scheduled, at half strength
+   (set inline from phaseChrome); a draft keeps its dashed peach edge. Event bars stay quiet until pointed at. */
 .rd.pln .rq-evbar:not(:hover):not(.dragging) { border-color: transparent !important; }
+/* A past event opens to be read, it doesn't drag (20 Oct, Alex). */
+.rd.pln .rq-evbar.past, .rd.pln .rq-pin.past, .rd.pln .rq-pin.past i { cursor: pointer; }
 /* A phase with nothing in it yet (20 Oct, Alex): the warn rust sign before the state pill, the message floating over on hover. */
 .rd.pln .rq-gap { position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; color: #b8471f; cursor: default; }
 .rd.pln .rq-gap:hover, .rd.pln .rq-gap:focus-visible { outline: none; background: rgba(184, 71, 31, 0.1); }

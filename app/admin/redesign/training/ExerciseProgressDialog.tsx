@@ -4,6 +4,7 @@ import { useId, useMemo, useState } from "react";
 import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { dayMonth } from "../../../lib/dayMonth";
 import { judge, nudgeFor, repRange, rowStatus, setStatus, tipFor, type Session, type Verdict } from "../../../lib/progressRules";
+import { TRAINING_ICON } from "../../../lib/eventTypes";
 
 // An exercise's progress (15 Oct), for the coach: one glance at whether the
 // client is progressing, stalling or dropping, and why, with real numbers.
@@ -12,7 +13,7 @@ import { judge, nudgeFor, repRange, rowStatus, setStatus, tipFor, type Session, 
 // line, and the sessions as rows with their sets against the rep range.
 // The maths lives in lib/progressRules.ts.
 
-const DUMBBELL = "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11";
+const DUMBBELL = TRAINING_ICON;
 const VERDICT: Record<Verdict, { label: string; c: string; rgb: string; bg: string; icon: string }> = {
   progressing: { label: "Progressing", c: "#2f7a3f", rgb: "47,122,63", bg: "#F2F8F4", icon: "M5 16l5-5 4 4 5-7" },
   stalling: { label: "Stalling", c: "#a8761f", rgb: "168,118,31", bg: "#FBF6EC", icon: "M5 12h14" },

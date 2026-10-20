@@ -13,6 +13,7 @@ import DatePick from "../DatePick";
 import { paletteOf, type Category } from "../palette";
 import type { CalEntry } from "./CalendarDay";
 import { dayMonth } from "../../../lib/dayMonth";
+import { TRAINING_ICON } from "../../../lib/eventTypes";
 
 // The Calendar's entry pop-up (14 Oct): the New event and New phase
 // dialogs' language. A glow and a title pill in the category's colour,
@@ -26,7 +27,7 @@ export type Open = { entry: CalEntry | null; date: string; time: string };
 
 const PRESET: Record<string, { icon: string; placeholder: string; length: number }> = {
   call: { icon: "M3 7h12v10H3zM15 10.5l6-3.5v10l-6-3.5", placeholder: "e.g. Week 1 check-in", length: 30 },
-  training: { icon: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11", placeholder: "e.g. Session with Mattia", length: 60 },
+  training: { icon: TRAINING_ICON, placeholder: "e.g. Session with Mattia", length: 60 },
   admin: { icon: "M6 3h12v18H6zM9 8h6M9 12h6M9 16h4", placeholder: "e.g. Write programmes", length: 60 },
   personal: { icon: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", placeholder: "e.g. Gym, lunch, school run", length: 60 },
   content: { icon: "M4 8h3.5l2-3h5l2 3H20v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z", placeholder: "e.g. Film the week's reels", length: 60 },

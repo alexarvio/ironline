@@ -11,6 +11,7 @@ import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
+import { TRAINING_ICON } from "../../../lib/eventTypes";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { GoalEditorOptions, PlanGoalRow, PlanPhaseRow, PlanProgramOption } from "../../../lib/queries";
 import type { GoalTracking } from "../../../lib/goalView";
@@ -118,7 +119,7 @@ const TRACKS: { id: PhaseTrack; label: string }[] = [
 // New event sheet: an icon on a tinted tile, the chosen one filled.
 const TRACK_ICON: Record<PhaseTrack, string> = {
   nutrition: "M15.5 8.5c2.8 0 4.5 2.4 4.5 5.5 0 4-2.7 7.5-5.5 7.5-1 0-1.5-.5-2.5-.5s-1.5.5-2.5.5c-2.8 0-5.5-3.5-5.5-7.5 0-3.1 1.9-5.5 4.7-5.5 1.3 0 2.1.6 3.3.6s1.9-.6 3.5-.6ZM12 8.5V6a2.2 2.2 0 0 1 2-2.2",
-  training: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11",
+  training: TRAINING_ICON,
   lifestyle: "M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z",
 };
 const rgbOf = (hex: string) => {
@@ -402,7 +403,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                       {/* The track's icon in its colour, its name in ink (20 Oct, Alex): no tinted pill. */}
                       <span className="rq-track">
                         <span className="rq-track-ic" style={{ color: TRACK_ACCENT[t.id] }}>
-                          <TrackIcon track={t.id} size={14} />
+                          <TrackIcon track={t.id} size={16} />
                         </span>
                         {t.label}
                       </span>
@@ -443,7 +444,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                             <div
                               key={p.id}
                               className={`rq-bar is-${state}${trained ? " fixed" : ""}${sp.clippedStart ? " clip-start" : ""}${sp.clippedEnd ? " clip-end" : ""}${drag?.id === p.id ? " dragging" : ""}`}
-                              style={{ gridColumn: `${sp.a + 1} / span ${shownW}`, gridRow: (laneOf.get(p.id) ?? 0) + 1, paddingLeft: `calc(14px + ${(Math.max(0, shift - sp.a) / shownW) * 100}%)`, background: chrome.band, color: chrome.edge, borderColor: chrome.line, borderStyle: chrome.dashed ? "dashed" : "solid" }}
+                              style={{ gridColumn: `${sp.a + 1} / span ${shownW}`, gridRow: (laneOf.get(p.id) ?? 0) + 1, paddingLeft: `calc(14px + ${(Math.max(0, shift - sp.a) / shownW) * 100}%)`, background: chrome.band, color: chrome.edge, borderColor: chrome.dashed ? chrome.line : `rgba(${rgbOf(chrome.edge)}, 0.5)`, borderStyle: chrome.dashed ? "dashed" : "solid" }}
                               onPointerDown={(e) => {
                                 if ((e.target as HTMLElement).closest(".rq-bar-edge")) return;
                                 if (trained) return;

@@ -5,7 +5,7 @@
 // Reminders (check-ins due, pictures due) are not notifications: they live
 // on Home and go out as pushes, never into this list.
 
-import { EVENT_TYPES, eventTypeOf, type EventTypeId } from "./eventTypes";
+import { EVENT_TYPES, eventTypeOf, TRAINING_ICON, type EventTypeId } from "./eventTypes";
 
 export type NotificationCategory =
   | "meeting_booked"
@@ -31,7 +31,7 @@ export type NotificationType = { label: string; color: string; rgb: string; icon
 const ICON = {
   video: "M3 7h12v10H3zM15 10.5l6-3.5v10l-6-3.5",
   play: "M8 5v14l11-7z",
-  dumbbell: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11",
+  dumbbell: TRAINING_ICON,
   chat: "M4 5h16v11H9l-5 4z",
   notes: "M6 3h12v18H6zM9 8h6M9 12h6M9 16h4",
   upload: "M12 16V5M7 10l5-5 5 5M5 19h14",
