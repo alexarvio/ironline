@@ -139,6 +139,8 @@ const WINDOWS = [
 ] as const;
 type Win = (typeof WINDOWS)[number]["weeks"];
 const WIN_KEY = "rq-plan-window";
+/** The Goals card is off the Plan tab for now (20 Oct, Alex). True brings it back as it was. */
+const SHOW_GOALS = false;
 const KIND_LABEL: Record<PlanGoalRow["kind"], string> = { metric: "Metric", exercise: "Exercise", habit: "Habit", none: "Text" };
 
 type Dlg = { kind: "phase"; phase: PlanPhaseRow | null; track?: PhaseTrack } | { kind: "move"; id: number; start: string; end: string } | { kind: "deletePhase"; id: number } | { kind: "goal"; goal: PlanGoalRow | null } | { kind: "removeGoal"; id: number } | null;
@@ -460,7 +462,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
       {/* ---- Events: life around the plan, on the same weeks. */}
       <EventsCard clientId={clientId} events={plan.events} categories={plan.eventCategories} today={today} thisWeek={thisWeek} intoWeek={intoWeek} windows={WINDOWS} />
 
-      {/* ---- Goals. */}
+      {/* ---- Goals: off the Plan tab for now (20 Oct, Alex); the code stays for when they come back. */}
+      {SHOW_GOALS && (
       <section className="rd-session open rn-card">
         <div className="rn-card-head">
           <h2>Goals</h2>
@@ -583,6 +586,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           )}
         </div>
       </section>
+      )}
 
       {/* ---- Dialogs. One open at a time. */}
       <Dialog open={dlg != null} onOpenChange={(o) => !o && close()}>
