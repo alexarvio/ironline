@@ -12,10 +12,15 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-empty { color: #5b6474; }
 .rd { display: flex; flex-direction: column; gap: 18px; }
 
-.rd-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
-.rd-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+/* One header on every tab (20 Oct, Alex: switching tabs changed the screen's size): the eyebrow 16px, the title 32px, the block at
+   least 76px (room for a fact line), so a tab's first card starts at the same height on Home, Plan, Training, Nutrition and the rest. */
+.rd-eyebrow { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; line-height: 16px; text-transform: uppercase; color: #5b6474; }
+.rd-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; min-height: 76px; }
 .rd-head-main { display: flex; flex-direction: column; gap: 4px; }
-.rd-title { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+.rd-title { display: flex; align-items: center; gap: 12px; height: 32px; margin: 0; font-size: 26px; font-weight: 600; line-height: 32px; letter-spacing: -0.01em; white-space: nowrap; }
+/* 18px from the header to a tab's first card on every tab: Training's page gap is 22 (its rail pulls up 2), Invoices' 16. */
+.rd.trn > .trn-head { margin-bottom: -2px; }
+.rd.riv > .rd-head { margin-bottom: 2px; }
 /* A state tag in the shared state colours (phaseChrome STATE_TAG, 20 Oct): Live green, Scheduled blue, Draft peach, Past grey. */
 .rd-status { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 .rd-status.live { background: #e6efe8; color: #2f7a3f; }

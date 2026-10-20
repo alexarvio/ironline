@@ -1,6 +1,8 @@
 /* The Home draft: what it adds on top of the Training draft's sheet. */
 
 .rh-title { gap: 14px; }
+/* The avatar keeps its size without making the title taller than every other tab's (20 Oct). */
+.rh-title .rh-avatar { margin-block: -6px; }
 .rh-avatar { flex: none; padding: 0; border: 0; cursor: pointer; font: inherit; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 999px; overflow: hidden; background: #e6ecf3; color: #1e3a6e; font-size: 18px; font-weight: 800; }
 .rh-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .rh-avatar:disabled { cursor: default; }

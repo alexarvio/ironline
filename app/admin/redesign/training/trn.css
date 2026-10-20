@@ -41,7 +41,8 @@
 .rd.trn .trn-state.warn { box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.35); color: #b8471f; }
 
 /* ---- Header */
-.rd.trn .trn-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.rd.trn .trn-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; min-height: 76px; }
+.rd.trn .trn-eyebrow { line-height: 16px; }
 .rd.trn .trn-head-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .rd.trn .trn-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--trn-muted); }
 .rd.trn .trn-name-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -223,10 +224,25 @@
 .rd.trn .trn-rg-when { font-size: 13px; font-weight: 500; color: var(--trn-sec); white-space: nowrap; }
 .rd.trn .trn-rg.open > .rd-rows { border-top: 0; }
 
-/* ---- After-workout check: one row (20 Oct, Alex: it wasted space): the title, the questions and + Add; the averages and the answers' fold on the right. */
-.rd.trn .trn-check { padding: 10px 10px 10px 18px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-line); }
-.rd.trn .trn-check-head { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; min-height: 36px; }
-.rd.trn .trn-check-head h2 { margin: 0 2px 0 0; font-size: 14px; font-weight: 600; white-space: nowrap; }
+/* ---- After-workout check: one table (20 Oct, Alex). The head: the title, how many workouts, + Add on the right.
+   Under it the questions are the columns, each head with its average and a ✕ on hover; the latest three workouts, the rest under Show all. */
+.rd.trn .trn-check { padding: 0; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-line); overflow: hidden; }
+.rd.trn .trn-check-head { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px 0 18px; }
+.rd.trn .trn-check-head h2 { margin: 0; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.rd.trn .trn-check-head .trn-q-plus { margin-left: auto; }
+.rd.trn .trn-ans-empty { margin: 0; padding: 0 18px 16px; font-size: 13px; font-weight: 500; color: var(--trn-muted); }
+.rd.trn .trn-ans-q { display: inline-flex; align-items: center; gap: 8px; }
+.rd.trn .trn-ans-qname { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rd.trn .trn-ans-q small { font-size: 10.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--trn-faint); }
+.rd.trn .trn-ans-q.gone { color: var(--trn-faint); }
+.rd.trn .trn-ans-x { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 20px; height: 20px; margin-left: -2px; padding: 0; border: 0; border-radius: 999px; background: none; font-size: 9px; color: var(--trn-muted); cursor: pointer; opacity: 0; transition: opacity 0.12s; }
+.rd.trn .trn-ans-q:hover .trn-ans-x, .rd.trn .trn-ans-x:focus-visible { opacity: 1; }
+.rd.trn .trn-ans-x:hover { background: var(--trn-page); color: var(--trn-ink); }
+.rd.trn .trn-ans-nil { display: flex; font-size: 13px; color: var(--trn-muted); }
+.rd.trn .trn-ans-foot { display: flex; justify-content: center; gap: 4px; border-top: 1px solid var(--trn-line); }
+.rd.trn .trn-ans-more { height: 40px; padding: 0 12px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.rd.trn .trn-ans-more:hover { color: var(--trn-ink); }
+@media (prefers-reduced-motion: reduce) { .rd.trn .trn-ans-x { transition: none; } }
 .rd.trn .trn-qs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; }
 .rd.trn .trn-q { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 4px 0 12px; border-radius: 999px; background: var(--trn-page); box-shadow: inset 0 0 0 1px var(--trn-line); box-sizing: border-box; }
 .rd.trn .trn-q b { font-size: 13px; font-weight: 600; }
@@ -250,30 +266,18 @@
 .rd.trn .trn-q-sugs small { font-size: 12px; font-weight: 500; color: var(--trn-faint); }
 .rd.trn .trn-q-warn { font-size: 12.5px; font-weight: 500; color: #b8471f; }
 
-.rd.trn .trn-ans { margin: 0 -10px -10px -18px; }
-.rd.trn .trn-check.open .trn-ans { margin-top: 8px; }
-.rd.trn .trn-ans-head { display: inline-flex; flex: none; align-items: center; gap: 8px; height: 32px; margin-left: auto; padding: 0 8px 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; color: var(--trn-ink); cursor: pointer; white-space: nowrap; }
-.rd.trn .trn-ans-head:hover { background: var(--trn-page); }
-.rd.trn .trn-ans-head > b { font-weight: 600; }
-.rd.trn .trn-ans-head .trn-chev.open { transform: rotate(90deg); }
-.rd.trn .trn-ans-none { margin-left: auto; padding-right: 8px; font-size: 13px; font-weight: 500; color: var(--trn-muted); white-space: nowrap; }
-.rd.trn .trn-avgs + .trn-ans-head, .rd.trn .trn-avgs + .trn-ans-none { margin-left: 0; }
 .rd.trn .trn-muted { font-size: 13px; font-weight: 500; color: var(--trn-muted); }
-.rd.trn .trn-avgs { display: inline-flex; gap: 22px; margin-left: auto; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; white-space: nowrap; }
-.rd.trn .trn-avgs b { margin-left: 10px; font-weight: 600; color: var(--trn-ink); }
-.rd.trn .trn-ans-empty { margin: 0; padding: 4px 18px 16px; font-size: 13px; color: var(--trn-muted); }
-.rd.trn .trn-ans-scroll { overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
+.rd.trn .trn-ans-scroll { overflow-x: auto; padding-bottom: 0; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
 .rd.trn .trn-ans-row { display: grid; align-items: center; column-gap: 0; min-height: 44px; padding: 0 18px; border-top: 1px solid var(--trn-div); font-size: 13.5px; font-weight: 500; color: var(--trn-body); text-decoration: none; }
 .rd.trn a.trn-ans-row:hover { background: #fafbfd; }
 .rd.trn .trn-ans-row > span { min-width: 0; padding-right: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* As a session's table (20 Oct, Alex): white heads in the same small caps, no line between Answers and them, hairlines between rows. */
 .rd.trn .trn-ans-cols { min-height: 30px; border-top: 0; background: none; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
 .rd.trn .trn-ans-row { border-top-color: var(--trn-line); }
-.rd.trn .trn-ans-avgval { margin-left: 10px; font-style: normal; color: var(--trn-ink); }
+.rd.trn .trn-ans-avgval { flex: none; font-style: normal; color: var(--trn-ink); }
 .rd.trn .trn-ans-session { color: var(--trn-ink); font-weight: 600; }
 .rd.trn .trn-ans-session small { margin-left: 6px; font-weight: 500; color: var(--trn-muted); }
 .rd.trn .trn-ans-val { font-weight: 600; color: var(--trn-ink); }
-.rd.trn .trn-ans-more { display: block; width: 100%; height: 40px; border: 0; border-top: 1px solid var(--trn-div); background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--trn-navy); cursor: pointer; }
 
 @media (max-width: 720px) {
   .rd.trn .trn-pop { right: auto; left: 0; }
