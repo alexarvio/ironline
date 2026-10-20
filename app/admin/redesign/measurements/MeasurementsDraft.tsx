@@ -416,15 +416,16 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <span>
                 {plan.weeks} {plan.weeks === 1 ? "week" : "weeks"}
               </span>
-              <span className="trn-meta-part">
-                {fmtDate(plan.startDate)}
-                {lastDay && ` – ${fmtDate(lastDay)}`}
-              </span>
               {plan.weekIdx != null && (
                 <span className="trn-meta-part">
                   week {plan.weekIdx} of {plan.weeks}
                 </span>
               )}
+              {/* The dates last (21 Oct, Alex). */}
+              <span className="trn-meta-part">
+                {fmtDate(plan.startDate)}
+                {lastDay && ` – ${fmtDate(lastDay)}`}
+              </span>
             </span>
           )}
         </div>
