@@ -277,6 +277,11 @@ export default function AppShell({
       if (settingsContent) setPushView("settings");
       return;
     }
+    // The coach's note on the lifestyle phase (21 Oct) sits at the top of the check-in.
+    if (tab === "checkin") {
+      openCheckIn("daily");
+      return;
+    }
     if (!tabs.some((t) => t.id === tab)) return;
     setScrolled(false);
     setPushView(null);
@@ -352,6 +357,7 @@ export default function AppShell({
           weeklyOpen={checkIn.weeklyOpen}
           monthlyOpen={checkIn.monthlyOpen}
           objectives={checkIn.objectives}
+          coachNote={checkIn.coachNote}
           history={checkIn.history}
           stats={checkIn.stats}
           calendar={checkIn.calendar}

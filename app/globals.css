@@ -4218,6 +4218,13 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nd-coach-name { font-size: 14px; font-weight: 600; color: #333333; }
 .nd-coach-date { margin-left: auto; font-size: 11.5px; color: #9E9E9E; }
 .nd-coach-note { margin: 12px 0 0; font-size: 14px; font-weight: 400; line-height: 1.5; color: #333333; white-space: pre-wrap; }
+/* On the check-in (21 Oct), a hairline screen: no card, the coach and their words on the page. */
+.nd-card.flat { border: 0; border-radius: 0; background: none; }
+.nd-card.flat .nd-coach { padding: 16px 4px 0; }
+.nd-card.flat .nd-avatar { background: #141a24; }
+.nd-card.flat .nd-coach-name { font-weight: 600; color: #141a24; }
+.nd-card.flat .nd-coach-date { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.nd-card.flat .nd-coach-note { margin-top: 10px; font-weight: 500; color: #3a4250; }
 
 /* 5 · Last 7 days */
 .nd-day { display: grid; grid-template-columns: 54px 1fr 66px 62px; align-items: center; gap: 0 8px; min-height: 44px; padding: 12px 16px; box-sizing: border-box; }

@@ -52,7 +52,8 @@
 .rd.trn .trn-name { display: inline-flex; align-items: center; gap: 4px; }
 .rd.trn .trn-name-btn { padding: 0; border: 0; border-bottom: 1px solid transparent; background: none; font: inherit; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; color: var(--trn-ink); text-align: left; cursor: text; }
 .rd.trn .trn-name-btn:hover { border-bottom-color: var(--trn-line); }
-.rd.trn .trn-name-input { max-width: 100%; padding: 0 0 2px; border: 0; border-bottom: 1px solid var(--trn-ink); border-radius: 0; background: none; font: inherit; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; color: var(--trn-ink); outline: none; }
+/* Typing in it keeps the title's height (21 Oct: it grew 2px and the row moved). */
+.rd.trn .trn-name-input { max-width: 100%; height: 32px; padding: 0; border: 0; border-bottom: 1px solid var(--trn-ink); border-radius: 0; background: none; box-sizing: border-box; font: inherit; font-size: 26px; font-weight: 600; line-height: 31px; letter-spacing: -0.01em; color: var(--trn-ink); outline: none; }
 /* The state tag wears its state's colours (stateTagStyle, inline): Live green, Scheduled blue, Draft peach, Past grey (20 Oct, Alex). */
 .rd.trn .trn-status { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
 .rd.trn .trn-status-btn { gap: 4px; border: 0; font-family: inherit; cursor: pointer; }

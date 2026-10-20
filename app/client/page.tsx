@@ -1368,6 +1368,12 @@ export default async function ClientPage({
     weeklyOpen: weeklyCheckInAskedToday(CLIENT_ID, checkInData.sections),
     monthlyOpen: monthlyCheckInAskedToday(CLIENT_ID, checkInData.sections),
     objectives: getCurrentPhase(CLIENT_ID, "lifestyle")?.objectives ?? [],
+    // The coach's note on the lifestyle phase (21 Oct), dated as Training's is.
+    coachNote: (() => {
+      const ph = getCurrentPhase(CLIENT_ID, "lifestyle");
+      const text = ph?.client_note?.trim();
+      return text ? { text, date: ph?.client_note_at ? new Date(ph.client_note_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null } : null;
+    })(),
     history: getCheckInHistory(CLIENT_ID),
     // The hub's streak and month, and everything done, day by day, for its calendar (28 Sep).
     stats: (() => {

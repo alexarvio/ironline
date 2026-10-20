@@ -7,6 +7,7 @@ import FitTitle from "./FitTitle";
 import CheckInProgress, { type CheckInFeedDay, type CheckInHistory } from "./CheckInProgress";
 import CheckInDialog, { buildGroups, dayLabel, type CheckInForm } from "./CheckInDialog";
 import PhaseObjectives from "./PhaseObjectives";
+import CoachCard from "./CoachCard";
 import { useCoachIdentity } from "./CheckInContext";
 import ActivityCalendar, { type ActivityDay } from "./ActivityCalendar";
 
@@ -57,6 +58,8 @@ export type CheckInProps = {
   history: CheckInHistory;
   /** The coach's objectives for the lifestyle phase, as on its Home card. */
   objectives: string[];
+  /** The coach's note on the lifestyle phase (21 Oct), as Training shows its own; null when none. */
+  coachNote?: { text: string; date: string | null } | null;
   /** The hub's strip: check-in streak and workouts this month (active days come from the calendar). */
   stats: { streak: number; workoutsThisMonth: number };
   /** Every day something was done (training, food, check-ins), newest first, for the Calendar view. */
@@ -79,6 +82,7 @@ export default function CheckInScreen({
   monthlyOpen,
   history,
   objectives,
+  coachNote = null,
   stats,
   calendar,
   initialSection,
@@ -93,6 +97,7 @@ export default function CheckInScreen({
   monthlyOpen: boolean;
   history: CheckInHistory;
   objectives: string[];
+  coachNote?: CheckInProps["coachNote"];
   stats: CheckInProps["stats"];
   calendar: ActivityDay[];
   initialSection: string;
@@ -140,6 +145,8 @@ export default function CheckInScreen({
             <FitTitle className="tr-name">Your lifestyle</FitTitle>
           </header>
           <div className="tr-body">
+            {/* The coach's note reaches the client even before anything is asked (21 Oct): "Read it" lands here. */}
+            <CoachCard flat coachName={coachFirst} photoPath={coach?.photoPath ?? null} note={coachNote?.text ?? null} noteDate={coachNote?.date ?? null} />
             <p className="empty-note">Your phase will be deployed soon.</p>
           </div>
         </div>
@@ -217,10 +224,17 @@ export default function CheckInScreen({
           ) : view === "progress" ? (
             <CheckInProgress history={history} today={today} />
           ) : todayRows.length === 0 ? (
-            <p className="ci-empty">Your coach hasn&rsquo;t set up any check-in metrics yet.</p>
+            <>
+              {/* Nothing to fill in today (a weekly-only phase, say): the goals and the coach's note still show (21 Oct). */}
+              <PhaseObjectives coachName={coachFirst} objectives={objectives} variant="line" />
+              <CoachCard flat coachName={coachFirst} photoPath={coach?.photoPath ?? null} note={coachNote?.text ?? null} noteDate={coachNote?.date ?? null} />
+              <p className="ci-empty">Your coach hasn&rsquo;t set up any check-in metrics yet.</p>
+            </>
           ) : (
             <>
               <PhaseObjectives coachName={coachFirst} objectives={objectives} variant="line" />
+              {/* The coach's note on this phase, under the goals, as on Training (21 Oct). */}
+              <CoachCard flat coachName={coachFirst} photoPath={coach?.photoPath ?? null} note={coachNote?.text ?? null} noteDate={coachNote?.date ?? null} />
               {/* Today, as one row: the date, what is still to fill, and the way in. */}
               <section className="ci-feed ci-today" aria-label="Today">
                 <h2 className="ci-feed-title">Today</h2>

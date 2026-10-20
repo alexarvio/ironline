@@ -637,7 +637,6 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
         )}
         {dlg?.kind === "dates" && (
           <PhaseDatesDialog
-            byDay
             title="Dates"
             name={plan.name}
             start={plan.startDate}
@@ -672,7 +671,6 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
         )}
         {dlg?.kind === "deploy" && !startHasCome && (
           <PhaseDatesDialog
-            byDay
             title={`Schedule ${plan.name}`}
             start={plan.startDate}
             end={plan.endDate}

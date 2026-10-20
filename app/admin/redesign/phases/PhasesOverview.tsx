@@ -371,12 +371,12 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
   );
 }
 
-/** Extend: a week or two or four more, or a day picked; a training phase keeps whole weeks. */
+/** Extend: a week or two or four more, or a day picked, to the end of its week (every track runs in whole weeks, 21 Oct). */
 function ExtendMenu({ phase, onPick }: { phase: OverviewPhase; onPick: (endWeek: string) => void }) {
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
   const byWeeks = (n: number) => addDays(phase.endWeek, n * 7);
-  const byDay = (lastDay: string) => (phase.track === "training" ? mondayOf(lastDay) : addDays(lastDay, -6));
+  const byDay = (lastDay: string) => mondayOf(lastDay);
   return (
     <PopoverPrimitive.Root
       open={open}

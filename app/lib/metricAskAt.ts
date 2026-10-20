@@ -21,10 +21,10 @@ export function defaultAskAt(name: string): MetricAskAt {
   return "anytime";
 }
 
-export function metricAskAt(def: { name: string; ask_at?: MetricAskAt | null }): MetricAskAt {
-  // "auto" was an option for a day (28 Sep): read as all day.
-  return ASK_AT.some((a) => a.id === def.ask_at) ? def.ask_at! : defaultAskAt(def.name);
-}
+// Every metric is asked all day (21 Oct, Alex): the coach no longer picks a
+// time of day, and one set to the morning or the evening before reads as all
+// day too. The type and the stored ask_at stay, unused.
+export const metricAskAt: (def: { name: string; ask_at?: MetricAskAt | null }) => MetricAskAt = () => "anytime";
 
 /** The evening's questions open at 17:00; before that the card asks the rest. */
 export const EVENING_FROM = 17;

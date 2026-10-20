@@ -58,10 +58,10 @@ export default function DeployNowDialog({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Scheduled on its own dates when it starts later; otherwise live now:
-  // from today for a nutrition or lifestyle phase, from this Monday for a
-  // programme, which runs in whole weeks (deployPhaseNow does the same).
-  const byDay = track !== "training";
+  // Scheduled on its own dates when it starts later; otherwise live now from
+  // this Monday, as every phase runs in whole weeks (21 Oct: nutrition and
+  // lifestyle too; deployPhaseNow does the same).
+  const byDay = false;
   const later = !!startsOn && startsOn > (byDay ? today : isoOf(mondayOf(today)));
   const start = later ? parse(startsOn!) : byDay ? parse(today) : mondayOf(today);
   const full = new Date(start.getTime() + ((byDay && days ? days : weeks * 7) - 1) * DAY);

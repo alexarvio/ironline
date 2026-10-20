@@ -66,8 +66,8 @@ export const phaseForm = (v: { id?: number; clientId?: number; name: string; tra
   fd.set("name", v.name);
   fd.set("start", v.start);
   fd.set("end", v.end);
-  // start and end here are always a phase's stored values (first day, last
-  // day minus 6), so a nutrition or lifestyle phase is sent as its exact days.
+  // start and end here are a phase's stored values (first day, last day
+  // minus 6); the server snaps them to whole weeks on every track (21 Oct).
   if (v.track !== "training") {
     fd.set("firstDay", v.start);
     fd.set("lastDay", addDays(v.end, 6));
@@ -870,8 +870,10 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const goalLines = goalRows.map((g) => g.trim().slice(0, PHASE_OBJECTIVE_CHARS)).filter(Boolean);
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? initialTrack ?? "nutrition");
   const [name, setName] = useState(phase?.name ?? "");
-  const [from, setFrom] = useState(phase?.start_week ?? initialStart ?? thisWeek);
-  const [to, setTo] = useState(phase ? addDays(phase.end_week, 6) : addDays(addWeeks(initialStart ?? thisWeek, 3), 6));
+  // Whole weeks on every track (21 Oct, Alex): a phase saved on other days before opens on its weeks.
+  const [from, setFrom] = useState(mondayOf(phase?.start_week ?? initialStart ?? thisWeek));
+  // The Sunday of the week its last day falls in: rounded up, never cut short.
+  const [to, setTo] = useState(addDays(mondayOf(phase ? addDays(phase.end_week, 6) : addDays(addWeeks(initialStart ?? thisWeek, 3), 6)), 6));
   // Opens on this month; a phase still to come opens on the month it starts.
   const [cursor, setCursor] = useState((from > today ? from : today).slice(0, 7));
   const [picking, setPicking] = useState<"start" | "end">("start");
@@ -881,12 +883,11 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   // A live programme starts on the week it went out, where the client began it: only the end moves.
   const startLocked = !!phase?.program && phase.program.status === "live";
   const isDraft = !phase ? true : phase.draft || phase.program?.status === "draft";
-  // Training runs in Monday-to-Sunday weeks (a programme's weeks); nutrition
-  // and lifestyle phases start and end on the days picked. What is saved is
-  // the first day and the last day minus 6 (see ClientPhase).
-  const byDay = track !== "training";
-  const startWeek = byDay ? from : mondayOf(from);
-  const endWeek = byDay ? addDays(to, -6) : mondayOf(to);
+  // Every phase runs in Monday-to-Sunday weeks (21 Oct, Alex: nutrition and
+  // lifestyle too, as training always did). What is saved is the Monday of
+  // the first week and of the last (see ClientPhase).
+  const startWeek = mondayOf(from);
+  const endWeek = mondayOf(to);
   const state = phaseStateOf({ draft: isDraft, startWeek, endWeek, today });
   const chrome = phaseChrome(track, state);
   const weeks = phaseWeeks(startWeek, endWeek);
@@ -901,27 +902,27 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   // The day the coach picked when training's weeks moved it, to say so.
   const [moved, setMoved] = useState<{ side: "start" | "end"; picked: string; to: string } | null>(null);
   // Training can't overlap: say the weeks rule and the nearest week that fits, and hold Save.
-  const weekClash = !byDay && overlap ? (overlap.from > startWeek ? { side: "end" as const, day: addDays(overlap.from, -1) } : { side: "start" as const, day: addDays(overlap.to, 1) }) : null;
+  const weekClash = overlap ? (overlap.from > startWeek ? { side: "end" as const, day: addDays(overlap.from, -1) } : { side: "start" as const, day: addDays(overlap.to, 1) }) : null;
   // A clash says only what is in the way; its fix button names the nearest week that fits (20 Oct, Alex: facts, no explanations).
-  const note = overlap ? `Overlaps ${overlap.name}, ${fmtDay(overlap.from)} – ${fmtDay(overlap.to)}.` : !byDay && moved ? `${fmtDay(moved.picked)} moved to ${fmtDay(moved.to)}.` : " ";
+  const note = overlap ? `Overlaps ${overlap.name}, ${fmtDay(overlap.from)} – ${fmtDay(overlap.to)}.` : moved ? `${fmtDay(moved.picked)} moved to ${fmtDay(moved.to)}.` : " ";
   // One click to the other side: the clash's nearest week, or the week after (or before) the one a picked day moved to.
-  const movedAlt = !byDay && moved && !overlap ? { side: moved.side, day: addDays(moved.to, moved.side === "start" ? 7 : -7), instead: true } : null;
+  const movedAlt = moved && !overlap ? { side: moved.side, day: addDays(moved.to, moved.side === "start" ? 7 : -7), instead: true } : null;
   const fix = weekClash ? { ...weekClash, instead: false } : movedAlt && (movedAlt.side === "start" ? movedAlt.day <= to : movedAlt.day > from) ? movedAlt : null;
 
   // A phase can be put in the past (it started a while ago), but not further back than a year (21 Oct, Alex: 2022 went in).
   const earliest = addDays(today, -365);
   const setStart = (d: string) => {
     if (startLocked || d < earliest) return;
-    const s = byDay ? d : mondayOf(d);
+    const s = mondayOf(d);
     setWeeksText(null);
     setMoved(s !== d ? { side: "start", picked: d, to: s } : null);
     setFrom(s);
-    if (to < s) setTo(byDay ? s : addDays(s, 6));
+    if (to < s) setTo(addDays(s, 6));
     setCursor(s.slice(0, 7));
   };
   const setEnd = (d: string) => {
     if (d < earliest) return;
-    const e = byDay ? d : addDays(mondayOf(d), 6);
+    const e = addDays(mondayOf(d), 6);
     if (e < from) return setStart(d);
     setWeeksText(null);
     setMoved(e !== d ? { side: "end", picked: d, to: e } : null);
@@ -954,7 +955,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const matchable = others
     .filter((o) => o.track !== track && o.id !== phase?.id && addDays(o.end_week, 6) >= today)
     .sort((a, b) => a.start_week.localeCompare(b.start_week))
-    .map((o) => ({ id: String(o.id), name: o.name, track: o.track, from: byDay ? o.start_week : mondayOf(o.start_week), to: byDay ? addDays(o.end_week, 6) : addDays(mondayOf(addDays(o.end_week, 6)), 6) }));
+    .map((o) => ({ id: String(o.id), name: o.name, track: o.track, from: mondayOf(o.start_week), to: addDays(mondayOf(addDays(o.end_week, 6)), 6) }));
   const matched = matchable.find((m) => m.from === from && m.to === to)?.id ?? "none";
   const matchPhase = (id: string) => {
     const m = matchable.find((x) => x.id === id);
@@ -977,8 +978,8 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const running = others.find((o) => o.id !== phase?.id && o.track === track && !(o.draft || o.program?.status === "draft") && o.start_week <= today && addDays(o.end_week, 6) >= today);
   if (going && phase) {
     const called = name.trim() || phase.name;
-    // Going live today ends the phase running on the track the day before (a training one, before this week's Monday).
-    const endsOn = shortDate(track === "training" ? addDays(mondayOf(today), -1) : addDays(today, -1));
+    // Going live now starts it this week, so the phase running on the track ends the Sunday before (every track, 21 Oct).
+    const endsOn = shortDate(addDays(mondayOf(today), -1));
     const t =
       going === "live"
         ? { title: `Make ${called} live?`, what: `${firstName} sees it from today.${running ? ` ${running.name} ends ${endsOn}.` : ""}`, go: "Make it live" }
@@ -1143,7 +1144,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             <div className={`npd-date${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")}>
               <span className="npd-date-head">Ends</span>
               {/* A training phase ends on its week's Sunday, so that is the day shown. */}
-              <DateText value={byDay ? to : savedTo} min={earliest} onChange={(d) => setEnd(d)} label="End date" onFocus={() => setPicking("end")} />
+              <DateText value={savedTo} min={earliest} onChange={(d) => setEnd(d)} label="End date" onFocus={() => setPicking("end")} />
             </div>
           </div>
           {/* Type the weeks and the end follows; pick the end and the weeks follow. An uneven span shows its length beside it. */}

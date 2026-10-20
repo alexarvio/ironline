@@ -4,59 +4,58 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { addClientPhaseAction, applyMetricChangesAction, deployPhaseNowAction, saveAndSchedulePhaseAction, sendChatMessageAction, setCheckInDayAction, setMonthlyCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientPhaseAction, applyMetricChangesAction, deletePhaseAction, deployPhaseNowAction, saveAndSchedulePhaseOrSayWhyAction, sendChatMessageAction, setCheckInDayAction, setMonthlyCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { LoggedMetric, LoggedValues } from "../../../lib/queries";
-import { ConfirmDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
+import { ConfirmDialog, DeletePhaseDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
+import { GoalsNotePills, GripIcon } from "../training/TrainingParts";
+import { stateTagStyle } from "../../phaseChrome";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
 import PhaseSwitcher from "../PhaseSwitcher";
-import PhaseGoalsCard from "../PhaseGoalsCard";
 import { useOpenChat } from "../ChatPanel";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
 import Pager from "../Pager";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
-import { Button } from "../../../components/ui/basics";
-import DatePick from "../DatePick";
-import { ASK_AT, defaultAskAt } from "../../../lib/metricAskAt";
-import type { MetricAskAt } from "../../../lib/db";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/form";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
+import { dayMonth } from "../../../lib/dayMonth";
 
-// The calmer Measurements tab, as a draft on real data, in the Training
-// draft's sheet. Two things: what the client is asked to log, and what they
-// logged.
+// The Lifestyle tab, built as Training is (21 Oct, Alex): the phase's name
+// to click and type, its state tag as the menu of what can be done with it,
+// the goals and the note to the client as two pills on the right. Under it:
 //
-// - Daily / Weekly / Monthly on the metrics card (1 Oct): each rhythm is its
-//   own screen, with its metrics, its check-ins and its notes. Weekly and
-//   monthly each say (and set) the day their check-in opens.
-// - Tracked metrics: one row a metric, its group, and the last figure.
-//   Adding, removing and moving one to another rhythm queue on the card's
-//   bar until Apply. "+ Add metric" opens the library in place.
-// - Check-ins: the same lookups three ways. A table (one column a metric, a
-//   Change line at the foot), a graph (one metric at a time, 7 or 30 days),
-//   and a feed (one row a period, a gap says Missed).
-// - Notes from the client, newest first, each with a reply.
-// Nothing here saves: every action ends in a toast.
+// - Tracked metrics: one card, a row a metric (its group and the last
+//   figure). Daily / Weekly / Monthly on the section's line, each its own
+//   list. Adding one is the exercise search's bar (a list that floats, six
+//   rows, Create pinned at its foot). Every change saves itself, one after
+//   another, and the line says so: Saving…, All changes saved, or Not saved
+//   with Retry. Every metric is asked all day (no time of day any more).
+// - Check-ins: what the client logged lately, a table, a graph or a feed,
+//   for one rhythm at a time.
 
 type State = "live" | "past" | "scheduled" | "draft";
 type Cadence = "daily" | "weekly" | "monthly";
-export type DraftMetric = { id: number; name: string; unit: string; frequency: Cadence; groupKey: string; groupLabel: string; tint: string; askAt: MetricAskAt; last: { value: number; when: string } | null };
+export type DraftMetric = { id: number; name: string; unit: string; frequency: Cadence; groupKey: string; groupLabel: string; tint: string; last: { value: number; when: string } | null };
 export type DraftMeasurements = {
   id: number;
   /** The plan behind the tab (10 Oct): today, this week, every phase and programme, for the New phase dialog the Plan tab has. */
   planCtx: Pick<DraftPlan, "today" | "thisWeek" | "phases" | "programs">;
   /** The coach's goals for the phase, up to three. */
   goals: string[];
+  /** The coach's note to the client on this phase (21 Oct), the Note pill. */
+  coachNote: string;
+  /** The coach has dragged the metrics into an order of their own; else they run group by group. */
+  customOrder: boolean;
   phases: { id: number; name: string; weeks: number; state: State }[];
   name: string;
   status: State;
   weeks: number;
   weekIdx: number | null;
   startDate: string | null;
+  /** The stored end_week: the last day is six days on. */
   endDate: string | null;
   checkInDay: string | null;
   /** The day of the month the monthly check-in opens; null: none set up yet. */
@@ -92,6 +91,11 @@ const phaseForm = (v: { id?: number; clientId?: number; track: string; name: str
   }
   return f;
 };
+const addDays = (day: string, n: number) => {
+  const d = new Date(`${day}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 const n = (v: number) => (Number.isInteger(v) ? v.toLocaleString("en-US") : v.toLocaleString("en-US", { maximumFractionDigits: 1 }));
 // A word unit takes a space ("8 h"); a scale butts up ("4/5"); steps are self-evident.
 const tailOf = (unit: string) => {
@@ -108,86 +112,189 @@ const CAD = {
   monthly: { label: "Monthly", unit: "months", recent: "in the last 6 months" },
 } as const;
 const CADENCES = ["daily", "weekly", "monthly"] as const;
+/** A check-in in words, for a message's link and a toast: a day as day/month (19/10); a month keeps its label. */
+const whenOf = (key: string, label: string) => (/^\d{4}-\d{2}-\d{2}$/.test(key) ? dayMonth(key) : label);
 const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"}`;
 
-type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "dates" } | { kind: "newPhase" } | { kind: "deploy" } | { kind: "backToDraft" } | null;
+type Dlg =
+  | { kind: "message"; label: string; link: MessageLink }
+  | { kind: "dates" }
+  | { kind: "newPhase" }
+  | { kind: "deploy" }
+  | { kind: "liveNow" }
+  | { kind: "backToDraft" }
+  | { kind: "deletePhase" }
+  | { kind: "remove"; metric: DraftMetric }
+  | null;
+type MetricChanges = Parameters<typeof applyMetricChangesAction>[0];
 
 export default function MeasurementsDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftMeasurements }) {
-  // ---- Tracked metrics: a working list against the saved one.
-  const [saved, setSaved] = useState(plan.metrics);
-  const [rows, setRows] = useState(plan.metrics);
-  const [adding, setAdding] = useState(false);
-  const [checkInDay, setCheckInDay] = useState(plan.checkInDay ?? "Monday");
-  const [monthDay, setMonthDay] = useState(plan.monthDay);
-  // The rhythm on screen: the header's Daily / Weekly / Monthly.
-  const [cadence, setCadence] = useState<Cadence>("daily");
   const router = useRouter();
   const [, startTransition] = useTransition();
-  // Every save goes to the server, then the page re-reads; what is on screen follows.
+  // A header action goes to the server, then the page re-reads; what is on screen follows.
   const act = (fn: () => Promise<unknown>, said?: string) =>
     startTransition(async () => {
       await fn();
       router.refresh();
       if (said) savedToast(said);
     });
-  // Reset only when what is saved actually changed: every re-read of the
-  // page (a save on another card) hands in new objects with the same values,
-  // and resetting on those wiped edits not yet applied.
+  const phaseId = plan.id > 0 ? plan.id : null;
+  const lastDay = plan.endDate ? addDays(plan.endDate, 6) : null;
+  const today = plan.planCtx.today;
+  const startHasCome = !!plan.startDate && plan.startDate <= today;
+
+  // ---- What the client is asked for: changed on screen at once, saved behind it (21 Oct, Alex: as Training).
+  const [rows, setRows] = useState(plan.metrics);
+  const [checkInDay, setCheckInDay] = useState(plan.checkInDay ?? "Monday");
+  const [monthDay, setMonthDay] = useState(plan.monthDay);
+  // The rhythm on screen: the section's Daily / Weekly / Monthly.
+  const [cadence, setCadence] = useState<Cadence>("daily");
+  const [adding, setAdding] = useState(false);
+  // A row just added has a negative id of its own until its save gives it the real one.
+  const tempIds = useRef(0);
+  // A drag puts the list in the coach's own order from then on (the server's too).
+  const [dragged, setDragged] = useState(false);
+  const customOrder = plan.customOrder || dragged;
+  // One save at a time, in the order they were made. A failed one stays first in line for Retry.
+  const jobs = useRef<(() => Promise<boolean>)[]>([]);
+  const running = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const run = async () => {
+    if (running.current) return;
+    running.current = true;
+    setSaving(true);
+    setFailed(false);
+    let ok = true;
+    while (ok && jobs.current.length > 0) {
+      try {
+        ok = await jobs.current[0]();
+      } catch {
+        ok = false;
+      }
+      if (ok) jobs.current.shift();
+    }
+    running.current = false;
+    setSaving(false);
+    if (!ok) {
+      setFailed(true);
+      toast.error("Not saved");
+    }
+    router.refresh();
+  };
+  const save = (job: () => Promise<boolean>) => {
+    jobs.current.push(job);
+    void run();
+  };
+  const saveMetrics = (changes: Partial<Omit<MetricChanges, "clientId" | "phaseId">>) => save(() => applyMetricChangesAction({ clientId, phaseId, adds: [], removes: [], cadence: [], order: null, ...changes }));
+  // Leaving while a change is still on its way: the browser asks first.
+  useEffect(() => {
+    if (!saving && !failed) return;
+    const hold = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", hold);
+    return () => window.removeEventListener("beforeunload", hold);
+  }, [saving, failed]);
+  // What is saved comes back with the page's re-read and replaces the screen's
+  // copy, by content (a re-read with the same values changes nothing), never
+  // while a change is on its way. After a failed save the screen shows what is
+  // saved (as Training does); the change waits in line for Retry.
   const planKey = JSON.stringify([plan.id, plan.metrics, plan.checkInDay, plan.monthDay]);
   const [seenPlan, setSeenPlan] = useState(planKey);
-  if (seenPlan !== planKey) {
+  if (seenPlan !== planKey && !saving) {
     setSeenPlan(planKey);
-    setSaved(plan.metrics);
     setRows(plan.metrics);
     setCheckInDay(plan.checkInDay ?? "Monday");
     setMonthDay(plan.monthDay);
   }
-  const phaseId = plan.id > 0 ? plan.id : null;
   const inLibrary = (name: string) => plan.library.some((p) => p.items.some((i) => i.name.toLowerCase() === name.toLowerCase()));
-  // The saved metrics' order on screen differs from how they were saved: a drag.
-  const kept = rows.filter((r) => saved.some((m) => m.id === r.id)).map((r) => r.id);
-  const reordered = kept.some((id, i) => id !== saved.filter((m) => kept.includes(m.id))[i]?.id);
-  const changes = (() => {
-    const before = new Map(saved.map((m) => [m.id, m]));
-    let c = saved.filter((m) => !rows.some((r) => r.id === m.id)).length;
-    for (const r of rows) {
-      const b = before.get(r.id);
-      if (!b) c += 1;
-      else if (b.frequency !== r.frequency || b.askAt !== r.askAt) c += 1;
-    }
-    if (reordered) c += 1;
-    return c;
-  })();
-  const isNew = (id: number) => !saved.some((m) => m.id === id);
   const addMetric = (name: string, unit: string, groupKey: string) => {
     if (rows.some((r) => r.name.toLowerCase() === name.toLowerCase())) return;
     const g = plan.groups.find((x) => x.key === groupKey) ?? plan.groups.find((x) => x.key === "other") ?? { key: groupKey, label: "Other", tint: "#dfe6ef" };
-    setRows((prev) => [...prev, { id: -(Date.now() + prev.length), name, unit, frequency: cadence, groupKey: g.key, groupLabel: g.label, tint: g.tint, askAt: defaultAskAt(name), last: null }]);
+    // There at once, faded until the save gives it its number, and where the
+    // saved list will have it (no jump when it comes back): last of all once
+    // the coach has their own order, else last in its group, groups in order.
+    const rank = (k: string) => {
+      const i = plan.groups.findIndex((x) => x.key === k);
+      return i < 0 ? plan.groups.length : i;
+    };
+    tempIds.current += 1;
+    const made: DraftMetric = { id: -tempIds.current, name, unit, frequency: cadence, groupKey: g.key, groupLabel: g.label, tint: g.tint, last: null };
+    setRows((prev) => {
+      if (customOrder) return [...prev, made];
+      const at = prev.findIndex((r) => rank(r.groupKey) > rank(g.key));
+      return at < 0 ? [...prev, made] : [...prev.slice(0, at), made, ...prev.slice(at)];
+    });
+    saveMetrics({ adds: [{ name, unit, group: g.key, cadence, source: inLibrary(name) ? "library" : "custom" }] });
+  };
+  const moveTo = (m: DraftMetric, c: Cadence) => {
+    setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, frequency: c } : r)));
+    saveMetrics({ cadence: [{ id: m.id, value: c }] });
+  };
+  const removeMetric = (m: DraftMetric) => {
+    setRows((prev) => prev.filter((r) => r.id !== m.id));
+    saveMetrics({ removes: [m.id] });
   };
   // The rows of the rhythm on screen; a drag reorders them among themselves.
   const shown = rows.filter((r) => r.frequency === cadence);
-  const moveShown = (ids: (number | string)[]) =>
-    setRows((prev) => {
-      const queue = ids.map((id) => prev.find((r) => r.id === id)!).filter(Boolean);
-      return prev.map((r) => (r.frequency === cadence ? queue.shift() ?? r : r));
+  // No drag on an ended phase, nor while a row just added is still saving (its place would be lost).
+  const canDrag = plan.status !== "past" && !rows.some((r) => r.id < 0);
+  const moveShown = (ids: (number | string)[]) => {
+    if (!canDrag) return;
+    const queue = ids.map((id) => rows.find((r) => r.id === id)).filter((r): r is DraftMetric => !!r);
+    const next = rows.map((r) => (r.frequency === cadence ? queue.shift() ?? r : r));
+    setRows(next);
+    setDragged(true);
+    saveMetrics({ order: next.filter((r) => r.id > 0).map((r) => r.id) });
+  };
+  const setWeeklyDay = (d: string) => {
+    setCheckInDay(d);
+    const f = new FormData();
+    f.set("clientId", String(clientId));
+    f.set("check_in_day", d);
+    if (phaseId) f.set("phaseId", String(phaseId));
+    save(async () => {
+      await setCheckInDayAction(f);
+      return true;
     });
+  };
+  const setMonthlyDay = (d: number) => {
+    setMonthDay(d);
+    save(async () => {
+      await setMonthlyCheckInDayAction(clientId, phaseId, d);
+      return true;
+    });
+  };
   const countOf = (c: Cadence) => rows.filter((r) => r.frequency === c).length;
-  // Daily / Weekly / Monthly, on the metrics card and on the check-ins card,
-  // each switching only its own card.
-  const rhythmToggle = (value: Cadence, set: (c: Cadence) => void) => (
+  // Daily / Weekly / Monthly, on the metrics and on the check-ins, each switching only its own section.
+  const rhythmToggle = (value: Cadence, set: (c: Cadence) => void, counts: boolean) => (
     <div className="rd-btn-group" role="group" aria-label="Rhythm">
       {CADENCES.map((c) => (
         <button key={c} type="button" className={value === c ? "on" : ""} aria-pressed={value === c} onClick={() => set(c)}>
           {CAD[c].label}
-          {countOf(c) > 0 && <small className="rm-cad-count">{countOf(c)}</small>}
+          {counts && countOf(c) > 0 && <small className="rm-cad-count">{countOf(c)}</small>}
         </button>
       ))}
     </div>
   );
 
-  // ---- Check-ins: which way; the rhythm is the header's.
+  // ---- The phase's name: click it to type (as Training's); Enter or a click away saves, Esc leaves it.
+  const [renaming, setRenaming] = useState<string | null>(null);
+  // The new name stays up from the moment Enter is pressed (21 Oct, Alex: it went back to the old one until the save came back).
+  const [named, setNamed] = useState<{ id: number; from: string; to: string } | null>(null);
+  const shownName = named && named.id === plan.id && plan.name === named.from ? named.to : plan.name;
+  const commitRename = () => {
+    const v = renaming?.trim() ?? "";
+    setRenaming(null);
+    if (!v || v === shownName || !phaseId || !plan.startDate || !lastDay) return;
+    setNamed({ id: plan.id, from: plan.name, to: v });
+    act(() => updateClientPhaseAction(phaseForm({ id: phaseId, track: "lifestyle", name: v, start: plan.startDate!, end: lastDay, exact: true })), `Renamed to ${v}`);
+  };
+
+  // ---- Check-ins: which way, and which rhythm (its own, apart from the metrics').
   const [show, setShow] = useState<"table" | "graph" | "feed">("table");
-  // The check-ins card's own rhythm: switching the metrics card leaves it be.
   const [logCadence, setLogCadence] = useState<Cadence>("daily");
   const view = plan[logCadence];
   const long = logCadence === "daily" ? plan.dailyLong : logCadence === "weekly" ? plan.weeklyLong : plan.monthlyLong;
@@ -202,14 +309,9 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const logPageNow = Math.min(logPage, logPages);
   const logPaged = { ...logShown, periods: logShown.periods.slice((logPageNow - 1) * PAGE, logPageNow * PAGE) };
   // The client's note on a check-in sits by its date (a bubble); Reply there is a message linked to that check-in.
-  const replyTo = (period: string) => message({ label: `${CAD[logCadence].label} check-in · ${logShown.periods.find((p) => p.key === period)?.label ?? period}`, link: { kind: "checkin", section: logCadence, period } });
+  const replyTo = (period: string) => message({ label: `${CAD[logCadence].label} check-in · ${whenOf(period, logShown.periods.find((p) => p.key === period)?.label ?? period)}`, link: { kind: "checkin", section: logCadence, period } });
   const done = (v: LoggedValues) => (v.metrics.length === 0 ? 0 : v.periods.filter((p) => v.metrics.some((m) => v.values[`${m.id}:${p.key}`] != null)).length);
   const asked = (v: LoggedValues) => (v.metrics.length === 0 ? 0 : v.periods.length);
-  // The client's notes on this rhythm's check-ins (measurements' with the daily ones).
-  const stats = [
-    { label: `${CAD[logCadence].label} check-ins`, value: asked(view) ? `${done(view)} of ${asked(view)}` : "–", unit: CAD[logCadence].recent, warn: asked(view) > 0 && done(view) < asked(view) * 0.6 },
-    { label: "Metrics tracked", value: String(countOf(logCadence)), unit: `${logCadence} · ${rows.length} in all` },
-  ];
 
   const [dlg, setDlg] = useState<Dlg>(null);
   // Messaging about a check-in, a metric or a note slides the chat in from
@@ -218,65 +320,111 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const openChat = useOpenChat();
   const message = (v: { label: string; link: MessageLink }) => (openChat ? openChat({ area: "Lifestyle", label: v.label, link: v.link }) : setDlg({ kind: "message", ...v }));
   const close = () => setDlg(null);
-  const today = new Date().toISOString().slice(0, 10);
-  const startHasCome = !!plan.startDate && plan.startDate <= today;
-  // "Asked" (when in the day) only means something for a daily metric.
-  const mGrid = { gridTemplateColumns: cadence === "daily" ? "20px minmax(200px, 1.4fr) 150px 130px minmax(160px, 1fr) 32px" : "20px minmax(200px, 1.4fr) 150px minmax(160px, 1fr) 32px", columnGap: 24 } as const;
-  // No grip column here: the date starts where the title does.
+  const goLive = () => {
+    if (!phaseId) return;
+    // Live, or why not (5 Oct: a blocked one used to say "is live" anyway).
+    startTransition(async () => {
+      const why = await deployPhaseNowAction(phaseId);
+      router.refresh();
+      if (why) toast.error(`${plan.name} isn't live yet`, { description: why });
+      else savedToast(`${plan.name} is live`);
+    });
+  };
+  const grid = { gridTemplateColumns: "20px minmax(200px, 1.4fr) 128px minmax(160px, 1fr) 32px", columnGap: 20 } as const;
 
   return (
-    <div className={`rd${plan.status === "past" ? " rd-past" : ""}`}>
+    <div className={`rd trn rls${plan.status === "past" ? " rd-past" : ""}`}>
       {plan.status === "past" && (
         <div className="rd-past-note" role="note">
           <b>Ended.</b> This phase is here to look back on; nothing in it can be changed.
         </div>
       )}
-      {/* ---- Header: the phase, where it is, its actions. */}
-      <header className="rd-head">
-        <div className="rd-head-main">
-          <span className="rd-eyebrow">Lifestyle</span>
-          <h1 className="rd-title">
-            {plan.phases.length > 1 ? (
-              <PhaseSwitcher name={plan.name} currentId={plan.id} items={plan.phases} hrefFor={(id) => `/admin/redesign/measurements?client=${clientId}&phase=${id}`} label="Switch phase" newLabel="New phase" onNew={() => setDlg({ kind: "newPhase" })} />
-            ) : (
-              plan.name
-            )}
-            {plan.weeks > 0 && <span className="rd-title-weeks">({plan.weeks} weeks)</span>}
-            <span className={`rd-status ${plan.status}`}>{stateLabel(plan.status)}</span>
-          </h1>
+      {/* ---- Header (21 Oct, as Training's): the name to click and type, the ▾ to switch phase, the state tag as its menu;
+          the weeks and dates under it; on the right the goals and note pills and the menu. */}
+      <header className="trn-head">
+        <div className="trn-head-main">
+          <span className="trn-eyebrow">Lifestyle</span>
+          <div className="trn-name-row">
+            <h1 className="trn-name">
+              {renaming != null ? (
+                <input
+                  className="trn-name-input"
+                  value={renaming}
+                  autoFocus
+                  maxLength={60}
+                  size={Math.max(8, renaming.length + 1)}
+                  onChange={(e) => setRenaming(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") setRenaming(null);
+                  }}
+                  onBlur={commitRename}
+                  aria-label="Phase name"
+                />
+              ) : (
+                <>
+                  {phaseId ? (
+                    <button type="button" className="trn-name-btn" onClick={() => setRenaming(shownName)} title="Rename">
+                      {shownName}
+                    </button>
+                  ) : (
+                    plan.name
+                  )}
+                  <PhaseSwitcher name="" currentId={plan.id} items={plan.phases} hrefFor={(id) => `/admin/redesign/measurements?client=${clientId}&phase=${id}`} label="Switch phase" newLabel="New phase" onNew={() => setDlg({ kind: "newPhase" })} />
+                </>
+              )}
+            </h1>
+            {phaseId != null &&
+              (plan.status === "draft" || plan.status === "scheduled" ? (
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger className={`trn-status trn-status-btn ${plan.status}`} style={stateTagStyle(plan.status)} aria-label={`${stateLabel(plan.status)}: change`}>
+                    {stateLabel(plan.status)}
+                    <ChevronDownIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="pb-menu">
+                    {plan.status === "draft" ? (
+                      startHasCome ? (
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Make it live</DropdownMenuItem>
+                      ) : (
+                        <>
+                          <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Schedule it</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setDlg({ kind: "liveNow" })}>Make it live now</DropdownMenuItem>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "liveNow" })}>Make it live now</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "backToDraft" })}>Back to draft</DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <span className={`trn-status ${plan.status}`} style={stateTagStyle(plan.status)}>
+                  {plan.status === "past" ? "Ended" : stateLabel(plan.status)}
+                </span>
+              ))}
+          </div>
           {plan.startDate && (
-            <span className="rd-sub">
-              {fmtDate(plan.startDate)}
-              {plan.endDate && ` – ${fmtDate(plan.endDate)}`}
+            <span className="trn-meta">
+              {plan.weeks} {plan.weeks === 1 ? "week" : "weeks"} · {fmtDate(plan.startDate)}
+              {lastDay && ` – ${fmtDate(lastDay)}`}
               {plan.weekIdx != null && ` · week ${plan.weekIdx} of ${plan.weeks}`}
             </span>
           )}
         </div>
-        <div className="rd-head-actions">
-          {plan.status === "draft" && (
-            <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "deploy" })}>
-              {startHasCome ? "Make it live" : "Schedule it"}
-            </button>
-          )}
-          {plan.status === "scheduled" && (
-            <>
-              <button type="button" className="rd-btn" onClick={() => setDlg({ kind: "backToDraft" })}>
-                Back to draft
-              </button>
-              <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "deploy" })}>
-                Make it live now
-              </button>
-            </>
-          )}
+        <div className="trn-head-actions">
+          {/* The goals and the note to the client as pills (21 Oct, as Training's), one pop-over under them. */}
+          {phaseId != null && <GoalsNotePills firstName={firstName} phaseId={phaseId} goals={plan.goals} note={plan.coachNote} area="lifestyle" />}
           <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="rd-btn ghost" aria-label="More for the phase">
+            <DropdownMenuTrigger className="trn-more" aria-label="More for the phase">
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
               <DropdownMenuItem onSelect={() => message({ label: "Lifestyle", link: { kind: "checkin", section: logCadence } })}>
                 <ChatIcon /> Message about lifestyle
               </DropdownMenuItem>
-              {plan.id !== 0 && (
+              {phaseId != null && (
                 <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>
                   <CalendarIcon /> Edit dates
                 </DropdownMenuItem>
@@ -285,224 +433,178 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <DropdownMenuItem onSelect={() => setDlg({ kind: "newPhase" })}>
                 <PlusIcon /> New phase
               </DropdownMenuItem>
+              {phaseId != null && (
+                <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "deletePhase" })}>
+                  <TrashIcon /> Delete phase
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
 
-      {/* ---- The coach's goals for this phase, shown on the client's Home. */}
-      <PhaseGoalsCard phaseId={phaseId} phaseName={plan.name} firstName={firstName} goals={plan.goals} />
-
-      {/* ---- Tracked metrics: what the client is asked for. */}
-      <section className="rd-session open rn-card">
-        <div className="rn-card-head">
-          <h2>Tracked metrics</h2>
-          {/* On the right: the day this phase's weekly or monthly check-in
-              opens, then which rhythm is on screen (its metrics here, its
-              check-ins and notes below). */}
-          <div className="rm-card-tools">
-          {cadence === "weekly" && (
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger className="rd-btn rm-checkinday" aria-label="Which day the weekly check-in opens">
-                <CalendarIcon /> Weekly check-in opens <b>{checkInDay}</b>
-                <ChevronDownIcon />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="pb-menu">
-                {DAYS.map((d) => (
-                  <DropdownMenuItem
-                    key={d}
-                    onSelect={() => {
-                      setCheckInDay(d);
-                      const f = new FormData();
-                      f.set("clientId", String(clientId));
-                      f.set("check_in_day", d);
-                      if (phaseId) f.set("phaseId", String(phaseId));
-                      act(() => setCheckInDayAction(f), `Weekly check-in opens on ${d}`);
-                    }}
-                  >
-                    {d}
-                  </DropdownMenuItem>
+      {/* ---- Tracked metrics: what the client is asked for, one rhythm at a time. */}
+      <section className="rls-section">
+        <div className="trn-weekhead">
+          <div>
+            <h2>Tracked metrics</h2>
+            <span>
+              {shown.length} {CAD[cadence].label.toLowerCase()} {shown.length === 1 ? "metric" : "metrics"}
+              {/* Every change saves itself (21 Oct, as Training): the line says so. */}
+              {phaseId != null &&
+                (failed ? (
+                  <span className="trn-allsaved failed" role="alert">
+                    Not saved ·{" "}
+                    <button type="button" onClick={() => void run()}>
+                      Retry
+                    </button>
+                  </span>
+                ) : (
+                  <span className={`trn-allsaved${saving ? " saving" : ""}`} role="status">
+                    {saving ? "Saving…" : "All changes saved"}
+                  </span>
                 ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          {cadence === "monthly" && (
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger className="rd-btn rm-checkinday" aria-label="Which day of the month the monthly check-in opens">
-                <CalendarIcon /> {monthDay ? <>Monthly check-in opens on the <b>{ordinal(monthDay)}</b></> : <>Monthly check-in opens on the <b>1st</b> once you add one</>}
-                <ChevronDownIcon />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="pb-menu rm-monthdays">
-                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-                  <DropdownMenuItem
-                    key={d}
-                    onSelect={() => {
-                      setMonthDay(d);
-                      act(() => setMonthlyCheckInDayAction(clientId, phaseId, d), `Monthly check-in opens on the ${ordinal(d)}`);
-                    }}
-                  >
-                    {ordinal(d)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          {rhythmToggle(cadence, setCadence)}
+            </span>
+          </div>
+          <div className="trn-weekhead-actions">
+            {/* The day this rhythm's check-in opens, beside the rhythm it belongs to. */}
+            {cadence === "weekly" && (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger className="trn-btn" aria-label="Which day the weekly check-in opens">
+                  <CalendarIcon /> Opens {checkInDay}
+                  <ChevronDownIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="pb-menu">
+                  {DAYS.map((d) => (
+                    <DropdownMenuItem key={d} onSelect={() => setWeeklyDay(d)}>
+                      {d}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {cadence === "monthly" && (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger className="trn-btn" aria-label="Which day of the month the monthly check-in opens">
+                  <CalendarIcon /> Opens on the {ordinal(monthDay ?? 1)}
+                  <ChevronDownIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="pb-menu rm-monthdays">
+                  {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                    <DropdownMenuItem key={d} onSelect={() => setMonthlyDay(d)}>
+                      {ordinal(d)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {rhythmToggle(cadence, setCadence, true)}
           </div>
         </div>
-        <div className="rd-rows">
-          {shown.length > 0 && (
-            <div className="rd-cols" aria-hidden="true" style={mGrid}>
-              <span />
-              <span>Metric</span>
-              <span>Group</span>
-              {cadence === "daily" && <span>Asked</span>}
-              <span>Last</span>
-              <span />
-            </div>
-          )}
-          <SortableList ids={shown.map((m) => m.id)} label="metric" onMove={moveShown}>
-          {shown.map((m) => {
-            const was = saved.find((s) => s.id === m.id);
-            return (
-              <SortableItem key={m.id} id={m.id} className={`rd-row${isNew(m.id) ? " new" : ""}`}>
-                {(metricGrip) => (
-                <div className="rd-row-main static" style={mGrid}>
-                  <span className="rd-grip" {...metricGrip}>
-                    ⋮⋮
-                  </span>
-                  <span className="rd-ex">
-                    <span className="rd-ex-name">
-                      {m.name}
-                      {m.unit && <small style={{ marginLeft: 6 }}>{m.unit}</small>}
-                    </span>
-                    {isNew(m.id) ? <small>New · not applied yet</small> : was && was.frequency !== m.frequency && <small>Moved from {was.frequency} · not applied yet</small>}
-                  </span>
-                  <span>
-                    <span className="rm-group" style={{ background: m.tint }}>
-                      {m.groupLabel}
-                    </span>
-                  </span>
-                  {/* When in the day the client's Home asks for it. */}
-                  {cadence === "daily" && (
-                    <Select value={m.askAt} onValueChange={(v) => setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, askAt: v as MetricAskAt } : r)))}>
-                      <SelectTrigger className={`rm-askat${was && was.askAt !== m.askAt ? " changed" : ""}`} aria-label={`When ${m.name} is asked for`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ASK_AT.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {m.last ? (
-                    <span className="rm-last">
-                      {withUnit(m.last.value, m.unit)}
-                      <small>{m.last.when}</small>
-                    </span>
-                  ) : (
-                    <span className="rm-last none">Nothing logged yet</span>
-                  )}
-                  <span className="rd-row-more">
-                    <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${m.name}`}>
-                        <MoreIcon />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="pb-menu">
-                        <DropdownMenuItem onSelect={() => message({ label: m.name, link: { kind: "checkin", section: m.frequency } })}>
-                          <ChatIcon /> Message about {m.name}
-                        </DropdownMenuItem>
-                        {/* To another rhythm: it leaves this screen for that one, applied with the rest. */}
-                        {CADENCES.filter((c) => c !== m.frequency).map((c) => (
-                          <DropdownMenuItem key={c} onSelect={() => setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, frequency: c } : r)))}>
-                            <CalendarIcon /> Ask for it {c === "daily" ? "daily" : c === "weekly" ? "weekly" : "monthly"} instead
-                          </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" onSelect={() => setRows((prev) => prev.filter((r) => r.id !== m.id))}>
-                          <TrashIcon /> {isNew(m.id) ? "Don't add it" : "Stop asking for it"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </span>
-                </div>
-                )}
-              </SortableItem>
-            );
-          })}
-          </SortableList>
-          {/* Metrics belong to a lifestyle phase: with none yet, the way to add
-              one is to set the phase up first. */}
+        <div className="rls-card">
           {!phaseId ? (
-            <div className="rm-needphase">
-              <span>Metrics belong to a lifestyle phase. Set one up for {firstName} first, then add what to track.</span>
-              <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "newPhase" })}>
-                New lifestyle phase
+            <div className="rls-empty">
+              <span>No phase yet</span>
+              <button type="button" className="trn-btn primary" onClick={() => setDlg({ kind: "newPhase" })}>
+                New phase
               </button>
             </div>
-          ) : adding ? (
-            <AddMetricRow library={plan.library} groups={plan.groups} have={rows.map((r) => r.name.toLowerCase())} onAdd={addMetric} onClose={() => setAdding(false)} />
           ) : (
-            <button type="button" className="rd-session add rm-additem" onClick={() => setAdding(true)}>
-              + Add metric
-            </button>
-          )}
-          {changes > 0 && (
-            <div className="rd-pending">
-              <span className="rd-pending-count">{changes}</span>
-              <span className="rd-pending-text">
-                {changes === 1 ? "change" : "changes"} to what {firstName} is asked for · their check-in asks for this once applied
-              </span>
-              <button type="button" className="rd-pending-ghost" onClick={() => setRows(saved)}>
-                Discard
-              </button>
-              <button
-                type="button"
-                className="rd-pending-apply"
-                onClick={() => {
-                  const before = new Map(saved.map((m) => [m.id, m]));
-                  const input = {
-                    clientId,
-                    phaseId,
-                    adds: rows.filter((r) => isNew(r.id)).map((r) => ({ name: r.name, unit: r.unit, group: r.groupKey, cadence: r.frequency, source: (inLibrary(r.name) ? "library" : "custom") as "library" | "custom", askAt: r.askAt })),
-                    removes: saved.filter((m) => !rows.some((r) => r.id === m.id)).map((m) => m.id),
-                    cadence: rows.filter((r) => !isNew(r.id) && before.get(r.id)?.frequency !== r.frequency).map((r) => ({ id: r.id, value: r.frequency })),
-                    askAt: rows.filter((r) => !isNew(r.id) && before.get(r.id)?.askAt !== r.askAt).map((r) => ({ id: r.id, value: r.askAt })),
-                    order: reordered ? kept : null,
-                  };
-                  setSaved(rows);
-                  act(() => applyMetricChangesAction(input), `Tracked metrics: ${rows.length} ${rows.length === 1 ? "metric" : "metrics"}`);
-                }}
-              >
-                Apply
-              </button>
-            </div>
+            <>
+              {shown.length > 0 && (
+                <div className="rls-cols" aria-hidden="true" style={grid}>
+                  <span />
+                  <span>Metric</span>
+                  <span>Group</span>
+                  <span>Last</span>
+                  <span />
+                </div>
+              )}
+              <SortableList ids={shown.map((m) => m.id)} label="metric" onMove={moveShown}>
+                {shown.map((m) => {
+                  // Just added: there, faded and still, until the save gives it its number.
+                  const incoming = m.id < 0;
+                  return (
+                    <SortableItem key={m.id} id={m.id} className={`rls-row${incoming ? " trn-incoming" : ""}`}>
+                      {(grip) => (
+                        <div className="rls-row-main" style={grid}>
+                          <span className="rd-grip trn-grip" {...(canDrag ? grip : {})}>
+                            <GripIcon />
+                          </span>
+                          <span className="rls-name">
+                            <b>{m.name}</b>
+                            {m.unit && <small>{m.unit}</small>}
+                          </span>
+                          <span className="rls-group" style={{ background: m.tint }}>
+                            {m.groupLabel}
+                          </span>
+                          {m.last ? (
+                            <span className="rls-last">
+                              {withUnit(m.last.value, m.unit)}
+                              <small>{m.last.when}</small>
+                            </span>
+                          ) : (
+                            <span className="rls-last none">None yet</span>
+                          )}
+                          <span className="rls-more">
+                            {!incoming && (
+                              <DropdownMenu modal={false}>
+                                <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${m.name}`}>
+                                  <MoreIcon />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="pb-menu">
+                                  <DropdownMenuItem onSelect={() => message({ label: m.name, link: { kind: "checkin", section: m.frequency } })}>
+                                    <ChatIcon /> Message about {m.name}
+                                  </DropdownMenuItem>
+                                  {/* To another rhythm: it leaves this list for that one. */}
+                                  {CADENCES.filter((c) => c !== m.frequency).map((c) => (
+                                    <DropdownMenuItem key={c} onSelect={() => moveTo(m, c)}>
+                                      <CalendarIcon /> Ask {c} instead
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "remove", metric: m })}>
+                                    <TrashIcon /> Remove
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </SortableItem>
+                  );
+                })}
+              </SortableList>
+              {adding ? (
+                <AddMetricRow library={plan.library} groups={plan.groups} have={rows.map((r) => r.name.toLowerCase())} onAdd={addMetric} onClose={() => setAdding(false)} />
+              ) : (
+                <button type="button" className="rls-add" onClick={() => setAdding(true)}>
+                  <PlusIcon /> Metric
+                </button>
+              )}
+            </>
           )}
         </div>
       </section>
 
-      {/* ---- Check-ins: what the client logged, three ways. */}
-      <section className="rd-session open rn-card">
-        <div className="rn-card-head">
-          <h2>
-            {firstName}&rsquo;s {logCadence} check-ins
-          </h2>
-          <div className="rm-card-tools">{rhythmToggle(logCadence, setLogCadence)}</div>
-        </div>
-        <div className="rn-stats">
-          {stats.map((s) => (
-            <div key={s.label}>
-              <small>{s.label}</small>
-              <b className={s.warn ? "warn" : ""}>{s.value}</b>
-              <span>{s.unit}</span>
-            </div>
-          ))}
-        </div>
-        <div className="rm-controls">
-          <div className="rm-controls-left">
+      {/* ---- Check-ins: what the client logged lately, three ways. Still to be looked through on an ended phase (rd-keep). */}
+      <section className="rls-section rd-keep">
+        <div className="trn-weekhead">
+          <div>
+            <h2>Check-ins</h2>
+            <span>{asked(view) ? `${done(view)} of ${asked(view)} ${CAD[logCadence].recent}` : `No ${logCadence} metrics`}</span>
+          </div>
+          <div className="trn-weekhead-actions">
+            {show !== "graph" && hasAll && (
+              <div className="rd-btn-group" role="group" aria-label="Range">
+                {(["recent", "all"] as const).map((r) => (
+                  <button key={r} type="button" className={range === r ? "on" : ""} aria-pressed={range === r} onClick={() => setRange(r)}>
+                    {r === "recent" ? `Last ${view.periods.length}` : `All ${long.periods.length}`}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="rd-btn-group" role="group" aria-label="Show as">
               {(["table", "graph", "feed"] as const).map((s) => (
                 <button key={s} type="button" className={show === s ? "on" : ""} aria-pressed={show === s} onClick={() => setShow(s)}>
@@ -510,33 +612,26 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                 </button>
               ))}
             </div>
+            {rhythmToggle(logCadence, setLogCadence, false)}
           </div>
-          {show !== "graph" && hasAll && (
-            <div className="rm-controls-right">
-              <div className="rd-btn-group" role="group" aria-label="Range">
-                {(["recent", "all"] as const).map((r) => (
-                  <button key={r} type="button" className={range === r ? "on" : ""} aria-pressed={range === r} onClick={() => setRange(r)}>
-                    {r === "recent" ? `Last ${view.periods.length} ${CAD[logCadence].unit}` : `All · ${long.periods.length} ${CAD[logCadence].unit}`}
-                  </button>
-                ))}
-              </div>
-            </div>
+        </div>
+        <div className="rls-card rls-log">
+          {/* Not started or nothing asked: two words, the header already says the state and the dates. */}
+          {plan.notStarted ? (
+            <p className="rls-none">None yet</p>
+          ) : view.metrics.length === 0 ? (
+            <p className="rls-none">None yet</p>
+          ) : show === "table" ? (
+            <CheckinTable view={logPaged} onReply={replyTo} />
+          ) : show === "graph" ? (
+            <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
+          ) : (
+            <CheckinFeed view={logPaged} cadence={logCadence} onReply={replyTo} onMessage={(label) => message({ label, link: { kind: "checkin", section: logCadence } })} />
+          )}
+          {!plan.notStarted && view.metrics.length > 0 && show !== "graph" && (
+            <Pager className="rm-pager" page={logPageNow} pages={logPages} from={(logPageNow - 1) * PAGE} shown={logPaged.periods.length} total={logShown.periods.length} noun={CAD[logCadence].unit} label="Check-in pages" onPage={setLogPage} />
           )}
         </div>
-        {plan.notStarted ? (
-          <p className="rd-full">{plan.notStarted}</p>
-        ) : view.metrics.length === 0 ? (
-          <p className="rd-full">No {logCadence} metrics in this phase. Add one above.</p>
-        ) : show === "table" ? (
-          <CheckinTable view={logPaged} onReply={replyTo} />
-        ) : show === "graph" ? (
-          <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
-        ) : (
-          <CheckinFeed view={logPaged} cadence={logCadence} onReply={replyTo} onMessage={(label) => message({ label, link: { kind: "checkin", section: logCadence } })} />
-        )}
-        {!plan.notStarted && view.metrics.length > 0 && show !== "graph" && (
-          <Pager className="rm-pager" page={logPageNow} pages={logPages} from={(logPageNow - 1) * PAGE} shown={logPaged.periods.length} total={logShown.periods.length} noun={CAD[logCadence].unit} label="Check-in pages" onPage={setLogPage} />
-        )}
       </section>
 
       {/* ---- Dialogs. One open at a time. */}
@@ -557,16 +652,27 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             }}
           />
         )}
+        {dlg?.kind === "remove" && (
+          <RemoveMetricDialog
+            metric={dlg.metric}
+            firstName={firstName}
+            onRemove={() => {
+              const m = dlg.metric;
+              close();
+              removeMetric(m);
+            }}
+            onClose={close}
+          />
+        )}
         {dlg?.kind === "dates" && (
           <PhaseDatesDialog
-            byDay
             title="Dates"
             name={plan.name}
             start={plan.startDate}
             end={plan.endDate}
             firstName={firstName}
             what="these metrics"
-            confirm="Save dates"
+            confirm="Save"
             onConfirm={(v) => {
               close();
               if (phaseId) act(() => updateClientPhaseAction(phaseForm({ id: phaseId, track: "lifestyle", name: v.name || plan.name, start: v.start, end: v.end, exact: true })), `${v.name || plan.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
@@ -594,7 +700,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         )}
         {dlg?.kind === "deploy" && !startHasCome && (
           <PhaseDatesDialog
-            byDay
             title={`Schedule ${plan.name}`}
             start={plan.startDate}
             end={plan.endDate}
@@ -603,32 +708,44 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             confirm="Schedule it"
             onConfirm={(v) => {
               close();
-              if (phaseId) act(() => saveAndSchedulePhaseAction(phaseForm({ id: phaseId, track: "lifestyle", name: plan.name, start: v.start, end: v.end, exact: true })), `${plan.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
+              if (!phaseId) return;
+              // Scheduled, or why not (21 Oct: an empty draft said "scheduled" and stayed a draft).
+              startTransition(async () => {
+                const why = await saveAndSchedulePhaseOrSayWhyAction(phaseForm({ id: phaseId, track: "lifestyle", name: plan.name, start: v.start, end: v.end, exact: true }));
+                router.refresh();
+                if (why) toast.error(`${plan.name} isn't scheduled yet`, { description: why });
+                else savedToast(`${plan.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
+              });
             }}
           />
         )}
         {dlg?.kind === "deploy" && startHasCome && (
           <ConfirmDialog
             title={`Make ${plan.name} live?`}
-            description={`${firstName}'s check-in asks for these metrics from now.`}
+            description={`${firstName}'s check-in asks for these metrics from today.`}
             confirm="Make it live"
             onConfirm={() => {
               close();
-              if (phaseId)
-                // Live, or why not (5 Oct: a blocked one used to say "is live" anyway).
-                startTransition(async () => {
-                  const why = await deployPhaseNowAction(phaseId);
-                  router.refresh();
-                  if (why) toast.error(`${plan.name} isn't live yet`, { description: why });
-                  else savedToast(`${plan.name} is live`);
-                });
+              goLive();
+            }}
+          />
+        )}
+        {/* Now, whatever its dates say (21 Oct, as Training): it starts today. */}
+        {dlg?.kind === "liveNow" && (
+          <ConfirmDialog
+            title={`Make ${plan.name} live now?`}
+            description={`It starts today; ${firstName}'s check-in asks for these metrics from now.`}
+            confirm="Make it live"
+            onConfirm={() => {
+              close();
+              goLive();
             }}
           />
         )}
         {dlg?.kind === "backToDraft" && (
           <ConfirmDialog
             title="Back to draft?"
-            description={`${plan.name} comes off ${firstName}'s schedule; only you see it until it is scheduled again.`}
+            description={`${plan.name} comes off ${firstName}'s schedule.`}
             confirm="Back to draft"
             onConfirm={() => {
               close();
@@ -636,17 +753,76 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             }}
           />
         )}
+        {/* Deleting the phase from here too (21 Oct, as Training). What the client logged stays: it is theirs, not the phase's. */}
+        {dlg?.kind === "deletePhase" && phaseId != null && (
+          <DeletePhaseDialog
+            name={plan.name}
+            logged={0}
+            firstName={firstName}
+            onDelete={() => {
+              close();
+              startTransition(async () => {
+                await deletePhaseAction(phaseId);
+                savedToast(`${plan.name} deleted`);
+                router.push(`${window.location.pathname}?client=${clientId}&tab=measurements`, { scroll: false });
+              });
+            }}
+            onClose={close}
+          />
+        )}
       </Dialog>
     </div>
   );
 }
 
-/** The library behind the search bar, as on a session: type to match, or the
- *  chevron for the groups, a group for its metrics; and your own metric, put
- *  in whichever group fits. */
+/** Taking a metric off the check-in, in the delete pop-up's style (21 Oct). Its
+ *  logged values go with it, so when there are any a tick has to be checked first. */
+function RemoveMetricDialog({ metric: m, firstName, onRemove, onClose }: { metric: DraftMetric; firstName: string; onRemove: () => void; onClose: () => void }) {
+  const [agreed, setAgreed] = useState(false);
+  const cancel = useRef<HTMLButtonElement>(null);
+  const logged = m.last != null;
+  return (
+    <DialogContent
+      className="dlh"
+      role="alertdialog"
+      onOpenAutoFocus={(ev) => {
+        ev.preventDefault();
+        setTimeout(() => cancel.current?.focus(), 60);
+      }}
+    >
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Remove {m.name}?</DialogTitle>
+        <button type="button" className="dlh-x" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <DialogDescription className="dlh-what">{logged ? "This permanently deletes what was logged for it. It can’t be undone." : `It comes off ${firstName}’s check-in.`}</DialogDescription>
+      {logged && (
+        <button type="button" role="checkbox" aria-checked={agreed} className="dlh-ack" onClick={() => setAgreed((x) => !x)}>
+          <span className={`dlh-box${agreed ? " on" : ""}`} aria-hidden="true">
+            {agreed ? "✓" : ""}
+          </span>
+          Delete {firstName}&rsquo;s logged {m.name} too
+        </button>
+      )}
+      <div className="dlh-foot">
+        <button ref={cancel} type="button" className="dlh-cancel" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="dlh-delete" disabled={logged && !agreed} onClick={onRemove}>
+          Remove
+        </button>
+      </div>
+    </DialogContent>
+  );
+}
+
+/** Adding a metric, as an exercise is added on Training (21 Oct, Alex): one
+ *  search bar. Type for matches; the chevron opens the groups, a group its
+ *  metrics. The list floats over the page, six rows then it scrolls, Create
+ *  pinned at its foot. A pick becomes a row and the bar stays for the next. */
 function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: DraftMeasurements["library"]; groups: DraftMeasurements["groups"]; have: string[]; onAdd: (name: string, unit: string, group: string) => void; onClose: () => void }) {
   const [q, setQ] = useState("");
-  // The bar alone first; the chevron opens the groups. "Create your own metric" stays in reach underneath.
   const [browse, setBrowse] = useState(false);
   const [pack, setPack] = useState<string | null>(null);
   const [cursor, setCursor] = useState(0);
@@ -660,13 +836,13 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
   const needle = q.trim().toLowerCase();
   type Item = { name: string; unit: string; group: string; pack: string; taken: boolean };
   const itemOf = (p: DraftMeasurements["library"][number], i: DraftMeasurements["library"][number]["items"][number]): Item => ({ name: i.name, unit: i.unit, group: p.group, pack: p.label, taken: i.already || have.includes(i.name.toLowerCase()) });
-  // What the list shows: matches while typing; else the picked group's
-  // metrics; else, with the chevron open, the groups.
-  const matches: Item[] = needle ? library.flatMap((p) => p.items.filter((i) => i.name.toLowerCase().includes(needle)).map((i) => itemOf(p, i))).slice(0, 8) : [];
-  const inPack: Item[] = !needle && pack ? (library.find((p) => p.id === pack)?.items ?? []).map((i) => itemOf(library.find((p) => p.id === pack)!, i)) : [];
+  // What the list shows: matches while typing; else the picked group's metrics; else, with the chevron open, the groups.
+  const matches: Item[] = needle ? library.flatMap((p) => p.items.filter((i) => i.name.toLowerCase().includes(needle)).map((i) => itemOf(p, i))) : [];
+  const packNow = pack ? library.find((p) => p.id === pack) : undefined;
+  const inPack: Item[] = !needle && packNow ? packNow.items.map((i) => itemOf(packNow, i)) : [];
   const list = needle ? matches : inPack;
   const showPacks = !needle && browse && !pack;
-  const exact = needle && !matches.some((m) => m.name.toLowerCase() === needle);
+  const exact = needle && matches.some((m) => m.name.toLowerCase() === needle);
   const pick = (m: Item) => {
     if (m.taken) return;
     onAdd(m.name, m.unit, m.group);
@@ -676,58 +852,126 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
     setBrowse(false);
     box.current?.focus();
   };
+  const open = !creating && (showPacks || (!!pack && !needle) || !!needle);
+  const pop = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    pop.current?.querySelector(".rd-addrow-item.on")?.scrollIntoView({ block: "nearest" });
+  }, [cursor, open]);
+  const row = (m: Item, i: number, hint: string) => (
+    <button key={`${m.pack}-${m.name}`} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}${m.taken ? " taken" : ""}`} disabled={m.taken} onMouseEnter={() => setCursor(i)} onClick={() => pick(m)}>
+      {m.name}
+      <small>{m.taken ? "On the list" : hint}</small>
+    </button>
+  );
   return (
-    <div ref={wrap} className="rd-addrow">
-      <div className={`rd-addrow-bar${browse || needle ? " open" : ""}`}>
-        <input
-          ref={box}
-          className="rd-addrow-search"
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setCursor(0);
-            setPack(null);
+    <div ref={wrap} className="rd-addrow rls-addrow">
+      <Popover open={open} onOpenChange={() => {}}>
+        <PopoverAnchor asChild>
+          <div className={`rd-addrow-bar${open ? " open" : ""}`}>
+            <input
+              ref={box}
+              className="rd-addrow-search"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setCursor(0);
+                setPack(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  if (pack) setPack(null);
+                  else if (browse) setBrowse(false);
+                  else onClose();
+                }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  if (!needle && !browse) setBrowse(true);
+                  setCursor((c) => Math.min(c + 1, Math.max(0, list.length - 1)));
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setCursor((c) => Math.max(c - 1, 0));
+                }
+                if (e.key === "Enter") {
+                  if (list[cursor] && !list[cursor].taken) pick(list[cursor]);
+                  else if (needle && !exact) setCreating(true);
+                }
+              }}
+              placeholder={packNow ? `${packNow.label} · type to narrow` : "Search metrics"}
+              aria-label="Search metrics"
+            />
+            <button
+              type="button"
+              className={`rd-addrow-chev${browse ? " open" : ""}`}
+              onClick={() => {
+                setBrowse((o) => !o);
+                setPack(null);
+                box.current?.focus();
+              }}
+              aria-label={browse ? "Hide groups" : "Browse by group"}
+              aria-expanded={browse}
+            >
+              <ChevronDownIcon />
+            </button>
+            <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
+              ×
+            </button>
+          </div>
+        </PopoverAnchor>
+        <PopoverContent
+          ref={pop}
+          className="rd-addpop"
+          align="start"
+          sideOffset={6}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          // The bar is outside the panel; a click in it is not a click away.
+          onInteractOutside={(e) => {
+            if (wrap.current?.contains(e.target as Node)) e.preventDefault();
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              if (pack) setPack(null);
-              else if (browse) setBrowse(false);
-              else onClose();
-            }
-            if (e.key === "ArrowDown") {
-              e.preventDefault();
-              if (!needle && !browse) setBrowse(true);
-              setCursor((c) => Math.min(c + 1, Math.max(0, list.length - 1)));
-            }
-            if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setCursor((c) => Math.max(c - 1, 0));
-            }
-            if (e.key === "Enter") {
-              if (list[cursor]) pick(list[cursor]);
-              else if (exact) setCreating(true);
-            }
-          }}
-          placeholder={pack ? `${library.find((p) => p.id === pack)?.label ?? ""} · type to narrow` : "Search metrics"}
-          aria-label="Search metrics"
-        />
-        <button
-          type="button"
-          className={`rd-addrow-chev${browse ? " open" : ""}`}
-          onClick={() => {
-            setBrowse((o) => !o);
-            setPack(null);
-            box.current?.focus();
-          }}
-          aria-label={browse ? "Hide groups" : "Browse by group"}
-          aria-expanded={browse}
         >
-          <ChevronDownIcon />
-        </button>
-        <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
-          ×
-        </button>
-      </div>
+          {showPacks && (
+            <>
+              <div className="rd-addpop-scroll" role="listbox" aria-label="Groups">
+                {library.map((p) => (
+                  <button key={p.id} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => setPack(p.id)}>
+                    {p.label}
+                    <small>{p.items.length}</small>
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="rd-addrow-item create" onClick={() => setCreating(true)}>
+                <PlusIcon /> Create your own metric
+              </button>
+            </>
+          )}
+          {packNow && !needle && (
+            <>
+              <button type="button" className="rd-addrow-back" onClick={() => setPack(null)}>
+                ‹ All groups
+              </button>
+              <div className="rd-addpop-scroll" role="listbox" aria-label={packNow.label}>
+                {list.map((m, i) => row(m, i, m.unit))}
+              </div>
+            </>
+          )}
+          {needle && (
+            <>
+              {list.length > 0 && (
+                <div className="rd-addpop-scroll" role="listbox" aria-label="Metrics">
+                  {list.map((m, i) => row(m, i, m.pack))}
+                </div>
+              )}
+              {!exact && (
+                <button type="button" className={`rd-addrow-item create${list.length === 0 ? " on solo" : ""}`} onClick={() => setCreating(true)}>
+                  <PlusIcon /> Create &ldquo;{q.trim()}&rdquo; as your own metric
+                </button>
+              )}
+            </>
+          )}
+        </PopoverContent>
+      </Popover>
       {creating && (
         <CreateMetric
           groups={groups}
@@ -746,55 +990,6 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
           }}
         />
       )}
-      {!creating && !browse && !needle && !pack && (
-        <div className="rd-addrow-list">
-          <button type="button" className="rd-addrow-item create" onClick={() => setCreating(true)}>
-            <PlusIcon /> Create your own metric
-          </button>
-        </div>
-      )}
-      {!creating && showPacks && (
-        <div className="rd-addrow-list" role="listbox" aria-label="Groups">
-          {library.map((p) => (
-            <button key={p.id} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => setPack(p.id)}>
-              {p.label}
-              <small>{p.items.length}</small>
-            </button>
-          ))}
-          <button type="button" className="rd-addrow-item create" onClick={() => setCreating(true)}>
-            <PlusIcon /> Create your own metric
-          </button>
-        </div>
-      )}
-      {!creating && pack && !needle && (
-        <div className="rd-addrow-list" role="listbox" aria-label={library.find((p) => p.id === pack)?.label}>
-          <button type="button" className="rd-addrow-back" onClick={() => setPack(null)}>
-            ‹ All groups
-          </button>
-          {list.map((m, i) => (
-            <button key={m.name} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}${m.taken ? " taken" : ""}`} disabled={m.taken} onMouseEnter={() => setCursor(i)} onClick={() => pick(m)}>
-              {m.name}
-              <small>{m.taken ? "on the list" : m.unit}</small>
-            </button>
-          ))}
-        </div>
-      )}
-      {!creating && needle && (
-        <div className="rd-addrow-list" role="listbox">
-          {list.map((m, i) => (
-            <button key={`${m.pack}-${m.name}`} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}${m.taken ? " taken" : ""}`} disabled={m.taken} onMouseEnter={() => setCursor(i)} onClick={() => pick(m)}>
-              {m.name}
-              <small>{m.taken ? "on the list" : `${m.pack}${m.unit ? ` · ${m.unit}` : ""}`}</small>
-            </button>
-          ))}
-          {exact && (
-            <button type="button" className={`rd-addrow-item create${list.length === 0 ? " on" : ""}`} onClick={() => setCreating(true)}>
-              <PlusIcon /> Create &ldquo;{q.trim()}&rdquo; as your own metric
-            </button>
-          )}
-        </div>
-      )}
-      <p className="rd-addrow-hint">Added on the rhythm on screen; its ⋯ moves it to another. Nothing reaches the check-in until Apply.</p>
     </div>
   );
 }
@@ -808,22 +1003,22 @@ function CreateMetric({ groups, initial, taken, onCreate, onCancel }: { groups: 
   useEffect(() => {
     first.current?.focus();
   }, []);
-  const ok = name.trim().length > 0 && !taken(name.trim());
+  const dup = taken(name.trim());
+  const ok = name.trim().length > 0 && !dup;
   return (
-    <div className="rd-create" onKeyDown={(e) => (e.key === "Escape" ? onCancel() : e.key === "Enter" && ok ? onCreate(name.trim(), unit.trim(), group) : null)}>
-      <span className="rd-eyebrow">Create your own metric</span>
+    <div className="rd-create rls-create" onKeyDown={(e) => (e.key === "Escape" ? onCancel() : e.key === "Enter" && ok ? onCreate(name.trim(), unit.trim(), group) : null)}>
       <div className="rd-create-row">
-        <input ref={first} className="rd-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Metric name" maxLength={60} />
-        <input className="rd-input rm-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit · kg, h, /10" maxLength={12} aria-label="Unit" />
+        <input ref={first} className="rd-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Metric" maxLength={60} aria-label="Metric" />
+        <input className="rd-input rm-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit" maxLength={12} aria-label="Unit" />
         <Picker value={group} onChange={setGroup} label="Group" options={groups.map((g) => ({ value: g.key, label: g.label }))} />
-        <button type="button" className="rd-btn" onClick={onCancel}>
+        <button type="button" className="trn-btn ghost" onClick={onCancel}>
           Cancel
         </button>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onCreate(name.trim(), unit.trim(), group)}>
-          Add to the list
+        <button type="button" className="trn-btn primary" disabled={!ok} onClick={() => onCreate(name.trim(), unit.trim(), group)}>
+          Add
         </button>
       </div>
-      <p className="rd-addrow-hint">{taken(name.trim()) ? `${name.trim()} is already on the list.` : `Sits under ${groups.find((g) => g.key === group)?.label ?? "Other"} on ${"the client's"} check-in.`}</p>
+      {dup && <p className="rls-create-warn">{name.trim()} is already on the list.</p>}
     </div>
   );
 }
@@ -842,9 +1037,10 @@ function NoteBubble({ text, onReply }: { text: string; onReply: () => void }) {
       <PopoverContent side="bottom" align="start" className="rm-notepop w-80" onClick={(e) => e.stopPropagation()}>
         <p>{text}</p>
         <div className="rm-notepop-foot">
-          <Button size="sm" onClick={onReply}>
+          {/* The one action, a small ink pill (21 Oct: was navy). */}
+          <button type="button" className="rm-reply" onClick={onReply}>
             Reply
-          </Button>
+          </button>
         </div>
       </PopoverContent>
     </Popover>
@@ -912,13 +1108,13 @@ function CheckinTable({ view, onReply }: { view: LoggedValues; onReply: (period:
 function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues; cadence: Cadence; onMessage: (label: string) => void; onReply: (period: string) => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
-  const grid = { gridTemplateColumns: "20px 150px 100px minmax(240px, 1fr) 120px 32px", columnGap: 24 } as const;
+  // No rhythm column (21 Oct): the section's toggle already says which (say a thing once).
+  const grid = { gridTemplateColumns: "20px 150px minmax(240px, 1fr) 112px 32px", columnGap: 24 } as const;
   return (
     <div className="rd-rows">
       <div className="rd-cols" aria-hidden="true" style={grid}>
         <span />
         <span>Date</span>
-        <span>Check-in</span>
         <span>Logged</span>
         <span>State</span>
         <span />
@@ -929,7 +1125,7 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
         const isOpen = open === p.key;
         const state = filled.length === 0 ? { text: "Missed", cls: "down" } : missing === 0 ? { text: "Complete", cls: "up" } : { text: `${missing} missing`, cls: "" };
         const note = view.notes[p.key];
-        const label = `${CAD[cadence].label} check-in · ${p.label}`;
+        const label = `${CAD[cadence].label} check-in · ${whenOf(p.key, p.label)}`;
         return (
           <div key={p.key} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
             <div className="rd-row-main" style={grid} onClick={() => setOpen((x) => (x === p.key ? null : p.key))} role="button" tabIndex={0} aria-expanded={isOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen((x) => (x === p.key ? null : p.key)))}>
@@ -942,9 +1138,6 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
                   {note && <NoteBubble text={note} onReply={() => onReply(p.key)} />}
                 </span>
               </span>
-              <span>
-                <span className={`rd-pill${cadence === "daily" ? " quiet" : ""}`}>{CAD[cadence].label}</span>
-              </span>
               <span className="rm-summary">
                 {filled
                   .slice(0, 4)
@@ -952,12 +1145,10 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
                   .join(" · ") || "Nothing submitted"}
                 {filled.length > 4 ? ` · +${filled.length - 4}` : ""}
               </span>
-              <span>
-                <span className={`rd-set rn-vs ${state.cls}`}>{state.text}</span>
-              </span>
+              <span className={`rls-vs ${state.cls}`}>{state.text}</span>
               {/* The row's one action: a message about this check-in (on hover), not a menu. */}
               <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
-                <button type="button" className="rd-btn ghost sm" onClick={() => onMessage(label)} aria-label={`Message about ${p.label}`} title="Message about this check-in">
+                <button type="button" className="trn-row-more" onClick={() => onMessage(label)} aria-label={`Message about ${p.label}`} title="Message about this check-in">
                   <ChatIcon />
                 </button>
               </span>

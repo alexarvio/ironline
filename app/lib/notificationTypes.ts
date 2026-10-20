@@ -108,7 +108,7 @@ export function categorize(n: StoredNotification): NotificationCategory {
   if (starts(m, "Your coach set new nutrition targets", "Your coach set a new nutrition phase")) return "nutrition_phase";
   if (starts(m, "Updated your nutrition", "Updated your supplements", "Updated your water goal", "Left a note on your nutrition")) return "nutrition_changed";
   if (starts(m, "Changed your progress pictures", "Left instructions for your progress pictures")) return "pics_reviewed";
-  if (starts(m, "Changed what you check in", "Moved your weekly check-in day", "Moved your monthly check-in day")) return "checkin_comment";
+  if (starts(m, "Changed what you check in", "Moved your weekly check-in day", "Moved your monthly check-in day", "Left a note on your check-in")) return "checkin_comment";
   if (starts(m, "Sent you invoice", "Sent a new invoice", "Marked invoice")) return "invoice";
   if (n.action_tab === "invoices") return "invoice";
   if (n.action_tab === "nutrition") return "nutrition_changed";

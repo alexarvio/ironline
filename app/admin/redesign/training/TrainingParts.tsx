@@ -5,7 +5,7 @@ import type React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { saveProgramWorkoutQuestionsAction, saveTrainingNoteAction, setPhaseGoalsAction } from "../../../lib/actions";
+import { saveProgramWorkoutQuestionsAction, savePhaseNoteAction, setPhaseGoalsAction } from "../../../lib/actions";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../../../lib/phaseCovers";
 import { MAX_WORKOUT_QUESTIONS, WORKOUT_QUESTION_PRESETS } from "../../../lib/workoutQuestions";
 import { ChatIcon, TargetIcon } from "../../../components/icons";
@@ -27,7 +27,7 @@ const preview = (s: string) => (s.length > 80 ? `${s.slice(0, 80).trimEnd()}…`
 
 const fill = (g: string[]) => Array.from({ length: PHASE_OBJECTIVES_MAX }, (_, i) => g[i] ?? "");
 
-export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName: string; phaseId: number; goals: string[]; note: string }) {
+export function GoalsNotePills({ firstName, phaseId, goals, note, area = "training" }: { firstName: string; phaseId: number; goals: string[]; note: string; /** The tab it sits on (Training, Lifestyle since 21 Oct), for the toast. */ area?: string }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [open, setOpen] = useState<"goals" | "note" | null>(null);
@@ -84,8 +84,8 @@ export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName:
         await setPhaseGoalsAction(phaseId, lines);
         toast.success("Saved", { description: lines.length ? `Phase goals · ${firstName} sees them on Home` : "Phase goals cleared" });
       } else {
-        await saveTrainingNoteAction(phaseId, text.trim());
-        toast.success("Saved", { description: text.trim() ? `Note to ${firstName} on training` : "Note removed" });
+        await savePhaseNoteAction(phaseId, text.trim());
+        toast.success("Saved", { description: text.trim() ? `Note to ${firstName} on ${area}` : "Note removed" });
       }
       router.refresh();
     });

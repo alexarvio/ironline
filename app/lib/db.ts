@@ -999,7 +999,7 @@ type ChatMessage = {
 // request.
 type CoachActivityKind = "coach_note" | "report" | "programme" | "reminder" | "general";
 // "video": a reply to a video the client sent; action_ref is the video_requests id.
-type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat" | "video" | "invoices";
+type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat" | "video" | "invoices" | "checkin";
 type CoachActivity = {
   id: number;
   client_id: number;

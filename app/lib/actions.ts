@@ -26,7 +26,7 @@ import {
   requireCoach,
 } from "./auth";
 import { eraseClient } from "./erase";
-import { endWeekFor, phaseDays } from "./phases";
+import { phaseDays, phaseLastDay } from "./phases";
 import { sendInviteEmail } from "./mail";
 import { clerkOn, sendClerkInvite } from "./clerk";
 import { inviteToken } from "./inviteToken";
@@ -1005,7 +1005,9 @@ export async function applyMetricChangesAction(input: {
   if (Array.isArray(input.order) && input.order.length && input.order.every(mine)) setMetricOrder(clientId, input.order);
   const adds = (Array.isArray(input.adds) ? input.adds : [])
     .map((a) => ({ name: String(a.name ?? "").trim().slice(0, 60), unit: String(a.unit ?? "").trim().slice(0, 20), group: String(a.group ?? "other"), cadence: a.cadence === "weekly" ? ("weekly" as const) : a.cadence === "monthly" ? ("monthly" as const) : ("daily" as const), source: a.source }))
-    .filter((a) => a.name);
+    .filter((a) => a.name)
+    // Already asked for on this phase (or in the standing set): not added twice, as when a save is retried (21 Oct).
+    .filter((a) => !getData().metric_definitions.some((m) => m.client_id === clientId && (m.phase_id == null || m.phase_id === phaseId) && m.name.trim().toLowerCase() === a.name.toLowerCase()));
   // A monthly metric added or moved in, and no monthly check-in yet: it opens on the 1st.
   const toMonthly = adds.some((a) => a.cadence === "monthly") || (Array.isArray(input.cadence) ? input.cadence : []).some((c) => mine(c.id) && c.value === "monthly");
   if (toMonthly && phaseCheckInDays(clientId, phaseId).monthly == null) setPhaseCheckInDays(clientId, phaseId, { monthly: 1 });
@@ -2922,16 +2924,17 @@ function readPhaseForm(formData: FormData) {
   const track = PHASE_TRACKS.find((t) => t.id === trackRaw)?.id ?? null;
   const name = String(formData.get("name") ?? "").trim();
   const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
-  // A form that means the exact days sends firstDay and lastDay (a nutrition
-  // or lifestyle phase can start and end on any day); start and end are any
-  // day of the first and last week, as before.
+  // A form may send the first and last day (firstDay, lastDay) or any day of
+  // the first and last week (start, end); either way the phase snaps to whole
+  // Monday-to-Sunday weeks (21 Oct, Alex: every track, see phaseSpanFor), its
+  // last week the one its last day falls in, so nothing is cut short.
   const firstDay = String(formData.get("firstDay") ?? "");
   const lastDay = String(formData.get("lastDay") ?? "");
-  if (track && name && isDate(firstDay) && isDate(lastDay)) return { track, name, start: firstDay, end: endWeekFor(lastDay), exact: true };
+  if (track && name && isDate(firstDay) && isDate(lastDay)) return { track, name, start: firstDay, end: lastDay };
   const start = String(formData.get("start") ?? "");
   const end = String(formData.get("end") ?? "");
   if (!track || !name || !isDate(start) || !isDate(end)) return null;
-  return { track, name, start, end, exact: false };
+  return { track, name, start, end };
 }
 
 // The phase dialog posts its objectives as repeated "objectives" fields, and
@@ -2948,7 +2951,7 @@ export async function addClientPhaseAction(formData: FormData): Promise<{ phaseI
   const rawProgram = String(formData.get("programId") ?? "");
   // Only one of this client's own programmes can be linked.
   const programId = /^\d+$/.test(rawProgram) && getClientIdForProgram(Number(rawProgram)) === clientId ? Number(rawProgram) : null;
-  const added = addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId, fields.exact);
+  const added = addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId);
   saveObjectivesFrom(added.id, formData);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2968,9 +2971,10 @@ export async function duplicateClientPhaseAction(phaseId: number): Promise<numbe
   const nextMonday = new Date(`${weekStart(localDateStr())}T00:00:00`);
   nextMonday.setDate(nextMonday.getDate() + 7);
   const start = localDateStr(nextMonday);
-  const lastMinus6 = new Date(nextMonday);
-  lastMinus6.setDate(lastMinus6.getDate() + Math.max(0, days - 7));
-  const made = addClientPhase(src.client_id, src.track, `${src.name} (copy)`, start, localDateStr(lastMinus6), null, src.track !== "training");
+  // Its last day, the same length on: the copy runs to the end of that week (whole weeks, 21 Oct).
+  const last = new Date(nextMonday);
+  last.setDate(last.getDate() + Math.max(0, days - 1));
+  const made = addClientPhase(src.client_id, src.track, `${src.name} (copy)`, start, localDateStr(last), null);
   setPhaseObjectives(made.id, src.objectives ?? []);
   const row = getData().client_phases.find((p) => p.id === made.id);
   if (row) {
@@ -2995,7 +2999,7 @@ export async function schedulePhaseAction(formData: FormData) {
   if (phaseEmptyReason(id)) return;
   const fields = readPhaseForm(formData);
   if (!fields) return;
-  schedulePhase(id, fields.name, fields.start, fields.end, fields.exact);
+  schedulePhase(id, fields.name, fields.start, fields.end);
   saveObjectivesFrom(id, formData);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -3009,8 +3013,8 @@ export async function schedulePhaseOnItsDatesAction(id: number) {
   if (phaseEmptyReason(phaseId)) return;
   const phase = getPhaseById(phaseId);
   if (!phase) return;
-  // Its stored dates, as they are.
-  schedulePhase(phaseId, phase.name, phase.start_week, phase.end_week, true);
+  // Its stored dates, its last week the one its last day falls in.
+  schedulePhase(phaseId, phase.name, phase.start_week, phaseLastDay(phase.end_week));
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -3041,11 +3045,11 @@ export async function saveAndSchedulePhaseOrSayWhyAction(formData: FormData): Pr
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return "That phase no longer exists.";
-  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
+  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
   saveObjectivesFrom(id, formData);
   // The edits are kept; an empty draft just doesn't go out, and says why (20 Oct: the toast said "scheduled" anyway).
   const empty = phaseEmptyReason(id);
-  if (!empty) schedulePhase(id, fields.name, fields.start, fields.end, fields.exact);
+  if (!empty) schedulePhase(id, fields.name, fields.start, fields.end);
   revalidatePath("/admin");
   revalidatePath("/client");
   return empty;
@@ -3055,7 +3059,7 @@ export async function saveAndDeployPhaseNowAction(formData: FormData): Promise<s
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return "That phase no longer exists.";
-  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
+  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
   saveObjectivesFrom(id, formData);
   // Saved either way; live only with something in it, and if not, why not (5 Oct).
   const empty = phaseEmptyReason(id);
@@ -3076,7 +3080,7 @@ export async function updateClientPhaseAction(formData: FormData) {
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
-  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
+  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
   saveObjectivesFrom(id, formData);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -3107,12 +3111,16 @@ export async function setPhaseGoalsAction(phaseId: number, goals: string[]) {
   revalidatePath("/client");
 }
 
-// The coach's note on a training phase, from the Training tab; the client
-// reads it at the top of theirs.
-export async function saveTrainingNoteAction(phaseId: number, text: string) {
+// The coach's note on a phase, from its tab's Note pill (Training, and
+// Lifestyle since 21 Oct): the client reads it at the top of that track's
+// screen, a training note on Training, a lifestyle one on the check-in.
+export async function savePhaseNoteAction(phaseId: number, text: string) {
   if (!Number.isInteger(phaseId) || !(await coachForClient(getClientIdForPhase(phaseId)))) return;
   const clientId = setPhaseClientNote(phaseId, String(text ?? ""));
-  if (clientId != null && String(text ?? "").trim() && clientSeesPhase(phaseId)) noteChange(clientId, "Left a note on your training", { tab: "training", label: "Read it", key: "training-note", ref: phaseId });
+  if (clientId != null && String(text ?? "").trim() && clientSeesPhase(phaseId)) {
+    if (getPhaseById(phaseId)?.track === "lifestyle") noteChange(clientId, "Left a note on your check-in", { tab: "checkin", label: "Read it", key: "lifestyle-note", ref: phaseId });
+    else noteChange(clientId, "Left a note on your training", { tab: "training", label: "Read it", key: "training-note", ref: phaseId });
+  }
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -3459,7 +3467,7 @@ export async function saveWarmupSetsAction(assignmentId: number, sets: { weight_
 // Everything the coach changes reaches the client as a notification: one per
 // kind per day, so an afternoon of edits reads as one line, not thirty.
 // In the app only, unless push says it is a real moment (see logCoachActivity).
-function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings" | "invoices"; label?: string; ref?: number; key: string; push?: boolean; detail?: string }) {
+function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings" | "invoices" | "checkin"; label?: string; ref?: number; key: string; push?: boolean; detail?: string }) {
   if (clientId == null) return;
   logCoachActivity(clientId, message, { kind: "general", actionTab: opts.tab, actionLabel: opts.label, actionRef: opts.ref, dedupeKey: `${opts.key}:${localDateStr()}`, push: opts.push, mergeDetail: opts.detail });
 }

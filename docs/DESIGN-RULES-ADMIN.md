@@ -53,7 +53,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - A date in words is day/month numerals (20 Oct, Alex): `Scheduled · starts 9/11`, `5/10 – 2/11`, `Start 16/11`. Never `9 Nov` or `Mon 9 Nov` in a pill, a fact line, a note, a button or a toast; the year only when it isn't this one (`9/11/2027`). Grids keep their month names: the timeline's axis (`9 Nov` under `NOV`), the week rail, calendars. One helper writes them, server and screen alike: `dayMonth` (`app/lib/dayMonth.ts`); no local copies.
 - Every date field, everywhere (20 Oct, Alex): typed or picked, always both. `DateText`: digits only, slashes fill in (0811 → 08/11/), dd/mm/yyyy, a pasted 2026-11-08 is turned round. A single date is `DatePick` (the typed field with the calendar on its icon); a range is two `DateText` boxes beside `MonthRange`. Never `<input type="date">`, never a calendar-only picker, never a date shown as words where it can be set.
 - The format lives in `DateText` alone, so a coach setting (dd/mm/yyyy or yyyy-mm-dd, to come) switches every field at once. Don't format a typed date anywhere else.
-- Phase dates: no earlier than a year back (`min`). Training phases run Monday to Sunday; the dates snap, and no sentence explains it.
+- Phase dates: no earlier than a year back (`min`). Every phase runs in whole Monday-to-Sunday weeks, Lifestyle and Nutrition too (21 Oct, Alex); the dates snap, and no sentence explains it. Make it live now starts a phase this week's Monday.
 
 ## 8. Lists, rows and tables
 - Training sessions: separate white cards (radius 18, hairline, 8px apart), no numbers, the whole row opens it, ⋯ shows on hover only.
@@ -72,8 +72,14 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - A bar on a timeline is outlined in the colour it is now (its track or kind at half strength); a draft's outline is dashed.
 
 ## 9. Saving
-- The Training tab autosaves: one status on the week's line (`✓ All changes saved` / `Saving…` / `Not saved · Retry`), none per session. Other tabs still use the pending bar; ask Alex before switching another tab to autosave.
+- The Training and Lifestyle tabs autosave (Lifestyle since 21 Oct): one status on the section's line (`✓ All changes saved` / `Saving…` / `Not saved · Retry`), none per row. A change shows at once; a row just added is faded until its save comes back, in the place the saved list will have it. Other tabs still use the pending bar; ask Alex before switching another tab to autosave.
 - Nothing on the client's screen changes before the coach (or client) confirms: a sheet with Done applies on Done.
+- A name typed in place shows the moment Enter is pressed, never the old one while it saves (21 Oct, Alex).
+
+## 9b. A track tab is built as Training (21 Oct, Alex)
+- The header: the phase's name to click and type (Enter or a click away saves, Esc leaves it), ▾ beside it to switch phase, the state tag as the menu of what can be done; one fact line (`4 weeks · 19/10 – 29/11 · week 1 of 6`); on the right Phase goals and Note to {client} as pills (one pop-over), then ⋯ (Message, Edit dates, New phase, Delete phase). No goals row across the page.
+- Each section's title (20px/600) and its status on the page, its controls on the right; the content in one white card (radius 18, hairline).
+- Adding to a list is the exercise search: one bar with an ink edge, the list floating under it (six rows, Create pinned at its foot), the bar staying for the next pick. Lifestyle's metrics have no time of day: every metric is asked all day.
 
 ## 10. Timeline (Plan)
 - Phase bars: the grab handles at both ends show while the pointer is on the bar, darker on the end itself.

@@ -3551,6 +3551,11 @@ export function listAllMetrics(clientId: number): MetricDefinition[] {
     });
 }
 
+/** Whether the coach has put this client's metrics in an order of their own (else they run group by group). */
+export function metricsInCustomOrder(clientId: number): boolean {
+  return !!getData().clients.find((c) => c.id === clientId)?.metrics_custom_order;
+}
+
 /**
  * The coach dragged the metrics on screen (one phase's, or the standing set)
  * into this order. Every metric of the client is numbered again, the ones on
@@ -3667,9 +3672,10 @@ export function addMetricDefinition(
   phaseId: number | null = null
 ) {
   const data = getData();
-  const count = data.metric_definitions.filter(
-    (m) => m.client_id === clientId && m.frequency === frequency
-  ).length;
+  // After every metric the client has (21 Oct): last in its group, or last of
+  // all in the coach's own order, where the coach's screen already put it. A
+  // count per rhythm tied with metrics further down and it jumped.
+  const count = Math.max(-1, ...data.metric_definitions.filter((m) => m.client_id === clientId).map((m) => m.order_index)) + 1;
   data.metric_definitions.push({
     id: allocId("metric_definitions"),
     client_id: clientId,
@@ -7128,7 +7134,7 @@ export function getCheckInSections(clientId: number): CheckInData {
 export type CoachActivityKind = "coach_note" | "report" | "programme" | "reminder" | "general";
 // Where a notification's action link should take the client — the four
 // bottom-nav tabs, or "chat" to open the chat/notifications panel itself.
-export type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat" | "video" | "invoices";
+export type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat" | "video" | "invoices" | "checkin";
 
 export type ClientNotification = {
   id: number;
@@ -7737,26 +7743,23 @@ export function getClientIdForPhase(phaseId: number): number | null {
 // `programId`: for a training phase, an existing programme to be the plan
 // for instead of a fresh draft.
 /**
- * A phase's stored start_week and end_week from the dates the coach picked.
- * `exact`: `start` is the first day and `end` an end_week (the last day
- * minus 6, see ClientPhase), kept as they are for a nutrition or lifestyle
- * phase. Otherwise both are any day of their week and snap to its Monday, as
- * every phase did before phases could start on any day; a training phase
- * always snaps, as a programme runs in Monday-to-Sunday weeks.
+ * A phase's stored start_week and end_week from the dates the coach picked:
+ * both snap to their week's Monday, so every phase runs in whole Monday-to-
+ * Sunday weeks (21 Oct, Alex: nutrition and lifestyle too, as training always
+ * did). `start` and `end` are any day of the first and last week (the last
+ * day itself will do), so a last day mid-week keeps its whole week rather than
+ * losing it. A phase saved on other days before then keeps them until it is
+ * saved again.
  */
-function phaseSpanFor(track: PhaseTrack, start: string, end: string, exact: boolean): { first: string; last: string } {
-  if (track === "training" || !exact) {
-    const a = weekStart(start);
-    const b = weekStart(end);
-    return a <= b ? { first: a, last: b } : { first: b, last: a };
-  }
-  // At least one day long: a last day before the first becomes the first.
-  return { first: start, last: phaseLastDay(end) < start ? endWeekFor(start) : end };
+function phaseSpanFor(start: string, end: string): { first: string; last: string } {
+  const a = weekStart(start);
+  const b = weekStart(end);
+  return a <= b ? { first: a, last: b } : { first: b, last: a };
 }
 
-export function addClientPhase(clientId: number, track: PhaseTrack, name: string, startDate: string, endDate: string, programId: number | null = null, exact = false): ClientPhase {
+export function addClientPhase(clientId: number, track: PhaseTrack, name: string, startDate: string, endDate: string, programId: number | null = null): ClientPhase {
   const data = getData();
-  const { first, last } = phaseSpanFor(track, startDate, endDate, exact);
+  const { first, last } = phaseSpanFor(startDate, endDate);
   const phase: ClientPhase = {
     id: allocId("client_phases"),
     client_id: clientId,
@@ -7865,14 +7868,13 @@ export function updateClientPhase(
   name: string,
   startDate: string,
   endDate: string,
-  adjustProgram = false,
-  exact = false
+  adjustProgram = false
 ) {
   const data = getData();
   const phase = data.client_phases.find((p) => p.id === phaseId);
   if (!phase) return;
   const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : undefined;
-  let { first: start, last: end } = phaseSpanFor(program ? "training" : track, startDate, endDate, exact);
+  let { first: start, last: end } = phaseSpanFor(startDate, endDate);
   // A programme starts on its deploy week. Moving the phase's start moves
   // that week with it, unless the client has already trained in the
   // programme: then the start stays put and only the end can move.
@@ -8298,11 +8300,11 @@ export function homeGymId(clientId: number): number | null {
  * A training phase's length is its programme's, so its weeks come from the
  * builder rather than from here; the start is still the coach's to pick.
  */
-export function schedulePhase(phaseId: number, name: string, startDate: string, endDate: string, exact = false): boolean {
+export function schedulePhase(phaseId: number, name: string, startDate: string, endDate: string): boolean {
   const data = getData();
   const phase = data.client_phases.find((p) => p.id === phaseId);
   if (!phase) return false;
-  const { first, last } = phaseSpanFor(phase.program_id ? "training" : phase.track, startDate, endDate, exact);
+  const { first, last } = phaseSpanFor(startDate, endDate);
   phase.name = name.trim() || phase.name;
   phase.start_week = first;
   phase.end_week = last;
@@ -8351,9 +8353,9 @@ export function deployPhaseNow(phaseId: number): boolean {
   if (!phase) return false;
   const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : null;
   if (program && !program.name?.trim()) return false;
-  // From today; a training phase from this week's Monday, as it runs in
-  // whole weeks (see phaseSpanFor).
-  const from = phase.track === "training" || program ? weekStart(localDateStr()) : localDateStr();
+  // From this week's Monday, every track (21 Oct, Alex: phases run in whole
+  // weeks, see phaseSpanFor).
+  const from = weekStart(localDateStr());
   const shift = (day: string, days: number) => {
     const d = new Date(`${day}T00:00:00`);
     d.setDate(d.getDate() + days);
@@ -8375,8 +8377,8 @@ export function deployPhaseNow(phaseId: number): boolean {
     deployProgram(program.id);
     return true;
   }
-  // Same length, up to the day before the next phase already set.
-  const days = phaseDays(phase.start_week, phase.end_week);
+  // Same length in whole weeks, up to the day before the next phase already set.
+  const days = Math.ceil(phaseDays(phase.start_week, phase.end_week) / 7) * 7;
   const next = sameTrack.filter((o) => !o.draft && o.start_week > from).map((o) => o.start_week).sort()[0];
   let lastDay = shift(from, days - 1);
   if (next && lastDay >= next) lastDay = shift(next, -1);

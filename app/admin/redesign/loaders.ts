@@ -55,6 +55,7 @@ import {
   listClients,
   listLifestylePhases,
   listMetricsForPhase,
+  metricsInCustomOrder,
   listExercisesByGroup,
   librarySubstitutesFor,
   homeGymId,
@@ -87,7 +88,6 @@ import type { DraftPlan } from "./plan/PlanDraft";
 import type { DraftHome } from "./home/HomeDraft";
 import type { DraftMessages } from "./messages/MessagesDraft";
 import type { MessageLink } from "../../lib/messageLinks";
-import { metricAskAt } from "../../lib/metricAskAt";
 import { dayMonth, dayMonthTime } from "../../lib/dayMonth";
 
 // What the redesign drafts read, gathered on the server for the shell that
@@ -595,6 +595,9 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
   return {
     id: selected?.id ?? 0,
     goals: goalsOf(selected?.id),
+    // The coach's note to the client on this phase (21 Oct): the Note pill, as on Training.
+    coachNote: selected?.client_note ?? "",
+    customOrder: metricsInCustomOrder(clientId),
     phases,
     planCtx: planCtxOf(clientId),
     name: selected?.name ?? "Check-ins",
@@ -611,7 +614,7 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
       const g = metricGroup(m.category);
       const entries = getMetricEntries([m.id]).filter((e): e is typeof e & { value: number } => e.value != null).sort((a, b) => a.period.localeCompare(b.period));
       const last = entries[entries.length - 1];
-      return { id: m.id, name: m.name, unit: m.unit, frequency: m.frequency, groupKey: g.key, groupLabel: g.label, tint: g.tint, askAt: metricAskAt(m), last: last ? { value: last.value, when: fmtWhen(last.period) } : null };
+      return { id: m.id, name: m.name, unit: m.unit, frequency: m.frequency, groupKey: g.key, groupLabel: g.label, tint: g.tint, last: last ? { value: last.value, when: fmtWhen(last.period) } : null };
     }),
     library,
     daily: getLoggedValues(clientId, "daily", started ? Math.min(8, logSpan("daily")) : 0, scope),

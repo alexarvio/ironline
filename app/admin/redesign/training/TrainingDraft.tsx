@@ -632,11 +632,16 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const [dlg, setDlg] = useState<Dlg>(null);
   // Renaming the phase in place (20 Oct, Alex): a click on the title makes it a line to type on; a click away or Enter saves, Esc leaves it.
   const [renaming, setRenaming] = useState<string | null>(null);
+  // The new name stays up from the moment Enter is pressed (21 Oct, Alex: it went back to the old one until the save came back).
+  const [named, setNamed] = useState<{ id: number; from: string; to: string } | null>(null);
+  const shownName = named && named.id === program.id && program.name === named.from ? named.to : program.name;
   const commitRename = () => {
     if (renaming == null) return;
     const v = renaming.trim();
     setRenaming(null);
-    if (v && v !== program.name) act(() => renameProgramAction(fd({ programId: program.id, name: v })), `Renamed to ${v}`);
+    if (!v || v === shownName) return;
+    setNamed({ id: program.id, from: program.name, to: v });
+    act(() => renameProgramAction(fd({ programId: program.id, name: v })), `Renamed to ${v}`);
   };
   const close = () => setDlg(null);
   const rowById = (id: number) => sessions.flatMap((s) => s.rows).find((r) => r.id === id) ?? null;
@@ -740,8 +745,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               ) : (
                 <>
                   {/* Click the name to type it (20 Oct, Alex); the ▾ beside it switches programme. */}
-                  <button type="button" className="trn-name-btn" onClick={() => setRenaming(program.name)} title="Rename">
-                    {program.name}
+                  <button type="button" className="trn-name-btn" onClick={() => setRenaming(shownName)} title="Rename">
+                    {shownName}
                   </button>
                   <PhaseSwitcher name="" currentId={program.id} items={program.programs} hrefFor={(id) => `/admin/redesign/training?client=${clientId}&program=${id}`} label="Switch programme" newLabel="New programme" onNew={() => setDlg({ kind: "newProgram" })} />
                 </>
