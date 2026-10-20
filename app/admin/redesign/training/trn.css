@@ -60,6 +60,8 @@
 .rd.trn .trn-status-btn svg { width: 11px; height: 11px; }
 .rd.trn .trn-status-btn:hover, .rd.trn .trn-status-btn[data-state="open"] { box-shadow: inset 0 0 0 1px currentColor; }
 .rd.trn .trn-meta { font-size: 13.5px; font-weight: 500; color: var(--trn-sec); }
+/* The header's facts parted by a short upright line, not a dot, on Training and Lifestyle alike (21 Oct, Alex). */
+.rd.trn .trn-meta-part::before { content: ""; display: inline-block; width: 1.5px; height: 12px; margin: 0 10px; border-radius: 1px; background: #b0b7c3; vertical-align: -1px; }
 .rd.trn .trn-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rd.trn .trn-head-actions .rd-btn { height: 36px; border-radius: 999px; }
 .rd.trn .trn-unit { display: inline-flex; height: 36px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); box-sizing: border-box; }

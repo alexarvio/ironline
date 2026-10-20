@@ -782,9 +782,17 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               <span className={`trn-status ${program.status}`} style={stateTagStyle(program.status)}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
             )}
           </div>
+          {/* The facts parted by a short upright line, not a dot (21 Oct, Alex); the dates last. */}
           <span className="trn-meta">
-            {weeks.length} {weeks.length === 1 ? "week" : "weeks"}
-            {program.startDate && ` · ${fmtDate(program.startDate)}${program.endDate ? ` – ${fmtDate(program.endDate)}` : ""}`}
+            <span>
+              {weeks.length} {weeks.length === 1 ? "week" : "weeks"}
+            </span>
+            {program.startDate && (
+              <span className="trn-meta-part">
+                {fmtDate(program.startDate)}
+                {program.endDate && ` – ${fmtDate(program.endDate)}`}
+              </span>
+            )}
           </span>
         </div>
         <div className="trn-head-actions">

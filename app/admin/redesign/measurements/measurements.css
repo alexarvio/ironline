@@ -153,8 +153,6 @@
 /* A real 1px edge, not an inset shadow (21 Oct, Alex): a row's white was painting over the hairline at its ends. */
 .rd.rls .rls-card { position: relative; padding: 2px 0 8px; border: 1px solid #e1e5eb; border-radius: 18px; background: #fff; overflow: hidden; }
 .rd.rls .trn-weekhead-actions .trn-btn svg { width: 14px; height: 14px; color: #8b93a1; }
-/* The header's facts parted by a thin upright line, as "3 daily metrics | ✓ All changes saved" under it (21 Oct, Alex). */
-.rd.rls .trn-meta-part::before { content: ""; display: inline-block; width: 1.5px; height: 12px; margin: 0 10px; border-radius: 1px; background: #b0b7c3; vertical-align: -1px; }
 
 /* Tracked metrics: column heads in small caps, a row a metric with a hairline between, ··· on hover. */
 .rd.rls .rls-cols { display: grid; align-items: center; min-height: 36px; padding: 4px 10px 0; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
