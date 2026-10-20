@@ -126,6 +126,7 @@ import {
   listMeasurementFields,
   listMetricDefinitions,
   logCoachActivity,
+  dropCoachActivity,
   markAllNotificationsRead,
   markCoachNotesRead,
   markNotificationRead,
@@ -1506,8 +1507,10 @@ export async function saveNutritionTargetsAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   if (!(await coachForClient(clientId))) return;
   const num = (k: string) => {
-    const raw = String(formData.get(k) ?? "").trim();
-    return raw === "" ? null : Number(raw);
+    // "2,5" is 2.5; anything not a number is none.
+    const raw = String(formData.get(k) ?? "").trim().replace(",", ".");
+    const n = raw === "" ? null : Number(raw);
+    return n != null && Number.isFinite(n) ? n : null;
   };
   const phaseRaw = Number(formData.get("phaseId"));
   const phaseId = Number.isInteger(phaseRaw) && phaseRaw > 0 ? phaseRaw : null;
@@ -1517,6 +1520,8 @@ export async function saveNutritionTargetsAction(formData: FormData) {
   const data = getData();
   const plan = data.nutrition_plans.find((p) => p.client_id === clientId);
   const phase = phaseId ? data.client_phases.find((p) => p.id === phaseId && p.client_id === clientId) : null;
+  // A phase that isn't this client's: nothing is saved (never the client-level sheet in its place).
+  if (phaseId != null && !phase) return;
   const before = (phase?.nutrition?.day_targets ?? plan?.day_targets) ?? null;
   const waterBefore = plan?.water_l ?? null;
   const training = { protein: num("t_protein"), carbs: num("t_carbs"), fats: num("t_fats") };
@@ -1526,20 +1531,31 @@ export async function saveNutritionTargetsAction(formData: FormData) {
   // and a second Save button for a single number would be silly.
   if (formData.has("water")) setNutritionWater(clientId, num("water"));
   if (phaseId == null || clientSeesPhase(phaseId)) {
+    // One note a day (21 Oct: the tab saves as the coach types, so 180 → 1 → 19 → 190
+    // mustn't reach the client as three notes): each figure from how the day began to now.
+    const key = `nutrition-targets:${localDateStr()}`;
+    const today = data.coach_activity.find((a) => a.client_id === clientId && a.dedupe_key === key);
+    const began = new Map<string, string>();
+    for (const part of today ? today.message.slice(today.message.indexOf(": ") + 2).split(" · ") : []) {
+      const m = /^(.+) (\S+) → \S+ (?:g|L)$/.exec(part);
+      if (m) began.set(m[1], m[2]);
+    }
     const moved: string[] = [];
     const say = (v: number | null) => (v == null ? "none" : String(v));
+    const figure = (label: string, was: number | null, now: number | null, unit: string) => {
+      const from = began.get(label) ?? say(was);
+      if (from !== say(now)) moved.push(`${label} ${from} → ${say(now)} ${unit}`);
+    };
     for (const [dayKey, dayWord, now] of [
       ["training", "training days", training],
       ["rest", "rest days", rest],
     ] as const) {
-      for (const macro of ["protein", "carbs", "fats"] as const) {
-        const was = before?.[dayKey]?.[macro] ?? null;
-        if (was !== now[macro]) moved.push(`${macro.charAt(0).toUpperCase() + macro.slice(1)} on ${dayWord} ${say(was)} → ${say(now[macro])} g`);
-      }
+      for (const macro of ["protein", "carbs", "fats"] as const) figure(`${macro.charAt(0).toUpperCase() + macro.slice(1)} on ${dayWord}`, before?.[dayKey]?.[macro] ?? null, now[macro], "g");
     }
-    if (formData.has("water") && waterBefore !== num("water")) moved.push(`Water ${say(waterBefore)} → ${say(num("water"))} L`);
-    // Saved with nothing changed: nothing to tell the client.
-    if (moved.length > 0) logCoachActivity(clientId, `Updated your nutrition targets: ${moved.join(" · ")}`, { kind: "general", actionTab: "nutrition", actionLabel: "See your targets" });
+    figure("Water", waterBefore, formData.has("water") ? num("water") : waterBefore, "L");
+    // Back where the day began: nothing to tell the client, and the day's note goes.
+    if (moved.length > 0) logCoachActivity(clientId, `Updated your nutrition targets: ${moved.join(" · ")}`, { kind: "general", actionTab: "nutrition", actionLabel: "See your targets", dedupeKey: key, replace: true });
+    else if (today) dropCoachActivity(clientId, key);
   }
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1561,6 +1577,7 @@ export async function applySupplementChangesAction(clientId: number, changes: Su
   if (!(await coachForClient(clientId))) return;
   const rowsBefore = getData().nutrition_plans.find((p) => p.client_id === clientId)?.supplement_rows ?? [];
   const removedNames = (changes.removedIds ?? []).map((id) => rowsBefore.find((r) => r.id === id)?.name.trim() || "a row");
+  const changed = (changes.updated ?? []).filter((u) => rowsBefore.some((r) => r.id === u.id));
   applySupplementChanges(clientId, changes);
   // The sheet always sends the order: only a different one is a reorder.
   const keptBefore = rowsBefore.filter((r) => !(changes.removedIds ?? []).includes(r.id)).map((r) => r.id);
@@ -1568,7 +1585,8 @@ export async function applySupplementChangesAction(clientId: number, changes: Su
   const parts = [
     changes.added?.length ? `Added ${changes.added.map((a) => a.name.trim() || "a row").join(", ")}` : null,
     removedNames.length ? `Removed ${removedNames.join(", ")}` : null,
-    changes.updated?.length ? `Changed ${changes.updated.map((u) => u.name.trim() || "a row").join(", ")}` : null,
+    // Only rows that are this client's.
+    changed.length ? `Changed ${changed.map((u) => u.name.trim() || "a row").join(", ")}` : null,
     reordered ? "Reordered them" : null,
   ].filter(Boolean);
   if (parts.length) supplementChange(clientId, parts.join(", "));

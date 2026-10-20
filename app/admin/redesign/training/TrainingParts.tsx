@@ -27,7 +27,7 @@ const preview = (s: string) => (s.length > 80 ? `${s.slice(0, 80).trimEnd()}…`
 
 const fill = (g: string[]) => Array.from({ length: PHASE_OBJECTIVES_MAX }, (_, i) => g[i] ?? "");
 
-export function GoalsNotePills({ firstName, phaseId, goals, note, area = "training", saveNote }: { firstName: string; phaseId: number; goals: string[]; note: string; /** The tab it sits on (Training, Lifestyle, Nutrition), for the toast. */ area?: string; /** Where the note goes when it isn't the phase's own (Nutrition's is its targets' note, 21 Oct). */ saveNote?: (text: string) => Promise<unknown> }) {
+export function GoalsNotePills({ firstName, phaseId, goals, note, area = "training", saveNote }: { firstName: string; /** None on a sheet without a phase (Nutrition's client-level one): the note alone. */ phaseId: number | null; goals: string[]; note: string; /** The tab it sits on (Training, Lifestyle, Nutrition), for the toast. */ area?: string; /** Where the note goes when it isn't the phase's own (Nutrition's is its targets' note, 21 Oct). */ saveNote?: (text: string) => Promise<unknown> }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [open, setOpen] = useState<"goals" | "note" | null>(null);
@@ -80,12 +80,13 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
     setOpen(null);
     startTransition(async () => {
       if (was === "goals") {
+        if (phaseId == null) return;
         const lines = rows.map((g) => g.trim().slice(0, PHASE_OBJECTIVE_CHARS)).filter(Boolean);
         await setPhaseGoalsAction(phaseId, lines);
         toast.success("Saved", { description: lines.length ? `Phase goals · ${firstName} sees them on Home` : "Phase goals cleared" });
       } else {
         if (saveNote) await saveNote(text.trim());
-        else await savePhaseNoteAction(phaseId, text.trim());
+        else if (phaseId != null) await savePhaseNoteAction(phaseId, text.trim());
         toast.success("Saved", { description: text.trim() ? `Note to ${firstName} on ${area}` : "Note removed" });
       }
       router.refresh();
@@ -111,7 +112,7 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
   };
   return (
     <div ref={wrap} className="trn-pills">
-      {pill("goals")}
+      {phaseId != null && pill("goals")}
       {pill("note")}
       {open && (
         <div className="trn-pop" role="dialog" aria-label={open === "goals" ? "Phase goals" : `Note to ${firstName}`}>

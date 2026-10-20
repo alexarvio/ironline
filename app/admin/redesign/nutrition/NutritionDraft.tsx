@@ -113,7 +113,15 @@ const textOf = (m: Macros): MacroText => ({
 const num = (s: string) => (s.trim() === "" ? 0 : Number(s.replace(",", ".")) || 0);
 const sameMacros = (a: MacroText, b: MacroText) => a.protein === b.protein && a.carbs === b.carbs && a.fats === b.fats;
 const isEmpty = (m: MacroText) => !m.protein && !m.carbs && !m.fats;
-const sameSupp = (a: DraftSupplement, b: DraftSupplement) => a.name === b.name && a.quantity === b.quantity && a.timing === b.timing && a.notes === b.notes;
+// Alike as saved: the server trims, so a space just typed ("Take with ") isn't a change, and the screen keeps it.
+const sameSupp = (a: DraftSupplement, b: DraftSupplement) => a.name.trim() === b.name.trim() && a.quantity.trim() === b.quantity.trim() && a.timing.trim() === b.timing.trim() && a.notes.trim() === b.notes.trim();
+// Two figures alike once read as numbers ("2." saved as 2, "2,5" as 2.5): the screen keeps what was typed.
+const sameFigure = (a: string, b: string) => a.trim() === b.trim() || (a.trim() !== "" && b.trim() !== "" && Number(a.replace(",", ".")) === Number(b.replace(",", ".")));
+const sameFigures = (a: Targets, b: Targets) => {
+  const aRest = a.same ? a.training : a.rest;
+  const bRest = b.same ? b.training : b.rest;
+  return sameFigure(a.water, b.water) && (["protein", "carbs", "fats"] as const).every((k) => sameFigure(a.training[k], b.training[k]) && sameFigure(aRest[k], bRest[k]));
+};
 
 type Targets = {
   same: boolean;
@@ -172,7 +180,10 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
     water: plan.waterL == null ? "" : String(plan.waterL),
   };
   const [t, setT] = useState(initial);
-  const targetsQ = useSaveQueue(() => router.refresh());
+  // The re-read after a save, until it lands: a copy on screen from before the save mustn't be taken for it.
+  const [refreshing, startRefresh] = useTransition();
+  const reRead = () => startRefresh(() => router.refresh());
+  const targetsQ = useSaveQueue(reRead);
   const [targetsWaiting, setTargetsWaiting] = useState(false);
   const targetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tNow = useRef(t);
@@ -206,12 +217,12 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
     targetTimer.current = setTimeout(sendTargets, QUIET_MS);
   };
   // What is saved comes back with the page's re-read and replaces the screen's copy, by content,
-  // never while a change waits, saves or failed (that would undo it on screen).
+  // never while a change waits, saves, failed or its re-read is on its way (that would undo it on screen).
   const planKey = JSON.stringify([plan.id, initial]);
   const [seenPlan, setSeenPlan] = useState(planKey);
-  if (seenPlan !== planKey && !targetsWaiting && !targetsQ.saving && !targetsQ.failed) {
+  if (seenPlan !== planKey && !targetsWaiting && !targetsQ.saving && !targetsQ.failed && !refreshing) {
     setSeenPlan(planKey);
-    setT(initial);
+    if (!sameFigures(t, initial)) setT(initial);
   }
   // Which day type the ring and the row show; with the tick on, one set for every day.
   const [day, setDay] = useState<"training" | "rest">("training");
@@ -221,7 +232,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   const [supps, setSupps] = useState(plan.supplements);
   // As last sent: what the next change is told apart from.
   const [suppSent, setSuppSent] = useState(plan.supplements);
-  const suppQ = useSaveQueue(() => router.refresh());
+  const suppQ = useSaveQueue(reRead);
   const [suppWaiting, setSuppWaiting] = useState(false);
   const suppTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppsNow = useRef(supps);
@@ -233,18 +244,24 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   const tempIds = useRef(0);
   // A new row once sent: there, faded and still, until the re-read gives it its number.
   const incoming = (s: DraftSupplement) => s.id < 0 && suppSent.some((x) => x.id === s.id);
-  // Something typed that hasn't gone yet (an empty new row doesn't count).
+  // Something typed that hasn't gone yet (an empty new row doesn't count, nor a saved row whose name is cleared: that isn't sent).
   const unsent = supps.some((s) => {
     const was = suppSent.find((x) => x.id === s.id);
-    return was ? !sameSupp(was, s) : s.id > 0 || !!s.name.trim();
+    return was ? !sameSupp(was, s) && !!s.name.trim() : s.id > 0 || !!s.name.trim();
   });
   const suppsKey = JSON.stringify(plan.supplements);
   const [seenSupps, setSeenSupps] = useState(suppsKey);
-  if (seenSupps !== suppsKey && !suppWaiting && !suppQ.saving && !suppQ.failed && !unsent) {
+  if (seenSupps !== suppsKey && !suppWaiting && !suppQ.saving && !suppQ.failed && !unsent && !refreshing) {
     setSeenSupps(suppsKey);
     setSuppSent(plan.supplements);
-    // An empty row just added stays for its name.
-    setSupps([...plan.supplements, ...supps.filter((s) => s.id < 0 && !s.name.trim())]);
+    // A row that says the same as saved keeps what was typed; an empty row just added stays for its name.
+    setSupps([
+      ...plan.supplements.map((p) => {
+        const s = supps.find((x) => x.id === p.id);
+        return s && sameSupp(s, p) ? s : p;
+      }),
+      ...supps.filter((s) => s.id < 0 && !s.name.trim()),
+    ]);
   }
   const sendSupps = (changes: { added?: DraftSupplement[]; updated?: DraftSupplement[]; removedIds?: number[]; order?: number[] }) => {
     const payload = {
@@ -263,7 +280,8 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
     suppTimer.current = null;
     setSuppWaiting(false);
     const sent = new Map(sentNow.current.map((s) => [s.id, s]));
-    const updated = suppsNow.current.filter((s) => s.id > 0 && sent.has(s.id) && !sameSupp(sent.get(s.id)!, s));
+    // A row with its name cleared waits: a nameless row isn't saved (the name comes back when the row is left).
+    const updated = suppsNow.current.filter((s) => s.id > 0 && s.name.trim() && sent.has(s.id) && !sameSupp(sent.get(s.id)!, s));
     if (!updated.length) return;
     setSuppSent((prev) => prev.map((s) => updated.find((u) => u.id === s.id) ?? s));
     sendSupps({ updated });
@@ -275,10 +293,16 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
     if (suppTimer.current) clearTimeout(suppTimer.current);
     suppTimer.current = setTimeout(sendSuppEdits, QUIET_MS);
   };
-  // A new row goes once it has a name and the coach leaves it.
-  const leaveNewRow = (id: number) => {
+  // Leaving a row: a new one goes once it has a name; a saved one left nameless gets its name back.
+  const leaveRow = (id: number) => {
     const s = suppsNow.current.find((x) => x.id === id);
-    if (!s || !s.name.trim() || sentNow.current.some((x) => x.id === id)) return;
+    if (!s) return;
+    if (id > 0) {
+      const was = sentNow.current.find((x) => x.id === id);
+      if (!s.name.trim() && was) editSupp(id, { name: was.name });
+      return;
+    }
+    if (!s.name.trim() || sentNow.current.some((x) => x.id === id)) return;
     setSuppSent((prev) => [...prev, s]);
     sendSupps({ added: [s] });
   };
@@ -312,12 +336,15 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
         clearTimeout(suppTimer.current);
         sendSuppEdits();
       }
+      // A new row with a name, not left yet.
+      const fresh = suppsNow.current.filter((s) => s.id < 0 && s.name.trim() && !sentNow.current.some((x) => x.id === s.id));
+      if (fresh.length) sendSupps({ added: fresh });
     },
     // Unmount only; the refs hold what is current.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
-  useHoldWhile(targetsWaiting || targetsQ.saving || targetsQ.failed || suppWaiting || suppQ.saving || suppQ.failed);
+  useHoldWhile(targetsWaiting || targetsQ.saving || targetsQ.failed || suppWaiting || suppQ.saving || suppQ.failed || unsent);
 
   // ---- The log: one day open at a time, twenty days a page.
   const [open, setOpen] = useState<string | null>(null);
@@ -496,17 +523,15 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                 </span>
               ))}
             {/* One status for the whole tab, beside the title and its tag (21 Oct, Alex): the targets' saves and the supplements'. */}
-            {phaseId != null && (
-              <SaveStatus
-                busy={targetsWaiting || targetsQ.saving || suppWaiting || suppQ.saving}
-                failed={targetsQ.failed || suppQ.failed}
-                onRetry={() => {
-                  if (targetsQ.failed) targetsQ.retry();
-                  if (suppQ.failed) suppQ.retry();
-                }}
-                solo
-              />
-            )}
+            <SaveStatus
+              busy={targetsWaiting || targetsQ.saving || suppWaiting || suppQ.saving}
+              failed={targetsQ.failed || suppQ.failed}
+              onRetry={() => {
+                if (targetsQ.failed) targetsQ.retry();
+                if (suppQ.failed) suppQ.retry();
+              }}
+              solo
+            />
           </div>
           {plan.startDate && (
             // The facts parted by a short upright line, the dates last (21 Oct, as Lifestyle).
@@ -528,22 +553,21 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
         </div>
         <div className="trn-head-actions">
           {/* The goals and the note to the client as pills (21 Oct), one pop-over; the note is the targets' note the client reads on Nutrition. */}
-          {phaseId != null && (
-            <GoalsNotePills
-              firstName={firstName}
-              phaseId={phaseId}
-              goals={plan.goals}
-              note={plan.note}
-              area="nutrition"
-              saveNote={async (text) => {
-                const f = new FormData();
-                f.set("clientId", String(clientId));
-                f.set("note", text);
-                f.set("phaseId", String(phaseId));
-                await saveCoachNutritionNoteAction(f);
-              }}
-            />
-          )}
+          {/* Without a phase (the client's own sheet), the note alone: goals belong to a phase. */}
+          <GoalsNotePills
+            firstName={firstName}
+            phaseId={phaseId}
+            goals={plan.goals}
+            note={plan.note}
+            area="nutrition"
+            saveNote={async (text) => {
+              const f = new FormData();
+              f.set("clientId", String(clientId));
+              f.set("note", text);
+              if (phaseId != null) f.set("phaseId", String(phaseId));
+              await saveCoachNutritionNoteAction(f);
+            }}
+          />
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="trn-more" aria-label="More for the phase">
               <MoreIcon />
@@ -677,16 +701,20 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                     className="rls-row-main rn-wide"
                     style={sGrid}
                     onBlur={(e) => {
-                      if (s.id < 0 && !e.currentTarget.contains(e.relatedTarget as Node | null)) leaveNewRow(s.id);
+                      const to = e.relatedTarget as HTMLElement | null;
+                      // Into the row's own ⋯ menu isn't leaving it.
+                      if (e.currentTarget.contains(to) || to?.closest('[role="menu"]')) return;
+                      leaveRow(s.id);
                     }}
                   >
                     <span className="rd-grip trn-grip" {...(canDrag && s.id > 0 ? suppGrip : {})}>
                       <GripIcon />
                     </span>
-                    <Box value={s.name} onChange={(v) => editSupp(s.id, { name: v })} label="Item" placeholder="Creatine" strong autoFocus={!s.name} />
-                    <Box value={s.quantity} onChange={(v) => editSupp(s.id, { quantity: v })} label="Quantity" placeholder="5 g" />
-                    <Box value={s.timing} onChange={(v) => editSupp(s.id, { timing: v })} label="Timing" placeholder="With breakfast" />
-                    <Box value={s.notes} onChange={(v) => editSupp(s.id, { notes: v })} label="Notes" placeholder="—" quiet />
+                    {/* A new row on its way is still until it has its number: an edit then would be lost. */}
+                    <Box value={s.name} onChange={(v) => editSupp(s.id, { name: v })} label="Item" placeholder="Creatine" strong autoFocus={!s.name} readOnly={incoming(s)} />
+                    <Box value={s.quantity} onChange={(v) => editSupp(s.id, { quantity: v })} label="Quantity" placeholder="5 g" readOnly={incoming(s)} />
+                    <Box value={s.timing} onChange={(v) => editSupp(s.id, { timing: v })} label="Timing" placeholder="With breakfast" readOnly={incoming(s)} />
+                    <Box value={s.notes} onChange={(v) => editSupp(s.id, { notes: v })} label="Notes" placeholder="—" quiet readOnly={incoming(s)} />
                     <span className="rls-more">
                       {!incoming(s) && (
                         <DropdownMenu modal={false}>
@@ -694,7 +722,8 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                             <MoreIcon />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="pb-menu">
-                            <DropdownMenuItem variant="destructive" onSelect={() => (s.id < 0 && !s.name.trim() ? removeSupp(s) : setDlg({ kind: "removeSupp", supp: s }))}>
+                            {/* A row not saved yet just goes; a saved one asks first. */}
+                            <DropdownMenuItem variant="destructive" onSelect={() => (s.id < 0 ? removeSupp(s) : setDlg({ kind: "removeSupp", supp: s }))}>
                               <TrashIcon /> Remove
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -938,10 +967,10 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
 }
 
 /** One editable figure: reads as a figure, types like a box. */
-function Box({ value, onChange, label, placeholder, unit, strong, quiet, autoFocus }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string; unit?: string; strong?: boolean; quiet?: boolean; autoFocus?: boolean }) {
+function Box({ value, onChange, label, placeholder, unit, strong, quiet, autoFocus, readOnly }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string; unit?: string; strong?: boolean; quiet?: boolean; autoFocus?: boolean; readOnly?: boolean }) {
   return (
     <span className={`rd-cell rn-box${unit ? " unit" : ""}${strong ? " strong" : ""}${quiet ? " quiet" : ""}`}>
-      <input className="rd-cell-box" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder ?? "—"} aria-label={label} autoFocus={autoFocus} />
+      <input className="rd-cell-box" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder ?? "—"} aria-label={label} autoFocus={autoFocus} readOnly={readOnly} />
       {unit && value !== "" && <em aria-hidden="true">{unit}</em>}
     </span>
   );

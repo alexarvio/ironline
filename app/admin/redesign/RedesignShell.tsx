@@ -209,10 +209,10 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           )}
         </div>
         <div hidden={tab !== "nutrition"}>
-          {nutritionBlank ? <NoPhase clientId={clientId} firstName={firstName} track="nutrition" plan={plan} /> : <NutritionTab key={nutrition.id} clientId={clientId} firstName={firstName} plan={nutrition} />}
+          {nutritionBlank ? <NoPhase clientId={clientId} firstName={firstName} track="nutrition" plan={plan} /> : <NutritionTab key={`${clientId}:${nutrition.id}`} clientId={clientId} firstName={firstName} plan={nutrition} />}
         </div>
         <div hidden={tab !== "measurements"}>
-          {measurementsBlank ? <NoPhase clientId={clientId} firstName={firstName} track="lifestyle" plan={plan} /> : <MeasurementsTab key={measurements.id} clientId={clientId} firstName={firstName} plan={measurements} />}
+          {measurementsBlank ? <NoPhase clientId={clientId} firstName={firstName} track="lifestyle" plan={plan} /> : <MeasurementsTab key={`${clientId}:${measurements.id}`} clientId={clientId} firstName={firstName} plan={measurements} />}
         </div>
         <div hidden={tab !== "pictures"}>
           <PicturesTab clientId={clientId} firstName={firstName} plan={pictures} />

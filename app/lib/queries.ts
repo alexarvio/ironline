@@ -7149,6 +7149,15 @@ export type ClientNotification = {
   action_ref: number | null;
 };
 
+/** A note taken back: what it said was undone the same day (a target put back where the day began). */
+export function dropCoachActivity(clientId: number, dedupeKey: string) {
+  const data = getData();
+  const note = data.coach_activity.find((a) => a.client_id === clientId && a.dedupe_key === dedupeKey);
+  if (!note) return;
+  data.coach_activity = data.coach_activity.filter((a) => a !== note);
+  persist();
+}
+
 export function logCoachActivity(
   clientId: number,
   message: string,
@@ -7175,11 +7184,21 @@ export function logCoachActivity(
      * latest change.
      */
     mergeDetail?: string;
+    /** With a dedupe key that already has a row: that row says this instead, unread again (a day's targets, from how the day began to now). */
+    replace?: boolean;
   }
 ) {
   const data = getData();
   const dup = opts.dedupeKey ? data.coach_activity.find((a) => a.client_id === clientId && a.dedupe_key === opts.dedupeKey) : null;
   if (dup) {
+    if (opts.replace) {
+      dup.message = message;
+      dup.created_at = new Date().toISOString();
+      dup.read = false;
+      if (opts.actionRef != null) dup.action_ref = opts.actionRef;
+      persist();
+      return;
+    }
     if (opts.mergeDetail) {
       const colon = dup.message.indexOf(": ");
       const base = colon > 0 ? dup.message.slice(0, colon) : dup.message;
