@@ -7,7 +7,7 @@ import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../.
 import { eventTypeOf } from "../../../lib/eventTypes";
 import { repeatWords } from "../../../lib/eventRepeat";
 import type { OverviewClient } from "./load";
-import { daysBetween, eventTiming, shortDate, type OverviewEvent } from "./timeline";
+import { daysBetween, eventTiming, dayMonth, type OverviewEvent } from "./timeline";
 
 // An event's detail (14 Oct), from a marker on the Phases timeline: the
 // phase pop-up's sibling. The category's icon big and alone, a category
@@ -18,16 +18,11 @@ import { daysBetween, eventTiming, shortDate, type OverviewEvent } from "./timel
 const first = (name: string) => name.split(" ")[0];
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const lengthLabel = (days: number) => (days % 7 === 0 && days >= 21 ? plural(days / 7, "week") : plural(days, "day"));
-const longDate = (d: string, today: string) => {
-  const x = new Date(`${d}T12:00:00`);
-  return x.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", ...(d.slice(0, 4) !== today.slice(0, 4) ? { year: "numeric" } : {}) });
-};
-const dayDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 /** "yesterday", "3 days ago", or the date. */
 const addedWhen = (d: string, today: string) => {
   if (!d) return "";
   const ago = daysBetween(d, today);
-  return ago === 0 ? "today" : ago === 1 ? "yesterday" : ago < 7 ? `${ago} days ago` : shortDate(d);
+  return ago === 0 ? "today" : ago === 1 ? "yesterday" : ago < 7 ? `${ago} days ago` : dayMonth(d);
 };
 
 export default function EventDetailDialog({ client, event: e, today, coach }: { client: OverviewClient; event: OverviewEvent; today: string; coach: { name: string; photoPath: string | null } }) {
@@ -82,12 +77,12 @@ export default function EventDetailDialog({ client, event: e, today, coach }: { 
               <div className="evd-range">
                 <span className="evd-end">
                   <small>From</small>
-                  <b>{dayDate(e.start)}</b>
+                  <b>{dayMonth(e.start)}</b>
                 </span>
                 <span className="evd-len">{e.repeat ? repeatWords(e.repeat, { until: false }) : lengthLabel(timing.days)}</span>
                 <span className="evd-end to">
                   <small>{e.repeat ? "Until" : "To"}</small>
-                  <b>{e.repeat && !e.repeat.until ? "No end" : dayDate(e.end)}</b>
+                  <b>{e.repeat && !e.repeat.until ? "No end" : dayMonth(e.end)}</b>
                 </span>
               </div>
               <span className="evd-bar" aria-hidden="true">
@@ -103,7 +98,7 @@ export default function EventDetailDialog({ client, event: e, today, coach }: { 
                 <small>{wd.toLocaleDateString("en-GB", { month: "short" })}</small>
               </span>
               <span className="evd-day-text">
-                <span className="evd-date">{longDate(e.start, today)}</span>
+                <span className="evd-date">{dayMonth(e.start)}</span>
                 <span className="evd-rel">{timing.relative}</span>
               </span>
             </div>

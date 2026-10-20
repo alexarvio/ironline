@@ -32,6 +32,7 @@ import { addDays } from "../phases/timeline";
 import { stateTagStyle } from "../../phaseChrome";
 import ExerciseProgressDialog from "./ExerciseProgressDialog";
 import DatePick from "../DatePick";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The calmer builder, as a draft on real data. Nothing here saves: every
 // action ends in a toast. What it settles, against the current builder:
@@ -649,9 +650,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const today = new Date().toISOString().slice(0, 10);
   const weekDate = (index: number) => {
     if (!program.startDate) return null;
-    const d = new Date(`${program.startDate}T00:00:00`);
-    d.setDate(d.getDate() + (index - 1) * 7);
-    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    return dayMonth(addDays(program.startDate, (index - 1) * 7));
   };
   const startHasCome = !!program.startDate && program.startDate <= today;
   const showWeek = (index: number) => {
@@ -2083,10 +2082,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
 
 export const stateLabel = (s: string) => (s === "live" ? "Live" : s === "past" ? "Past" : s === "scheduled" ? "Scheduled" : "Draft");
 /** A date in words is day/month (20 Oct, Alex: "starts 9/11", not "9 Nov"); a year only when it isn't this one. Training, Nutrition and Lifestyle headers share it. */
-export const fmtDate = (iso: string) => {
-  const x = new Date(`${iso.slice(0, 10)}T00:00:00`);
-  return `${x.getDate()}/${x.getMonth() + 1}${x.getFullYear() !== new Date().getFullYear() ? `/${x.getFullYear()}` : ""}`;
-};
+export const fmtDate = (iso: string) => dayMonth(iso.slice(0, 10));
 
 /** The session's name, typed into in place; Enter or blur keeps it, Esc puts it back. */
 function SessionName({ value, onChange }: { value: string; onChange: (v: string) => void }) {

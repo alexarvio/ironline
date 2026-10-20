@@ -2,6 +2,7 @@ import { approveCoachAction, createCoachAction, declineCoachAction, removeCoachA
 import { getData } from "../lib/db";
 import { listCoachAccounts } from "../lib/queries";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
+import { dayMonth } from "../lib/dayMonth";
 
 // The owner's Coaches page: every coach account, how many clients each has
 // and when one last logged something, and the three things the owner does
@@ -52,7 +53,7 @@ export default function CoachesPanel({ ownerId, ok, error }: { ownerId: number; 
               <span className="au-approval-main">
                 <b>{u.pending!.name}</b>
                 <small>
-                  {[u.pending!.business, u.email, `signed up ${new Date(u.pending!.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`].filter(Boolean).join(" · ")}
+                  {[u.pending!.business, u.email, `signed up ${dayMonth(u.pending!.at)}`].filter(Boolean).join(" · ")}
                 </small>
               </span>
               <form action={declineCoachAction}>

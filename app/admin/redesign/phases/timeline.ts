@@ -6,6 +6,9 @@
 
 import type { PhaseTrack } from "../../../lib/db";
 import { nextOccurrence, type EventRepeat } from "../../../lib/eventRepeat";
+import { dayMonth } from "../../../lib/dayMonth";
+/** Dates in words are day/month (20 Oct, Alex): the Phases view, its pop-ups and toasts read them from here. */
+export { dayMonth };
 
 export type OverviewPhase = {
   id: number;
@@ -48,7 +51,6 @@ export const addDays = (d: string, n: number) => {
 };
 export const mondayOf = (d: string) => addDays(d, -((parse(d).getDay() + 6) % 7));
 export const daysBetween = (a: string, b: string) => dayNum(b) - dayNum(a);
-export const shortDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 // ---- The window --------------------------------------------------------------
 
@@ -281,7 +283,7 @@ export function eventTiming(e: OverviewEvent, today: string): EventTiming {
   // Repeating (19 Oct): on, and when it comes next; no day count, and none to an end it doesn't have.
   if (e.repeat) {
     const next = nextOccurrence(e.start, e.end, e.repeat, today);
-    const nextWords = next === today ? "Today" : next ? `Next ${new Date(`${next}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}` : "No more to come";
+    const nextWords = next === today ? "Today" : next ? `Next ${dayMonth(next)}` : "No more to come";
     return { chip: { text: "Now", cls: "solid" }, relative: e.repeat.until ? `${nextWords} · ends in ${toEnd} day${toEnd === 1 ? "" : "s"}` : nextWords, pct: e.repeat.until ? (daysBetween(e.start, today) + 1) / days : 0, range, days };
   }
   const day = daysBetween(e.start, today) + 1;

@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
+import { dayMonth } from "../../../lib/dayMonth";
 import { judge, nudgeFor, repRange, rowStatus, setStatus, tipFor, type Session, type Verdict } from "../../../lib/progressRules";
 
 // An exercise's progress (15 Oct), for the coach: one glance at whether the
@@ -19,7 +20,7 @@ const VERDICT: Record<Verdict, { label: string; c: string; rgb: string; bg: stri
   none: { label: "Not enough data", c: "#5b6474", rgb: "91,100,114", bg: "#F4F6FA", icon: "M12 8v5M12 16h.01" },
 };
 const DAY = 86400000;
-const shortDate = (d: string | null) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—");
+const shortDate = (d: string | null) => (d ? dayMonth(d) : "—");
 const pct = (x: number) => `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(Math.round(x * 100))}%`;
 
 export type ProgressSession = Session & { gym: string | null };

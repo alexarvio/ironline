@@ -10,6 +10,7 @@ import type { LinkView, MessageLink } from "./messageLinks";
 import { coachIdOfClient } from "./tenancy";
 import { inViewZone } from "./viewZone";
 import { isTimezone } from "./timezones";
+import { dayMonth } from "./dayMonth";
 import { countryOf, invoicingFor } from "./countries";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
@@ -2392,9 +2393,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
     },
     coachNote: {
       text: client?.coach_note ?? "",
-      savedLabel: client?.coach_note_at
-        ? new Date(client.coach_note_at).toLocaleDateString("en-US", { day: "numeric", month: "short" })
-        : null,
+      savedLabel: client?.coach_note_at ? dayMonth(client.coach_note_at) : null,
     },
     snapshot: [
       {
@@ -2407,13 +2406,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       },
       {
         label: "Next meeting",
-        value: nextMeeting
-          ? new Date(`${nextMeeting.date}T00:00:00`).toLocaleDateString("en-US", {
-              weekday: "short",
-              day: "numeric",
-              month: "short",
-            })
-          : "None booked",
+        value: nextMeeting ? dayMonth(nextMeeting.date) : "None booked",
         suffix: nextMeeting ? nextMeeting.time : undefined,
         attention: !nextMeeting,
       },
@@ -2553,8 +2546,8 @@ function stampMs(at: string): number {
 const middayMs = (day: string) => stampMs(`${day} 12:00:00`);
 const latestOf = (a: string | null, b: string | undefined) => (b && (!a || stampMs(b) > stampMs(a)) ? b : a);
 
-const feedDay = (day: string) =>
-  new Date(`${day}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+/** The coach's feed dates its words day/month (20 Oct, Alex). */
+const feedDay = dayMonth;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const feedValue = (v: number) => String(Math.round(v * 10) / 10);
 
@@ -2947,9 +2940,9 @@ export function feedClock(at: number): string {
   return new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-/** "3 Sep · 14:05", or just "3 Sep" when the time was never recorded. */
+/** "3/9 · 14:05", or just "3/9" when the time was never recorded (day/month, 20 Oct, Alex). */
 export function feedTimeLabel(at: number, timeKnown = true): string {
-  const date = new Date(at).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const date = dayMonth(new Date(at));
   return timeKnown ? `${date} · ${feedClock(at)}` : date;
 }
 
@@ -10553,7 +10546,7 @@ export function getPlanData(clientId: number) {
   }));
 
   // The goals table.
-  const fmtShort = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { day: "numeric", month: "short" });
+  const fmtShort = dayMonth;
   const meetingsById = new Map(listMeetings(clientId).map((m) => [m.id, m] as const));
   const goals: PlanGoalRow[] = getGoalSummaries(clientId).map(({ goal, view }) => {
     const t = goal.tracked_by ?? null;
@@ -11819,7 +11812,7 @@ function mealCommentsOn(clientId: number, date: string): Map<string, MealComment
     const l = m.link;
     if (m.sender !== "coach" || !m.text || l?.kind !== "food" || l.date !== date || !l.meal) continue;
     const list = out.get(l.meal) ?? [];
-    list.push({ id: m.id, text: m.text, when: new Date(m.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) });
+    list.push({ id: m.id, text: m.text, when: dayMonth(m.created_at) });
     out.set(l.meal, list);
   }
   return out;

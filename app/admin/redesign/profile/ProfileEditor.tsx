@@ -10,6 +10,7 @@ import ProfileDetails, { type ProfileDetailsData } from "./ProfileDetails";
 import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Textarea } from "../../../components/ui/form";
 import { publishCoachProfileAction, removeCoachPhotoAction, saveCoachProfileAction, uploadCoachPhotoAction } from "../../../lib/actions";
 import { COACH_PROFILE_LIMITS as LIMIT, type CoachProfileView, type CoachRole, type CoachStudy } from "../../../lib/coachProfileView";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The coach's profile editor in the redesign: the form in cards on the left,
 // the client's own profile screen in a phone on the right, fed from what is
@@ -49,7 +50,7 @@ function ago(iso: string, now: number): string {
   if (minutes < 60) return `${minutes} min ago`;
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours} h ago`;
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return dayMonth(iso);
 }
 
 export default function ProfileEditor({ profile, coaches, currentCoachId, details, countries }: { profile: CoachProfileView; coaches: { id: number; email: string }[]; currentCoachId: number; /** Your details: email, phone, address (the other tab). */ details: ProfileDetailsData; countries: { code: string; name: string }[] }) {

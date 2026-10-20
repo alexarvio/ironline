@@ -15,6 +15,7 @@ import { ArrowRightIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../componen
 import DatePick from "../DatePick";
 import Picker from "../Picker";
 import type { DraftInvoices } from "../loaders";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // A client's invoices: every one with its number, dates, total and where it
 // stands, and a new one made from Settings (numbering, VAT, payment terms).
@@ -233,7 +234,7 @@ function NewInvoiceDialog({ clientName, plan, onCreate }: { clientName: string; 
             <span className="nc-label">
               Due <span className="ncd-aside">{d.termsDays} days, from Settings</span>
             </span>
-            <span className="nc-control nc-static">{issue ? shortDate(addDays(issue, d.termsDays)) : "–"}</span>
+            <span className="nc-control nc-static">{issue ? dayMonth(addDays(issue, d.termsDays)) : "–"}</span>
           </div>
 
           <div className="nc-row full riv-lines">

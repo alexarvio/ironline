@@ -4,6 +4,7 @@ import "./client-gyms.css";
 import { useRef, useState } from "react";
 import type React from "react";
 import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The client's gyms (15 Oct), in the admin hairline style since 20 Oct (Alex:
 // no explanations, facts only). A hairline row a gym: its initial, Home as
@@ -21,7 +22,7 @@ const when = (iso: string, today: string) => {
   if (diff <= 0) return "today";
   if (diff === 1) return "yesterday";
   if (diff < 7) return d.toLocaleDateString("en-GB", { weekday: "long" });
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return dayMonth(d);
 };
 
 /** Shares that add up to exactly 100: rounded, the largest fixed up. */

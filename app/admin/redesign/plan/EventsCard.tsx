@@ -11,6 +11,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { ChevronDownIcon, PlusIcon } from "../../../components/icons";
 import { gridFor, MonthRange } from "./PlanDraft";
 import DateText from "../DateText";
+import { dayMonth } from "../../../lib/dayMonth";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
 
 // The New event dialog after the client's sheet and the phase dialog (10 Oct):
@@ -62,12 +63,8 @@ const addDays = (d: string, n: number) => {
   return isoOf(x);
 };
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
-const shortDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-/** A date in words is day/month (20 Oct, Alex: 9/11, not Mon 9 Nov); a year only when it isn't this one. */
-const longDate = (d: string) => {
-  const x = parse(d);
-  return `${x.getDate()}/${x.getMonth() + 1}${x.getFullYear() !== new Date().getFullYear() ? `/${x.getFullYear()}` : ""}`;
-};
+/** The timeline's week axis keeps the month's name; every other date in words is day/month (dayMonth). */
+const axisDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 /** "in 3 weeks", "in 5 days", "today", "2 days ago", "6 weeks ago". */
 const relative = (today: string, d: string) => {
@@ -290,7 +287,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                 <div className="rq-tl-grid" style={cols}>
                   {weeks.map((w, i) => (
                     <span key={w} className={`rq-week${i === nowIdx ? " now" : ""}`}>
-                      <small>{shortDate(w)}</small>
+                      <small>{axisDate(w)}</small>
                     </span>
                   ))}
                 </div>
@@ -336,12 +333,12 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                         setDlg({ event: e });
                       };
                       return single ? (
-                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }} onPointerDown={(ev) => beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${longDate(e.start)} · ${standing(today, e)}`}>
+                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }} onPointerDown={(ev) => beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${dayMonth(e.start)} · ${standing(today, e)}`}>
                           <i style={{ background: k.ink }} />
                           <span className="rq-pin-text">
                             <b>{e.title}</b>
                             <small>
-                              {shortDate(shown.start)} · {standing(today, shown)}
+                              {dayMonth(shown.start)} · {standing(today, shown)}
                             </small>
                           </span>
                         </button>
@@ -356,7 +353,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                             beginDrag(ev, e, "move");
                           }}
                           onClick={open}
-                          title={`${e.title} · ${e.repeat ? `${repeatWords(e.repeat, { until: false })} · ` : ""}${longDate(e.start)} → ${e.repeat && !e.repeat.until ? "no end" : longDate(e.end)} · ${standing(today, e)}`}
+                          title={`${e.title} · ${e.repeat ? `${repeatWords(e.repeat, { until: false })} · ` : ""}${dayMonth(e.start)} → ${e.repeat && !e.repeat.until ? "no end" : dayMonth(e.end)} · ${standing(today, e)}`}
                         >
                           <span className="rq-bar-edge left" onPointerDown={(ev) => beginDrag(ev, e, "start")} onClick={(ev) => ev.stopPropagation()} />
                           <span className="rq-bar-edge right" onPointerDown={(ev) => beginDrag(ev, e, "end")} onClick={(ev) => ev.stopPropagation()} />
@@ -412,7 +409,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                 <div key={e.id} className={`rd-row${past ? " rq-ev-past" : ""}`}>
                   <button type="button" className="rd-row-main rq-evrow" onClick={() => setDlg({ event: e })}>
                     <span className="rq-evrow-when">
-                      <b>{e.repeat ? `${shortDate(e.start)} → ${e.repeat.until ? shortDate(e.end) : "no end"}` : e.start === e.end ? shortDate(e.start) : `${shortDate(e.start)} → ${shortDate(e.end)}`}</b>
+                      <b>{e.repeat ? `${dayMonth(e.start)} → ${e.repeat.until ? dayMonth(e.end) : "no end"}` : e.start === e.end ? dayMonth(e.start) : `${dayMonth(e.start)} → ${dayMonth(e.end)}`}</b>
                       {e.repeat && <small>{repeatWords(e.repeat, { until: false })}</small>}
                     </span>
                     <span className="rq-state" style={{ background: k.tint, color: k.ink }}>
@@ -448,7 +445,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
               const e = events.find((x) => x.id === moveDlg.id)!;
               const { start, end } = moveDlg;
               setMoveDlg(null);
-              act(() => updateClientEventAction(clientId, e.id, { kind: e.kind, title: e.title, start, end, note: e.note }), `${e.title}: ${start === end ? longDate(start) : `${shortDate(start)} → ${shortDate(end)}`}`);
+              act(() => updateClientEventAction(clientId, e.id, { kind: e.kind, title: e.title, start, end, note: e.note }), `${e.title}: ${start === end ? dayMonth(start) : `${dayMonth(start)} → ${dayMonth(end)}`}`);
             }}
           />
         )}
@@ -703,10 +700,10 @@ function MoveEventDialog({ event: e, start, end, cats, onCancel, onSave }: { eve
   const single = e.start === e.end;
   const len = (a: string, b: string) => `${daysBetween(a, b) + 1} day${daysBetween(a, b) === 0 ? "" : "s"}`;
   const rows = single
-    ? [{ label: "Date", was: longDate(e.start), now: longDate(start) }]
+    ? [{ label: "Date", was: dayMonth(e.start), now: dayMonth(start) }]
     : [
-        { label: "Start", was: longDate(e.start), now: longDate(start) },
-        { label: "End", was: longDate(e.end), now: longDate(end) },
+        { label: "Start", was: dayMonth(e.start), now: dayMonth(start) },
+        { label: "End", was: dayMonth(e.end), now: dayMonth(end) },
         { label: "Length", was: len(e.start, e.end), now: len(start, end) },
       ];
   // The phase's move pop-up, for an event (20 Oct, Alex): its category as a tinted tag, what it was struck through, the new value in its colour; no arrows, no sentences.

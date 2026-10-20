@@ -4,6 +4,7 @@ import { useState } from "react";
 import type React from "react";
 import { ChevronRightIcon, CompassIcon } from "../../../components/icons";
 import type { DraftRogue } from "./TrainingDraft";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The client's rogue sessions under the week's own (19 Oct, Alex): workouts
 // they made themselves, off the plan. Built from the session card's own parts
@@ -14,7 +15,6 @@ import type { DraftRogue } from "./TrainingDraft";
 
 type Cols = { sets: boolean; weight: boolean; reps: boolean; rpe: boolean; tempo: boolean; rest: boolean };
 
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 const num = (n: number | null) => (n == null ? "–" : String(Math.round(n * 100) / 100));
 /** "60" when every set is the same, else each in turn: "60 · 65 · 70". */
 const each = (xs: (number | null)[]) => (xs.length === 0 ? "–" : xs.every((x) => x === xs[0]) ? num(xs[0]) : xs.map(num).join(" · "));
@@ -48,7 +48,7 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
                   {count} {count === 1 ? "exercise" : "exercises"}
                 </small>
               </span>
-              <span className="trn-rg-when">{[r.started && day(r.started), r.duration != null && `${r.duration} min`].filter(Boolean).join(" · ")}</span>
+              <span className="trn-rg-when">{[r.started && dayMonth(r.started), r.duration != null && `${r.duration} min`].filter(Boolean).join(" · ")}</span>
               <span className={`trn-state ${r.ended ? "good" : "live"}`}>{r.ended ? "Completed" : "In progress"}</span>
               <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : r.id)} aria-expanded={isOpen} aria-label={isOpen ? "Fold rogue session" : "Open rogue session"}>
                 <span className={`trn-chev${isOpen ? " open" : ""}`} aria-hidden="true">

@@ -7,6 +7,7 @@ import type React from "react";
 import { phaseChrome, TRACK_PALETTE } from "../../phaseChrome";
 import { addDays, mondayOf } from "../phases/timeline";
 import DateText from "../DateText";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // Scheduling a built programme (20 Oct, Alex): not its dates, which it
 // already has, but when it goes live. The coach picks the week it starts
@@ -14,10 +15,7 @@ import DateText from "../DateText";
 // stays what was built. Drawn in the phase pop-up's hairline style (npd).
 
 /** Day/month, as every date in words (20 Oct, Alex). */
-const short = (iso: string) => {
-  const x = new Date(`${iso}T00:00:00`);
-  return `${x.getDate()}/${x.getMonth() + 1}${x.getFullYear() !== new Date().getFullYear() ? `/${x.getFullYear()}` : ""}`;
-};
+const short = dayMonth;
 
 export default function ScheduleDialog({
   name,

@@ -3,6 +3,7 @@
 import "./demo-video.css";
 import { useEffect, useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The demo video on an exercise (15 Oct), in the admin hairline style (20 Oct,
 // Alex): the exercise name, one quiet fact line, the demo as clients see it,
@@ -31,7 +32,6 @@ function providerOf(url: string): "YouTube" | "YouTube Shorts" | "Vimeo" | "Driv
 const shortUrl = (url: string) => url.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
 const fileName = (path: string) => decodeURIComponent(path.split("?")[0].split("/").pop() ?? "video").replace(/\.[a-z0-9]+$/i, "");
 const mb = (bytes: number) => `${Math.max(1, Math.round(bytes / 1024 / 1024))} MB`;
-const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 
 /** The poster for a source: YouTube's thumbnail, the clip's first frame, or the plain dark tile. */
@@ -155,7 +155,7 @@ export default function DemoVideoDialog({
   const previewMeta = !preview
     ? ""
     : isUpload(preview)
-      ? ["Uploaded", clip ? shortDate(clip.at) : null, clip?.bytes ? mb(clip.bytes) : null].filter(Boolean).join(" · ")
+      ? ["Uploaded", clip ? dayMonth(clip.at) : null, clip?.bytes ? mb(clip.bytes) : null].filter(Boolean).join(" · ")
       : `${previewProvider} · ${shortUrl(preview)}`;
 
   return (
@@ -310,7 +310,7 @@ export default function DemoVideoDialog({
                         </span>
                         <span className="dmvh-rtext">
                           <b>{v.name}</b>
-                          <small>{[v.path === attached ? "Current" : null, shortDate(v.at), v.bytes ? mb(v.bytes) : null].filter(Boolean).join(" · ")}</small>
+                          <small>{[v.path === attached ? "Current" : null, dayMonth(v.at), v.bytes ? mb(v.bytes) : null].filter(Boolean).join(" · ")}</small>
                         </span>
                         {on && (
                           <i className="dmvh-tick" aria-hidden="true">

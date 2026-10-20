@@ -19,6 +19,7 @@ import { ConfirmDialog, DeletePhaseDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DateText from "../DateText";
 import DatePick from "../DatePick";
+import { dayMonth } from "../../../lib/dayMonth";
 import { phaseDays, phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import { SortableItem, SortableList } from "../Sortable";
 import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
@@ -93,10 +94,7 @@ const addWeeks = (monday: string, n: number) => addDays(monday, n * 7);
 const weeksBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / (7 * DAY));
 const mondayOf = (d: string) => addDays(d, -((parse(d).getDay() + 6) % 7));
 /** A date in words is day/month (20 Oct, Alex: "starts 9/11", not "starts 9 Nov"); a year only when it isn't this one. */
-const shortDate = (d: string) => {
-  const x = parse(d);
-  return `${x.getDate()}/${x.getMonth() + 1}${x.getFullYear() !== new Date().getFullYear() ? `/${x.getFullYear()}` : ""}`;
-};
+const shortDate = dayMonth;
 const fmtDay = shortDate;
 /** The timeline's axis keeps the month's name under its month heads; a screen reader gets the whole day. */
 const axisDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });

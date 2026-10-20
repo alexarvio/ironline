@@ -13,6 +13,7 @@ import Picker from "../Picker";
 import DatePick from "../DatePick";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The calmer Progress pictures tab, as a draft on real data, in the Training
 // draft's sheet. Two cards: what is asked for, and what came in.
@@ -68,7 +69,6 @@ const NOTE_FIELDS: { name: keyof Note; label: string; placeholder: string }[] = 
   { name: "improvements", label: "What we can improve", placeholder: "Areas to keep working on" },
   { name: "next_steps", label: "Next steps", placeholder: "What to focus on next" },
 ];
-const fmtDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const daysApart = (a: string, b: string) => Math.abs(Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / 86400000));
 const kgDelta = (from: number, to: number) => {
   const d = Math.round((to - from) * 10) / 10;
@@ -289,7 +289,7 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
           )}
         </div>
         {sheets.length === 0 ? (
-          <p className="rd-full">{s.slots.length === 0 ? `No angles asked for yet. Add one above and ${firstName} gets a sheet to fill.` : s.startDate && s.startDate > new Date().toISOString().slice(0, 10) ? `The first sheet opens ${fmtDate(s.startDate)}.` : `Photos land here the moment ${firstName} submits.`}</p>
+          <p className="rd-full">{s.slots.length === 0 ? `No angles asked for yet. Add one above and ${firstName} gets a sheet to fill.` : s.startDate && s.startDate > new Date().toISOString().slice(0, 10) ? `The first sheet opens ${dayMonth(s.startDate)}.` : `Photos land here the moment ${firstName} submits.`}</p>
         ) : mode === "compare" ? (
           <CompareView sheets={sheets} />
         ) : (

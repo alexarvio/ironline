@@ -48,7 +48,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - Never the browser's own `<datalist>` or `<select>` list. Use `Picker` or the floating list; a plain `+ Add` that opens a menu when the choices are fixed.
 
 ## 7. Dates
-- A date in words is day/month numerals (20 Oct, Alex): `Scheduled · starts 9/11`, `5/10 – 2/11`, `Start 16/11`. Never `9 Nov` or `Mon 9 Nov` in a pill, a fact line, a note, a button or a toast; the year only when it isn't this one (`9/11/2027`). Grids keep their month names: the timeline's axis (`9 Nov` under `NOV`), the week rail, calendars.
+- A date in words is day/month numerals (20 Oct, Alex): `Scheduled · starts 9/11`, `5/10 – 2/11`, `Start 16/11`. Never `9 Nov` or `Mon 9 Nov` in a pill, a fact line, a note, a button or a toast; the year only when it isn't this one (`9/11/2027`). Grids keep their month names: the timeline's axis (`9 Nov` under `NOV`), the week rail, calendars. One helper writes them, server and screen alike: `dayMonth` (`app/lib/dayMonth.ts`); no local copies.
 - Every date field, everywhere (20 Oct, Alex): typed or picked, always both. `DateText`: digits only, slashes fill in (0811 → 08/11/), dd/mm/yyyy, a pasted 2026-11-08 is turned round. A single date is `DatePick` (the typed field with the calendar on its icon); a range is two `DateText` boxes beside `MonthRange`. Never `<input type="date">`, never a calendar-only picker, never a date shown as words where it can be set.
 - The format lives in `DateText` alone, so a coach setting (dd/mm/yyyy or yyyy-mm-dd, to come) switches every field at once. Don't format a typed date anywhere else.
 - Phase dates: no earlier than a year back (`min`). Training phases run Monday to Sunday; the dates snap, and no sentence explains it.
@@ -72,6 +72,6 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - ‹ › step back into the past a month at a time; Today comes back.
 
 ## 11. Before you build
-- Search for an existing pattern first: `.dlh`, `.npd`, `ConfirmDialog`, `Picker`, `DateText`, the floating add-row list (`rd-addpop`), `trn-btn`, `trn-state`, `stateChip`, `TRACK_ACCENT`.
+- Search for an existing pattern first: `.dlh`, `.npd`, `ConfirmDialog`, `Picker`, `DateText`, `dayMonth`, the floating add-row list (`rd-addpop`), `trn-btn`, `trn-state`, `stateChip`, `TRACK_ACCENT`.
 - Don't add a CSS file for a pop-up that fits `.dlh`. Don't hardcode a track colour; take it from `phaseChrome.ts`.
 - Check the result against this file before saying it's done.

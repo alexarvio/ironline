@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import Link from "next/link";
 import { variationIdeas } from "../../../lib/variationIdeas";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // Which variation of an exercise the client does on this session (15 Oct),
 // in the shared pop-up language: Standard and the library's variations as
@@ -14,7 +15,7 @@ import { variationIdeas } from "../../../lib/variationIdeas";
 
 const BRANCH = "M6 3v12M6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9c0 4-6 4-12 6";
 const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
-const shortDate = (d: string) => new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const shortDate = (d: string) => dayMonth(d.slice(0, 10));
 
 export type VariationChoice = { variationId: number | null; name: string; video: string | null; last: { weight: number; reps: number; date: string } | null };
 export type VariationScope = "from" | "just" | "all";

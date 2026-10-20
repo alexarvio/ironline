@@ -12,6 +12,7 @@ import "../training/draft.css";
 import "../rail.css";
 import "../messages/messages.css";
 import "./feed.css";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The Feed in the redesign, the rail on its left (replaces /admin?view=feed).
 // Where a coach starts their day (12 Oct; before, one log of everything):
@@ -146,8 +147,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   const dayLabel = (day: string) => {
     if (day === today) return "Today";
     if (day === yesterday) return "Yesterday";
-    const [y, m, d] = day.split("-").map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+    return dayMonth(day);
   };
   const weekAgo = now - 7 * DAY_MS;
   const recent = (f: FilterId) => all.filter((e) => matches(e, f) && e.at >= weekAgo).length;
@@ -296,7 +296,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
                         {l.scope === "device" ? "3 wrong passwords from one device" : "10 wrong passwords from different devices"}.
                       </div>
                       <div className="rfd-lock-meta">
-                        {new Date(l.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · {feedClock(new Date(l.at).getTime())} · {l.email} · IP {l.ip}
+                        {dayMonth(l.at)} · {feedClock(new Date(l.at).getTime())} · {l.email} · IP {l.ip}
                         {l.active ? " · still locked" : l.cleared ? " · unlocked" : ""}
                       </div>
                     </div>

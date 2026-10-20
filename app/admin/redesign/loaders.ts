@@ -87,6 +87,7 @@ import type { DraftHome } from "./home/HomeDraft";
 import type { DraftMessages } from "./messages/MessagesDraft";
 import type { MessageLink } from "../../lib/messageLinks";
 import { metricAskAt } from "../../lib/metricAskAt";
+import { dayMonth, dayMonthTime } from "../../lib/dayMonth";
 
 // What the redesign drafts read, gathered on the server for the shell that
 // shows them side by side. Read-only: the drafts save nothing.
@@ -280,7 +281,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   for (const m of [...listChatMessages(clientId)].sort((x, y) => x.created_at.localeCompare(y.created_at))) {
     if (m.link?.kind !== "exercise") continue;
     const list = aboutExercise.get(m.link.assignmentId) ?? [];
-    list.push({ id: m.id, mine: m.sender === "coach", text: m.text || (m.media_path ? "" : "A file"), when: new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }), at: new Date(m.created_at).getTime(), media: m.media_path ? { path: m.media_path, type: m.media_type ?? "file" } : null });
+    list.push({ id: m.id, mine: m.sender === "coach", text: m.text || (m.media_path ? "" : "A file"), when: dayMonthTime(m.created_at), at: new Date(m.created_at).getTime(), media: m.media_path ? { path: m.media_path, type: m.media_type ?? "file" } : null });
     aboutExercise.set(m.link.assignmentId, list);
   }
   const sessions = days.map((d, si) => {
@@ -349,7 +350,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
           ? {
               name: (a.swap.library_exercise_id != null ? libName.get(a.swap.library_exercise_id) ?? null : null) ?? a.swap.custom_name ?? "Another exercise",
               typed: a.swap.library_exercise_id == null,
-              when: new Date(a.swap.at).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
+              when: dayMonth(a.swap.at),
               sets: logs.map((l) => ({ set: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual, gym: l.gym_id != null ? gymName.get(l.gym_id) ?? null : null })),
             }
           : null,
@@ -424,7 +425,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     sessions,
     rogue,
     gyms,
-    note: noteMeta ? { seen: noteMeta.seen, text: noteMeta.text, when: new Date(noteMeta.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) } : null,
+    note: noteMeta ? { seen: noteMeta.seen, text: noteMeta.text, when: dayMonth(noteMeta.updatedAt) } : null,
   };
   return { draft, library, cardioMoves, videos };
 }
@@ -578,9 +579,9 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
     if (days === 0) return "today";
     if (days === -1) return "yesterday";
     if (days > -7) return `${-days} days ago`;
-    return new Date(`${period}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    return dayMonth(period);
   };
-  const startsOn = selected ? new Date(`${selected.start_week}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
+  const startsOn = selected ? dayMonth(selected.start_week) : "";
   return {
     id: selected?.id ?? 0,
     goals: goalsOf(selected?.id),
@@ -618,13 +619,8 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
 // ---- Progress pictures ---------------------------------------------------------
 
 const PERIOD_UNIT = { weekly: "Week", biweekly: "Check-in", monthly: "Month", sixweekly: "Block" } as const;
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const dayMonth = (day: string) => {
-  const d = new Date(`${day}T00:00:00`);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-};
 const stampDay = (iso: string) => dayMonth(localDateStr(new Date(iso)));
-const stampDayTime = (iso: string) => `${stampDay(iso)}, ${new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+const stampDayTime = dayMonthTime;
 
 export function loadPictures(clientId: number): DraftPictures {
   const cadence = getPhotoCadence(clientId);
@@ -762,7 +758,7 @@ export function loadPlan(clientId: number): DraftPlan {
     goals: d.goals,
     goalOptions: d.goalOptions,
     mainGoal: d.mainGoal,
-    mainGoalSavedAt: d.mainGoalSavedAt ? new Date(d.mainGoalSavedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : null,
+    mainGoalSavedAt: d.mainGoalSavedAt ? dayMonth(d.mainGoalSavedAt) : null,
     events: listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, byClient: e.added_by === "client", repeat: e.repeat ?? null })),
     eventCategories: listEventCategories(getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0),
   };
@@ -895,7 +891,7 @@ export function messageLinkHref(clientId: number, link: MessageLink, week: numbe
 }
 
 export function loadMessages(clientId: number): DraftMessages {
-  const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const when = dayMonthTime;
   const hrefFor = (link: MessageLink, week: number | null) => messageLinkHref(clientId, link, week);
   // Both sides, newest first: the client answers from their app.
   const messages = listChatMessages(clientId)

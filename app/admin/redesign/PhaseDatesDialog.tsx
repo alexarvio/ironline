@@ -5,6 +5,7 @@ import { useState } from "react";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../components/ui/dialog";
 import { ChevronLeftIcon, ChevronRightIcon } from "../../components/icons";
 import DateText from "./DateText";
+import { dayMonth } from "../../lib/dayMonth";
 
 // When a programme or phase reaches the client: a month to click the dates
 // on, and the same dates as fields to type into. A programme runs Monday to
@@ -27,7 +28,6 @@ const mondayOf = (d: string) => shift(d, -((parse(d).getDay() + 6) % 7));
 const sundayOf = (d: string) => shift(mondayOf(d), 6);
 const weeksBetween = (start: string, end: string) => Math.max(1, Math.round((parse(end).getTime() - parse(start).getTime() + DAY) / (7 * DAY)));
 const fmt = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-const fmtShort = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const today = () => isoOf(new Date());
 
 export default function PhaseDatesDialog({
@@ -120,7 +120,7 @@ export default function PhaseDatesDialog({
         <DialogTitle className="pdh-title">{title}</DialogTitle>
       </div>
       {/* The one fact line: how long, from when to when (20 Oct: no explanations). */}
-      <DialogDescription className="pdh-what">{[lengthLabel, `${fmtShort(from)} – ${fmtShort(to)}`].filter(Boolean).join(" · ")}</DialogDescription>
+      <DialogDescription className="pdh-what">{[lengthLabel, `${dayMonth(from)} – ${dayMonth(to)}`].filter(Boolean).join(" · ")}</DialogDescription>
       {name !== undefined && (
         <label className="pdh-field pdh-name">
           <span className="pdh-label">Name</span>

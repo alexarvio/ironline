@@ -16,6 +16,7 @@ import ExerciseEditor from "./ExerciseEditor";
 import ExerciseDrawer, { DRAWER_WIDTH } from "./ExerciseDrawer";
 import { groupColour } from "../../../lib/muscleGroups";
 import ExerciseLibraryGrid from "./ExerciseLibraryGrid";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The coach's Library (5 Oct, rebuilt 6 Oct on the shadcn parts and the
 // Training tab's rows). Three shelves on tabs:
@@ -325,7 +326,6 @@ function VideosShelf({
 
 const fmtDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 const fmtBytes = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(n >= 10 * 1024 * 1024 ? 0 : 1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const FALLBACKS = ["linear-gradient(150deg,#55648a,#1a2030)", "linear-gradient(150deg,#4a6b7a,#162028)", "linear-gradient(150deg,#665a7d,#1c1828)", "linear-gradient(150deg,#5a6f5f,#18221c)"];
 
 /** One clip as a card: its first frame with a play disc and its length, then its size and date; ⋯ renames or deletes it; a matching exercise with no demo is offered. */
@@ -375,7 +375,7 @@ function VideoCard({ v, index, hint, renaming, onRename, onStartRename, onDelete
           />
         )}
         <span className="lib-cue" title={v.name}>
-          {[v.bytes != null ? fmtBytes(v.bytes) : null, fmtDate(v.at)].filter(Boolean).join(" · ")}
+          {[v.bytes != null ? fmtBytes(v.bytes) : null, dayMonth(v.at)].filter(Boolean).join(" · ")}
         </span>
         <span className="lib-cardchips">
           {v.usedBy.length > 0 ? (

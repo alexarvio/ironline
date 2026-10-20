@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { markVideoSeenAction, removeVideoReplyAction, removeVideoRequestAction, requestExerciseVideoAction, sendVideoReplyAction } from "../lib/actions";
 import { TRACK_PALETTE } from "./phaseChrome";
+import { dayMonthTime } from "../lib/dayMonth";
 
 // Asking the client for a video of one exercise in one session, watching
 // what they send, and replying to it: a comment, a video (often a screen
@@ -28,8 +29,7 @@ export type VideoRequestView = {
 
 const MAX_REPLY_BYTES = 500 * 1024 * 1024;
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const when = dayMonthTime;
 const mb = (bytes: number) => `${Math.max(1, Math.round(bytes / 1024 / 1024))} MB`;
 
 // A reply video goes as the raw file to its own route (/api/video-reply),

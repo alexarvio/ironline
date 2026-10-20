@@ -17,6 +17,7 @@ import "../plan/plan.css";
 import "../rail.css";
 import "../ncdialog.css";
 import "./calendar.css";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The Calendar in the redesign, the rail on its left (replaces
 // /admin?view=calendar): every meeting across clients plus the coach's own
@@ -85,7 +86,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                   {conflicts.map((c, i) => (
                     <li key={i}>
                       <Link href={href(c.a.date.slice(0, 7), c.a.date)} scroll={false}>
-                        {new Date(`${c.a.date}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                        {dayMonth(c.a.date)}
                       </Link>
                       : <b>{c.a.clientName}</b> at {c.a.time} ({c.a.duration_minutes} min) overlaps <b>{c.b.clientName}</b> at {c.b.time} ({c.b.duration_minutes} min)
                     </li>

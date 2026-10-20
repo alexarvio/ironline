@@ -7,7 +7,7 @@ import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../.
 import type { PhaseTrack } from "../../../lib/db";
 import { stateTagStyle, TRACK_LABEL } from "../../phaseChrome";
 import type { OverviewClient } from "./load";
-import { daysBetween, daysLeft, nextOnTrack, phaseState, phaseStatus, prevOnTrack, shortDate, TRACK_COLOR, weekIndexOf, weekSegments, weeksOf, type OverviewPhase, type PhaseState } from "./timeline";
+import { daysBetween, daysLeft, nextOnTrack, phaseState, phaseStatus, prevOnTrack, dayMonth, TRACK_COLOR, weekIndexOf, weekSegments, weeksOf, type OverviewPhase, type PhaseState } from "./timeline";
 
 // A phase's detail (14 Oct), from a bar on the Phases timeline. Read-only:
 // the track pill and a state chip, the name, the client's first name, the
@@ -58,7 +58,7 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
   const openRef = useRef<HTMLAnchorElement>(null);
   const href = planHref(client.id, p);
 
-  const top = running ? `Week ${weekIndexOf(p, today)} of ${weeks}` : status === "done" ? `Finished on ${shortDate(p.end)}` : `Starts in ${inWords(daysBetween(today, p.start))}`;
+  const top = running ? `Week ${weekIndexOf(p, today)} of ${weeks}` : status === "done" ? `Finished on ${dayMonth(p.end)}` : `Starts in ${inWords(daysBetween(today, p.start))}`;
   const side = running
     ? { text: `${left} day${left === 1 ? "" : "s"} left`, cls: state === "soon" ? "rust" : "track" }
     : draft
@@ -70,10 +70,10 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
   // After this: the next phase on the track, or the warning that nothing is.
   const after = next
     ? next.draft
-      ? { text: `${next.name} · draft · from ${shortDate(next.start)}`, cls: "rust" }
+      ? { text: `${next.name} · draft · from ${dayMonth(next.start)}`, cls: "rust" }
       : phaseStatus(next, today) === "running"
-        ? { text: `${next.name} · running since ${shortDate(next.start)}`, cls: "track" }
-        : { text: `${next.name} · from ${shortDate(next.start)}`, cls: "track" }
+        ? { text: `${next.name} · running since ${dayMonth(next.start)}`, cls: "track" }
+        : { text: `${next.name} · from ${dayMonth(next.start)}`, cls: "track" }
     : status === "done"
       ? { text: "Nothing followed", cls: "faint" }
       : { text: `Nothing planned. The ${TRACK_LABEL[p.track].toLowerCase()} track ends here.`, cls: "rust" };
@@ -150,9 +150,9 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
             </div>
           )}
           <div className="phd-dates">
-            <span>{shortDate(p.start)}</span>
+            <span>{dayMonth(p.start)}</span>
             <span>{length}</span>
-            <span>{shortDate(p.end)}</span>
+            <span>{dayMonth(p.end)}</span>
           </div>
         </div>
 

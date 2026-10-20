@@ -21,6 +21,7 @@ import PhaseGoalsCard from "../PhaseGoalsCard";
 import CoachNoteCard from "../CoachNoteCard";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The calmer Nutrition tab, as a draft on real data, cut like the Training
 // draft: the same header, the same white cards, the same grid rows with the
@@ -571,7 +572,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                 onMessage={() =>
                   setDlg({
                     kind: "message",
-                    label: `Food diary · ${fmtDay(d.date)}`,
+                    label: `Food diary · ${dayMonth(d.date)}`,
                     link: { kind: "food", date: d.date },
                   })
                 }
@@ -917,7 +918,7 @@ function PhotoDialog({ firstName, date, meal, comments, onSend }: { firstName: s
     <DialogContent className="rd-dlg rn-shotdlg">
       <DialogHeader>
         <DialogTitle>
-          {meal.label} · {fmtDay(date)}
+          {meal.label} · {dayMonth(date)}
         </DialogTitle>
         <DialogDescription>
           {n(meal.kcal)} kcal · {meal.protein} g protein · {meal.carbs} g carbs · {meal.fat} g fat

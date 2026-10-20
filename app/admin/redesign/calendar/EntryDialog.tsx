@@ -12,6 +12,7 @@ import { SearchIcon, TrashIcon } from "../../../components/icons";
 import DatePick from "../DatePick";
 import { paletteOf, type Category } from "../palette";
 import type { CalEntry } from "./CalendarDay";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The Calendar's entry pop-up (14 Oct): the New event and New phase
 // dialogs' language. A glow and a title pill in the category's colour,
@@ -205,7 +206,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
               </span>
             </div>
             <DialogDescription className="cal-entry-sub">
-              {date ? longDate(date) : "No day yet"}
+              {date ? dayMonth(date) : "No day yet"}
               {client && (
                 <>
                   {" · "}

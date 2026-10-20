@@ -17,6 +17,7 @@ import TimezonePicker from "./TimezonePicker";
 import Picker from "../Picker";
 import HelpTip from "../HelpTip";
 import { useOpenChat } from "../ChatPanel";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
 // sheet. The next call with everything to prepare it, the calls after it,
@@ -85,8 +86,9 @@ const addDaysIso = (iso: string, n: number) => {
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
 const monthCap = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short" });
 const dayNum = (d: string) => String(parse(d).getDate());
-const longDay = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
-const shortDay = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+/** Dates in words are day/month (dayMonth, 20 Oct, Alex); the day picker's head and the past calls' Date column keep their words. */
+const dayHead = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+const dateCol = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 const toMin = (t: string) => {
   const [h, m] = t.split(":").map((x) => Number(x) || 0);
   return h * 60 + m;
@@ -260,7 +262,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                       aria-label="Topic"
                     />
                     <span className="rt-when">
-                      {longDay(upcoming.date)}
+                      {dayMonth(upcoming.date)}
                       {upcoming.time ? ` · ${upcoming.time} – ${endTime(upcoming.time, upcoming.durationMinutes)} ${zoneOf(upcoming)}` : ""} · {upcoming.durationMinutes} min
                     </span>
                   </div>
@@ -363,7 +365,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                       <span className="rd-ex">
                         <span className="rd-ex-name">{m.topic || "Check-in call"}</span>
                         <small>
-                          {longDay(m.date)}
+                          {dayMonth(m.date)}
                           {m.time ? ` · ${m.time} – ${endTime(m.time, m.durationMinutes)} ${zoneOf(m)}` : ""} · {m.durationMinutes} min · {m.provider}
                         </small>
                       </span>
@@ -417,7 +419,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                           <ChevronDownIcon />
                         </span>
                         <span className="rd-ex">
-                          <span className="rd-ex-name">{shortDay(m.date)}</span>
+                          <span className="rd-ex-name">{dateCol(m.date)}</span>
                         </span>
                         <span className="rd-ex">
                           <span className="rd-ex-name">{m.topic || "Check-in call"}</span>
@@ -431,7 +433,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                               <MoreIcon />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="pb-menu">
-                              <DropdownMenuItem onSelect={() => (openChat ? openChat() : setDlg({ kind: "message", label: `${m.topic || "Check-in call"} · ${shortDay(m.date)}` }))}>
+                              <DropdownMenuItem onSelect={() => (openChat ? openChat() : setDlg({ kind: "message", label: `${m.topic || "Check-in call"} · ${dayMonth(m.date)}` }))}>
                                 <ChatIcon /> Message about this call
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
@@ -490,13 +492,13 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
             onSave={(v) => {
               if (dlg.reschedule) {
                 patchMeeting(dlg.reschedule.id, { ...v, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" });
-                act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `Moved to ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
+                act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `Moved to ${dayMonth(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
               } else {
                 act(
                   () => addMeetingAction(fd({ clientId, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", repeatWeeks: v.repeatWeeks, count: v.count, meetingType: v.meetingType })),
                   v.repeatWeeks
-                    ? `${v.count} calls, ${v.repeatWeeks === 1 ? "weekly" : `every ${v.repeatWeeks} weeks`} from ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees them on Home`
-                    : `${v.topic || "Check-in call"} on ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees it on Home`
+                    ? `${v.count} calls, ${v.repeatWeeks === 1 ? "weekly" : `every ${v.repeatWeeks} weeks`} from ${dayMonth(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees them on Home`
+                    : `${v.topic || "Check-in call"} on ${dayMonth(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees it on Home`
                 );
               }
               setSelectedDay(v.date);
@@ -588,7 +590,7 @@ function PastBody({ m, firstName, onPatch, bare, onAddEvent }: { m: DraftMeeting
   const changes = (recap.trim() !== m.summary.trim() ? 1 : 0) + (title.trim() !== (m.summaryTitle || m.topic || "Check-in call").trim() ? 1 : 0);
   const save = () => {
     onPatch({ summary: recap.trim(), summaryTitle: title.trim() });
-    savedToast(`Summary · ${shortDay(m.date)}`);
+    savedToast(`Summary · ${dayMonth(m.date)}`);
   };
   return (
     <div className={`rt-past${bare ? " bare" : ""}`}>
@@ -689,7 +691,7 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
       </div>
       <div className="rt-day">
         <div className="rt-day-head">
-          <span>{longDay(selected)}</span>
+          <span>{dayHead(selected)}</span>
         </div>
         <div className="rt-day-list">
           {onDay.length === 0 ? (
@@ -799,7 +801,7 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
               {repeatWeeks > 0 && (
                 <span className="rt-repeat">
                   <input type="text" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value.replace(/\D/g, "").slice(0, 2))} onBlur={() => setCount(String(calls))} aria-label="How many calls" />
-                  calls{date ? `, the last on ${longDay(lastDate)}` : ""}
+                  calls{date ? `, the last on ${dayMonth(lastDate)}` : ""}
                 </span>
               )}
             </div>

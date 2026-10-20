@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // Deleting a session, in the admin hairline style (20 Oct, Alex): the title,
 // one line of what goes with it, and, when the client logged sets on it, a
@@ -9,7 +10,6 @@ import { DialogContent, DialogDescription, DialogTitle } from "../../../componen
 // the focus; Enter never deletes.
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 export default function DeleteSessionDialog({
   number,
@@ -85,7 +85,7 @@ export default function DeleteSessionDialog({
       </DialogDescription>
       {gated && (
         <p className="dlh-warn">
-          {firstName} logged this session{lastLoggedAt ? `, last on ${shortDate(lastLoggedAt)}` : ""}. Those sets come out of their history and progress charts.
+          {firstName} logged this session{lastLoggedAt ? `, last on ${dayMonth(lastLoggedAt)}` : ""}. Those sets come out of their history and progress charts.
           {hasUploads ? " Videos stay in Media." : ""}
         </p>
       )}

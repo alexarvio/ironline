@@ -32,7 +32,7 @@ import {
   phaseStatus,
   progressOf,
   rangeOf,
-  shortDate,
+  dayMonth,
   soonPhases,
   soonTag,
   spanOf,
@@ -82,9 +82,9 @@ function EventIcon({ kind, size = 11 }: { kind: string | null; size?: number }) 
 const phaseTip = (p: OverviewPhase, today: string) => {
   const st = phaseStatus(p, today);
   const tail = st === "draft" ? " · draft" : st === "running" ? ` · ${leftLabel(daysLeft(p, today)).toLowerCase()}` : "";
-  return `${TRACK_LABEL[p.track]} · ${p.name} · ${shortDate(p.start)} – ${shortDate(p.end)} · ${weeksOf(p)} week${weeksOf(p) === 1 ? "" : "s"}${tail}`;
+  return `${TRACK_LABEL[p.track]} · ${p.name} · ${dayMonth(p.start)} – ${dayMonth(p.end)} · ${weeksOf(p)} week${weeksOf(p) === 1 ? "" : "s"}${tail}`;
 };
-const eventTip = (e: OverviewEvent) => `${eventTypeOf(e.kind).label} · ${e.title}${e.repeat ? ` · ${repeatDays(e.repeat.days)}` : ""} · ${shortDate(e.start)}${e.repeat && !e.repeat.until ? " – no end" : e.end > e.start ? ` – ${shortDate(e.end)}` : ""}${e.note ? ` · ${e.note}` : ""} · added by ${e.addedBy === "client" ? "the client" : "you"}`;
+const eventTip = (e: OverviewEvent) => `${eventTypeOf(e.kind).label} · ${e.title}${e.repeat ? ` · ${repeatDays(e.repeat.days)}` : ""} · ${dayMonth(e.start)}${e.repeat && !e.repeat.until ? " – no end" : e.end > e.start ? ` – ${dayMonth(e.end)}` : ""}${e.note ? ` · ${e.note}` : ""} · added by ${e.addedBy === "client" ? "the client" : "you"}`;
 
 export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
   const router = useRouter();
@@ -161,7 +161,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
     const form = (end: string) => phaseForm({ id: p.id, name: p.name, track: p.track, start: p.start, end });
     act(
       () => updateClientPhaseAction(form(endWeek)),
-      `${p.name} now ends ${shortDate(addDays(endWeek, 6))}`,
+      `${p.name} now ends ${dayMonth(addDays(endWeek, 6))}`,
       () => updateClientPhaseAction(form(p.endWeek))
     );
   };
@@ -280,7 +280,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
             ))}
             {todayIn && (
               <span className="pov-today-pill" style={{ left: `${todayX * 100}%` }}>
-                Today · {shortDate(today)}
+                Today · {dayMonth(today)}
               </span>
             )}
           </div>
@@ -329,7 +329,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
               start(async () => {
                 const added = await addClientPhaseAction(phaseForm({ clientId: client.id, ...v }));
                 router.refresh();
-                toast(`${v.name} drafted on ${TRACK_LABEL[v.track]} for ${first(client.name)}: ${shortDate(v.start)} – ${shortDate(addDays(v.end, 6))}`, {
+                toast(`${v.name} drafted on ${TRACK_LABEL[v.track]} for ${first(client.name)}: ${dayMonth(v.start)} – ${dayMonth(addDays(v.end, 6))}`, {
                   action: added
                     ? {
                         label: "Undo",
@@ -400,7 +400,7 @@ function ExtendMenu({ phase, onPick }: { phase: OverviewPhase; onPick: (endWeek:
                 onPick(byWeeks(n));
               }}
             >
-              +{n} week{n === 1 ? "" : "s"} <small>to {shortDate(addDays(byWeeks(n), 6))}</small>
+              +{n} week{n === 1 ? "" : "s"} <small>to {dayMonth(addDays(byWeeks(n), 6))}</small>
             </button>
           ))}
           {picking ? (
@@ -562,7 +562,7 @@ function ClientBlock({
                                   <EventIcon kind={e.kind} size={14} />
                                 </span>
                                 <b>{e.title}</b>
-                                <small>{shortDate(e.start)}</small>
+                                <small>{dayMonth(e.start)}</small>
                               </button>
                             );
                           })}

@@ -15,6 +15,7 @@ import { MessageDialog } from "../training/TrainingDraft";
 import AppAccessButton from "./AppAccessButton";
 import type { NeedView } from "../loaders";
 import type { ClientAccess } from "../../../lib/access-actions";
+import { dayMonth } from "../../../lib/dayMonth";
 
 // The calmer Home tab, as a draft on real data, in the Training draft's
 // sheet. Where the coach lands for a client: who this is and where they are,
@@ -176,7 +177,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
             <section className="rd-session open rn-card">
               <div className="rn-card-head">
                 <h2>
-                  Keeping up <span title={eng.since ? `Counted from ${new Date(`${eng.since}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}, their first day` : undefined}>· last {eng.days} days</span>
+                  Keeping up <span title={eng.since ? `Counted from ${dayMonth(eng.since)}, their first day` : undefined}>· last {eng.days} days</span>
                 </h2>
                 {/* What counts for this client (12 Oct): the coach's pick, at least one. */}
                 <DropdownMenu modal={false}>
