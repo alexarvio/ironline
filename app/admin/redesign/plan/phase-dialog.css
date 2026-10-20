@@ -192,3 +192,5 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 .npd.npd .npd-tile:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
 .npd.npd .npd-tile.on { background: #141a24; box-shadow: none; color: #fff; font-weight: 600; }
 .npd.npd .npd-tile.on svg { color: #fff; }
+/* Starts / Ends as rounded boxes, not capsules (21 Oct, Alex preferred the live shape). */
+.npd.npd .npd-date { border-radius: 12px; padding: 0 14px; }
