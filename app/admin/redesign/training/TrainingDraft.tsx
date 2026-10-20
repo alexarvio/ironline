@@ -648,9 +648,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const orderOf = (s: DraftSession) => pend(s.id).order ?? s.rows.map((r) => r.id);
 
   const today = new Date().toISOString().slice(0, 10);
+  /** A week's first day. The rail is a grid, so its cards keep the month's name ("19 Oct"); the add-week pop-up's fact line is day/month. */
+  const weekStart = (index: number) => (program.startDate ? addDays(program.startDate, (index - 1) * 7) : null);
   const weekDate = (index: number) => {
-    if (!program.startDate) return null;
-    return dayMonth(addDays(program.startDate, (index - 1) * 7));
+    const d = weekStart(index);
+    return d ? new Date(`${d}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : null;
   };
   const startHasCome = !!program.startDate && program.startDate <= today;
   const showWeek = (index: number) => {
@@ -1927,7 +1929,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         {dlg?.kind === "addWeek" && (
           <AddWeekDialog
             next={weeks.length + 1}
-            date={weekDate(weeks.length + 1)}
+            date={weekStart(weeks.length + 1) && dayMonth(weekStart(weeks.length + 1)!)}
             source={week}
             sessionCount={sessions.length}
             onAdd={(copy) => {
