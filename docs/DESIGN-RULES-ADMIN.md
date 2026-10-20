@@ -75,7 +75,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - A bar on a timeline is outlined in the colour it is now (its track or kind at half strength); a draft's outline is dashed.
 
 ## 9. Saving
-- The Training and Lifestyle tabs autosave (Lifestyle since 21 Oct): one status on the section's line (`✓ All changes saved` / `Saving…` / `Not saved · Retry`), none per row. A change shows at once; a row just added is faded until its save comes back, in the place the saved list will have it. Other tabs still use the pending bar; ask Alex before switching another tab to autosave.
+- The Training, Lifestyle and Nutrition tabs autosave (Lifestyle and Nutrition since 21 Oct): one status on each section's line (`✓ All changes saved` / `Saving…` / `Not saved · Retry`), none per row. A change shows at once; typed figures go a moment after the typing stops; a row just added is faded until its save comes back, in the place the saved list will have it (a new supplement goes once it has a name and the row is left). Other tabs still use the pending bar; ask Alex before switching another tab to autosave. The queue is `useSaveQueue` (app/admin/redesign/useSaveQueue.ts).
 - Nothing on the client's screen changes before the coach (or client) confirms: a sheet with Done applies on Done.
 - A name typed in place shows the moment Enter is pressed, never the old one while it saves (21 Oct, Alex).
 

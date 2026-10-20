@@ -27,7 +27,7 @@ const preview = (s: string) => (s.length > 80 ? `${s.slice(0, 80).trimEnd()}…`
 
 const fill = (g: string[]) => Array.from({ length: PHASE_OBJECTIVES_MAX }, (_, i) => g[i] ?? "");
 
-export function GoalsNotePills({ firstName, phaseId, goals, note, area = "training" }: { firstName: string; phaseId: number; goals: string[]; note: string; /** The tab it sits on (Training, Lifestyle since 21 Oct), for the toast. */ area?: string }) {
+export function GoalsNotePills({ firstName, phaseId, goals, note, area = "training", saveNote }: { firstName: string; phaseId: number; goals: string[]; note: string; /** The tab it sits on (Training, Lifestyle, Nutrition), for the toast. */ area?: string; /** Where the note goes when it isn't the phase's own (Nutrition's is its targets' note, 21 Oct). */ saveNote?: (text: string) => Promise<unknown> }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [open, setOpen] = useState<"goals" | "note" | null>(null);
@@ -84,7 +84,8 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
         await setPhaseGoalsAction(phaseId, lines);
         toast.success("Saved", { description: lines.length ? `Phase goals · ${firstName} sees them on Home` : "Phase goals cleared" });
       } else {
-        await savePhaseNoteAction(phaseId, text.trim());
+        if (saveNote) await saveNote(text.trim());
+        else await savePhaseNoteAction(phaseId, text.trim());
         toast.success("Saved", { description: text.trim() ? `Note to ${firstName} on ${area}` : "Note removed" });
       }
       router.refresh();

@@ -1,39 +1,40 @@
 "use client";
 
 import Pager from "../Pager";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { addClientPhaseAction, applySupplementChangesAction, deployPhaseNowAction, saveAndSchedulePhaseAction, saveCoachNutritionNoteAction, saveNutritionTargetsAction, sendChatMessageAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientPhaseAction, applySupplementChangesAction, deletePhaseAction, deployPhaseNowAction, saveAndSchedulePhaseOrSayWhyAction, saveCoachNutritionNoteAction, saveNutritionTargetsAction, sendChatMessageAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { CalendarIcon, CameraIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { LoggedDay, LoggedDaysView, LoggedMeal, MealComment } from "../../../lib/queries";
-import DatePick from "../DatePick";
-import { ConfirmDialog, MessageDialog, fmtDate, stateLabel } from "../training/TrainingDraft";
+import { ConfirmDialog, DeletePhaseDialog, MessageDialog, fmtDate, stateLabel } from "../training/TrainingDraft";
+import { GoalsNotePills, GripIcon } from "../training/TrainingParts";
+import { stateTagStyle } from "../../phaseChrome";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
 import PhaseSwitcher from "../PhaseSwitcher";
-import PhaseGoalsCard from "../PhaseGoalsCard";
-import CoachNoteCard from "../CoachNoteCard";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth } from "../../../lib/dayMonth";
+import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
 
-// The calmer Nutrition tab, as a draft on real data, cut like the Training
-// draft: the same header, the same white cards, the same grid rows with the
-// headings flush over their figures and no lines between the columns.
+// The Nutrition tab, built as Training and Lifestyle are (21 Oct, Alex): the
+// phase's name to click and type, its state tag as its menu, the goals and
+// the note to the client as two pills on the right. Under it, each section's
+// title and status on the page and its content in one hairline card:
 //
-// - Daily targets: one row a day type (or one row for every day), protein,
-//   carbs and fat typed in, the kcal derived. A water goal under them.
-// - Supplements: one row an item, "+ Add item" as a dashed pill like a session.
+// - Daily targets: the kcal as a ring, protein, carbs and fat typed in for
+//   training and rest days (or one set for every day), a water goal. Saved a
+//   moment after the typing stops; the section's line says so.
+// - Supplements: one row an item. A saved row saves a moment after typing
+//   stops; a new one once it has a name and the row is left. Removing asks.
 // - What the client logged: four figures, then one row a day, twenty to a
 //   page. A day opens into its meals and their foods; a camera on a meal
 //   opens the picture, where the coach can leave a comment.
-// Nothing here saves: every action ends in a toast.
 
 type State = "live" | "past" | "scheduled" | "draft";
 export type Macros = {
@@ -60,6 +61,7 @@ export type DraftNutrition = {
   weeks: number;
   weekIdx: number | null;
   startDate: string | null;
+  /** The stored end_week: the last day is six days on. */
   endDate: string | null;
   training: Macros;
   rest: Macros;
@@ -71,9 +73,7 @@ export type DraftNutrition = {
 };
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
-/** A phase's fields as the actions read them. */
-// exact: start and end are the first and last day, kept as they are (the
-// Dates dialog picks days); otherwise any day of the first and last week.
+/** A phase's fields as the actions read them: start and end are the first and last day. */
 const phaseForm = (v: { id?: number; clientId?: number; track: string; name: string; start: string; end: string; exact?: boolean }) => {
   const f = new FormData();
   if (v.id != null) f.set("id", String(v.id));
@@ -88,9 +88,16 @@ const phaseForm = (v: { id?: number; clientId?: number; track: string; name: str
   }
   return f;
 };
+const addDays = (day: string, k: number) => {
+  const d = new Date(`${day}T00:00:00`);
+  d.setDate(d.getDate() + k);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
 const ON_TARGET = 200;
 const PAGE = 20;
+// A typed change waits this long for the next keystroke before it goes.
+const QUIET_MS = 800;
 const fmtDay = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
     weekday: "short",
@@ -105,80 +112,213 @@ const textOf = (m: Macros): MacroText => ({
   fats: m.fats == null ? "" : String(m.fats),
 });
 const num = (s: string) => (s.trim() === "" ? 0 : Number(s.replace(",", ".")) || 0);
-const kcalOf = (m: MacroText) => num(m.protein) * 4 + num(m.carbs) * 4 + num(m.fats) * 9;
 const sameMacros = (a: MacroText, b: MacroText) => a.protein === b.protein && a.carbs === b.carbs && a.fats === b.fats;
 const isEmpty = (m: MacroText) => !m.protein && !m.carbs && !m.fats;
+const sameSupp = (a: DraftSupplement, b: DraftSupplement) => a.name === b.name && a.quantity === b.quantity && a.timing === b.timing && a.notes === b.notes;
 
 type Targets = {
   same: boolean;
   training: MacroText;
   rest: MacroText;
   water: string;
-  note: string;
 };
-type Dlg = { kind: "photo"; date: string; meal: string } | { kind: "message"; label: string; link: MessageLink } | { kind: "dates" } | { kind: "newPhase" } | { kind: "deploy" } | { kind: "backToDraft" } | null;
+type Dlg =
+  | { kind: "photo"; date: string; meal: string }
+  | { kind: "message"; label: string; link: MessageLink }
+  | { kind: "dates" }
+  | { kind: "newPhase" }
+  | { kind: "deploy" }
+  | { kind: "liveNow" }
+  | { kind: "backToDraft" }
+  | { kind: "deletePhase" }
+  | { kind: "removeSupp"; supp: DraftSupplement }
+  | null;
+
+/** A section's status, as Training's week line: Saving…, ✓ All changes saved, or Not saved · Retry. */
+function SaveStatus({ busy, failed, onRetry, solo = false }: { busy: boolean; failed: boolean; onRetry: () => void; solo?: boolean }) {
+  return failed ? (
+    <span className={`trn-allsaved failed${solo ? " solo" : ""}`} role="alert">
+      Not saved ·{" "}
+      <button type="button" onClick={onRetry}>
+        Retry
+      </button>
+    </span>
+  ) : (
+    <span className={`trn-allsaved${busy ? " saving" : ""}${solo ? " solo" : ""}`} role="status">
+      {busy ? "Saving…" : "All changes saved"}
+    </span>
+  );
+}
 
 export default function NutritionDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftNutrition }) {
-  // ---- Targets: typed into in place, queued on the card's bar until Apply.
-  const initial: Targets = {
-    same: sameMacros(textOf(plan.training), textOf(plan.rest)) || isEmpty(textOf(plan.rest)),
-    training: textOf(plan.training),
-    rest: textOf(plan.rest),
-    water: plan.waterL == null ? "" : String(plan.waterL),
-    note: plan.note,
-  };
-  const [saved, setSaved] = useState(initial);
-  const [t, setT] = useState(initial);
   const router = useRouter();
   const [, startTransition] = useTransition();
-  // Every save goes to the server, then the page re-reads; what is on screen follows.
+  // A header action goes to the server, then the page re-reads; what is on screen follows.
   const act = (fn: () => Promise<unknown>, said?: string) =>
     startTransition(async () => {
       await fn();
       router.refresh();
       if (said) savedToast(said);
     });
-  // Reset only when what is saved actually changed: every re-read of the
-  // page (a save on another card) hands in new objects with the same values,
-  // and resetting on those wiped edits not yet applied.
+  const phaseId = plan.id > 0 ? plan.id : null;
+  const today = plan.planCtx.today;
+  const startHasCome = !!plan.startDate && plan.startDate <= today;
+  const lastDay = plan.endDate ? addDays(plan.endDate, 6) : null;
+
+  // ---- Targets: typed in place, saved a moment after the typing stops (21 Oct, Alex: no Apply bar).
+  const initial: Targets = {
+    same: sameMacros(textOf(plan.training), textOf(plan.rest)) || isEmpty(textOf(plan.rest)),
+    training: textOf(plan.training),
+    rest: textOf(plan.rest),
+    water: plan.waterL == null ? "" : String(plan.waterL),
+  };
+  const [t, setT] = useState(initial);
+  const targetsQ = useSaveQueue(() => router.refresh());
+  const [targetsWaiting, setTargetsWaiting] = useState(false);
+  const targetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tNow = useRef(t);
+  useEffect(() => {
+    tNow.current = t;
+  });
+  const sendTargets = () => {
+    targetTimer.current = null;
+    setTargetsWaiting(false);
+    const x = tNow.current;
+    const rest = x.same ? x.training : x.rest;
+    const f = new FormData();
+    f.set("clientId", String(clientId));
+    f.set("t_protein", x.training.protein);
+    f.set("t_carbs", x.training.carbs);
+    f.set("t_fats", x.training.fats);
+    f.set("r_protein", rest.protein);
+    f.set("r_carbs", rest.carbs);
+    f.set("r_fats", rest.fats);
+    f.set("water", x.water);
+    if (phaseId) f.set("phaseId", String(phaseId));
+    targetsQ.save(async () => {
+      await saveNutritionTargetsAction(f);
+      return true;
+    });
+  };
+  const editTargets = (change: (x: Targets) => Targets) => {
+    setT(change);
+    setTargetsWaiting(true);
+    if (targetTimer.current) clearTimeout(targetTimer.current);
+    targetTimer.current = setTimeout(sendTargets, QUIET_MS);
+  };
+  // What is saved comes back with the page's re-read and replaces the screen's copy, by content,
+  // never while a change waits, saves or failed (that would undo it on screen).
   const planKey = JSON.stringify([plan.id, initial]);
   const [seenPlan, setSeenPlan] = useState(planKey);
-  if (seenPlan !== planKey) {
+  if (seenPlan !== planKey && !targetsWaiting && !targetsQ.saving && !targetsQ.failed) {
     setSeenPlan(planKey);
-    setSaved(initial);
     setT(initial);
   }
-  const phaseId = plan.id > 0 ? plan.id : null;
-  const targetChanges = (t.same !== saved.same ? 1 : 0) + (sameMacros(t.training, saved.training) ? 0 : 1) + (!t.same && !sameMacros(t.rest, saved.rest) ? 1 : 0) + (t.water !== saved.water ? 1 : 0);
-  const trainingKcal = kcalOf(t.training);
-  const restKcal = t.same ? trainingKcal : kcalOf(t.rest);
+  // Which day type the ring and the row show; with the tick on, one set for every day.
+  const [day, setDay] = useState<"training" | "rest">("training");
+  const shown = t.same ? "training" : day;
 
-  // ---- Supplements: a working copy against the saved list.
-  const [suppSaved, setSuppSaved] = useState(plan.supplements);
+  // ---- Supplements: a saved row saves a moment after typing stops; a new one once it has a name and the row is left.
   const [supps, setSupps] = useState(plan.supplements);
+  // As last sent: what the next change is told apart from.
+  const [suppSent, setSuppSent] = useState(plan.supplements);
+  const suppQ = useSaveQueue(() => router.refresh());
+  const [suppWaiting, setSuppWaiting] = useState(false);
+  const suppTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppsNow = useRef(supps);
+  const sentNow = useRef(suppSent);
+  useEffect(() => {
+    suppsNow.current = supps;
+    sentNow.current = suppSent;
+  });
+  const tempIds = useRef(0);
+  // A new row once sent: there, faded and still, until the re-read gives it its number.
+  const incoming = (s: DraftSupplement) => s.id < 0 && suppSent.some((x) => x.id === s.id);
+  // Something typed that hasn't gone yet (an empty new row doesn't count).
+  const unsent = supps.some((s) => {
+    const was = suppSent.find((x) => x.id === s.id);
+    return was ? !sameSupp(was, s) : s.id > 0 || !!s.name.trim();
+  });
   const suppsKey = JSON.stringify(plan.supplements);
   const [seenSupps, setSeenSupps] = useState(suppsKey);
-  if (seenSupps !== suppsKey) {
+  if (seenSupps !== suppsKey && !suppWaiting && !suppQ.saving && !suppQ.failed && !unsent) {
     setSeenSupps(suppsKey);
-    setSuppSaved(plan.supplements);
-    setSupps(plan.supplements);
+    setSuppSent(plan.supplements);
+    // An empty row just added stays for its name.
+    setSupps([...plan.supplements, ...supps.filter((s) => s.id < 0 && !s.name.trim())]);
   }
-  const suppChanges = (() => {
-    const before = new Map(suppSaved.map((s) => [s.id, s]));
-    let c = suppSaved.filter((s) => !supps.some((x) => x.id === s.id)).length;
-    for (const s of supps) {
-      const b = before.get(s.id);
-      // A fresh row counts once something is typed into it, not the moment it appears.
-      if (!b) c += s.name.trim() || s.quantity.trim() || s.timing.trim() || s.notes.trim() ? 1 : 0;
-      else if (b.name !== s.name || b.quantity !== s.quantity || b.timing !== s.timing || b.notes !== s.notes) c += 1;
-    }
-    // The order, judged on the rows that are saved: a fresh empty row at the foot is not a reorder.
-    if (c === 0 && supps.filter((s) => before.has(s.id)).some((s, i) => suppSaved[i]?.id !== s.id)) c = 1;
-    return c;
-  })();
-  const editSupp = (id: number, f: Partial<DraftSupplement>) => setSupps((prev) => prev.map((s) => (s.id === id ? { ...s, ...f } : s)));
-  // A drop sets the new order; it is saved with the rest on Apply.
-  const moveSupps = (ids: (number | string)[]) => setSupps((prev) => ids.map((id) => prev.find((x) => x.id === id)!).filter(Boolean));
+  const sendSupps = (changes: { added?: DraftSupplement[]; updated?: DraftSupplement[]; removedIds?: number[]; order?: number[] }) => {
+    const payload = {
+      added: (changes.added ?? []).map(({ name, quantity, timing, notes }) => ({ name, quantity, timing, notes })),
+      updated: (changes.updated ?? []).map(({ id, name, quantity, timing, notes }) => ({ id, name, quantity, timing, notes })),
+      removedIds: changes.removedIds ?? [],
+      order: changes.order,
+    };
+    suppQ.save(async () => {
+      await applySupplementChangesAction(clientId, payload);
+      return true;
+    });
+  };
+  // The saved rows' edits, a moment after the typing stops.
+  const sendSuppEdits = () => {
+    suppTimer.current = null;
+    setSuppWaiting(false);
+    const sent = new Map(sentNow.current.map((s) => [s.id, s]));
+    const updated = suppsNow.current.filter((s) => s.id > 0 && sent.has(s.id) && !sameSupp(sent.get(s.id)!, s));
+    if (!updated.length) return;
+    setSuppSent((prev) => prev.map((s) => updated.find((u) => u.id === s.id) ?? s));
+    sendSupps({ updated });
+  };
+  const editSupp = (id: number, f: Partial<DraftSupplement>) => {
+    setSupps((prev) => prev.map((s) => (s.id === id ? { ...s, ...f } : s)));
+    if (id < 0) return;
+    setSuppWaiting(true);
+    if (suppTimer.current) clearTimeout(suppTimer.current);
+    suppTimer.current = setTimeout(sendSuppEdits, QUIET_MS);
+  };
+  // A new row goes once it has a name and the coach leaves it.
+  const leaveNewRow = (id: number) => {
+    const s = suppsNow.current.find((x) => x.id === id);
+    if (!s || !s.name.trim() || sentNow.current.some((x) => x.id === id)) return;
+    setSuppSent((prev) => [...prev, s]);
+    sendSupps({ added: [s] });
+  };
+  const addRow = () => {
+    tempIds.current += 1;
+    setSupps((prev) => [...prev, { id: -tempIds.current, name: "", quantity: "", timing: "", notes: "" }]);
+  };
+  const removeSupp = (s: DraftSupplement) => {
+    setSupps((prev) => prev.filter((x) => x.id !== s.id));
+    if (s.id < 0) return;
+    setSuppSent((prev) => prev.filter((x) => x.id !== s.id));
+    sendSupps({ removedIds: [s.id] });
+  };
+  // A drop sets the new order, saved at once; not while a new row waits for its number.
+  const canDrag = plan.status !== "past" && !supps.some((s) => s.id < 0 && s.name.trim());
+  const moveSupps = (ids: (number | string)[]) => {
+    if (!canDrag) return;
+    const next = ids.map((id) => supps.find((x) => x.id === id)).filter((s): s is DraftSupplement => !!s);
+    setSupps(next);
+    setSuppSent((prev) => next.map((s) => prev.find((x) => x.id === s.id)).filter((s): s is DraftSupplement => !!s));
+    sendSupps({ order: next.filter((s) => s.id > 0).map((s) => s.id) });
+  };
+  // Leaving the page or the tab with something typed: it goes now.
+  useEffect(
+    () => () => {
+      if (targetTimer.current) {
+        clearTimeout(targetTimer.current);
+        sendTargets();
+      }
+      if (suppTimer.current) {
+        clearTimeout(suppTimer.current);
+        sendSuppEdits();
+      }
+    },
+    // Unmount only; the refs hold what is current.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  useHoldWhile(targetsWaiting || targetsQ.saving || targetsQ.failed || suppWaiting || suppQ.saving || suppQ.failed);
 
   // ---- The log: one day open at a time, twenty days a page.
   const [open, setOpen] = useState<string | null>(null);
@@ -211,6 +351,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   const [dlg, setDlg] = useState<Dlg>(null);
   // Messaging slides the chat in from the right (ChatPanel, 2 Oct).
   const openChat = useOpenChat();
+  const message = (v: { label: string; link: MessageLink }) => (openChat ? openChat({ area: "Nutrition", label: v.label, link: v.link }) : setDlg({ kind: "message", ...v }));
   const close = () => setDlg(null);
   const photoOf = dlg?.kind === "photo" ? (view.days.find((d) => d.date === dlg.date)?.meals.find((m) => m.id === dlg.meal) ?? null) : null;
 
@@ -241,11 +382,28 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
     },
   ];
 
-  const today = new Date().toISOString().slice(0, 10);
-  const startHasCome = !!plan.startDate && plan.startDate <= today;
-  // Which day type the ring and the row show; with the tick on, only training is kept.
-  const [day, setDay] = useState<"training" | "rest">("training");
-  const shown = t.same ? "training" : day;
+  // ---- The phase's name: click it to type (as Training's); the new one shows at once.
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [named, setNamed] = useState<{ id: number; from: string; to: string } | null>(null);
+  const shownName = named && named.id === plan.id && plan.name === named.from ? named.to : plan.name;
+  const commitRename = () => {
+    const v = renaming?.trim() ?? "";
+    setRenaming(null);
+    if (!v || v === shownName || !phaseId || !plan.startDate || !lastDay) return;
+    setNamed({ id: plan.id, from: plan.name, to: v });
+    act(() => updateClientPhaseAction(phaseForm({ id: phaseId, track: "nutrition", name: v, start: plan.startDate!, end: lastDay, exact: true })), `Renamed to ${v}`);
+  };
+  const goLive = () => {
+    if (!phaseId) return;
+    // Live, or why not (5 Oct: a blocked one used to say "is live" anyway).
+    startTransition(async () => {
+      const why = await deployPhaseNowAction(phaseId);
+      router.refresh();
+      if (why) toast.error(`${plan.name} isn't live yet`, { description: why });
+      else savedToast(`${plan.name} is live`);
+    });
+  };
+
   const tGrid = {
     gridTemplateColumns: "minmax(150px, 1fr) 92px 92px 92px",
   } as const;
@@ -258,60 +416,126 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   const mGrid = {
     gridTemplateColumns: "20px minmax(160px, 1fr) 84px 72px 72px 72px 32px",
   } as const;
+  const named_ = supps.filter((s) => s.name.trim()).length;
 
   return (
-    <div className={`rd${plan.status === "past" ? " rd-past" : ""}`}>
+    <div className={`rd trn rls rnt${plan.status === "past" ? " rd-past" : ""}`}>
       {plan.status === "past" && (
         <div className="rd-past-note" role="note">
           <b>Ended.</b> This phase is here to look back on; nothing in it can be changed.
         </div>
       )}
-      {/* ---- Header: the phase, where it is, its actions. */}
-      <header className="rd-head">
-        <div className="rd-head-main">
-          <span className="rd-eyebrow">Nutrition</span>
-          <h1 className="rd-title">
-            {plan.phases.length > 1 ? (
-              <PhaseSwitcher name={plan.name} currentId={plan.id} items={plan.phases} hrefFor={(id) => `/admin/redesign/nutrition?client=${clientId}&phase=${id}`} label="Switch phase" newLabel="New phase" onNew={() => setDlg({ kind: "newPhase" })} />
-            ) : (
-              plan.name
-            )}
-            {plan.weeks > 0 && <span className="rd-title-weeks">({plan.weeks} weeks)</span>}
-            <span className={`rd-status ${plan.status}`}>{stateLabel(plan.status)}</span>
-          </h1>
+      {/* ---- Header (21 Oct, as Training's and Lifestyle's): the name to click and type, the ▾ to switch phase,
+          the state tag as its menu; the facts under it; on the right the goals and note pills and the menu. */}
+      <header className="trn-head">
+        <div className="trn-head-main">
+          <span className="trn-eyebrow">Nutrition</span>
+          <div className="trn-name-row">
+            <h1 className="trn-name">
+              {renaming != null ? (
+                <input
+                  className="trn-name-input"
+                  value={renaming}
+                  autoFocus
+                  maxLength={60}
+                  size={Math.max(8, renaming.length + 1)}
+                  onChange={(e) => setRenaming(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") setRenaming(null);
+                  }}
+                  onBlur={commitRename}
+                  aria-label="Phase name"
+                />
+              ) : (
+                <>
+                  {phaseId ? (
+                    <button type="button" className="trn-name-btn" onClick={() => setRenaming(shownName)} title="Rename">
+                      {shownName}
+                    </button>
+                  ) : (
+                    plan.name
+                  )}
+                  <PhaseSwitcher name="" currentId={plan.id} items={plan.phases} hrefFor={(id) => `/admin/redesign/nutrition?client=${clientId}&phase=${id}`} label="Switch phase" newLabel="New phase" onNew={() => setDlg({ kind: "newPhase" })} />
+                </>
+              )}
+            </h1>
+            {phaseId != null &&
+              (plan.status === "draft" || plan.status === "scheduled" ? (
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger className={`trn-status trn-status-btn ${plan.status}`} style={stateTagStyle(plan.status)} aria-label={`${stateLabel(plan.status)}: change`}>
+                    {stateLabel(plan.status)}
+                    <ChevronDownIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="pb-menu">
+                    {plan.status === "draft" ? (
+                      startHasCome ? (
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Make it live</DropdownMenuItem>
+                      ) : (
+                        <>
+                          <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Schedule it</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setDlg({ kind: "liveNow" })}>Make it live now</DropdownMenuItem>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "liveNow" })}>Make it live now</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "backToDraft" })}>Back to draft</DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <span className={`trn-status ${plan.status}`} style={stateTagStyle(plan.status)}>
+                  {plan.status === "past" ? "Ended" : stateLabel(plan.status)}
+                </span>
+              ))}
+          </div>
           {plan.startDate && (
-            <span className="rd-sub">
-              {fmtDate(plan.startDate)}
-              {plan.endDate && ` – ${fmtDate(plan.endDate)}`}
-              {plan.weekIdx != null && ` · week ${plan.weekIdx} of ${plan.weeks}`}
+            // The facts parted by a short upright line, the dates last (21 Oct, as Lifestyle).
+            <span className="trn-meta">
+              <span>
+                {plan.weeks} {plan.weeks === 1 ? "week" : "weeks"}
+              </span>
+              {plan.weekIdx != null && (
+                <span className="trn-meta-part">
+                  week {plan.weekIdx} of {plan.weeks}
+                </span>
+              )}
+              <span className="trn-meta-part">
+                {fmtDate(plan.startDate)}
+                {lastDay && ` – ${fmtDate(lastDay)}`}
+              </span>
             </span>
           )}
         </div>
-        <div className="rd-head-actions">
-          {plan.status === "draft" && (
-            <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "deploy" })}>
-              {startHasCome ? "Make it live" : "Schedule it"}
-            </button>
-          )}
-          {plan.status === "scheduled" && (
-            <>
-              <button type="button" className="rd-btn" onClick={() => setDlg({ kind: "backToDraft" })}>
-                Back to draft
-              </button>
-              <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "deploy" })}>
-                Make it live now
-              </button>
-            </>
+        <div className="trn-head-actions">
+          {/* The goals and the note to the client as pills (21 Oct), one pop-over; the note is the targets' note the client reads on Nutrition. */}
+          {phaseId != null && (
+            <GoalsNotePills
+              firstName={firstName}
+              phaseId={phaseId}
+              goals={plan.goals}
+              note={plan.note}
+              area="nutrition"
+              saveNote={async (text) => {
+                const f = new FormData();
+                f.set("clientId", String(clientId));
+                f.set("note", text);
+                f.set("phaseId", String(phaseId));
+                await saveCoachNutritionNoteAction(f);
+              }}
+            />
           )}
           <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="rd-btn ghost" aria-label="More for the phase">
+            <DropdownMenuTrigger className="trn-more" aria-label="More for the phase">
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => (openChat ? openChat({ area: "Nutrition", label: plan.name, link: { kind: "nutrition" } }) : setDlg({ kind: "message", label: plan.name, link: { kind: "nutrition" } }))}>
+              <DropdownMenuItem onSelect={() => message({ label: plan.name, link: { kind: "nutrition" } })}>
                 <ChatIcon /> Message about nutrition
               </DropdownMenuItem>
-              {plan.id !== 0 && (
+              {phaseId != null && (
                 <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>
                   <CalendarIcon /> Edit dates
                 </DropdownMenuItem>
@@ -320,62 +544,56 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
               <DropdownMenuItem onSelect={() => setDlg({ kind: "newPhase" })}>
                 <PlusIcon /> New phase
               </DropdownMenuItem>
+              {phaseId != null && (
+                <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "deletePhase" })}>
+                  <TrashIcon /> Delete phase
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
 
-      {/* ---- The coach's goals for this phase, shown on the client's Home. */}
-      <PhaseGoalsCard phaseId={phaseId} phaseName={plan.name} firstName={firstName} goals={plan.goals} />
-      <CoachNoteCard
-        firstName={firstName}
-        note={saved.note}
-        what="nutrition"
-        save={async (text) => {
-          const f = new FormData();
-          f.set("clientId", String(clientId));
-          f.set("note", text);
-          if (phaseId) f.set("phaseId", String(phaseId));
-          await saveCoachNutritionNoteAction(f);
-          setSaved((x) => ({ ...x, note: text }));
-          setT((x) => ({ ...x, note: text }));
-        }}
-      />
-
-      {/* ---- Daily targets: the kcal as a ring on the left, split by the
-           macros typed in on the right. */}
-      <section className="rd-session open rn-card">
-        <div className="rn-card-head">
-          <h2>Daily targets</h2>
+      {/* ---- Daily targets: the kcal as a ring on the left, split by the macros typed in on the right. */}
+      <section className="rls-section">
+        <div className="trn-weekhead">
+          <div>
+            <h2>Daily targets</h2>
+            <span>
+              <SaveStatus busy={targetsWaiting || targetsQ.saving} failed={targetsQ.failed} onRetry={targetsQ.retry} solo />
+            </span>
+          </div>
+          <div className="trn-weekhead-actions">
+            {/* Kept in its place when hidden, so the tick beside it never moves. */}
+            <div className="rd-btn-group" role="group" aria-label="Day type shown" style={{ visibility: t.same ? "hidden" : "visible" }}>
+              {(["training", "rest"] as const).map((d) => (
+                <button key={d} type="button" className={shown === d ? "on" : ""} aria-pressed={shown === d} onClick={() => setDay(d)} tabIndex={t.same ? -1 : 0}>
+                  {d === "training" ? "Training" : "Rest"}
+                </button>
+              ))}
+            </div>
+            <label className="rd-tick rnt-same">
+              <input
+                type="checkbox"
+                checked={t.same}
+                onChange={(e) =>
+                  editTargets((x) => ({
+                    ...x,
+                    same: e.target.checked,
+                    rest: e.target.checked ? x.rest : isEmpty(x.rest) ? x.training : x.rest,
+                  }))
+                }
+              />
+              Same on training and rest days
+            </label>
+          </div>
         </div>
-        <div className="rd-rows">
+        <div className="rls-card">
           <div className="rn-targets">
             <div className="rn-rings">
               <Ring label={t.same ? "Every day" : shown === "training" ? "Training days" : "Rest days"} m={t[shown]} />
             </div>
             <div className="rn-tside">
-              <div className="rn-daypick">
-                {!t.same && (
-                  <ToggleGroup type="single" value={shown} onValueChange={(v) => v && setDay(v as "training" | "rest")} aria-label="Day type shown">
-                    <ToggleGroupItem value="training">Training</ToggleGroupItem>
-                    <ToggleGroupItem value="rest">Rest</ToggleGroupItem>
-                  </ToggleGroup>
-                )}
-                <label className="rd-tick">
-                  <input
-                    type="checkbox"
-                    checked={t.same}
-                    onChange={(e) =>
-                      setT((x) => ({
-                        ...x,
-                        same: e.target.checked,
-                        rest: e.target.checked ? x.rest : isEmpty(x.rest) ? x.training : x.rest,
-                      }))
-                    }
-                  />
-                  Same on training and rest days
-                </label>
-              </div>
               <div className="rd-cols" aria-hidden="true" style={tGrid}>
                 <span>Day</span>
                 <span className="p">Protein</span>
@@ -386,14 +604,13 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                 <div className="rd-row-main static" style={tGrid}>
                   <span className="rd-ex">
                     <span className="rd-ex-name">{t.same ? "Every day" : shown === "training" ? "Training days" : "Rest days"}</span>
-                    <small>{t.same ? "training and rest alike" : shown === "training" ? `the days ${firstName} trains` : "the days off"}</small>
                   </span>
                   {(["protein", "carbs", "fats"] as const).map((f) => (
                     <Box
                       key={`${shown}-${f}`}
                       value={t[shown][f]}
                       onChange={(v) =>
-                        setT((x) => ({
+                        editTargets((x) => ({
                           ...x,
                           [shown]: { ...x[shown], [f]: v },
                         }))
@@ -408,48 +625,29 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                 <div className="rd-row-main static" style={tGrid}>
                   <span className="rd-ex">
                     <span className="rd-ex-name">Water</span>
-                    <small>a goal, not a tracker</small>
                   </span>
-                  <Box value={t.water} onChange={(v) => setT((x) => ({ ...x, water: v }))} label="Water goal" unit="L" placeholder="—" />
-                  <span className="rd-num quiet rn-span2">{t.water ? "litres a day" : "no goal set"}</span>
+                  <Box value={t.water} onChange={(v) => editTargets((x) => ({ ...x, water: v }))} label="Water goal" unit="L" placeholder="—" />
                 </div>
               </div>
             </div>
           </div>
-          {targetChanges > 0 && (
-            <Bar
-              count={targetChanges}
-              text={`${targetChanges === 1 ? "change" : "changes"} to the targets · ${firstName} sees ${n(trainingKcal)}${t.same ? "" : ` / ${n(restKcal)}`} kcal`}
-              onDiscard={() => setT(saved)}
-              onApply={() => {
-                const next = { ...t, rest: t.same ? t.training : t.rest };
-                setSaved(next);
-                setT(next);
-                const f = new FormData();
-                f.set("clientId", String(clientId));
-                f.set("t_protein", next.training.protein);
-                f.set("t_carbs", next.training.carbs);
-                f.set("t_fats", next.training.fats);
-                f.set("r_protein", next.rest.protein);
-                f.set("r_carbs", next.rest.carbs);
-                f.set("r_fats", next.rest.fats);
-                f.set("water", next.water);
-                if (phaseId) f.set("phaseId", String(phaseId));
-                act(() => saveNutritionTargetsAction(f), `Targets: ${n(trainingKcal)}${t.same ? "" : ` / ${n(restKcal)}`} kcal`);
-              }}
-            />
-          )}
         </div>
       </section>
 
       {/* ---- Supplements: a reference list, one row an item. */}
-      <section className="rd-session open rn-card">
-        <div className="rn-card-head">
-          <h2>Supplements</h2>
+      <section className="rls-section">
+        <div className="trn-weekhead">
+          <div>
+            <h2>Supplements</h2>
+            <span>
+              {named_} {named_ === 1 ? "item" : "items"}
+              <SaveStatus busy={suppWaiting || suppQ.saving} failed={suppQ.failed} onRetry={suppQ.retry} />
+            </span>
+          </div>
         </div>
-        <div className="rd-rows">
+        <div className="rls-card">
           {supps.length > 0 && (
-            <div className="rd-cols" aria-hidden="true" style={sGrid}>
+            <div className="rls-cols" aria-hidden="true" style={sGrid}>
               <span />
               <span>Item</span>
               <span>Quantity</span>
@@ -459,141 +657,106 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             </div>
           )}
           <SortableList ids={supps.map((s) => s.id)} label="supplement" onMove={moveSupps}>
-          {supps.map((s) => (
-            <SortableItem key={s.id} id={s.id} className={`rd-row${suppSaved.some((x) => x.id === s.id) ? "" : " new"}`}>
-              {(suppGrip) => (
-              <div className="rd-row-main static rn-wide" style={sGrid}>
-                <span className="rd-grip" {...suppGrip}>
-                  ⋮⋮
-                </span>
-                <Box value={s.name} onChange={(v) => editSupp(s.id, { name: v })} label="Item" placeholder="Creatine" strong autoFocus={!s.name} />
-                <Box value={s.quantity} onChange={(v) => editSupp(s.id, { quantity: v })} label="Quantity" placeholder="5 g" />
-                <Box value={s.timing} onChange={(v) => editSupp(s.id, { timing: v })} label="Timing" placeholder="With breakfast" />
-                <Box value={s.notes} onChange={(v) => editSupp(s.id, { notes: v })} label="Notes" placeholder="—" quiet />
-                <span className="rd-row-more">
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${s.name || "item"}`}>
-                      <MoreIcon />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="pb-menu">
-                      <DropdownMenuItem variant="destructive" onSelect={() => setSupps((prev) => prev.filter((x) => x.id !== s.id))}>
-                        <TrashIcon /> Remove
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </span>
-              </div>
-              )}
-            </SortableItem>
-          ))}
+            {supps.map((s) => (
+              <SortableItem key={s.id} id={s.id} className={`rls-row${incoming(s) ? " trn-incoming" : ""}`}>
+                {(suppGrip) => (
+                  <div
+                    className="rls-row-main rn-wide"
+                    style={sGrid}
+                    onBlur={(e) => {
+                      if (s.id < 0 && !e.currentTarget.contains(e.relatedTarget as Node | null)) leaveNewRow(s.id);
+                    }}
+                  >
+                    <span className="rd-grip trn-grip" {...(canDrag && s.id > 0 ? suppGrip : {})}>
+                      <GripIcon />
+                    </span>
+                    <Box value={s.name} onChange={(v) => editSupp(s.id, { name: v })} label="Item" placeholder="Creatine" strong autoFocus={!s.name} />
+                    <Box value={s.quantity} onChange={(v) => editSupp(s.id, { quantity: v })} label="Quantity" placeholder="5 g" />
+                    <Box value={s.timing} onChange={(v) => editSupp(s.id, { timing: v })} label="Timing" placeholder="With breakfast" />
+                    <Box value={s.notes} onChange={(v) => editSupp(s.id, { notes: v })} label="Notes" placeholder="—" quiet />
+                    <span className="rls-more">
+                      {!incoming(s) && (
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${s.name || "item"}`}>
+                            <MoreIcon />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="pb-menu">
+                            <DropdownMenuItem variant="destructive" onSelect={() => (s.id < 0 && !s.name.trim() ? removeSupp(s) : setDlg({ kind: "removeSupp", supp: s }))}>
+                              <TrashIcon /> Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </span>
+                  </div>
+                )}
+              </SortableItem>
+            ))}
           </SortableList>
-          <button
-            type="button"
-            className="rd-session add rn-additem"
-            onClick={() =>
-              setSupps((prev) => [
-                ...prev,
-                {
-                  id: -Date.now(),
-                  name: "",
-                  quantity: "",
-                  timing: "",
-                  notes: "",
-                },
-              ])
-            }
-          >
-            + Add item
+          <button type="button" className="rls-add" onClick={addRow}>
+            <PlusIcon /> Item
           </button>
-          {suppChanges > 0 && (
-            <Bar
-              count={suppChanges}
-              text={`${suppChanges === 1 ? "change" : "changes"} to the supplements · ${firstName} sees the list as it is here`}
-              onDiscard={() => setSupps(suppSaved)}
-              onApply={() => {
-                const kept = supps.filter((s) => s.name.trim());
-                setSuppSaved(kept);
-                setSupps(kept);
-                const before = new Map(suppSaved.map((s) => [s.id, s]));
-                const changes = {
-                  added: kept.filter((s) => s.id < 0).map(({ name, quantity, timing, notes }) => ({ name, quantity, timing, notes })),
-                  updated: kept
-                    .filter((s) => s.id > 0)
-                    .filter((s) => {
-                      const b = before.get(s.id);
-                      return !b || b.name !== s.name || b.quantity !== s.quantity || b.timing !== s.timing || b.notes !== s.notes;
-                    })
-                    .map(({ id, name, quantity, timing, notes }) => ({ id, name, quantity, timing, notes })),
-                  removedIds: suppSaved.filter((s) => !kept.some((k) => k.id === s.id)).map((s) => s.id),
-                  order: kept.filter((s) => s.id > 0).map((s) => s.id),
-                };
-                act(() => applySupplementChangesAction(clientId, changes), `Supplements: ${kept.length} ${kept.length === 1 ? "item" : "items"}`);
-              }}
-            />
-          )}
         </div>
       </section>
 
-      {/* ---- What the client logged: figures, then one row a day. */}
-      <section className="rd-session open rn-card">
-        <div className="rn-card-head">
-          <h2>{firstName}&rsquo;s logs</h2>
-        </div>
-        <div className="rn-stats">
-          {stats.map((s) => (
-            <div key={s.label}>
-              <small>{s.label}</small>
-              <b className={s.warn ? "warn" : ""}>{s.value}</b>
-              <span>{s.unit}</span>
-            </div>
-          ))}
-        </div>
-        {view.days.length > 0 && (
-          <div className="rd-rows">
-            <div className="rd-cols" aria-hidden="true" style={lGrid}>
-              <span />
-              <span>Date</span>
-              <span>Logged</span>
-              <span>Day</span>
-              <span>Vs target</span>
-              <span>Protein · carbs · fat</span>
-              <span />
-            </div>
-            {days.map((d) => (
-              <DayRow
-                key={d.date}
-                day={d}
-                open={open === d.date}
-                grid={lGrid}
-                mealGrid={mGrid}
-                commentsOn={commentsOn}
-                onToggle={() => setOpen((x) => (x === d.date ? null : d.date))}
-                onShot={(meal) => setDlg({ kind: "photo", date: d.date, meal })}
-                onMessage={() =>
-                  setDlg({
-                    kind: "message",
-                    label: `Food diary · ${dayMonth(d.date)}`,
-                    link: { kind: "food", date: d.date },
-                  })
-                }
-              />
-            ))}
-            <Pager
-              className="rn-foot"
-              page={at}
-              pages={pages}
-              from={from}
-              shown={days.length}
-              total={view.days.length}
-              noun="days"
-              label="Logged day pages"
-              onPage={(p) => {
-                setPage(p);
-                setOpen(null);
-              }}
-            />
+      {/* ---- What the client logged: figures, then one row a day. Still to be looked through on an ended phase (rd-keep). */}
+      <section className="rls-section rd-keep">
+        <div className="trn-weekhead">
+          <div>
+            <h2>{firstName}&rsquo;s logs</h2>
           </div>
-        )}
+        </div>
+        <div className="rls-card rls-log">
+          <div className="rn-stats">
+            {stats.map((s) => (
+              <div key={s.label}>
+                <small>{s.label}</small>
+                <b className={s.warn ? "warn" : ""}>{s.value}</b>
+                <span>{s.unit}</span>
+              </div>
+            ))}
+          </div>
+          {view.days.length > 0 && (
+            <div className="rd-rows">
+              <div className="rd-cols" aria-hidden="true" style={lGrid}>
+                <span />
+                <span>Date</span>
+                <span>Logged</span>
+                <span>Day</span>
+                <span>Vs target</span>
+                <span>Protein · carbs · fat</span>
+                <span />
+              </div>
+              {days.map((d) => (
+                <DayRow
+                  key={d.date}
+                  day={d}
+                  open={open === d.date}
+                  grid={lGrid}
+                  mealGrid={mGrid}
+                  commentsOn={commentsOn}
+                  onToggle={() => setOpen((x) => (x === d.date ? null : d.date))}
+                  onShot={(meal) => setDlg({ kind: "photo", date: d.date, meal })}
+                  onMessage={() => message({ label: `Food diary · ${dayMonth(d.date)}`, link: { kind: "food", date: d.date } })}
+                />
+              ))}
+              <Pager
+                className="rn-foot"
+                page={at}
+                pages={pages}
+                from={from}
+                shown={days.length}
+                total={view.days.length}
+                noun="days"
+                label="Logged day pages"
+                onPage={(p) => {
+                  setPage(p);
+                  setOpen(null);
+                }}
+              />
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ---- Dialogs. One open at a time. */}
@@ -635,6 +798,19 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             }}
           />
         )}
+        {dlg?.kind === "removeSupp" && (
+          <ConfirmDialog
+            title={`Remove ${dlg.supp.name || "this item"}?`}
+            description={`It comes off ${firstName}'s supplements.`}
+            confirm="Remove"
+            danger
+            onConfirm={() => {
+              const s = dlg.supp;
+              close();
+              removeSupp(s);
+            }}
+          />
+        )}
         {dlg?.kind === "dates" && (
           <PhaseDatesDialog
             title="Dates"
@@ -643,7 +819,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             end={plan.endDate}
             firstName={firstName}
             what="these targets"
-            confirm="Save dates"
+            confirm="Save"
             onConfirm={(v) => {
               close();
               if (phaseId) act(() => updateClientPhaseAction(phaseForm({ id: phaseId, track: "nutrition", name: v.name || plan.name, start: v.start, end: v.end, exact: true })), `${v.name || plan.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
@@ -679,37 +855,66 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             confirm="Schedule it"
             onConfirm={(v) => {
               close();
-              if (phaseId) act(() => saveAndSchedulePhaseAction(phaseForm({ id: phaseId, track: "nutrition", name: plan.name, start: v.start, end: v.end, exact: true })), `${plan.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
+              if (!phaseId) return;
+              // Scheduled, or why not (an empty draft said "scheduled" and stayed a draft).
+              startTransition(async () => {
+                const why = await saveAndSchedulePhaseOrSayWhyAction(phaseForm({ id: phaseId, track: "nutrition", name: plan.name, start: v.start, end: v.end, exact: true }));
+                router.refresh();
+                if (why) toast.error(`${plan.name} isn't scheduled yet`, { description: why });
+                else savedToast(`${plan.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
+              });
             }}
           />
         )}
         {dlg?.kind === "deploy" && startHasCome && (
           <ConfirmDialog
             title={`Make ${plan.name} live?`}
-            description={`${firstName} sees these targets and supplements from now.`}
+            description={`${firstName} sees these targets and supplements from today.`}
             confirm="Make it live"
             onConfirm={() => {
               close();
-              if (phaseId)
-                // Live, or why not (5 Oct: a blocked one used to say "is live" anyway).
-                startTransition(async () => {
-                  const why = await deployPhaseNowAction(phaseId);
-                  router.refresh();
-                  if (why) toast.error(`${plan.name} isn't live yet`, { description: why });
-                  else savedToast(`${plan.name} is live`);
-                });
+              goLive();
+            }}
+          />
+        )}
+        {/* Now, whatever its dates say (21 Oct, as Training): it starts this week. */}
+        {dlg?.kind === "liveNow" && (
+          <ConfirmDialog
+            title={`Make ${plan.name} live now?`}
+            description={`It starts this week; ${firstName} sees these targets from today.`}
+            confirm="Make it live"
+            onConfirm={() => {
+              close();
+              goLive();
             }}
           />
         )}
         {dlg?.kind === "backToDraft" && (
           <ConfirmDialog
             title="Back to draft?"
-            description={`${plan.name} comes off ${firstName}'s schedule; only you see it until it is scheduled again.`}
+            description={`${plan.name} comes off ${firstName}'s schedule.`}
             confirm="Back to draft"
             onConfirm={() => {
               close();
               if (phaseId) act(() => unschedulePhaseAction(phaseId), `${plan.name} is a draft again`);
             }}
+          />
+        )}
+        {/* Deleting the phase from here too (21 Oct, as Training). What the client logged stays. */}
+        {dlg?.kind === "deletePhase" && phaseId != null && (
+          <DeletePhaseDialog
+            name={plan.name}
+            logged={0}
+            firstName={firstName}
+            onDelete={() => {
+              close();
+              startTransition(async () => {
+                await deletePhaseAction(phaseId);
+                savedToast(`${plan.name} deleted`);
+                router.push(`${window.location.pathname}?client=${clientId}&tab=nutrition`, { scroll: false });
+              });
+            }}
+            onClose={close}
           />
         )}
       </Dialog>
@@ -799,21 +1004,6 @@ function Split({ p, c, f }: { p: number; c: number; f: number }) {
   );
 }
 
-/** A card's own pending bar, at its foot. */
-function Bar({ count, text, onDiscard, onApply }: { count: number; text: string; onDiscard: () => void; onApply: () => void }) {
-  return (
-    <div className="rd-pending">
-      <span className="rd-pending-count">{count}</span>
-      <span className="rd-pending-text">{text}</span>
-      <button type="button" className="rd-pending-ghost" onClick={onDiscard}>
-        Discard
-      </button>
-      <button type="button" className="rd-pending-apply" onClick={onApply}>
-        Apply
-      </button>
-    </div>
-  );
-}
 
 function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMessage }: { day: LoggedDay; open: boolean; grid: React.CSSProperties; mealGrid: React.CSSProperties; commentsOn: (d: string, m: LoggedMeal) => MealComment[]; onToggle: () => void; onShot: (meal: string) => void; onMessage: () => void }) {
   const diff = day.target != null ? day.kcal - day.target : null;
@@ -939,7 +1129,6 @@ function PhotoDialog({ firstName, date, meal, comments, onSend }: { firstName: s
         <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder={`On ${firstName}'s ${meal.label.toLowerCase()}…`} onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && send()} />
       </label>
       <DialogFooter>
-        <span className="rd-dlg-hint grow">{firstName} gets a notification and sees it under this meal. Ctrl + Enter sends.</span>
         <DialogClose className="rd-btn">Close</DialogClose>
         <button type="button" className="rd-btn primary" disabled={!text.trim()} onClick={send}>
           Send
