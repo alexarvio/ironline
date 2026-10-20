@@ -2,7 +2,7 @@
 
 import Pager from "../Pager";
 import { repeatWords, WEEKDAY_LETTERS, isoWeekday, type EventRepeat } from "../../../lib/eventRepeat";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -22,6 +22,14 @@ const rgbOf = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
   return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
 };
+/** The arrow between two dates: the pop-up's Starts → Ends, and the log's 14/10 → 5/11 (21 Oct, Alex). */
+function RangeArrow() {
+  return (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
 function KindIcon({ id, size = 20 }: { id: string | null; size?: number }) {
   const t = iconOf(id);
   return (
@@ -444,7 +452,9 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                         {dayMonth(e.start)}
                         {(e.repeat || e.start !== e.end) && (
                           <>
-                            <i aria-hidden="true">→</i>
+                            <i aria-hidden="true">
+                              <RangeArrow />
+                            </i>
                             {e.repeat && !e.repeat.until ? "no end" : dayMonth(e.end)}
                           </>
                         )}
@@ -535,7 +545,26 @@ export function EventDialog({ today, event, cats, initialStart, initialKind, rea
   const [note, setNote] = useState(event?.note ?? "");
   const [days, setDays] = useState<number[]>(event?.repeat?.days ?? [isoWeekday(event?.start ?? initialStart ?? today)]);
   const [until, setUntil] = useState<string | null>(event?.repeat?.until ?? null);
-  const toggleDay = (d: number) => setDays((xs) => (xs.includes(d) ? xs.filter((x) => x !== d) : [...xs, d].sort((a, b) => a - b)));
+  // A long note grows down to the month's last row, never further, so the pop-up keeps its height;
+  // only past that does it scroll (21 Oct, Alex). Stacked on a narrow screen, it stops at 160px.
+  const colsRef = useRef<HTMLDivElement>(null);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const ta = noteRef.current;
+    const month = colsRef.current?.firstElementChild as HTMLElement | null;
+    if (!ta || !month) return;
+    ta.style.overflowY = "hidden";
+    ta.style.height = "auto";
+    const m = month.getBoundingClientRect();
+    const t = ta.getBoundingClientRect();
+    // Measured while the pop-up may still be zooming in: back to its own pixels.
+    const k = m.height / (month.offsetHeight || 1) || 1;
+    const room = t.top >= m.bottom ? 160 : (m.bottom - t.top) / k;
+    const want = ta.scrollHeight + (ta.offsetHeight - ta.clientHeight);
+    ta.style.height = `${Math.min(want, room)}px`;
+    ta.style.overflowY = want > room ? "auto" : "hidden";
+  }, [note, shape]);
+  const toggleDay =(d: number) => setDays((xs) => (xs.includes(d) ? xs.filter((x) => x !== d) : [...xs, d].sort((a, b) => a - b)));
   const k = chromeOf(cats, kind);
   const endOk = shape === "event" || (shape === "repeat" ? until == null || until >= start : end >= start);
   // The calendar: which month shows, and which end a click sets (a period).
@@ -659,7 +688,7 @@ export function EventDialog({ today, event, cats, initialStart, initialKind, rea
         <input className="npd-line" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={placeholder} maxLength={80} autoFocus={!event} />
       </label>
 
-      <div className="npd-cols">
+      <div ref={colsRef} className="npd-cols">
         <MonthRange from={start} to={shape === "event" ? start : shape === "repeat" ? until ?? start : end} onPick={pick} chrome={calChrome} planned={[]} cursor={cursor} setCursor={setCursor} today={today} plain legend={null} />
         <div className="npd-side">
           <div className="npd-when">
@@ -689,9 +718,7 @@ export function EventDialog({ today, event, cats, initialStart, initialKind, rea
                   <DateText value={start} onChange={typeStart} label="Start date" onFocus={() => setPicking("start")} />
                 </div>
                 <span className="npd-arrow" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M13 6l6 6-6 6" />
-                  </svg>
+                  <RangeArrow />
                 </span>
                 <div className={`npd-date${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")}>
                   <span className="npd-date-head">{shape === "repeat" ? "Until" : "Ends"}</span>
@@ -727,7 +754,7 @@ export function EventDialog({ today, event, cats, initialStart, initialKind, rea
           )}
           <label className="npd-field">
             <span className="npd-label">Note</span>
-            <textarea className="npd-line" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+            <textarea ref={noteRef} className="npd-line npd-grow" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
           </label>
         </div>
       </div>

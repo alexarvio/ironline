@@ -26,6 +26,8 @@
 .npd.npd .npd-line:focus { border-bottom-color: #141a24; box-shadow: none; }
 .npd.npd .npd-line::placeholder { color: #98a2b3; }
 .npd.npd textarea.npd-line { resize: none; }
+/* A note that grows (the event pop-up's, 21 Oct): no scrollbar until it fills its room, then a thin one. */
+.npd.npd textarea.npd-grow { overflow-y: hidden; scrollbar-width: thin; scrollbar-color: #c9cfd8 transparent; }
 .npd.npd .npd-weeks-row { display: flex; align-items: baseline; gap: 12px; }
 .npd.npd input.npd-weeks { width: 72px; flex: none; font-variant-numeric: tabular-nums; }
 .npd.npd .npd-meta { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #98a2b3; white-space: nowrap; }
