@@ -356,7 +356,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                         setDlg({ event: e });
                       };
                       return single ? (
-                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }} onPointerDown={(ev) => !past && beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${dayMonth(e.start)} · ${standing(today, e)}`}>
+                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: `${10 + lane * 40}px`, color: k.ink }} onPointerDown={(ev) => !past && beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${dayMonth(e.start)} · ${standing(today, e)}`}>
                           <i style={{ background: k.ink }} />
                           <span className="rq-pin-text">
                             <b>{e.title}</b>
@@ -370,7 +370,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                           key={e.id}
                           type="button"
                           className={`rq-evbar${past ? " past" : ""}${dragging ? " dragging" : ""}`}
-                          style={{ left: `${p.left}%`, width: `${p.width}%`, top: `${6 + lane * 40}px`, background: k.tint, color: k.ink, borderColor: k.line }}
+                          style={{ left: `${p.left}%`, width: `${p.width}%`, top: `${10 + lane * 40}px`, background: k.tint, color: k.ink, borderColor: k.line }}
                           onPointerDown={(ev) => {
                             if (past || (ev.target as HTMLElement).closest(".rq-bar-edge")) return;
                             beginDrag(ev, e, "move");
