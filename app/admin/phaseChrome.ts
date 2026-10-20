@@ -36,12 +36,11 @@ export type PhaseChrome = {
 export const TRACK_PALETTE: Record<PhaseTrack, { tint: string; ink: string; soft: string; line: string }> = {
   nutrition: { tint: "#dff1ef", ink: "#1d7a70", soft: "#cfe9e5", line: "#9fd3cd" },
   training: { tint: "#e6e4fa", ink: "#3a3390", soft: "#dcd8f6", line: "#b9b4ec" },
-  lifestyle: { tint: "#efede6", ink: "#4a4a45", soft: "#e4e1d5", line: "#cfcbbd" },
+  lifestyle: { tint: "#efede6", ink: "#a08a5c", soft: "#e4e1d5", line: "#cfcbbd" },
 };
 
-/** A track's accent for type and solid marks on white (21 Oct, Alex: lifestyle reads beige, not grey):
- *  the ink for training and nutrition, a warm beige-brown for lifestyle (its ink is a neutral grey). */
-export const TRACK_ACCENT: Record<PhaseTrack, string> = { nutrition: TRACK_PALETTE.nutrition.ink, training: TRACK_PALETTE.training.ink, lifestyle: "#a08a5c" };
+/** A track's accent for type and solid marks on white: its ink (21 Oct, Alex: lifestyle is one beige everywhere, never grey). */
+export const TRACK_ACCENT: Record<PhaseTrack, string> = { nutrition: TRACK_PALETTE.nutrition.ink, training: TRACK_PALETTE.training.ink, lifestyle: TRACK_PALETTE.lifestyle.ink };
 
 export const TRACK_LABEL: Record<PhaseTrack, string> = { nutrition: "Nutrition", training: "Training", lifestyle: "Lifestyle" };
 
@@ -49,6 +48,18 @@ export const STATE_LABEL: Record<PhaseState, string> = { live: "Live", scheduled
 
 const SCHEDULED: PhaseChrome = { band: "#eef3f9", edge: "#1e3a6e", soft: "#e6ecf3", line: "#c9d6e6", chipBg: "#e6ecf3", chipInk: "#1e3a6e", dashed: false };
 const DRAFT: PhaseChrome = { band: "#fdf3ee", edge: "#b3471d", soft: "#fbe9e0", line: "#b3471d", chipBg: "#fbe9e0", chipInk: "#b3471d", dashed: true };
+
+/** A state's tag, the same wherever a phase or programme state shows (20 Oct, Alex): Live green on every
+ *  track, Scheduled blue, Draft peach, Past grey. Never a black-and-white capsule, never the track's colour. */
+export const STATE_TAG: Record<PhaseState, { bg: string; ink: string }> = {
+  live: { bg: "rgba(47, 122, 63, 0.12)", ink: "#2f7a3f" },
+  scheduled: { bg: SCHEDULED.chipBg, ink: SCHEDULED.chipInk },
+  draft: { bg: DRAFT.chipBg, ink: DRAFT.chipInk },
+  past: { bg: "#EEF0F3", ink: "#5b6474" },
+};
+
+/** The tag's tint laid over white, so it reads the same on a tinted bar as on a white card. */
+export const stateTagStyle = (state: PhaseState): { background: string; color: string } => ({ background: `linear-gradient(${STATE_TAG[state].bg}, ${STATE_TAG[state].bg}), #fff`, color: STATE_TAG[state].ink });
 
 export function phaseChrome(track: PhaseTrack, state: PhaseState): PhaseChrome {
   if (state === "scheduled") return SCHEDULED;

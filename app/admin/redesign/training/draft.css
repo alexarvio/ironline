@@ -14,10 +14,11 @@
 .rd-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .rd-head-main { display: flex; flex-direction: column; gap: 4px; }
 .rd-title { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
-.rd-status { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.rd-status.live { background: #dff3ea; color: #1b7a4b; }
+/* A state tag in the shared state colours (phaseChrome STATE_TAG, 20 Oct): Live green, Scheduled blue, Draft peach, Past grey. */
+.rd-status { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.rd-status.live { background: #e6efe8; color: #2f7a3f; }
 .rd-status.scheduled { background: #e6ecf3; color: #1e3a6e; }
-.rd-status.draft { background: #fdf3ee; color: #b3471d; }
+.rd-status.draft { background: #fbe9e0; color: #b3471d; }
 .rd-sub { font-size: 13px; color: #5b6474; }
 .rd-head-actions { display: flex; align-items: center; gap: 10px; }
 
@@ -134,7 +135,7 @@
 .rd-switch-states > button { flex: 1; gap: 5px; padding: 0 8px; cursor: pointer; }
 .rd-switch-states > button:disabled { opacity: 0.4; cursor: default; }
 .rd-switch-count { font-weight: 600; opacity: 0.7; }
-.rd-status.past { background: #eceff3; color: #5b6474; }
+.rd-status.past { background: #EEF0F3; color: #5b6474; }
 /* A past phase or programme on screen (29 Sep): there to look back on, nothing
    to change. Every control sleeps except the pickers that move between
    phases, weeks and programmes (.rd-keep), and links. */

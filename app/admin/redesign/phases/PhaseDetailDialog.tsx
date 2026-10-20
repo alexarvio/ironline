@@ -5,7 +5,7 @@ import type React from "react";
 import Link from "next/link";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import type { PhaseTrack } from "../../../lib/db";
-import { TRACK_LABEL } from "../../phaseChrome";
+import { stateTagStyle, TRACK_LABEL } from "../../phaseChrome";
 import type { OverviewClient } from "./load";
 import { daysBetween, daysLeft, nextOnTrack, phaseState, phaseStatus, prevOnTrack, shortDate, TRACK_COLOR, weekIndexOf, weekSegments, weeksOf, type OverviewPhase, type PhaseState } from "./timeline";
 
@@ -29,15 +29,16 @@ const inWords = (days: number) => (days >= 14 ? plural(Math.round(days / 7), "we
 export const planHref = (clientId: number, p: OverviewPhase) =>
   p.track === "training" ? `/admin/redesign/training?client=${clientId}${p.programId ? `&program=${p.programId}` : ""}` : `/admin/redesign/${p.track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${p.id}`;
 
-function chipOf(p: OverviewPhase, state: PhaseState, today: string): { text: string; cls: string } {
+/** The chip wears the shared state colours (20 Oct, Alex): running is Live green, upcoming Scheduled blue, a draft peach, done grey. */
+function chipOf(p: OverviewPhase, state: PhaseState, today: string): { text: string; cls: string; tag: "live" | "scheduled" | "draft" | "past" } {
   if (state === "soon") {
     const d = daysLeft(p, today);
-    return { text: d <= 0 ? "Ends today" : d === 1 ? "Ends tomorrow" : `Ends in ${d} days`, cls: "soon" };
+    return { text: d <= 0 ? "Ends today" : d === 1 ? "Ends tomorrow" : `Ends in ${d} days`, cls: "soon", tag: "live" };
   }
-  if (state === "running") return { text: `Week ${weekIndexOf(p, today)} of ${weeksOf(p)}`, cls: "track" };
-  if (state === "upcoming") return { text: `Starts in ${daysBetween(today, p.start)} days`, cls: "track" };
-  if (state === "draft") return { text: "Draft · not sent", cls: "draft" };
-  return { text: "Done", cls: "done" };
+  if (state === "running") return { text: `Week ${weekIndexOf(p, today)} of ${weeksOf(p)}`, cls: "track", tag: "live" };
+  if (state === "upcoming") return { text: `Starts in ${daysBetween(today, p.start)} days`, cls: "track", tag: "scheduled" };
+  if (state === "draft") return { text: "Draft · not sent", cls: "draft", tag: "draft" };
+  return { text: "Done", cls: "done", tag: "past" };
 }
 
 export default function PhaseDetailDialog({ client, phase: p, today, onMove }: { client: OverviewClient; phase: OverviewPhase; today: string; /** ← and →: the phase before or after on the track. */ onMove: (p: OverviewPhase) => void }) {
@@ -106,7 +107,7 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
                 </svg>
                 {TRACK_LABEL[p.track]}
               </span>
-              <DialogDescription id="phd-state" className={`phd-chip ${chip.cls}`}>
+              <DialogDescription id="phd-state" className={`phd-chip ${chip.cls}`} style={stateTagStyle(chip.tag)}>
                 {chip.text}
               </DialogDescription>
             </div>

@@ -8,6 +8,8 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - A real problem is a short fact plus its fix button: `Overlaps Health, 19 Oct – 15 Nov.` [Start Mon 16 Nov].
 - Buttons say the action, one word when it can: Save, Delete, Remove, Add, Copy, Schedule it. Not "Save new dates", not "Add as copy of Week 1".
 - Empty states are one or two words: `None yet`, `No gyms yet`.
+- Say a thing once (20 Oct): the week rail dates every week, so the week's own line doesn't (`0 of 5 sessions done`, no date).
+- Don't offer an action that would change nothing (20 Oct): no "Copy week 3 here" when the weeks already match, no copy from an empty week, no "Copy to weeks 5–6" when they're the same.
 
 ## 2. Tokens
 - Page `#F5F6F8` · surface `#fff` · ink `#141a24` · body `#3a4250` · secondary `#5b6474` · muted `#8b93a1` · faint `#98A2B3`.
@@ -19,7 +21,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 ## 3. Track and state colours (one source: `app/admin/phaseChrome.ts`)
 - Track accents, `TRACK_ACCENT`: training purple `#3a3390`, nutrition teal `#1d7a70`, lifestyle beige `#a08a5c` (tint `#efede6`).
 - How a track colour appears: a tinted tag (background `rgba(accent, .12)`, text and icon in the accent), a tile's icon, the new value in a change, a calendar range (band `rgba(accent, .10)`, first and last day solid). Never a big filled block.
-- States, via `stateChip()` in `plan/PlanDraft.tsx`: **Live is green** `#2f7a3f` on `rgba(47,122,63,.12)` on every track (never the track's own colour); Scheduled and Draft (peach) keep their `phaseChrome`; Past is grey.
+- **A state tag is always colour-coded** (20 Oct, Alex), wherever a phase's or programme's state shows: the Training header, the programme switcher, the Plan and Phases views, every pop-up. **Live green** `#2f7a3f` on `rgba(47,122,63,.12)`, on every track (never the track's own colour); **Scheduled blue** `#1e3a6e` on `#e6ecf3`; **Draft peach** `#b3471d` on `#fbe9e0`; **Past grey** `#5b6474` on `#EEF0F3`. One source: `STATE_TAG` / `stateTagStyle()` in `phaseChrome.ts`. The same when the tag is a menu. Never a black-and-white capsule. (The Scheduled blue is a state, so the no-navy rule in §2 doesn't apply to it.)
 - A phase's pop-ups show both tags under the title: `[icon Training] [LIVE]`.
 - Lifestyle is one beige everywhere, admin and client (21 Oct): `#a08a5c` for marks and text, `#efede6` behind. Never amber, orange or grey for lifestyle. (The Lifestyle tab's metric groups have their own colours in `app/lib/categoryColors.ts`; those are groups of metrics, not the track.)
 
@@ -57,6 +59,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - A summary lives in the column head (`ENJOYMENT  AVG 8`), never as a fake row of data.
 - A change from → to: two columns, the old value struck through in grey, the new one in the track's accent. No arrows.
 - NOW on the week rail: the word in black with a green pulse on its left. No pill.
+- Use the width (20 Oct, Alex): a section with little in it is one row: its title, its items and add on the left, its summary and fold on the right (the After-workout check). Never a title line, a pill line and a fold line stacked in a wide card.
 
 ## 9. Saving
 - The Training tab autosaves: one status on the week's line (`✓ All changes saved` / `Saving…` / `Not saved · Retry`), none per session. Other tabs still use the pending bar; ask Alex before switching another tab to autosave.

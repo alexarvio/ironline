@@ -14,7 +14,7 @@ import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MoreIcon, PlusIcon,
 import type { GoalEditorOptions, PlanGoalRow, PlanPhaseRow, PlanProgramOption } from "../../../lib/queries";
 import type { GoalTracking } from "../../../lib/goalView";
 import type { PhaseTrack } from "../../../lib/db";
-import { phaseChrome, phaseStateOf, STATE_LABEL, TRACK_ACCENT, TRACK_LABEL, TRACK_PALETTE, type PhaseState } from "../../phaseChrome";
+import { phaseChrome, phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL, TRACK_PALETTE, type PhaseState } from "../../phaseChrome";
 import { ConfirmDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DateText from "../DateText";
@@ -436,8 +436,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                                   {total} {total === 1 ? "week" : "weeks"}
                                 </span>
                               </span>
-                              {/* Its state in words on the bar (30 Sep): the colours are the track's, so a legend of them read wrong. */}
-                              {state === "draft" ? <span className="rq-bar-pill">Draft</span> : state === "live" ? <span className="rq-bar-pill"><b>Live</b> · week {weeksBetween(sp.s, thisWeek) + 1} of {total}</span> : state === "scheduled" ? <span className="rq-bar-pill"><b>Scheduled</b> · starts {shortDate(sp.s)}</span> : null}
+                              {/* Its state in words on the bar (30 Sep), in the state's colours (20 Oct, Alex): Live green, Scheduled blue, Draft peach. */}
+                              {state === "draft" ? <span className="rq-bar-pill" style={stateTagStyle(state)}>Draft</span> : state === "live" ? <span className="rq-bar-pill" style={stateTagStyle(state)}><b>Live</b> · week {weeksBetween(sp.s, thisWeek) + 1} of {total}</span> : state === "scheduled" ? <span className="rq-bar-pill" style={stateTagStyle(state)}><b>Scheduled</b> · starts {shortDate(sp.s)}</span> : null}
                             </div>
                           );
                         })}
@@ -944,7 +944,7 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
           <TrackIcon track={track} size={12} />
           {TRACK_LABEL[track]}
         </span>
-        <span className="npd-state" style={stateChip(state, chrome)}>
+        <span className="npd-state" style={stateTagStyle(state)}>
           {STATE_LABEL[state]}
         </span>
       </DialogDescription>
@@ -1075,9 +1075,6 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
   );
 }
 
-/** A state's tag: Live is always green (21 Oct, Alex: it read teal on nutrition, the track's own colour); the rest keep their chrome. */
-const stateChip = (state: PhaseState, chrome: ReturnType<typeof phaseChrome>): React.CSSProperties =>
-  state === "live" ? { background: "rgba(47, 122, 63, 0.12)", color: "#2f7a3f" } : { background: chrome.chipBg, color: chrome.chipInk };
 
 /** A finished drag waits here: the dates as they were and as they will be. In the hairline style
  *  (21 Oct, Alex) with the track's colour: its name in a tinted capsule, the new dates in its ink;
@@ -1085,7 +1082,6 @@ const stateChip = (state: PhaseState, chrome: ReturnType<typeof phaseChrome>): R
 function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: PlanPhaseRow; start: string; end: string; today: string; onCancel: () => void; onSave: () => void }) {
   const isDraft = p.draft || p.program?.status === "draft";
   const state = phaseStateOf({ draft: isDraft, startWeek: start, endWeek: end, today });
-  const chrome = phaseChrome(p.track, state);
   const ink = TRACK_ACCENT[p.track];
   const last = (monday: string) => fmtDay(addDays(monday, 6));
   const rows = [
@@ -1106,7 +1102,7 @@ function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: 
           <TrackIcon track={p.track} size={12} />
           {TRACK_LABEL[p.track]}
         </span>
-        <span className="mvd-state" style={stateChip(state, chrome)}>
+        <span className="mvd-state" style={stateTagStyle(state)}>
           {STATE_LABEL[state]}
         </span>
       </DialogDescription>

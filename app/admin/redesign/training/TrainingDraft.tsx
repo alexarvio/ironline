@@ -29,6 +29,7 @@ import ClientGymsDialog from "./ClientGymsDialog";
 import DeleteSessionDialog from "./DeleteSessionDialog";
 import ScheduleDialog from "./ScheduleDialog";
 import { addDays } from "../phases/timeline";
+import { stateTagStyle } from "../../phaseChrome";
 import ExerciseProgressDialog from "./ExerciseProgressDialog";
 import DatePick from "../DatePick";
 
@@ -134,7 +135,8 @@ export type DraftProgram = {
   weekIdx: number;
   liveIdx: number;
   /** trained: each session completed; missed: begun and left unfinished; skipped: the client said they couldn't do it. Neither: not started. */
-  weeks: { index: number; label: string; trained: boolean[]; missed: boolean[]; skipped: boolean[]; state: "past" | "live" | "ahead" }[];
+  /** print: what a copy of the week would carry, so a week the same as another offers no copy of it. */
+  weeks: { index: number; label: string; print: string; trained: boolean[]; missed: boolean[]; skipped: boolean[]; state: "past" | "live" | "ahead" }[];
   sessions: DraftSession[];
   /** The client's rogue sessions (19 Oct), by week index: their own workouts off the plan, read only. */
   rogue: Record<number, DraftRogue[]>;
@@ -672,6 +674,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // Weeks are added and removed on the server (the dialogs below); the page then lands on the right one.
   const later = weeks.filter((w) => w.index > viewIdx);
   const laterLabel = later.length === 0 ? "" : later.length === 1 ? `W${later[0].index}` : `W${later[0].index}–W${later[later.length - 1].index}`;
+  // A copy that would change nothing isn't offered (20 Oct, Alex: Week 4 was Week 3 and still said "Copy week 3 here").
+  const sameWeeks = (a: number, b: number) => weeks.find((w) => w.index === a)?.print === weeks.find((w) => w.index === b)?.print;
+  // An empty week copies nothing (copyProgramWeek), so it is never offered as a source.
+  const copyable = (i: number) => (weeks.find((w) => w.index === i)?.trained.length ?? 0) > 0 && !sameWeeks(i, viewIdx);
+  const copyFromChoices = weeks.filter((w) => w.index !== viewIdx && copyable(w.index));
+  const forwardChanges = later.some((w) => !sameWeeks(w.index, viewIdx));
 
   return (
     <div className={`rd trn${program.status === "past" ? " rd-past" : ""}`}>
@@ -714,7 +722,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             {/* The state is where its actions live (20 Oct, Alex): a draft or a scheduled programme's tag opens what can be done with it. */}
             {program.status === "draft" || program.status === "scheduled" ? (
               <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className={`trn-status trn-status-btn ${program.status}`} aria-label={`${stateLabel(program.status)}: change`}>
+                <DropdownMenuTrigger className={`trn-status trn-status-btn ${program.status}`} style={stateTagStyle(program.status)} aria-label={`${stateLabel(program.status)}: change`}>
                   {stateLabel(program.status)}
                   <ChevronDownIcon />
                 </DropdownMenuTrigger>
@@ -730,7 +738,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <span className={`trn-status ${program.status}`}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
+              <span className={`trn-status ${program.status}`} style={stateTagStyle(program.status)}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
             )}
           </div>
           <span className="trn-meta">
@@ -861,7 +869,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         <div>
           <h2>Week {week.index}</h2>
           <span>
-            {weekDate(week.index) ? `${weekDate(week.index)} · ` : ""}
+            {/* No date here (20 Oct, Alex): the week rail above already dates every week. */}
             {week.trained.filter(Boolean).length} of {week.trained.length} sessions done
             {/* Every change saves itself (20 Oct): the week says so. */}
             {weekFailed ? (
@@ -885,31 +893,28 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               <TrashIcon /> Remove week
             </button>
           )}
-          {week.state !== "past" &&
-            weeks.length > 1 &&
-            (viewIdx > 1 ? (
-              <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyWeek", from: viewIdx - 1 })}>
-                <CopyIcon /> Copy week {viewIdx - 1} here
-              </button>
-            ) : (
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className="trn-btn">
-                  <CopyIcon /> Copy from…
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="pb-menu">
-                  {weeks
-                    .filter((w) => w.index !== viewIdx)
-                    .map((w) => (
-                      <DropdownMenuItem key={w.index} onSelect={() => setDlg({ kind: "copyWeek", from: w.index })}>
-                        Week {w.index}
-                        <small className="rd-menu-inuse">{w.trained.length} {w.trained.length === 1 ? "session" : "sessions"}</small>
-                      </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ))}
+          {week.state !== "past" && weeks.length > 1 && viewIdx > 1 && copyable(viewIdx - 1) && (
+            <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyWeek", from: viewIdx - 1 })}>
+              <CopyIcon /> Copy week {viewIdx - 1} here
+            </button>
+          )}
+          {week.state !== "past" && weeks.length > 1 && viewIdx === 1 && copyFromChoices.length > 0 && (
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger className="trn-btn">
+                <CopyIcon /> Copy from…
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="pb-menu">
+                {copyFromChoices.map((w) => (
+                  <DropdownMenuItem key={w.index} onSelect={() => setDlg({ kind: "copyWeek", from: w.index })}>
+                    Week {w.index}
+                    <small className="rd-menu-inuse">{w.trained.length} {w.trained.length === 1 ? "session" : "sessions"}</small>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {/* Build one week, fill the rest in one go (20 Oct, Alex). */}
-          {later.length > 0 && sessions.length > 0 && (
+          {later.length > 0 && sessions.length > 0 && forwardChanges && (
             <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyForward" })}>
               <CopyIcon /> Copy to {later.length === 1 ? `week ${later[0].index}` : `weeks ${later[0].index}–${later[later.length - 1].index}`}
             </button>
@@ -1789,7 +1794,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             title={`Copy Week ${dlg.from} here`}
             description="Replaces this week's sessions. Nothing logged is touched."
             confirm="Copy week"
-            tick={laterLabel ? `Also copy it to ${laterLabel}` : null}
+            tick={laterLabel ? "Also apply to the rest of the programme" : null}
             onConfirm={(also) => {
               const from = weekNo(dlg.from);
               const targets = also ? weeks.filter((w) => w.index >= viewIdx).map((w) => weekNo(w.index)) : [weekNo(viewIdx)];

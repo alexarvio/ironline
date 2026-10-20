@@ -5,7 +5,7 @@ import { ChevronLeftIcon } from "../components/icons";
 
 // The hub's Calendar (28 Sep): everything the client did, a month at a time,
 // Monday first. Each day's number sits in a ring of up to three equal parts,
-// one a thing done: training (navy), food logged (green), a check-in (amber).
+// one a thing done: training (navy), food logged (green), a check-in (beige).
 // One thing fills the ring in its colour, two halve it, three third it. A
 // record of what was done, not a score. Tap a day and the month opens under
 // its week, with a snapshot of the day: the session (exercises, gym, time),

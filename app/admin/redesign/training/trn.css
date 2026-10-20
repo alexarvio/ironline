@@ -52,12 +52,11 @@
 .rd.trn .trn-name-btn { padding: 0; border: 0; border-bottom: 1px solid transparent; background: none; font: inherit; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; color: var(--trn-ink); text-align: left; cursor: text; }
 .rd.trn .trn-name-btn:hover { border-bottom-color: var(--trn-line); }
 .rd.trn .trn-name-input { max-width: 100%; padding: 0 0 2px; border: 0; border-bottom: 1px solid var(--trn-ink); border-radius: 0; background: none; font: inherit; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; color: var(--trn-ink); outline: none; }
-.rd.trn .trn-status { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--trn-line); font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--trn-muted); }
-.rd.trn .trn-status-btn { gap: 4px; border: 0; background: #fff; font-family: inherit; cursor: pointer; }
+/* The state tag wears its state's colours (stateTagStyle, inline): Live green, Scheduled blue, Draft peach, Past grey (20 Oct, Alex). */
+.rd.trn .trn-status { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+.rd.trn .trn-status-btn { gap: 4px; border: 0; font-family: inherit; cursor: pointer; }
 .rd.trn .trn-status-btn svg { width: 11px; height: 11px; }
-.rd.trn .trn-status-btn:hover, .rd.trn .trn-status-btn[data-state="open"] { box-shadow: inset 0 0 0 1px var(--trn-ink); color: var(--trn-ink); }
-.rd.trn .trn-status.live { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.35); color: var(--trn-green); }
-.rd.trn .trn-status.scheduled { box-shadow: inset 0 0 0 1px rgba(20, 26, 36, 0.35); color: var(--trn-ink); }
+.rd.trn .trn-status-btn:hover, .rd.trn .trn-status-btn[data-state="open"] { box-shadow: inset 0 0 0 1px currentColor; }
 .rd.trn .trn-meta { font-size: 13.5px; font-weight: 500; color: var(--trn-sec); }
 .rd.trn .trn-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rd.trn .trn-head-actions .rd-btn { height: 36px; border-radius: 999px; }
@@ -224,16 +223,15 @@
 .rd.trn .trn-rg-when { font-size: 13px; font-weight: 500; color: var(--trn-sec); white-space: nowrap; }
 .rd.trn .trn-rg.open > .rd-rows { border-top: 0; }
 
-/* ---- After-workout check */
-.rd.trn .trn-check { padding: 18px 18px 6px; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-line); }
-.rd.trn .trn-check-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.rd.trn .trn-check-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
-.rd.trn .trn-check-head span { font-size: 13px; font-weight: 500; color: var(--trn-muted); }
-.rd.trn .trn-qs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 14px 0 12px; }
-.rd.trn .trn-q { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px 0 14px; border-radius: 999px; background: var(--trn-page); box-shadow: inset 0 0 0 1px var(--trn-line); box-sizing: border-box; }
-.rd.trn .trn-q b { font-size: 14px; font-weight: 600; }
-.rd.trn .trn-q small { font-size: 12px; font-weight: 500; color: var(--trn-muted); }
-.rd.trn .trn-q-x { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 999px; background: none; font-size: 11px; color: var(--trn-muted); cursor: pointer; }
+/* ---- After-workout check: one row (20 Oct, Alex: it wasted space): the title, the questions and + Add; the averages and the answers' fold on the right. */
+.rd.trn .trn-check { padding: 10px 10px 10px 18px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-line); }
+.rd.trn .trn-check-head { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; min-height: 36px; }
+.rd.trn .trn-check-head h2 { margin: 0 2px 0 0; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.rd.trn .trn-qs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; }
+.rd.trn .trn-q { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 4px 0 12px; border-radius: 999px; background: var(--trn-page); box-shadow: inset 0 0 0 1px var(--trn-line); box-sizing: border-box; }
+.rd.trn .trn-q b { font-size: 13px; font-weight: 600; }
+.rd.trn .trn-q small { font-size: 11.5px; font-weight: 500; color: var(--trn-muted); }
+.rd.trn .trn-q-x { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 0; border-radius: 999px; background: none; font-size: 10px; color: var(--trn-muted); cursor: pointer; }
 .rd.trn .trn-q-x:hover { background: #fff; color: var(--trn-ink); }
 .rd.trn .trn-q-add { display: inline-flex; align-items: center; gap: 4px; height: 40px; padding: 0 5px 0 14px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); box-sizing: border-box; }
 .rd.trn .trn-q-add:focus-within { box-shadow: inset 0 0 0 1.5px var(--trn-navy); }
@@ -242,7 +240,7 @@
 .rd.trn .trn-q-add input::placeholder { color: var(--trn-faint); }
 .rd.trn .trn-q-addbtn { height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--trn-div); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--trn-faint); cursor: default; }
 .rd.trn .trn-q-addbtn.ready { background: var(--trn-navy); color: #fff; cursor: pointer; }
-.rd.trn .trn-q-plus { height: 40px; padding: 0 16px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); font: inherit; font-size: 13.5px; font-weight: 600; color: var(--trn-ink); cursor: pointer; }
+.rd.trn .trn-q-plus { height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); font: inherit; font-size: 13px; font-weight: 600; color: var(--trn-ink); cursor: pointer; }
 .rd.trn .trn-q-plus:hover, .rd.trn .trn-q-plus[data-state="open"] { box-shadow: inset 0 0 0 1px var(--trn-ink); }
 .trn-q-menu.trn-q-menu { min-width: 200px; max-height: calc(6 * 36px + 12px); overflow-y: auto; scrollbar-width: thin; }
 .rd.trn .trn-q-add { position: relative; }
@@ -252,11 +250,16 @@
 .rd.trn .trn-q-sugs small { font-size: 12px; font-weight: 500; color: var(--trn-faint); }
 .rd.trn .trn-q-warn { font-size: 12.5px; font-weight: 500; color: #b8471f; }
 
-.rd.trn .trn-ans { margin: 0 -18px; border-top: 0; }
-.rd.trn .trn-ans-head { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 18px; border: 0; background: none; font: inherit; font-size: 13.5px; color: var(--trn-ink); text-align: left; cursor: pointer; flex-wrap: wrap; }
+.rd.trn .trn-ans { margin: 0 -10px -10px -18px; }
+.rd.trn .trn-check.open .trn-ans { margin-top: 8px; }
+.rd.trn .trn-ans-head { display: inline-flex; flex: none; align-items: center; gap: 8px; height: 32px; margin-left: auto; padding: 0 8px 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; color: var(--trn-ink); cursor: pointer; white-space: nowrap; }
+.rd.trn .trn-ans-head:hover { background: var(--trn-page); }
 .rd.trn .trn-ans-head > b { font-weight: 600; }
+.rd.trn .trn-ans-head .trn-chev.open { transform: rotate(90deg); }
+.rd.trn .trn-ans-none { margin-left: auto; padding-right: 8px; font-size: 13px; font-weight: 500; color: var(--trn-muted); white-space: nowrap; }
+.rd.trn .trn-avgs + .trn-ans-head, .rd.trn .trn-avgs + .trn-ans-none { margin-left: 0; }
 .rd.trn .trn-muted { font-size: 13px; font-weight: 500; color: var(--trn-muted); }
-.rd.trn .trn-avgs { display: inline-flex; gap: 22px; margin-left: auto; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.rd.trn .trn-avgs { display: inline-flex; gap: 22px; margin-left: auto; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; white-space: nowrap; }
 .rd.trn .trn-avgs b { margin-left: 10px; font-weight: 600; color: var(--trn-ink); }
 .rd.trn .trn-ans-empty { margin: 0; padding: 4px 18px 16px; font-size: 13px; color: var(--trn-muted); }
 .rd.trn .trn-ans-scroll { overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }

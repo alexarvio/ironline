@@ -91,6 +91,14 @@ import { metricAskAt } from "../../lib/metricAskAt";
 // What the redesign drafts read, gathered on the server for the shell that
 // shows them side by side. Read-only: the drafts save nothing.
 
+/** A short print of a week's contents, to tell two weeks apart without sending them. */
+const weekPrint = (parts: unknown) => {
+  const s = JSON.stringify(parts);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return `${s.length.toString(36)}.${(h >>> 0).toString(36)}`;
+};
+
 /** The client asked for, else the demo client, else one with a programme, else the first. */
 export function pickClient(coachId: number, asked: string | undefined) {
   const clients = listClients(coachId);
@@ -188,9 +196,21 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       return { done, missed: !done && !skipped && begun, skipped };
     });
     void over;
+    // What a copy of this week would carry (copyProgramWeek): each session's name and its exercises' prescriptions.
+    // Two weeks with the same print need no "Copy week N here" (20 Oct, Alex).
+    const print = weekPrint(
+      days.map((d) => [
+        d.day_of_week,
+        d.label ?? "",
+        [...getAssignmentsForDay(d.id)]
+          .sort((a, b) => a.order_index - b.order_index)
+          .map((a) => [a.exercise_id, a.custom_name ?? null, a.variation_id ?? null, a.sets, a.reps, a.target_weight_kg, a.rpe_target, a.rest_seconds, a.tempo, a.distance ?? null, a.time ?? null, a.notes ?? null, a.note_kind ?? null, a.alternatives ?? null, a.demo_hidden ?? false, a.gym_targets ? Object.entries(a.gym_targets).map(([g, t]) => [g, t.kg]).sort() : null]),
+      ]),
+    );
     return {
       index: i + 1,
       label: programWeekLabel(program, n),
+      print,
       trained: dots.map((x) => x.done),
       missed: dots.map((x) => x.missed),
       skipped: dots.map((x) => x.skipped),

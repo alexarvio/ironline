@@ -334,91 +334,93 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
   const minW = 150 + 160 + labels.length * 150;
 
   return (
-    <section className="trn-check" aria-labelledby="trn-check-h">
+    <section className={`trn-check${shown && answers.length > 0 ? " open" : ""}`} aria-labelledby="trn-check-h">
+      {/* One row (20 Oct, Alex: the card wasted space): the title, the questions and + Add, then the averages and the answers' fold on the right. */}
       <div className="trn-check-head">
         <h2 id="trn-check-h">After-workout check</h2>
-      </div>
-      <div className="trn-qs">
-        {list.map((q) => (
-          <span key={q.id} className="trn-q">
-            <b>{q.label}</b>
-            <small>{!q.kind || q.kind === "scale" ? "1–10" : q.kind === "number" ? `Value${q.unit ? ` · ${q.unit}` : ""}` : "Text"}</small>
-            <button type="button" className="trn-q-x" aria-label={`Remove ${q.label}`} onClick={() => (answered(q.label) ? setRemoving(q) : remove(q))}>
-              ✕
-            </button>
+        <div className="trn-qs">
+          {list.map((q) => (
+            <span key={q.id} className="trn-q">
+              <b>{q.label}</b>
+              <small>{!q.kind || q.kind === "scale" ? "1–10" : q.kind === "number" ? `Value${q.unit ? ` · ${q.unit}` : ""}` : "Text"}</small>
+              <button type="button" className="trn-q-x" aria-label={`Remove ${q.label}`} onClick={() => (answered(q.label) ? setRemoving(q) : remove(q))}>
+                ✕
+              </button>
+            </span>
+          ))}
+          {!full && sugs.length > 0 && (
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger className="trn-q-plus">+ Add</DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="pb-menu trn-q-menu">
+                {sugs.map((p) => (
+                  <DropdownMenuItem key={p.id} onSelect={() => add(p)}>
+                    {p.label}
+                    <small className="rd-menu-inuse">1–10</small>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+        {averages.length > 0 && !shown && (
+          <span className="trn-avgs">
+            {averages.map((a) => (
+              <span key={a.label}>
+                {a.label}
+                <b>Avg {a.value}</b>
+              </span>
+            ))}
           </span>
-        ))}
-        {!full && sugs.length > 0 && (
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="trn-q-plus">+ Add</DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="pb-menu trn-q-menu">
-              {sugs.map((p) => (
-                <DropdownMenuItem key={p.id} onSelect={() => add(p)}>
-                  {p.label}
-                  <small className="rd-menu-inuse">1–10</small>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        )}
+        {answers.length === 0 ? (
+          <span className="trn-ans-none">No answers yet</span>
+        ) : (
+          <button type="button" className="trn-ans-head" aria-expanded={shown} onClick={toggle}>
+            <b>Answers</b>
+            <span className="trn-muted">{answers.length}</span>
+            <span className={`trn-chev${shown ? " open" : ""}`} aria-hidden="true">
+              <ChevronRightIcon />
+            </span>
+          </button>
         )}
       </div>
 
       <div className="trn-ans">
-        <button type="button" className="trn-ans-head" aria-expanded={shown} onClick={toggle}>
-          <span className={`trn-chev${shown ? " open" : ""}`} aria-hidden="true">
-            <ChevronRightIcon />
-          </span>
-          <b>Answers</b>
-          <span className="trn-muted">{answers.length === 0 ? "none yet" : `${answers.length} ${answers.length === 1 ? "workout" : "workouts"}`}</span>
-          {averages.length > 0 && !shown && (
-            <span className="trn-avgs">
-              {averages.map((a) => (
-                <span key={a.label}>
-                  {a.label}
-                  <b>Avg {a.value}</b>
-                </span>
-              ))}
-            </span>
-          )}
-        </button>
-        {shown &&
-          (answers.length === 0 ? (
-            <p className="trn-ans-empty">Nothing yet: the answers land here as {firstName} ends workouts.</p>
-          ) : (
-            <div className="trn-ans-scroll">
-              <div className="trn-ans-table" style={{ minWidth: minW }}>
-                <div className="trn-ans-row trn-ans-cols" style={grid}>
-                  <span>Date</span>
-                  <span>Session</span>
-                  {/* Each question's average sits in its own heading (20 Oct, Alex): "Enjoyment · avg 8". */}
-                  {labels.map((l) => (
-                    <span key={l}>
-                      {l}
-                      {avg(l) != null && <em className="trn-ans-avgval">Avg {avg(l)}</em>}
-                    </span>
-                  ))}
-                </div>
-                {answers.slice(0, limit).map((it) => (
-                  <Link key={it.dayId} href={href(it)} scroll={false} className="trn-ans-row" style={grid} title={`Open ${it.name}, ${it.weekLabel}`}>
-                    <span>{when(it.ended)}</span>
-                    <span className="trn-ans-session">
-                      {it.name} <small>{it.weekLabel}</small>
-                    </span>
-                    {labels.map((l) => (
-                      <span key={l} className="trn-ans-val" title={cell(it, l)}>
-                        {cell(it, l)}
-                      </span>
-                    ))}
-                  </Link>
+        {shown && answers.length > 0 && (
+          <div className="trn-ans-scroll">
+            <div className="trn-ans-table" style={{ minWidth: minW }}>
+              <div className="trn-ans-row trn-ans-cols" style={grid}>
+                <span>Date</span>
+                <span>Session</span>
+                {/* Each question's average sits in its own heading (20 Oct, Alex): "Enjoyment · avg 8". */}
+                {labels.map((l) => (
+                  <span key={l}>
+                    {l}
+                    {avg(l) != null && <em className="trn-ans-avgval">Avg {avg(l)}</em>}
+                  </span>
                 ))}
               </div>
-              {answers.length > limit && (
-                <button type="button" className="trn-ans-more" onClick={() => setLimit((n) => n + 10)}>
-                  Show more
-                </button>
-              )}
+              {answers.slice(0, limit).map((it) => (
+                <Link key={it.dayId} href={href(it)} scroll={false} className="trn-ans-row" style={grid} title={`Open ${it.name}, ${it.weekLabel}`}>
+                  <span>{when(it.ended)}</span>
+                  <span className="trn-ans-session">
+                    {it.name} <small>{it.weekLabel}</small>
+                  </span>
+                  {labels.map((l) => (
+                    <span key={l} className="trn-ans-val" title={cell(it, l)}>
+                      {cell(it, l)}
+                    </span>
+                  ))}
+                </Link>
+              ))}
             </div>
-          ))}
+            {answers.length > limit && (
+              <button type="button" className="trn-ans-more" onClick={() => setLimit((n) => n + 10)}>
+                Show more
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <Dialog open={removing != null} onOpenChange={(o) => !o && setRemoving(null)}>

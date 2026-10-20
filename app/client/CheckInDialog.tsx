@@ -85,7 +85,8 @@ const DAY = 86400000;
 const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const SAND_RGB = "168,118,31";
+// Lifestyle's beige, the one it wears everywhere (DESIGN-RULES §4).
+const SAND_RGB = "160,138,92";
 const buzz = (ms = 5) => {
   try {
     navigator.vibrate?.(ms);

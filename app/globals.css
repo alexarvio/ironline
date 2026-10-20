@@ -18584,8 +18584,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
    only on what is filled. */
 .cki-card { position: relative; display: flex; flex-direction: column; width: 100%; max-width: 440px; max-height: calc(100dvh - 72px); border-radius: 30px; background: #fff; overflow: hidden; box-shadow: 0 40px 70px -24px rgba(0, 0, 0, 0.6); animation: gpk-pop 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif; color: #333333; }
 .cki-card.closing { animation: gpk-pop 0.18s ease-in reverse forwards; }
-.cki-glow { position: absolute; right: -120px; top: -170px; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(168, 118, 31, 0.3), transparent 68%); pointer-events: none; }
-.cki-wash { position: absolute; left: 0; right: 0; top: 0; height: 130px; background: linear-gradient(180deg, rgba(168, 118, 31, 0.1), transparent); pointer-events: none; }
+.cki-glow { position: absolute; right: -120px; top: -170px; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(160, 138, 92, 0.3), transparent 68%); pointer-events: none; }
+.cki-wash { position: absolute; left: 0; right: 0; top: 0; height: 130px; background: linear-gradient(180deg, rgba(160, 138, 92, 0.1), transparent); pointer-events: none; }
 .cki-head { position: relative; flex: none; display: flex; align-items: flex-start; gap: 12px; padding: 20px 18px 12px; }
 .cki-ring { position: relative; flex: none; width: 52px; height: 52px; border-radius: 50%; transition: background 0.3s; }
 .cki-ring::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #fff; }
@@ -19811,7 +19811,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* ---- The check-in pop-up and the gym picker in the shared voice (17 Oct, Alex): like Add an event. Still pop-ups with real fields, but plain white (no wash or glow), titles at 600, small grey labels, rows white with a hairline, the colour of the thing on its ring, icon or edge only, inputs white with a hairline (ink while typing), choices ink when chosen, one ink pill to save or start. */
 .cki-wash, .cki-glow, .gpk-wash, .gpk-glow { display: none; }
 .cki-title, .gpk-title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
-.cki-eyebrow { font-weight: 600; letter-spacing: 0.16em; color: #a8761f; }
+.cki-eyebrow { font-weight: 600; letter-spacing: 0.16em; color: #a08a5c; }
 .cki-sub, .gpk-sub { font-weight: 500; color: #8b93a1; }
 .cki-sub.done { color: #2f7a3f; }
 .cki-ring-in b { font-weight: 600; color: #141a24; }

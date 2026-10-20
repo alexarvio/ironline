@@ -154,10 +154,11 @@
 .phd-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .phd-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .phd-track { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px 0 10px; border-radius: 999px; background: var(--s, var(--c)); color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 6px 12px -6px rgba(var(--rgb), 0.9); }
-.phd-chip { display: inline-flex; align-items: center; height: 28px; margin: 0; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+/* Colours inline from stateTagStyle (phaseChrome): the classes below only give the shape. */
+.phd-chip { display: inline-flex; align-items: center; height: 28px; margin: 0; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
 .phd-chip.track { background: rgba(var(--rgb), 0.1); color: var(--c); }
 .phd-chip.soon { background: #FBEDE7; color: #b8471f; }
-.phd-chip.draft { background: #FBF4F1; color: #b8471f; box-shadow: inset 0 0 0 1.5px rgba(184, 71, 31, 0.55); }
+.phd-chip.draft { background: #FBF4F1; color: #b8471f; }
 .phd-chip.done { background: #F2F4F7; color: #5b6474; }
 .phd-name { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .phd-client { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: #5b6474; }

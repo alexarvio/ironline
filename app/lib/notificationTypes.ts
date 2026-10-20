@@ -46,6 +46,8 @@ const ICON = {
 const BLUE = { color: "#2f6fd6", rgb: "47,111,214" };
 const INDIGO = { color: "#3a3390", rgb: "58,51,144" };
 const AMBER = { color: "#a8761f", rgb: "168,118,31" };
+/** Lifestyle's one beige (the check-in belongs to lifestyle). */
+const BEIGE = { color: "#a08a5c", rgb: "160,138,92" };
 const ORANGE = { color: "#b8471f", rgb: "184,71,31" };
 const TEAL = { color: "#1d7a70", rgb: "29,122,112" };
 const NAVY = { color: "#1d3466", rgb: "29,52,102" };
@@ -59,7 +61,7 @@ export const NOTIFICATION_TYPES: Record<NotificationCategory, NotificationType> 
   video_request: { label: "Video request", ...INDIGO, icon: ICON.upload, action: "Upload video" },
   training_block: { label: "Training", ...INDIGO, icon: ICON.dumbbell, action: "Preview block" },
   training_changed: { label: "Training", ...INDIGO, icon: ICON.dumbbell, action: "See training" },
-  checkin_comment: { label: "Check-in", ...AMBER, icon: ICON.chat, action: "Open check-in" },
+  checkin_comment: { label: "Check-in", ...BEIGE, icon: ICON.chat, action: "Open check-in" },
   event_added: { label: "Event", ...AMBER, icon: EVENT_TYPES[5].icon, action: "View event" },
   event_changed: { label: "Event", ...AMBER, icon: EVENT_TYPES[5].icon, action: "View event" },
   pics_reviewed: { label: "Progress pictures", ...ORANGE, icon: ICON.camera, action: "Open pictures" },
