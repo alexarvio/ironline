@@ -114,6 +114,24 @@ body:has(.ad-shell) .ad-client-title {
   font-family: "Newsreader", Georgia, serif;
 }
 
+/* A pop-up never moves the coach admin (20 Oct, Alex: Move <phase> on Plan
+   shifted the page sideways and a scrollbar-wide strip came and went). The
+   window is what scrolls there, and it always keeps its scrollbar (the same
+   rule as draft.css, here so every admin page has it whichever tab's CSS has
+   loaded). Radix's scroll lock (react-remove-scroll-bar, on every modal
+   Dialog, AlertDialog, Select, modal DropdownMenu and modal Popover) puts
+   overflow: hidden and a scrollbar-wide margin-right on body. With the
+   scrollbar kept, the margin only narrowed the page by its width, and the
+   overflow made body a scroll box of its own, so the sticky rail let go and
+   slid off when the page was scrolled. Both undone while locked: nothing
+   moves, the scrollbar stays, and the lock still stops wheel and touch scroll
+   behind the pop-up. Specificity beats the injected body[data-scroll-locked]. */
+html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
+html:has(.rd-page) body[data-scroll-locked] {
+  overflow: visible !important;
+  margin-right: 0 !important;
+}
+
 a { color: var(--accent-ink); }
 
 .shell {
@@ -20438,3 +20456,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .cv-cell.up::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 2px solid rgba(255, 255, 255, 0.5); border-top-color: #fff; border-radius: 50%; animation: cv-spin 0.8s linear infinite; }
 .cv-cell.failed img { opacity: 0.3; filter: grayscale(1); }
 @keyframes cv-spin { to { transform: rotate(360deg); } }
+/* No line between the phase cards and the coach's latest right under them (21 Oct, Alex). Events and Meetings keep theirs. */
+.hm-body > .hm-latest-note::before { content: none; }
+.hm-body > .hm-latest-note { padding-top: 6px; }
