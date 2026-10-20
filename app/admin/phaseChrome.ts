@@ -39,6 +39,10 @@ export const TRACK_PALETTE: Record<PhaseTrack, { tint: string; ink: string; soft
   lifestyle: { tint: "#efede6", ink: "#4a4a45", soft: "#e4e1d5", line: "#cfcbbd" },
 };
 
+/** A track's accent for type and solid marks on white (21 Oct, Alex: lifestyle reads beige, not grey):
+ *  the ink for training and nutrition, a warm beige-brown for lifestyle (its ink is a neutral grey). */
+export const TRACK_ACCENT: Record<PhaseTrack, string> = { nutrition: TRACK_PALETTE.nutrition.ink, training: TRACK_PALETTE.training.ink, lifestyle: "#a08a5c" };
+
 export const TRACK_LABEL: Record<PhaseTrack, string> = { nutrition: "Nutrition", training: "Training", lifestyle: "Lifestyle" };
 
 export const STATE_LABEL: Record<PhaseState, string> = { live: "Live", scheduled: "Scheduled", draft: "Draft", past: "Past" };

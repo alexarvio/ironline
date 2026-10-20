@@ -14,9 +14,10 @@ import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MoreIcon, PlusIcon,
 import type { GoalEditorOptions, PlanGoalRow, PlanPhaseRow, PlanProgramOption } from "../../../lib/queries";
 import type { GoalTracking } from "../../../lib/goalView";
 import type { PhaseTrack } from "../../../lib/db";
-import { phaseChrome, phaseStateOf, STATE_LABEL, TRACK_LABEL, TRACK_PALETTE, type PhaseState } from "../../phaseChrome";
+import { phaseChrome, phaseStateOf, STATE_LABEL, TRACK_ACCENT, TRACK_LABEL, TRACK_PALETTE, type PhaseState } from "../../phaseChrome";
 import { ConfirmDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
+import DateText from "../DateText";
 import DatePick from "../DatePick";
 import { phaseDays, phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import { SortableItem, SortableList } from "../Sortable";
@@ -912,7 +913,8 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
   // two hairline capsules, no explanations; a clash says what is in the way
   // and offers the fix. Delete as red words on the left, Save a black pill.
   return (
-    <DialogContent className="npd">
+    // The phase's own colour (21 Oct, Alex): its track tags under the title, its range on the calendar.
+    <DialogContent className="npd" style={{ "--npd-c": TRACK_ACCENT[track], "--npd-rgb": rgbOf(TRACK_ACCENT[track]) } as React.CSSProperties}>
       <div className="npd-head">
         <DialogTitle className="npd-title">{editing ? phase.name : "New phase"}</DialogTitle>
         <span className="npd-tools">
@@ -934,8 +936,14 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
           </DialogClose>
         </span>
       </div>
-      <DialogDescription className="npd-what">
-        {TRACK_LABEL[track]} · {STATE_LABEL[state]}
+      <DialogDescription className="npd-tags">
+        <span className="npd-track">
+          <TrackIcon track={track} size={12} />
+          {TRACK_LABEL[track]}
+        </span>
+        <span className="npd-state" style={stateChip(state, chrome)}>
+          {STATE_LABEL[state]}
+        </span>
       </DialogDescription>
       {!editing && !lockTrack && (
         <div className="npd-field">
@@ -991,20 +999,21 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
         <div className="npd-side">
           {/* The dates as two capsules with the arrow between; a tap arms that end in the calendar, which is the picker. */}
           <div className="npd-dates">
-            <button type="button" className={`npd-date${picking === "start" ? " arm" : ""}${startLocked ? " locked" : ""}`} onClick={() => !startLocked && setPicking("start")} aria-pressed={picking === "start"} disabled={startLocked}>
+            {/* Typed or picked (21 Oct, Alex: typing the dates was missed): a click arms that end in the calendar, the field takes 05/10/2026. */}
+            <div className={`npd-date${picking === "start" ? " arm" : ""}${startLocked ? " locked" : ""}`} onClick={() => !startLocked && setPicking("start")}>
               <span className="npd-date-head">Starts{startLocked ? " · fixed" : ""}</span>
-              <b>{from === today ? "Today" : fmtDay(from)}</b>
-            </button>
+              <DateText value={from} onChange={(d) => setStart(d)} label="Start date" disabled={startLocked} onFocus={() => setPicking("start")} />
+            </div>
             <span className="npd-arrow" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </span>
-            <button type="button" className={`npd-date${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")} aria-pressed={picking === "end"}>
+            <div className={`npd-date${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")}>
               <span className="npd-date-head">Ends</span>
               {/* A training phase ends on its week's Sunday, so that is the day shown. */}
-              <b>{fmtDay(byDay ? to : savedTo)}</b>
-            </button>
+              <DateText value={byDay ? to : savedTo} onChange={(d) => setEnd(d)} label="End date" onFocus={() => setPicking("end")} />
+            </div>
           </div>
           {/* Type the weeks and the end follows; pick the end and the weeks follow. An uneven span shows its length beside it. */}
           <label className="npd-field">
@@ -1023,7 +1032,7 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
                 onChange={matchPhase}
                 label="Same dates as"
                 className="npd-pick"
-                options={[{ value: "none", label: "Not matched" }, ...matchable.map((m) => ({ value: m.id, label: m.name, color: TRACK_PALETTE[m.track].ink, hint: `${shortDate(m.from)} – ${shortDate(m.to)}` }))]}
+                options={[{ value: "none", label: "Not matched" }, ...matchable.map((m) => ({ value: m.id, label: m.name, color: TRACK_ACCENT[m.track], hint: `${shortDate(m.from)} – ${shortDate(m.to)}` }))]}
               />
             </div>
           )}
@@ -1062,6 +1071,10 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
   );
 }
 
+/** A state's tag: Live is always green (21 Oct, Alex: it read teal on nutrition, the track's own colour); the rest keep their chrome. */
+const stateChip = (state: PhaseState, chrome: ReturnType<typeof phaseChrome>): React.CSSProperties =>
+  state === "live" ? { background: "rgba(47, 122, 63, 0.12)", color: "#2f7a3f" } : { background: chrome.chipBg, color: chrome.chipInk };
+
 /** A finished drag waits here: the dates as they were and as they will be. In the hairline style
  *  (21 Oct, Alex) with the track's colour: its name in a tinted capsule, the new dates in its ink;
  *  a draft keeps its peach state chip. */
@@ -1069,7 +1082,7 @@ function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: 
   const isDraft = p.draft || p.program?.status === "draft";
   const state = phaseStateOf({ draft: isDraft, startWeek: start, endWeek: end, today });
   const chrome = phaseChrome(p.track, state);
-  const ink = TRACK_PALETTE[p.track].ink;
+  const ink = TRACK_ACCENT[p.track];
   const last = (monday: string) => fmtDay(addDays(monday, 6));
   const rows = [
     { label: "Start", was: fmtDay(p.start_week), now: fmtDay(start) },
@@ -1089,7 +1102,7 @@ function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: 
           <TrackIcon track={p.track} size={12} />
           {TRACK_LABEL[p.track]}
         </span>
-        <span className="mvd-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
+        <span className="mvd-state" style={stateChip(state, chrome)}>
           {STATE_LABEL[state]}
         </span>
       </DialogDescription>

@@ -93,12 +93,17 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 /* Days taken by another phase on the track: a light grey hatch, rounded at the ends of each week's run. */
 .npd.npd .rdd-cell.taken { background: repeating-linear-gradient(135deg, rgba(20, 26, 36, 0.08) 0 4px, rgba(20, 26, 36, 0.02) 4px 8px); color: #98a2b3; }
 .npd.npd .rdd-cell.taken:hover { filter: none; background: repeating-linear-gradient(135deg, rgba(20, 26, 36, 0.12) 0 4px, rgba(20, 26, 36, 0.04) 4px 8px); }
-/* The new range: a soft band, its first and last days solid ink. */
-.npd.npd .rdd-cell.in { background: #f5f6f8; color: #141a24; font-weight: 500; }
+/* The new range in the phase's colour (21 Oct, Alex): a soft band of it, its first and last days solid. --npd-c / --npd-rgb come from the track. */
+.npd.npd { --npd-c: #141a24; --npd-rgb: 20, 26, 36; }
+.npd.npd .rdd-cell.in { background: rgba(var(--npd-rgb), 0.1); color: #141a24; font-weight: 500; }
 .npd.npd .rdd-cell.in.past { color: #98a2b3; }
-.npd.npd .rdd-cell.in:hover, .npd.npd .rdd-cell.in:focus-visible { background: #eef0f3; }
-.npd.npd .rdd-cell.in.start, .npd.npd .rdd-cell.in.end { background: #141a24; color: #fff; font-weight: 600; }
-.npd.npd .rdd-cell.in.start:hover, .npd.npd .rdd-cell.in.end:hover, .npd.npd .rdd-cell.in.start:focus-visible, .npd.npd .rdd-cell.in.end:focus-visible { background: #2a3242; }
+.npd.npd .rdd-cell.in:hover, .npd.npd .rdd-cell.in:focus-visible { background: rgba(var(--npd-rgb), 0.16); }
+.npd.npd .rdd-cell.in.start, .npd.npd .rdd-cell.in.end { background: var(--npd-c); color: #fff; font-weight: 600; }
+.npd.npd .rdd-cell.in.start:hover, .npd.npd .rdd-cell.in.end:hover, .npd.npd .rdd-cell.in.start:focus-visible, .npd.npd .rdd-cell.in.end:focus-visible { background: var(--npd-c); filter: brightness(1.12); }
+/* The track and state as tags under the title, as the move pop-up has them. */
+.npd.npd .npd-tags { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; }
+.npd.npd .npd-track { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px; background: rgba(var(--npd-rgb), 0.12); font-size: 11.5px; font-weight: 600; color: var(--npd-c); }
+.npd.npd .npd-state { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
 .npd.npd .rdd-cell.in.past.start, .npd.npd .rdd-cell.in.past.end { opacity: 0.6; }
 .npd.npd .rdd-cell.today.in.start, .npd.npd .rdd-cell.today.in.end { box-shadow: inset 0 0 0 2px #141a24, inset 0 0 0 3px #fff; }
 /* Overlap: a light red hatch (above the shared rule's !important). */
@@ -118,7 +123,7 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 .npd.npd .rdd-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 0 0; }
 .npd.npd .rdd-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; color: #5b6474; }
 .npd.npd .rdd-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; }
-.npd.npd .rdd-legend i.new { background: #141a24; }
+.npd.npd .rdd-legend i.new { background: var(--npd-c); }
 .npd.npd .rdd-legend i.taken { background: repeating-linear-gradient(135deg, rgba(20, 26, 36, 0.22) 0 3px, rgba(20, 26, 36, 0.05) 3px 6px); }
 .npd.npd .rdd-legend i.overlap { background: repeating-linear-gradient(135deg, rgba(180, 35, 24, 0.32) 0 3px, rgba(180, 35, 24, 0.08) 3px 6px); }
 
@@ -170,3 +175,9 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 .mvd .mvd-now { font-size: 14px; font-weight: 600; color: var(--mv); }
 .mvd .mvd-row.same .mvd-now { font-weight: 500; color: #141a24; }
 .mvd .mvd-was { font-size: 14px; font-weight: 500; color: #98a2b3; text-decoration-color: #c5ccd8; }
+/* The typed date inside a Starts / Ends capsule: reads as the capsule's value, no box of its own. */
+.npd.npd .npd-date { cursor: pointer; }
+.npd.npd .npd-date.locked { cursor: default; }
+.npd.npd .npd-date .rdt.rdt { width: 100%; height: auto; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; outline: none; font: inherit; font-size: 14.5px; font-weight: 500; color: #141a24; }
+.npd.npd .npd-date .rdt.rdt:disabled { color: #8b93a1; opacity: 1; }
+.npd.npd .npd-date .rdt.bad { color: #b42318; }

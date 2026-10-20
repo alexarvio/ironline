@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { MonthRange } from "../plan/PlanDraft";
-import { phaseChrome } from "../../phaseChrome";
+import type React from "react";
+import { phaseChrome, TRACK_PALETTE } from "../../phaseChrome";
 import { addDays, mondayOf } from "../phases/timeline";
 
 // Scheduling a built programme (20 Oct, Alex): not its dates, which it
@@ -45,7 +46,7 @@ export default function ScheduleDialog({
   const ok = !clash && !past && /^\d{2}:\d{2}$/.test(time);
 
   return (
-    <DialogContent className="npd sch">
+    <DialogContent className="npd sch" style={{ "--npd-c": TRACK_PALETTE.training.ink, "--npd-rgb": "58, 51, 144" } as React.CSSProperties}>
       <div className="npd-head">
         <div>
           <DialogTitle className="npd-title">Schedule {name}</DialogTitle>
