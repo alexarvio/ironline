@@ -15,6 +15,9 @@
    scroll box itself isn't scaled, so its scrollbar stays the page's. */
 .rd.pov .rq-tl { zoom: 0.86; }
 .rd.pov .rq-ev-tools { flex-wrap: wrap; justify-content: flex-end; }
+/* Clients, with which clients right beside it (21 Oct, Alex); the time controls stay on the right. */
+.rd.pov .pov-clients-title { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; min-width: 0; }
+.rd.pov .pov-clients-title h2 { margin: 0; }
 
 /* ---- Ending soon: one white hairline card, a row a phase, a hairline between them. */
 .rd.pov .pov-soon-list { list-style: none; margin: 0; padding: 0; }

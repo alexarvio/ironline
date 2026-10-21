@@ -192,8 +192,9 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
       {/* ---- Every client on the Plan's timeline. */}
       <section className="pln-section">
         <div className="rn-card-head">
-          <h2>Clients</h2>
-          <div className="rq-ev-tools">
+          {/* The title with which clients beside it (21 Oct, Alex); the time controls on the right. */}
+          <div className="pov-clients-title">
+            <h2>Clients</h2>
             <div className="rd-btn-group" role="group" aria-label="Which clients">
               <button type="button" className={prefs.view === "all" ? "on" : ""} aria-pressed={prefs.view === "all"} onClick={() => setPrefs((p) => ({ ...p, view: "all" }))}>
                 All clients
@@ -206,6 +207,8 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
                 {attention.length}
               </button>
             </div>
+          </div>
+          <div className="rq-ev-tools">
             <div className="rq-pan" role="group" aria-label="Move in time">
               <button type="button" className="rd-btn ghost" onClick={() => setBack((b) => b + 4)} aria-label="Earlier" title="Earlier">
                 <ChevronLeftIcon />
