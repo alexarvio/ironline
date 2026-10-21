@@ -13,9 +13,10 @@ import { EVENT_TYPES, isEventTypeId } from "../../../lib/eventTypes";
 import { dayMonth } from "../../../lib/dayMonth";
 import type { PhaseTrack } from "../../../lib/db";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
-import { gridFor, PhaseDialog, phaseForm, TrackIcon, WINDOWS, type Win } from "../plan/PlanDraft";
+import { gridFor, MoveDialog, PhaseDialog, phaseForm, TrackIcon, WINDOWS, type Win } from "../plan/PlanDraft";
 import { chromeOf, EV_LANE, EventDialog, KindIcon, rgbOf, type Category } from "../plan/EventsCard";
-import { EventMark, eventPlace, LaneLabel, MonthsRow, packLanes, PhaseBar, weekSpan, WeeksRow, type Grid } from "../plan/timelineParts";
+import { EventMark, eventPlace, LaneLabel, MonthsRow, packLanes, PhaseBar, weekSpan, weeksBetween, WeeksRow, type Grid } from "../plan/timelineParts";
+import type { PlanPhaseRow } from "../../../lib/queries";
 import DatePick from "../DatePick";
 import { Sep } from "../Sep";
 import { Fold } from "../Fold";
@@ -114,6 +115,9 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
   const leaving = leavingOf && leavingOf.of === data ? leavingOf.ids : NONE_LEAVING;
   const [picked, setPicked] = useState<Picked>(null);
   const [newPhase, setNewPhase] = useState<{ client: OverviewClient; track: PhaseTrack; start: string; /** Plan next: the track is given. From an empty week: the coach can still pick. */ lock: boolean } | null>(null);
+  // A bar dragged or stretched on the grid (21 Oct, Alex: as on the Plan): it waits here for a yes in the Plan's Move
+  // pop-up, drawn at its new weeks meanwhile; nothing changes for the client before Save.
+  const [move, setMove] = useState<{ client: OverviewClient; row: PlanPhaseRow; start: string; end: string } | null>(null);
   const [newEvent, setNewEvent] = useState<{ client: OverviewClient; day: string; /** From a kind's lane: that kind (null for "Event"); else the dialog's own first pick. */ kind?: string | null } | null>(null);
   const leave = (id: number) => setLeavingOf((s) => ({ of: data, ids: new Set(s && s.of === data ? s.ids : []).add(id) }));
   const act = (fn: () => Promise<unknown>, said: string, undo?: () => Promise<unknown>) =>
@@ -246,6 +250,11 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
                       onPick={setPicked}
                       onNewPhase={(track, startWeek) => setNewPhase({ client: c, track, start: startWeek, lock: false })}
                       onNewEvent={(day, kind) => setNewEvent({ client: c, day, kind })}
+                      pending={move && move.client.id === c.id ? { id: move.row.id, startWeek: move.start, endWeek: move.end } : null}
+                      onMove={(p, start, end) => {
+                        const row = c.plan.phases.find((x) => x.id === p.id);
+                        if (row) setMove({ client: c, row, start, end });
+                      }}
                       folded={prefs.folded.includes(c.id)}
                       onFold={() => setPrefs((p) => ({ ...p, folded: p.folded.includes(c.id) ? p.folded.filter((x) => x !== c.id) : [...p.folded, c.id] }))}
                     />
@@ -268,6 +277,25 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
       </Dialog>
 
       {/* ---- New phase, the Plan's own dialog: Plan next opens on the track and the day after the one ending; an empty week on that week. */}
+      {/* A dragged bar's new weeks, the Plan's Move pop-up: Save saves (Undo in the toast), Cancel puts it back. */}
+      <Dialog open={!!move} onOpenChange={(o) => !o && setMove(null)}>
+        {move && (
+          <MoveDialog
+            phase={move.row}
+            start={move.start}
+            end={move.end}
+            today={today}
+            onCancel={() => setMove(null)}
+            onSave={() => {
+              const { row, start: s, end: e } = move;
+              setMove(null);
+              const form = (start: string, end: string) => phaseForm({ id: row.id, name: row.name, track: row.track, start, end });
+              act(() => updateClientPhaseAction(form(s, e)), `${row.name}: ${dayMonth(s)} – ${dayMonth(addDays(e, 6))}`, () => updateClientPhaseAction(form(row.start_week, row.end_week)));
+            }}
+          />
+        )}
+      </Dialog>
+
       <Dialog open={!!newPhase} onOpenChange={(o) => !o && setNewPhase(null)}>
         {newPhase && (
           <PhaseDialog
@@ -401,6 +429,8 @@ function ClientBlock({
   onPick,
   onNewPhase,
   onNewEvent,
+  pending,
+  onMove,
   folded,
   onFold,
 }: {
@@ -414,6 +444,10 @@ function ClientBlock({
   onPick: (p: Picked) => void;
   onNewPhase: (track: PhaseTrack, startWeek: string) => void;
   onNewEvent: (day: string, kind?: string | null) => void;
+  /** A move of one of its bars waiting for a yes: drawn at those weeks meanwhile. */
+  pending: { id: number; startWeek: string; endWeek: string } | null;
+  /** A bar dragged or stretched to new weeks (its Monday start and end_week). */
+  onMove: (p: OverviewPhase, start: string, end: string) => void;
   /** Folded down to its name row (21 Oct, Alex: a chevron after the name). */
   folded: boolean;
   onFold: () => void;
@@ -431,6 +465,55 @@ function ClientBlock({
     const day = Math.max(0, Math.min(6, Math.floor(((ev.clientX - r.left) / Math.max(1, r.width)) * 7)));
     onNewEvent(addDays(week, day), kind);
   };
+
+  // Dragging, the Plan's (21 Oct, Alex): a bar by its body moves, by an end stretches; a training programme with logged
+  // weeks keeps its start. The week under the pointer, from the lanes' grid (all the client's lanes share its columns).
+  const areaRef = useRef<HTMLDivElement | null>(null);
+  const [drag, setDrag] = useState<{ id: number; edge: "start" | "end" | "move"; start: string; end: string; moved: boolean; origStart: string; origEnd: string; anchor: string | null } | null>(null);
+  const justDragged = useRef(false);
+  const weekAt = (clientX: number) => {
+    const el = areaRef.current;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return weeks[Math.max(0, Math.min(count - 1, Math.floor(((clientX - r.left) / r.width) * count)))];
+  };
+  const beginDrag = (e: React.PointerEvent, p: OverviewPhase, edge: "start" | "end" | "move") => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDrag({ id: p.id, edge, start: p.start, end: p.endWeek, moved: false, origStart: p.start, origEnd: p.endWeek, anchor: edge === "move" ? weekAt(e.clientX) : null });
+  };
+  const moveDrag = (e: React.PointerEvent) => {
+    if (!drag) return;
+    const w = weekAt(e.clientX);
+    if (!w) return;
+    setDrag((d) => {
+      if (!d) return d;
+      let next = d;
+      if (d.edge === "move" && d.anchor) {
+        const delta = weeksBetween(d.anchor, w);
+        next = { ...d, start: addDays(d.origStart, delta * 7), end: addDays(d.origEnd, delta * 7) };
+      } else if (d.edge === "start") next = { ...d, start: w <= d.end ? w : d.end };
+      else next = { ...d, end: w >= d.start ? w : d.start };
+      return { ...next, moved: next.start !== d.start || next.end !== d.end || d.moved };
+    });
+  };
+  const endDrag = (e: React.PointerEvent) => {
+    if (!drag) return;
+    if ((e.currentTarget as HTMLElement).hasPointerCapture?.(e.pointerId)) (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    const d = drag;
+    setDrag(null);
+    if (d.moved) {
+      justDragged.current = true;
+      setTimeout(() => (justDragged.current = false), 300);
+    }
+    const p = c.phases.find((x) => x.id === d.id);
+    if (!p || (d.start === p.start && d.end === p.endWeek)) return;
+    onMove(p, d.start, d.end);
+  };
+  const trainedOf = (p: OverviewPhase) => (c.plan.phases.find((x) => x.id === p.id)?.program?.loggedWeeks.length ?? 0) > 0;
+  const atOf = (p: OverviewPhase) => (drag?.id === p.id ? { startWeek: drag.start, endWeek: drag.end } : pending?.id === p.id ? { startWeek: pending.startWeek, endWeek: pending.endWeek } : undefined);
 
   // Events: a row a kind with something on the grid, in the app's kind order, "Event" last; overlapping ones stack into lanes, a pin's label taking room too.
   const onGrid = c.events.filter((e) => eventPlace(e, grid.first, totalDays).visible).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id - b.id));
@@ -506,7 +589,7 @@ function ClientBlock({
           <div key={t} className="rq-tl-row">
             <LaneLabel icon={<TrackIcon track={t} size={16} />} color={TRACK_ACCENT[t]} label={TRACK_LABEL[t]} />
             <div className="rq-tl-clip">
-              <div className="rq-tl-grid rq-lanes" style={{ ...cols, gridTemplateRows: `repeat(${lanes.count}, 44px)` }}>
+              <div ref={areaRef} className="rq-tl-grid rq-lanes" style={{ ...cols, gridTemplateRows: `repeat(${lanes.count}, 44px)` }} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
                 {/* An empty week on a lane is a way in (the Plan's): New phase on this track, from that week. Bars sit over it. */}
                 {weeks.map((w, i) => (
                   <span
@@ -534,7 +617,12 @@ function ClientBlock({
                     today={today}
                     thisWeek={thisWeek}
                     intoWeek={intoWeek}
-                    onOpen={() => onPick({ client: c, phase: p })}
+                    at={atOf(p)}
+                    drag={{ dragging: drag?.id === p.id, onBody: trainedOf(p) ? undefined : (e) => beginDrag(e, p, "move"), onStart: trainedOf(p) ? undefined : (e) => beginDrag(e, p, "start"), onEnd: (e) => beginDrag(e, p, "end") }}
+                    onOpen={() => {
+                      if (drag || justDragged.current) return;
+                      onPick({ client: c, phase: p });
+                    }}
                   />
                 ))}
               </div>

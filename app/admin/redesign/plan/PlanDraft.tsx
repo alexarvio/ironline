@@ -1023,7 +1023,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
 /** A finished drag waits here: the dates as they were and as they will be. In the hairline style
  *  (21 Oct, Alex) with the track's colour: its name in a tinted capsule, the new dates in its ink;
  *  a draft keeps its peach state chip. */
-function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: PlanPhaseRow; start: string; end: string; today: string; onCancel: () => void; onSave: () => void }) {
+export function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: PlanPhaseRow; start: string; end: string; today: string; onCancel: () => void; onSave: () => void }) {
   const isDraft = p.draft || p.program?.status === "draft";
   const state = phaseStateOf({ draft: isDraft, startWeek: start, endWeek: end, today });
   const ink = TRACK_ACCENT[p.track];
