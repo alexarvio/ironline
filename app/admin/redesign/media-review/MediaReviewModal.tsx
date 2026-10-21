@@ -19,7 +19,7 @@ import { Sep, SepJoin } from "../Sep";
 // the next session) and in the chat, linked to the exercise.
 
 /** An upload drawn into the recorder's canvas must come from this origin (15 Oct): the plain path redirects to the bucket, which taints the canvas ("Canvas is not origin-clean"); ?stream=1 sends the bytes through the app. */
-const sameOrigin = (url: string) => (url.startsWith("/uploads/") ? `${url}${url.includes("?") ? "&" : "?"}stream=1` : url);
+export const sameOrigin = (url: string) => (url.startsWith("/uploads/") ? `${url}${url.includes("?") ? "&" : "?"}stream=1` : url);
 
 export type ThreadItem =
   | { id: string; kind: "text"; mine: boolean; text: string; at: number }
@@ -39,7 +39,7 @@ export type MediaReview = {
 };
 
 // The palette (12 Oct): one swatch on the toolbox, the rest a click away.
-const COLORS = [
+export const COLORS = [
   { id: "#FFD60A", name: "Yellow" },
   { id: "#FF9F0A", name: "Orange" },
   { id: "#FF453A", name: "Red" },
@@ -75,8 +75,8 @@ const Ico = ({ d, size = 18, w = 2.2 }: { d: string; size?: number; w?: number }
   </svg>
 );
 
-/** Up with progress; null once it is up, else what went wrong. */
-function upload(id: number, blob: Blob, onProgress: (share: number) => void): Promise<string | null> {
+/** Up with progress; null once it is up, else what went wrong. The coach's phone sends its reviews through it too. */
+export function upload(id: number, blob: Blob, onProgress: (share: number) => void): Promise<string | null> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `/api/video-reply/${id}`);

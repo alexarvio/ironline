@@ -64,3 +64,10 @@ Read this before touching any client screen. One hero language, one everyday lan
   - Events: a Today row always, even when nothing (shown) is on: an empty ink ring with no icon, "Nothing on today" (or "No trips today" under a filter).
   - Notifications: flat rows with a hairline between them (inset to the text), the ink dot and a 600 title for unread, 500 once read. Text cut at two lines gets a chevron by the title that eases it open in place; the row itself still opens the thing.
   - Meetings: calls are few, so no Today row. The next call is a fixed white pill under the ask ("No upcoming meetings" when none), more booked behind "+1 more"; only the past scrolls, with its snap spot near the top.
+
+## 10. The coach's phone (`/coach`, 21 Oct, Alex: built from the mockup)
+- Two things only: every client's chat, and the videos clients send from an exercise. Planning and editing stay on the laptop. Classes `cph-` (app/coach/coach.css).
+- This file's language: the pushed screens' page, Archivo 500/600, ink. Chats and Videos on a floating white tab bar, the tab on screen in ink, an ink count on each.
+- Chats: newest first, a client a row, space between rows; unread is the name and time at 600, the line in body grey, and an ink count.
+- A chat: theirs white with a hairline on the left, the coach's a neutral tint on the right. Hold a message for its sheet: the reactions, then Reply, Copy, Edit, Pin, Delete (Delete asks). + sends a photo, video or file, the mic a voice message, the ink arrow the words.
+- Videos: Waiting (a wait past a day in rust), then Replied, greyed. A video opens on the recorder, as the laptop's review does: the tools on the dark stage, one ink Record review, a few words on the underline instead.

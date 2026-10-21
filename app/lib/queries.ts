@@ -6785,10 +6785,15 @@ export function setCoachNote(clientId: number, text: string) {
 /** The coach has looked: these events (all of them, one session's, or by id) stop being new. */
 /** Something the client wrote in the chat lately that the coach hasn't opened the chat on. */
 export function chatUnread(clientId: number): boolean {
+  return chatUnreadCount(clientId) > 0;
+}
+
+/** How many of them (the coach's phone, 21 Oct, shows the count). */
+export function chatUnreadCount(clientId: number): number {
   const data = getData();
   const seen = data.clients.find((c) => c.id === clientId)?.coach_seen ?? {};
   const since = Date.now() - HOME_NEW_DAYS * 86400000;
-  return data.chat_messages.some((m) => m.client_id === clientId && m.sender === "client" && (m.text.trim() || m.media_path) && stampMs(m.created_at) >= since && !(`chat-${m.id}` in seen));
+  return data.chat_messages.filter((m) => m.client_id === clientId && m.sender === "client" && (m.text.trim() || m.media_path) && stampMs(m.created_at) >= since && !(`chat-${m.id}` in seen)).length;
 }
 
 export function markClientEventsSeen(clientId: number, which: { all: true } | { dayId: number } | { ids: string[] } | { tab: string }) {

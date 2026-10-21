@@ -118,6 +118,7 @@ import MyDetailsCard from "./MyDetailsCard";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ProgramNote from "./ProgramNote";
 import AppShell, { AppTab, type PhoneScreen } from "./AppShell";
+import NativeCoachRedirect from "../coach/NativeCoachRedirect";
 import AvatarUpload from "./AvatarUpload";
 import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import { defaultPhaseCover } from "../lib/phaseCovers";
@@ -1536,6 +1537,9 @@ export default async function ClientPage({
   ];
 
   return (
+    <>
+    {/* A coach in the native app goes to their phone screens (21 Oct, /coach). */}
+    {viewer?.role === "coach" && !phone && <NativeCoachRedirect />}
     <AppShell
       clientName={client?.name ?? ""}
       tabs={tabs}
@@ -1567,5 +1571,6 @@ export default async function ClientPage({
       initialTab={initialTab}
       readOnly={phone}
     />
+    </>
   );
 }

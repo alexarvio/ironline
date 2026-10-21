@@ -18,6 +18,7 @@ import {
   phaseCheckInDays,
   chatQuote,
   chatUnread,
+  chatUnreadCount,
   mediaWords,
   syncClientLoginEmail,
   getMetricEntries,
@@ -1090,14 +1091,16 @@ export function loadInvoices(coachId: number, clientId: number): DraftInvoices {
 
 // ---- The chat dock (12 Oct): every client's chat, for the screens that are
 // not one client's. Newest word first, then those with no messages, by name.
-export type DockChat = { id: number; name: string; avatarPath: string | null; unread: boolean; last: { text: string; at: number; mine: boolean } | null };
+/** unreadCount and last.media: the coach's phone (21 Oct) shows how many and what kind. */
+export type DockChat = { id: number; name: string; avatarPath: string | null; unread: boolean; unreadCount?: number; last: { text: string; at: number; mine: boolean; media?: "image" | "video" | "audio" | "file" | null } | null };
 export function loadChatDock(coach: { id: number }): DockChat[] {
   return getData()
     .clients.filter((c) => c.coach_id === coach.id)
     .map((c) => {
       const m = listChatMessages(c.id).filter((x) => x.text.trim() || x.media_path).at(-1) ?? null;
       const at = m ? new Date(m.created_at.includes("T") ? m.created_at : m.created_at.replace(" ", "T")).getTime() : 0;
-      return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, unread: chatUnread(c.id), last: m ? { text: m.text.trim() || mediaWords(m.media_type), at, mine: m.sender === "coach" } : null };
+      const unreadCount = chatUnreadCount(c.id);
+      return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, unread: unreadCount > 0, unreadCount, last: m ? { text: m.text.trim() || mediaWords(m.media_type), at, mine: m.sender === "coach", media: m.media_path ? m.media_type ?? "image" : null } : null };
     })
     .sort((x, y) => (y.last?.at ?? 0) - (x.last?.at ?? 0) || x.name.localeCompare(y.name));
 }
