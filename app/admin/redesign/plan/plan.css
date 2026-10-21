@@ -236,7 +236,6 @@
 .rq-evlog-toggle:hover { background: #f5f6f8; }
 .rq-evlog-toggle small { font-size: 12px; font-weight: 500; color: #8b93a1; }
 .rq-evlog:not(.open) { padding-bottom: 4px; }
-.rq-evlog-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px 4px; font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .rq-ev-tools { display: flex; align-items: center; gap: 10px; }
 
 /* Every kind's pill the same width, whatever its word (20 Oct, Alex). */

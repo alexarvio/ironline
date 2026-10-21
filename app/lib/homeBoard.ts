@@ -19,6 +19,10 @@ export type PerGroup = Record<MuscleGroup, number>;
 /** One day of the consistency strip. */
 export type ConsistencyDay = { date: string; trained: boolean; food: boolean; checkIn: boolean; /** A day still to come: a young phase shows 30 days all the same, filling in as they pass (21 Oct, Alex). */ future?: boolean };
 
+/** A week of the consistency strip, for a long phase (over 8 weeks, 21 Oct, Alex): of its days in the phase so far
+    (`days`; the current week up to today), how many had each. A week still to come is `future`, its counts 0. */
+export type ConsistencyWeek = { start: string; /** Its week of the phase, from 1. */ week: number; days: number; trained: number; food: number; checkIn: number; future?: boolean };
+
 /** One window of the strength card. */
 export type StrengthWindow = { since: string; groups: { group: MuscleGroup; pct: number; exercises: number }[] };
 
@@ -66,8 +70,6 @@ export type HomeBoard = {
     "30d": MuscleWindow;
     /** The live training phase, against the same number of days before it; null with no training phase. */
     phase: MuscleWindow | null;
-    /** The programme's current week: sets prescribed per group, and how many of those were logged. Null with no live programme. */
-    plan: { week: number; planned: PerGroup; done: PerGroup } | null;
   };
   /** Strength per window (21 Oct, Alex: a 7d | 30d | Phase toggle, as the muscle balance): per group, the mean % change
       (one decimal) of each exercise's best estimated one-rep max (Epley, weight × (1 + reps / 30)). 7d and 30d: this
@@ -89,10 +91,12 @@ export type HomeBoard = {
   /** The last 30 days, oldest first (21 Oct, Alex: 30, not four weeks): trained (a set logged that day, or a session ended or done in full on it), food
       logged, checked in. */
   days: ConsistencyDay[];
-  /** Consistency over the phase (21 Oct, Alex: a 30 days | Phase toggle): every day from the earliest live phase's
-      first day (at most 120 days back) to today, oldest first, and at least 30 days: a phase younger than that runs on
-      into the days still to come (future), so the strip fills up as they pass. Null with no live phase. */
-  phaseDays: { since: string; days: ConsistencyDay[] } | null;
+  /** Consistency over the phase (21 Oct, Alex: a 30 days | Phase toggle). The phase is the live ones together, the
+      earliest first day to the latest last day. Up to 8 weeks, by day: every day from its first to today, oldest first,
+      and at least 30: a younger phase runs on into the days still to come (future), so the strip fills up as they pass.
+      Longer, by week (21 Oct, Alex: 180 squares don't fit): every week of the phase, the weeks to come included (at most
+      53). Null with no live phase. */
+  phaseDays: { since: string; by: "day"; days: ConsistencyDay[] } | { since: string; by: "week"; weeks: ConsistencyWeek[] } | null;
 };
 
 export { getHomeBoard, noteHomeLooked } from "./homeBoardData";

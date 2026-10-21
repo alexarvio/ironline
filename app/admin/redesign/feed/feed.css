@@ -64,6 +64,8 @@
    client picker; each lane has its own heading, Activity's with the kinds. */
 .rfd-head { flex-direction: row; align-items: center; justify-content: space-between; }
 .rfd-lane { display: flex; flex-direction: column; gap: 10px; }
+/* The pager under the last day's card: 12px of air, as under every other log's. */
+.rfd-lane > .rpg { margin-top: 2px; }
 .rfd-lane-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 .rfd-lane-title { margin: 0; font-size: 15px; font-weight: 700; color: #141a24; }
 .rfd-lane-title span { font-weight: 500; color: #8b93a1; }

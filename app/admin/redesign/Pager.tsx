@@ -5,6 +5,9 @@ import { pageWindow } from "../../lib/pager";
 // page numbers (first, last, and either side of this one), ›, then where
 // in the list you are ("1–15 of 65"). Pages are links on a server page
 // (href) or buttons in a client one (onPage). Nothing shows for one page.
+// It floats under the list's card, never inside it (21 Oct, Alex): render it
+// after the card, as its sibling; the pages centred, the count at the right
+// (`.rpg` in training/draft.css), the section's own gap above it.
 // No "use client": the Feed renders it on the server, the tabs in the browser.
 
 type Props = {
@@ -42,17 +45,19 @@ export default function Pager({ page, pages, from, shown, total, noun, label, cl
   );
   return (
     <nav className={`rpg${className ? ` ${className}` : ""}`} aria-label={label}>
-      {page > 1 ? to(page - 1, "‹", { aria: "Newer" }) : off("‹")}
-      {pageWindow(page, pages).map((n, i) =>
-        n === "gap" ? (
-          <span key={`gap${i}`} className="rpg-gap" aria-hidden="true">
-            …
-          </span>
-        ) : (
-          to(n, n, { current: n === page })
-        )
-      )}
-      {page < pages ? to(page + 1, "›", { aria: "Older" }) : off("›")}
+      <span className="rpg-pages">
+        {page > 1 ? to(page - 1, "‹", { aria: "Newer" }) : off("‹")}
+        {pageWindow(page, pages).map((n, i) =>
+          n === "gap" ? (
+            <span key={`gap${i}`} className="rpg-gap" aria-hidden="true">
+              …
+            </span>
+          ) : (
+            to(n, n, { current: n === page })
+          )
+        )}
+        {page < pages ? to(page + 1, "›", { aria: "Older" }) : off("›")}
+      </span>
       <span className="rpg-count">
         {from + 1}–{from + shown} of {total}
         {noun ? ` ${noun}` : ""}

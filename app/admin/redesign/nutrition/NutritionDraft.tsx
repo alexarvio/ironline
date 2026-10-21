@@ -794,23 +794,25 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                   onMessage={() => message({ label: `Food diary · ${dayMonth(d.date)}`, link: { kind: "food", date: d.date } })}
                 />
               ))}
-              <Pager
-                className="rn-foot"
-                page={at}
-                pages={pages}
-                from={from}
-                shown={days.length}
-                total={view.days.length}
-                noun="days"
-                label="Logged day pages"
-                onPage={(p) => {
-                  setPage(p);
-                  setOpen(null);
-                }}
-              />
             </div>
           )}
         </div>
+        {/* The pager floats under the card, not in it (21 Oct, Alex). */}
+        {view.days.length > 0 && (
+          <Pager
+            page={at}
+            pages={pages}
+            from={from}
+            shown={days.length}
+            total={view.days.length}
+            noun="days"
+            label="Logged day pages"
+            onPage={(p) => {
+              setPage(p);
+              setOpen(null);
+            }}
+          />
+        )}
       </section>
 
       {/* ---- Dialogs. One open at a time. */}

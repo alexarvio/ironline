@@ -975,7 +975,6 @@ export function loadHome(clientId: number): DraftHome {
     name: panel.name,
     initial: panel.initial,
     avatarPath: panel.avatarPath,
-    clientSince: panel.clientSince,
     panel,
     coachNote: panel.coachNote,
     events,

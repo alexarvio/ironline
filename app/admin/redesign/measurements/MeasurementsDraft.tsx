@@ -652,10 +652,11 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           ) : (
             <CheckinFeed view={logPaged} cadence={logCadence} onReply={replyTo} onMessage={(label) => message({ label, link: { kind: "checkin", section: logCadence } })} />
           )}
-          {!plan.notStarted && view.metrics.length > 0 && show !== "graph" && (
-            <Pager className="rm-pager" page={logPageNow} pages={logPages} from={(logPageNow - 1) * PAGE} shown={logPaged.periods.length} total={logShown.periods.length} noun={CAD[logCadence].unit} label="Check-in pages" onPage={setLogPage} />
-          )}
         </div>
+        {/* The pager floats under the card, not in it (21 Oct, Alex). */}
+        {!plan.notStarted && view.metrics.length > 0 && show !== "graph" && (
+          <Pager page={logPageNow} pages={logPages} from={(logPageNow - 1) * PAGE} shown={logPaged.periods.length} total={logShown.periods.length} noun={CAD[logCadence].unit} label="Check-in pages" onPage={setLogPage} />
+        )}
       </section>
 
       {/* ---- Dialogs. One open at a time. */}

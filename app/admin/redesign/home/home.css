@@ -5,18 +5,19 @@
 .rd.rh { container: rh / inline-size; }
 
 /* ---- Header: the face before the name, as tall as the name's line so the header matches every tab's. The name is
-   the whole name, never cut: it wraps if it must, and the face and "Client since" stay centred on its first line (the
-   name's line is Training's, 26px × 1.2 = 31.2px; the face overhangs it 4.4px each way). */
+   the whole name, never cut: it wraps if it must, and the face stays centred on its first line (the name's line is
+   Training's, 26px × 1.2 = 31.2px; the 48px face overhangs it 8.4px each way, 21 Oct, Alex: a bit bigger). */
 .rd.rh .trn-name-row.rh-name-row { align-items: flex-start; }
+/* The eyebrow starts over the name, so the bigger face sits clear beside both lines (face 48 + gap 12). */
+.rd.rh .trn-head-main > .trn-eyebrow { padding-left: 60px; }
 .rd.rh .trn-name.rh-name { display: block; line-height: 31.2px; white-space: normal; overflow-wrap: break-word; }
-.rd.rh .rh-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-block: -4.4px; padding: 0; border: 0; border-radius: 999px; overflow: hidden; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; font-size: 16px; font-weight: 600; color: #141a24; cursor: pointer; }
+.rd.rh .rh-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; margin-block: -8.4px; padding: 0; border: 0; border-radius: 999px; overflow: hidden; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; font-size: 18px; font-weight: 600; color: #141a24; cursor: pointer; }
 .rd.rh .rh-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .rd.rh .rh-avatar:disabled { cursor: default; }
 .rd.rh .rh-avatar:not(:disabled):hover { box-shadow: 0 0 0 1px #141a24; }
-.rd.rh .rh-since { flex: none; font-size: 13px; font-weight: 500; line-height: 31.2px; color: #8b93a1; white-space: nowrap; }
 
 /* ---- Since the coach last looked: one quiet line close under the header, the date in ink. */
-.rd.rh .rh-sinceline { margin: -10px 0 0; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rd.rh .rh-sinceline { margin: -6px 0 0; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .rd.rh .rh-sinceline b { font-weight: 500; color: #141a24; }
 
 /* ---- The three tracks: equal hairline tiles in a row (the grid gives them one height), one a row when the page is
@@ -67,13 +68,11 @@
 .rd.rh .rh-radar text { font-family: inherit; font-variant-numeric: tabular-nums; }
 .rd.rh .rh-radar-name { font-size: 11.5px; font-weight: 500; fill: #8b93a1; }
 .rd.rh .rh-radar-val { font-size: 13px; font-weight: 600; fill: #141a24; }
-.rd.rh .rh-radar-of { font-size: 11.5px; font-weight: 500; fill: #8b93a1; }
 .rd.rh .rh-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .rd.rh .rh-key > span { display: inline-flex; align-items: center; gap: 6px; }
 .rd.rh .rh-key i { display: block; flex: none; width: 14px; }
 .rd.rh .rh-key i.line { height: 2px; border-radius: 1px; background: var(--rh-c, #141a24); }
 .rd.rh .rh-key i.dash { height: 0; border-top: 1.5px dashed #98a2b3; }
-.rd.rh .rh-key .miss { margin-left: auto; font-weight: 600; color: #b8471f; }
 
 /* Strength: a row a group, all six, the name, a thin ink bar at the change's size, the % on the right (green up, red
    down); a group with nothing to compare an empty bar and a faint "–". */
@@ -169,10 +168,6 @@
 /* The date first, as every log's (logDate in .rd-logdate, draft.css), the time faint right after it. */
 .rd.rh .rh-when { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
 .rd.rh .rh-clock { flex: none; font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
-
-/* The pager under Activity, as the Nutrition log's: pages on the left, the count on the right. */
-.rd.rh .rh-foot { display: flex; align-items: center; gap: 4px; padding: 8px 14px 12px 18px; }
-.rd.rh .rh-foot .rpg-count { margin-left: auto; }
 
 /* ---- Pop-ups (portaled, so never under .rd): the .dlh card (training/trn.css). */
 .rh-field { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }

@@ -732,14 +732,18 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rp-hit.flat { background: #fdf4e4; color: #9a5b00; }
 .rp-hit.down { background: #fdeee8; color: #b3471d; }
 
-/* The pager under every paged list (Pager.tsx, 26 Sep): the Feed's. */
-.rpg { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
-.rpg-page { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid #dfe3e8; border-radius: 9px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #141a24; text-decoration: none; cursor: pointer; }
+/* The pager under every paged list (Pager.tsx, 26 Sep): the Feed's. It floats under the list's card, a sibling after
+   it (21 Oct, Alex): no background, box or line of its own, the pages centred on the page and the count grey at the
+   right of the same row, in a column of its own so it never pushes the pages off centre. The gap above it is the
+   section's (12px). */
+.rpg { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 12px; margin: 0; padding: 0; border: 0; background: none; }
+.rpg-pages { grid-column: 2; display: flex; align-items: center; gap: 4px; }
+.rpg-page { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid #dfe3e8; border-radius: 9px; background: #fff; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; text-decoration: none; cursor: pointer; }
 .rpg-page:hover { border-color: #c3c9d2; }
-.rpg-page.on { background: #1e3a6e; border-color: #1e3a6e; color: #fff; }
+.rpg-page.on { background: #141a24; border-color: #141a24; color: #fff; }
 .rpg-page.off { opacity: 0.35; cursor: default; }
 .rpg-gap { padding: 0 4px; color: #8b93a1; }
-.rpg-count { margin-left: 10px; font-size: 12.5px; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rpg-count { grid-column: 3; justify-self: end; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd-noprog { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 .rd-noprog .rd-empty { margin: 0; }
 .rd-noprog .rd-btn svg { width: 14px; height: 14px; }

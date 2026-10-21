@@ -101,15 +101,6 @@
 .rn-said { margin: 6px 32px 0 20px; padding: 8px 12px; border-radius: 10px; background: #f1f6fd; font-size: 12.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
 .rn-said b { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #1e3a6e; margin-bottom: 2px; }
 
-/* The foot of the log: the count, and the pages once there are more than twenty days. */
-.rn-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 10px 2px; font-size: 12.5px; color: #8b93a1; }
-.rn-pager { display: flex; align-items: center; gap: 2px; }
-.rn-pager .rd-btn.ghost.sm { font-size: 12.5px; font-weight: 700; color: #5b6474; }
-.rn-pager .rd-btn.ghost.sm.on { background: #1e3a6e; color: #fff; }
-.rn-pager .rd-btn:disabled { opacity: 0.35; cursor: default; }
-.rn-pager .rn-next svg { transform: rotate(180deg); }
-.rn-gap { padding: 0 4px; color: #b0b6c0; }
-
 /* The picture of one meal, with the coach's comment under it. */
 .rn-shotdlg { max-width: 560px; }
 .rn-shotimg { display: block; width: 100%; max-height: 380px; object-fit: contain; border-radius: 12px; background: #0b0f16; }

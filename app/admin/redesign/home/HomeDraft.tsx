@@ -25,13 +25,13 @@ import type { PhaseTrack } from "../../../lib/db";
 
 // The client's Home (21 Oct, Alex: built from the Home mockup, root "rd trn rls rh"): Training's header, then the board.
 //
-// - The header: face, name (the whole of it, wrapping if it must), how long they have been a client on the name's line;
+// - The header: face, name (the whole of it, wrapping if it must), nothing after it;
 //   App access, Details and Message as white pills, ⋯ to delete.
 // - Since: what they did since the coach last looked, one quiet line.
 // - The three tracks (Lifestyle, Training, Nutrition): the phase, its week and how far in, then the one figure that
 //   matters right under it. A tile opens its tab.
-// - Muscle balance (sets or volume per group, this window against the one before, or the week's plan against what was
-//   done) beside Strength (all six groups, over 7d, 30d or the phase) and Weight (the phase's readings).
+// - Muscle balance (sets or volume per group over 7d, 30d or the phase, one against the window before or several
+//   together) beside Strength (all six groups, over 7d, 30d or the phase) and Weight (the phase's readings).
 // - Consistency (the last 30 days, a square a day, per behaviour) with Meetings (the next call big, the last at the foot)
 //   and Invoices (what is owed big; the last paid and the next to be made at the foot) beside it; each opens its tab.
 // - Activity: what they did, one kind at a time, a page at a time; every row leads with its date.
@@ -43,7 +43,6 @@ export type DraftHome = {
   name: string;
   initial: string;
   avatarPath: string | null;
-  clientSince: string | null;
   /** The whole client card, for the live editor in the Details dialog. */
   panel: OverviewPanel;
   coachNote: { text: string; savedLabel: string | null };
@@ -204,7 +203,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
   return (
     <div className="rd trn rls rh">
       {/* ---- Header: Training's, with the face before the name. No fact line, so no room kept for one. The face and
-          "Client since" sit on the name's (first) line, however many lines the whole name takes. */}
+          the face sits on the name's (first) line, however many lines the whole name takes; nothing after the name. */}
       <header className="trn-head bare">
         <div className="trn-head-main">
           <span className="trn-eyebrow">Home</span>
@@ -226,7 +225,6 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
               )}
             </button>
             <h1 className="trn-name rh-name">{home.name}</h1>
-            {home.clientSince && <span className="rh-since">{home.clientSince}</span>}
           </div>
         </div>
         <div className="trn-head-actions">
@@ -327,8 +325,9 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
               })}
             </div>
           )}
-          <Pager className="rh-foot" page={at} pages={pages} from={from} shown={shown.length} total={matching.length} label="Activity pages" onPage={setPage} />
         </div>
+        {/* The pager floats under the card, not in it (21 Oct, Alex). */}
+        <Pager page={at} pages={pages} from={from} shown={shown.length} total={matching.length} label="Activity pages" onPage={setPage} />
       </section>
 
       {/* ---- Details: the card and the coach's note. Non-modal: the card's Edit opens its form in a layer of its own,
@@ -477,7 +476,7 @@ function PhaseTile({ tile, onOpen }: { tile: HomeBoard["tracks"][number]; onOpen
 
 // ---- Muscle balance: sets (or volume) per group as a hexagon. 7d, 30d and Phase can be on together (21 Oct, Alex: "so
 // I can compare easily"), each its own colour: one on, it against the window before it (dashed grey); more, each its own
-// shape. Plan is a view of its own: the programme's week, planned against done.
+// shape; none, an empty hexagon (21 Oct, Alex: the last one clicks off too). No Plan view (21 Oct, Alex: just the three).
 type Window = "7d" | "30d" | "phase";
 const WINDOWS: Window[] = ["7d", "30d", "phase"];
 /** A colour a window: 7d the training purple, 30d rose, Phase ink; none of them another track's. */
@@ -487,44 +486,18 @@ type Shape = { v: PerGroup; color: string; dashed?: boolean; fill?: number };
 function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
   const [measure, setMeasure] = useState<Measure>("sets");
   const [picked, setPicked] = useState<Window[]>(["7d"]);
-  const [planOn, setPlanOn] = useState(false);
-  // A window that went away (no phase any more) drops out; nothing left falls back to the week.
-  const live = picked.filter((w) => w !== "phase" || !!muscles.phase);
-  const windows: Window[] = live.length ? live : ["7d"];
-  const plan = planOn && muscles.plan ? muscles.plan : null;
-  const toggle = (w: Window) => {
-    if (plan) {
-      setPlanOn(false);
-      setPicked([w]);
-      return;
-    }
-    // At least one stays on; the order is always 7d, 30d, Phase.
-    setPicked((p) => (p.includes(w) ? (p.length > 1 ? p.filter((x) => x !== w) : p) : WINDOWS.filter((x) => x === w || p.includes(x))));
-  };
+  // A window that went away (no phase any more) drops out.
+  const windows = picked.filter((w) => w !== "phase" || !!muscles.phase);
+  // Each on or off, all off too (an empty hexagon); the order is always 7d, 30d, Phase.
+  const toggle = (w: Window) => setPicked((p) => (p.includes(w) ? p.filter((x) => x !== w) : WINDOWS.filter((x) => x === w || p.includes(x))));
   const winOf = (w: Window): MuscleWindow => (w === "phase" && muscles.phase ? muscles.phase : w === "30d" ? muscles["30d"] : muscles["7d"]);
   const nameOf = (w: Window) => (w === "phase" ? `Since ${dayMonth(winOf("phase").from)}` : `Last ${w}`);
   const valuesOf = (w: Window) => (measure === "volume" ? winOf(w).volume : winOf(w).sets);
 
   let shapes: Shape[];
   let shown: { v: PerGroup; color?: string }[];
-  let of: PerGroup | undefined;
   let key: { label: string; color: string; dashed?: boolean }[];
-  let missed: ReactNode = null;
-  if (plan) {
-    // The plan is in sets: done against planned, each axis "9 of 14".
-    shapes = [
-      { v: plan.planned, color: BEFORE_GREY, dashed: true },
-      { v: plan.done, color: WINDOW_COLOR["7d"], fill: 0.12 },
-    ];
-    shown = [{ v: plan.done }];
-    of = plan.planned;
-    key = [
-      { label: "Done", color: WINDOW_COLOR["7d"] },
-      { label: "Planned", color: BEFORE_GREY, dashed: true },
-    ];
-    const gap = AXES.map((g) => ({ g, short: (plan.planned[g] ?? 0) - (plan.done[g] ?? 0) })).sort((a, b) => b.short - a.short)[0];
-    if (gap && gap.short > 0) missed = `${gap.g} ${setsOf(plan.done[gap.g] ?? 0)} of ${setsOf(plan.planned[gap.g] ?? 0)} planned`;
-  } else if (windows.length === 1) {
+  if (windows.length === 1) {
     const w = windows[0];
     const win = winOf(w);
     const before = measure === "volume" ? win.prevVolume : win.prevSets;
@@ -537,49 +510,50 @@ function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
       { label: nameOf(w), color: WINDOW_COLOR[w] },
       { label: w === "phase" ? "Before" : `${w} before`, color: BEFORE_GREY, dashed: true },
     ];
-  } else {
+  } else if (windows.length > 1) {
     // Several at once: each its own shape, lightly filled so the ones under still show; the longest window drawn first.
     shapes = [...windows].reverse().map((w) => ({ v: valuesOf(w), color: WINDOW_COLOR[w], fill: 0.07 }));
     shown = windows.map((w) => ({ v: valuesOf(w), color: WINDOW_COLOR[w] }));
     key = windows.map((w) => ({ label: nameOf(w), color: WINDOW_COLOR[w] }));
+  } else {
+    shapes = [];
+    shown = [];
+    key = [];
   }
   const most = Math.max(0, ...shapes.flatMap((s) => AXES.map((g) => s.v[g] ?? 0)));
-  const byVolume = !plan && measure === "volume";
+  const byVolume = measure === "volume";
   const fmt = byVolume ? volumeIn(most) : setsOf;
-  const empty = shapes.every((s) => AXES.every((g) => !(s.v[g] > 0)));
+  // No data in what is picked: None yet. Nothing picked: the hexagon alone.
+  const empty = windows.length > 0 && shapes.every((s) => AXES.every((g) => !(s.v[g] > 0)));
   // Said in full for a screen reader: the measure, and every shape on the chart.
-  const each = (v: PerGroup, out?: PerGroup) => AXES.map((g) => `${g} ${fmt(v[g] ?? 0)}${out ? ` of ${fmt(out[g] ?? 0)}` : ""}`).join(", ");
-  const said = plan
-    ? `Sets done of planned, week ${plan.week}: ${each(plan.done, plan.planned)}`
+  const each = (v: PerGroup) => AXES.map((g) => `${g} ${fmt(v[g] ?? 0)}`).join(", ");
+  const said = !windows.length
+    ? "Muscle balance: no window picked"
     : `${byVolume ? "Volume" : "Sets"}. ${key.map((k, i) => `${k.label}: ${each(windows.length === 1 ? (i === 0 ? valuesOf(windows[0]) : shapes[0].v) : valuesOf(windows[i]))}`).join(". ")}`;
 
-  const spanButtons: { id: Window | "plan"; label: string }[] = [
+  const spanButtons: { id: Window; label: string }[] = [
     { id: "7d", label: "7d" },
     { id: "30d", label: "30d" },
     ...(muscles.phase ? [{ id: "phase" as const, label: "Phase" }] : []),
-    ...(muscles.plan ? [{ id: "plan" as const, label: "Plan" }] : []),
   ];
   return (
     <section className="rls-card rh-panel rh-muscles" aria-label="Muscle balance" style={{ "--rh-c": TRACK_ACCENT.training } as CSSProperties}>
       <div className="rh-panel-head tall">
         <h2 className="rh-panel-title">Muscle balance</h2>
-        {/* The plan is counted in sets alone: no Volume to offer there. */}
-        {!plan && (
-          <div className="rd-btn-group" role="group" aria-label="Count">
-            {(["sets", "volume"] as const).map((m) => (
-              <button key={m} type="button" className={measure === m ? "on" : ""} aria-pressed={measure === m} onClick={() => setMeasure(m)}>
-                {m === "sets" ? "Sets" : "Volume"}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="rd-btn-group" role="group" aria-label="Count">
+          {(["sets", "volume"] as const).map((m) => (
+            <button key={m} type="button" className={measure === m ? "on" : ""} aria-pressed={measure === m} onClick={() => setMeasure(m)}>
+              {m === "sets" ? "Sets" : "Volume"}
+            </button>
+          ))}
+        </div>
       </div>
-      {/* 7d, 30d and Phase each on or off (one at least); Plan alone. */}
+      {/* 7d, 30d and Phase each on or off, all off for an empty hexagon. */}
       <div className="rd-btn-group rh-spans" role="group" aria-label="Windows">
         {spanButtons.map((s) => {
-          const on = s.id === "plan" ? !!plan : !plan && windows.includes(s.id);
+          const on = windows.includes(s.id);
           return (
-            <button key={s.id} type="button" className={on ? "on" : ""} aria-pressed={on} onClick={() => (s.id === "plan" ? setPlanOn(true) : toggle(s.id))}>
+            <button key={s.id} type="button" className={on ? "on" : ""} aria-pressed={on} onClick={() => toggle(s.id)}>
               {s.label}
             </button>
           );
@@ -590,7 +564,7 @@ function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
       ) : (
         <>
           <div className="rh-radar-wrap">
-            <Radar shapes={shapes} shown={shown} of={of} fmt={fmt} label={said} />
+            <Radar shapes={shapes} shown={shown} fmt={fmt} label={said} />
           </div>
           <div className="rh-key">
             {key.map((k) => (
@@ -599,7 +573,6 @@ function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
                 {k.label}
               </span>
             ))}
-            {missed && <span className="miss">{missed}</span>}
           </div>
         </>
       )}
@@ -642,7 +615,7 @@ function roundedPath(pts: (readonly [number, number])[], r: number) {
   });
   return `M${f(cuts[0].out)}` + cuts.slice(1).map((c) => `L${f(c.into)}Q${f(c.at)} ${f(c.out)}`).join("") + `L${f(cuts[0].into)}Q${f(cuts[0].at)} ${f(cuts[0].out)}Z`;
 }
-function Radar({ shapes, shown, of, fmt, label }: { shapes: Shape[]; shown: { v: PerGroup; color?: string }[]; of?: PerGroup; fmt: (v: number) => string; label: string }) {
+function Radar({ shapes, shown, fmt, label }: { shapes: Shape[]; shown: { v: PerGroup; color?: string }[]; fmt: (v: number) => string; label: string }) {
   const scale = Math.max(1, ...shapes.flatMap((s) => AXES.map((g) => s.v[g] ?? 0)));
   const shape = (v: PerGroup) => roundedPath(AXES.map((g, i) => corner(i, (RR * Math.max(0, v[g] ?? 0)) / scale)), ROUND);
   const ring = (f: number) => AXES.map((_, i) => corner(i, RR * f).join(",")).join(" ");
@@ -679,7 +652,6 @@ function Radar({ shapes, shown, of, fmt, label }: { shapes: Shape[]; shown: { v:
                   {fmt(s.v[g] ?? 0)}
                 </tspan>
               ))}
-              {of && <tspan className="rh-radar-of"> of {fmt(of[g] ?? 0)}</tspan>}
             </text>
           </g>
         );
@@ -800,7 +772,7 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
   );
 }
 
-// ---- Consistency: the last 30 days (as the server sends them), a square a day per behaviour. A day done wears its
+// ---- Consistency: the last 30 days or the phase (as the server sends them), a square a day (a week, in a long phase) per behaviour. A day done wears its
 // track as a phase does (21 Oct, Alex): the colour soft inside, its full strength on the edge; a day not done is grey.
 // The rows in the tracks' order (21 Oct, Alex): Check-in, Trained, Food, each named by its track's icon alone.
 const CONS: { key: "trained" | "food" | "checkIn"; label: string; track: PhaseTrack; yes: string; no: string }[] = [
@@ -809,9 +781,12 @@ const CONS: { key: "trained" | "food" | "checkIn"; label: string; track: PhaseTr
   { key: "food", label: "Food", track: "nutrition", yes: "food logged", no: "no food logged" },
 ];
 function ConsistencyCard({ days: last30, phaseDays }: { days: HomeBoard["days"]; phaseDays: HomeBoard["phaseDays"] }) {
-  // 30 days | Phase (21 Oct, Alex): the phase from its first day, at least 30 squares (days to come stay empty).
+  // 30 days | Phase (21 Oct, Alex): the phase from its first day, at least 30 squares (days to come stay empty). A phase
+  // over 8 weeks goes by week (21 Oct, Alex: 180 days won't fit), a square a week, stronger the more days were done.
   const [span, setSpan] = useState<"30" | "phase">("30");
-  const days = span === "phase" && phaseDays ? phaseDays.days : last30;
+  const weeks = span === "phase" && phaseDays?.by === "week" ? phaseDays.weeks : null;
+  const days = weeks ? [] : span === "phase" && phaseDays?.by === "day" ? phaseDays.days : last30;
+  const count = weeks ? weeks.length : days.length;
   // Evenly spaced, no gap before a Monday (21 Oct, Alex): the two spans start on different weekdays, and the gaps moved
   // the squares when switching between them.
   return (
@@ -835,21 +810,39 @@ function ConsistencyCard({ days: last30, phaseDays }: { days: HomeBoard["days"];
           )}
         </span>
       </div>
-      {days.length === 0 ? (
+      {count === 0 ? (
         <p className="rls-none">None yet</p>
       ) : (
         <div className="rh-cons-rows">
           {CONS.map((c) => {
-            const done = days.filter((d) => d[c.key]).length;
+            const color = TRACK_ACCENT[c.track];
+            let said: string;
+            if (weeks) {
+              const past = weeks.filter((w) => !w.future);
+              said = `${c.label}: ${past.reduce((n, w) => n + w[c.key], 0)} of ${past.reduce((n, w) => n + w.days, 0)} days, over ${past.length} ${past.length === 1 ? "week" : "weeks"}`;
+            } else {
+              const past = days.filter((d) => !d.future);
+              said = `${c.label}: ${past.filter((d) => d[c.key]).length} of ${past.length} days`;
+            }
             return (
-              <div key={c.key} className="rh-cons-row" style={{ "--rh-c": TRACK_ACCENT[c.track], "--rh-t": tintOf(TRACK_ACCENT[c.track], 0.18) } as CSSProperties}>
+              <div key={c.key} className="rh-cons-row" style={{ "--rh-c": color, "--rh-t": tintOf(color, 0.18) } as CSSProperties}>
                 <span className="rh-cons-label" title={c.label} aria-hidden="true">
                   <TrackIcon track={c.track} size={16} />
                 </span>
-                <span className="rh-cons-days" role="img" aria-label={`${c.label}: ${done} of the last ${days.length} days`}>
-                  {days.map((d) => (
-                    <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${d.future ? " ahead" : ""}`} title={d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />
-                  ))}
+                <span className="rh-cons-days" role="img" aria-label={said}>
+                  {weeks
+                    ? weeks.map((w) => {
+                        const head = `Week ${w.week} (${dayMonth(w.start)})`;
+                        if (w.future) return <span key={w.start} className="rh-day ahead" title={`${head}: to come`} />;
+                        const n = w[c.key];
+                        // The share of the week's days done sets the fill and the edge: a full week strongest.
+                        const f = w.days ? n / w.days : 0;
+                        const look = n ? { background: tintOf(color, 0.05 + 0.2 * f), boxShadow: `inset 0 0 0 1.5px ${tintOf(color, 0.3 + 0.7 * f)}` } : undefined;
+                        return <span key={w.start} className="rh-day" style={look} title={`${head}: ${c.yes} on ${n} of ${w.days} ${w.days === 1 ? "day" : "days"}`} />;
+                      })
+                    : days.map((d) => (
+                        <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${d.future ? " ahead" : ""}`} title={d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />
+                      ))}
                 </span>
               </div>
             );

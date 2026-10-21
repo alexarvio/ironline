@@ -459,11 +459,12 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                 </div>
               );
             })}
-            <Pager className="rq-evlog-foot" page={at} pages={pages} from={from} shown={onPage.length} total={listed.length} label="Log pages" onPage={setPage} />
           </div>
         )}
       </div>
       </div>
+      {/* The log's pager floats under the card, not in it (21 Oct, Alex). */}
+      {logOpen && <Pager page={at} pages={pages} from={from} shown={onPage.length} total={listed.length} label="Log pages" onPage={setPage} />}
 
       {/* Let go after a drag: what changes, and a yes before it saves. */}
       <Dialog open={!!moveDlg} onOpenChange={(o) => !o && setMoveDlg(null)}>

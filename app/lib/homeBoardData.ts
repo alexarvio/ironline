@@ -2,7 +2,7 @@
 // Home tab, and the note of when the coach looked, so "Since 18/10" counts from the visit before this one.
 // Never throws: a client with no programme, no phases, no weight and no logs gets nulls and zeros.
 
-import type { HomeBoard, MuscleGroup, MuscleWindow, PerGroup, StrengthWindow } from "./homeBoard";
+import type { ConsistencyDay, ConsistencyWeek, HomeBoard, MuscleGroup, MuscleWindow, PerGroup, StrengthWindow } from "./homeBoard";
 import { getData, persist, type Data, type PhaseTrack } from "./db";
 import {
   coachGroups,
@@ -146,8 +146,6 @@ type Ctx = {
   /** The client's metrics the workout answers (workoutFed): not check-ins, so never counted as one. Ids, and names. */
   fedIds: Set<number>;
   fedNames: Set<string>;
-  /** The prescription's group (the exercise asked for), for the plan. */
-  prescribedGroup: (a: AssignmentRow) => MuscleGroup | null;
 };
 
 function context(clientId: number, today: string): Ctx {
@@ -244,7 +242,6 @@ function context(clientId: number, today: string): Ctx {
     weightStamps: weightStampsOf(data, clientId),
     fedIds: new Set(fed.map((m) => m.id)),
     fedNames: new Set(fed.map((m) => m.name)),
-    prescribedGroup,
   };
 }
 
@@ -324,7 +321,7 @@ function emptyBoard(today: string): HomeBoard {
     outstanding: null,
     nextInvoice: null,
     since: null,
-    muscles: { "7d": emptyWindow(addDays(today, -6), today), "30d": emptyWindow(addDays(today, -29), today), phase: null, plan: null },
+    muscles: { "7d": emptyWindow(addDays(today, -6), today), "30d": emptyWindow(addDays(today, -29), today), phase: null },
     strength: { "7d": null, "30d": null, phase: null },
     weight: null,
     days: lastDays(today).map((date) => ({ date, trained: false, food: false, checkIn: false })),
@@ -563,30 +560,7 @@ function musclesOf(ctx: Ctx): HomeBoard["muscles"] {
     "7d": windowOf(ctx, addDays(today, -6), today),
     "30d": windowOf(ctx, addDays(today, -29), today),
     phase: training && training.start_week <= today ? windowOf(ctx, training.start_week, today) : null,
-    plan: safe("plan", () => planOf(ctx), null),
   };
-}
-
-/** The live programme's current week: sets prescribed per group over its sessions, and how many of them were logged. */
-function planOf(ctx: Ctx): HomeBoard["muscles"]["plan"] {
-  const program = getDeployedProgram(ctx.clientId);
-  if (!program) return null;
-  const index = getProgramCurrentWeekIndex(program);
-  const planned = zero();
-  const done = zero();
-  for (const d of getWeek(ctx.clientId, program.start_week + index - 1)) {
-    if (d.is_rest) continue;
-    for (const a of ctx.byDay.get(d.id) ?? []) {
-      const g = ctx.prescribedGroup(a);
-      if (!g) continue;
-      const asked = Math.max(0, Math.round(Number(a.sets) || 0));
-      planned[g] += asked;
-      // A swap's sets still count for the prescription they replaced (as the Training tab counts them).
-      const logged = (ctx.logsByAssignment.get(a.id) ?? []).filter((l) => (l.reps ?? 0) > 0 || (l.weight_kg ?? 0) > 0).length;
-      done[g] += Math.min(asked, logged);
-    }
-  }
-  return { week: index, planned, done };
 }
 
 // ---- Strength --------------------------------------------------------------------------------------
@@ -711,19 +685,60 @@ function daysOf(ctx: Ctx, dates: string[] = lastDays(ctx.today)): HomeBoard["day
   });
 }
 
-/** The phase's days for the consistency strip: from the earliest live phase's first day (at most 120 days back) to today. */
+/** The phase for the consistency strip: the live ones together, from the earliest first day to the latest last day.
+    Up to 8 weeks it goes by day, from its first day (at most 120 days back) to today; longer, by week (21 Oct, Alex). */
 const PHASE_DAYS_MAX = 120;
+const PHASE_BY_DAY_MAX = 56;
+const PHASE_WEEKS_MAX = 53;
 function phaseDaysOf(ctx: Ctx): HomeBoard["phaseDays"] {
-  const starts = [ctx.phases.lifestyle, ctx.phases.training, ctx.phases.nutrition].map((p) => p?.start_week).filter((d): d is string => !!d && d <= ctx.today).sort();
-  if (!starts.length) return null;
+  const live = [ctx.phases.lifestyle, ctx.phases.training, ctx.phases.nutrition].filter((p): p is PhaseRow => !!p && p.start_week <= ctx.today);
+  if (!live.length) return null;
+  const starts = live.map((p) => p.start_week).sort();
+  const ends = live.map((p) => phaseLastDay(p.end_week)).sort();
+  const first = starts[0];
+  const last = ends[ends.length - 1] < ctx.today ? ctx.today : ends[ends.length - 1];
+  if (daysBetween(first, last) + 1 > PHASE_BY_DAY_MAX) return { since: first, by: "week", weeks: weeksOf(ctx, first, last) };
   const floor = addDays(ctx.today, -(PHASE_DAYS_MAX - 1));
-  const since = starts[0] < floor ? floor : starts[0];
+  const since = first < floor ? floor : first;
   const dates: string[] = [];
   for (let d = since; d <= ctx.today; d = addDays(d, 1)) dates.push(d);
   // Always 30 at least: a young phase runs on into the days still to come, empty, filling in as they pass.
-  const ahead: HomeBoard["days"] = [];
+  const ahead: ConsistencyDay[] = [];
   for (let d = addDays(ctx.today, 1); dates.length + ahead.length < CONSISTENCY_DAYS; d = addDays(d, 1)) ahead.push({ date: d, trained: false, food: false, checkIn: false, future: true });
-  return { since, days: [...daysOf(ctx, dates), ...ahead] };
+  return { since, by: "day", days: [...daysOf(ctx, dates), ...ahead] };
+}
+
+/** Every week (Monday to Sunday) of a long phase, the weeks to come included: of its days in the phase up to today, how
+    many had each. Over a year, the 53 weeks up to this one. */
+function weeksOf(ctx: Ctx, since: string, until: string): ConsistencyWeek[] {
+  const firstMonday = weekStart(since);
+  const thisMonday = weekStart(ctx.today);
+  let from = firstMonday;
+  const yearBack = addDays(thisMonday, -7 * (PHASE_WEEKS_MAX - 1));
+  if (from < yearBack) from = yearBack;
+  const weeks: ConsistencyWeek[] = [];
+  for (let monday = from; monday <= until && weeks.length < PHASE_WEEKS_MAX; monday = addDays(monday, 7)) {
+    const week = Math.round(daysBetween(firstMonday, monday) / 7) + 1;
+    if (monday > ctx.today) {
+      weeks.push({ start: monday, week, days: 0, trained: 0, food: 0, checkIn: 0, future: true });
+      continue;
+    }
+    const dates: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(monday, i);
+      if (d >= since && d <= until && d <= ctx.today) dates.push(d);
+    }
+    const flags = daysOf(ctx, dates);
+    weeks.push({
+      start: monday,
+      week,
+      days: dates.length,
+      trained: flags.filter((f) => f.trained).length,
+      food: flags.filter((f) => f.food).length,
+      checkIn: flags.filter((f) => f.checkIn).length,
+    });
+  }
+  return weeks;
 }
 
 // ---- The coach's look -------------------------------------------------------------------------------
