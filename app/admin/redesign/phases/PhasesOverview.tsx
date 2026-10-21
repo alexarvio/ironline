@@ -146,9 +146,8 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
       {soonRows.length > 0 && (
         <section className="pln-section" aria-label="Ending soon">
           <div className="rn-card-head">
-            <h2>
-              Ending soon <span>{soonRows.length}</span>
-            </h2>
+            {/* No count after it (21 Oct, Alex): the rows say how many. */}
+            <h2>Ending soon</h2>
           </div>
           <ul className="pln-card pov-soon-list">
             {soonRows.map(({ client, phase }) => {
@@ -362,7 +361,8 @@ function ExtendMenu({ phase, onPick }: { phase: OverviewPhase; onPick: (endWeek:
                 onPick(byWeeks(n));
               }}
             >
-              +{n} week{n === 1 ? "" : "s"} <small>to {dayMonth(addDays(byWeeks(n), 6))}</small>
+              {/* The weeks alone (21 Oct, Alex: no "to 1/11"); the new end shows in the toast. */}
+              +{n} week{n === 1 ? "" : "s"}
             </button>
           ))}
           {picking ? (
