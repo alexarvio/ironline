@@ -1128,6 +1128,8 @@ type User = {
   onboarding?: boolean;
   /** A coach's own video library (Library page, 5 Oct): clips uploaded in bulk, handed to exercises as demos. */
   video_library?: { id: number; path: string; name: string; at: string; /** File size in bytes (from 6 Oct; absent before). */ bytes?: number }[];
+  /** When the coach last had Business on screen (epoch ms) and the visit before it, 30 minutes apart being one visit: the Business board's "Since" line (21 Oct). */
+  business_looked?: { at: number; prev: number | null };
 };
 
 /** What a coach's invoices say about who sends them. Every field optional: filled in over time.
@@ -1253,6 +1255,10 @@ export type Data = {
   // Clients who deleted their own account, so their coach's Feed can say so.
   // The name and when, nothing else: everything of theirs is gone.
   account_deletions?: { id: number; at: string; coach_id: number | null; client_id: number; name: string }[];
+  // Every client who left (21 Oct), deleted by the coach or by themselves: the name, when they started (as the
+  // Business board reads a start: the card's coaching start, else their login, else their first programme) and when
+  // they went. For the Business board's clients by month and how long clients stay. Kept when their rows go.
+  client_departures?: { id: number; coach_id: number | null; client_id: number; name: string; start: string | null; at: string; by: "coach" | "client" }[];
   _seq: Record<string, number>;
 };
 

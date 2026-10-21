@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { coachForClient } from "../../../../lib/auth";
+import { coachForClient, requireCoach } from "../../../../lib/auth";
+import { getData } from "../../../../lib/db";
 import { clientIdForInvoice } from "../../../../lib/tenancy";
 import { getInvoiceView } from "../../../../lib/queries";
 import InvoiceSheet from "../../../../components/InvoiceSheet";
@@ -20,7 +21,12 @@ export const dynamic = "force-dynamic";
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const invoiceId = Number(id);
-  if (!Number.isInteger(invoiceId) || !(await coachForClient(clientIdForInvoice(invoiceId)))) notFound();
+  // The coach's own client's invoice, or one they kept after the client was deleted (its client_id points at no
+  // client then, and coach_id says whose it is; Business lists those as owed, 21 Oct).
+  if (!Number.isInteger(invoiceId)) notFound();
+  const ownsClient = !!(await coachForClient(clientIdForInvoice(invoiceId)));
+  const keptForCoach = !ownsClient && getData().invoices.find((i) => i.id === invoiceId)?.coach_id === (await requireCoach()).id;
+  if (!ownsClient && !keptForCoach) notFound();
   const v = getInvoiceView(invoiceId);
   if (!v) notFound();
   const f = v.from;

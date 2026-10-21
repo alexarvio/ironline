@@ -4,13 +4,15 @@ import { removeAllSubscriptions } from "./push";
 import { removeClient } from "./queries";
 import { deleteUploadFolder } from "./storage";
 import { deleteClerkUser } from "./clerk";
+import { clientStartDay } from "./businessBoardData";
 
 // Erasing a client: everything of theirs, wherever it lives. Their rows in the
 // store (removeClient), their files on the disk, in the uploads bucket and in
 // the backup bucket's mirror, and their push devices in Postgres. What is left
 // afterwards is only what the law makes the coach keep (invoices, when the
-// client deleted the account themselves) and the nightly snapshots, which age
-// out after 30 days.
+// client deleted the account themselves), their name with when they started
+// and left (client_departures, for the coach's Business board) and the nightly
+// snapshots, which age out after 30 days.
 
 // Every uploads folder that is per client: <kind>/<clientId>/...
 const CLIENT_UPLOAD_KINDS = ["avatars", "chat", "covers", "demos", "gyms", "meals", "phases", "progress", "videos"] as const;
@@ -23,13 +25,20 @@ export async function eraseClient(clientId: number, opts: { selfDeleted: boolean
   // Their Clerk account goes too, so the email can be invited afresh (lib/clerk.ts).
   const clerkIds = data.users.filter((u) => u.role === "client" && u.client_id === clientId).map((u) => u.clerk_user_id);
 
+  const at = new Date().toISOString();
   if (opts.selfDeleted) {
     data.account_deletions = [
       ...(data.account_deletions ?? []),
-      { id: allocId("account_deletions"), at: new Date().toISOString(), coach_id: client.coach_id ?? null, client_id: clientId, name: client.name },
+      { id: allocId("account_deletions"), at, coach_id: client.coach_id ?? null, client_id: clientId, name: client.name },
     ];
-    persist();
   }
+  // Every delete, the coach's or their own, leaves a line for the Business board (clients by month, how long clients
+  // stay): written before the rows go, since their start is read from them, and kept by removeClient.
+  data.client_departures = [
+    ...(data.client_departures ?? []),
+    { id: allocId("client_departures"), coach_id: client.coach_id ?? null, client_id: clientId, name: client.name, start: clientStartDay(clientId), at, by: opts.selfDeleted ? "client" : "coach" },
+  ];
+  persist();
   // The rows first: from here the client is gone from the app, whatever
   // happens to the file clean-up below.
   // Invoices are business records the coach must keep (7 years in the

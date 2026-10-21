@@ -1,55 +1,108 @@
-/* The Business view in the redesign (25 Sep). Prefix bzd- (biz- is the old one). */
-.bzd { display: flex; flex-direction: column; gap: 20px; }
-.bzd-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
-.bzd-sub { margin: 4px 0 0; font-size: 13.5px; color: #5b6474; }
-.bzd-section { display: flex; flex-direction: column; gap: 10px; }
-.bzd-h { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
-.bzd-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
-.bzd-tiles.four { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-.bzd-tile > * { display: flex; flex-direction: column; gap: 4px; }
-.bzd-label { font-size: 12px; font-weight: 600; color: #5b6474; }
-.bzd-value { font-size: 24px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
-.bzd-value small { font-size: 13px; font-weight: 600; color: #8b93a1; }
-.bzd-basis { font-size: 11.5px; color: #8b93a1; }
-.bzd-tile.warn .bzd-value { color: #b3471d; }
-.bzd-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
-.bzd-bars { display: flex; flex-direction: column; gap: 10px; }
-.bzd-bar-row { display: grid; grid-template-columns: 80px 1fr 70px; align-items: center; gap: 12px; font-size: 13px; }
-.bzd-bar-label { color: #313851; font-weight: 600; }
-.bzd-bar-track { height: 10px; border-radius: 999px; background: #eef1f5; overflow: hidden; }
-.bzd-bar-fill { display: block; height: 100%; border-radius: 999px; background: #1e3a6e; }
-.bzd-bar-num { text-align: right; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
-.bzd-bar-num small { font-weight: 500; color: #8b93a1; }
-.bzd-empty { margin: 0; font-size: 13.5px; color: #8b93a1; }
-.bzd-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-.bzd-name { font-weight: 700; color: #141a24; text-decoration: none; }
-.bzd-name:hover { text-decoration: underline; text-underline-offset: 3px; }
-.bzd-open { background: #fdeee8; color: #b3471d; }
-/* Tiles (25 Sep): room above the titles, and each row of them stretched to the page's width. */
-.bzd-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-.bzd-tiles.four { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-.bzd-tile { padding: 0; }
-.bzd-tile > * { padding: 18px 20px 16px; gap: 6px; }
+/* The coach's Business (21 Oct, Alex: built from the Business mockup, root "rd trn rls rh rbz"): Training's header,
+   Home's Since line, the figures in the shared hairline card (rls-figs), Money by month beside Clients by month (Home's
+   panels, inline SVG), then Owed, Plans ending and Not billed automatically as logs. It wears Home's classes (rh-) for
+   what it shares, and the room it has, not the window, sets the layout (Home's container rh). Ink, never navy; weights
+   500 and 600. Overrides of a shared class carry an extra class (.rd.rh.rbz), whichever file the dev server loads last. */
 
-/* The whole screen (25 Sep): the numbers in a column on the left, By client
-   beside them, its rows scrolling inside when there are many. */
-.bzd-cols { display: grid; grid-template-columns: minmax(380px, 0.85fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
-.bzd-left { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
-.bzd-left .bzd-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-.bzd-left .bzd-tiles.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.bzd-left .bzd-two { grid-template-columns: 1fr; }
-.bzd-right { position: sticky; top: 20px; max-height: calc(100vh - 40px); min-width: 0; }
-.bzd-right [data-slot="card-content"] { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; }
-@media (max-width: 1150px) {
-  .bzd-cols { grid-template-columns: 1fr; }
-  .bzd-right { position: static; max-height: none; }
-}
+.rd.rbz [id] { scroll-margin-top: 20px; }
 
-/* One column (26 Sep): the numbers across the full width on top (each row
-   of tiles on one line, Gender and Age side by side), By client below them
-   at full width, scrolling with the page. */
-.bzd-cols { grid-template-columns: 1fr; gap: 20px; }
-.bzd-left .bzd-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-.bzd-left .bzd-tiles.four { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-.bzd-left .bzd-two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
-.bzd-right { position: static; max-height: none; }
+/* ---- The figures: each cell a way in (Clients and Owed scroll to theirs, A month opens the series). */
+.rd.rh.rbz .rls-fig.rbz-fig { margin: 0; border-top: 0; border-right: 0; border-bottom: 0; border-radius: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: background-color 0.15s; }
+.rd.rh.rbz .rls-fig.rbz-fig:first-child { border-left: 0; }
+.rd.rh.rbz .rls-fig.rbz-fig:hover, .rd.rh.rbz .rls-fig.rbz-fig[data-state="open"] { background: #fafbfc; }
+/* Keyboard focus as every way in shows it: a quiet underline, here on the label. */
+.rd.rh.rbz .rls-fig.rbz-fig:focus-visible { outline: none; }
+.rd.rh.rbz .rls-fig.rbz-fig:focus-visible .rls-fig-label { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
+.rd.rh.rbz .rbz-fig small .up { font-weight: 600; color: #2f7a3f; }
+.rd.rh.rbz .rbz-fig small .down { font-weight: 600; color: #b8471f; }
+
+/* ---- Money by month (wider) beside Clients by month, one height; one under the other under ~920px of page. */
+.rd.rbz .rbz-duo { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 12px; }
+@container rh (max-width: 920px) { .rd.rbz .rbz-duo { grid-template-columns: minmax(0, 1fr); } }
+/* The title with its facts under it, the capsule on the right; both cards' heads one height, so the charts line up. */
+.rd.rbz .rbz-titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rd.rbz .rbz-under { display: block; min-width: 0; overflow: hidden; font-size: 12.5px; font-weight: 500; line-height: 18px; color: #8b93a1; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rbz .rbz-under b { font-weight: 600; color: #141a24; }
+.rd.rbz .rbz-under b.up { color: #2f7a3f; }
+.rd.rbz .rbz-under b.down { color: #b42318; }
+/* AVG as a column head's summary (design rules 8: "AVG 7.4"). */
+.rd.rbz .rbz-avg { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+
+/* The drawing: a column a month, each a button under the SVG (hover shades it, a click opens the month), its short
+   name at its foot; the SVG lets clicks through. This month's name in ink, the months to come quieter. */
+.rd.rbz .rbz-chart { position: relative; min-width: 0; }
+.rd.rbz .rbz-chart svg { position: absolute; top: 0; left: 0; display: block; overflow: visible; pointer-events: none; }
+.rd.rbz .rbz-chart svg text { font-family: inherit; font-variant-numeric: tabular-nums; }
+.rd.rbz .rbz-ytick { font-size: 11px; font-weight: 500; fill: #98a2b3; }
+.rd.rbz .rbz-dotval { font-size: 12px; font-weight: 600; fill: #141a24; }
+.rd.rbz .rbz-col { position: absolute; top: 0; bottom: 0; display: flex; align-items: flex-end; justify-content: center; margin: 0; padding: 0 0 3px; border: 0; border-radius: 8px; background: none; box-sizing: border-box; font: inherit; font-size: 11.5px; font-weight: 500; line-height: 16px; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; transition: background-color 0.15s; }
+.rd.rbz button.rbz-col:hover, .rd.rbz button.rbz-col[data-state="open"] { background: #f5f6f8; }
+.rd.rbz .rbz-col.now { font-weight: 600; color: #141a24; }
+.rd.rbz .rbz-col.ahead { color: #b0b7c3; cursor: default; }
+.rd.rbz .rbz-col:focus-visible { outline: none; }
+.rd.rbz .rbz-col:focus-visible span { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .rd.rbz .rbz-col, .rd.rh.rbz .rls-fig.rbz-fig { transition: none; } }
+
+/* The key's marks, as on the chart: paid a soft green with its edge, open a rust outline, to come dashed grey; a join
+   a green tick, a leave a rust one. Also in the roster's pop-up (portaled), so not under .rd. */
+.rd.rh.rbz .rh-key i.rbz-sw, .rbz-pop i.rbz-sw { display: block; flex: none; width: 12px; height: 12px; border-radius: 3px; box-sizing: border-box; }
+.rbz-sw.paid { background: rgba(47, 122, 63, 0.18); box-shadow: inset 0 0 0 1.5px #2f7a3f; }
+.rbz-sw.open { background: #fff; box-shadow: inset 0 0 0 1.5px #b8471f; }
+.rbz-sw.come { border: 1.5px dashed #98a2b3; }
+.rd.rh.rbz .rh-key i.rbz-sw.tick, .rbz-pop i.rbz-sw.tick { width: 2px; height: 9px; border-radius: 1px; }
+.rbz-sw.tick.join { background: #2f7a3f; }
+.rbz-sw.tick.leave { background: #b8471f; }
+
+/* ---- The logs: a section title and its status on the page, the rows in one hairline card, no line above the first. */
+.rd.rh.rbz .rls-card.rbz-card { padding: 0; }
+.rd.rh.rbz .rbz-card .rls-none { padding: 16px 18px; }
+.rd.rbz .rbz-rows > .rls-row:first-child { border-top: 0; }
+.rd.rbz .rbz-row .rls-row-main { min-height: 52px; padding: 0 12px 0 18px; column-gap: 16px; }
+.rd.rbz .rbz-row.opens .rls-row-main { cursor: pointer; }
+/* The date is the row's own link to the invoice (keyboard focus underlines it, rd-row-hit); otherwise no underline. */
+.rd.rbz a.rd-row-hit { text-decoration: none; }
+.rd.rbz a.rd-row-hit:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
+/* A draft the client can't see: there, faded, not counted. */
+.rd.rbz .rbz-row.draft .rls-row-main { opacity: 0.5; }
+.rd.rbz .rbz-who { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
+.rd.rbz .rbz-name { min-width: 0; overflow: hidden; font-size: 15px; font-weight: 600; color: #141a24; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rbz a.rbz-name:hover { text-decoration: underline; text-decoration-color: #c9cfd8; text-underline-offset: 3px; }
+.rd.rbz a.rbz-name:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
+.rd.rbz .rbz-num { flex: none; font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rd.rbz .rbz-when { font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rd.rbz .rbz-when.late { font-weight: 600; color: #b8471f; }
+.rd.rbz .rbz-amt { font-size: 14px; font-weight: 600; color: #141a24; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rd.rbz .rbz-amt.none { font-weight: 500; color: #98a2b3; }
+.rd.rbz .rbz-facts { min-width: 0; overflow: hidden; font-size: 13px; font-weight: 500; color: #5b6474; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+/* The state pill (design rules 8), the column's width, the word centred. */
+.rd.trn.rbz .trn-state.rbz-state { justify-content: center; width: 100%; box-sizing: border-box; }
+/* The track as its tinted tag, one width down the column. */
+.rd.rbz .rbz-tag { display: inline-flex; align-items: center; justify-content: center; gap: 5px; justify-self: stretch; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--t); box-sizing: border-box; font-size: 11.5px; font-weight: 600; color: var(--c); white-space: nowrap; }
+.rd.rbz .rbz-tag svg { flex: none; translate: 0 -0.5px; }
+.rd.rbz .rbz-act { display: flex; justify-content: flex-end; }
+.rd.rbz .rbz-act .trn-pill { text-decoration: none; }
+
+/* ---- The pop-ups (portaled, so never under .rd): the floating list, as the Phases' Extend menu. Six rows, then it
+   scrolls inside (design rules 6). */
+.rbz-pop.rbz-pop { z-index: 60; width: 400px; max-width: calc(100vw - 32px); padding: 6px; border: 0; border-radius: 14px; background: #fff; color: #141a24; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; }
+.rbz-pop.rbz-pop-money { width: 460px; }
+.rbz-pop.rbz-pop-roster { width: 280px; }
+.rbz-pop-head { display: flex; align-items: baseline; gap: 10px; min-width: 0; padding: 8px 10px 6px; font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rbz-pop-head b { flex: none; font-size: 14px; font-weight: 600; color: #141a24; }
+.rbz-pop-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rbz-pop-list { display: flex; flex-direction: column; max-height: 240px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+.rbz-pop-row { display: grid; flex: none; align-items: center; min-height: 40px; padding: 0 10px; border-radius: 8px; box-sizing: border-box; font-size: 13px; font-weight: 500; color: inherit; text-decoration: none; }
+a.rbz-pop-row:hover, a.rbz-pop-row:focus-visible { outline: none; background: #f5f6f8; }
+.rbz-pop-row.off { opacity: 0.45; }
+.rbz-pop-row.rbz-pop-person { grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; }
+.rbz-pop-row.still { cursor: default; }
+.rbz-pop-name { min-width: 0; overflow: hidden; font-size: 13.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
+.rbz-pop-name small { margin-left: 8px; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rbz-pop-grey { font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rbz-pop-amt { font-size: 13px; font-weight: 600; color: #141a24; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rbz-pop-label { display: flex; flex: none; align-items: center; gap: 7px; padding: 10px 10px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.rbz-pop-none { margin: 0; padding: 4px 10px 10px; font-size: 13px; font-weight: 500; color: #8b93a1; }
+/* The state pill, as on the page (trn.css's .rd.trn .trn-state, which can't reach a portal). */
+.rbz-pop .trn-state { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 22px; padding: 0 8px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; box-sizing: border-box; font-size: 11.5px; font-weight: 600; color: #8b93a1; white-space: nowrap; }
+.rbz-pop .trn-state.good { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.35); color: #2f7a3f; }
+.rbz-pop .trn-state.warn { box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.35); color: #b8471f; }

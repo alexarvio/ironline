@@ -316,7 +316,7 @@ export function removeClient(clientId: number, opts: { keepInvoices?: boolean } 
   // Everything else of theirs: every collection's rows with their client_id.
   const store = data as unknown as Record<string, unknown>;
   for (const [name, value] of Object.entries(store)) {
-    if (!Array.isArray(value) || name === "users" || name === "account_deletions") continue;
+    if (!Array.isArray(value) || name === "users" || name === "account_deletions" || name === "client_departures") continue;
     if (name === "invoices" && opts.keepInvoices) continue;
     store[name] = value.filter((row) => !(row && typeof row === "object" && (row as { client_id?: unknown }).client_id === clientId));
   }
