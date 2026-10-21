@@ -1015,10 +1015,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           // The icon columns on the rows (30 Sep): one for each kind some row
           // in this session has, so a lone swap sits beside the chat with no
           // empty video slot between, and each kind still lines up down the rows.
-          const videoIn = (id: number) => {
-            const v = videos[id];
-            return !!v && (v.state === "in" || v.state === "replied");
-          };
+          // A video on the row in any state, asked for too (21 Oct, Alex: an ask had no icon): asked a quiet grey ring
+          // (waiting for the client), in rust (waiting for the coach), replied green.
+          const videoIn = (id: number) => !!videos[id];
           const flagCols = {
             chat: rows.some((r) => r.exerciseChat.some((m) => !m.mine)),
             video: rows.some((r) => videoIn(r.id)),
@@ -1068,13 +1067,15 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     </span>
                   )}
                   {(() => {
-                    const vs = rows.map((r) => videos[r.id] ?? null).filter((v) => v && (v.state === "in" || v.state === "replied"));
+                    // The most pressing first: one in (waiting for the coach), then one asked for (waiting for the client), then replied.
+                    const vs = rows.map((r) => videos[r.id] ?? null).filter((v): v is NonNullable<typeof v> => !!v);
                     if (vs.length === 0) return null;
-                    const waiting = vs.some((v) => v!.state === "in");
-                    const photo = vs.every((v) => v!.media === "photo");
+                    const state = vs.some((v) => v.state === "in") ? "in" : vs.some((v) => v.state === "asked") ? "asked" : "replied";
+                    const photo = state !== "asked" && vs.filter((v) => v.state === state).every((v) => v.media === "photo");
                     const word = photo ? "photo" : "video";
+                    const title = state === "in" ? `${firstName} sent a ${word} · waiting for your reply` : state === "asked" ? `Video asked for · waiting for ${firstName}` : `Their ${word} · replied`;
                     return (
-                      <span className={`rd-flag video ${waiting ? "in" : "replied"}`} title={waiting ? `${firstName} sent a ${word} · waiting for your reply` : `Their ${word} · replied`} aria-label={waiting ? `A ${word} is waiting for your reply` : `${photo ? "Photo" : "Video"} replied`}>
+                      <span className={`rd-flag video ${state}`} title={title} aria-label={title}>
                         {photo ? <PhotoIcon /> : <VideoIcon />}
                       </span>
                     );
@@ -1279,10 +1280,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     type="button"
                                     className={`rd-flag video ${video.state}`}
                                     onClick={() => setDlg({ kind: "video", rowId: r.id })}
-                                    title={video.state === "in" ? `${firstName}'s ${video.media} is in · ${video.media === "photo" ? "look" : "watch"} and reply` : `Their ${video.media} · replied`}
-                                    aria-label={video.state === "in" ? `${video.media === "photo" ? "See" : "Watch"} ${firstName}'s ${video.media}` : `Their ${video.media}, replied`}
+                                    title={video.state === "asked" ? `Video asked for · waiting for ${firstName}${video.recurring ? " · every session" : ""}` : video.state === "in" ? `${firstName}'s ${video.media} is in · ${video.media === "photo" ? "look" : "watch"} and reply` : `Their ${video.media} · replied`}
+                                    aria-label={video.state === "asked" ? `Video asked for, waiting for ${firstName}: edit the ask` : video.state === "in" ? `${video.media === "photo" ? "See" : "Watch"} ${firstName}'s ${video.media}` : `Their ${video.media}, replied`}
                                   >
-                                    {video.media === "photo" ? <PhotoIcon /> : <VideoIcon />}
+                                    {video.media === "photo" && video.state !== "asked" ? <PhotoIcon /> : <VideoIcon />}
                                   </button>
                                 )}
                               </span>
@@ -1789,9 +1790,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           <AskVideoDialog
             firstName={firstName}
             exerciseName={rowById(dlg.rowId)!.swap ?? rowById(dlg.rowId)!.name}
-            session={sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}
-            week={week.index}
-            targets={[rowById(dlg.rowId)!.reps ? `${rowById(dlg.rowId)!.sets} × ${rowById(dlg.rowId)!.reps}` : rowById(dlg.rowId)!.sets ? `${rowById(dlg.rowId)!.sets} sets` : "", rowById(dlg.rowId)!.rpe != null ? `RPE ${rowById(dlg.rowId)!.rpe}` : ""].filter(Boolean)}
             existing={videos[dlg.rowId] ? { note: videos[dlg.rowId]!.note ?? "", recurring: !!videos[dlg.rowId]!.recurring } : null}
             onAsk={async (note, recurring) => {
               const rowId = dlg.rowId;

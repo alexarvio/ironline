@@ -45,6 +45,7 @@ import {
   getPhotoInstructions,
   getPhotoStartDate,
   getProgramCurrentWeekIndex,
+  programWeekNow,
   getStoredNutritionPlan,
   getWeek,
   getWeightSeriesAll,
@@ -182,9 +183,13 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const demoClients = exerciseClientCounts(coachId);
   if (!program) return { draft: null, library, cardioMoves, videos };
 
-  const liveIdx = program.status === "deployed" ? getProgramCurrentWeekIndex(program) : 0;
+  // NOW only on the week this calendar week really is (21 Oct, Alex: an ended programme kept NOW on its last week). Ended
+  // (a later one is live) or run out (its weeks are behind us): every week is over and none is live; it opens on its last.
+  const nowIdx = program.status === "deployed" ? programWeekNow(program) : 0;
+  const allOver = stateOf(program) === "past" || nowIdx > program.total_weeks;
+  const liveIdx = !allOver && nowIdx >= 1 ? nowIdx : 0;
   const askedWeek = Number(params.week);
-  const weekIdx = Number.isInteger(askedWeek) && askedWeek >= 1 && askedWeek <= program.total_weeks ? askedWeek : Math.max(1, liveIdx);
+  const weekIdx = Number.isInteger(askedWeek) && askedWeek >= 1 && askedWeek <= program.total_weeks ? askedWeek : program.status === "deployed" ? getProgramCurrentWeekIndex(program) : 1;
   const weekNumber = program.start_week + weekIdx - 1;
 
   const weeks = Array.from({ length: program.total_weeks }, (_, i) => {
@@ -193,7 +198,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     // Sessions have no set weekday (any order, any day), so a session counts
     // as not done once its week is over, or sooner once the client skipped it,
     // ended it early or logged part of it.
-    const over = i + 1 < liveIdx || stateOf(program) === "past";
+    const over = i + 1 < liveIdx || allOver;
     // One dot a session, every session, so the dots always count the
     // sessions listed under the week: green once the client completed it
     // (every set logged, every cardio ticked); red when they said they
@@ -251,7 +256,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       trained: dots.map((x) => x.done),
       missed: dots.map((x) => x.missed),
       skipped: dots.map((x) => x.skipped),
-      state: (i + 1 < liveIdx ? "past" : i + 1 === liveIdx ? "live" : "ahead") as "past" | "live" | "ahead",
+      state: (allOver || i + 1 < liveIdx ? "past" : i + 1 === liveIdx ? "live" : "ahead") as "past" | "live" | "ahead",
     };
   });
 

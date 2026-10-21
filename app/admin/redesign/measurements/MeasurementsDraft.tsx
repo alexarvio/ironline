@@ -308,7 +308,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const [show, setShow] = useState<"table" | "graph" | "feed">("table");
   const [logCadence, setLogCadence] = useState<Cadence>("daily");
   const view = plan[logCadence];
-  const long = logCadence === "daily" ? plan.dailyLong : logCadence === "weekly" ? plan.weeklyLong : plan.monthlyLong;
+  const longOf = (c: Cadence) => (c === "daily" ? plan.dailyLong : c === "weekly" ? plan.weeklyLong : plan.monthlyLong);
+  const long = longOf(logCadence);
   // The Table and the Feed show the recent window or everything since the client's first entry (6 Oct); the Graph has its own switch.
   const [range, setRange] = useState<"recent" | "all">("recent");
   const hasAll = long.periods.length > view.periods.length;
@@ -319,6 +320,21 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const logPages = Math.max(1, Math.ceil(logShown.periods.length / PAGE));
   const logPageNow = Math.min(logPage, logPages);
   const logPaged = { ...logShown, periods: logShown.periods.slice((logPageNow - 1) * PAGE, logPageNow * PAGE) };
+  // One height through the rhythms, the range and the pages (21 Oct, Alex: switching one made the screen jump): room for
+  // the most rows any rhythm and range can show, a page at most; a rhythm with nothing asked (None yet) keeps it too.
+  const logRows = Math.min(PAGE, Math.max(0, ...CADENCES.map((c) => (plan[c].metrics.length ? Math.max(plan[c].periods.length, longOf(c).periods.length) : 0))));
+  const logSteady = !plan.notStarted && show !== "graph" && logRows > 0;
+  // The table's sideways scrollbar, once the metrics outrun the card: Windows draws it in the layout, so its height joins
+  // the head's or the pager would move by it on a short page. Measured as it comes and goes (the observer's first call too).
+  const logCard = useRef<HTMLDivElement>(null);
+  const [logBar, setLogBar] = useState(0);
+  useEffect(() => {
+    const el = logCard.current?.querySelector<HTMLElement>(".rm-scroll");
+    if (!el) return;
+    const ro = new ResizeObserver(() => setLogBar(Math.max(0, el.offsetHeight - el.clientHeight)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [show, logCadence, view.metrics.length, plan.notStarted]);
   // The client's note on a check-in sits by its date (a bubble); Reply there is a message linked to that check-in.
   const replyTo = (period: string) => message({ label: `${CAD[logCadence].label} check-in · ${whenOf(period, logShown.periods.find((p) => p.key === period)?.label ?? period)}`, link: { kind: "checkin", section: logCadence, period } });
 
@@ -639,7 +655,14 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             {rhythmToggle(logCadence, setLogCadence, false)}
           </div>
         </div>
-        <div className="rls-card rls-log">
+        {/* As tall as its fullest page in the Table and the Feed (.rd-steady): a Table row is 42px with its hairline, under
+            a 45.75px head; a Feed row 49px, under 29.75px of column heads; the card's edge, padding and the rows' own
+            12px under them make up the rest. The Graph keeps its own height. */}
+        <div
+          ref={logCard}
+          className={`rls-card rls-log${logSteady ? " rd-steady" : ""}`}
+          style={logSteady ? ({ "--log-rows": logRows, "--log-row": show === "table" ? "42px" : "49px", "--log-head": show === "table" ? `${73.75 + logBar}px` : "57.75px" } as React.CSSProperties) : undefined}
+        >
           {/* Not started or nothing asked: two words, the header already says the state and the dates. */}
           {plan.notStarted ? (
             <p className="rls-none">None yet</p>

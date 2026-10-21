@@ -36,7 +36,9 @@
 .rm-table { display: grid; align-items: center; column-gap: 24px; min-width: max-content; }
 .rm-table .rd-cols { display: contents; }
 .rm-table .rd-cols span, .rm-th { padding: 6px 0 8px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; }
-.rm-th { display: flex; flex-direction: column; gap: 1px; }
+/* Every head starts on the one line (21 Oct, Alex: DATE sat centred against the two-line metric heads, not on WEIGHT's
+   line); the cell still fills the row so the line under the heads stays one. */
+.rm-th { display: flex; flex-direction: column; gap: 1px; align-self: stretch; }
 .rm-th em { font-size: 10px; font-style: normal; font-weight: 700; letter-spacing: 0.06em; }
 .rm-td { padding: 10px 0; border-top: 1px solid #eceff3; font-size: 14px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* The date flush left; the note bubble, when there is one, at the cell's right edge (12 Oct), so every bubble lines up down the column, by the first metric. */

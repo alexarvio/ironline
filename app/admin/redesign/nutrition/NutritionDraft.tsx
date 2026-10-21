@@ -768,8 +768,10 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
               </div>
             ))}
           </div>
+          {/* With more than a page, the rows keep a full page's height (21 Oct, Alex: the last page made the screen jump;
+              .rd-steady): a day's row is 49px with its hairline, under 29.75px of column heads and over 6px of room. */}
           {view.days.length > 0 && (
-            <div className="rd-rows">
+            <div className={`rd-rows${pages > 1 ? " rd-steady" : ""}`} style={pages > 1 ? ({ "--log-rows": PAGE, "--log-row": "49px", "--log-head": "35.75px" } as React.CSSProperties) : undefined}>
               <div className="rd-cols" aria-hidden="true" style={lGrid}>
                 <span>Date</span>
                 <span>Logged</span>

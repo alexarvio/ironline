@@ -17,7 +17,7 @@ import type { HomeBoard, MuscleGroup, MuscleWindow, PerGroup } from "../../../li
 import { MessageDialog } from "../training/TrainingDraft";
 import AppAccessButton from "./AppAccessButton";
 import type { ClientAccess } from "../../../lib/access-actions";
-import { dayMonth, logDate } from "../../../lib/dayMonth";
+import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
 import { SepJoin } from "../Sep";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { TrackIcon } from "../plan/PlanDraft";
@@ -197,8 +197,10 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
     if (t) onOpenTab(t);
   };
 
-  // The date column holds "Wed, 30 Sep  18:48".
-  const actGrid = { gridTemplateColumns: "148px minmax(0, 1fr)", columnGap: 20 } as const;
+  // The date at the left of its column, the time centred in one of its own (21 Oct, Alex: every time lines up), then
+  // the thing. The date column is as wide as the whole feed's widest date, so it never moves between kinds or pages.
+  const dateW = useMemo(() => logDateWidth(home.events.map((e) => new Date(e.at))), [home.events]);
+  const actGrid = { gridTemplateColumns: `${dateW}px 48px minmax(0, 1fr)`, columnGap: 12 } as const;
 
   return (
     <div className="rd trn rls rh">
@@ -277,7 +279,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
       </div>
 
       {/* ---- Activity: what they did, one kind at a time. A log (design rules 8): the date first as every log's
-          (logDate, .rd-logdate) with the time faint after it, the thing semi-bold, the rest in grey after it on the one
+          (logDate, .rd-logdate) with the time centred in its own column (.rd-logtime), the thing semi-bold, the rest in grey after it on the one
           line. A row opens the thing on its tab. */}
       <section className="rls-section">
         <div className="trn-weekhead">
@@ -294,7 +296,10 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
             </div>
           </div>
         </div>
-        <div className="rls-card rh-card">
+        {/* Always a full page tall (21 Oct, Alex): another kind or the last page never moves the pager. A full page is as
+            many rows as All can show (up to 20), as Lifestyle's check-ins: a new client's three rows keep a short card.
+            53px a row with its hairline; the first has none but the card's two 1px edges add one. */}
+        <div className="rls-card rh-card rd-steady" style={{ "--log-rows": Math.max(1, Math.min(PAGE, home.events.length)), "--log-row": "53px", "--log-head": "1px" } as CSSProperties}>
           {shown.length === 0 ? (
             <p className="rls-none">None yet</p>
           ) : (
@@ -305,10 +310,8 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
                 return (
                   <div key={e.id} className="rls-row rh-row">
                     <div className="rls-row-main" style={actGrid} onClick={() => go(e)}>
-                      <span className="rh-when">
-                        <span className="rd-logdate">{logDate(new Date(e.at))}</span>
-                        {clock && <span className="rh-clock">{clock}</span>}
-                      </span>
+                      <span className="rd-logdate">{logDate(new Date(e.at))}</span>
+                      <span className="rd-logtime">{clock}</span>
                       <span className="rh-what">
                         <button type="button" className="rd-row-hit rh-what-title">
                           {head}

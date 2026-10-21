@@ -306,6 +306,9 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
 .rd-chattab.open { right: min(460px, 100vw); transform: none; }
 @media (max-width: 520px) { .rd-chattab.open { opacity: 0; pointer-events: none; } }
 @media (prefers-reduced-motion: reduce) { .rd-chattab { transition: none; } }
+/* The tabs never cover the page (21 Oct, Alex: they sat over ⋯ and the header's pills): a page with them keeps 60px on its
+   right, the tabs' 41px (45px, open) and air, so its last control ends clear of them, the chat open or closed. */
+.rd-frame:has(.rd-chattab) > .rd-page { padding-right: 60px; }
 
 /* The link over the box, easy to take away before sending (12 Oct): a round
    × that reads as a button, not a stray character. */

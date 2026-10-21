@@ -199,18 +199,18 @@
   .npd.npd .rq-blank, .npd.npd .rq-sentence .rd-picker.rq-daypick { transition: none; }
 }
 
-/* Events: bars for a stretch, pins for a moment, on the phases' grid; the log under it. */
+/* Events: bars for a stretch, pins for a moment, on the phases' grid; the log under it. An event bar is a phase bar's
+   size (21 Oct, Alex): 38px in a 44px lane (EventsCard's EV_LANE), radius 10, the name 12.5/600 and its facts 10.5/500,
+   so one lane of events is as tall as a phase's track; inside, a phase bar's parts (.rq-bar-main, .rq-bar-pill). */
 .rq-evlanes { position: relative; }
-.rq-evbar { position: absolute; z-index: 2; display: flex; flex-direction: column; justify-content: center; gap: 1px; height: 32px; padding: 0 10px; border: 1px solid; border-radius: 9px; font: inherit; text-align: left; cursor: pointer; overflow: hidden; box-sizing: border-box; }
-.rq-evbar b { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-.rq-evbar small { font-size: 10px; font-weight: 600; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+.rq-evbar { position: absolute; z-index: 2; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px 0 14px; border: 1px solid; border-radius: 10px; font: inherit; text-align: left; cursor: pointer; overflow: hidden; box-sizing: border-box; }
 /* No shadows on the page (20 Oct): a hovered bar takes a full-strength edge instead. */
 .rq-evbar.past, .rq-pin.past { opacity: 0.55; }
-.rq-pin { position: absolute; z-index: 2; display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 8px 0 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; white-space: nowrap; }
+.rq-pin { position: absolute; z-index: 2; display: flex; align-items: center; gap: 7px; height: 38px; padding: 0 8px 0 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; white-space: nowrap; }
 .rq-pin i { flex: none; width: 10px; height: 10px; margin-left: -5px; border-radius: 999px; box-shadow: 0 0 0 3px #fff; }
 .rq-pin-text { display: flex; flex-direction: column; line-height: 1.2; }
-.rq-pin-text b { font-size: 12px; font-weight: 600; color: #141a24; }
-.rq-pin-text small { font-size: 10px; font-weight: 600; color: #8b93a1; }
+.rq-pin-text b { font-size: 12.5px; font-weight: 600; color: #141a24; }
+.rq-pin-text small { font-size: 10.5px; font-weight: 500; color: #8b93a1; }
 .rq-pin:hover .rq-pin-text b { text-decoration: underline; text-decoration-color: #c9cfd8; text-underline-offset: 3px; }
 .rq-evlog { padding: 4px 10px 8px; border-top: 1px solid #eceff3; }
 .rq-evlog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px 10px 14px; }
@@ -223,7 +223,6 @@
 .rq-evrow-when b { display: flex; align-items: center; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; }
 /* Two dates breathe (20 Oct, Alex): the pop-up's faint arrow (21 Oct) with air either side. */
 .rq-evrow-when b i { display: inline-flex; margin: 0 9px; color: #98a2b3; }
-.rq-evrow-when small { font-size: 11px; font-weight: 500; color: #8b93a1; }
 .rq-evrow-main { display: flex; align-items: center; min-width: 0; }
 .rq-evrow-main b { flex: 0 1 auto; min-width: 0; font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rq-evrow-main .rq-ev-by { flex: none; }

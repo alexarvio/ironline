@@ -114,24 +114,26 @@ const STATUS: Record<DraftMeeting["status"], { text: string; cls: string }> = { 
 /** A call's title (21 Oct, Alex): the recap's title once written, else the topic, else its kind ("Review call"). */
 const titleOf = (m: { summaryTitle: string; topic: string; kind: MeetingTypeId }) => m.summaryTitle.trim() || m.topic.trim() || `${meetingTypeOf(m.kind).label} call`;
 
-/** The title with the kind after it; with no title of its own, the kind's name faint (the tag would say it twice). */
-function CallTitle({ m }: { m: { summaryTitle: string; topic: string; kind: MeetingTypeId } }) {
+/** The title with the kind after it; with no title of its own, the kind's name faint (the tag would say it twice). Past
+    calls keep the kind in a column of their own (`tag={false}`). */
+function CallTitle({ m, tag = true }: { m: { summaryTitle: string; topic: string; kind: MeetingTypeId }; tag?: boolean }) {
   const own = m.summaryTitle.trim() || m.topic.trim();
   return own ? (
     <>
       {own}
-      <KindTag kind={m.kind} />
+      {tag && <KindTag kind={m.kind} />}
     </>
   ) : (
     <span className="rt-untitled">{titleOf(m)}</span>
   );
 }
 
-/** The kind of call as a tag in its colour (21 Oct, Alex: it showed nowhere): the tint behind, the icon and word in it. */
-function KindTag({ kind }: { kind: MeetingTypeId }) {
+/** The kind of call as a tag in its colour (21 Oct, Alex: it showed nowhere): the tint behind, the icon and word in it.
+    `wide`: a column's tag, the column's width with the word centred, as every pill down a column. */
+function KindTag({ kind, wide }: { kind: MeetingTypeId; wide?: boolean }) {
   const t = meetingTypeOf(kind);
   return (
-    <span className="rt-kind" style={{ color: t.color, background: `rgba(${t.rgb}, 0.12)` }}>
+    <span className={`rt-kind${wide ? " wide" : ""}`} style={{ color: t.color, background: `rgba(${t.rgb}, 0.12)` }}>
       <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d={t.icon} />
       </svg>
@@ -336,7 +338,8 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
       {isOpen && <div className="rt-rowbody">{callBody(m)}</div>}
     </div>
   );
-  const pGrid = { gridTemplateColumns: "150px minmax(200px, 1fr) 130px 32px", columnGap: 24 } as const;
+  // The kind of call in a column of its own by Status (21 Oct, Alex: so it always lines up), its tag the column's width.
+  const pGrid = { gridTemplateColumns: "150px minmax(200px, 1fr) 110px 130px 32px", columnGap: 24 } as const;
 
   return (
     // Built as the track tabs are (21 Oct, Alex): Training's header, each section's title on the page and its content in one hairline card.
@@ -433,6 +436,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
               <div className="rd-cols" aria-hidden="true" style={pGrid}>
                 <span>Date</span>
                 <span>Call</span>
+                <span>Type</span>
                 <span>Status</span>
                 <span />
               </div>
@@ -453,8 +457,11 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                       </span>
                       <span className="rd-ex">
                         <span className="rd-ex-name rt-call">
-                          <CallTitle m={m} />
+                          <CallTitle m={m} tag={false} />
                         </span>
+                      </span>
+                      <span>
+                        <KindTag kind={m.kind} wide />
                       </span>
                       <span>
                         <span className={`rt-state ${st.cls}`}>{st.text}</span>

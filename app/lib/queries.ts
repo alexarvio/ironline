@@ -809,12 +809,17 @@ export function getDraftProgram(clientId: number): TrainingProgram | null {
 // week (a program that's run its full course just stays parked on its
 // final week) or before the first.
 export function getProgramCurrentWeekIndex(program: TrainingProgram): number {
+  return Math.min(Math.max(programWeekNow(program), 1), program.total_weeks);
+}
+
+/** The same, unclamped: the programme's week this calendar week falls in, above total_weeks once its weeks have run
+    out (21 Oct, Alex: the coach's week rail puts NOW only on a week that really is this one). 1 when not deployed. */
+export function programWeekNow(program: TrainingProgram): number {
   if (!program.deployed_at) return 1;
   const start = weekStart(localDayOf(program.deployed_at));
   const now = weekStart(localDateStr());
   const diffDays = Math.round((new Date(`${now}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / 86400000);
-  const index = Math.floor(diffDays / 7) + 1;
-  return Math.min(Math.max(index, 1), program.total_weeks);
+  return Math.floor(diffDays / 7) + 1;
 }
 
 // The label shown for one of this program's weeks — always "Week N" where N

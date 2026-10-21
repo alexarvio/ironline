@@ -28,3 +28,13 @@ export function logDate(d: string | Date): string {
   const x = typeof d === "string" ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T00:00:00` : d) : d;
   return `${WEEKDAYS[x.getDay()]}, ${x.getDate()} ${MONTHS[x.getMonth()]}${x.getFullYear() !== new Date().getFullYear() ? ` ${x.getFullYear()}` : ""}`;
 }
+
+/**
+ * The width of a log's date column (21 Oct, Alex: the time in a column of its own, so every row's time lines up): the
+ * widest `logDate` at .rd-logdate's 13.5px Archivo is 79px (`Wed, 28 May`), 112px with a year. Pass the whole list's
+ * dates, not one page's, so the column keeps its width from page to page.
+ */
+export function logDateWidth(dates: (string | Date)[]): number {
+  const year = new Date().getFullYear();
+  return dates.some((d) => (typeof d === "string" ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T00:00:00` : d) : d).getFullYear() !== year) ? 116 : 84;
+}

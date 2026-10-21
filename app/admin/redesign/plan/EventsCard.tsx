@@ -51,6 +51,11 @@ function KindIcon({ id, size = 20 }: { id: string | null; size?: number }) {
 // Real, not a draft: events and the coach's own categories save through
 // the actions in lib/actions.ts and come back from the loader.
 
+/** An events lane, as a phase's track (21 Oct, Alex: the same size): a 38px bar with 3px above and below; plan.css's .rq-evbar. */
+const EV_LANE = 44;
+/** A bar's or a pin's top in its lanes: the lanes' 6px padding, the 3px over the bar, then a lane each. */
+const evTop = (lane: number) => `${9 + lane * EV_LANE}px`;
+
 /** kind is the category's id, and optional: an event can just be an event. */
 export type PlanEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it from their Home. */ byClient?: boolean; /** Comes back on these weekdays (19 Oct), lib/eventRepeat.ts. */ repeat?: EventRepeat | null };
 
@@ -98,6 +103,13 @@ const standingParts = (today: string, e: PlanEvent): string[] => {
 };
 /** The same as one string, for a tooltip. */
 const standing = (today: string, e: PlanEvent) => standingParts(today, e).join(" · ");
+/** A bar's pill, as a phase bar's "week 3 of 6" (21 Oct, Alex): on now, `Day 18 of 23` (a repeating one with no end,
+    `Ongoing`); still to come or over, nothing (21 Oct, Alex: a coming one is just its days). */
+const barStanding = (today: string, e: PlanEvent): string | null => {
+  if (today < e.start || today > e.end) return null;
+  if (e.repeat && !e.repeat.until) return "Ongoing";
+  return `Day ${daysBetween(e.start, today) + 1} of ${daysBetween(e.start, e.end) + 1}`;
+};
 
 export type EventsCardProps = {
   clientId: number;
@@ -331,7 +343,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
               <div className="rq-tl-row">
                 <div className="rq-tl-label" />
                 <div className="rq-tl-clip">
-                  <div ref={lanesRef} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: "repeat(1, 40px)" }}>
+                  <div ref={lanesRef} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(1, ${EV_LANE}px)` }}>
                     {weeks.map((w, i) => (
                       <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: "1 / span 1" }} role="button" tabIndex={-1} aria-label={`New event in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev)} />
                     ))}
@@ -353,7 +365,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                   </span>
                 </div>
                 <div className="rq-tl-clip">
-                  <div ref={gi === 0 ? lanesRef : undefined} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${g.laneCount}, 40px)` }} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
+                  <div ref={gi === 0 ? lanesRef : undefined} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${g.laneCount}, ${EV_LANE}px)` }} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
                     {weeks.map((w, i) => (
                       <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: `1 / span ${g.laneCount}` }} role="button" tabIndex={-1} aria-label={`New ${g.chrome.label.toLowerCase()} in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev, g.id)} />
                     ))}
@@ -370,7 +382,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                         setDlg({ event: e });
                       };
                       return single ? (
-                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: `${10 + lane * 40}px`, color: k.ink }} onPointerDown={(ev) => !past && beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${dayMonth(e.start)} · ${standing(today, e)}`}>
+                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: evTop(lane), color: k.ink }} onPointerDown={(ev) => !past && beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${dayMonth(e.start)} · ${standing(today, e)}`}>
                           <i style={{ background: k.ink }} />
                           <span className="rq-pin-text">
                             <b>{e.title}</b>
@@ -384,7 +396,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                           key={e.id}
                           type="button"
                           className={`rq-evbar${past ? " past" : ""}${dragging ? " dragging" : ""}`}
-                          style={{ left: `${p.left}%`, width: `${p.width}%`, top: `${10 + lane * 40}px`, background: k.tint, color: k.ink, borderColor: `rgba(${rgbOf(k.ink)}, 0.5)` }}
+                          style={{ left: `${p.left}%`, width: `${p.width}%`, top: evTop(lane), background: k.tint, color: k.ink, borderColor: `rgba(${rgbOf(k.ink)}, 0.5)` }}
                           onPointerDown={(ev) => {
                             if (past || (ev.target as HTMLElement).closest(".rq-bar-edge")) return;
                             beginDrag(ev, e, "move");
@@ -395,11 +407,16 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                           {/* A past one has no handles: it can't be moved or stretched. */}
                           {!past && <span className="rq-bar-edge left" onPointerDown={(ev) => beginDrag(ev, e, "start")} onClick={(ev) => ev.stopPropagation()} />}
                           {!past && <span className="rq-bar-edge right" onPointerDown={(ev) => beginDrag(ev, e, "end")} onClick={(ev) => ev.stopPropagation()} />}
-                          <b>{e.title}</b>
-                          <small>
-                            {/* Repeating (19 Oct): the days it comes back on, not a length. */}
-                            <SepJoin parts={[e.repeat ? repeatWords(e.repeat, { until: false }) : `${daysBetween(shown.start, shown.end) + 1} days`, ...standingParts(today, shown)]} />
-                          </small>
+                          {/* Built as a phase's bar (21 Oct, Alex): the title, its length under it (repeating: the days it
+                              comes back on), and while it is on, where it stands in a pill on the right: Day 18 of 23. */}
+                          <span className="rq-bar-main">
+                            <span className="rq-bar-name">{e.title}</span>
+                            <span className="rq-bar-meta">{e.repeat ? repeatWords(e.repeat, { until: false }) : `${daysBetween(shown.start, shown.end) + 1} days`}</span>
+                          </span>
+                          {(() => {
+                            const word = barStanding(today, shown);
+                            return word && <span className="rq-bar-pill">{word}</span>;
+                          })()}
                         </button>
                       );
                     })}
@@ -422,7 +439,9 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
         {!logOpen ? null : listed.length === 0 ? (
           <p className="rq-evlog-empty">None yet</p>
         ) : (
-          <div className="rd-rows">
+          // With more than a page, the rows keep a full page's height (21 Oct, Alex: the last page made the screen jump;
+          // .rd-steady): a row is 43px with its hairline (the 22px kind pill and 10px either side), over 12px of room.
+          <div className={`rd-rows${pages > 1 ? " rd-steady" : ""}`} style={pages > 1 ? ({ "--log-rows": PAGE, "--log-row": "43px", "--log-head": "12px" } as React.CSSProperties) : undefined}>
             {onPage.map((e) => {
               const k = chromeOf(cats, e.kind);
               return (
@@ -441,13 +460,17 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                           </>
                         )}
                       </b>
-                      {e.repeat && <small>{repeatWords(e.repeat, { until: false })}</small>}
                     </span>
-                    {/* Then the title, its note running on right after it (21 Oct, Alex), so every row is one line high; the kind after them. */}
+                    {/* Then the title, its repeat days and its note running on right after it (21 Oct, Alex), so every row is
+                        one line high (the log keeps one height); the kind after them. */}
                     <span className="rq-evrow-main">
                       <b>{e.title}</b>
                       {e.byClient && <span className="rq-ev-by">From client</span>}
-                      {e.note && <span className="rq-evrow-note">{e.note}</span>}
+                      {(e.repeat || e.note) && (
+                        <span className="rq-evrow-note">
+                          <SepJoin parts={[e.repeat ? repeatWords(e.repeat, { until: false }) : null, e.note || null]} />
+                        </span>
+                      )}
                     </span>
                     <span className="rq-state" style={{ background: k.tint, color: k.ink }}>
                       {k.label}

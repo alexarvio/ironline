@@ -165,9 +165,6 @@
 /* The title keeps its room; the grey after it gives way first, each cut with an ellipsis. */
 .rd.rh .rh-what-title { display: block; flex: 0 1 auto; min-width: 0; overflow: hidden; font-size: 15px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
 .rd.rh .rh-what-note { flex: 1 1 7em; min-width: 0; overflow: hidden; font-size: 13px; font-weight: 500; color: #8b93a1; text-overflow: ellipsis; white-space: nowrap; }
-/* The date first, as every log's (logDate in .rd-logdate, draft.css), the time faint right after it. */
-.rd.rh .rh-when { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
-.rd.rh .rh-clock { flex: none; font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 
 /* ---- Pop-ups (portaled, so never under .rd): the .dlh card (training/trn.css). */
 .rh-field { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }

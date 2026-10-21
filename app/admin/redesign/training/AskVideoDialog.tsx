@@ -3,22 +3,18 @@
 import "./ask-video.css";
 import { useEffect, useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { SepJoin } from "../Sep";
 
 // Asking the client for a video of one exercise, in the admin hairline style
-// (20 Oct, Alex): the title, one quiet line of facts (the exercise, the
-// session, the week, its targets), the note as a clean line, one switch: Ask
-// every session. No explanations. Opened again on a request already made, it
-// edits it.
+// (20 Oct, Alex): the title, the exercise's name under it and nothing else
+// (21 Oct, Alex: no session, week or targets), the note as a clean line, one
+// switch: Ask every session. No explanations. Opened again on a request
+// already made, it edits it.
 
 const MAX = 280;
 
 export default function AskVideoDialog({
   firstName,
   exerciseName,
-  session,
-  week,
-  targets,
   existing,
   onAsk,
   onWithdraw,
@@ -27,11 +23,6 @@ export default function AskVideoDialog({
   firstName: string;
   /** The exercise as the client sees it: a variation's or substitute's name when they are on one. */
   exerciseName: string;
-  /** The session's name ("Push") and the week it is in. */
-  session: string;
-  week: number;
-  /** ["3 × 8-10", "RPE 8"]: only what is set. */
-  targets: string[];
   /** A request already on this exercise: edit it. */
   existing: { note: string; recurring: boolean } | null;
   onAsk: (note: string, recurring: boolean) => Promise<void>;
@@ -86,9 +77,7 @@ export default function AskVideoDialog({
           ✕
         </button>
       </div>
-      <DialogDescription className="avh-what">
-        <SepJoin parts={[exerciseName, session, `Week ${week}`, ...targets]} />
-      </DialogDescription>
+      <DialogDescription className="avh-what">{exerciseName}</DialogDescription>
 
       <div className="avh-field">
         <textarea
