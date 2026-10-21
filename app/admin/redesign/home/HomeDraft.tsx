@@ -31,9 +31,9 @@ import type { PhaseTrack } from "../../../lib/db";
 // - The three tracks (Lifestyle, Training, Nutrition): the phase, its week and how far in, then the one figure that
 //   matters right under it. A tile opens its tab.
 // - Muscle balance (sets or volume per group, this window against the one before, or the week's plan against what was
-//   done) beside Strength (all six groups, since the phase began) and Weight (the phase's readings).
-// - Consistency (four weeks, a square a day, per behaviour) with Meetings (the next call, the last) and Invoices (what is
-//   owed, the next to be made) beside it; each of those two opens its tab.
+//   done) beside Strength (all six groups, over 7d, 30d or the phase) and Weight (the phase's readings).
+// - Consistency (the last 30 days, a square a day, per behaviour) with Meetings (the next call big, the last at the foot)
+//   and Invoices (what is owed big; the last paid and the next to be made at the foot) beside it; each opens its tab.
 // - Activity: what they did, one kind at a time, a page at a time; every row leads with its date.
 // Details is a pop-up: member info, coaching info and the coach's own note.
 
@@ -143,6 +143,18 @@ const AXES: MuscleGroup[] = ["Back", "Chest", "Core", "Legs", "Shoulders", "Arms
 const STRENGTH_GROUPS: MuscleGroup[] = ["Back", "Chest", "Shoulders", "Arms", "Legs", "Core"];
 type Measure = "sets" | "volume";
 type Span = "7d" | "30d" | "phase" | "plan";
+/** Strength's windows, in Muscle balance's order (21 Oct, Alex: the same toggle). */
+type StrengthSpan = "7d" | "30d" | "phase";
+const STRENGTH_SPANS: { id: StrengthSpan; label: string }[] = [
+  { id: "7d", label: "7d" },
+  { id: "30d", label: "30d" },
+  { id: "phase", label: "Phase" },
+];
+/** A track's colour at a strength (a hex from phaseChrome): the soft fill under its full-strength edge, as a phase's bar. */
+const tintOf = (hex: string, alpha: number) => {
+  const n = parseInt(hex.slice(1, 7), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+};
 
 export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { clientId: number; firstName: string; home: DraftHome; onOpenTab: (tab: string) => void }) {
   const router = useRouter();
@@ -264,7 +276,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
       <div className="rh-trio">
         <ConsistencyCard days={board.days} />
         <MeetingsCard next={board.nextCall} last={board.lastCall} onOpen={() => onOpenTab("meetings")} />
-        <InvoicesCard owed={board.outstanding} next={board.nextInvoice} onOpen={() => onOpenTab("invoices")} />
+        <InvoicesCard owed={board.outstanding} paid={board.lastPaid} next={board.nextInvoice} onOpen={() => onOpenTab("invoices")} />
       </div>
 
       {/* ---- Activity: what they did, one kind at a time. A log (design rules 8): the date first as every log's
@@ -570,9 +582,31 @@ const corner = (i: number, r: number) => {
   const a = ((-90 + 60 * i) * Math.PI) / 180;
   return [Math.round((CX + r * Math.cos(a)) * 10) / 10, Math.round((CY + r * Math.sin(a)) * 10) / 10] as const;
 };
+/** A closed shape through the corners with each corner rounded (21 Oct, Alex: "a bit round so the shape is smoother"):
+    the line runs to just before a corner and curves round it, up to `r` along each side and never past half a side, so a
+    spike keeps its length with a soft tip and corners sitting on the centre stay put. */
+const ROUND = 16;
+function roundedPath(pts: (readonly [number, number])[], r: number) {
+  const n = pts.length;
+  const toward = (a: readonly [number, number], b: readonly [number, number], d: number) => {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len = Math.hypot(dx, dy);
+    return len === 0 ? a : ([a[0] + (dx / len) * d, a[1] + (dy / len) * d] as const);
+  };
+  const side = (a: readonly [number, number], b: readonly [number, number]) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const f = (p: readonly [number, number]) => `${Math.round(p[0] * 10) / 10},${Math.round(p[1] * 10) / 10}`;
+  const cuts = pts.map((p, i) => {
+    const prev = pts[(i - 1 + n) % n];
+    const next = pts[(i + 1) % n];
+    const k = Math.min(r, side(prev, p) / 2, side(p, next) / 2);
+    return { into: toward(p, prev, k), out: toward(p, next, k), at: p };
+  });
+  return `M${f(cuts[0].out)}` + cuts.slice(1).map((c) => `L${f(c.into)}Q${f(c.at)} ${f(c.out)}`).join("") + `L${f(cuts[0].into)}Q${f(cuts[0].at)} ${f(cuts[0].out)}Z`;
+}
 function Radar({ now, before, fmt, of, label }: { now: PerGroup; before: PerGroup; fmt: (v: number) => string; of?: PerGroup; label: string }) {
   const scale = Math.max(1, ...AXES.map((g) => Math.max(now[g] ?? 0, before[g] ?? 0)));
-  const shape = (v: PerGroup) => AXES.map((g, i) => corner(i, (RR * Math.max(0, v[g] ?? 0)) / scale).join(",")).join(" ");
+  const shape = (v: PerGroup) => roundedPath(AXES.map((g, i) => corner(i, (RR * Math.max(0, v[g] ?? 0)) / scale)), ROUND);
   const ring = (f: number) => AXES.map((_, i) => corner(i, RR * f).join(",")).join(" ");
   return (
     <svg className="rh-radar" viewBox={`0 0 ${RW} ${RH}`} role="img" aria-label={label}>
@@ -583,8 +617,8 @@ function Radar({ now, before, fmt, of, label }: { now: PerGroup; before: PerGrou
         const [x, y] = corner(i, RR);
         return <line key={g} x1={CX} y1={CY} x2={x} y2={y} stroke="#e1e5eb" strokeWidth={1} />;
       })}
-      <polygon points={shape(before)} fill="none" stroke="#98a2b3" strokeWidth={1.5} strokeDasharray="4 3" strokeLinejoin="round" />
-      <polygon points={shape(now)} fill={TRACK_ACCENT.training} fillOpacity={0.12} stroke={TRACK_ACCENT.training} strokeWidth={2} strokeLinejoin="round" />
+      <path d={shape(before)} fill="none" stroke="#98a2b3" strokeWidth={1.5} strokeDasharray="4 3" strokeLinejoin="round" />
+      <path d={shape(now)} fill={TRACK_ACCENT.training} fillOpacity={0.12} stroke={TRACK_ACCENT.training} strokeWidth={2} strokeLinejoin="round" />
       {AXES.map((g, i) => {
         const [x, y] = corner(i, RR + 10);
         // Top and bottom: centred over / under the corner; the sides: beside it, the two lines either side of its height.
@@ -606,19 +640,31 @@ function Radar({ now, before, fmt, of, label }: { now: PerGroup; before: PerGrou
   );
 }
 
-// ---- Strength: all six groups, each the change since the phase began as a thin ink bar and the %: green up, red
-// down; a group with nothing to compare an empty bar and a grey "–".
+// ---- Strength: all six groups, each the change over the window picked (7d | 30d | Phase, as Muscle balance; Phase
+// at first) as a thin ink bar and the %: green up, red down; a group with nothing to compare an empty bar and a grey "–",
+// every group so in a window with nothing.
 function StrengthCard({ strength }: { strength: HomeBoard["strength"] }) {
+  const [span, setSpan] = useState<StrengthSpan>("phase");
+  const w = strength?.[span] ?? null;
   const rows = STRENGTH_GROUPS.map((g) => {
-    const x = strength?.groups.find((s) => s.group === g);
+    const x = w?.groups.find((s) => s.group === g);
     return { group: g, r: x ? pctOf(x.pct) : null, exercises: x?.exercises ?? 0 };
   });
   const most = Math.max(0, ...rows.map((x) => Math.abs(x.r ?? 0)));
   return (
     <section className="rls-card rh-panel" aria-label="Strength">
-      <div className="rh-panel-head">
+      <div className="rh-panel-head tall">
         <h2 className="rh-panel-title">Strength</h2>
-        {strength && <span className="rh-panel-aside">since {dayMonth(strength.since)}</span>}
+        <span className="rh-panel-tools">
+          {w && <span className="rh-panel-aside">since {dayMonth(w.since)}</span>}
+          <span className="rd-btn-group" role="group" aria-label="Window">
+            {STRENGTH_SPANS.map((s) => (
+              <button key={s.id} type="button" className={span === s.id ? "on" : ""} aria-pressed={span === s.id} onClick={() => setSpan(s.id)}>
+                {s.label}
+              </button>
+            ))}
+          </span>
+        </span>
       </div>
       <div className="rh-str">
         {rows.map((x) => (
@@ -707,7 +753,8 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
   );
 }
 
-// ---- Consistency: the last four weeks, a square a day per behaviour, filled in its track's colour when done.
+// ---- Consistency: the last 30 days (as the server sends them), a square a day per behaviour. A day done wears its
+// track as a phase does (21 Oct, Alex): the colour soft inside, its full strength on the edge; a day not done is grey.
 const CONS: { key: "trained" | "food" | "checkIn"; label: string; track: PhaseTrack; yes: string; no: string }[] = [
   { key: "trained", label: "Trained", track: "training", yes: "trained", no: "no session" },
   { key: "food", label: "Food", track: "nutrition", yes: "food logged", no: "no food logged" },
@@ -720,7 +767,7 @@ function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
     <section className="rls-card rh-panel rh-cons" aria-label="Consistency">
       <div className="rh-panel-head">
         <h2 className="rh-panel-title">Consistency</h2>
-        <span className="rh-panel-aside">Last 4 weeks</span>
+        {days.length > 0 && <span className="rh-panel-aside">Last {days.length} days</span>}
       </div>
       {days.length === 0 ? (
         <p className="rls-none">None yet</p>
@@ -729,7 +776,7 @@ function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
           {CONS.map((c) => {
             const done = days.filter((d) => d[c.key]).length;
             return (
-              <div key={c.key} className="rh-cons-row" style={{ "--rh-c": TRACK_ACCENT[c.track] } as CSSProperties}>
+              <div key={c.key} className="rh-cons-row" style={{ "--rh-c": TRACK_ACCENT[c.track], "--rh-t": tintOf(TRACK_ACCENT[c.track], 0.18) } as CSSProperties}>
                 <span className="rh-cons-label">{c.label}</span>
                 <span className="rh-cons-days" role="img" aria-label={`${c.label}: ${done} of the last ${days.length} days`}>
                   {days.map((d, i) => (
@@ -755,31 +802,28 @@ function SideFact({ label, children }: { label?: string; children: ReactNode }) 
   );
 }
 
-// ---- Meetings, beside Consistency: the next call booked and the last one over, each its date and title. Opens Meetings.
+// ---- Meetings, beside Consistency (21 Oct, Alex: the next call leads): the next call big under the title, its day
+// with the time grey after it and its title on a line of its own; the last one over quiet at the card's foot, over a
+// hairline. Opens Meetings.
 function MeetingsCard({ next, last, onOpen }: { next: HomeBoard["nextCall"]; last: HomeBoard["lastCall"]; onOpen: () => void }) {
   return (
     <button type="button" className="rls-card rh-panel rh-side" onClick={onOpen}>
       <span className="rh-panel-title">Meetings</span>
-      <span className="rh-side-facts">
-        <SideFact label="Next call">
-          {next ? (
-            <SepJoin
-              parts={[
-                <b key="d">
-                  {dayMonth(next.date)}
-                  {next.time ? `, ${next.time}` : ""}
-                </b>,
-                next.title ? (
-                  <span key="t" className="rh-side-what">
-                    {next.title}
-                  </span>
-                ) : null,
-              ]}
-            />
-          ) : (
-            <span className="rh-side-none">None booked</span>
-          )}
-        </SideFact>
+      <span className="rh-lead">
+        <span className="rh-side-label">Next call</span>
+        {next ? (
+          <>
+            <span className="rh-lead-big">
+              <b>{dayMonth(next.date)}</b>
+              {next.time && <span className="rh-lead-time">{next.time}</span>}
+            </span>
+            {next.title && <span className="rh-lead-title">{next.title}</span>}
+          </>
+        ) : (
+          <span className="rh-lead-none">None booked</span>
+        )}
+      </span>
+      <span className="rh-side-foot">
         <SideFact label="Last call">
           {last ? (
             <SepJoin
@@ -806,36 +850,43 @@ function MeetingsCard({ next, last, onOpen }: { next: HomeBoard["nextCall"]; las
   );
 }
 
-// ---- Invoices, beside Meetings: what is owed (rust) and the next one a series will make. Opens Invoices.
-function InvoicesCard({ owed, next, onOpen }: { owed: HomeBoard["outstanding"]; next: HomeBoard["nextInvoice"]; onOpen: () => void }) {
+// ---- Invoices, beside Meetings, the same shape: what is owed big (rust) and how many invoices; at the foot, quiet, the
+// last one paid and the next one a series will make, each only when there is one. Opens Invoices.
+function InvoicesCard({ owed, paid, next, onOpen }: { owed: HomeBoard["outstanding"]; paid: HomeBoard["lastPaid"]; next: HomeBoard["nextInvoice"]; onOpen: () => void }) {
+  const owing = owed != null && owed.amount > 0;
   return (
     <button type="button" className="rls-card rh-panel rh-side" onClick={onOpen}>
       <span className="rh-panel-title">Invoices</span>
-      <span className="rh-side-facts">
+      <span className="rh-lead">
         {owed ? (
-          <SideFact label="Outstanding">
-            <SepJoin
-              parts={[
-                <b key="a" className="owed">
-                  {money(owed.amount, owed.currency)}
-                </b>,
-                <span key="n" className="rh-side-what">
-                  {owed.count} invoice{owed.count === 1 ? "" : "s"}
-                </span>,
-              ]}
-            />
-          </SideFact>
+          <>
+            <span className="rh-side-label">Outstanding</span>
+            <span className="rh-lead-big">
+              <b className={owing ? "owed" : undefined}>{money(owed.amount, owed.currency)}</b>
+            </span>
+            <span className="rh-lead-sub">
+              {owed.count} invoice{owed.count === 1 ? "" : "s"}
+            </span>
+          </>
         ) : (
-          <SideFact>
-            <span className="rh-side-none">Nothing outstanding</span>
-          </SideFact>
-        )}
-        {next && (
-          <SideFact label="Next">
-            <SepJoin parts={[<b key="d">{dayMonth(next.date)}</b>, <span key="a">{money(next.amount, next.currency)}</span>]} />
-          </SideFact>
+          // Nothing owed: the words alone, no "Outstanding" over them (design rules 1: say a thing once).
+          <span className="rh-lead-none">Nothing outstanding</span>
         )}
       </span>
+      {(paid || next) && (
+        <span className="rh-side-foot">
+          {paid && (
+            <SideFact label="Last paid">
+              <SepJoin parts={[<b key="d">{dayMonth(paid.date)}</b>, <span key="a">{money(paid.amount, paid.currency)}</span>]} />
+            </SideFact>
+          )}
+          {next && (
+            <SideFact label="Next">
+              <SepJoin parts={[<b key="d">{dayMonth(next.date)}</b>, <span key="a">{money(next.amount, next.currency)}</span>]} />
+            </SideFact>
+          )}
+        </span>
+      )}
     </button>
   );
 }

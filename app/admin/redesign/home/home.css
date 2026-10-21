@@ -56,6 +56,8 @@
 .rd.rh .rh-panel-head.tall { min-height: 36px; }
 .rd.rh .rh-panel-title { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 600; letter-spacing: -0.005em; color: #141a24; }
 .rd.rh .rh-panel-aside { font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* The head's right side when it holds more than its aside: the aside, then the capsule (Strength's window). */
+.rd.rh .rh-panel-tools { display: inline-flex; align-items: center; gap: 12px; margin-left: auto; min-width: 0; }
 
 /* Muscle balance: the window's capsule under the title, the hexagon centred in what room is left, the key under it.
    The hexagon takes the card's width up to 440px, its words scaling with it, never wider than the card. */
@@ -104,29 +106,42 @@
 }
 @container rh (max-width: 440px) { .rd.rh .rh-trio { grid-template-columns: minmax(0, 1fr); } }
 
-/* Consistency: three rows of 28 squares across the whole width (still square), a little more air before each Monday,
-   filled in the track's colour; the rows centred in the room under the title. */
+/* Consistency: three rows of a square a day, as many as the server sends (the last 30), across the whole width (still
+   square), a little more air before each Monday; the rows centred in the room under the title. A day done wears its
+   track as a phase's bar does (21 Oct, Alex): the colour soft inside (--rh-t, 18%), full strength on a 1.5px edge. */
 .rd.rh .rh-cons-rows { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
 .rd.rh .rh-cons-row { display: flex; align-items: center; min-width: 0; }
 .rd.rh .rh-cons-label { flex: none; width: 72px; font-size: 12.5px; font-weight: 500; color: #8b93a1; }
 .rd.rh .rh-cons-days { display: flex; align-items: center; gap: 3px; flex: 1 1 auto; min-width: 0; }
 .rd.rh .rh-day { display: block; flex: 1 1 0; min-width: 0; aspect-ratio: 1; border-radius: 3px; background: #eef0f3; }
 .rd.rh .rh-day.mon { margin-left: 4px; }
-.rd.rh .rh-day.on { background: var(--rh-c, #141a24); }
+.rd.rh .rh-day.on { background: var(--rh-t, #eef0f3); box-shadow: inset 0 0 0 1.5px var(--rh-c, #141a24); }
 
 /* Meetings and Invoices: the card is the way in, as a tile (hover a darker edge, keyboard focus a quiet underline on the
-   title); under the title a small-caps label and its fact a line each, the date (or the sum) in ink, the rest grey. */
+   title), and it uses its whole height (21 Oct, Alex): what matters most leads, big, right under the title (the next
+   call; what is owed); the rest sits quiet at the card's foot over a divider, a small-caps label and its line each,
+   the date in ink, the rest grey. */
 .rd.rh .rls-card.rh-panel.rh-side { align-items: stretch; justify-content: flex-start; margin: 0; font: inherit; color: #141a24; text-align: left; cursor: pointer; transition: border-color 0.15s; }
 .rd.rh .rls-card.rh-panel.rh-side:hover { border-color: #c5ccd8; }
 .rd.rh .rls-card.rh-panel.rh-side:focus-visible { outline: none; }
 .rd.rh .rls-card.rh-panel.rh-side:focus-visible .rh-panel-title { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
-.rd.rh .rh-side-facts { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+/* The lead: the day (or the sum) at 20px with the time grey after it, then the call's title on a line of its own
+   (or how many invoices); "None booked" / "Nothing outstanding" in the big line's place. */
+.rd.rh .rh-lead { display: flex; flex-direction: column; min-width: 0; }
+.rd.rh .rh-lead-big { display: flex; align-items: baseline; gap: 8px; min-width: 0; margin-top: 2px; line-height: 26px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rd.rh .rh-lead-big b { flex: none; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
+.rd.rh .rh-lead-big b.owed { color: #b8471f; }
+.rd.rh .rh-lead-time { flex: none; font-size: 14px; font-weight: 500; color: #8b93a1; }
+.rd.rh .rh-lead-title { display: block; min-width: 0; margin-top: 2px; overflow: hidden; font-size: 15px; font-weight: 600; line-height: 20px; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rh .rh-lead-sub { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; line-height: 18px; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rd.rh .rh-lead-none { display: block; margin-top: 2px; font-size: 15px; font-weight: 500; line-height: 26px; color: #8b93a1; }
+/* The foot: pinned to the card's bottom over a divider; every line in it 13/500, the date ink. */
+.rd.rh .rh-side-foot { display: flex; flex-direction: column; gap: 10px; min-width: 0; margin-top: auto; padding-top: 12px; border-top: 1px solid #eef0f3; }
 .rd.rh .rh-side-fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rd.rh .rh-side-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; line-height: 16px; text-transform: uppercase; color: #5b6474; }
 .rd.rh .rh-side-line { display: flex; align-items: baseline; min-width: 0; font-size: 13px; font-weight: 500; line-height: 20px; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd.rh .rh-side-line .rd-sep { align-self: center; }
-.rd.rh .rh-side-line b { flex: none; font-size: 13.5px; font-weight: 600; color: #141a24; }
-.rd.rh .rh-side-line b.owed { color: #b8471f; }
+.rd.rh .rh-side-line b { flex: none; font-size: 13px; font-weight: 500; color: #141a24; }
 .rd.rh .rh-side-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .rd.rh .rh-side-missed { flex: none; font-weight: 600; color: #b8471f; }
 .rd.rh .rh-side-none { color: #98a2b3; }

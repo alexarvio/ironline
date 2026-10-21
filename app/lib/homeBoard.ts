@@ -1,6 +1,6 @@
 // The client's Home board (21 Oct, Alex: built from the Home mockup): where each track stands, what the client did
-// since the coach last looked, the muscle balance, strength by muscle group, weight across the phase, and four weeks
-// of consistency. One read for the admin's Home tab (loaders.ts loadHome → DraftHome.board).
+// since the coach last looked, the muscle balance, strength by muscle group, weight across the phase, and the last 30
+// days of consistency. One read for the admin's Home tab (loaders.ts loadHome → DraftHome.board).
 //
 // Muscle groups come from each exercise's first muscle tag (exercises.muscle_tags, "chest,shoulders" → chest):
 // back/lats → Back; chest → Chest; shoulders/delts → Shoulders; arms/biceps/triceps/forearms → Arms;
@@ -15,6 +15,9 @@ import type { InvoiceEvery, PhaseTrack } from "./db";
 export const MUSCLE_GROUPS = ["Back", "Chest", "Shoulders", "Arms", "Legs", "Core"] as const;
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 export type PerGroup = Record<MuscleGroup, number>;
+
+/** One window of the strength card. */
+export type StrengthWindow = { since: string; groups: { group: MuscleGroup; pct: number; exercises: number }[] };
 
 /** One window of the muscle balance: this period, and the one just before it of the same length. */
 export type MuscleWindow = {
@@ -45,6 +48,8 @@ export type HomeBoard = {
       the recap's title once written, else the topic, else the kind's name ("Check-in call", "Review call", "Call"). */
   nextCall: { date: string; time: string | null; title: string } | null;
   lastCall: { date: string; title: string; missed: boolean } | null;
+  /** The last invoice paid (its paid day, else its issue day). */
+  lastPaid: { date: string; amount: number; currency: string } | null;
   /** The Invoices card: owed (invoices that reached the client and are not paid), and the next recurring invoice to be made. */
   outstanding: { amount: number; currency: string; count: number } | null;
   nextInvoice: { date: string; amount: number; currency: string; every: InvoiceEvery } | null;
@@ -61,10 +66,12 @@ export type HomeBoard = {
     /** The programme's current week: sets prescribed per group, and how many of those were logged. Null with no live programme. */
     plan: { week: number; planned: PerGroup; done: PerGroup } | null;
   };
-  /** Strength since the training phase began (else the last 8 weeks): per group, the mean % change (one decimal) of each
-      exercise's best estimated one-rep max (Epley, weight × (1 + reps / 30)) between its first and its latest session in
-      that span. Only groups with data; the screen draws all six. */
-  strength: { since: string; groups: { group: MuscleGroup; pct: number; exercises: number }[] } | null;
+  /** Strength per window (21 Oct, Alex: a 7d | 30d | Phase toggle, as the muscle balance): per group, the mean % change
+      (one decimal) of each exercise's best estimated one-rep max (Epley, weight × (1 + reps / 30)). 7d and 30d: this
+      window's best against the window before's, for exercises done in both. Phase: since the training phase began (else
+      the last 8 weeks), its first session against its latest. Only groups with data; null when none; the screen draws
+      all six. `since` is the date the window is measured from. */
+  strength: { "7d": StrengthWindow | null; "30d": StrengthWindow | null; phase: StrengthWindow | null };
   /** Weight readings across the current phase (nutrition's, else training's, else lifestyle's; else the last 8 weeks). */
   weight: {
     points: { date: string; value: number }[];
@@ -76,7 +83,7 @@ export type HomeBoard = {
         a phase, under 4 readings across 2 weeks, or when the phase's end is further ahead than twice the span read. */
     projection: { date: string; value: number } | null;
   } | null;
-  /** The last 28 days, oldest first: trained (a set logged that day, or a session ended or done in full on it), food
+  /** The last 30 days, oldest first (21 Oct, Alex: 30, not four weeks): trained (a set logged that day, or a session ended or done in full on it), food
       logged, checked in. */
   days: { date: string; trained: boolean; food: boolean; checkIn: boolean }[];
 };

@@ -2,7 +2,7 @@
 // Home tab, and the note of when the coach looked, so "Since 18/10" counts from the visit before this one.
 // Never throws: a client with no programme, no phases, no weight and no logs gets nulls and zeros.
 
-import type { HomeBoard, MuscleGroup, MuscleWindow, PerGroup } from "./homeBoard";
+import type { HomeBoard, MuscleGroup, MuscleWindow, PerGroup, StrengthWindow } from "./homeBoard";
 import { getData, persist, type Data, type PhaseTrack } from "./db";
 import {
   coachGroups,
@@ -299,11 +299,12 @@ export function getHomeBoard(clientId: number): HomeBoard {
     tracks: safe("tracks", () => tracksOf(ctx), empty.tracks),
     nextCall: safe("nextCall", () => nextCallOf(ctx), null),
     lastCall: safe("lastCall", () => lastCallOf(ctx), null),
+    lastPaid: safe("lastPaid", () => lastPaidOf(ctx), null),
     outstanding: safe("outstanding", () => outstandingOf(ctx), null),
     nextInvoice: safe("nextInvoice", () => nextInvoiceOf(ctx), null),
     since: safe("since", () => sinceOf(ctx), null),
     muscles: safe("muscles", () => musclesOf(ctx), empty.muscles),
-    strength: safe("strength", () => strengthOf(ctx), null),
+    strength: safe("strength", () => strengthOf(ctx), empty.strength),
     weight: safe("weight", () => weightOf(ctx), null),
     days: safe("days", () => daysOf(ctx), empty.days),
   };
@@ -318,15 +319,21 @@ function emptyBoard(today: string): HomeBoard {
     tracks: TRACK_ORDER.map((track) => ({ track, phase: null, figure: null, note: null })),
     nextCall: null,
     lastCall: null,
+    lastPaid: null,
     outstanding: null,
     nextInvoice: null,
     since: null,
     muscles: { "7d": emptyWindow(addDays(today, -6), today), "30d": emptyWindow(addDays(today, -29), today), phase: null, plan: null },
-    strength: null,
+    strength: { "7d": null, "30d": null, phase: null },
     weight: null,
-    days: Array.from({ length: 28 }, (_, i) => ({ date: addDays(today, i - 27), trained: false, food: false, checkIn: false })),
+    days: lastDays(today).map((date) => ({ date, trained: false, food: false, checkIn: false })),
   };
 }
+
+/** How many days Consistency shows (21 Oct, Alex: the last 30, not four weeks). */
+const CONSISTENCY_DAYS = 30;
+/** The last 30 days, today included, oldest first. */
+const lastDays = (today: string) => Array.from({ length: CONSISTENCY_DAYS }, (_, i) => addDays(today, i - (CONSISTENCY_DAYS - 1)));
 
 // ---- The three tracks ----------------------------------------------------------------------
 
@@ -431,17 +438,34 @@ function nextInvoiceOf(ctx: Ctx): HomeBoard["nextInvoice"] {
   return { date: next.next, amount: next.total, currency: next.currency, every: next.every };
 }
 
+/** The coach's invoicing currency, for an invoice that carries none. */
+function coachCurrency(ctx: Ctx): string {
+  const s = getCoachSettings(ctx.client?.coach_id ?? 0);
+  return invoicingFor(s.business ?? {}, s.invoicing ?? {}).currency;
+}
+
 function outstandingOf(ctx: Ctx): HomeBoard["outstanding"] {
   const owed = getData().invoices.filter((i) => i.client_id === ctx.clientId && (i.status === "sent" || i.status === "due"));
   if (!owed.length) return null;
   const amount = Math.round(owed.reduce((t, i) => t + (Number(i.amount) || 0), 0) * 100) / 100;
-  const currency =
-    owed.find((i) => i.currency)?.currency ??
-    (() => {
-      const s = getCoachSettings(ctx.client?.coach_id ?? 0);
-      return invoicingFor(s.business ?? {}, s.invoicing ?? {}).currency;
-    })();
+  const currency = owed.find((i) => i.currency)?.currency ?? coachCurrency(ctx);
   return { amount, currency, count: owed.length };
+}
+
+/** Their latest paid invoice: on the day it was paid (local), else its issue day (an older invoice: the day it was made). */
+function lastPaidOf(ctx: Ctx): HomeBoard["lastPaid"] {
+  let last: { date: string; ms: number; id: number; amount: number; currency: string | undefined } | null = null;
+  for (const i of getData().invoices) {
+    if (i.client_id !== ctx.clientId || i.status !== "paid") continue;
+    const date = i.paid_at ? stampDay(i.paid_at) : (i.issue_date || stampDay(i.created_at ?? "")).slice(0, 10);
+    if (!PLAIN_DAY.test(date)) continue;
+    const ms = stampMs(i.paid_at);
+    const row = { date, ms: Number.isFinite(ms) ? ms : 0, id: i.id, amount: Math.round((Number(i.amount) || 0) * 100) / 100, currency: i.currency || undefined };
+    // The later day wins; on one day, the later stamp, then the later invoice.
+    if (!last || row.date > last.date || (row.date === last.date && (row.ms > last.ms || (row.ms === last.ms && row.id > last.id)))) last = row;
+  }
+  if (!last) return null;
+  return { date: last.date, amount: last.amount, currency: last.currency ?? coachCurrency(ctx) };
 }
 
 // ---- Since the coach last looked ------------------------------------------------------------
@@ -563,28 +587,13 @@ function planOf(ctx: Ctx): HomeBoard["muscles"]["plan"] {
 
 // ---- Strength --------------------------------------------------------------------------------------
 
-function strengthOf(ctx: Ctx): HomeBoard["strength"] {
-  const since = ctx.phases.training?.start_week ?? addDays(ctx.today, -55);
-  // Each exercise's best estimated one-rep max a day (Epley).
-  const best = new Map<string, { group: MuscleGroup; byDay: Map<string, number> }>();
-  for (const s of ctx.sets) {
-    if (!s.group || !s.exerciseKey || s.day < since || s.day > ctx.today) continue;
-    if (s.weight == null || s.reps == null || !(s.weight > 0) || !(s.reps > 0)) continue;
-    const e1rm = s.weight * (1 + s.reps / 30);
-    let ex = best.get(s.exerciseKey);
-    if (!ex) best.set(s.exerciseKey, (ex = { group: s.group, byDay: new Map() }));
-    if (e1rm > (ex.byDay.get(s.day) ?? 0)) ex.byDay.set(s.day, e1rm);
-  }
+/** Each exercise's % change to one window: per group, their mean (one decimal), best group first. Null with none. */
+function strengthWindow(since: string, changes: { group: MuscleGroup; pct: number }[]): StrengthWindow | null {
   const byGroup = new Map<MuscleGroup, number[]>();
-  for (const ex of best.values()) {
-    if (ex.byDay.size < 2) continue;
-    const days = [...ex.byDay.keys()].sort();
-    const first = ex.byDay.get(days[0])!;
-    const last = ex.byDay.get(days[days.length - 1])!;
-    if (!(first > 0)) continue;
-    const list = byGroup.get(ex.group) ?? [];
-    list.push(((last - first) / first) * 100);
-    byGroup.set(ex.group, list);
+  for (const c of changes) {
+    const list = byGroup.get(c.group);
+    if (list) list.push(c.pct);
+    else byGroup.set(c.group, [c.pct]);
   }
   const groups = GROUPS.filter((g) => byGroup.has(g))
     .map((g) => {
@@ -594,6 +603,55 @@ function strengthOf(ctx: Ctx): HomeBoard["strength"] {
     })
     .sort((a, b) => b.pct - a.pct);
   return groups.length ? { since, groups } : null;
+}
+
+function strengthOf(ctx: Ctx): HomeBoard["strength"] {
+  const { today } = ctx;
+  const phaseSince = ctx.phases.training?.start_week ?? addDays(today, -55);
+  // The 30 days before the last 30 is the furthest back a rolling window reads.
+  const rollBack = addDays(today, -59);
+  const earliest = phaseSince < rollBack ? phaseSince : rollBack;
+  // One pass over the sets: each exercise's best estimated one-rep max a day (Epley).
+  const best = new Map<string, { group: MuscleGroup; byDay: Map<string, number> }>();
+  for (const s of ctx.sets) {
+    if (!s.group || !s.exerciseKey || s.day < earliest || s.day > today) continue;
+    if (s.weight == null || s.reps == null || !(s.weight > 0) || !(s.reps > 0)) continue;
+    const e1rm = s.weight * (1 + s.reps / 30);
+    let ex = best.get(s.exerciseKey);
+    if (!ex) best.set(s.exerciseKey, (ex = { group: s.group, byDay: new Map() }));
+    if (e1rm > (ex.byDay.get(s.day) ?? 0)) ex.byDay.set(s.day, e1rm);
+  }
+  const exercises = [...best.values()];
+
+  // 7d and 30d: this window's best against the window just before's (the same length), for exercises done in both.
+  const rolling = (n: number): StrengthWindow | null => {
+    const from = addDays(today, -(n - 1));
+    const prevFrom = addDays(from, -n);
+    const changes: { group: MuscleGroup; pct: number }[] = [];
+    for (const ex of exercises) {
+      let cur = 0;
+      let prev = 0;
+      for (const [day, v] of ex.byDay) {
+        if (day >= from) cur = Math.max(cur, v);
+        else if (day >= prevFrom) prev = Math.max(prev, v);
+      }
+      if (cur > 0 && prev > 0) changes.push({ group: ex.group, pct: ((cur - prev) / prev) * 100 });
+    }
+    return strengthWindow(from, changes);
+  };
+
+  // Phase: since the training phase began (else the last 8 weeks), each exercise's first day against its latest.
+  const phaseChanges: { group: MuscleGroup; pct: number }[] = [];
+  for (const ex of exercises) {
+    const days = [...ex.byDay.keys()].filter((d) => d >= phaseSince).sort();
+    if (days.length < 2) continue;
+    const first = ex.byDay.get(days[0])!;
+    const last = ex.byDay.get(days[days.length - 1])!;
+    if (!(first > 0)) continue;
+    phaseChanges.push({ group: ex.group, pct: ((last - first) / first) * 100 });
+  }
+
+  return { "7d": rolling(7), "30d": rolling(30), phase: strengthWindow(phaseSince, phaseChanges) };
 }
 
 // ---- Weight ----------------------------------------------------------------------------------------
@@ -643,8 +701,7 @@ function weightOf(ctx: Ctx): HomeBoard["weight"] {
     (ended there, done in full, or kept from before a coach's edit). Checked in: anything but what the workout answers. */
 function daysOf(ctx: Ctx): HomeBoard["days"] {
   const setDays = new Set(ctx.sets.filter((s) => s.counts).map((s) => s.day));
-  return Array.from({ length: 28 }, (_, i) => {
-    const date = addDays(ctx.today, i - 27);
+  return lastDays(ctx.today).map((date) => {
     const d = ctx.calendar.get(date);
     return { date, trained: !!d?.sessions.length || setDays.has(date), food: !!d?.food, checkIn: !!d?.checkIns.some((n) => !ctx.fedNames.has(n)) };
   });
