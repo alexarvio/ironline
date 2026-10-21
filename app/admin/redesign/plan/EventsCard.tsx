@@ -1,7 +1,7 @@
 "use client";
 
 import Pager from "../Pager";
-import { repeatWords, WEEKDAY_LETTERS, isoWeekday, type EventRepeat } from "../../../lib/eventRepeat";
+import { repeatWords, WEEKDAY_LETTERS, isoWeekday } from "../../../lib/eventRepeat";
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,8 @@ import { toast } from "sonner";
 import { addClientEventAction, deleteClientEventAction, updateClientEventAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { PlusIcon } from "../../../components/icons";
-import { gridFor, MonthRange } from "./PlanDraft";
+import { MonthRange } from "../MonthRange";
+import { AddCells, chromeOf, EmptyLane, eventIsPast, eventLanes, EventMark, eventPlace, gridFor, LANE, LaneRow, rgbOf, standingParts, Timeline, type Category, type PlanEvent } from "./timelineParts";
 import DateText from "../DateText";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
@@ -20,10 +21,6 @@ import { Fold } from "../Fold";
 // a category pill in the title, category tiles with icons, the dates as pills.
 const CUSTOM_ICON = "M20 12.5 12.5 20a1.5 1.5 0 0 1-2.1 0L4 13.6V4h9.6l6.4 6.4a1.5 1.5 0 0 1 0 2.1zM8 8h.01";
 const iconOf = (id: string | null) => (isEventTypeId(id) ? eventTypeOf(id) : null);
-export const rgbOf = (hex: string) => {
-  const n = parseInt(hex.slice(1), 16);
-  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
-};
 /** The arrow between two dates: the pop-up's Starts → Ends, and the log's 14/10 → 5/11 (21 Oct, Alex). */
 function RangeArrow() {
   return (
@@ -51,23 +48,9 @@ export function KindIcon({ id, size = 20 }: { id: string | null; size?: number }
 // Real, not a draft: events and the coach's own categories save through
 // the actions in lib/actions.ts and come back from the loader.
 
-/** An events lane, as a phase's track (21 Oct, Alex: the same size): a 38px bar with 3px above and below; plan.css's .rq-evbar. */
-export const EV_LANE = 44;
-/** A bar's or a pin's top in its lanes: the lanes' 6px padding, the 3px over the bar, then a lane each. */
-export const evTop = (lane: number) => `${9 + lane * EV_LANE}px`;
-
-/** kind is the category's id, and optional: an event can just be an event. */
-export type PlanEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it from their Home. */ byClient?: boolean; /** Comes back on these weekdays (19 Oct), lib/eventRepeat.ts. */ repeat?: EventRepeat | null };
-
-export type Category = { id: string; label: string; color: string; custom: boolean };
-const NONE = { tint: "#eceff3", ink: "#5b6474", line: "#c3c9d2" };
-// The built-in four and the coach's own come from the loader (listEventCategories).
-/** The app's six event types colour everything here (10 Oct): the same six the client's sheet has, in the same colours. Anything else is grey "Event". */
-export const chromeOf = (_cats: Category[], id: string | null) => {
-  if (!isEventTypeId(id)) return { label: "Event", ...NONE };
-  const t = eventTypeOf(id);
-  return { label: t.label, tint: `rgba(${t.rgb}, 0.12)`, ink: t.color, line: `rgba(${t.rgb}, 0.45)` };
-};
+/** An events lane is a phase's track (21 Oct, Alex: the same size); the lanes, the bars and the pins are drawn in timelineParts.tsx. */
+export { LANE as EV_LANE, chromeOf, rgbOf, standingParts };
+export type { Category, PlanEvent };
 
 const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
@@ -78,38 +61,6 @@ const addDays = (d: string, n: number) => {
   return isoOf(x);
 };
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
-/** The timeline's week axis keeps the month's name; every other date in words is day/month (dayMonth). */
-const axisDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-
-/** "in 3 weeks", "in 5 days", "today", "2 days ago", "6 weeks ago". */
-const relative = (today: string, d: string) => {
-  const n = daysBetween(today, d);
-  if (n === 0) return "today";
-  const abs = Math.abs(n);
-  const w = abs >= 14 ? `${Math.round(abs / 7)} weeks` : abs === 1 ? "1 day" : `${abs} days`;
-  return n > 0 ? `in ${w}` : `${w} ago`;
-};
-/** The words on a bar or pin: where it stands against today, as its facts ("now", "3 days left"); on screen a bar parts them. */
-export const standingParts = (today: string, e: PlanEvent): string[] => {
-  const single = e.start === e.end;
-  // A timestamp is only ever "in 3 days", "today" or "2 days ago".
-  if (single) return [relative(today, e.start)];
-  if (today < e.start) return [relative(today, e.start)];
-  if (today > e.end) return [`ended ${relative(today, e.end)}`];
-  // Repeating with no end (19 Oct): its stored end is only a horizon.
-  if (e.repeat && !e.repeat.until) return ["ongoing"];
-  const left = daysBetween(today, e.end);
-  return left === 0 ? ["last day"] : ["now", `${left} day${left === 1 ? "" : "s"} left`];
-};
-/** The same as one string, for a tooltip. */
-const standing = (today: string, e: PlanEvent) => standingParts(today, e).join(" · ");
-/** A bar's pill, as a phase bar's "week 3 of 6" (21 Oct, Alex): on now, `Day 18 of 23` (a repeating one with no end,
-    `Ongoing`); still to come or over, nothing (21 Oct, Alex: a coming one is just its days). */
-export const barStanding = (today: string, e: PlanEvent): string | null => {
-  if (today < e.start || today > e.end) return null;
-  if (e.repeat && !e.repeat.until) return "Ongoing";
-  return `Day ${daysBetween(e.start, today) + 1} of ${daysBetween(e.start, e.end) + 1}`;
-};
 
 export type EventsCardProps = {
   clientId: number;
@@ -139,8 +90,6 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
     setSeenKey(serverKey);
     setEvents(serverEvents);
   }
-  // Over and done (20 Oct, Alex: a past event isn't editable any more): ended before today; a repeat only once its last day has gone.
-  const isPast = (e: PlanEvent) => (e.repeat ? e.repeat.until != null && e.repeat.until < today : e.end < today);
   // Its own window, remembered in the browser; the server renders 3 months and the saved choice follows after the first paint.
   const [win, setWinState] = useState(windows[0]?.weeks ?? 13);
   useEffect(() => {
@@ -155,7 +104,8 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
       window.localStorage.setItem(EV_WIN_KEY, String(w));
     } catch {}
   };
-  const { count, weeks, nowIdx, months, cols, nowLeft } = gridFor(win, thisWeek, intoWeek);
+  const grid = gridFor(win, thisWeek, intoWeek);
+  const { count, weeks } = grid;
   const [busy, start] = useTransition();
   useEffect(() => {
     onSaving?.(busy);
@@ -194,14 +144,8 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
     const d = drag?.id === e.id ? drag : moveDlg?.id === e.id ? moveDlg : null;
     return d ? { start: d.start, end: d.end } : { start: e.start, end: e.end };
   };
-  // Where an event sits on the grid, as fractions of its width; the grid is
-  // week columns, so a day is a seventh of one.
-  const place = (e: PlanEvent) => {
-    const { start, end } = live(e);
-    const a = daysBetween(first, start);
-    const b = daysBetween(first, end) + 1;
-    return { left: (Math.max(0, a) / totalDays) * 100, width: (Math.max(0.6, Math.min(totalDays, b) - Math.max(0, a)) / totalDays) * 100, visible: b > 0 && a < totalDays };
-  };
+  // Where an event sits on the grid (eventPlace), at the dates it is drawn at.
+  const place = (e: PlanEvent) => eventPlace(live(e), first, totalDays);
   // The day under the pointer, on the grid's first lanes (every row is as wide).
   const lanesRef = useRef<HTMLDivElement>(null);
   const dayAt = (clientX: number) => {
@@ -245,11 +189,10 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
     setMoveDlg({ id: d.id, start: d.start, end: d.end });
   };
   // One row a category (10 Oct), only for the categories with something on the
-  // grid, in the coach's category order; an event with no category rows last
-  // as "Event". Within a row, overlapping events stack into lanes; a pin's
-  // label needs room too.
+  // grid, in the app's kind order; an event with no category rows last as
+  // "Event". Within a row, overlapping events stack into lanes; a pin's label
+  // needs room too (eventLanes).
   const onGrid = events.filter((e) => place(e).visible).sort((a, b) => (a.start < b.start ? -1 : 1));
-  const laneOf = new Map<number, number>();
   // A pin's label needs room to its right: measured against the grid, so
   // the reach is what the label takes on this screen, not a guess.
   const [gridPx, setGridPx] = useState(0);
@@ -261,25 +204,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
     return () => ro.disconnect();
   }, []);
   const dayPx = gridPx > 0 ? gridPx / totalDays : 9;
-  const labelDays = (title: string) => Math.ceil((title.length * 6.6 + 28) / dayPx);
-  const reach = (e: PlanEvent) => (e.start === e.end ? addDays(e.start, labelDays(e.title)) : e.end);
-  const order = [...EVENT_TYPES.map((t) => t.id), null];
-  const groups = order
-    .map((id) => ({ id, chrome: chromeOf(cats, id), events: onGrid.filter((e) => (isEventTypeId(e.kind) ? e.kind : null) === id) }))
-    .filter((g) => g.events.length > 0)
-    .map((g) => {
-      const lanes: PlanEvent[][] = [];
-      g.events.forEach((e) => {
-        let li = lanes.findIndex((l) => l.every((q) => reach(q) < e.start || q.start > reach(e)));
-        if (li < 0) {
-          lanes.push([]);
-          li = lanes.length - 1;
-        }
-        lanes[li].push(e);
-        laneOf.set(e.id, li);
-      });
-      return { ...g, laneCount: Math.max(1, lanes.length) };
-    });
+  const { groups, laneOf } = eventLanes(onGrid, cats, dayPx);
 
   // The log keeps only what is over (21 Oct, Alex): what is on or coming is on the grid above.
   // The latest ended first, so a supplement stopped last week sits above a trip that ended a month ago.
@@ -312,123 +237,37 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
       </div>
 
       <div className="pln-card">
-      {/* The same grid as the phases: months, weeks, and the events on one row of lanes. */}
-      <div className="rq-tl-scroll">
-        <div className="rq-tl" style={{ minWidth: Math.round(win * 63) }}>
-          <div className="rq-tl-row">
-            <span />
-            <div className="rq-tl-clip">
-              <div className="rq-tl-grid" style={cols}>
-                {months.map((m) => (
-                  <span key={m.start} className="rq-month" style={{ gridColumn: `${m.start + 1} / span ${m.span}` }}>
-                    {m.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="rq-tl-body">
-            {nowLeft && <span className="rq-now" style={{ left: nowLeft }} title="Now" />}
-            <div className="rq-tl-row">
-              <span />
-              <div className="rq-tl-clip">
-                <div className="rq-tl-grid" style={cols}>
-                  {weeks.map((w, i) => (
-                    <span key={w} className={`rq-week${i === nowIdx ? " now" : ""}`}>
-                      <small>{axisDate(w)}</small>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {groups.length === 0 && (
-              <div className="rq-tl-row">
-                <div className="rq-tl-label" />
-                <div className="rq-tl-clip">
-                  <div ref={lanesRef} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(1, ${EV_LANE}px)` }}>
-                    {weeks.map((w, i) => (
-                      <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: "1 / span 1" }} role="button" tabIndex={-1} aria-label={`New event in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev)} />
-                    ))}
-                    <button type="button" className="rq-empty" style={{ gridColumn: `${nowIdx + 1} / span ${Math.min(count - nowIdx, 8)}`, gridRow: 1 }} onClick={() => setDlg({ event: null })}>
-                      None yet <b>+ Add</b>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-            {groups.map((g, gi) => (
-              <div key={g.id ?? "none"} className="rq-tl-row">
-                <div className="rq-tl-label">
-                  <span className="rq-track">
-                    <span className="rq-track-ic" style={{ color: g.chrome.ink }}>
-                      <KindIcon id={g.id} size={16} />
-                    </span>
-                    {g.chrome.label}
-                  </span>
-                </div>
-                <div className="rq-tl-clip">
-                  <div ref={gi === 0 ? lanesRef : undefined} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${g.laneCount}, ${EV_LANE}px)` }} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
-                    {weeks.map((w, i) => (
-                      <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: `1 / span ${g.laneCount}` }} role="button" tabIndex={-1} aria-label={`New ${g.chrome.label.toLowerCase()} in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev, g.id)} />
-                    ))}
-                    {g.events.map((e) => {
-                      const p = place(e);
-                      const k = chromeOf(cats, e.kind);
-                      const single = e.start === e.end;
-                      const past = isPast(e);
-                      const lane = laneOf.get(e.id) ?? 0;
-                      const shown = { ...e, ...live(e) };
-                      const dragging = drag?.id === e.id;
-                      const open = () => {
-                        if (justDragged.current || drag) return;
-                        setDlg({ event: e });
-                      };
-                      return single ? (
-                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: evTop(lane), color: k.ink }} onPointerDown={(ev) => !past && beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${dayMonth(e.start)} · ${standing(today, e)}`}>
-                          <i style={{ background: k.ink }} />
-                          <span className="rq-pin-text">
-                            <b>{e.title}</b>
-                            <small>
-                              <SepJoin parts={[dayMonth(shown.start), ...standingParts(today, shown)]} />
-                            </small>
-                          </span>
-                        </button>
-                      ) : (
-                        <button
-                          key={e.id}
-                          type="button"
-                          className={`rq-evbar${past ? " past" : ""}${dragging ? " dragging" : ""}`}
-                          style={{ left: `${p.left}%`, width: `${p.width}%`, top: evTop(lane), background: k.tint, color: k.ink, borderColor: `rgba(${rgbOf(k.ink)}, 0.5)` }}
-                          onPointerDown={(ev) => {
-                            if (past || (ev.target as HTMLElement).closest(".rq-bar-edge")) return;
-                            beginDrag(ev, e, "move");
-                          }}
-                          onClick={open}
-                          title={`${e.title} · ${e.repeat ? `${repeatWords(e.repeat, { until: false })} · ` : ""}${dayMonth(e.start)} → ${e.repeat && !e.repeat.until ? "no end" : dayMonth(e.end)} · ${standing(today, e)}`}
-                        >
-                          {/* A past one has no handles: it can't be moved or stretched. */}
-                          {!past && <span className="rq-bar-edge left" onPointerDown={(ev) => beginDrag(ev, e, "start")} onClick={(ev) => ev.stopPropagation()} />}
-                          {!past && <span className="rq-bar-edge right" onPointerDown={(ev) => beginDrag(ev, e, "end")} onClick={(ev) => ev.stopPropagation()} />}
-                          {/* Built as a phase's bar (21 Oct, Alex): the title, its length under it (repeating: the days it
-                              comes back on), and while it is on, where it stands in a pill on the right: Day 18 of 23. */}
-                          <span className="rq-bar-main">
-                            <span className="rq-bar-name">{e.title}</span>
-                            <span className="rq-bar-meta">{e.repeat ? repeatWords(e.repeat, { until: false }) : `${daysBetween(shown.start, shown.end) + 1} days`}</span>
-                          </span>
-                          {(() => {
-                            const word = barStanding(today, shown);
-                            return word && <span className="rq-bar-pill">{word}</span>;
-                          })()}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+      {/* The same grid as the phases (timelineParts.tsx): months, the Mondays, and a row of lanes an event kind. */}
+      <Timeline grid={grid} minWidth={Math.round(win * 63)} weekNumbers={false}>
+        {groups.length === 0 && (
+          <LaneRow grid={grid} lanes={1} events gridRef={lanesRef}>
+            <AddCells grid={grid} lanes={1} label={(w) => `New event in the week of ${dayMonth(w)}`} onAdd={(w, ev) => addAt(w, ev)} />
+            <EmptyLane grid={grid} onAdd={() => setDlg({ event: null })} />
+          </LaneRow>
+        )}
+        {groups.map((g, gi) => (
+          <LaneRow key={g.id ?? "none"} grid={grid} lanes={g.laneCount} events icon={<KindIcon id={g.id} size={16} />} color={g.chrome.ink} label={g.chrome.label} gridRef={gi === 0 ? lanesRef : undefined} onDragMove={moveDrag} onDragEnd={endDrag}>
+            <AddCells grid={grid} lanes={g.laneCount} label={(w) => `New ${g.chrome.label.toLowerCase()} in the week of ${dayMonth(w)}`} onAdd={(w, ev) => addAt(w, ev, g.id)} />
+            {g.events.map((e) => (
+              <EventMark
+                key={e.id}
+                e={e}
+                at={live(e)}
+                place={place(e)}
+                lane={laneOf.get(e.id) ?? 0}
+                today={today}
+                cats={cats}
+                // A past one has no handles: it can't be moved or stretched (a pin's edges are never drawn).
+                drag={eventIsPast(e, today) ? undefined : { dragging: drag?.id === e.id, onBody: (ev) => beginDrag(ev, e, "move"), onStart: (ev) => beginDrag(ev, e, "start"), onEnd: (ev) => beginDrag(ev, e, "end") }}
+                onOpen={() => {
+                  if (justDragged.current || drag) return;
+                  setDlg({ event: e });
+                }}
+              />
             ))}
-          </div>
-        </div>
-      </div>
+          </LaneRow>
+        ))}
+      </Timeline>
 
       {/* ---- The log: the events that are over, nothing else (21 Oct, Alex). */}
       <div className={`rq-evlog${logOpen ? " open" : ""}`}>
@@ -525,7 +364,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
             firstName={firstName}
             initialStart={dlg.start}
             initialKind={dlg.kind}
-            readOnly={!!dlg.event && isPast(dlg.event)}
+            readOnly={!!dlg.event && eventIsPast(dlg.event, today)}
             onSave={(v) => {
               const was = dlg.event;
               // An edit shows at once, as a move does; a new one comes with the page's re-read (it needs its id).

@@ -10,13 +10,12 @@ import Link from "next/link";
 import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, cancelProgramScheduleAction, unschedulePhaseAction, duplicateClientPhaseAction, removeClientGoalAction, deletePhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseOrSayWhyAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
 import { TRAINING_ICON } from "../../../lib/eventTypes";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { GoalEditorOptions, PlanGoalRow, PlanPhaseRow, PlanProgramOption } from "../../../lib/queries";
 import type { GoalTracking } from "../../../lib/goalView";
 import type { PhaseTrack } from "../../../lib/db";
-import { phaseChrome, phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL, type PhaseState } from "../../phaseChrome";
+import { phaseChrome, phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { ConfirmDialog, DeletePhaseDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DateText from "../DateText";
@@ -27,6 +26,7 @@ import { phaseDays, phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import { SortableItem, SortableList } from "../Sortable";
 import { Sep, SepJoin } from "../Sep";
 import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
+import { AddCells, EmptyLane, gridFor, LaneRow, packLanes, PhaseBar, rgbOf, Timeline, weekSpan, weeksBetween } from "./timelineParts";
 
 // The calmer Plan tab, as a draft on real data, in the Training draft's
 // sheet. Three cards: the one headline goal, the phases as bars on a week
@@ -86,7 +86,6 @@ export const phaseForm = (v: { id?: number; clientId?: number; name: string; tra
   }
   return fd;
 };
-const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const addDays = (d: string, n: number) => {
@@ -95,19 +94,10 @@ const addDays = (d: string, n: number) => {
   return isoOf(x);
 };
 const addWeeks = (monday: string, n: number) => addDays(monday, n * 7);
-export const weeksBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / (7 * DAY));
 const mondayOf = (d: string) => addDays(d, -((parse(d).getDay() + 6) % 7));
 /** A date in words is day/month (20 Oct, Alex: "starts 9/11", not "starts 9 Nov"); a year only when it isn't this one. */
 const shortDate = dayMonth;
 const fmtDay = shortDate;
-/** The timeline's axis keeps the month's name under its month heads; a screen reader gets the whole day. */
-export const axisDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-const monthName = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short" });
-export const isoWeek = (day: string) => {
-  const thursday = parse(addDays(mondayOf(day), 3));
-  const jan1 = new Date(thursday.getFullYear(), 0, 1);
-  return Math.floor((thursday.getTime() - jan1.getTime()) / DAY / 7) + 1;
-};
 const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10));
 
 /** Lifestyle, Training, Nutrition (20 Oct, Alex): the order of the lanes, the track tiles and the client's tabs. */
@@ -122,10 +112,6 @@ const TRACK_ICON: Record<PhaseTrack, string> = {
   nutrition: "M15.5 8.5c2.8 0 4.5 2.4 4.5 5.5 0 4-2.7 7.5-5.5 7.5-1 0-1.5-.5-2.5-.5s-1.5.5-2.5.5c-2.8 0-5.5-3.5-5.5-7.5 0-3.1 1.9-5.5 4.7-5.5 1.3 0 2.1.6 3.3.6s1.9-.6 3.5-.6ZM12 8.5V6a2.2 2.2 0 0 1 2-2.2",
   training: TRAINING_ICON,
   lifestyle: "M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z",
-};
-const rgbOf = (hex: string) => {
-  const n = parseInt(hex.slice(1), 16);
-  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
 };
 export function TrackIcon({ track, size = 20 }: { track: PhaseTrack; size?: number }) {
   return (
@@ -205,7 +191,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   // (21 Oct, Alex: a past phase that clashed was nowhere to be seen); Today comes back.
   const [back, setBack] = useState(0);
   // The grid for this window (the maths in gridFor, shared with the Events card, which has a window of its own since 10 Oct).
-  const { first, count, weeks, nowIdx, months, cols, nowLeft, shift } = gridFor(win, thisWeek, intoWeek, back);
+  const grid = gridFor(win, thisWeek, intoWeek, back);
+  const { first, count, weeks } = grid;
 
   const weekAt = (clientX: number) => {
     const el = areaRef.current;
@@ -248,23 +235,16 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
     if (!p || (d.start === p.start_week && d.end === p.end_week)) return;
     setDlg({ kind: "move", id: p.id, start: d.start, end: d.end });
   };
-  const span = (p: PlanPhaseRow) => {
+  // The weeks a phase is drawn at: the drag's while it is dragged, the move's while it waits for a yes, else its own.
+  const liveWeeks = (p: PlanPhaseRow) => {
     const live = drag?.id === p.id ? drag : dlg?.kind === "move" && dlg.id === p.id ? dlg : null;
-    const s = live ? live.start : p.start_week;
-    const e = live ? live.end : p.end_week;
-    // The columns its first and last day fall in: a phase that starts or
-    // ends mid-week fills the weeks it touches.
-    // The end is a day of the last week (its Monday, or the exact last day):
-    // its own column, never the week after (30 Sep: "+ 6 days" pushed a
-    // mid-week end into the next phase's first week, drawn under it).
-    const col = (day: string) => Math.floor(Math.round((parse(day).getTime() - parse(first).getTime()) / DAY) / 7);
-    const sc = col(s);
-    const ec = col(e);
-    const a = Math.max(0, sc);
-    const b = Math.min(count - 1, ec);
-    return { a, b, sc, ec, s, e, visible: b >= 0 && a <= count - 1, clippedStart: sc < 0, clippedEnd: ec > count - 1 };
+    return { startWeek: live ? live.start : p.start_week, endWeek: live ? live.end : p.end_week };
   };
-  const stateOf = (p: PlanPhaseRow, s = p.start_week, e = p.end_week): PhaseState => phaseStateOf({ draft: p.draft || p.program?.status === "draft", startWeek: s, endWeek: e, today });
+  // The columns its first and last day fall in (weekSpan): a phase that starts or ends mid-week fills the weeks it touches.
+  const spanOf = (p: PlanPhaseRow) => {
+    const w = liveWeeks(p);
+    return weekSpan(w.startWeek, w.endWeek, first, count);
+  };
 
   // ---- Goals: done-ticks and a dragged order queue until Apply.
   const [goals, setGoals] = useState(plan.goals);
@@ -350,160 +330,58 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           </div>
         </div>
         <div className="pln-card">
-        <div className="rq-tl-scroll">
-          <div className="rq-tl" style={{ minWidth: Math.round(count * 63) }}>
-            <div className="rq-tl-row">
-              <span />
-              <div className="rq-tl-clip">
-                <div className="rq-tl-grid" style={cols}>
-                  {months.map((m) => (
-                    <span key={m.start} className="rq-month" style={{ gridColumn: `${m.start + 1} / span ${m.span}` }}>
-                      {m.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="rq-tl-body">
-              {nowLeft && <span className="rq-now" style={{ left: nowLeft }} title="Now" />}
-              <div className="rq-tl-row">
-                <span />
-                <div className="rq-tl-clip">
-                  <div className="rq-tl-grid" style={cols}>
-                    {weeks.map((w, i) => (
-                      <span key={w} className={`rq-week${i === nowIdx ? " now" : ""}`}>
-                        <b>W{isoWeek(w)}</b>
-                        <small>{axisDate(w)}</small>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              {TRACKS.map((t) => {
-                const mine = phases.filter((p) => p.track === t.id).sort((a, b) => (a.start_week < b.start_week ? -1 : 1));
-                // Phases that share a week column on one track stack into
-                // lanes, judged by the columns they are drawn in so two bars
-                // never sit on top of each other.
-                const lanes: PlanPhaseRow[][] = [];
-                const laneOf = new Map<number, number>();
-                const cells = (p: PlanPhaseRow) => {
-                  const sp = span(p);
-                  return { from: sp.sc, to: sp.ec };
-                };
-                // Only the bars drawn take a lane: a phase outside the window used to hold an empty lane nobody could see (7 Oct).
-                mine.filter((p) => span(p).visible).forEach((p) => {
-                  const cp = cells(p);
-                  let li = lanes.findIndex((l) => l.every((q) => {
-                    const cq = cells(q);
-                    return cq.to < cp.from || cq.from > cp.to;
-                  }));
-                  if (li < 0) {
-                    lanes.push([]);
-                    li = lanes.length - 1;
-                  }
-                  lanes[li].push(p);
-                  laneOf.set(p.id, li);
-                });
-                const laneCount = Math.max(1, lanes.length);
-                return (
-                  <div key={t.id} className="rq-tl-row">
-                    <div className="rq-tl-label">
-                      {/* The track's icon in its colour, its name in ink (20 Oct, Alex): no tinted pill. */}
-                      <span className="rq-track">
-                        <span className="rq-track-ic" style={{ color: TRACK_ACCENT[t.id] }}>
-                          <TrackIcon track={t.id} size={16} />
-                        </span>
-                        {t.label}
-                      </span>
-                    </div>
-                    <div className="rq-tl-clip">
-                      <div className="rq-tl-grid rq-lanes" style={{ ...cols, gridTemplateRows: `repeat(${laneCount}, 44px)` }} ref={t.id === "nutrition" ? areaRef : undefined} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
-                        {/* An empty week on a lane is a way in (20 Oct, Alex): a click opens New phase on this track, from that week. Bars sit over it. */}
-                        {weeks.map((w, i) => (
-                          <span
-                            key={w}
-                            className="rq-cell add"
-                            style={{ gridColumn: i + 1, gridRow: `1 / span ${laneCount}` }}
-                            role="button"
-                            tabIndex={-1}
-                            aria-label={`New ${t.label.toLowerCase()} phase from ${shortDate(w)}`}
-                            title={`${t.label} · ${shortDate(w)}`}
-                            onClick={() => {
-                              if (drag || justDragged.current) return;
-                              setDlg({ kind: "phase", phase: null, track: t.id, start: w });
-                            }}
-                          />
-                        ))}
-                        {mine.length === 0 && nowIdx < count && (
-                          <button type="button" className="rq-empty" style={{ gridColumn: `${nowIdx + 1} / span ${Math.min(count - nowIdx, 8)}`, gridRow: 1 }} onClick={() => setDlg({ kind: "phase", phase: null, track: t.id })}>
-                            None yet <b>+ Add</b>
-                          </button>
-                        )}
-                        {mine.map((p) => {
-                          const sp = span(p);
-                          if (!sp.visible) return null;
-                          const total = weeksBetween(sp.s, sp.e) + 1;
-                          const shownW = sp.b - sp.a + 1;
-                          const state = stateOf(p, sp.s, sp.e);
-                          const chrome = phaseChrome(t.id, state);
-                          const elapsed = state === "draft" ? 0 : Math.max(0, Math.min(shownW, nowIdx + intoWeek - sp.a));
-                          const trained = !!p.program && p.program.loggedWeeks.length > 0;
-                          return (
-                            <div
-                              key={p.id}
-                              className={`rq-bar is-${state}${trained ? " fixed" : ""}${sp.clippedStart ? " clip-start" : ""}${sp.clippedEnd ? " clip-end" : ""}${drag?.id === p.id ? " dragging" : ""}`}
-                              style={{ gridColumn: `${sp.a + 1} / span ${shownW}`, gridRow: (laneOf.get(p.id) ?? 0) + 1, paddingLeft: `calc(14px + ${(Math.max(0, shift - sp.a) / shownW) * 100}%)`, background: chrome.band, color: chrome.edge, borderColor: chrome.dashed ? chrome.line : `rgba(${rgbOf(chrome.edge)}, 0.5)`, borderStyle: chrome.dashed ? "dashed" : "solid" }}
-                              onPointerDown={(e) => {
-                                if ((e.target as HTMLElement).closest(".rq-bar-edge")) return;
-                                if (trained) return;
-                                beginDrag(e, p, "move");
-                              }}
-                              onClick={() => {
-                                if (justDragged.current || drag) return;
-                                setDlg({ kind: "phase", phase: p });
-                              }}
-                              title={`${p.name} · ${shortDate(p.start_week)} – ${shortDate(addDays(p.end_week, 6))}`}
-                            >
-                              {elapsed > 0 && <span className="rq-bar-elapsed" style={{ width: `${(elapsed / shownW) * 100}%` }} />}
-                              {!sp.clippedStart && !trained && <span className="rq-bar-edge left" onPointerDown={(e) => beginDrag(e, p, "start")} onClick={(e) => e.stopPropagation()} />}
-                              {!sp.clippedEnd && <span className="rq-bar-edge right" onPointerDown={(e) => beginDrag(e, p, "end")} onClick={(e) => e.stopPropagation()} />}
-                              <span className="rq-bar-main">
-                                <span className="rq-bar-name">{p.name}</span>
-                                <span className="rq-bar-meta">
-                                  {total} {total === 1 ? "week" : "weeks"}
-                                </span>
-                              </span>
-                              {/* Nothing in it yet (20 Oct, Alex): a warning sign, what is missing on hover. Not on a past phase. */}
-                              {p.gap && state !== "past" && <GapSign text={p.gap} />}
-                              {/* Its state in words on the bar (30 Sep), in the state's colours (20 Oct, Alex): Live green, Scheduled blue, Draft peach. */}
-                              {state === "draft" ? (
-                                <span className="rq-bar-pill" style={stateTagStyle(state)}>
-                                  Draft
-                                </span>
-                              ) : state === "live" ? (
-                                <span className="rq-bar-pill" style={stateTagStyle(state)}>
-                                  <b>Live</b>
-                                  <Sep />
-                                  week {weeksBetween(sp.s, thisWeek) + 1} of {total}
-                                </span>
-                              ) : state === "scheduled" ? (
-                                <span className="rq-bar-pill" style={stateTagStyle(state)}>
-                                  <b>Scheduled</b>
-                                  <Sep />
-                                  starts {shortDate(sp.s)}
-                                </span>
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+          {/* The timeline is plan/timelineParts.tsx, as on the Phases screen: months over weeks, the NOW line, a row of lanes a track. */}
+          <Timeline grid={grid}>
+            {TRACKS.map((t) => {
+              const mine = phases.filter((p) => p.track === t.id).sort((a, b) => (a.start_week < b.start_week ? -1 : 1));
+              // Phases that share a week column on one track stack into lanes, judged by the columns they are drawn in.
+              // Only the bars drawn take a lane: a phase outside the window used to hold an empty lane nobody could see (7 Oct).
+              const drawn = mine.filter((p) => spanOf(p).visible);
+              const lanes = packLanes(drawn, (p) => {
+                const sp = spanOf(p);
+                return { from: sp.sc, to: sp.ec };
+              });
+              return (
+                // The track's icon in its colour, its name in ink (20 Oct, Alex): no tinted pill.
+                <LaneRow key={t.id} grid={grid} lanes={lanes.count} icon={<TrackIcon track={t.id} size={16} />} color={TRACK_ACCENT[t.id]} label={t.label} gridRef={t.id === "nutrition" ? areaRef : undefined} onDragMove={moveDrag} onDragEnd={endDrag}>
+                  {/* An empty week on a lane is a way in (20 Oct, Alex): a click opens New phase on this track, from that week. */}
+                  <AddCells
+                    grid={grid}
+                    lanes={lanes.count}
+                    label={(w) => `New ${t.label.toLowerCase()} phase from ${shortDate(w)}`}
+                    title={(w) => `${t.label} · ${shortDate(w)}`}
+                    onAdd={(w) => {
+                      if (drag || justDragged.current) return;
+                      setDlg({ kind: "phase", phase: null, track: t.id, start: w });
+                    }}
+                  />
+                  {mine.length === 0 && <EmptyLane grid={grid} onAdd={() => setDlg({ kind: "phase", phase: null, track: t.id })} />}
+                  {drawn.map((p) => {
+                    // A programme the client has trained on keeps its start: it doesn't move, and only its end stretches.
+                    const trained = !!p.program && p.program.loggedWeeks.length > 0;
+                    return (
+                      <PhaseBar
+                        key={p.id}
+                        phase={{ id: p.id, name: p.name, track: p.track, startWeek: p.start_week, endWeek: p.end_week, draft: p.draft || p.program?.status === "draft", gap: p.gap }}
+                        at={liveWeeks(p)}
+                        grid={grid}
+                        row={lanes.laneOf.get(p.id) ?? 0}
+                        today={today}
+                        thisWeek={thisWeek}
+                        intoWeek={intoWeek}
+                        keyboard={false}
+                        drag={{ dragging: drag?.id === p.id, onBody: trained ? undefined : (e) => beginDrag(e, p, "move"), onStart: trained ? undefined : (e) => beginDrag(e, p, "start"), onEnd: (e) => beginDrag(e, p, "end") }}
+                        onOpen={() => {
+                          if (justDragged.current || drag) return;
+                          setDlg({ kind: "phase", phase: p });
+                        }}
+                      />
+                    );
+                  })}
+                </LaneRow>
+              );
+            })}
+          </Timeline>
         </div>
       </section>
 
@@ -788,37 +666,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
 
 /** The month a phase's dates are picked on: the one calendar in the admin, in its own module (MonthRange.tsx) since 21 Oct; still exported from here for its callers. */
 export { MonthRange };
-
-/**
- * The week grid for a window: last week for context, this week in the second
- * column, and most of the grid what is coming. "Now" is one fixed line a week
- * and a half in; the weeks slide under it as the week goes by. A phase that
- * just ended stays a week and drifts off (no "Show past", 30 Sep). The line
- * stays where it is drawn and the weeks slide so today's day is under it
- * (30 Sep: the weeks sat a week off the line, so the bars' "behind us" shade
- * stopped short of it).
- */
-export function gridFor(win: number, thisWeek: string, intoWeek: number, /** Weeks stepped back into the past (21 Oct); 0 is today's window. */ pastBy = 0) {
-  const back = 1;
-  const first = addWeeks(thisWeek, -back - pastBy);
-  const count = win + back;
-  const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
-  const nowIdx = weeksBetween(first, thisWeek);
-  const months: { label: string; start: number; span: number }[] = [];
-  weeks.forEach((w, i) => {
-    const label = monthName(w);
-    const prev = months[months.length - 1];
-    if (prev && prev.label === label) prev.span += 1;
-    else months.push({ label, start: i, span: 1 });
-  });
-  // Stepped back into the past: whole weeks, no slide under the now line (which shows only while it is still on screen).
-  const shift = pastBy ? 0 : (nowIdx + intoWeek) * (1 - win / count);
-  const nowCol = nowIdx + intoWeek - shift;
-  const cols: React.CSSProperties = { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`, width: `${(count / win) * 100}%`, transform: `translateX(${-(shift / count) * 100}%)` };
-  // The "now" line at today's spot; none when today is past the window's right edge.
-  const nowLeft = nowCol >= 0 && nowCol <= win ? `calc(108px + (100% - 108px) * ${nowCol / win})` : null;
-  return { first, count, weeks, nowIdx, months, cols, nowLeft, shift };
-}
+/** The week grid's maths, in the timeline's own module (timelineParts.tsx) since 21 Oct; still exported from here for their callers. */
+export { gridFor, weeksBetween };
 
 export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, initialStart, others, programs, onSave, onDelete, onDuplicate, onSend, onUnschedule }: { clientId: number; firstName: string; /** A scheduled phase back to a draft (its state tag's menu). */ onUnschedule?: () => void; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase opens on this day (the Phases overview: the day after the one ending). */ initialStart?: string; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null; goals: string[] }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean; goals: string[] }) => void }) {
   const editing = !!phase;
@@ -1168,38 +1017,6 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
         </button>
       </div>
     </DialogContent>
-  );
-}
-
-
-/** A phase with nothing in it yet (20 Oct, Alex): a small warning sign on its bar, what it lacks on hover or focus.
- *  The message floats (a popover) because a bar clips what is inside it; pressing the sign never starts a drag. */
-export function GapSign({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverAnchor asChild>
-        <span
-          className="rq-gap"
-          tabIndex={0}
-          role="img"
-          aria-label={text}
-          onPointerEnter={() => setOpen(true)}
-          onPointerLeave={() => setOpen(false)}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-            <path d="M12 9v4M12 17h.01" />
-          </svg>
-        </span>
-      </PopoverAnchor>
-      <PopoverContent side="top" sideOffset={8} className="rq-gap-tip" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
-        {text}
-      </PopoverContent>
-    </Popover>
   );
 }
 
