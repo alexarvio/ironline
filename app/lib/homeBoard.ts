@@ -41,7 +41,7 @@ export type HomeBoard = {
     track: PhaseTrack;
     /** The phase running today; null when none (the tile then says so in one word and links to Plan). */
     phase: { name: string; weekNow: number; weeks: number } | null;
-    /** The figure, big, and what it is (grey): "5" + "of 7 days checked in"; "2" + "of 4 sessions this week"; "2,900 kcal" + "P 200 | C 300 | F 80". */
+    /** The figure, big, and what it is (grey): "5" + "of 9 days checked in" (Lifestyle: the phase's days so far); "2" + "of 4 sessions this week"; "2,900 kcal" + "P 200 | C 300 | F 80". */
     figure: { value: string; suffix: string } | null;
     /** A second quiet fact under the figure, when there is one: Nutrition's "logged avg 2,640" over the last 7 days with
         food before today (today is still being logged). */

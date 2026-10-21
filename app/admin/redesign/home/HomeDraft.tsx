@@ -704,7 +704,6 @@ function StrengthCard({ strength }: { strength: HomeBoard["strength"] }) {
       <div className="rh-panel-head tall">
         <h2 className="rh-panel-title">Strength</h2>
         <span className="rh-panel-tools">
-          {w && <span className="rh-panel-aside">since {dayMonth(w.since)}</span>}
           <span className="rd-btn-group" role="group" aria-label="Window">
             {STRENGTH_SPANS.map((s) => (
               <button key={s.id} type="button" className={span === s.id ? "on" : ""} aria-pressed={span === s.id} onClick={() => setSpan(s.id)}>
@@ -813,14 +812,13 @@ function ConsistencyCard({ days: last30, phaseDays }: { days: HomeBoard["days"];
   // 30 days | Phase (21 Oct, Alex): the phase from its first day, at least 30 squares (days to come stay empty).
   const [span, setSpan] = useState<"30" | "phase">("30");
   const days = span === "phase" && phaseDays ? phaseDays.days : last30;
-  // A Monday starts a week: a little more air before it, so the weeks read.
-  const monday = days.map((d, i) => i > 0 && new Date(timeOf(d.date)).getDay() === 1);
+  // Evenly spaced, no gap before a Monday (21 Oct, Alex): the two spans start on different weekdays, and the gaps moved
+  // the squares when switching between them.
   return (
     <section className="rls-card rh-panel rh-cons" aria-label="Consistency">
       <div className="rh-panel-head">
         <h2 className="rh-panel-title">Consistency</h2>
         <span className="rh-cons-tools">
-          {span === "phase" && phaseDays && <span className="rh-panel-aside">Since {dayMonth(phaseDays.since)}</span>}
           {phaseDays ? (
             <span className="rd-btn-group" role="group" aria-label="Span">
               {([
@@ -849,8 +847,8 @@ function ConsistencyCard({ days: last30, phaseDays }: { days: HomeBoard["days"];
                   <TrackIcon track={c.track} size={16} />
                 </span>
                 <span className="rh-cons-days" role="img" aria-label={`${c.label}: ${done} of the last ${days.length} days`}>
-                  {days.map((d, i) => (
-                    <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${d.future ? " ahead" : ""}${monday[i] ? " mon" : ""}`} title={d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />
+                  {days.map((d) => (
+                    <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${d.future ? " ahead" : ""}`} title={d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />
                   ))}
                 </span>
               </div>

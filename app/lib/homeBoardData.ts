@@ -359,7 +359,9 @@ function lifestyleFigure(ctx: Ctx): { value: string; suffix: string } | null {
   );
   if (!asked.length) return null;
   const ids = new Set(asked.map((m) => m.id));
-  const monday = weekStart(ctx.today);
+  // Across the phase (21 Oct, Alex): its days so far, today included (week 2, day 2: of 9); no phase, this week's.
+  const start = ctx.phases.lifestyle?.start_week;
+  const monday = start && start <= ctx.today ? start : weekStart(ctx.today);
   const soFar = daysBetween(monday, ctx.today) + 1;
   const seen = new Set<string>();
   for (const e of data.metric_entries) {

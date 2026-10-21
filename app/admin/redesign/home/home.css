@@ -116,7 +116,6 @@
 .rd.rh .rh-cons-label svg { width: 16px; height: 16px; }
 .rd.rh .rh-cons-days { display: flex; align-items: center; justify-content: space-between; gap: 3px; flex: 1 1 auto; min-width: 0; }
 .rd.rh .rh-day { display: block; flex: 0 1 20px; min-width: 6px; aspect-ratio: 1; border-radius: 4px; background: #eef0f3; }
-.rd.rh .rh-day.mon { margin-left: 6px; }
 /* A day still to come in a young phase: there, but quieter than a day gone by without it. */
 .rd.rh .rh-day.ahead { background: #f5f6f8; box-shadow: inset 0 0 0 1px #eef0f3; }
 .rd.rh .rh-cons-tools { display: inline-flex; align-items: center; gap: 12px; }
