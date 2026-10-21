@@ -755,10 +755,11 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
 
 // ---- Consistency: the last 30 days (as the server sends them), a square a day per behaviour. A day done wears its
 // track as a phase does (21 Oct, Alex): the colour soft inside, its full strength on the edge; a day not done is grey.
+// The rows in the tracks' order (21 Oct, Alex): Check-in, Trained, Food, each named by its track's icon alone.
 const CONS: { key: "trained" | "food" | "checkIn"; label: string; track: PhaseTrack; yes: string; no: string }[] = [
+  { key: "checkIn", label: "Check-in", track: "lifestyle", yes: "checked in", no: "no check-in" },
   { key: "trained", label: "Trained", track: "training", yes: "trained", no: "no session" },
   { key: "food", label: "Food", track: "nutrition", yes: "food logged", no: "no food logged" },
-  { key: "checkIn", label: "Check-in", track: "lifestyle", yes: "checked in", no: "no check-in" },
 ];
 function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
   // A Monday starts a week: a little more air before it, so the weeks read.
@@ -777,7 +778,9 @@ function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
             const done = days.filter((d) => d[c.key]).length;
             return (
               <div key={c.key} className="rh-cons-row" style={{ "--rh-c": TRACK_ACCENT[c.track], "--rh-t": tintOf(TRACK_ACCENT[c.track], 0.18) } as CSSProperties}>
-                <span className="rh-cons-label">{c.label}</span>
+                <span className="rh-cons-label" title={c.label} aria-hidden="true">
+                  <TrackIcon track={c.track} size={16} />
+                </span>
                 <span className="rh-cons-days" role="img" aria-label={`${c.label}: ${done} of the last ${days.length} days`}>
                   {days.map((d, i) => (
                     <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${monday[i] ? " mon" : ""}`} title={`${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />

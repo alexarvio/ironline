@@ -109,12 +109,14 @@
 /* Consistency: three rows of a square a day, as many as the server sends (the last 30), across the whole width (still
    square), a little more air before each Monday; the rows centred in the room under the title. A day done wears its
    track as a phase's bar does (21 Oct, Alex): the colour soft inside (--rh-t, 18%), full strength on a 1.5px edge. */
-.rd.rh .rh-cons-rows { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+/* Smaller squares spread across the width, more air between the rows (21 Oct, Alex); each row named by its track's icon. */
+.rd.rh .rh-cons-rows { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
 .rd.rh .rh-cons-row { display: flex; align-items: center; min-width: 0; }
-.rd.rh .rh-cons-label { flex: none; width: 72px; font-size: 12.5px; font-weight: 500; color: #8b93a1; }
-.rd.rh .rh-cons-days { display: flex; align-items: center; gap: 3px; flex: 1 1 auto; min-width: 0; }
-.rd.rh .rh-day { display: block; flex: 1 1 0; min-width: 0; aspect-ratio: 1; border-radius: 3px; background: #eef0f3; }
-.rd.rh .rh-day.mon { margin-left: 4px; }
+.rd.rh .rh-cons-label { flex: none; display: inline-flex; align-items: center; width: 32px; color: var(--rh-c, #8b93a1); }
+.rd.rh .rh-cons-label svg { width: 16px; height: 16px; }
+.rd.rh .rh-cons-days { display: flex; align-items: center; justify-content: space-between; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.rd.rh .rh-day { display: block; flex: 0 1 20px; min-width: 6px; aspect-ratio: 1; border-radius: 4px; background: #eef0f3; }
+.rd.rh .rh-day.mon { margin-left: 6px; }
 .rd.rh .rh-day.on { background: var(--rh-t, #eef0f3); box-shadow: inset 0 0 0 1.5px var(--rh-c, #141a24); }
 
 /* Meetings and Invoices: the card is the way in, as a tile (hover a darker edge, keyboard focus a quiet underline on the
