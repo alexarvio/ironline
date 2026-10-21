@@ -67,5 +67,6 @@ export const config = {
   // shows the logo before anyone has a session. sw.js too: the browser
   // re-checks the service worker on its own, cookie or not, and a redirect
   // to /login there would break push notifications once a session expired.
-  matcher: ["/((?!_next/static|_next/image|api/video-reply|api/stripe/webhook|favicon.ico|manifest.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
+  // coach.webmanifest is the coach phone's (21 Oct, /coach), fetched with no cookie the same way.
+  matcher: ["/((?!_next/static|_next/image|api/video-reply|api/stripe/webhook|favicon.ico|manifest.webmanifest|coach.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
 };

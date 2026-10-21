@@ -1,0 +1,16 @@
+{
+  "id": "/coach",
+  "name": "NorCoach Coach",
+  "short_name": "NorCoach",
+  "description": "Your clients' chats and videos.",
+  "start_url": "/coach",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F6F8",
+  "theme_color": "#F5F6F8",
+  "icons": [
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

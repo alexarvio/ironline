@@ -10,6 +10,7 @@ import { listClientGyms } from "./queries";
 import { createCoachAccount, invoiceCheckout, onboardingLink, stripeConfigured } from "./stripe";
 import { canPayOnline } from "./payments";
 import { sendPushInBackground } from "./push";
+import { pushCoachMessage, pushCoachVideo } from "./coachPush";
 import { coachIdOfClient as coachUserIdOf } from "./tenancy";
 import { appUrl } from "./passwordReset";
 import { lookupOpenFoodFacts, searchOpenFoodFacts } from "./foods/openfoodfacts";
@@ -1607,6 +1608,8 @@ export async function uploadRequestedVideoAction(formData: FormData): Promise<st
   if (!saved) return "That request is gone.";
   if (saved.previous) await deleteUpload(saved.previous);
   await putUpload(saved.path, buffer, file.type);
+  // The coach's phone buzzes (21 Oct, /coach); not for a coach trying the client's app.
+  if ((await getSessionUser())?.role === "client") pushCoachVideo(id);
   revalidatePath("/admin");
   revalidatePath("/client");
   return null;
@@ -1633,6 +1636,7 @@ export async function sendExerciseMediaAction(formData: FormData): Promise<strin
   if (!saved) return "That exercise is gone.";
   if (saved.previous) await deleteUpload(saved.previous);
   await putUpload(saved.path, buffer, file.type);
+  if ((await getSessionUser())?.role === "client") pushCoachVideo(row.id);
   revalidatePath("/admin");
   revalidatePath("/client");
   return null;
@@ -2321,6 +2325,8 @@ export async function sendChatMessageAction(formData: FormData) {
   // A reply to one message (WhatsApp-style): sendChatMessage keeps it only if that message is in this chat.
   const replyTo = Number(formData.get("replyTo")) || null;
   sendChatMessage(clientId, sender, text, media, link, replyTo);
+  // The coach's phone buzzes for what a client writes (21 Oct, /coach).
+  if (sender === "client") pushCoachMessage(clientId, { text, media: media?.type });
   // A picture's small copies and a video's poster are made now, after the
   // answer, so the first person to open the chat doesn't wait for them (21 Oct).
   const kind = media?.type;
@@ -3739,7 +3745,10 @@ export async function endSessionAction(programDayId: number, opts?: { note?: str
   // pointing at the session (1 Oct): it used to stay on the Training tab,
   // easy to miss. Once per wording, and never from a coach's preview.
   const after = getData().program_days.find((pd) => pd.id === Number(programDayId))?.session_note ?? "";
-  if (after && after !== before && (await getSessionUser())?.role === "client") sendChatMessage(owner, "client", after, undefined, { kind: "session", dayId: Number(programDayId) });
+  if (after && after !== before && (await getSessionUser())?.role === "client") {
+    sendChatMessage(owner, "client", after, undefined, { kind: "session", dayId: Number(programDayId) });
+    pushCoachMessage(owner, { text: after });
+  }
   revalidatePath("/client");
   revalidatePath("/admin");
 }

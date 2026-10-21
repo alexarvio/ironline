@@ -10,16 +10,23 @@ import type { PhoneVideo } from "../lib/coachPhone";
 import ChatThread from "./ChatThread";
 import PhoneReview from "./PhoneReview";
 import { Avatar, Facts, Icon, Sheet } from "./parts";
+import { PushSwitch } from "../client/PushToggle";
+import { NativePush } from "../client/NativePush";
 
 // The coach's phone (21 Oct, Alex): Chats and Videos on a floating tab bar,
 // a chat or a video over them. Where it is lives in the address (?c=, ?v=,
 // ?tab=videos), moved with the browser's own history so the phone's Back
 // works and nothing is fetched to switch screens. The lists ask for
 // themselves every 15 s while the app is showing, as the chat does.
+// Notifications are turned on in the account sheet (the coach's face); a
+// tapped one opens its chat or video (lib/coachPush.ts; NativePush in the
+// Android app, the service worker in a browser).
 
 const POLL_MS = 15000;
 
-export default function CoachApp({ inbox: fromPage, coach }: { inbox: CoachInbox; coach: { name: string; photoPath: string | null } }) {
+type Push = { publicKey: string | null; nativeReady: boolean };
+
+export default function CoachApp({ inbox: fromPage, coach, push }: { inbox: CoachInbox; coach: { name: string; photoPath: string | null }; push: Push }) {
   const params = useSearchParams();
   const chatId = Number(params.get("c")) || null;
   const videoId = Number(params.get("v")) || null;
@@ -66,6 +73,7 @@ export default function CoachApp({ inbox: fromPage, coach }: { inbox: CoachInbox
     const chat = inbox.chats.find((c) => c.id === chatId) ?? null;
     return (
       <div className="cph">
+        <NativePush />
         <ChatThread
           key={chatId}
           clientId={chatId}
@@ -80,6 +88,7 @@ export default function CoachApp({ inbox: fromPage, coach }: { inbox: CoachInbox
   if (videoId) {
     return (
       <div className="cph">
+        <NativePush />
         <PhoneReview key={videoId} requestId={videoId} onBack={back} onSent={() => void refresh()} />
       </div>
     );
@@ -89,10 +98,12 @@ export default function CoachApp({ inbox: fromPage, coach }: { inbox: CoachInbox
   const waiting = inbox.videos.waiting.length;
   return (
     <div className="cph">
+      <NativePush />
       <Lists
         tab={tab}
         inbox={inbox}
         coach={coach}
+        push={push}
         onOpenChat={(id) => {
           listY[tab] = window.scrollY;
           open(`c=${id}`);
@@ -121,7 +132,7 @@ export default function CoachApp({ inbox: fromPage, coach }: { inbox: CoachInbox
 /** Where each list was left, for coming back from a chat or a video. */
 const listY: Record<string, number> = {};
 
-function Lists({ tab, inbox, coach, onOpenChat, onOpenVideo }: { tab: "chats" | "videos"; inbox: CoachInbox; coach: { name: string; photoPath: string | null }; onOpenChat: (id: number) => void; onOpenVideo: (id: number) => void }) {
+function Lists({ tab, inbox, coach, push, onOpenChat, onOpenVideo }: { tab: "chats" | "videos"; inbox: CoachInbox; coach: { name: string; photoPath: string | null }; push: Push; onOpenChat: (id: number) => void; onOpenVideo: (id: number) => void }) {
   const [q, setQ] = useState("");
   const [account, setAccount] = useState(false);
   // Back from a chat or a video: the list where it was left.
@@ -200,6 +211,22 @@ function Lists({ tab, inbox, coach, onOpenChat, onOpenVideo }: { tab: "chats" | 
             <Avatar name={coach.name} src={coach.photoPath} size={40} />
             <b>{coach.name}</b>
           </div>
+          {/* The client's switch, drawn as this sheet's row: white while off, ink while on (21 Oct). */}
+          <PushSwitch
+            publicKey={push.publicKey}
+            nativeReady={push.nativeReady}
+            row={(p) => (
+              <button type="button" className="cph-sheet-row cph-switch-row" onClick={p.onClick} disabled={p.disabled} aria-pressed={p.on}>
+                <span className="cph-switch-text">
+                  Notifications
+                  <small>{p.detail}</small>
+                </span>
+                <span className={`cph-switch${p.on ? " on" : ""}`} aria-hidden="true">
+                  <i />
+                </span>
+              </button>
+            )}
+          />
           <button type="button" className="cph-sheet-row" onClick={() => logoutAction()}>
             Sign out
           </button>

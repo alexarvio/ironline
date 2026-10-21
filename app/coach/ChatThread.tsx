@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { chatDraftThreadAction } from "../admin/redesign/messages/actions";
+import { coachThreadAction } from "./actions";
 import type { DraftMedia, DraftMessage, DraftMessages } from "../admin/redesign/messages/MessagesDraft";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction } from "../lib/actions";
 import VoiceRecordButton from "../components/VoiceRecordButton";
@@ -11,8 +11,9 @@ import { dayMonth } from "../lib/dayMonth";
 import { useKeyboardInset } from "../client/useKeyboardInset";
 import { Avatar, Facts, Icon, Sheet } from "./parts";
 
-// One client's chat on the coach's phone (21 Oct): the laptop's thread
-// (chatDraftThreadAction, the same actions for every send, reaction, edit,
+// One client's chat on the coach's phone (21 Oct): the laptop's thread (its
+// loader, through coachThreadAction, which also keeps this chat's pushes
+// quiet while it shows, and the same actions for every send, reaction, edit,
 // pin and delete), laid out for a thumb. Their messages on the left in white
 // with a hairline, the coach's on the right in a neutral tint; hold one to
 // react, reply, copy, edit, pin or delete it. + sends a photo, video or file,
@@ -50,12 +51,12 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     },
     [clientId]
   );
-  const refresh = useCallback(async () => take(await chatDraftThreadAction(clientId).catch(() => null)), [clientId, take]);
+  const refresh = useCallback(async () => take(await coachThreadAction(clientId).catch(() => null)), [clientId, take]);
   useEffect(() => {
     void markSeenAction(clientId, { tab: "messages" })
       .then(() => readRef.current())
       .catch(() => {});
-    chatDraftThreadAction(clientId).then(take, () => {});
+    coachThreadAction(clientId).then(take, () => {});
     const tick = () => {
       if (document.visibilityState === "visible") void refresh();
     };

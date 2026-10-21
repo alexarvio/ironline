@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { nativePlatform } from "../lib/native";
 import { fcmTokenFromPhone, forgetFcmToken, NATIVE_PUSH, readFcmToken, rememberFcmToken } from "./NativePush";
 
@@ -40,14 +40,22 @@ async function send(method: "POST" | "DELETE" | "PUT", body: unknown) {
 
 const noSubscribe = () => () => {};
 
+/** What a switch row draws: the client's Settings row, or the coach's phone's own (21 Oct, app/coach). */
+export type PushRowProps = { on: boolean; disabled: boolean; detail: string; onClick: () => void };
+
 export default function PushToggle({ publicKey, nativeReady }: { publicKey: string | null; nativeReady: boolean }) {
-  const platform = useSyncExternalStore(noSubscribe, nativePlatform, () => null);
-  if (platform === "android") return <NativePushToggle ready={nativeReady} />;
-  if (platform === "ios") return null;
-  return publicKey ? <WebPushToggle publicKey={publicKey} /> : null;
+  return <PushSwitch publicKey={publicKey} nativeReady={nativeReady} row={(p) => <ToggleRow {...p} />} />;
 }
 
-function NativePushToggle({ ready }: { ready: boolean }) {
+/** The phone's notifications on or off, the right way for where it runs (Android app, a browser; none in the iPhone app yet), drawn by `row`. */
+export function PushSwitch({ publicKey, nativeReady, row }: { publicKey: string | null; nativeReady: boolean; row: (p: PushRowProps) => ReactNode }) {
+  const platform = useSyncExternalStore(noSubscribe, nativePlatform, () => null);
+  if (platform === "android") return <NativePushToggle ready={nativeReady} row={row} />;
+  if (platform === "ios") return null;
+  return publicKey ? <WebPushToggle publicKey={publicKey} row={row} /> : null;
+}
+
+function NativePushToggle({ ready, row }: { ready: boolean; row: (p: PushRowProps) => ReactNode }) {
   const [state, setState] = useState<State>("loading");
 
   useEffect(() => {
@@ -94,10 +102,10 @@ function NativePushToggle({ ready }: { ready: boolean }) {
       : state === "unsupported"
         ? "Not available yet"
         : "On your lock screen, even with the app closed";
-  return <ToggleRow on={state === "on"} disabled={state === "loading" || state === "busy" || state === "blocked" || state === "unsupported"} detail={detail} onClick={state === "on" ? turnOff : turnOn} />;
+  return <>{row({ on: state === "on", disabled: state === "loading" || state === "busy" || state === "blocked" || state === "unsupported", detail, onClick: state === "on" ? turnOff : turnOn })}</>;
 }
 
-function ToggleRow({ on, disabled, detail, onClick }: { on: boolean; disabled: boolean; detail: string; onClick: () => void }) {
+function ToggleRow({ on, disabled, detail, onClick }: PushRowProps) {
   return (
     <button type="button" className="settings-toggle-row" onClick={onClick} disabled={disabled} aria-pressed={on}>
       <div className="home-dark-row-body">
@@ -111,7 +119,7 @@ function ToggleRow({ on, disabled, detail, onClick }: { on: boolean; disabled: b
   );
 }
 
-function WebPushToggle({ publicKey }: { publicKey: string }) {
+function WebPushToggle({ publicKey, row }: { publicKey: string; row: (p: PushRowProps) => ReactNode }) {
   const [state, setState] = useState<State>("loading");
 
   useEffect(() => {
@@ -171,5 +179,5 @@ function WebPushToggle({ publicKey }: { publicKey: string }) {
           ? "This browser can't show notifications"
           : "On your lock screen, even with the app closed";
   const disabled = state === "loading" || state === "busy" || state === "install" || state === "blocked" || state === "unsupported";
-  return <ToggleRow on={state === "on"} disabled={disabled} detail={detail} onClick={state === "on" ? turnOff : turnOn} />;
+  return <>{row({ on: state === "on", disabled, detail, onClick: state === "on" ? turnOff : turnOn })}</>;
 }
