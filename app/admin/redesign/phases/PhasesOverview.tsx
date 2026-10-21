@@ -375,6 +375,7 @@ function ExtendMenu({ phase, onPick }: { phase: OverviewPhase; onPick: (endWeek:
                   onPick(byDay(d));
                 }}
                 label="Pick the new last day"
+                className="pov-extend-date"
               />
             </div>
           ) : (

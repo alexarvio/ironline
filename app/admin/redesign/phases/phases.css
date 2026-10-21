@@ -76,11 +76,15 @@
 .rd.pov :is(.rq-bar, .rq-evbar, .rq-pin):focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
 
 /* ---- Extend: the floating list (portalled). */
-.pov-extend-menu.pov-extend-menu { z-index: 60; min-width: 210px; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; }
+.pov-extend-menu.pov-extend-menu { z-index: 60; width: 210px; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; }
 .pov-extend-opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
 .pov-extend-opt:hover, .pov-extend-opt:focus-visible { outline: none; background: #f5f6f8; }
 .pov-extend-opt small { font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.pov-extend-pick { display: flex; flex-direction: column; gap: 6px; padding: 6px 6px 4px; }
+/* Pick date… becomes the typed date in its own row's place (21 Oct, Alex: the menu must not change size): the same
+   36px and the menu's width, drawn as the option it replaces, held (hover grey), the calendar on its icon. */
+.pov-extend-pick { display: flex; height: 36px; min-width: 0; }
+.pov-extend-pick .rd-picker.pov-extend-date { flex: 1; min-width: 0; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: #f5f6f8; box-shadow: none; gap: 8px; }
+.pov-extend-pick .rd-picker.pov-extend-date .rdt { min-width: 0; font-size: 13px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; }
 
 /* ---- The detail pop-ups (portalled): the .dlh card (training/trn.css) with the Move pop-up's tags (.mvd, plan/phase-dialog.css). */
 .dlh.dlh.phd, .dlh.dlh.evd { width: min(480px, 100vw - 32px); }
