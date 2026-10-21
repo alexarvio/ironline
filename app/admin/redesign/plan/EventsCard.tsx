@@ -636,7 +636,7 @@ export function EventDialog({ today, event, cats, firstName, initialStart, initi
 }
 
 // ---- After a drag: what moves, from what to what, and a yes before it saves.
-function MoveEventDialog({ event: e, start, end, cats, onCancel, onSave }: { event: PlanEvent; start: string; end: string; cats: Category[]; onCancel: () => void; onSave: () => void }) {
+export function MoveEventDialog({ event: e, start, end, cats, onCancel, onSave }: { event: PlanEvent; start: string; end: string; cats: Category[]; onCancel: () => void; onSave: () => void }) {
   const k = chromeOf(cats, e.kind);
   const single = e.start === e.end;
   const len = (a: string, b: string) => `${daysBetween(a, b) + 1} day${daysBetween(a, b) === 0 ? "" : "s"}`;

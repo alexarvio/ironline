@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Popover as PopoverPrimitive } from "radix-ui";
 import { toast } from "sonner";
-import { addClientEventAction, addClientPhaseAction, removeClientPhaseAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientEventAction, addClientPhaseAction, removeClientPhaseAction, updateClientEventAction, updateClientPhaseAction } from "../../../lib/actions";
 import { Dialog } from "../../../components/ui/dialog";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../../components/icons";
 import { EVENT_TYPES, isEventTypeId } from "../../../lib/eventTypes";
@@ -14,8 +14,8 @@ import { dayMonth } from "../../../lib/dayMonth";
 import type { PhaseTrack } from "../../../lib/db";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { gridFor, MoveDialog, PhaseDialog, phaseForm, TrackIcon, WINDOWS, type Win } from "../plan/PlanDraft";
-import { chromeOf, EV_LANE, EventDialog, KindIcon, rgbOf, type Category } from "../plan/EventsCard";
-import { EventMark, eventPlace, LaneLabel, MonthsRow, packLanes, PhaseBar, weekSpan, weeksBetween, WeeksRow, type Grid } from "../plan/timelineParts";
+import { chromeOf, EV_LANE, EventDialog, KindIcon, MoveEventDialog, rgbOf, type Category } from "../plan/EventsCard";
+import { EventMark, eventIsPast, eventPlace, LaneLabel, MonthsRow, packLanes, PhaseBar, weekSpan, weeksBetween, WeeksRow, type Grid } from "../plan/timelineParts";
 import type { PlanPhaseRow } from "../../../lib/queries";
 import DatePick from "../DatePick";
 import { Sep } from "../Sep";
@@ -23,7 +23,7 @@ import { Fold } from "../Fold";
 import PhaseDetailDialog from "./PhaseDetailDialog";
 import EventDetailDialog from "./EventDetailDialog";
 import type { OverviewClient, PhasesOverviewData } from "./load";
-import { addDays, clientStatus, daysLeft, endingSoon, leftLabel, mondayOf, needsAttention, progressOf, soonPhases, TRACKS, weekIndexOf, weeksOf, type OverviewEvent, type OverviewPhase } from "./timeline";
+import { addDays, clientStatus, daysBetween, daysLeft, endingSoon, leftLabel, mondayOf, needsAttention, progressOf, soonPhases, TRACKS, weekIndexOf, weeksOf, type OverviewEvent, type OverviewPhase } from "./timeline";
 
 // The Phases overview (14 Oct; drawn as the Plan since 21 Oct): Ending soon
 // on top as a list to act on (Plan next, Extend), then every client on one
@@ -118,6 +118,8 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
   // A bar dragged or stretched on the grid (21 Oct, Alex: as on the Plan): it waits here for a yes in the Plan's Move
   // pop-up, drawn at its new weeks meanwhile; nothing changes for the client before Save.
   const [move, setMove] = useState<{ client: OverviewClient; row: PlanPhaseRow; start: string; end: string } | null>(null);
+  // An event dragged or stretched the same way (21 Oct, Alex: as the Events card): the Move pop-up waits for a yes.
+  const [evMove, setEvMove] = useState<{ client: OverviewClient; event: OverviewEvent; start: string; end: string } | null>(null);
   const [newEvent, setNewEvent] = useState<{ client: OverviewClient; day: string; /** From a kind's lane: that kind (null for "Event"); else the dialog's own first pick. */ kind?: string | null } | null>(null);
   const leave = (id: number) => setLeavingOf((s) => ({ of: data, ids: new Set(s && s.of === data ? s.ids : []).add(id) }));
   const act = (fn: () => Promise<unknown>, said: string, undo?: () => Promise<unknown>) =>
@@ -255,6 +257,8 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
                         const row = c.plan.phases.find((x) => x.id === p.id);
                         if (row) setMove({ client: c, row, start, end });
                       }}
+                      evPending={evMove && evMove.client.id === c.id ? { id: evMove.event.id, start: evMove.start, end: evMove.end } : null}
+                      onMoveEvent={(e, start, end) => setEvMove({ client: c, event: e, start, end })}
                       folded={prefs.folded.includes(c.id)}
                       onFold={() => setPrefs((p) => ({ ...p, folded: p.folded.includes(c.id) ? p.folded.filter((x) => x !== c.id) : [...p.folded, c.id] }))}
                     />
@@ -291,6 +295,25 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
               setMove(null);
               const form = (start: string, end: string) => phaseForm({ id: row.id, name: row.name, track: row.track, start, end });
               act(() => updateClientPhaseAction(form(s, e)), `${row.name}: ${dayMonth(s)} – ${dayMonth(addDays(e, 6))}`, () => updateClientPhaseAction(form(row.start_week, row.end_week)));
+            }}
+          />
+        )}
+      </Dialog>
+
+      {/* A dragged event's new dates, the Events card's Move pop-up: Save saves (Undo in the toast), Cancel puts it back. */}
+      <Dialog open={!!evMove} onOpenChange={(o) => !o && setEvMove(null)}>
+        {evMove && (
+          <MoveEventDialog
+            event={evMove.event}
+            start={evMove.start}
+            end={evMove.end}
+            cats={categories}
+            onCancel={() => setEvMove(null)}
+            onSave={() => {
+              const { client, event: e, start, end } = evMove;
+              setEvMove(null);
+              const at = (s: string, en: string) => updateClientEventAction(client.id, e.id, { kind: e.kind, title: e.title, start: s, end: en, note: e.note });
+              act(() => at(start, end), `${e.title}: ${start === end ? dayMonth(start) : `${dayMonth(start)} → ${dayMonth(end)}`}`, () => at(e.start, e.end));
             }}
           />
         )}
@@ -431,6 +454,8 @@ function ClientBlock({
   onNewEvent,
   pending,
   onMove,
+  evPending,
+  onMoveEvent,
   folded,
   onFold,
 }: {
@@ -448,6 +473,9 @@ function ClientBlock({
   pending: { id: number; startWeek: string; endWeek: string } | null;
   /** A bar dragged or stretched to new weeks (its Monday start and end_week). */
   onMove: (p: OverviewPhase, start: string, end: string) => void;
+  /** An event's move waiting for a yes, and an event dragged or stretched to new days. */
+  evPending: { id: number; start: string; end: string } | null;
+  onMoveEvent: (e: OverviewEvent, start: string, end: string) => void;
   /** Folded down to its name row (21 Oct, Alex: a chevron after the name). */
   folded: boolean;
   onFold: () => void;
@@ -513,6 +541,53 @@ function ClientBlock({
     onMove(p, d.start, d.end);
   };
   const trainedOf = (p: OverviewPhase) => (c.plan.phases.find((x) => x.id === p.id)?.program?.loggedWeeks.length ?? 0) > 0;
+  // Events drag as the Events card's (21 Oct, Alex): a bar by its body or either end, a pin whole, by the day; a past
+  // one stays put. The day under the pointer, from the first event lane's grid.
+  const evAreaRef = useRef<HTMLDivElement | null>(null);
+  const [evDrag, setEvDrag] = useState<{ id: number; edge: "start" | "end" | "move"; start: string; end: string; moved: boolean; origStart: string; origEnd: string; anchor: string | null } | null>(null);
+  const evJustDragged = useRef(false);
+  const dayAt = (clientX: number) => {
+    const el = evAreaRef.current;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return addDays(grid.first, Math.max(0, Math.min(totalDays - 1, Math.floor(((clientX - r.left) / r.width) * totalDays))));
+  };
+  const beginEvDrag = (ev: React.PointerEvent, e: OverviewEvent, edge: "start" | "end" | "move") => {
+    if (ev.button !== 0 && ev.pointerType === "mouse") return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    (ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
+    setEvDrag({ id: e.id, edge, start: e.start, end: e.end, moved: false, origStart: e.start, origEnd: e.end, anchor: edge === "move" ? dayAt(ev.clientX) : null });
+  };
+  const moveEvDrag = (ev: React.PointerEvent) => {
+    if (!evDrag) return;
+    const day = dayAt(ev.clientX);
+    if (!day) return;
+    setEvDrag((d) => {
+      if (!d) return d;
+      let next = d;
+      if (d.edge === "move" && d.anchor) {
+        const delta = daysBetween(d.anchor, day);
+        next = { ...d, start: addDays(d.origStart, delta), end: addDays(d.origEnd, delta) };
+      } else if (d.edge === "start") next = { ...d, start: day <= d.end ? day : d.end };
+      else next = { ...d, end: day >= d.start ? day : d.start };
+      return { ...next, moved: d.moved || next.start !== d.start || next.end !== d.end };
+    });
+  };
+  const endEvDrag = (ev: React.PointerEvent) => {
+    if (!evDrag) return;
+    if ((ev.currentTarget as HTMLElement).hasPointerCapture?.(ev.pointerId)) (ev.currentTarget as HTMLElement).releasePointerCapture(ev.pointerId);
+    const d = evDrag;
+    setEvDrag(null);
+    if (d.moved) {
+      evJustDragged.current = true;
+      setTimeout(() => (evJustDragged.current = false), 300);
+    }
+    const e = c.events.find((x) => x.id === d.id);
+    if (!e || (d.start === d.origStart && d.end === d.origEnd)) return;
+    onMoveEvent(e, d.start, d.end);
+  };
+  const evAt = (e: OverviewEvent) => (evDrag?.id === e.id ? { start: evDrag.start, end: evDrag.end } : evPending?.id === e.id ? { start: evPending.start, end: evPending.end } : undefined);
   const atOf = (p: OverviewPhase) => (drag?.id === p.id ? { startWeek: drag.start, endWeek: drag.end } : pending?.id === p.id ? { startWeek: pending.startWeek, endWeek: pending.endWeek } : undefined);
 
   // Events: a row a kind with something on the grid, in the app's kind order, "Event" last; overlapping ones stack into lanes, a pin's label taking room too.
@@ -640,16 +715,29 @@ function ClientBlock({
           <PlusIcon /> Add
         </button>
       </div>
-      {groups.map((g) => (
+      {groups.map((g, gi) => (
           <div key={g.id ?? "none"} className="rq-tl-row">
             <LaneLabel icon={<KindIcon id={g.id} size={16} />} color={g.chrome.ink} label={g.chrome.label} />
             <div className="rq-tl-clip">
-              <div className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${g.laneCount}, ${EV_LANE}px)` }}>
+              <div ref={gi === 0 ? evAreaRef : undefined} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${g.laneCount}, ${EV_LANE}px)` }} onPointerMove={moveEvDrag} onPointerUp={endEvDrag} onPointerCancel={endEvDrag}>
                 {weeks.map((w, i) => (
                   <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: `1 / span ${g.laneCount}` }} role="button" tabIndex={-1} aria-label={`New ${g.chrome.label.toLowerCase()} for ${c.name} in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev, g.id)} />
                 ))}
                 {g.events.map((e) => (
-                  <EventMark key={e.id} e={e} place={eventPlace(e, grid.first, totalDays)} lane={evLane.get(e.id) ?? 0} today={today} cats={cats} onOpen={() => onPick({ client: c, event: e })} />
+                  <EventMark
+                    key={e.id}
+                    e={e}
+                    at={evAt(e)}
+                    place={eventPlace(evAt(e) ?? e, grid.first, totalDays)}
+                    lane={evLane.get(e.id) ?? 0}
+                    today={today}
+                    cats={cats}
+                    drag={eventIsPast(e, today) ? undefined : { dragging: evDrag?.id === e.id, onBody: (ev) => beginEvDrag(ev, e, "move"), onStart: (ev) => beginEvDrag(ev, e, "start"), onEnd: (ev) => beginEvDrag(ev, e, "end") }}
+                    onOpen={() => {
+                      if (evDrag || evJustDragged.current) return;
+                      onPick({ client: c, event: e });
+                    }}
+                  />
                 ))}
               </div>
             </div>
