@@ -2,21 +2,21 @@ import { requireCoach } from "../../../lib/auth";
 import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import ChatDock from "../ChatDock";
-import LookFlag from "../LookFlag";
 import "../messages/messages.css";
 import PhasesOverview from "./PhasesOverview";
 import { loadPhasesOverview } from "./load";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
+import "../nutrition/nutrition.css";
+import "../measurements/measurements.css";
 import "../plan/plan.css";
 import "../ncdialog.css";
 import "../rail.css";
 import "./phases.css";
-import "../look-hairline.css";
-import "./phases-hairline.css";
 
-// Every client's phases and events on one timeline (redrawn 14 Oct): ending
-// soon as a list to act on, the clients' lanes below, the rail on the left.
+// Every client's phases and events on one timeline (redrawn 14 Oct; the
+// Plan's timeline since 21 Oct): ending soon as a list to act on, the
+// clients' lanes below, the rail on the left.
 //   /admin/redesign/phases
 export const dynamic = "force-dynamic";
 
@@ -24,12 +24,10 @@ export default async function PhasesPage() {
   const coach = await requireCoach();
   return (
     <div className="rd-frame">
-      {/* ?look=hairline: the client app's language, as a preview (19 Oct, as Home's). */}
-      <LookFlag />
       <RedesignRail rail={loadRail(coach)} clientId={0} />
       <ChatDock chats={loadChatDock(coach)} />
       <div className="rd-page">
-        <PhasesOverview data={loadPhasesOverview(coach.id, coach.email)} />
+        <PhasesOverview data={loadPhasesOverview(coach.id)} />
       </div>
     </div>
   );

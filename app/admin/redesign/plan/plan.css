@@ -216,8 +216,9 @@
 .rq-evlog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px 10px 14px; }
 .rq-evlog-empty { margin: 0; padding: 8px 14px 12px; font-size: 13px; color: #8b93a1; }
 /* One line a row (20 Oct, Alex): when (logDate, 21 Oct: room for `Wed, 30 Sep → Wed, 30 Sep`), the title with its note
-   right after it (21 Oct), the kind, where it stands. */
-.rd-row-main.rq-evrow, .rq-evrow { display: grid; grid-template-columns: 188px minmax(0, 1fr) 108px 110px; column-gap: 16px; align-items: center; cursor: pointer; }
+   right after it (21 Oct), the kind, where it stands. Tight (21 Oct, Alex: too much empty room): the date column as wide
+   as the log needs (--ev-when, EventsCard), and where it stands right after the kind, not pushed to the far edge. */
+.rd-row-main.rq-evrow, .rq-evrow { display: grid; grid-template-columns: var(--ev-when, 188px) minmax(0, 1fr) 108px 110px; column-gap: 16px; align-items: center; cursor: pointer; }
 .rq-evrow:hover { background: #fafbfd; }
 .rq-evrow-when { display: flex; flex-direction: column; gap: 1px; font-variant-numeric: tabular-nums; }
 .rq-evrow-when b { display: flex; align-items: center; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; }
@@ -228,7 +229,7 @@
 .rq-evrow-main .rq-ev-by { flex: none; }
 /* Short of room, the note gives way before the title. */
 .rq-evrow-note { flex: 0 100 auto; min-width: 0; margin-left: 14px; font-size: 12.5px; font-weight: 500; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rq-evrow-rel { font-size: 12px; font-weight: 600; color: #8b93a1; text-align: right; white-space: nowrap; }
+.rq-evrow-rel { font-size: 12px; font-weight: 600; color: #8b93a1; text-align: left; white-space: nowrap; }
 
 /* The log folds: a row with a chevron, the filters only when open, ten a page. */
 .rq-evlog-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 6px 8px 6px 4px; border: 0; border-radius: 8px; background: none; font: inherit; cursor: pointer; }

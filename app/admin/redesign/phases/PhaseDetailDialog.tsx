@@ -4,90 +4,46 @@ import { useRef } from "react";
 import type React from "react";
 import Link from "next/link";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import type { PhaseTrack } from "../../../lib/db";
-import { stateTagStyle, TRACK_LABEL } from "../../phaseChrome";
-import { TRAINING_ICON } from "../../../lib/eventTypes";
-import type { OverviewClient } from "./load";
-import { daysBetween, daysLeft, nextOnTrack, phaseState, phaseStatus, prevOnTrack, dayMonth, TRACK_COLOR, weekIndexOf, weekSegments, weeksOf, type OverviewPhase, type PhaseState } from "./timeline";
+import { phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
+import { phaseLengthLabel } from "../../../lib/phases";
+import { dayMonth } from "../../../lib/dayMonth";
+import { TrackIcon, weeksBetween } from "../plan/PlanDraft";
+import { rgbOf } from "../plan/EventsCard";
 import { SepJoin } from "../Sep";
+import type { OverviewClient } from "./load";
+import { daysLeft, endingSoon, leftLabel, mondayOf, nextOnTrack, prevOnTrack, weekSegments, type OverviewPhase } from "./timeline";
 
-// A phase's detail (14 Oct), from a bar on the Phases timeline. Read-only:
-// the track pill and a state chip, the name, the client's first name, the
-// weeks as segments with the current one part-filled, the coach's
-// objectives, what comes after on the track, and one way out: Open plan.
-// A draft wears a dashed rust box and says DRAFT · NOT SENT, so it is
-// recognisable at once. ← and → move along the track.
-
-const TRACK_ICON: Record<PhaseTrack, string> = {
-  lifestyle: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z",
-  training: TRAINING_ICON,
-  nutrition: "M5 19c0-8 6-14 14-14 0 8-6 14-14 14zM5 19l7-7",
-};
-const first = (name: string) => name.split(" ")[0];
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-const inWords = (days: number) => (days >= 14 ? plural(Math.round(days / 7), "week") : plural(days, "day"));
+// A phase's detail (14 Oct; the .dlh card since 21 Oct), from a bar on the
+// Phases timeline. Read-only: the name, its track and state tags, one fact
+// line, the weeks as a strip, its goals, what comes after on the track, and
+// one way out: Open, to the track's own tab. ← and → move along the track.
 
 /** Where the phase is edited: the track's own tab, on this phase. */
 export const planHref = (clientId: number, p: OverviewPhase) =>
   p.track === "training" ? `/admin/redesign/training?client=${clientId}${p.programId ? `&program=${p.programId}` : ""}` : `/admin/redesign/${p.track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${p.id}`;
 
-/** The chip wears the shared state colours (20 Oct, Alex): running is Live green, upcoming Scheduled blue, a draft peach, done grey. */
-function chipOf(p: OverviewPhase, state: PhaseState, today: string): { text: React.ReactNode; cls: string; tag: "live" | "scheduled" | "draft" | "past" } {
-  if (state === "soon") {
-    const d = daysLeft(p, today);
-    return { text: d <= 0 ? "Ends today" : d === 1 ? "Ends tomorrow" : `Ends in ${d} days`, cls: "soon", tag: "live" };
-  }
-  if (state === "running") return { text: `Week ${weekIndexOf(p, today)} of ${weeksOf(p)}`, cls: "track", tag: "live" };
-  if (state === "upcoming") return { text: `Starts in ${daysBetween(today, p.start)} days`, cls: "track", tag: "scheduled" };
-  if (state === "draft") return { text: <SepJoin parts={["Draft", "not sent"]} />, cls: "draft", tag: "draft" };
-  return { text: "Done", cls: "done", tag: "past" };
-}
+const stateOf = (p: OverviewPhase, today: string) => phaseStateOf({ draft: p.draft, startWeek: p.start, endWeek: p.endWeek, today });
 
 export default function PhaseDetailDialog({ client, phase: p, today, onMove }: { client: OverviewClient; phase: OverviewPhase; today: string; /** ← and →: the phase before or after on the track. */ onMove: (p: OverviewPhase) => void }) {
-  const col = TRACK_COLOR[p.track];
-  const state = phaseState(p, client.phases, today);
-  const status = phaseStatus(p, today);
-  const running = status === "running";
-  const chip = chipOf(p, state, today);
-  const draft = state === "draft";
-  const left = daysLeft(p, today);
-  const total = daysBetween(p.start, p.end) + 1;
-  const weeks = weeksOf(p);
-  const segments = weekSegments(p, today);
-  const length = total % 7 === 0 ? plural(weeks, "week") : plural(total, "day");
+  const accent = TRACK_ACCENT[p.track];
+  const state = stateOf(p, today);
+  const soon = endingSoon(p, client.phases, today);
+  // The Plan bar's weeks, so the two always say the same.
+  const total = weeksBetween(p.start, p.endWeek) + 1;
+  const weekNow = weeksBetween(p.start, mondayOf(today)) + 1;
+  // A draft has run for nobody: its strip stays empty, as its bar has no shade.
+  const segments = weekSegments(p, today).map((s) => (state === "draft" ? { ...s, fill: 0 } : s));
+  const elapsed = segments.reduce((n, s) => n + s.days * s.fill, 0) / Math.max(1, segments.reduce((n, s) => n + s.days, 0));
   const next = nextOnTrack(p, client.phases);
   const prev = prevOnTrack(p, client.phases);
+  const nextState = next ? stateOf(next, today) : null;
+  const goals = p.objectives.filter((g) => g.trim()).slice(0, 3);
   const openRef = useRef<HTMLAnchorElement>(null);
-  const href = planHref(client.id, p);
-
-  const top = running ? `Week ${weekIndexOf(p, today)} of ${weeks}` : status === "done" ? `Finished on ${dayMonth(p.end)}` : `Starts in ${inWords(daysBetween(today, p.start))}`;
-  const side = running
-    ? { text: `${left} day${left === 1 ? "" : "s"} left`, cls: state === "soon" ? "rust" : "track" }
-    : draft
-      ? { text: "Draft", cls: "rust" }
-      : status === "upcoming"
-        ? { text: <SepJoin parts={["Sent", `${first(client.name)} sees it`]} />, cls: "faint" }
-        : { text: `${weeks} of ${weeks} weeks`, cls: "ok" };
-
-  // After this: the next phase on the track, or the warning that nothing is.
-  const after = next
-    ? next.draft
-      ? { text: <SepJoin parts={[next.name, "draft", `from ${dayMonth(next.start)}`]} />, cls: "rust" }
-      : phaseStatus(next, today) === "running"
-        ? { text: <SepJoin parts={[next.name, `running since ${dayMonth(next.start)}`]} />, cls: "track" }
-        : { text: <SepJoin parts={[next.name, `from ${dayMonth(next.start)}`]} />, cls: "track" }
-    : status === "done"
-      ? { text: "Nothing followed", cls: "faint" }
-      : { text: `Nothing planned. The ${TRACK_LABEL[p.track].toLowerCase()} track ends here.`, cls: "rust" };
-
-  const shown = p.objectives.slice(0, 4);
-  const more = p.objectives.length - shown.length;
 
   return (
     <DialogContent
-      className="phd"
-      style={{ "--c": col.c, "--rgb": col.rgb, "--s": col.solid } as React.CSSProperties}
-      aria-describedby="phd-state"
+      className="dlh mvd phd"
+      style={{ "--mv": accent, "--mv-rgb": rgbOf(accent) } as React.CSSProperties}
       onOpenAutoFocus={(ev) => {
         ev.preventDefault();
         openRef.current?.focus();
@@ -97,104 +53,76 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
         if (ev.key === "ArrowRight" && next) onMove(next);
       }}
     >
-      <span className="phd-glow" aria-hidden="true" />
-      <span className="phd-wash" aria-hidden="true" />
-      <div className="phd-body">
-        <header className="phd-head">
-          <div className="phd-head-text">
-            <div className="phd-pills">
-              <span className="phd-track">
-                <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d={TRACK_ICON[p.track]} />
-                </svg>
-                {TRACK_LABEL[p.track]}
-              </span>
-              <DialogDescription id="phd-state" className={`phd-chip ${chip.cls}`} style={stateTagStyle(chip.tag)}>
-                {chip.text}
-              </DialogDescription>
-            </div>
-            <DialogTitle className="phd-name">{p.name}</DialogTitle>
-            <span className="phd-client">
-              <span className="phd-avatar">
-                {client.avatarPath ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                  <img src={client.avatarPath} alt="" />
-                ) : (
-                  client.name.slice(0, 1).toUpperCase()
-                )}
-              </span>
-              {first(client.name)}
-            </span>
-          </div>
-          <DialogClose className="phd-x" aria-label="Close">
-            <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-          </DialogClose>
-        </header>
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">{p.name}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <div className="mvd-tags">
+        <span className="mvd-track">
+          <TrackIcon track={p.track} size={12} />
+          {TRACK_LABEL[p.track]}
+        </span>
+        <span className="mvd-state" style={stateTagStyle(state)}>
+          {STATE_LABEL[state]}
+        </span>
+      </div>
+      <DialogDescription className="dlh-what">
+        <SepJoin parts={[client.name, state === "live" ? `week ${weekNow} of ${total}` : phaseLengthLabel(p.start, p.endWeek), `${dayMonth(p.start)} – ${dayMonth(p.end)}`, soon && <span className="phd-soon">{leftLabel(daysLeft(p, today))}</span>]} />
+      </DialogDescription>
 
-        {/* The weeks. */}
-        <div className={`phd-box${draft ? " draft" : ""}`}>
-          <div className="phd-box-top">
-            <b>{top}</b>
-            <span className={`phd-side ${side.cls}`}>{side.text}</span>
-          </div>
-          {weeks > 16 ? (
-            <span className="phd-bar" aria-hidden="true">
-              <i style={{ width: `${(Math.min(total, Math.max(0, daysBetween(p.start, today) + 1)) / total) * 100}%` }} />
-            </span>
-          ) : (
-            <div className="phd-weeks" style={{ gridTemplateColumns: segments.map((s) => `${s.days}fr`).join(" ") }} aria-hidden="true">
-              {segments.map((s, i) => {
-                const now = s.fill > 0 && s.fill < 1;
-                return <i key={i} className={`phd-week${s.fill >= 1 ? " past" : now ? " now" : ""}`} style={now ? { background: `linear-gradient(90deg, var(--s, var(--c)) ${s.fill * 100}%, rgba(var(--rgb), 0.16) ${s.fill * 100}%)` } : undefined} />;
-              })}
-            </div>
-          )}
-          <div className="phd-dates">
-            <span>{dayMonth(p.start)}</span>
-            <span>{length}</span>
-            <span>{dayMonth(p.end)}</span>
-          </div>
-        </div>
+      {/* The weeks: those behind in the track's colour, this one part filled, those to come grey. A long phase is one line. */}
+      {segments.length > 16 ? (
+        <span className="phd-line" aria-hidden="true">
+          <i style={{ width: `${elapsed * 100}%` }} />
+        </span>
+      ) : (
+        <span className="phd-weeks" style={{ gridTemplateColumns: segments.map((s) => `${s.days}fr`).join(" ") }} aria-hidden="true">
+          {segments.map((s, i) => (
+            <i key={i} className={s.fill >= 1 ? "done" : undefined} style={s.fill > 0 && s.fill < 1 ? { background: `linear-gradient(90deg, var(--mv) ${s.fill * 100}%, #eef0f3 ${s.fill * 100}%)` } : undefined} />
+          ))}
+        </span>
+      )}
 
-        {/* The coach's objectives. */}
-        <section className="phd-section">
-          <span className="phd-label">Objectives</span>
-          {shown.length === 0 ? (
-            <p className="phd-none">No objectives set</p>
-          ) : (
-            <ul className="phd-objectives">
-              {shown.map((o, i) => (
-                <li key={i}>
-                  <i aria-hidden="true" />
-                  {o}
-                </li>
-              ))}
-              {more > 0 && (
-                <li className="phd-more">
-                  <Link href={href}>+{more} more</Link>
-                </li>
-              )}
-            </ul>
-          )}
-        </section>
-
-        {/* What follows on the track. */}
-        <div className={`phd-after ${after.cls}`}>
-          <span className="phd-after-label">After this</span>
-          <span className="phd-after-text">{after.text}</span>
-        </div>
+      <div className="phd-field">
+        <span className="dlh-label">Phase goals</span>
+        {goals.length === 0 ? (
+          <p className="phd-none">None yet</p>
+        ) : (
+          <ul className="phd-goals">
+            {goals.map((g, i) => (
+              <li key={i}>
+                <i aria-hidden="true" />
+                {g}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      <footer className="phd-foot">
-        <Link ref={openRef} href={href} className="phd-open">
-          Open plan
-          <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M9 6l6 6-6 6" />
-          </svg>
+      <div className="phd-field">
+        <span className="dlh-label">After this</span>
+        {next && nextState ? (
+          <p className="phd-after">
+            <b>{next.name}</b>
+            <span className="mvd-state" style={stateTagStyle(nextState)}>
+              {STATE_LABEL[nextState]}
+            </span>
+            <span className="phd-after-when">from {dayMonth(next.start)}</span>
+          </p>
+        ) : state === "past" ? (
+          <p className="phd-none">Nothing followed</p>
+        ) : (
+          <p className="phd-none bad">Nothing planned</p>
+        )}
+      </div>
+
+      <div className="dlh-foot">
+        <Link ref={openRef} href={planHref(client.id, p)} className="dlh-go">
+          Open
         </Link>
-      </footer>
+      </div>
     </DialogContent>
   );
 }

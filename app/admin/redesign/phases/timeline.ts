@@ -1,14 +1,12 @@
-// The Phases overview's maths (14 Oct), with no React in it: the window,
-// where a day lands in it, which phases are ending soon, which clients need
-// attention, how events stack so their labels never overlap, and when a bar
-// is too small to label. The list, the toggle's count and the timeline all
-// read the same data through these, so they always agree.
+// The Phases overview's maths (14 Oct), with no React in it: which phases are
+// ending soon, which clients need attention, and the detail pop-up's weeks
+// and neighbours. The list, the toggle's count and the timeline all read the
+// same data through these, so they always agree. The timeline itself is the
+// Plan's (plan/timelineParts.tsx, since 21 Oct). addDays and mondayOf are
+// shared with Training (ScheduleDialog, TrainingDraft).
 
 import type { PhaseTrack } from "../../../lib/db";
-import { nextOccurrence, type EventRepeat } from "../../../lib/eventRepeat";
-import { dayMonth } from "../../../lib/dayMonth";
-/** Dates in words are day/month (20 Oct, Alex): the Phases view, its pop-ups and toasts read them from here. */
-export { dayMonth };
+import type { EventRepeat } from "../../../lib/eventRepeat";
 
 export type OverviewPhase = {
   id: number;
@@ -25,18 +23,13 @@ export type OverviewPhase = {
   objectives: string[];
   /** A training phase's programme, for the way to its Training tab. */
   programId: number | null;
+  /** What it still lacks for the client (the Plan's warning sign on its bar, 20 Oct). */
+  gap: string | null;
 };
 export type OverviewEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; addedBy: "coach" | "client"; /** When it was added, yyyy-mm-dd. */ createdAt: string; /** Comes back on these weekdays (19 Oct), lib/eventRepeat.ts. */ repeat?: EventRepeat | null };
 
+/** Lifestyle, Training, Nutrition (20 Oct, Alex): the order of the lanes everywhere. */
 export const TRACKS: PhaseTrack[] = ["lifestyle", "training", "nutrition"];
-/** The tracks' colours, the Plan tab's (phaseChrome TRACK_PALETTE): a pale tint for a bar, its ink for the words and a line for the edge. */
-/** `solid` fills a pill, a segment, a button: each track's ink. Lifestyle is one beige everywhere (21 Oct), its words included. */
-export const TRACK_COLOR: Record<PhaseTrack, { c: string; rgb: string; tint: string; line: string; solid: string }> = {
-  lifestyle: { c: "#a08a5c", rgb: "160,138,92", tint: "#efede6", line: "#cfcbbd", solid: "#a08a5c" },
-  training: { c: "#3a3390", rgb: "58,51,144", tint: "#e6e4fa", line: "#b9b4ec", solid: "#3a3390" },
-  nutrition: { c: "#1d7a70", rgb: "29,122,112", tint: "#dff1ef", line: "#9fd3cd", solid: "#1d7a70" },
-};
-export const EVENTS_COLOR = { c: "#2f5d8f", rgb: "47,93,143" };
 
 /** A running phase with this many days left, or fewer, and nothing after it, is ending soon. */
 export const SOON_DAYS = 14;
@@ -51,61 +44,6 @@ export const addDays = (d: string, n: number) => {
 };
 export const mondayOf = (d: string) => addDays(d, -((parse(d).getDay() + 6) % 7));
 export const daysBetween = (a: string, b: string) => dayNum(b) - dayNum(a);
-
-// ---- The window --------------------------------------------------------------
-
-export type Months = 3 | 6 | 12;
-export type Range = { start: string; end: string; days: number; months: Months };
-
-/** The 1st of the month `shift` months from today's. */
-export function monthAnchor(today: string, shift = 0): string {
-  const d = parse(today);
-  d.setDate(1);
-  d.setMonth(d.getMonth() + shift);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-/** From the 1st of `anchor`'s month, `months` months on; `end` is the first day after. */
-export function rangeOf(anchor: string, months: Months): Range {
-  const d = parse(anchor);
-  d.setDate(1);
-  const start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-  d.setMonth(d.getMonth() + months);
-  const end = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-  return { start, end, days: daysBetween(start, end), months };
-}
-
-/** Where a day sits in the window, 0 to 1, clamped. */
-export const xOf = (day: string, r: Range) => Math.min(1, Math.max(0, daysBetween(r.start, day) / r.days));
-
-/** A bar from `start` to `end` (both inclusive): left and width as fractions, and which ends are cut by the window. */
-export function spanOf(start: string, end: string, r: Range) {
-  const a = xOf(start, r);
-  const b = xOf(addDays(end, 1), r);
-  return { left: a, width: Math.max(0, b - a), clipStart: start < r.start, clipEnd: addDays(end, 1) > r.end, visible: b > a };
-}
-
-/** The month starts inside the window, with their labels. */
-export function monthMarks(r: Range): { day: string; label: string; x: number }[] {
-  const out: { day: string; label: string; x: number }[] = [];
-  const d = parse(r.start);
-  while (true) {
-    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-    if (day >= r.end) break;
-    out.push({ day, label: d.toLocaleDateString("en-GB", { month: "short" }).toUpperCase(), x: xOf(day, r) });
-    d.setMonth(d.getMonth() + 1);
-  }
-  return out;
-}
-
-/** The faint verticals: every week at 3 months, every two at 6, monthly at 12. */
-export function gridLines(r: Range): number[] {
-  if (r.months === 12) return monthMarks(r).map((m) => m.x);
-  const step = r.months === 3 ? 7 : 14;
-  const out: number[] = [];
-  for (let d = mondayOf(r.start); d < r.end; d = addDays(d, step)) if (d > r.start) out.push(xOf(d, r));
-  return out;
-}
 
 // ---- Phases ------------------------------------------------------------------
 
@@ -144,11 +82,6 @@ export function leftLabel(days: number): string {
   if (days <= 0) return "Ends today";
   return `${days} day${days === 1 ? "" : "s"} left`;
 }
-/** The tag on an ending-soon bar: "last week" or "{n} wks left". */
-export const soonTag = (days: number) => (days <= 7 ? "last week" : `${Math.ceil(days / 7)} wks left`);
-
-/** Below this share of the track a bar has no label; below `hide`, no bar at all. */
-export const TINY = { label: 0.09, hide: 0.03 };
 
 // ---- Clients -----------------------------------------------------------------
 
@@ -179,64 +112,7 @@ export function needsAttention(c: ClientLike, tracksOn: Set<PhaseTrack>, today: 
   return reasons.some((r) => r === "ending-soon" && soonPhases(c, tracksOn, today).length > 0);
 }
 
-/** Ending soon first, then those with phases, then the rest; A to Z inside each. */
-export function sortClients<T extends ClientLike>(clients: T[], tracksOn: Set<PhaseTrack>, today: string): T[] {
-  const rank = (c: T) => {
-    const s = clientStatus(c, tracksOn, today).kind;
-    return s === "soon" ? 0 : s === "planned" ? 1 : 2;
-  };
-  return [...clients].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-}
-
-// ---- Events ------------------------------------------------------------------
-
-export const EVENT_ROWS_MAX = 3;
-/** Roughly what a label takes: its letters, the marker and the gaps. */
-export const eventReserve = (title: string) => title.length * 6.5 + 36;
-
-export type StackedEvent = { event: OverviewEvent; row: number; x: number; x1: number };
-export type EventOverflow = { x: number; events: OverviewEvent[] };
-
-/**
- * Events in rows: each reserves its marker plus label, or its dates,
- * whichever is longer; one that starts inside a reserved stretch drops to
- * the next row. Past three rows they gather in a "+n" chip at that spot.
- */
-export function stackEvents(events: OverviewEvent[], r: Range, widthPx: number): { placed: StackedEvent[]; overflow: EventOverflow[] } {
-  const w = Math.max(200, widthPx);
-  const rows: number[] = []; // where each row's reservation ends, as a fraction
-  const placed: StackedEvent[] = [];
-  const overflow: EventOverflow[] = [];
-  const sorted = [...events].filter((e) => spanOf(e.start, e.end, r).visible || (e.start >= r.start && e.start < r.end)).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id - b.id));
-  for (const e of sorted) {
-    const x = xOf(e.start, r);
-    const byLabel = x + eventReserve(e.title) / w;
-    const byDates = e.end > e.start ? xOf(addDays(e.end, 1), r) : x;
-    const x1 = Math.max(byLabel, byDates);
-    let row = rows.findIndex((end) => end <= x - 0.002);
-    if (row === -1) {
-      if (rows.length < EVENT_ROWS_MAX) {
-        row = rows.length;
-        rows.push(0);
-      } else {
-        // Into the chip nearest this spot, or a new one.
-        const near = overflow.find((o) => Math.abs(o.x - x) < 24 / w);
-        if (near) near.events.push(e);
-        else overflow.push({ x, events: [e] });
-        continue;
-      }
-    }
-    rows[row] = x1;
-    placed.push({ event: e, row, x, x1 });
-  }
-  return { placed, overflow };
-}
-
 // ---- The detail pop-up ---------------------------------------------------------
-
-export type PhaseState = PhaseStatus | "soon";
-/** The status, with "soon" for a running phase that is ending soon. */
-export const phaseState = (p: OverviewPhase, all: OverviewPhase[], today: string): PhaseState => (endingSoon(p, all, today) ? "soon" : phaseStatus(p, today));
 
 /** The phase that comes after this one on the same track, the nearest first. */
 export function nextOnTrack(p: OverviewPhase, all: OverviewPhase[]): OverviewPhase | null {
@@ -257,35 +133,4 @@ export function weekSegments(p: OverviewPhase, today: string): { days: number; f
     out.push({ days, fill: Math.min(1, Math.max(0, (elapsed - d) / days)) });
   }
   return out;
-}
-
-// ---- The event pop-up ---------------------------------------------------------
-
-export type EventTiming = { chip: { text: string; cls: "solid" | "rust" | "track" | "done" }; relative: string; pct: number; range: boolean; days: number };
-
-/** The timing chip, the relative line and the progress, from the dates and today. */
-export function eventTiming(e: OverviewEvent, today: string): EventTiming {
-  const range = e.end > e.start;
-  const days = daysBetween(e.start, e.end) + 1;
-  const toStart = daysBetween(today, e.start);
-  const toEnd = daysBetween(today, e.end);
-  const trip = e.kind === "trip";
-  if (toStart > 0) {
-    const inWords = toStart === 1 ? "Tomorrow" : toStart >= 14 ? `In ${Math.round(toStart / 7)} weeks` : `In ${toStart} days`;
-    return { chip: { text: inWords, cls: toStart === 1 ? "rust" : "track" }, relative: range ? `Starts in ${toStart} day${toStart === 1 ? "" : "s"}` : inWords, pct: 0, range, days };
-  }
-  if (toEnd < 0) {
-    const ago = -toEnd;
-    const relative = ago === 1 ? (range ? "Ended yesterday" : "Yesterday") : range ? `Ended ${ago} days ago` : `${ago} days ago`;
-    return { chip: { text: range ? "Ended" : "Done", cls: "done" }, relative, pct: 1, range, days };
-  }
-  if (!range) return { chip: { text: "Today", cls: "solid" }, relative: "Today", pct: 1, range, days };
-  // Repeating (19 Oct): on, and when it comes next; no day count, and none to an end it doesn't have.
-  if (e.repeat) {
-    const next = nextOccurrence(e.start, e.end, e.repeat, today);
-    const nextWords = next === today ? "Today" : next ? `Next ${dayMonth(next)}` : "No more to come";
-    return { chip: { text: "Now", cls: "solid" }, relative: e.repeat.until ? `${nextWords} · ends in ${toEnd} day${toEnd === 1 ? "" : "s"}` : nextWords, pct: e.repeat.until ? (daysBetween(e.start, today) + 1) / days : 0, range, days };
-  }
-  const day = daysBetween(e.start, today) + 1;
-  return { chip: { text: `Now · day ${day} of ${days}`, cls: "solid" }, relative: toEnd === 0 ? (trip ? "Back tomorrow" : "Ends today") : `${trip ? "Back" : "Ends"} in ${toEnd} day${toEnd === 1 ? "" : "s"}`, pct: day / days, range, days };
 }

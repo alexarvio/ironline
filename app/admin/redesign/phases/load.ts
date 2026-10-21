@@ -1,4 +1,4 @@
-import { getCoachProfile, getPlanData, listClientEvents, listClientPhases, listClients, listEventCategories, localDateStr, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
+import { getPlanData, listClientEvents, listClients, listEventCategories, localDateStr, weekStart, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
 import { phaseLastDay } from "../../../lib/phases";
 import type { OverviewEvent, OverviewPhase } from "./timeline";
 
@@ -17,15 +17,28 @@ export type OverviewClient = {
   events: OverviewEvent[];
   plan: { phases: PlanPhaseRow[]; programs: PlanProgramOption[] };
 };
-export type PhasesOverviewData = { today: string; thisWeek: string; coachId: number; clients: OverviewClient[]; /** The event dialog's categories. */ categories: { id: string; label: string; color: string; custom: boolean }[]; /** For the "added by you" badge. */ coach: { name: string; photoPath: string | null } };
+export type PhasesOverviewData = {
+  today: string;
+  /** This week's Monday. */
+  thisWeek: string;
+  /** How far through this week it is, 0 to 1, from the server so both renders agree (the Plan's). */
+  intoWeek: number;
+  coachId: number;
+  clients: OverviewClient[];
+  /** The event dialog's categories. */
+  categories: { id: string; label: string; color: string; custom: boolean }[];
+};
 
-export function loadPhasesOverview(coachId: number, coachEmail = ""): PhasesOverviewData {
+/** How far through the week it is, 0 (Monday 00:00) to 1, in server-local time: the Plan's (loaders.ts), so the NOW line sits where it does there. */
+const intoWeek = () => {
+  const now = new Date();
+  return (((now.getDay() + 6) % 7) + (now.getHours() + now.getMinutes() / 60) / 24) / 7;
+};
+
+export function loadPhasesOverview(coachId: number): PhasesOverviewData {
   const today = localDateStr();
-  let thisWeek = today;
   const clients = listClients(coachId).map((c) => {
     const plan = getPlanData(c.id);
-    const objectives = new Map(listClientPhases(c.id).map((p) => [p.id, p.objectives ?? []]));
-    thisWeek = plan.thisWeek;
     const phases: OverviewPhase[] = plan.phases.map((p) => ({
       id: p.id,
       track: p.track,
@@ -34,13 +47,12 @@ export function loadPhasesOverview(coachId: number, coachEmail = ""): PhasesOver
       end: phaseLastDay(p.end_week),
       endWeek: p.end_week,
       draft: p.draft || p.program?.status === "draft",
-      objectives: objectives.get(p.id) ?? [],
+      objectives: p.objectives ?? [],
       programId: p.program?.id ?? null,
+      gap: p.gap,
     }));
     const events: OverviewEvent[] = listClientEvents(c.id).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, addedBy: e.added_by === "client" ? "client" : "coach", createdAt: String(e.created_at ?? "").slice(0, 10), repeat: e.repeat ?? null }));
     return { id: c.id, name: c.name ?? "Client", avatarPath: c.avatar_path ?? null, phases, events, plan: { phases: plan.phases, programs: plan.programs } };
   });
-  const profile = getCoachProfile(coachId);
-  const coach = { name: profile?.display_name?.trim() || coachEmail.split("@")[0].replace(/[._-]+/g, " ").replace(/bw/g, (ch) => ch.toUpperCase()) || "Coach", photoPath: profile?.avatar_path ?? null };
-  return { today, thisWeek, coachId, clients, categories: listEventCategories(coachId), coach };
+  return { today, thisWeek: weekStart(today), intoWeek: intoWeek(), coachId, clients, categories: listEventCategories(coachId) };
 }

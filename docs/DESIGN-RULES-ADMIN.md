@@ -127,6 +127,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - A phase with nothing in it yet (no sessions, no targets, no metrics asked) wears a small rust warning sign before its state pill; hovering it says what is missing (20 Oct, Alex). Not on a past phase.
 - An empty week on a lane is a way in: a + on hover, a click opens New phase on that track from that week.
 - An event bar is a phase bar (21 Oct, Alex): the same size (38px in a 44px lane, radius 10) and the same parts, the title 12.5/600 with its length under it (`14 days`; a repeating one, the days it comes back on), and while it is on, a white pill on the right `Day 18 of 23` (`Ongoing` with no end). One still to come or over is just its days. A pin's words are the same sizes.
+- The Phases screen's timeline is the Plan's (21 Oct, Alex): its bars, pins, NOW line and axis (`plan/timelineParts.tsx`), per client a name row over the three tracks and their event kinds.
 
 ## 11. Before you build
 - Search for an existing pattern first: `.dlh`, `.npd`, `ConfirmDialog`, `Picker`, `DateText`, `MonthRange`, `dayMonth`, the floating add-row list (`rd-addpop`), `trn-btn`, `trn-state`, `stateChip`, `TRACK_ACCENT`.

@@ -11,7 +11,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { PlusIcon } from "../../../components/icons";
 import { gridFor, MonthRange } from "./PlanDraft";
 import DateText from "../DateText";
-import { dayMonth, logDate } from "../../../lib/dayMonth";
+import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
 import { SepJoin } from "../Sep";
 import { Fold } from "../Fold";
@@ -20,7 +20,7 @@ import { Fold } from "../Fold";
 // a category pill in the title, category tiles with icons, the dates as pills.
 const CUSTOM_ICON = "M20 12.5 12.5 20a1.5 1.5 0 0 1-2.1 0L4 13.6V4h9.6l6.4 6.4a1.5 1.5 0 0 1 0 2.1zM8 8h.01";
 const iconOf = (id: string | null) => (isEventTypeId(id) ? eventTypeOf(id) : null);
-const rgbOf = (hex: string) => {
+export const rgbOf = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
   return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
 };
@@ -32,7 +32,7 @@ function RangeArrow() {
     </svg>
   );
 }
-function KindIcon({ id, size = 20 }: { id: string | null; size?: number }) {
+export function KindIcon({ id, size = 20 }: { id: string | null; size?: number }) {
   const t = iconOf(id);
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -52,9 +52,9 @@ function KindIcon({ id, size = 20 }: { id: string | null; size?: number }) {
 // the actions in lib/actions.ts and come back from the loader.
 
 /** An events lane, as a phase's track (21 Oct, Alex: the same size): a 38px bar with 3px above and below; plan.css's .rq-evbar. */
-const EV_LANE = 44;
+export const EV_LANE = 44;
 /** A bar's or a pin's top in its lanes: the lanes' 6px padding, the 3px over the bar, then a lane each. */
-const evTop = (lane: number) => `${9 + lane * EV_LANE}px`;
+export const evTop = (lane: number) => `${9 + lane * EV_LANE}px`;
 
 /** kind is the category's id, and optional: an event can just be an event. */
 export type PlanEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it from their Home. */ byClient?: boolean; /** Comes back on these weekdays (19 Oct), lib/eventRepeat.ts. */ repeat?: EventRepeat | null };
@@ -63,7 +63,7 @@ export type Category = { id: string; label: string; color: string; custom: boole
 const NONE = { tint: "#eceff3", ink: "#5b6474", line: "#c3c9d2" };
 // The built-in four and the coach's own come from the loader (listEventCategories).
 /** The app's six event types colour everything here (10 Oct): the same six the client's sheet has, in the same colours. Anything else is grey "Event". */
-const chromeOf = (_cats: Category[], id: string | null) => {
+export const chromeOf = (_cats: Category[], id: string | null) => {
   if (!isEventTypeId(id)) return { label: "Event", ...NONE };
   const t = eventTypeOf(id);
   return { label: t.label, tint: `rgba(${t.rgb}, 0.12)`, ink: t.color, line: `rgba(${t.rgb}, 0.45)` };
@@ -90,7 +90,7 @@ const relative = (today: string, d: string) => {
   return n > 0 ? `in ${w}` : `${w} ago`;
 };
 /** The words on a bar or pin: where it stands against today, as its facts ("now", "3 days left"); on screen a bar parts them. */
-const standingParts = (today: string, e: PlanEvent): string[] => {
+export const standingParts = (today: string, e: PlanEvent): string[] => {
   const single = e.start === e.end;
   // A timestamp is only ever "in 3 days", "today" or "2 days ago".
   if (single) return [relative(today, e.start)];
@@ -105,7 +105,7 @@ const standingParts = (today: string, e: PlanEvent): string[] => {
 const standing = (today: string, e: PlanEvent) => standingParts(today, e).join(" · ");
 /** A bar's pill, as a phase bar's "week 3 of 6" (21 Oct, Alex): on now, `Day 18 of 23` (a repeating one with no end,
     `Ongoing`); still to come or over, nothing (21 Oct, Alex: a coming one is just its days). */
-const barStanding = (today: string, e: PlanEvent): string | null => {
+export const barStanding = (today: string, e: PlanEvent): string | null => {
   if (today < e.start || today > e.end) return null;
   if (e.repeat && !e.repeat.until) return "Ongoing";
   return `Day ${daysBetween(e.start, today) + 1} of ${daysBetween(e.start, e.end) + 1}`;
@@ -123,10 +123,12 @@ export type EventsCardProps = {
   windows: readonly { months: number; weeks: number }[];
   /** Told when its saves start and end, for the one status beside the plan's title. */
   onSaving?: (busy: boolean) => void;
+  /** The client's first name: an event they added says "From Alex" (21 Oct, Alex), not "From client". */
+  firstName?: string;
 };
 const EV_WIN_KEY = "rq-events-window";
 
-export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, onSaving }: EventsCardProps) {
+export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, onSaving, firstName }: EventsCardProps) {
   const router = useRouter();
   // What is on screen lives here, so a move or an edit shows the moment it is saved (20 Oct, Alex: a dragged trip
   // jumped back to its old length until the save came back). The page's re-read replaces it whenever its content changes.
@@ -441,7 +443,11 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
         ) : (
           // With more than a page, the rows keep a full page's height (21 Oct, Alex: the last page made the screen jump;
           // .rd-steady): a row is 43px with its hairline (the 22px kind pill and 10px either side), over 12px of room.
-          <div className={`rd-rows${pages > 1 ? " rd-steady" : ""}`} style={pages > 1 ? ({ "--log-rows": PAGE, "--log-row": "43px", "--log-head": "12px" } as React.CSSProperties) : undefined}>
+          // The date column only as wide as the log needs (21 Oct, Alex: too much empty room): a range's two dates, else one.
+          <div
+            className={`rd-rows${pages > 1 ? " rd-steady" : ""}`}
+            style={{ "--ev-when": listed.some((e) => e.repeat || e.start !== e.end) ? "188px" : `${logDateWidth(listed.map((e) => e.start))}px`, ...(pages > 1 ? { "--log-rows": PAGE, "--log-row": "43px", "--log-head": "12px" } : {}) } as React.CSSProperties}
+          >
             {onPage.map((e) => {
               const k = chromeOf(cats, e.kind);
               return (
@@ -465,7 +471,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                         one line high (the log keeps one height); the kind after them. */}
                     <span className="rq-evrow-main">
                       <b>{e.title}</b>
-                      {e.byClient && <span className="rq-ev-by">From client</span>}
+                      {e.byClient && <span className="rq-ev-by">From {firstName || "client"}</span>}
                       {(e.repeat || e.note) && (
                         <span className="rq-evrow-note">
                           <SepJoin parts={[e.repeat ? repeatWords(e.repeat, { until: false }) : null, e.note || null]} />
@@ -516,6 +522,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
             today={today}
             event={dlg.event}
             cats={cats}
+            firstName={firstName}
             initialStart={dlg.start}
             initialKind={dlg.kind}
             readOnly={!!dlg.event && isPast(dlg.event)}
@@ -541,7 +548,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
 
 // ---- One event: what kind, what to call it, a moment or a stretch, and a note.
 /** Also opened from the Phases overview (14 Oct), on the day clicked there. */
-export function EventDialog({ today, event, cats, initialStart, initialKind, readOnly = false, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; /** A new event opens on this day. */ initialStart?: string; /** A new event from a lane: that lane's kind (null for "Event"). */ initialKind?: string | null; /** A past event: shown, not changed (20 Oct, Alex). */ readOnly?: boolean; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
+export function EventDialog({ today, event, cats, firstName, initialStart, initialKind, readOnly = false, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; /** For "From Alex" on an event the client added. */ firstName?: string; /** A new event opens on this day. */ initialStart?: string; /** A new event from a lane: that lane's kind (null for "Event"). */ initialKind?: string | null; /** A past event: shown, not changed (20 Oct, Alex). */ readOnly?: boolean; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
   // The six types the client's sheet has (10 Oct); the coach's own categories went, so both sides speak the same six.
   // A new event starts on Trip, the first tile (14 Oct), or on the kind of the lane it was clicked on (20 Oct).
   const [kind, setKind] = useState<string | null>(event ? event.kind : initialKind !== undefined ? initialKind : "trip");
@@ -673,7 +680,7 @@ export function EventDialog({ today, event, cats, initialStart, initialKind, rea
           <KindIcon id={kind} size={12} />
           {k.label}
         </span>
-        {event?.byClient && <span className="npd-from">From client</span>}
+        {event?.byClient && <span className="npd-from">From {firstName || "client"}</span>}
         {readOnly && <span className="npd-from">Past</span>}
       </DialogDescription>
 

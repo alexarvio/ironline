@@ -8,89 +8,52 @@ import { Popover as PopoverPrimitive } from "radix-ui";
 import { toast } from "sonner";
 import { addClientEventAction, addClientPhaseAction, removeClientPhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import { Dialog } from "../../../components/ui/dialog";
-import { eventTypeOf } from "../../../lib/eventTypes";
-import { repeatDays } from "../../../lib/eventRepeat";
-import PhaseDetailDialog from "./PhaseDetailDialog";
-import EventDetailDialog from "./EventDetailDialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../../components/icons";
+import { EVENT_TYPES, isEventTypeId } from "../../../lib/eventTypes";
+import { dayMonth } from "../../../lib/dayMonth";
 import type { PhaseTrack } from "../../../lib/db";
-import { TRACK_LABEL } from "../../phaseChrome";
-import { PhaseDialog, phaseForm } from "../plan/PlanDraft";
-import { EventDialog } from "../plan/EventsCard";
+import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
+import { gridFor, PhaseDialog, phaseForm, TrackIcon, WINDOWS, type Win } from "../plan/PlanDraft";
+import { chromeOf, EV_LANE, EventDialog, KindIcon, rgbOf, type Category } from "../plan/EventsCard";
+import { EventMark, eventPlace, LaneLabel, MonthsRow, packLanes, PhaseBar, weekSpan, WeeksRow, type Grid } from "../plan/timelineParts";
 import DatePick from "../DatePick";
 import { Sep } from "../Sep";
+import PhaseDetailDialog from "./PhaseDetailDialog";
+import EventDetailDialog from "./EventDetailDialog";
 import type { OverviewClient, PhasesOverviewData } from "./load";
-import {
-  addDays,
-  clientStatus,
-  daysLeft,
-  endingSoon,
-  gridLines,
-  leftLabel,
-  monthAnchor,
-  monthMarks,
-  mondayOf,
-  needsAttention,
-  phaseStatus,
-  progressOf,
-  rangeOf,
-  dayMonth,
-  soonPhases,
-  soonTag,
-  spanOf,
-  stackEvents,
-  TINY,
-  TRACK_COLOR,
-  TRACKS,
-  weekIndexOf,
-  weeksOf,
-  xOf,
-  type Months,
-  type OverviewEvent,
-  type OverviewPhase,
-  type Range,
-} from "./timeline";
+import { addDays, clientStatus, daysLeft, endingSoon, leftLabel, mondayOf, needsAttention, progressOf, soonPhases, TRACKS, weekIndexOf, weeksOf, type OverviewEvent, type OverviewPhase } from "./timeline";
 
-// The Phases overview (14 Oct): every client's plan and events on one
-// timeline. Ending soon on top as a list to act on (Plan next, Extend), the
-// clients below, a lane a track in a fixed order (lifestyle, training,
-// nutrition, then events) and only the lanes with something in them. Bars
-// wear their track's colour: solid running or sent, dashed for a draft, grey
-// when done, a rust ring when ending soon. Events are round markers with
-// their category's icon. The maths lives in timeline.ts.
+// The Phases overview (14 Oct; drawn as the Plan since 21 Oct): Ending soon
+// on top as a list to act on (Plan next, Extend), then every client on one
+// timeline. The timeline is the Plan's (plan/timelineParts.tsx): months over
+// weeks, the NOW line, and per client a name row over the three tracks
+// (Lifestyle, Training, Nutrition) and their event kinds, each bar and pin
+// as the Plan draws it. An empty week is a way in: New phase on that track,
+// or New event of that kind, from there. A bar or pin opens its detail.
+// The maths of ending soon and attention lives in timeline.ts.
 
 const ALL_TRACKS = new Set<PhaseTrack>(TRACKS);
-const RANGES: Months[] = [3, 6, 12];
 const EXTENDS = [1, 2, 4];
 const first = (name: string) => name.split(" ")[0];
 const PLAN = (id: number) => `/admin/redesign/plan?client=${id}`;
 
-type Prefs = { months: Months; view: "all" | "attention" };
-const DEFAULT_PREFS: Prefs = { months: 3, view: "all" };
+type View = "all" | "attention";
+type Prefs = { win: Win; view: View };
+const DEFAULT_PREFS: Prefs = { win: 13, view: "all" };
 const prefsKey = (coachId: number) => `norcoach:phases:${coachId}`;
+/** What this screen saved before (3, 6 or 12 months), as the Plan's windows. */
+const FROM_MONTHS: Record<number, Win> = { 3: 13, 6: 26, 9: 39, 12: 52 };
+const isWin = (n: unknown): n is Win => WINDOWS.some((w) => w.weeks === n);
 
 type Picked = { client: OverviewClient; phase: OverviewPhase } | { client: OverviewClient; event: OverviewEvent } | null;
 
-function EventIcon({ kind, size = 11 }: { kind: string | null; size?: number }) {
-  const t = eventTypeOf(kind);
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {t.fill && <path d={t.fill} fill="currentColor" stroke="none" opacity={0.35} />}
-      <path d={t.icon} />
-    </svg>
-  );
-}
-
-const phaseTip = (p: OverviewPhase, today: string) => {
-  const st = phaseStatus(p, today);
-  const tail = st === "draft" ? " · draft" : st === "running" ? ` · ${leftLabel(daysLeft(p, today)).toLowerCase()}` : "";
-  return `${TRACK_LABEL[p.track]} · ${p.name} · ${dayMonth(p.start)} – ${dayMonth(p.end)} · ${weeksOf(p)} week${weeksOf(p) === 1 ? "" : "s"}${tail}`;
-};
-const eventTip = (e: OverviewEvent) => `${eventTypeOf(e.kind).label} · ${e.title}${e.repeat ? ` · ${repeatDays(e.repeat.days)}` : ""} · ${dayMonth(e.start)}${e.repeat && !e.repeat.until ? " – no end" : e.end > e.start ? ` – ${dayMonth(e.end)}` : ""}${e.note ? ` · ${e.note}` : ""} · added by ${e.addedBy === "client" ? "the client" : "you"}`;
+const NONE_LEAVING = new Set<number>();
 
 export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
   const router = useRouter();
   const [, start] = useTransition();
-  const { today, thisWeek, coachId, clients } = data;
+  const { today, thisWeek, intoWeek, coachId, clients, categories } = data;
 
   // What the coach last chose, kept per coach in this browser.
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
@@ -99,8 +62,9 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
     try {
       const raw = window.localStorage.getItem(prefsKey(coachId));
       if (raw) {
-        const p = JSON.parse(raw) as Partial<Prefs>;
-        start(() => setPrefs({ months: RANGES.includes(p.months as Months) ? (p.months as Months) : 3, view: p.view === "attention" ? "attention" : "all" }));
+        const p = JSON.parse(raw) as { win?: unknown; months?: unknown; view?: unknown };
+        const win = isWin(p.win) ? p.win : (typeof p.months === "number" && FROM_MONTHS[p.months]) || DEFAULT_PREFS.win;
+        start(() => setPrefs({ win, view: p.view === "attention" ? "attention" : "all" }));
       }
     } catch {}
     loaded.current = true;
@@ -111,45 +75,45 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
       window.localStorage.setItem(prefsKey(coachId), JSON.stringify(prefs));
     } catch {}
   }, [prefs, coachId]);
-  // Every track and the events, always (14 Oct, Alex: no toggles; every client is shown as they are).
-  const tracksOn = ALL_TRACKS;
-  const eventsOn = true;
 
-  // The window: the 1st of this month, shifted by the arrows, N months on.
-  const [shift, setShift] = useState(0);
-  const range = useMemo(() => rangeOf(monthAnchor(today, shift), prefs.months), [today, shift, prefs.months]);
-
-  // The track's width in pixels, for the events' label room.
-  const axisRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(800);
-  useEffect(() => {
-    const el = axisRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
-    ro.observe(el);
-    setWidth(el.clientWidth);
-    return () => ro.disconnect();
-  }, []);
+  // The window, the Plan's: last week for context, this week second, the NOW line in it; ‹ steps back a month at a time.
+  const [back, setBack] = useState(0);
+  const grid = gridFor(prefs.win, thisWeek, intoWeek, back);
 
   // The three readings of the same data: the list, the toggle's count, the order.
   const soonRows = useMemo(
     () =>
       clients
-        .flatMap((c) => soonPhases(c, tracksOn, today).map((phase) => ({ client: c, phase })))
+        .flatMap((c) => soonPhases(c, ALL_TRACKS, today).map((phase) => ({ client: c, phase })))
         .sort((a, b) => (a.phase.end < b.phase.end ? -1 : a.phase.end > b.phase.end ? 1 : a.client.name.localeCompare(b.client.name))),
-    [clients, tracksOn, today]
+    [clients, today]
   );
   // All clients: A to Z, nothing else (14 Oct, Alex). Needs attention: only those with a phase ending soon, A to Z too.
   const sorted = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
-  const attention = useMemo(() => sorted.filter((c) => needsAttention(c, tracksOn, today)), [sorted, tracksOn, today]);
+  const attention = useMemo(() => sorted.filter((c) => needsAttention(c, ALL_TRACKS, today)), [sorted, today]);
   const shown = prefs.view === "attention" ? attention : sorted;
 
-  // Acting on a phase: the row folds away, the change saves, Undo puts it back.
-  const [leaving, setLeaving] = useState<Set<number>>(new Set());
+  // A pin's label needs room to its right, measured against the grid as the Plan does.
+  const weeksRef = useRef<HTMLDivElement>(null);
+  const [gridPx, setGridPx] = useState(0);
+  const hasRows = shown.length > 0;
+  useEffect(() => {
+    const el = weeksRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => setGridPx(entries[0]?.contentRect.width ?? 0));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hasRows]);
+  const dayPx = gridPx > 0 ? gridPx / (grid.count * 7) : 9;
+
+  // Acting on a phase: the row folds away, the change saves, Undo puts it back. A row is held away only until the
+  // server's next read lands (a new `data`): still ending soon after it (extended by a week), it comes back.
+  const [leavingOf, setLeavingOf] = useState<{ of: PhasesOverviewData; ids: Set<number> } | null>(null);
+  const leaving = leavingOf && leavingOf.of === data ? leavingOf.ids : NONE_LEAVING;
   const [picked, setPicked] = useState<Picked>(null);
-  const [newPhase, setNewPhase] = useState<{ client: OverviewClient; track: PhaseTrack; start: string; /** Plan next: the track is given. A first phase: the coach picks it. */ lock: boolean } | null>(null);
-  const [newEvent, setNewEvent] = useState<{ client: OverviewClient; day: string } | null>(null);
-  const leave = (id: number) => setLeaving((s) => new Set(s).add(id));
+  const [newPhase, setNewPhase] = useState<{ client: OverviewClient; track: PhaseTrack; start: string; /** Plan next: the track is given. From an empty week: the coach can still pick. */ lock: boolean } | null>(null);
+  const [newEvent, setNewEvent] = useState<{ client: OverviewClient; day: string; /** From a kind's lane: that kind (null for "Event"); else the dialog's own first pick. */ kind?: string | null } | null>(null);
+  const leave = (id: number) => setLeavingOf((s) => ({ of: data, ids: new Set(s && s.of === data ? s.ids : []).add(id) }));
   const act = (fn: () => Promise<unknown>, said: string, undo?: () => Promise<unknown>) =>
     start(async () => {
       await fn();
@@ -167,70 +131,47 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
     );
   };
 
-  const months = useMemo(() => monthMarks(range), [range]);
-  const lines = useMemo(() => gridLines(range), [range]);
-  const todayX = xOf(today, range);
-  const todayIn = today >= range.start && today < range.end;
-
   return (
-    <div className="pov">
-      <header className="pov-head">
-        <div>
-          <h1 className="pov-title">Phases</h1>
-          <p className="pov-sub">Every client&rsquo;s plan and events on one timeline.</p>
-        </div>
-        <div className="pov-tools">
-          <div className="pov-nav">
-            <button type="button" className="pov-arrow" onClick={() => setShift((s) => s - 1)} aria-label="A month earlier">
-              ‹
-            </button>
-            <button type="button" className="pov-today-btn" onClick={() => setShift(0)} disabled={shift === 0}>
-              Today
-            </button>
-            <button type="button" className="pov-arrow" onClick={() => setShift((s) => s + 1)} aria-label="A month later">
-              ›
-            </button>
-          </div>
-          <div className="pov-seg" role="radiogroup" aria-label="Months shown">
-            {RANGES.map((m) => (
-              <button key={m} type="button" role="radio" aria-checked={prefs.months === m} className={prefs.months === m ? "on" : ""} onClick={() => setPrefs((p) => ({ ...p, months: m }))}>
-                {m} months
-              </button>
-            ))}
-          </div>
+    // rd pln: the Plan's hairline language (plan.css), so its bars, pins, buttons and sections are the same here.
+    <div className="rd pln pov">
+      <header className="rd-head bare">
+        <div className="rd-head-main">
+          <h1 className="rd-title">Phases</h1>
         </div>
       </header>
 
       {/* ---- Ending soon: a row a phase, soonest first. Hidden when there is nothing to act on. */}
       {soonRows.length > 0 && (
-        <section className="pov-soon" aria-label="Ending soon">
-          <div className="pov-soon-head">
-            <span className="pov-soon-eyebrow">
-              Ending soon<Sep />
-              {soonRows.length}
-            </span>
-            <span className="pov-soon-rule">Last two weeks, nothing planned after</span>
+        <section className="pln-section" aria-label="Ending soon">
+          <div className="rn-card-head">
+            <h2>
+              Ending soon <span>{soonRows.length}</span>
+            </h2>
           </div>
-          <ul className="pov-soon-list">
+          <ul className="pln-card pov-soon-list">
             {soonRows.map(({ client, phase }) => {
-              const col = TRACK_COLOR[phase.track];
-              const left = daysLeft(phase, today);
+              const accent = TRACK_ACCENT[phase.track];
+              const at = `Week ${weekIndexOf(phase, today)} of ${weeksOf(phase)}`;
               return (
-                <li key={phase.id} className={`pov-soon-row${leaving.has(phase.id) ? " leaving" : ""}`} style={{ "--c": col.c, "--rgb": col.rgb, "--s": col.solid, "--tint": col.tint, "--line": col.line } as React.CSSProperties}>
-                  <span className="pov-pill">{TRACK_LABEL[phase.track]}</span>
+                <li key={phase.id} className={`pov-soon-row${leaving.has(phase.id) ? " leaving" : ""}`} style={{ "--c": accent, "--rgb": rgbOf(accent) } as React.CSSProperties}>
+                  <span className="pov-tag">
+                    <TrackIcon track={phase.track} size={12} />
+                    {TRACK_LABEL[phase.track]}
+                  </span>
                   <span className="pov-who">
                     <Link href={PLAN(client.id)} className="pov-who-name">
                       {client.name}
                     </Link>
+                    <Sep />
                     <span className="pov-who-what">{phase.name}</span>
                   </span>
-                  <span className="pov-left">{leftLabel(left)}</span>
-                  <span className="pov-prog" title={`Week ${weekIndexOf(phase, today)} of ${weeksOf(phase)}`} aria-label={`Week ${weekIndexOf(phase, today)} of ${weeksOf(phase)}`}>
+                  <span className="pov-left">{leftLabel(daysLeft(phase, today))}</span>
+                  <span className="pov-prog" role="img" title={at} aria-label={at}>
                     <i style={{ width: `${progressOf(phase, today) * 100}%` }} />
                   </span>
                   <span className="pov-actions">
-                    <button type="button" className="pov-plan" onClick={() => setNewPhase({ client, track: phase.track, start: addDays(phase.end, 1), lock: true })}>
-                      Plan next
+                    <button type="button" className="rd-btn" onClick={() => setNewPhase({ client, track: phase.track, start: addDays(phase.end, 1), lock: true })}>
+                      <PlusIcon /> Plan next
                     </button>
                     <ExtendMenu phase={phase} onPick={(endWeek) => extend(phase, endWeek)} />
                   </span>
@@ -241,81 +182,88 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
         </section>
       )}
 
-      {/* ---- The timeline. */}
-      <section className="pov-card">
-        <header className="pov-card-head">
-          <div className="pov-view" role="radiogroup" aria-label="Which clients">
-            <button type="button" role="radio" aria-checked={prefs.view === "all"} className={prefs.view === "all" ? "on" : ""} onClick={() => setPrefs((p) => ({ ...p, view: "all" }))}>
-              <span>
-                All clients<Sep />
+      {/* ---- Every client on the Plan's timeline. */}
+      <section className="pln-section">
+        <div className="rn-card-head">
+          <h2>Clients</h2>
+          <div className="rq-ev-tools">
+            <div className="rd-btn-group" role="group" aria-label="Which clients">
+              <button type="button" className={prefs.view === "all" ? "on" : ""} aria-pressed={prefs.view === "all"} onClick={() => setPrefs((p) => ({ ...p, view: "all" }))}>
+                All clients
+                <Sep />
                 {clients.length}
-              </span>
-            </button>
-            <button type="button" role="radio" aria-checked={prefs.view === "attention"} className={prefs.view === "attention" ? "on" : ""} onClick={() => setPrefs((p) => ({ ...p, view: "attention" }))}>
-              Needs attention <b className="pov-count">{attention.length}</b>
-            </button>
+              </button>
+              <button type="button" className={prefs.view === "attention" ? "on" : ""} aria-pressed={prefs.view === "attention"} onClick={() => setPrefs((p) => ({ ...p, view: "attention" }))}>
+                Needs attention
+                <Sep />
+                {attention.length}
+              </button>
+            </div>
+            <div className="rq-pan" role="group" aria-label="Move in time">
+              <button type="button" className="rd-btn ghost" onClick={() => setBack((b) => b + 4)} aria-label="Earlier" title="Earlier">
+                <ChevronLeftIcon />
+              </button>
+              <button type="button" className="rd-btn ghost rq-today" disabled={back === 0} onClick={() => setBack(0)}>
+                Today
+              </button>
+              <button type="button" className="rd-btn ghost" disabled={back === 0} onClick={() => setBack((b) => Math.max(0, b - 4))} aria-label="Later" title="Later">
+                <ChevronRightIcon />
+              </button>
+            </div>
+            <div className="rd-btn-group" role="group" aria-label="Time shown">
+              {WINDOWS.map((w) => (
+                <button key={w.weeks} type="button" className={prefs.win === w.weeks ? "on" : ""} aria-pressed={prefs.win === w.weeks} onClick={() => setPrefs((p) => ({ ...p, win: w.weeks }))}>
+                  {w.months} months
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="pov-legend" aria-hidden="true">
-            <span>
-              <i className="run" /> Running
-            </span>
-            <span>
-              <i className="sched" /> Scheduled
-            </span>
-            <span>
-              <i className="draft" /> Draft
-            </span>
-            <span>
-              <i className="done" /> Done
-            </span>
-            <span>
-              <i className="ev">
-                <EventIcon kind="trip" size={14} />
-              </i>{" "}
-              Event
-            </span>
-          </div>
-        </header>
-
-        <div className="pov-grid">
-          <div className="pov-axis-left" />
-          <div className="pov-axis" ref={axisRef}>
-            {months.map((m) => (
-              <span key={m.day} className="pov-month" style={{ left: `${m.x * 100}%` }}>
-                {m.label}
-              </span>
-            ))}
-            {todayIn && (
-              <span className="pov-today-pill" style={{ left: `${todayX * 100}%` }}>
-                Today<Sep />
-                {dayMonth(today)}
-              </span>
-            )}
-          </div>
-
+        </div>
+        <div className="pln-card">
           {clients.length === 0 ? (
-            <p className="pov-empty">No clients yet.</p>
+            <p className="pov-empty">No clients yet</p>
           ) : shown.length === 0 ? (
-            <p className="pov-empty">Nobody needs attention: every running phase has something planned after it.</p>
+            <p className="pov-empty">Nobody</p>
           ) : (
-            shown.map((c) => (
-              <ClientBlock key={c.id} client={c} today={today} range={range} tracksOn={tracksOn} eventsOn={eventsOn} width={width} lines={lines} todayX={todayIn ? todayX : null} onPick={setPicked} onPlan={(track, startDay) => setNewPhase({ client: c, track, start: startDay, lock: false })} onEvent={(day) => setNewEvent({ client: c, day })} />
-            ))
+            <div className="rq-tl-scroll">
+              <div className="rq-tl" style={{ minWidth: Math.round(grid.count * 63) }}>
+                <MonthsRow grid={grid} />
+                <div className="rq-tl-body">
+                  {grid.nowLeft && <span className="rq-now" style={{ left: grid.nowLeft }} title="Now" />}
+                  <WeeksRow grid={grid} gridRef={weeksRef} />
+                  {shown.map((c) => (
+                    <ClientBlock
+                      key={c.id}
+                      client={c}
+                      grid={grid}
+                      today={today}
+                      thisWeek={thisWeek}
+                      intoWeek={intoWeek}
+                      dayPx={dayPx}
+                      cats={categories}
+                      onPick={setPicked}
+                      onNewPhase={(track, startWeek) => setNewPhase({ client: c, track, start: startWeek, lock: false })}
+                      onNewEvent={(day, kind) => setNewEvent({ client: c, day, kind })}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </section>
 
-      {/* ---- A bar's detail (PhaseDetailDialog, read-only), or a marker's, and the way to the client's Plan. */}
+      {/* ---- A bar's detail (PhaseDetailDialog, read-only), or a pin's, and the way to the client's tab. */}
       <Dialog open={!!picked} onOpenChange={(o) => !o && setPicked(null)}>
         {picked &&
           ("phase" in picked ? (
             <PhaseDetailDialog client={picked.client} phase={picked.phase} today={today} onMove={(p) => setPicked({ client: picked.client, phase: p })} />
           ) : (
-            <EventDetailDialog client={picked.client} event={picked.event} today={today} coach={data.coach} />
+            <EventDetailDialog client={picked.client} event={picked.event} today={today} />
           ))}
       </Dialog>
 
-      {/* ---- New phase, the Plan's own dialog, opened on the track and the day after the one ending. */}
+      {/* ---- New phase, the Plan's own dialog: Plan next opens on the track and the day after the one ending; an empty week on that week. */}
       <Dialog open={!!newPhase} onOpenChange={(o) => !o && setNewPhase(null)}>
         {newPhase && (
           <PhaseDialog
@@ -358,14 +306,15 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
         )}
       </Dialog>
 
-      {/* ---- New event, the Plan's own dialog, on the day clicked. */}
+      {/* ---- New event, the Plan's own dialog, on the day clicked and its lane's kind. */}
       <Dialog open={!!newEvent} onOpenChange={(o) => !o && setNewEvent(null)}>
         {newEvent && (
           <EventDialog
             today={today}
             event={null}
-            cats={data.categories}
+            cats={categories}
             initialStart={newEvent.day}
+            initialKind={newEvent.kind}
             onSave={(v) => {
               const client = newEvent.client;
               setNewEvent(null);
@@ -393,8 +342,8 @@ function ExtendMenu({ phase, onPick }: { phase: OverviewPhase; onPick: (endWeek:
         if (!o) setPicking(false);
       }}
     >
-      <PopoverPrimitive.Trigger className="pov-extend" aria-label={`Extend ${phase.name}`}>
-        Extend
+      <PopoverPrimitive.Trigger className="rd-btn" aria-label={`Extend ${phase.name}`}>
+        Extend <ChevronDownIcon />
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content align="end" sideOffset={6} className="pb-menu pov-extend-menu">
@@ -422,7 +371,6 @@ function ExtendMenu({ phase, onPick }: { phase: OverviewPhase; onPick: (endWeek:
                 }}
                 label="Pick the new last day"
               />
-              {phase.track === "training" && <small>Training runs in whole weeks: the day picked becomes that week&rsquo;s Sunday.</small>}
             </div>
           ) : (
             <button type="button" className="pov-extend-opt" onClick={() => setPicking(true)}>
@@ -435,166 +383,182 @@ function ExtendMenu({ phase, onPick }: { phase: OverviewPhase; onPick: (endWeek:
   );
 }
 
+/** One client on the timeline: a name row, then the three tracks and their event kinds, each lane as the Plan's. */
 function ClientBlock({
   client: c,
+  grid,
   today,
-  range,
-  tracksOn,
-  eventsOn,
-  width,
-  lines,
-  todayX,
+  thisWeek,
+  intoWeek,
+  dayPx,
+  cats,
   onPick,
-  onPlan,
-  onEvent,
+  onNewPhase,
+  onNewEvent,
 }: {
   client: OverviewClient;
+  grid: Grid;
   today: string;
-  range: Range;
-  tracksOn: Set<PhaseTrack>;
-  eventsOn: boolean;
-  width: number;
-  lines: number[];
-  todayX: number | null;
+  thisWeek: string;
+  intoWeek: number;
+  dayPx: number;
+  cats: Category[];
   onPick: (p: Picked) => void;
-  onPlan: (track: PhaseTrack, start: string) => void;
-  onEvent: (start: string) => void;
+  onNewPhase: (track: PhaseTrack, startWeek: string) => void;
+  onNewEvent: (day: string, kind?: string | null) => void;
 }) {
-  const status = clientStatus(c, tracksOn, today);
-  // Said only when something is ending (14 Oct): a quiet row says nothing under the name.
+  const status = clientStatus(c, ALL_TRACKS, today);
+  // Said only when something is ending (14 Oct): a quiet row says nothing after the name.
   const statusText = status.kind === "soon" ? `${TRACK_LABEL[status.track]} ends ${status.days <= 0 ? "today" : `in ${status.days} day${status.days === 1 ? "" : "s"}`}` : null;
+  const { weeks, count, nowIdx, cols } = grid;
+  const totalDays = count * 7;
+  // "None yet + Add" from this week on, as the Plan's; not when this week is off the window.
+  const emptyAt: React.CSSProperties | null = nowIdx < count ? { gridColumn: `${nowIdx + 1} / span ${Math.min(count - nowIdx, 8)}`, gridRow: 1 } : null;
+  // An empty spot is a way in: the day under the pointer in its week's column, the lane's kind.
+  const addAt = (week: string, ev: React.MouseEvent<HTMLElement>, kind?: string | null) => {
+    const r = ev.currentTarget.getBoundingClientRect();
+    const day = Math.max(0, Math.min(6, Math.floor(((ev.clientX - r.left) / Math.max(1, r.width)) * 7)));
+    onNewEvent(addDays(week, day), kind);
+  };
 
-  // The lanes with something in the window, in the fixed order.
-  // Two phases on one track over the same days (Sam Rivera, 14 Oct) each get a row of their own, so both are seen whole.
-  const lanes = TRACKS.filter((t) => tracksOn.has(t)).flatMap((t) => {
-    const rows: OverviewPhase[][] = [];
-    for (const p of c.phases.filter((x) => x.track === t && spanOf(x.start, x.end, range).width >= TINY.hide).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0))) {
-      let row = rows.find((r) => r.every((q) => q.end < p.start || q.start > p.end));
-      if (!row) rows.push((row = []));
-      row.push(p);
-    }
-    return rows.map((phases, row) => ({ track: t, row, phases }));
-  });
-  const events = eventsOn ? stackEvents(c.events, range, width) : { placed: [], overflow: [] };
-  const eventRows = events.placed.length || events.overflow.length ? Math.max(...events.placed.map((p) => p.row + 1), events.overflow.length ? 1 : 0) : 0;
+  // Events: a row a kind with something on the grid, in the app's kind order, "Event" last; overlapping ones stack into lanes, a pin's label taking room too.
+  const onGrid = c.events.filter((e) => eventPlace(e, grid.first, totalDays).visible).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id - b.id));
+  const reach = (e: OverviewEvent) => (e.start === e.end ? addDays(e.start, Math.ceil((e.title.length * 6.6 + 28) / dayPx)) : e.end);
+  const evLane = new Map<number, number>();
+  const groups = [...EVENT_TYPES.map((t) => t.id), null]
+    .map((id) => ({ id, chrome: chromeOf(cats, id), events: onGrid.filter((e) => (isEventTypeId(e.kind) ? e.kind : null) === id) }))
+    .filter((g) => g.events.length > 0)
+    .map((g) => {
+      const lanes: OverviewEvent[][] = [];
+      for (const e of g.events) {
+        let li = lanes.findIndex((l) => l.every((q) => reach(q) < e.start || q.start > reach(e)));
+        if (li < 0) {
+          lanes.push([]);
+          li = lanes.length - 1;
+        }
+        lanes[li].push(e);
+        evLane.set(e.id, li);
+      }
+      return { ...g, laneCount: Math.max(1, lanes.length) };
+    });
 
   return (
-    <div role="group" aria-label={statusText ? `${c.name}, ${statusText}` : c.name} className="pov-client" style={{ display: "contents" }}>
-      <div className="pov-client-cell">
-        <span className="pov-avatar">
-          {c.avatarPath ? (
-            // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-            <img src={c.avatarPath} alt="" />
-          ) : (
-            c.name.slice(0, 1).toUpperCase()
-          )}
-        </span>
-        <span className="pov-client-text">
+    <div role="group" aria-label={statusText ? `${c.name}, ${statusText}` : c.name} className="pov-client">
+      <div className="pov-client-head">
+        <span className="pov-client-id">
+          <span className="pov-avatar">
+            {c.avatarPath ? (
+              // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+              <img src={c.avatarPath} alt="" />
+            ) : (
+              c.name.slice(0, 1).toUpperCase()
+            )}
+          </span>
           <Link href={PLAN(c.id)} className="pov-client-name">
             {c.name}
           </Link>
-          {status.kind === "soon" && <small className="pov-status soon">{statusText}</small>}
+          {statusText && (
+            <>
+              <Sep />
+              <span className="pov-status">{statusText}</span>
+            </>
+          )}
+          {/* Always a way in for this client, whatever the grid holds (on hover, as row actions): a phase or an event. */}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="pov-add" aria-label={`Add for ${c.name}`}>
+              <PlusIcon /> Add
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="pb-menu">
+              <DropdownMenuItem onSelect={() => onNewPhase("training", thisWeek)}>Phase</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onNewEvent(today)}>Event</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </span>
       </div>
-      <div className="pov-track-cell">
-        {lines.map((x) => (
-          <i key={x} className="pov-gridline" style={{ left: `${x * 100}%` }} aria-hidden="true" />
-        ))}
-        {todayX != null && <i className="pov-today-line" style={{ left: `${todayX * 100}%` }} aria-hidden="true" />}
-            {lanes.map((lane) => (
-              <div key={`${lane.track}-${lane.row}`} className="pov-lane" aria-label={lane.row ? undefined : TRACK_LABEL[lane.track]}>
-                {lane.phases.map((p) => {
-                  const sp = spanOf(p.start, p.end, range);
-                  const st = phaseStatus(p, today);
-                  const soon = endingSoon(p, c.phases, today);
-                  const col = TRACK_COLOR[p.track];
-                  const tip = phaseTip(p, today);
-                  const label = sp.width >= TINY.label;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={`pov-bar ${st}${soon ? " soon" : ""}${sp.clipStart ? " clip-l" : ""}${sp.clipEnd ? " clip-r" : ""}`}
-                      style={{ left: `${sp.left * 100}%`, width: `${sp.width * 100}%`, "--c": col.c, "--rgb": col.rgb, "--tint": col.tint, "--line": col.line } as React.CSSProperties}
-                      title={tip}
-                      aria-label={tip}
-                      onClick={() => onPick({ client: c, phase: p })}
-                    >
-                      {label && <span>{p.name}</span>}
-                      {label && soon && <em>{soonTag(daysLeft(p, today))}</em>}
-                    </button>
-                  );
-                })}
+
+      {/* The three tracks, always, in their order. */}
+      {TRACKS.map((t) => {
+        const mine = c.phases.filter((p) => p.track === t).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+        const drawn = mine.filter((p) => weekSpan(p.start, p.endWeek, grid.first, count).visible);
+        const lanes = packLanes(drawn, (p) => {
+          const s = weekSpan(p.start, p.endWeek, grid.first, count);
+          return { from: s.sc, to: s.ec };
+        });
+        return (
+          <div key={t} className="rq-tl-row">
+            <LaneLabel icon={<TrackIcon track={t} size={16} />} color={TRACK_ACCENT[t]} label={TRACK_LABEL[t]} />
+            <div className="rq-tl-clip">
+              <div className="rq-tl-grid rq-lanes" style={{ ...cols, gridTemplateRows: `repeat(${lanes.count}, 44px)` }}>
+                {/* An empty week on a lane is a way in (the Plan's): New phase on this track, from that week. Bars sit over it. */}
+                {weeks.map((w, i) => (
+                  <span
+                    key={w}
+                    className="rq-cell add"
+                    style={{ gridColumn: i + 1, gridRow: `1 / span ${lanes.count}` }}
+                    role="button"
+                    tabIndex={-1}
+                    aria-label={`New ${TRACK_LABEL[t].toLowerCase()} phase for ${c.name} from ${dayMonth(w)}`}
+                    title={`${TRACK_LABEL[t]} · ${dayMonth(w)}`}
+                    onClick={() => onNewPhase(t, w)}
+                  />
+                ))}
+                {mine.length === 0 && emptyAt && (
+                  <button type="button" className="rq-empty" style={emptyAt} onClick={() => onNewPhase(t, thisWeek)}>
+                    None yet <b>+ Add</b>
+                  </button>
+                )}
+                {drawn.map((p) => (
+                  <PhaseBar
+                    key={p.id}
+                    phase={{ id: p.id, name: p.name, track: p.track, startWeek: p.start, endWeek: p.endWeek, draft: p.draft, gap: p.gap }}
+                    grid={grid}
+                    row={lanes.laneOf.get(p.id) ?? 0}
+                    today={today}
+                    thisWeek={thisWeek}
+                    intoWeek={intoWeek}
+                    onOpen={() => onPick({ client: c, phase: p })}
+                  />
+                ))}
               </div>
-            ))}
-        {/* Always a way to plan the next phase (14 Oct), under whatever lanes there are. */}
-        <div className="pov-none">
-          <button type="button" className="pov-none-link" onClick={() => onPlan("training", today)}>
-            + Plan a phase
-          </button>
-        </div>
-            {Array.from({ length: eventRows }, (_, r) => (
-              <div key={r} className={`pov-ev-row${r === 0 ? " first" : ""}`} aria-label={r === 0 ? "Events" : undefined}>
-                {events.placed
-                  .filter((pe) => pe.row === r)
-                  .map(({ event: e, x }) => {
-                    const t = eventTypeOf(e.kind);
-                    const tip = eventTip(e);
-                    const sp = e.end > e.start ? spanOf(e.start, e.end, range) : null;
-                    return (
-                      <span key={e.id} className="pov-ev-slot" style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
-                        {sp && sp.width > 0 && <i className="pov-ev-range" style={{ left: `${sp.left * 100}%`, width: `${sp.width * 100}%` }} aria-hidden="true" />}
-                        <button type="button" className="pov-ev" style={{ left: `${x * 100}%` }} title={tip} aria-label={tip} onClick={() => onPick({ client: c, event: e })}>
-                          <span className="pov-ev-mark">
-                            <EventIcon kind={e.kind} size={18} />
-                          </span>
-                          {/* Repeating (19 Oct): one stretch, the days beside the name. */}
-                          <span className="pov-ev-label">
-                            {e.title}
-                            {e.repeat ? (
-                              <>
-                                <Sep />
-                                {repeatDays(e.repeat.days)}
-                              </>
-                            ) : null}
-                          </span>
-                        </button>
-                      </span>
-                    );
-                  })}
-                {r === 0 &&
-                  events.overflow.map((o) => (
-                    <PopoverPrimitive.Root key={o.x}>
-                      <PopoverPrimitive.Trigger className="pov-ev-more" style={{ left: `${o.x * 100}%` }} aria-label={`${o.events.length} more events`}>
-                        +{o.events.length}
-                      </PopoverPrimitive.Trigger>
-                      <PopoverPrimitive.Portal>
-                        <PopoverPrimitive.Content align="start" sideOffset={6} className="pb-menu pov-ev-list">
-                          {o.events.map((e) => {
-                            const t = eventTypeOf(e.kind);
-                            return (
-                              <button key={e.id} type="button" className="pov-ev-list-row" style={{ "--c": t.color } as React.CSSProperties} onClick={() => onPick({ client: c, event: e })}>
-                                <span className="pov-ev-mark small">
-                                  <EventIcon kind={e.kind} size={14} />
-                                </span>
-                                <b>{e.title}</b>
-                                <small>{dayMonth(e.start)}</small>
-                              </button>
-                            );
-                          })}
-                        </PopoverPrimitive.Content>
-                      </PopoverPrimitive.Portal>
-                    </PopoverPrimitive.Root>
-                  ))}
-              </div>
-            ))}
-        {/* Always a way to add an event (14 Oct), under whatever event rows there are; the hairline sits on this row when there are none. */}
-          <div className={`pov-none${eventRows === 0 ? " events" : ""}`}>
-            <button type="button" className="pov-none-link" onClick={() => onEvent(today)}>
-              + Add an event
-            </button>
+            </div>
           </div>
-      </div>
+        );
+      })}
+
+      {/* Events: one lane when there is none on the grid, else a row a kind. */}
+      {groups.length === 0 ? (
+        <div className="rq-tl-row">
+          <LaneLabel label="Events" />
+          <div className="rq-tl-clip">
+            <div className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(1, ${EV_LANE}px)` }}>
+              {weeks.map((w, i) => (
+                <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: "1 / span 1" }} role="button" tabIndex={-1} aria-label={`New event for ${c.name} in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev)} />
+              ))}
+              {emptyAt && (
+                <button type="button" className="rq-empty" style={emptyAt} onClick={() => onNewEvent(today)}>
+                  None yet <b>+ Add</b>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        groups.map((g) => (
+          <div key={g.id ?? "none"} className="rq-tl-row">
+            <LaneLabel icon={<KindIcon id={g.id} size={16} />} color={g.chrome.ink} label={g.chrome.label} />
+            <div className="rq-tl-clip">
+              <div className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${g.laneCount}, ${EV_LANE}px)` }}>
+                {weeks.map((w, i) => (
+                  <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: `1 / span ${g.laneCount}` }} role="button" tabIndex={-1} aria-label={`New ${g.chrome.label.toLowerCase()} for ${c.name} in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev, g.id)} />
+                ))}
+                {g.events.map((e) => (
+                  <EventMark key={e.id} e={e} place={eventPlace(e, grid.first, totalDays)} lane={evLane.get(e.id) ?? 0} today={today} cats={cats} onOpen={() => onPick({ client: c, event: e })} />
+                ))}
+              </div>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 }

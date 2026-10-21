@@ -4,167 +4,92 @@ import { useRef, useState } from "react";
 import type React from "react";
 import Link from "next/link";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { eventTypeOf } from "../../../lib/eventTypes";
 import { repeatWords } from "../../../lib/eventRepeat";
+import { dayMonth } from "../../../lib/dayMonth";
+import { chromeOf, KindIcon, rgbOf, standingParts } from "../plan/EventsCard";
+import { eventIsPast } from "../plan/timelineParts";
+import { SepJoin } from "../Sep";
 import type { OverviewClient } from "./load";
-import { daysBetween, eventTiming, dayMonth, type OverviewEvent } from "./timeline";
-import { Sep, SepJoin } from "../Sep";
+import { daysBetween, type OverviewEvent } from "./timeline";
 
-// An event's detail (14 Oct), from a marker on the Phases timeline: the
-// phase pop-up's sibling. The category's icon big and alone, a category
-// pill and a timing chip, the title, when (a date tile for one day; from,
-// to, length and progress for a range), who added it, the note as a
-// bubble, and one way out: Open events. Read-only.
+// An event's detail (14 Oct; the .dlh card since 21 Oct), from a bar or pin
+// on the Phases timeline: the phase pop-up's sibling. Read-only: the title,
+// its kind (and From {first name}, Past) as tags, one fact line, who added it, the
+// note, and one way out: Open, to the client's Plan.
 
 const first = (name: string) => name.split(" ")[0];
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-const lengthLabel = (days: number) => (days % 7 === 0 && days >= 21 ? plural(days / 7, "week") : plural(days, "day"));
-/** "yesterday", "3 days ago", or the date. */
+/** "today", "yesterday", "3 days ago", or the date. */
 const addedWhen = (d: string, today: string) => {
   if (!d) return "";
   const ago = daysBetween(d, today);
   return ago === 0 ? "today" : ago === 1 ? "yesterday" : ago < 7 ? `${ago} days ago` : dayMonth(d);
 };
 
-export default function EventDetailDialog({ client, event: e, today, coach }: { client: OverviewClient; event: OverviewEvent; today: string; coach: { name: string; photoPath: string | null } }) {
-  const t = eventTypeOf(e.kind);
-  const timing = eventTiming(e, today);
+export default function EventDetailDialog({ client, event: e, today }: { client: OverviewClient; event: OverviewEvent; today: string }) {
+  // The kind's colour and name as the timeline wears them (EventsCard's chromeOf): a kind that isn't one of the app's is grey "Event".
+  const k = chromeOf([], e.kind);
+  const byClient = e.addedBy === "client";
+  const past = eventIsPast(e, today);
+  const single = e.start === e.end;
   const openRef = useRef<HTMLAnchorElement>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const longNote = e.note.length > 280;
-  const wd = new Date(`${e.start}T12:00:00`);
-  const byClient = e.addedBy === "client";
+  const facts: React.ReactNode[] = single
+    ? [client.name, dayMonth(e.start), ...standingParts(today, e)]
+    : [client.name, `${dayMonth(e.start)} – ${e.repeat && !e.repeat.until ? "no end" : dayMonth(e.end)}`, e.repeat ? repeatWords(e.repeat, { until: false }) : `${daysBetween(e.start, e.end) + 1} days`, ...standingParts(today, e)];
 
   return (
     <DialogContent
-      className="evd"
-      style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}
-      aria-describedby="evd-state"
+      className="dlh mvd evd"
+      style={{ "--mv": k.ink, "--mv-rgb": rgbOf(k.ink) } as React.CSSProperties}
       onOpenAutoFocus={(ev) => {
         ev.preventDefault();
         openRef.current?.focus();
       }}
     >
-      <span className="evd-glow" aria-hidden="true" />
-      <span className="evd-wash" aria-hidden="true" />
-      <div className="evd-body">
-        <header className="evd-head">
-          <span className="evd-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width={40} height={40} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              {t.fill && <path d={t.fill} fill="currentColor" stroke="none" opacity={0.35} />}
-              <path d={t.icon} />
-            </svg>
-          </span>
-          <div className="evd-head-text">
-            <div className="evd-pills">
-              <span className="evd-cat">{t.label}</span>
-              <DialogDescription id="evd-state" className={`evd-chip ${timing.chip.cls}`}>
-                <SepJoin parts={timing.chip.text.split(" · ")} />
-              </DialogDescription>
-            </div>
-            <DialogTitle className="evd-title">{e.title}</DialogTitle>
-          </div>
-          <DialogClose className="phd-x" aria-label="Close">
-            <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-          </DialogClose>
-        </header>
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">{e.title}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <div className="mvd-tags">
+        <span className="mvd-track">
+          <KindIcon id={e.kind} size={12} />
+          {k.label}
+        </span>
+        {byClient && <span className="evd-tag">From {first(client.name)}</span>}
+        {past && <span className="evd-tag">Past</span>}
+      </div>
+      <DialogDescription className="dlh-what">
+        <SepJoin parts={facts} />
+      </DialogDescription>
 
-        {/* When. */}
-        <div className="evd-when">
-          {timing.range ? (
-            <>
-              <div className="evd-range">
-                <span className="evd-end">
-                  <small>From</small>
-                  <b>{dayMonth(e.start)}</b>
-                </span>
-                <span className="evd-len">{e.repeat ? repeatWords(e.repeat, { until: false }) : lengthLabel(timing.days)}</span>
-                <span className="evd-end to">
-                  <small>{e.repeat ? "Until" : "To"}</small>
-                  <b>{e.repeat && !e.repeat.until ? "No end" : dayMonth(e.end)}</b>
-                </span>
-              </div>
-              <span className="evd-bar" aria-hidden="true">
-                <i style={{ width: `${timing.pct * 100}%` }} />
-              </span>
-              <span className="evd-rel">
-                <SepJoin parts={timing.relative.split(" · ")} />
-              </span>
-            </>
-          ) : (
-            <div className="evd-day">
-              <span className="evd-tile" aria-hidden="true">
-                <small className="wd">{wd.toLocaleDateString("en-GB", { weekday: "short" })}</small>
-                <b>{wd.getDate()}</b>
-                <small>{wd.toLocaleDateString("en-GB", { month: "short" })}</small>
-              </span>
-              <span className="evd-day-text">
-                <span className="evd-date">{dayMonth(e.start)}</span>
-                <span className="evd-rel">
-                  <SepJoin parts={timing.relative.split(" · ")} />
-                </span>
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Who: the client, always; a small badge of the coach when the coach added it. */}
-        <div className="evd-who">
-          <span className="evd-avatar">
-            {client.avatarPath ? (
-              // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-              <img src={client.avatarPath} alt="" />
-            ) : (
-              client.name.slice(0, 1).toUpperCase()
-            )}
-            {!byClient && (
-              <span className="evd-badge" aria-label="Added by you">
-                {coach.photoPath ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- coach-uploaded file
-                  <img src={coach.photoPath} alt="" />
-                ) : (
-                  coach.name.slice(0, 1).toUpperCase()
-                )}
-              </span>
-            )}
-          </span>
-          <span className="evd-who-text">
-            <b>{client.name}</b>
-            <small>
-              Added by {byClient ? first(client.name) : "you"}
-              {e.createdAt ? (
-                <>
-                  <Sep />
-                  {addedWhen(e.createdAt, today)}
-                </>
-              ) : null}
-            </small>
-          </span>
-        </div>
-
-        {/* The note, in quotes when the client wrote it. */}
-        {e.note && (
-          <>
-            <p className={`evd-note${longNote && !noteOpen ? " clamp" : ""}`}>{byClient ? `“${e.note}”` : e.note}</p>
-            {longNote && !noteOpen && (
-              <button type="button" className="evd-more" onClick={() => setNoteOpen(true)}>
-                Show more
-              </button>
-            )}
-          </>
-        )}
+      <div className="phd-field">
+        <span className="dlh-label">Added by</span>
+        <p className="evd-text">
+          <SepJoin parts={[byClient ? first(client.name) : "You", addedWhen(e.createdAt, today)]} />
+        </p>
       </div>
 
-      <footer className="evd-foot">
-        <Link ref={openRef} href={`/admin/redesign/plan?client=${client.id}`} className="phd-open">
-          Open events
-          <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M9 6l6 6-6 6" />
-          </svg>
+      {/* The note, in quotes when the client wrote it. */}
+      {e.note && (
+        <div className="phd-field">
+          <span className="dlh-label">Note</span>
+          <p className={`evd-text evd-note${longNote && !noteOpen ? " clamp" : ""}`}>{byClient ? `“${e.note}”` : e.note}</p>
+          {longNote && !noteOpen && (
+            <button type="button" className="evd-more" onClick={() => setNoteOpen(true)}>
+              Show more
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="dlh-foot">
+        <Link ref={openRef} href={`/admin/redesign/plan?client=${client.id}`} className="dlh-go">
+          Open
         </Link>
-      </footer>
+      </div>
     </DialogContent>
   );
 }

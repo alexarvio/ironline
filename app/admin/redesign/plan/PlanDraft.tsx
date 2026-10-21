@@ -95,15 +95,15 @@ const addDays = (d: string, n: number) => {
   return isoOf(x);
 };
 const addWeeks = (monday: string, n: number) => addDays(monday, n * 7);
-const weeksBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / (7 * DAY));
+export const weeksBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / (7 * DAY));
 const mondayOf = (d: string) => addDays(d, -((parse(d).getDay() + 6) % 7));
 /** A date in words is day/month (20 Oct, Alex: "starts 9/11", not "starts 9 Nov"); a year only when it isn't this one. */
 const shortDate = dayMonth;
 const fmtDay = shortDate;
 /** The timeline's axis keeps the month's name under its month heads; a screen reader gets the whole day. */
-const axisDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+export const axisDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const monthName = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short" });
-const isoWeek = (day: string) => {
+export const isoWeek = (day: string) => {
   const thursday = parse(addDays(mondayOf(day), 3));
   const jan1 = new Date(thursday.getFullYear(), 0, 1);
   return Math.floor((thursday.getTime() - jan1.getTime()) / DAY / 7) + 1;
@@ -135,13 +135,13 @@ export function TrackIcon({ track, size = 20 }: { track: PhaseTrack; size?: numb
   );
 }
 // How far ahead the grid shows, in months; each a whole number of weeks.
-const WINDOWS = [
+export const WINDOWS = [
   { months: 3, weeks: 13 },
   { months: 6, weeks: 26 },
   { months: 9, weeks: 39 },
   { months: 12, weeks: 52 },
 ] as const;
-type Win = (typeof WINDOWS)[number]["weeks"];
+export type Win = (typeof WINDOWS)[number]["weeks"];
 const WIN_KEY = "rq-plan-window";
 /** The Goals card is off the Plan tab for now (20 Oct, Alex). True brings it back as it was. */
 const SHOW_GOALS = false;
@@ -508,7 +508,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
       </section>
 
       {/* ---- Events: life around the plan, on the same weeks. */}
-      <EventsCard clientId={clientId} events={plan.events} categories={plan.eventCategories} today={today} thisWeek={thisWeek} intoWeek={intoWeek} windows={WINDOWS} onSaving={setEventsSaving} />
+      <EventsCard clientId={clientId} firstName={firstName} events={plan.events} categories={plan.eventCategories} today={today} thisWeek={thisWeek} intoWeek={intoWeek} windows={WINDOWS} onSaving={setEventsSaving} />
 
       {/* ---- Goals: off the Plan tab for now (20 Oct, Alex); the code stays for when they come back. */}
       {SHOW_GOALS && (
@@ -1174,7 +1174,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
 
 /** A phase with nothing in it yet (20 Oct, Alex): a small warning sign on its bar, what it lacks on hover or focus.
  *  The message floats (a popover) because a bar clips what is inside it; pressing the sign never starts a drag. */
-function GapSign({ text }: { text: string }) {
+export function GapSign({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
