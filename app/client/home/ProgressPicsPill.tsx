@@ -39,7 +39,7 @@ export default function ProgressPicsPill({ pics }: { pics: NonNullable<ProgressP
   const state: "due" | "progress" | "done" = done ? "done" : k > 0 ? "progress" : "due";
   const label = state === "done" ? "Completed" : state === "progress" ? `In progress · ${k} of ${n}` : `Due today · 0 of ${n}`;
   const button = state === "done" ? "View" : state === "progress" ? "Continue" : "Start";
-  const spoken = state === "done" ? "Progress pictures, completed. View." : state === "progress" ? `Progress pictures, in progress, ${k} of ${n}. Continue.` : `Progress pictures, due today, 0 of ${n}. Start.`;
+  const spoken = state === "done" ? "Shape update, completed. View." : state === "progress" ? `Shape update, in progress, ${k} of ${n}. Continue.` : `Shape update, due today, 0 of ${n}. Start.`;
   return (
     <button type="button" className={`ppp ${state}`} onClick={() => openPhotos?.()} aria-label={spoken}>
       <span className="ppp-ring" aria-hidden="true" style={{ background: ringOf(n, k, done) } as React.CSSProperties}>
@@ -53,7 +53,7 @@ export default function ProgressPicsPill({ pics }: { pics: NonNullable<ProgressP
           <span className="ppp-label">{label}</span>
           {state === "due" && <i className="ppp-dot" aria-hidden="true" />}
         </span>
-        <span className="ppp-title">Progress pictures</span>
+        <span className="ppp-title">Shape update</span>
       </span>
       <span className="ppp-btn" aria-hidden="true">
         {button}

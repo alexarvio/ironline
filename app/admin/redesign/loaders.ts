@@ -838,7 +838,7 @@ export function loadPlan(clientId: number): DraftPlan {
 export type NeedReply = { area: string; label: string; link: MessageLink | null; focus: number | null };
 export type NeedView = HomeAction & { open: string; reply: NeedReply | null };
 const NEED_TAB_ROUTE: Record<string, string> = { photos: "pictures" };
-const NEED_AREA: Record<string, string> = { training: "Training", nutrition: "Nutrition", measurements: "Check-in", meetings: "Meetings", messages: "Chat", invoices: "Invoice", plan: "Plan", photos: "Progress pictures" };
+const NEED_AREA: Record<string, string> = { training: "Training", nutrition: "Nutrition", measurements: "Check-in", meetings: "Meetings", messages: "Chat", invoices: "Invoice", plan: "Plan", photos: "Shape update" };
 /** What the coach fixes on their side: nothing to say to the client from these. */
 const NO_REPLY = new Set(["no-phase", "week", "program-ending", "locked"]);
 export function needView(clientId: number, a: HomeAction, byId: Map<string, FeedEvent>): NeedView {

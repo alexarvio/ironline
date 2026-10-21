@@ -14,7 +14,7 @@ const TAB_LABEL: Record<string, string> = {
   nutrition: "Nutrition",
   measurements: "Lifestyle",
   meetings: "Meetings",
-  photos: "Progress pictures",
+  photos: "Shape update",
   messages: "Messages",
 };
 const TONE_LABEL: Record<HomeAction["tone"], string> = { urgent: "Urgent", due: "Due", note: "To read" };

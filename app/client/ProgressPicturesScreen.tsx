@@ -82,16 +82,16 @@ export default function ProgressPicturesScreen({
           <button type="button" className="ci-back" onClick={back} aria-label="Back">
             <ChevronLeftIcon />
           </button>
-          <h1 className="ci-title">Progress pictures</h1>
+          <h1 className="ci-title">Shape update</h1>
           <span aria-hidden="true" />
         </div>
         {/* The photo banner, the check-in's: the same size, the sheet open
             now as its title, and two pills that switch the screen between
             the sheet and Compare. */}
         <header className="tr-banner ci-banner pp-banner">
-          <div className="tr-kicker">{open ? "Open now" : "Progress pictures"}</div>
+          <div className="tr-kicker">{open ? "Open now" : "Shape update"}</div>
           <FitTitle className="tr-name">{open ? open.title : "No sheet open"}</FitTitle>
-          <div className="tr-weeks ci-views" role="tablist" aria-label="Progress pictures">
+          <div className="tr-weeks ci-views" role="tablist" aria-label="Shape update">
             <button type="button" role="tab" aria-selected={view === "sheet"} className={`tr-wk${view === "sheet" ? " on" : ""}`} onClick={() => setView("sheet")}>
               {open ? `${sent} of ${open.slots.length} sent` : "Sheets"}
             </button>
@@ -111,7 +111,7 @@ export default function ProgressPicturesScreen({
         ) : data.openSheet ? (
           <OpenSheet clientId={data.clientId} sheet={data.openSheet} onUnsentChange={setUnsent} />
         ) : (
-          !data.hasAngles && <p className="pp-app-empty">Your coach hasn&rsquo;t asked for progress pictures yet.</p>
+          !data.hasAngles && <p className="pp-app-empty">Your coach hasn&rsquo;t asked for a shape update yet.</p>
         )}
 
         {view === "sheet" && data.earlier.length > 0 && (
@@ -428,7 +428,7 @@ export function ProgressPicturesRow() {
   return (
     <button type="button" className="pp-app-account-btn" onClick={() => openPhotos?.()}>
       <span className="settings-data-row">
-        <span className="home-dark-row-title">Progress pictures</span>
+        <span className="home-dark-row-title">Shape update</span>
         <ArrowRightIcon />
       </span>
     </button>

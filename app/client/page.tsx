@@ -457,7 +457,7 @@ function actionOnly(message: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 // What a comment was on, in words: "Commented on your nutrition".
-const COMMENT_ON = { nutrition: "your nutrition", checkin: "your check-in", photos: "your progress pictures", training: "your training" } as const;
+const COMMENT_ON = { nutrition: "your nutrition", checkin: "your check-in", photos: "your shape update", training: "your training" } as const;
 
 function latestCoachActivity(clientId: number, coachFirst: string): LatestActivity {
   const weekAgo = Date.now() - 7 * 86400000;
@@ -486,7 +486,7 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     if (latestMsg.link && !latestMsg.link.gone) {
       const k = latestMsg.link.link.kind;
       const context = k === "food" || k === "nutrition" ? "nutrition" : k === "checkin" ? "checkin" : k === "photos" ? "photos" : "training";
-      const cta = context === "nutrition" ? "View meal" : context === "checkin" ? "View check-in" : context === "photos" ? "View pictures" : "View session";
+      const cta = context === "nutrition" ? "View meal" : context === "checkin" ? "View check-in" : context === "photos" ? "View shape update" : "View session";
       return { kind: "comment", context, title: `Commented on ${COMMENT_ON[context]}`, body: latestMsg.text || null, whenLabel: relativeLabel(iso), cta, link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
     }
     return { kind: "message", title: "Sent you a message", body: latestMsg.text || (media ? (media.type === "video" ? "Sent you a video" : media.type === "image" ? "Sent you a photo" : media.type === "audio" ? "Sent you a voice message" : "Sent you a file") : null), whenLabel: relativeLabel(iso), cta: "Reply", link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
@@ -522,7 +522,8 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
       if (latestNote.action_tab === "training") return { kind: "deploy", track: "training", title, body: detail, cta: lower.includes("video") ? "View exercise" : "View training", ...base, focusWeek };
       if (lower.includes("goal")) return { kind: "goal", title, body: detail, cta: "Open chat", ...base };
       if (lower.includes("call") || lower.includes("meeting")) return { kind: "meeting", title, body: detail, cta: "View meeting", ...base };
-      if (lower.includes("progress pictures")) return { kind: "comment", context: "photos", title, body: detail, cta: "View pictures", ...base, actionTab: latestNote.action_tab ?? "home" };
+      // "progress pictures" is the feature's old name (21 Oct), still in notes written before.
+      if (lower.includes("shape update") || lower.includes("progress pictures")) return { kind: "comment", context: "photos", title, body: detail, cta: "View shape update", ...base, actionTab: latestNote.action_tab ?? "home" };
       if (lower.includes("check in") || lower.includes("check-in")) return { kind: "comment", context: "checkin", title, body: detail, cta: "View check-in", ...base, actionTab: latestNote.action_tab ?? "home" };
       if (lower.includes("calendar")) return { kind: "message", title, body: detail, cta: "Open chat", ...base };
       return { kind: "message", title, body: detail, cta: latestNote.action_label ?? "Open", ...base };

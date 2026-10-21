@@ -140,7 +140,7 @@ export default function MessageLinkPicker({ targets, onPick }: { targets: LinkTa
 
               {area === "Lifestyle" &&
                 (nothing.Lifestyle ? (
-                  <p className="msg-link-empty">No check-ins or progress pictures set up yet.</p>
+                  <p className="msg-link-empty">No check-ins or shape updates set up yet.</p>
                 ) : (
                   <>
                     {targets.checkins.map((c) => (
@@ -154,8 +154,8 @@ export default function MessageLinkPicker({ targets, onPick }: { targets: LinkTa
                       </button>
                     ))}
                     {targets.photos && (
-                      <button type="button" className="msg-link-row head" onClick={() => pick({ link: { kind: "photos" }, label: "Progress pictures" })}>
-                        Progress pictures
+                      <button type="button" className="msg-link-row head" onClick={() => pick({ link: { kind: "photos" }, label: "Shape update" })}>
+                        Shape update
                       </button>
                     )}
                   </>

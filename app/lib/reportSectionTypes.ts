@@ -9,6 +9,6 @@ export const REPORT_SECTION_TYPE_LABEL: Record<ReportSectionType, string> = {
   nutrition: "Nutrition plan",
   measurements: "Measurements trend",
   tracker_metric: "Tracker metric",
-  photos: "Progress photos",
+  photos: "Shape update",
   goals: "Goals",
 };
