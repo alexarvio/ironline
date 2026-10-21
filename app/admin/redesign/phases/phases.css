@@ -5,10 +5,10 @@
 
 .rd.pov .rd-btn svg { translate: 0 -0.5px; }
 /* The data starts later than on the Plan (21 Oct, Alex): a wider label column, so the lanes sit clear of the names. */
-.rd.pov { --pov-lbl: 200px; --pov-tab: 48px; }
+.rd.pov { --pov-lbl: 200px; --pov-tab: 84px; }
 .rd.pov .rq-tl-row { grid-template-columns: var(--pov-lbl) minmax(0, 1fr); }
 /* Under a client's name, its heads and lane labels start a tab in (21 Oct, Alex: not aligned with the name, as a
-   document's Tab key): --pov-tab, so they start under the name's first letter, past the face; the name reads as the parent. */
+   document's Tab key, pressed twice): --pov-tab, two tabs past the face; the name reads as the parent. */
 .rd.pov .pov-client .rq-tl-label { padding-left: calc(10px + var(--pov-tab)); }
 .rd.pov .rq-ev-tools { flex-wrap: wrap; justify-content: flex-end; }
 
