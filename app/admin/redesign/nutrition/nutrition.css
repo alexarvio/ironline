@@ -81,6 +81,10 @@
 /* The day open: its meals, each with its foods under it. */
 /* The same side padding as the day row over it, so the meal grid's edges are the row's. */
 .rn-meals { display: flex; flex-direction: column; padding: 2px 4px 12px 10px; }
+/* The client's note on the day, first in the opened row (21 Oct, Alex): their words in quotes, body grey, a line of air under it. */
+.rn-daynote { margin: 4px 0 10px; font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rn-daynote::before { content: "\201C"; }
+.rn-daynote::after { content: "\201D"; }
 .rn-mcols { padding-left: 0; padding-right: 0; }
 .rn-mcols .p { color: var(--macro-protein); }
 .rn-mcols .c { color: var(--macro-carbs); }

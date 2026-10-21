@@ -85,6 +85,10 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
    Each log sets its page size and its row's height, border included (--log-rows, --log-row), and what else the box
    holds round the rows, its column heads, padding and edge (--log-head; none on Home). */
 .rd-steady { min-height: calc(var(--log-rows, 20) * var(--log-row, 53px) + var(--log-head, 0px)); }
+/* A note from the client on a log's row (21 Oct, Alex: Lifestyle's check-ins, the Nutrition log): the chat icon after the
+   date and its chevron, quiet grey; the words show only once the row is opened. A mark, not a button: the row opens. */
+.rd-notemark { display: inline-flex; align-items: center; flex: none; margin-left: 8px; color: #5b6474; }
+.rd-notemark svg { width: 15px; height: 15px; }
 /* The button that opens such a row (its title and chevron): no look of its own, the row's click does the same and the
    ring goes round the whole row (nutrition.css, meetings.css). Controls in the row stay its siblings, never inside it. */
 .rd-row-hit { display: inline-flex; align-items: inherit; gap: inherit; min-width: 0; max-width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }

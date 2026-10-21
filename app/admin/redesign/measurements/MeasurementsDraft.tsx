@@ -1204,17 +1204,28 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
         const state = filled.length === 0 ? { text: "Missed", cls: "down" } : missing === 0 ? { text: "Complete", cls: "up" } : { text: `${missing} missing`, cls: "" };
         const note = view.notes[p.key];
         const label = `${CAD[cadence].label} check-in · ${whenOf(p.key, p.label)}`;
+        // A row opens only when it has something in it (21 Oct, Alex): nothing submitted, no chevron and no click.
+        const opens = filled.length > 0 || !!note;
         return (
-          <div key={p.key} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
+          <div key={p.key} className={`rd-row rn-day${isOpen && opens ? " open" : ""}`}>
             {/* A click anywhere opens it; for the keyboard the date is the button, the note and the message its siblings. */}
-            <div className="rd-row-main" style={grid} onClick={() => setOpen((x) => (x === p.key ? null : p.key))}>
+            <div className={`rd-row-main${opens ? "" : " static"}`} style={grid} onClick={opens ? () => setOpen((x) => (x === p.key ? null : p.key)) : undefined}>
               <span className="rd-ex">
                 <span className="rd-ex-name">
-                  <button type="button" className="rd-row-hit" aria-expanded={isOpen}>
+                  {opens ? (
+                    <button type="button" className="rd-row-hit" aria-expanded={isOpen}>
+                      <span className="rd-logdate">{logWhen(p.key, p.label, cadence)}</span>
+                      <Fold open={isOpen} />
+                    </button>
+                  ) : (
                     <span className="rd-logdate">{logWhen(p.key, p.label, cadence)}</span>
-                    <Fold open={isOpen} />
-                  </button>
-                  {note && <NoteBubble text={note} onReply={() => onReply(p.key)} />}
+                  )}
+                  {/* A note: the chat icon in the row, the words once it is opened (21 Oct, Alex), with Reply there. */}
+                  {note && (
+                    <span className="rd-notemark" title="A note from the client" aria-label="A note from the client">
+                      <ChatIcon />
+                    </span>
+                  )}
                 </span>
               </span>
               <span className="rm-summary">
@@ -1228,7 +1239,7 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
                 </button>
               </span>
             </div>
-            {isOpen && (
+            {isOpen && opens && (
               <div className="rm-tiles">
                 {filled.map((x) => (
                   <div key={x.m.id} className="rm-tile">
@@ -1243,6 +1254,11 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
                   <div className="rm-tile note">
                     <small>Note</small>
                     <p>{note}</p>
+                    <div className="rm-notepop-foot">
+                      <button type="button" className="rm-reply" onClick={() => onReply(p.key)}>
+                        Reply
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

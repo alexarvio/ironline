@@ -446,9 +446,10 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   const sGrid = {
     gridTemplateColumns: "20px minmax(160px, 1.3fr) 120px 140px minmax(160px, 1.6fr) 32px",
   } as const;
-  // No Vs target column (21 Oct, Alex); the day's kind as one-width pills.
+  // No Vs target column (21 Oct, Alex); the day's kind as one-width pills. The date column holds the date, its chevron
+  // and the note's chat icon (21 Oct, Alex), as Lifestyle's check-ins.
   const lGrid = {
-    gridTemplateColumns: "120px 84px 84px minmax(200px, 1fr) 32px",
+    gridTemplateColumns: "150px 84px 84px minmax(200px, 1fr) 32px",
   } as const;
   const mGrid = {
     // No leading column (21 Oct): the meals start under the day's date.
@@ -1283,8 +1284,13 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
               <span className="rd-logdate">{logDate(day.date)}</span>
               <Fold open={open} />
             </button>
+            {/* A note from the client: the chat icon in the row, the words once it is opened (21 Oct, Alex). */}
+            {day.note && (
+              <span className="rd-notemark" title="A note from the client" aria-label="A note from the client">
+                <ChatIcon />
+              </span>
+            )}
           </span>
-          {day.note && <small title={day.note}>{day.note}</small>}
         </span>
         <span className="rd-num">{n(day.kcal)}</span>
         <span className={`rd-pill rnt-daypill${day.isTraining ? "" : " quiet"}`}>{day.isTraining ? "Training" : "Rest"}</span>
@@ -1301,6 +1307,9 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
 
       {open && (
         <div className="rn-meals">
+          {/* The client's note on the day, inside the opened row (21 Oct, Alex): in the row it made that row taller than
+              the rest, and the log keeps one height. */}
+          {day.note && <p className="rn-daynote">{day.note}</p>}
           <div className="rd-cols rn-mcols" aria-hidden="true" style={mealGrid}>
             <span>Meal</span>
             <span>Kcal</span>
