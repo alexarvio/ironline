@@ -454,7 +454,8 @@ function ClientBlock({
 
   return (
     <div role="group" aria-label={statusText ? `${c.name}, ${statusText}` : c.name} className="pov-client">
-      <div className="pov-client-head">
+      {/* A click anywhere on the row folds or opens the client (21 Oct, Alex); the name still opens their Plan. */}
+      <div className="pov-client-head" onClick={onFold}>
         <span className="pov-client-id">
           <span className="pov-avatar">
             {c.avatarPath ? (
@@ -464,11 +465,14 @@ function ClientBlock({
               c.name.slice(0, 1).toUpperCase()
             )}
           </span>
-          <Link href={PLAN(c.id)} className="pov-client-name">
+          <Link href={PLAN(c.id)} className="pov-client-name" onClick={(e) => e.stopPropagation()}>
             {c.name}
           </Link>
           {/* Fold the client down to this row, or open it again (21 Oct, Alex): the chevron right after the name. */}
-          <button type="button" className="pov-fold" onClick={onFold} aria-expanded={!folded} aria-label={folded ? `Show ${c.name}` : `Fold ${c.name}`} title={folded ? "Show" : "Fold"}>
+          <button type="button" className="pov-fold" onClick={(e) => {
+              e.stopPropagation();
+              onFold();
+            }} aria-expanded={!folded} aria-label={folded ? `Show ${c.name}` : `Fold ${c.name}`} title={folded ? "Show" : "Fold"}>
             <Fold open={!folded} />
           </button>
           {statusText && (
