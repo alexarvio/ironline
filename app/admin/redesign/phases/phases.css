@@ -4,6 +4,9 @@
    The pop-ups are portalled, so theirs (phd-, evd-, pov-extend-) are scoped by their own classes. */
 
 .rd.pov .rd-btn svg { translate: 0 -0.5px; }
+/* The data starts later than on the Plan (21 Oct, Alex): a wider label column, so the lanes sit clear of the names. */
+.rd.pov { --pov-lbl: 200px; }
+.rd.pov .rq-tl-row { grid-template-columns: var(--pov-lbl) minmax(0, 1fr); }
 .rd.pov .rq-ev-tools { flex-wrap: wrap; justify-content: flex-end; }
 
 /* ---- Ending soon: one white hairline card, a row a phase, a hairline between them. */
@@ -40,12 +43,19 @@
 .rd.pov .pov-client-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 15px; font-weight: 600; color: #141a24; text-decoration: none; }
 .rd.pov .pov-client-name:hover { text-decoration: underline; text-decoration-color: #c9cfd8; text-underline-offset: 3px; }
 .rd.pov .pov-status { font-size: 12.5px; font-weight: 500; color: #b8471f; }
-/* + Add after the name (21 Oct): a phase or an event for this client whatever the grid holds. Words alone, on hover as
-   every row action, and while its menu is open or it has the keyboard. */
-.rd.pov .pov-add { display: inline-flex; align-items: center; gap: 4px; margin-left: 14px; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+/* The chevron right after the name folds the client to its name row (21 Oct, Alex). */
+.rd.pov .pov-fold { display: inline-flex; align-items: center; margin-left: 6px; padding: 2px; border: 0; background: none; color: #8b93a1; cursor: pointer; }
+.rd.pov .pov-fold:hover { color: #141a24; }
+/* Phases and events apart (21 Oct, Alex): each under a quiet head, its + Add on the right (kept in sight when the
+   timeline scrolls sideways); the events under a dashed line, inset to the labels, with a little air. */
+.rd.pov .pov-sub { position: relative; display: grid; grid-template-columns: var(--pov-lbl) minmax(0, 1fr); align-items: center; height: 30px; }
+.rd.pov .pov-sub.ev { margin-top: 10px; }
+.rd.pov .pov-sub.ev::before { content: ""; position: absolute; top: 0; left: 10px; right: 0; border-top: 1px dashed #dce1e8; }
+.rd.pov .pov-sub-label { display: inline-flex; align-items: baseline; gap: 10px; padding-left: 10px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98a2b3; }
+.rd.pov .pov-sub-label em { font-style: normal; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #8b93a1; }
+.rd.pov .pov-add { grid-column: 2; justify-self: end; position: sticky; right: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
 .rd.pov .pov-add svg { width: 13px; height: 13px; translate: 0 -0.5px; }
 .rd.pov .pov-add:hover { color: #141a24; }
-.rd.pov .pov-client:hover .pov-add, .rd.pov .pov-add:focus-visible, .rd.pov .pov-add[data-state="open"] { opacity: 1; }
 .rd.pov .pov-empty { margin: 0; padding: 18px 24px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 
 /* Nothing here drags (the Plan's bars do): a bar, a pin and its dot only open. */

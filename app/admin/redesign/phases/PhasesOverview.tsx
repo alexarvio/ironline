@@ -8,7 +8,6 @@ import { Popover as PopoverPrimitive } from "radix-ui";
 import { toast } from "sonner";
 import { addClientEventAction, addClientPhaseAction, removeClientPhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import { Dialog } from "../../../components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../../components/icons";
 import { EVENT_TYPES, isEventTypeId } from "../../../lib/eventTypes";
 import { dayMonth } from "../../../lib/dayMonth";
@@ -19,6 +18,7 @@ import { chromeOf, EV_LANE, EventDialog, KindIcon, rgbOf, type Category } from "
 import { EventMark, eventPlace, LaneLabel, MonthsRow, packLanes, PhaseBar, weekSpan, WeeksRow, type Grid } from "../plan/timelineParts";
 import DatePick from "../DatePick";
 import { Sep } from "../Sep";
+import { Fold } from "../Fold";
 import PhaseDetailDialog from "./PhaseDetailDialog";
 import EventDetailDialog from "./EventDetailDialog";
 import type { OverviewClient, PhasesOverviewData } from "./load";
@@ -39,8 +39,9 @@ const first = (name: string) => name.split(" ")[0];
 const PLAN = (id: number) => `/admin/redesign/plan?client=${id}`;
 
 type View = "all" | "attention";
-type Prefs = { win: Win; view: View };
-const DEFAULT_PREFS: Prefs = { win: 13, view: "all" };
+/** folded: the clients folded down to their name row (21 Oct, Alex), kept with the rest. */
+type Prefs = { win: Win; view: View; folded: number[] };
+const DEFAULT_PREFS: Prefs = { win: 13, view: "all", folded: [] };
 const prefsKey = (coachId: number) => `norcoach:phases:${coachId}`;
 /** What this screen saved before (3, 6 or 12 months), as the Plan's windows. */
 const FROM_MONTHS: Record<number, Win> = { 3: 13, 6: 26, 9: 39, 12: 52 };
@@ -62,9 +63,10 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
     try {
       const raw = window.localStorage.getItem(prefsKey(coachId));
       if (raw) {
-        const p = JSON.parse(raw) as { win?: unknown; months?: unknown; view?: unknown };
+        const p = JSON.parse(raw) as { win?: unknown; months?: unknown; view?: unknown; folded?: unknown };
         const win = isWin(p.win) ? p.win : (typeof p.months === "number" && FROM_MONTHS[p.months]) || DEFAULT_PREFS.win;
-        start(() => setPrefs({ win, view: p.view === "attention" ? "attention" : "all" }));
+        const folded = Array.isArray(p.folded) ? p.folded.filter((x): x is number => typeof x === "number") : [];
+        start(() => setPrefs({ win, view: p.view === "attention" ? "attention" : "all", folded }));
       }
     } catch {}
     loaded.current = true;
@@ -229,7 +231,8 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
               <div className="rq-tl" style={{ minWidth: Math.round(grid.count * 63) }}>
                 <MonthsRow grid={grid} />
                 <div className="rq-tl-body">
-                  {grid.nowLeft && <span className="rq-now" style={{ left: grid.nowLeft }} title="Now" />}
+                  {/* The Plan places the line past its 108px labels; here the label column is wider (--pov-lbl, phases.css). */}
+                  {grid.nowLeft && <span className="rq-now" style={{ left: grid.nowLeft.split("108px").join("var(--pov-lbl)") }} title="Now" />}
                   <WeeksRow grid={grid} gridRef={weeksRef} />
                   {shown.map((c) => (
                     <ClientBlock
@@ -244,6 +247,8 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
                       onPick={setPicked}
                       onNewPhase={(track, startWeek) => setNewPhase({ client: c, track, start: startWeek, lock: false })}
                       onNewEvent={(day, kind) => setNewEvent({ client: c, day, kind })}
+                      folded={prefs.folded.includes(c.id)}
+                      onFold={() => setPrefs((p) => ({ ...p, folded: p.folded.includes(c.id) ? p.folded.filter((x) => x !== c.id) : [...p.folded, c.id] }))}
                     />
                   ))}
                 </div>
@@ -395,6 +400,8 @@ function ClientBlock({
   onPick,
   onNewPhase,
   onNewEvent,
+  folded,
+  onFold,
 }: {
   client: OverviewClient;
   grid: Grid;
@@ -406,6 +413,9 @@ function ClientBlock({
   onPick: (p: Picked) => void;
   onNewPhase: (track: PhaseTrack, startWeek: string) => void;
   onNewEvent: (day: string, kind?: string | null) => void;
+  /** Folded down to its name row (21 Oct, Alex: a chevron after the name). */
+  folded: boolean;
+  onFold: () => void;
 }) {
   const status = clientStatus(c, ALL_TRACKS, today);
   // Said only when something is ending (14 Oct): a quiet row says nothing after the name.
@@ -457,26 +467,29 @@ function ClientBlock({
           <Link href={PLAN(c.id)} className="pov-client-name">
             {c.name}
           </Link>
+          {/* Fold the client down to this row, or open it again (21 Oct, Alex): the chevron right after the name. */}
+          <button type="button" className="pov-fold" onClick={onFold} aria-expanded={!folded} aria-label={folded ? `Show ${c.name}` : `Fold ${c.name}`} title={folded ? "Show" : "Fold"}>
+            <Fold open={!folded} />
+          </button>
           {statusText && (
             <>
               <Sep />
               <span className="pov-status">{statusText}</span>
             </>
           )}
-          {/* Always a way in for this client, whatever the grid holds (on hover, as row actions): a phase or an event. */}
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="pov-add" aria-label={`Add for ${c.name}`}>
-              <PlusIcon /> Add
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="pb-menu">
-              <DropdownMenuItem onSelect={() => onNewPhase("training", thisWeek)}>Phase</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onNewEvent(today)}>Event</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </span>
       </div>
 
-      {/* The three tracks, always, in their order. */}
+      {!folded && (
+        <>
+      {/* Phases and events apart (21 Oct, Alex: not the same thing): each under its own quiet head with its + Add on the
+          right, the events under a dashed line and a little air. Then the three tracks, always, in their order. */}
+      <div className="pov-sub">
+        <span className="pov-sub-label">Phases</span>
+        <button type="button" className="pov-add" onClick={() => onNewPhase("training", thisWeek)} aria-label={`New phase for ${c.name}`}>
+          <PlusIcon /> Add
+        </button>
+      </div>
       {TRACKS.map((t) => {
         const mine = c.phases.filter((p) => p.track === t).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
         const drawn = mine.filter((p) => weekSpan(p.start, p.endWeek, grid.first, count).visible);
@@ -525,25 +538,16 @@ function ClientBlock({
         );
       })}
 
-      {/* Events: one lane when there is none on the grid, else a row a kind. */}
-      {groups.length === 0 ? (
-        <div className="rq-tl-row">
-          <LaneLabel label="Events" />
-          <div className="rq-tl-clip">
-            <div className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(1, ${EV_LANE}px)` }}>
-              {weeks.map((w, i) => (
-                <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: "1 / span 1" }} role="button" tabIndex={-1} aria-label={`New event for ${c.name} in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev)} />
-              ))}
-              {emptyAt && (
-                <button type="button" className="rq-empty" style={emptyAt} onClick={() => onNewEvent(today)}>
-                  None yet <b>+ Add</b>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        groups.map((g) => (
+      {/* Events: their own head, then a row a kind with something on the grid; none on the grid, None yet in the head. */}
+      <div className="pov-sub ev">
+        <span className="pov-sub-label">
+          Events{groups.length === 0 && <em>None yet</em>}
+        </span>
+        <button type="button" className="pov-add" onClick={() => onNewEvent(today)} aria-label={`New event for ${c.name}`}>
+          <PlusIcon /> Add
+        </button>
+      </div>
+      {groups.map((g) => (
           <div key={g.id ?? "none"} className="rq-tl-row">
             <LaneLabel icon={<KindIcon id={g.id} size={16} />} color={g.chrome.ink} label={g.chrome.label} />
             <div className="rq-tl-clip">
@@ -557,7 +561,8 @@ function ClientBlock({
               </div>
             </div>
           </div>
-        ))
+        ))}
+        </>
       )}
     </div>
   );
