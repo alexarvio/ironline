@@ -8,6 +8,7 @@ import { ChevronDownIcon, PinIcon } from "../../../components/icons";
 import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
 import ChatMediaGallery from "../../../components/ChatMediaGallery";
+import { ChatVideo, sized } from "../../../components/ChatMedia";
 import { chatDraftThreadAction } from "./actions";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
@@ -54,8 +55,16 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   }
   const refreshThread = async () => {
     const next = await chatDraftThreadAction(clientId).catch(() => null);
-    if (next) setPlan(next);
+    if (!next) return;
+    setPlan(next);
+    // Something the client wrote came in while the chat is open: it is read
+    // (21 Oct: it stayed new on the rail and the Feed after the chat closed).
+    if (next.unread && activeRef.current) void markSeenAction(clientId, { tab: "messages" }).catch(() => {});
   };
+  const activeRef = useRef(active);
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
   const messages = plan.messages;
   const [text, setText] = useState("");
   const [link, setLink] = useState<DraftLink | null>(null);
@@ -145,10 +154,18 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     const el = thread.current;
     if (el && atEnd.current) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
-  // After a send, a reaction, a pin: the thread again, not the whole page.
-  const act = (fn: () => Promise<void>, done?: () => void) =>
+  // After a send, a reaction, a pin: the thread again, not the whole page
+  // (the actions skip the page read: quiet). One that fails says so and
+  // leaves the box as it was (21 Oct: a throw here took the admin to the
+  // error screen, the words lost).
+  const act = (fn: () => Promise<void>, done?: () => void, failed = "Not saved") =>
     start(async () => {
-      await fn();
+      try {
+        await fn();
+      } catch {
+        toast.error(failed, { description: "Check the connection, then try again." });
+        return;
+      }
       await refreshThread();
       done?.();
     });
@@ -158,6 +175,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("text", text.trim());
+    fd.set("quiet", "1");
     if (link?.link) fd.set("link", JSON.stringify(link.link));
     if (replying) fd.set("replyTo", String(replying.id));
     act(
@@ -171,16 +189,33 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
           box.current.style.overflowY = "hidden";
         }
         box.current?.focus();
-      }
+      },
+      "Not sent"
     );
   };
+  // A photo, video, file or voice message carries the link over the box too,
+  // as the words do and as the client's do (21 Oct: it went without it).
   const sendFile = (file: File) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("text", "");
     fd.set("file", file);
+    fd.set("quiet", "1");
+    if (link?.link) fd.set("link", JSON.stringify(link.link));
     if (replying) fd.set("replyTo", String(replying.id));
-    act(() => sendChatMessageAction(fd), () => setReplying(null));
+    act(
+      () => sendChatMessageAction(fd),
+      () => {
+        setReplying(null);
+        setLink(null);
+      },
+      "Not sent"
+    );
+  };
+  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (f) sendFile(f);
   };
   // Replying to one message (2 Oct, as WhatsApp): it shows over the box until sent or dropped.
   const [replying, setReplying] = useState<DraftMessage | null>(null);
@@ -192,12 +227,12 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   const photoInput = useRef<HTMLInputElement>(null);
   // Media and files sent in the chat, over it (ChatMediaGallery).
   const [gallery, setGallery] = useState(false);
-  const react = (m: DraftMessage, emoji: string | null) => act(() => reactToMessageAction(clientId, m.id, emoji));
+  const react = (m: DraftMessage, emoji: string | null) => act(() => reactToMessageAction(clientId, m.id, emoji, true));
   function saveEdit() {
     if (!editing || !editing.text.trim()) return;
     const { id, text: words } = editing;
     setEditing(null);
-    act(() => editChatMessageAction(clientId, id, words));
+    act(() => editChatMessageAction(clientId, id, words, true));
   }
 
   // Oldest first on screen, a heading over each day; the coach's pins on top.
@@ -348,8 +383,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
                 <DropdownMenuItem onSelect={() => startReply(m)}>Reply</DropdownMenuItem>
                 {m.mine && <DropdownMenuItem onSelect={() => setEditing({ id: m.id, text: m.text })}>Edit</DropdownMenuItem>}
                 {m.mine && <DropdownMenuItem onSelect={() => setRelink(m.id)}>{m.link ? "Change the link" : "Link to…"}</DropdownMenuItem>}
-                {m.mine && m.link && <DropdownMenuItem onSelect={() => act(() => setMessageLinkAction(clientId, m.id, null))}>Remove the link</DropdownMenuItem>}
-                <DropdownMenuItem onSelect={() => act(() => pinMessageAction(clientId, m.id, !m.pinned))}>{m.pinned ? "Unpin" : "Pin to the top"}</DropdownMenuItem>
+                {m.mine && m.link && <DropdownMenuItem onSelect={() => act(() => setMessageLinkAction(clientId, m.id, null, true))}>Remove the link</DropdownMenuItem>}
+                <DropdownMenuItem onSelect={() => act(() => pinMessageAction(clientId, m.id, !m.pinned, true))}>{m.pinned ? "Unpin" : "Pin to the top"}</DropdownMenuItem>
                 {m.mine && <DropdownMenuSeparator />}
                 {m.mine && (
                   <DropdownMenuItem variant="destructive" onSelect={() => setRemove(m)}>
@@ -455,7 +490,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
             {pinned.length > 1 && <span className="rm-pinbar-count">{(pinAt % pinned.length) + 1}/{pinned.length}</span>}
           </button>
           {/* Off the top straight from the bar. */}
-          <button type="button" className="rm-pinbar-x" onClick={() => act(() => pinMessageAction(clientId, pinShown.id, false))} aria-label="Unpin this message" title="Unpin">
+          <button type="button" className="rm-pinbar-x" onClick={() => act(() => pinMessageAction(clientId, pinShown.id, false, true))} aria-label="Unpin this message" title="Unpin">
             ×
           </button>
           </div>
@@ -538,23 +573,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            {[
-              { ref: photoInput, accept: "image/*,video/*" },
-              { ref: fileInput, accept: "image/*,video/*,audio/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip" },
-            ].map((i) => (
-              <input
-                key={i.accept}
-                ref={i.ref}
-                type="file"
-                accept={i.accept}
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = "";
-                  if (f) sendFile(f);
-                }}
-              />
-            ))}
+            <input ref={photoInput} type="file" accept="image/*,video/*" hidden onChange={pickFile} />
+            <input ref={fileInput} type="file" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip" hidden onChange={pickFile} />
             <textarea
               ref={box}
               className="rm-box"
@@ -609,7 +629,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
               if (relink != null) {
                 const id = relink;
                 setRelink(null);
-                act(() => setMessageLinkAction(clientId, id, JSON.stringify(l.link)));
+                act(() => setMessageLinkAction(clientId, id, JSON.stringify(l.link), true));
               } else {
                 setLink(l);
                 setLinking(false);
@@ -629,7 +649,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
             onConfirm={() => {
               const id = remove.id;
               setRemove(null);
-              act(() => deleteChatMessageAction(clientId, id), () => toast("Message deleted"));
+              act(() => deleteChatMessageAction(clientId, id, true), () => toast("Message deleted"));
             }}
           />
         )}
@@ -643,6 +663,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
 // one week at a time: each session a heading that is itself a row, its
 // exercises under it. Type to narrow any of it.
 type Area = "training" | "nutrition" | "measurements";
+const CHECKIN_NAME = { daily: "Daily check-in", weekly: "Weekly check-in", monthly: "Monthly check-in" } as const;
 function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targets: LinkTargets; onPick: (l: DraftLink & { link: MessageLink }) => void }) {
   const areas: { id: Area; label: string; empty: boolean }[] = [
     { id: "training", label: "Training", empty: t.training.length === 0 },
@@ -724,11 +745,13 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
         )}
         {area === "measurements" && (
           <>
+            {/* Monthly too (21 Oct: it was listed as a second "Weekly check-in"). */}
             {t.checkins
-              .filter((c) => hit(c === "daily" ? "Daily check-in" : "Weekly check-in"))
-              .map((c) => (
-                <button key={c} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick(c === "daily" ? "Daily check-in" : "Weekly check-in", { kind: "checkin", section: c })}>
-                  {c === "daily" ? "Daily check-in" : "Weekly check-in"}
+              .map((c) => ({ c, name: CHECKIN_NAME[c] }))
+              .filter(({ name }) => hit(name))
+              .map(({ c, name }) => (
+                <button key={c} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick(name, { kind: "checkin", section: c })}>
+                  {name}
                 </button>
               ))}
             {t.photos && hit("Shape update") && (
@@ -747,8 +770,10 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
 }
 
 // A picture shows, a video and a voice message play, any other file downloads.
+// The picture at 1080 wide, not the phone's original (21 Oct: a 6 MB, 4000 px
+// photo for a 280 px bubble), the video behind its poster: ChatMedia.
 function Media({ media }: { media: DraftMedia }) {
-  if (media.type === "video") return <video className="rm-media-video" src={media.path} controls playsInline />;
+  if (media.type === "video") return <ChatVideo className="rm-media-video" src={media.path} />;
   if (media.type === "audio") return <audio className="rm-media-audio" src={media.path} controls preload="metadata" />;
   if (media.type === "file")
     return (
@@ -761,7 +786,7 @@ function Media({ media }: { media: DraftMedia }) {
       </a>
     );
   // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-  return <img className="rm-media-img" src={media.path} alt="" />;
+  return <img className="rm-media-img" src={sized(media.path, 1080)} alt="" decoding="async" />;
 }
 
 /** A link's label as written ("Squat · Upper, Week 2"), its parts parted by the drawn bar (21 Oct). */

@@ -14,6 +14,7 @@ import { coachIdOfClient as coachUserIdOf } from "./tenancy";
 import { appUrl } from "./passwordReset";
 import { lookupOpenFoodFacts, searchOpenFoodFacts } from "./foods/openfoodfacts";
 import { revalidatePath } from "next/cache";
+import { after as afterResponse } from "next/server";
 import {
   canAccessClient,
   coachForClient,
@@ -373,7 +374,7 @@ import {
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import { COACH_PROFILE_LIMITS } from "./coachProfileView";
-import { deleteUpload, keyOf, putUpload } from "./storage";
+import { deleteUpload, keyOf, prepareChatMedia, putUpload } from "./storage";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
 import { clearPhotoOpenSheet, getPhotoCadence, getPhotoInstructions, getPhotoStartDate, listActivePhotoSlots, listPhotoSlots, listPhotoUploads, photoSheetFor, photoSheetForClient, resetPhotoOpenSheet } from "./queries";
@@ -2320,6 +2321,19 @@ export async function sendChatMessageAction(formData: FormData) {
   // A reply to one message (WhatsApp-style): sendChatMessage keeps it only if that message is in this chat.
   const replyTo = Number(formData.get("replyTo")) || null;
   sendChatMessage(clientId, sender, text, media, link, replyTo);
+  // A picture's small copies and a video's poster are made now, after the
+  // answer, so the first person to open the chat doesn't wait for them (21 Oct).
+  const kind = media?.type;
+  if (media && (kind === "image" || kind === "video")) afterResponse(() => prepareChatMedia(media.path, kind));
+  // The chat screens ask for their own thread after a send ("quiet"): a page
+  // read on top sent the whole page back with every message (21 Oct: 211 KB
+  // on the client's phone, 96 KB for the coach). Other callers still need it.
+  if (formData.get("quiet") !== "1") chatSaved();
+}
+
+/** A chat change: both apps' pages are read again, unless the chat screen asked for its own thread only (quiet). */
+function chatSaved(quiet = false) {
+  if (quiet) return;
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -2336,13 +2350,13 @@ export async function chatThreadAction(clientId: number): Promise<ChatThreadView
 
 // A thumbs up on a message, from either side. Which side is decided by the
 // session, never by the caller; null takes the reaction off again.
-export async function reactToMessageAction(clientId: number, messageId: number, emoji: string | null) {
+// quiet: the chat asks for its own thread after it (chatSaved).
+export async function reactToMessageAction(clientId: number, messageId: number, emoji: string | null, quiet = false) {
   const id = await requireClientAccess(Number(clientId));
   if (!id) return;
   const user = await getSessionUser();
   setChatReaction(id, Number(messageId), user?.role === "coach" ? "coach" : "client", emoji);
-  revalidatePath("/admin");
-  revalidatePath("/client");
+  chatSaved(quiet === true);
 }
 
 /**
@@ -2442,48 +2456,47 @@ async function coachOn(clientId: number) {
   const user = await getSessionUser();
   return id && user?.role === "coach" ? id : null;
 }
-const bothSides = () => {
-  revalidatePath("/admin");
-  revalidatePath("/client");
-};
+// The chat screens pass quiet: they ask for their own thread after each of
+// these, and a page read on top sent the whole page back (chatSaved).
+const bothSides = (quiet?: boolean) => chatSaved(quiet === true);
 
-export async function editChatMessageAction(clientId: number, messageId: number, text: string) {
+export async function editChatMessageAction(clientId: number, messageId: number, text: string, quiet = false) {
   const id = await coachOn(clientId);
   if (!id) return;
   editChatMessage(id, Number(messageId), String(text ?? ""));
-  bothSides();
+  bothSides(quiet);
 }
 
-export async function deleteChatMessageAction(clientId: number, messageId: number) {
+export async function deleteChatMessageAction(clientId: number, messageId: number, quiet = false) {
   const id = await coachOn(clientId);
   if (!id) return;
-  deleteChatMessage(id, Number(messageId));
-  bothSides();
+  // Its photo, video or file goes with it (21 Oct: it stayed at its address).
+  await deleteUpload(deleteChatMessage(id, Number(messageId)));
+  bothSides(quiet);
 }
 
 // The client app's chat: whoever is signed in edits or deletes their OWN
 // messages only. A coach previewing the app acts on the coach's; the client
 // on theirs. Who you are comes from the session, never from the page.
-export async function editMyChatMessageAction(clientId: number, messageId: number, text: string) {
+export async function editMyChatMessageAction(clientId: number, messageId: number, text: string, quiet = false) {
   const id = await requireClientAccess(Number(clientId));
   if (!id) return;
   const user = await getSessionUser();
   if (user?.role === "coach") editChatMessage(id, Number(messageId), String(text ?? ""));
   else editClientChatMessage(id, Number(messageId), String(text ?? ""));
-  bothSides();
+  bothSides(quiet);
 }
 
-export async function deleteMyChatMessageAction(clientId: number, messageId: number) {
+export async function deleteMyChatMessageAction(clientId: number, messageId: number, quiet = false) {
   const id = await requireClientAccess(Number(clientId));
   if (!id) return;
   const user = await getSessionUser();
-  if (user?.role === "coach") deleteChatMessage(id, Number(messageId));
-  else deleteClientChatMessage(id, Number(messageId));
-  bothSides();
+  await deleteUpload(user?.role === "coach" ? deleteChatMessage(id, Number(messageId)) : deleteClientChatMessage(id, Number(messageId)));
+  bothSides(quiet);
 }
 
 /** A link on a sent message: one that parses and the client can open, or null to take it off. */
-export async function setMessageLinkAction(clientId: number, messageId: number, raw: string | null) {
+export async function setMessageLinkAction(clientId: number, messageId: number, raw: string | null, quiet = false) {
   const id = await coachOn(clientId);
   if (!id) return;
   let link: MessageLink | null = null;
@@ -2496,23 +2509,23 @@ export async function setMessageLinkAction(clientId: number, messageId: number, 
     if (!link || describeMessageLink(id, link).gone) return;
   }
   setChatMessageLink(id, Number(messageId), link);
-  bothSides();
+  bothSides(quiet);
 }
 
 // Taking a message off the top: the coach or the client, either may (only
 // the coach pins).
-export async function unpinMessageAction(clientId: number, messageId: number) {
+export async function unpinMessageAction(clientId: number, messageId: number, quiet = false) {
   const id = await requireClientAccess(Number(clientId));
   if (!id) return;
   setChatMessagePinned(id, Number(messageId), false);
-  bothSides();
+  bothSides(quiet);
 }
 
-export async function pinMessageAction(clientId: number, messageId: number, pinned: boolean) {
+export async function pinMessageAction(clientId: number, messageId: number, pinned: boolean, quiet = false) {
   const id = await coachOn(clientId);
   if (!id) return;
   setChatMessagePinned(id, Number(messageId), !!pinned);
-  bothSides();
+  bothSides(quiet);
 }
 
 // The coach taking back a comment on a meal (a wrong meal, a typo): it goes

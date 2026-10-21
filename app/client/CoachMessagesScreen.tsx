@@ -5,10 +5,11 @@ import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "rea
 import { ChevronDownIcon, ChevronLeftIcon, PinIcon } from "../components/icons";
 import ChatComposeForm from "../components/ChatComposeForm";
 import { REACTIONS } from "../components/MessageReactions";
-import { chatThreadAction, deleteMyChatMessageAction, editMyChatMessageAction, reactToMessageAction, unpinMessageAction } from "../lib/actions";
+import { chatThreadAction, deleteMyChatMessageAction, editMyChatMessageAction, markCoachNotesReadAction, reactToMessageAction, unpinMessageAction } from "../lib/actions";
 import CoachMark from "./CoachMark";
 import { useOpenLink } from "./CheckInContext";
 import ChatMediaGallery from "../components/ChatMediaGallery";
+import { ChatVideo, sized } from "../components/ChatMedia";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
 
 // The conversation with the coach, laid out as WhatsApp does: the coach's
@@ -71,11 +72,21 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
     setThread(fromPage);
   }
   const [sending, setSending] = useState<CoachMessageView[]>([]);
-  const refresh = () =>
-    chatThreadAction(clientId).then((t) => {
-      setThread(t);
-      setSending([]);
-    }).catch(() => {});
+  // The newest message from the other side that has been read here: one that
+  // comes in while the chat is open is read too (21 Oct: it stayed unread, so
+  // the dot and Home's count came back on the next visit). The client only:
+  // a coach previewing never sets their read marks.
+  const readUpTo = useRef(Math.max(0, ...fromPage.filter((m) => !m.mine).map((m) => m.id)));
+  const took = (t: CoachMessageView[]) => {
+    setThread(t);
+    setSending([]);
+    const newest = Math.max(0, ...t.filter((m) => !m.mine).map((m) => m.id));
+    if (newest > readUpTo.current) {
+      readUpTo.current = newest;
+      if (viewerIsClient) void markCoachNotesReadAction(clientId).catch(() => {});
+    }
+  };
+  const refresh = () => chatThreadAction(clientId).then(took).catch(() => {});
   const messages = sending.length ? [...thread, ...sending] : thread;
   // Media and files sent in the chat, newest first, over it (ChatMediaGallery).
   const [gallery, setGallery] = useState(false);
@@ -99,13 +110,9 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
 
   // Keep it fresh while it is open, and stay at the newest message.
   useEffect(() => {
-    const t = setInterval(() => {
-      chatThreadAction(clientId).then((list) => {
-        setThread(list);
-        setSending([]);
-      }).catch(() => {});
-    }, POLL_MS);
+    const t = setInterval(() => void refresh(), POLL_MS);
     return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh reads only clientId and viewerIsClient
   }, [clientId]);
   // Open at the newest message, and stay there while pictures and videos
   // load in above it (they grow the thread after the first jump, which used
@@ -141,21 +148,24 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
+  // Each asks for the thread afterwards, so the actions skip the page read
+  // (quiet); one that fails leaves the thread as the server has it, and the
+  // app standing (21 Oct: a throw here took it to the error screen).
   const act = (fn: () => Promise<void>) =>
     startTransition(async () => {
-      await fn();
+      await fn().catch(() => {});
       await refresh();
     });
   const saveEdit = () => {
     if (!editing) return;
     const { id, text } = editing;
     setEditing(null);
-    act(() => editMyChatMessageAction(clientId, id, text));
+    act(() => editMyChatMessageAction(clientId, id, text, true));
   };
   // Off the top: either side may take a pin away.
-  const unpin = (m: CoachMessageView) => act(() => unpinMessageAction(clientId, m.id));
-  const remove = (m: CoachMessageView) => act(() => deleteMyChatMessageAction(clientId, m.id));
-  const react = (m: CoachMessageView, emoji: string | null) => act(() => reactToMessageAction(clientId, m.id, emoji));
+  const unpin = (m: CoachMessageView) => act(() => unpinMessageAction(clientId, m.id, true));
+  const remove = (m: CoachMessageView) => act(() => deleteMyChatMessageAction(clientId, m.id, true));
+  const react = (m: CoachMessageView, emoji: string | null) => act(() => reactToMessageAction(clientId, m.id, emoji, true));
 
   // The pinned bar shows one pin at a time: a tap goes to that message in
   // the thread and lights it for a moment, and the bar moves on to the next.
@@ -318,7 +328,7 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
       <main ref={body} className="cm-body">
         {days.length === 0 ? (
           // An empty chat (17 Oct, Alex): one quiet line, low over the box where the first message will go.
-          <p className="cm-start">This is the beginning of your chat with {coachName.trim().split(/s+/)[0] || coachName}</p>
+          <p className="cm-start">This is the beginning of your chat with {coachName.trim().split(/\s+/)[0] || coachName}</p>
         ) : (
           days.map((d) => (
             <section key={d.label} className="cm-day">
@@ -358,6 +368,7 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
             ]);
           }}
           onSent={() => void refresh()}
+          onFailed={(text) => setSending((s) => s.filter((m) => m.text !== text))}
         />
       </footer>
     </>
@@ -503,14 +514,10 @@ function LinkBubble({ view }: { view: LinkView }) {
   );
 }
 
-/** A picture at this width (19 Oct): the uploads route makes a small copy once; a phone photo is several MB. */
-export const sized = (src: string, w: number) => (src.startsWith("/uploads/") ? `${src}${src.includes("?") ? "&" : "?"}w=${w}` : src);
-/** A video's first frame shows before it plays (19 Oct): iOS draws nothing until asked for a time. */
-const firstFrame = (src: string) => (src.includes("#") ? src : `${src}#t=0.001`);
-
 // A picture shows, a video and a voice message play, any other file downloads.
+// The picture at 1080 wide (19 Oct), the video behind its poster (21 Oct): ChatMedia.
 function Media({ media }: { media: NonNullable<CoachMessageView["media"]> }) {
-  if (media.type === "video") return <video className="cm-msg-video" src={firstFrame(media.path)} controls playsInline preload="metadata" />;
+  if (media.type === "video") return <ChatVideo className="cm-msg-video" src={media.path} />;
   if (media.type === "audio") return <audio className="cm-msg-audio" src={media.path} controls preload="metadata" />;
   if (media.type === "file")
     return (

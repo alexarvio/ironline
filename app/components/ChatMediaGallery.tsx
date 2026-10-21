@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ChatVideo, sized } from "./ChatMedia";
 
 // Everything sent in a chat, gathered (2 Oct): the photos and videos as a
 // grid, and the files and voice messages as a list, newest first. Tapping
@@ -54,7 +55,7 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
                   <button type="button" className="cmg-thumb" onClick={() => show(i.id)} aria-label={`${i.media.type === "video" ? "Video" : "Photo"} from ${i.who}, ${i.when}: show it in the chat`} title={`${i.who} · ${i.when}`}>
                     {i.media.type === "video" ? (
                       <>
-                        <video src={i.media.path} preload="metadata" muted playsInline />
+                        <ChatVideo src={i.media.path} controls={false} muted />
                         <span className="cmg-play" aria-hidden="true">
                           <svg viewBox="0 0 24 24">
                             <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
@@ -63,7 +64,7 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
                       </>
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element -- an upload from the chat
-                      <img src={i.media.path.startsWith("/uploads/") ? `${i.media.path}${i.media.path.includes("?") ? "&" : "?"}w=480` : i.media.path} alt="" loading="lazy" decoding="async" />
+                      <img src={sized(i.media.path, 480)} alt="" loading="lazy" decoding="async" />
                     )}
                   </button>
                   <a className="cmg-open" href={i.media.path} target="_blank" rel="noreferrer" aria-label="Open it full size" title="Open">

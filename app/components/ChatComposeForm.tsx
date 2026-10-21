@@ -20,6 +20,7 @@ export default function ChatComposeForm({
   onClearAbout,
   onSending,
   onSent,
+  onFailed,
   replyTo = null,
   onClearReply,
   onAddEvent = null,
@@ -34,8 +35,10 @@ export default function ChatComposeForm({
   onClearAbout?: () => void;
   /** The words just sent, before the server has them: the thread can show them at once. */
   onSending?: (text: string) => void;
-  /** The server has it: the thread can ask for the real thing. */
+  /** The server has it: the thread can ask for the real thing. With it, the send skips the page read (the thread asks for itself). */
   onSent?: () => void;
+  /** It didn't go (no connection, too big): the words just shown as sending come off again; they are back in the box. */
+  onFailed?: (text: string) => void;
   /** The one message this answers (2 Oct, as WhatsApp): quoted over the box, sent with it. */
   replyTo?: { id: number; who: string; text: string; own: boolean } | null;
   onClearReply?: () => void;
@@ -82,6 +85,22 @@ export default function ChatComposeForm({
     if (replyId != null) boxRef.current?.focus();
   }, [replyId]);
 
+  // A send that fails (no connection, a file over the limit) must not take
+  // the app down (21 Oct: a throw in the transition reached the app's error
+  // screen and the words were lost). It stays unsent: the link and the reply
+  // stay over the box for another try.
+  const deliver = async (fd: FormData) => {
+    if (onSent) fd.set("quiet", "1");
+    try {
+      await sendChatMessageAction(fd);
+    } catch {
+      return false;
+    }
+    onClearAbout?.();
+    onClearReply?.();
+    onSent?.();
+    return true;
+  };
   const sendFile = (file: File) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -90,10 +109,7 @@ export default function ChatComposeForm({
     if (about) fd.set("link", JSON.stringify(about.link));
     if (replyTo) fd.set("replyTo", String(replyTo.id));
     start(async () => {
-      await sendChatMessageAction(fd);
-      onClearAbout?.();
-      onClearReply?.();
-      onSent?.();
+      await deliver(fd);
     });
   };
 
@@ -139,10 +155,11 @@ export default function ChatComposeForm({
         if (boxRef.current) boxRef.current.style.height = "auto";
         onSending?.(words);
         start(async () => {
-          await sendChatMessageAction(fd);
-          onClearAbout?.();
-          onClearReply?.();
-          onSent?.();
+          if (await deliver(fd)) return;
+          // Not sent: the words go back in the box (unless something new was typed meanwhile).
+          onFailed?.(words);
+          setText((t) => t || words);
+          requestAnimationFrame(() => fit(boxRef.current));
         });
       }}
     >

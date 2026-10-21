@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PictureCycle from "./PictureCycle";
 import { CalendarIcon, ChecklistIcon, ChevronDownIcon, ChevronLeftIcon, DumbbellIcon } from "../components/icons";
 import FitTitle from "./FitTitle";
@@ -86,9 +86,12 @@ export default function CheckInScreen({
   stats,
   calendar,
   initialSection,
+  focusPeriod = null,
   pictures,
   onBack,
 }: {
+  /** The day, week or month a coach's message is about (with initialSection its kind): it opens there in the feed. */
+  focusPeriod?: string | null;
   clientId: number;
   dateLabel: string;
   today: string;
@@ -248,7 +251,7 @@ export default function CheckInScreen({
                   </button>
                 </div>
               </section>
-              <CheckInFeed days={history.days} onEdit={openDay} />
+              <CheckInFeed days={history.days} onEdit={openDay} focus={focusDay(history.days, initialSection, focusPeriod)} />
             </>
           )}
         </div>
@@ -263,12 +266,36 @@ export default function CheckInScreen({
 // logged, Edit opens the day's lines in the pop-up to change them; a day
 // with nothing logged opens them straight away to fill in. A day's check-in
 // stays the client's for as long as it is in this list.
-function CheckInFeed({ days, onEdit }: { days: CheckInFeedDay[]; onEdit: (d: CheckInFeedDay) => void }) {
-  const [open, setOpen] = useState<string | null>(null);
+/**
+ * The day a coach's message is about (21 Oct: a link to "Weekly check-in · week
+ * of 13/10" opened the check-in at its top): that day, or the newest day with
+ * something logged in that week or month, while it is still in the feed.
+ */
+function focusDay(days: CheckInFeedDay[], section: string, period: string | null | undefined): string | null {
+  if (!period) return null;
+  const end = section === "weekly" ? isoPlus(period, 6) : section === "monthly" ? `${period.slice(0, 7)}-31` : period;
+  const from = section === "monthly" ? `${period.slice(0, 7)}-01` : period;
+  const inside = days.filter((d) => d.date >= from && d.date <= end);
+  return (inside.find((d) => d.items.length > 0) ?? (section === "daily" ? inside[0] : null))?.date ?? null;
+}
+const isoPlus = (iso: string, n: number) => {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+function CheckInFeed({ days, onEdit, focus = null }: { days: CheckInFeedDay[]; onEdit: (d: CheckInFeedDay) => void; /** Opened on this day and scrolled to it: a link from the chat. */ focus?: string | null }) {
+  const [open, setOpen] = useState<string | null>(focus);
+  const list = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!focus) return;
+    const t = setTimeout(() => list.current?.querySelector(`[data-day="${focus}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
+    return () => clearTimeout(t);
+  }, [focus]);
   if (days.length === 0) return null;
   const label = (iso: string) => dayLabel(iso);
   return (
-    <section className="ci-feed" aria-label="The last seven days">
+    <section ref={list} className="ci-feed" aria-label="The last seven days">
       <h2 className="ci-feed-title">Last 7 days</h2>
       {days.map((d) => {
         const done = d.items.length > 0;
@@ -276,7 +303,7 @@ function CheckInFeed({ days, onEdit }: { days: CheckInFeedDay[]; onEdit: (d: Che
         const isOpen = open === d.date;
         const fillable = !done && d.edit.length > 0;
         return (
-          <div key={d.date} className={`ci-day${done ? " done" : ""}${unfinished ? " unfinished" : ""}`}>
+          <div key={d.date} data-day={d.date} className={`ci-day${done ? " done" : ""}${unfinished ? " unfinished" : ""}`}>
             <button
               type="button"
               className="ci-day-head"

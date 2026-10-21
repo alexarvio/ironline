@@ -4,7 +4,7 @@ import { Readable } from "stream";
 import { DATA_DIR } from "../../lib/db";
 import { canAccessClient, getSessionUser, isOwner } from "../../lib/auth";
 import { coachIdOfClient, coachOwnsExercise } from "../../lib/tenancy";
-import { bucketLink, LINK_CACHE_SECONDS, smallCopy, streamUpload } from "../../lib/storage";
+import { bucketLink, LINK_CACHE_SECONDS, posterCopy, smallCopy, streamUpload } from "../../lib/storage";
 
 // Serves files written by savePhotoUpload/saveChatMedia in queries.ts. Those
 // live under DATA_DIR/uploads rather than /public/uploads so they survive on
@@ -107,6 +107,9 @@ export async function GET(
     const small = await smallCopy(segments.join("/"), w);
     if (small) return small;
   }
+  // "?poster=1" (21 Oct): a video's first frame, a small picture. None to be
+  // had is a 404, and the chat falls back to the video's own first frame.
+  if (!stream && search.get("poster") === "1") return (await posterCopy(segments.join("/"))) ?? new Response("Not found", { status: 404 });
   if (stream) {
     const piped = await streamUpload(segments.join("/"), range);
     if (piped) return piped;

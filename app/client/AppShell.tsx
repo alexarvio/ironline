@@ -202,9 +202,12 @@ export default function AppShell({
   const canPush = (v: PushView) => !(v === "invoices" && !invoices) && !(v === "food" && !foodDiary) && !(v === "meetings" && !meetings) && !(v === "events" && !events);
   const [chosenPush, setChosenPush] = useState<PushView | undefined>(initialPush && canPush(initialPush) ? initialPush : undefined);
   // The link has done its job: a reload opens the app as usual. (The preview keeps its address: it is read again in place.)
+  // Arriving on the chat (a message's lock-screen notification, 21 Oct) reads it, as opening it from the nav does.
   useEffect(() => {
-    if (initialPush && !readOnly) window.history.replaceState(null, "", "/client");
-  }, [initialPush, readOnly]);
+    if (!initialPush || readOnly) return;
+    window.history.replaceState(null, "", "/client");
+    if (initialPush === "messages") void markCoachNotesReadAction(clientId).catch(() => {});
+  }, [initialPush, readOnly, clientId]);
   const pushView: PushView = chosenPush !== undefined ? chosenPush : !readOnly && storedPush === "food" && foodDiary ? "food" : null;
   // The event Events opens on, from a notification (10 Oct); cleared when the screen closes.
   const [eventFocus, setEventFocus] = useState<number | null>(null);
@@ -234,8 +237,11 @@ export default function AppShell({
   };
   // Which check-in section to land on, set by whichever due item opened it.
   const [checkInSection, setCheckInSection] = useState("daily");
-  const openCheckIn = (section: string) => {
+  // … and, from a coach's message about one day, week or month of it, that one (21 Oct).
+  const [checkInPeriod, setCheckInPeriod] = useState<string | null>(null);
+  const openCheckIn = (section: string, period: string | null = null) => {
     setCheckInSection(section);
+    setCheckInPeriod(period);
     setPushView("checkin");
   };
   // The burger's drawer. A row closes it and then does its thing.
@@ -351,7 +357,7 @@ export default function AppShell({
         returnTo("food");
         return;
       case "checkin":
-        openCheckIn(l.section);
+        openCheckIn(l.section, l.period ?? null);
         returnTo("checkin");
         return;
       case "photos":
@@ -412,6 +418,7 @@ export default function AppShell({
           today={checkIn.today}
           sections={checkIn.sections}
           initialSection={checkInSection}
+          focusPeriod={checkInPeriod}
           dueSections={checkIn.dueSections}
           weeklyOpen={checkIn.weeklyOpen}
           monthlyOpen={checkIn.monthlyOpen}

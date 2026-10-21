@@ -154,6 +154,30 @@ function Pictures({ clientId, firstName, plan }: Props) {
   };
   // A row of All sheets open on its photos, one at a time.
   const [openRow, setOpenRow] = useState<string | null>(null);
+  // Arriving from a link in a message (#sheet-YYYY-MM-DD, 21 Oct: it opened the tab at its top): that sheet's row
+  // opens in All sheets and comes into view (the open sheet is the top already). A later #part only, too.
+  const closedKey = closed.map((s) => s.period).join(",");
+  useEffect(() => {
+    let frame = 0;
+    const arrive = () => {
+      const m = /^#sheet-(\d{4}-\d{2}-\d{2})$/.exec(window.location.hash);
+      if (!m) return;
+      const i = closedKey.split(",").indexOf(m[1]);
+      if (i < 0) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (i >= ROWS_SHOWN) setAll(true);
+        setOpenRow(m[1]);
+        setTimeout(() => document.getElementById(`sheet-${m[1]}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+      });
+    };
+    arrive();
+    window.addEventListener("hashchange", arrive);
+    return () => {
+      window.removeEventListener("hashchange", arrive);
+      cancelAnimationFrame(frame);
+    };
+  }, [closedKey]);
   // Compare: the first sheet beside the newest.
   const openCompare = (period?: string) => {
     if (!latest) return;
@@ -360,7 +384,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
               const st = stateOf(sh);
               const isOpen = openRow === sh.period;
               return (
-                <div key={sh.period} className={`rp-tgroup${isOpen ? " open" : ""}`}>
+                <div key={sh.period} id={`sheet-${sh.period}`} className={`rp-tgroup${isOpen ? " open" : ""}`}>
                   <button type="button" className="rp-trow" aria-expanded={isOpen} aria-label={`${logDate(sh.period)}, ${sh.title}, ${sh.inCount} of ${sh.total} photos, ${st.text}`} onClick={() => setOpenRow((x) => (x === sh.period ? null : sh.period))}>
                     {/* The date first, the chevron after it, then the sheet's name (21 Oct, Alex: as every log). */}
                     <span className="rp-tdate">

@@ -335,6 +335,38 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
     ro.observe(el);
     return () => ro.disconnect();
   }, [show, logCadence, view.metrics.length, plan.notStarted]);
+  // Arriving from a link in a message (#checkin-weekly, #checkin-weekly-2026-10-12; 21 Oct: it opened at the top):
+  // that rhythm, the page holding that check-in, its row in view. On a later link that changes only the #part too.
+  useEffect(() => {
+    let frame = 0;
+    const arrive = () => {
+      const m = /^#checkin-(daily|weekly|monthly)(?:-(\d{4}-\d{2}-\d{2}))?$/.exec(window.location.hash);
+      if (!m) return;
+      const c = m[1] as Cadence;
+      const period = m[2] ?? null;
+      if (!plan[c].metrics.length) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setLogCadence(c);
+        if (!period) return;
+        const recent = plan[c].periods.findIndex((p) => p.key === period);
+        const all = recent < 0 ? longOf(c).periods.findIndex((p) => p.key === period) : -1;
+        const idx = recent >= 0 ? recent : all;
+        if (idx < 0) return;
+        setRange(recent >= 0 ? "recent" : "all");
+        setLogPage(Math.floor(idx / PAGE) + 1);
+        setShow((s) => (s === "graph" ? "table" : s));
+        setTimeout(() => document.querySelector(`[data-checkin="${c}-${period}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+      });
+    };
+    arrive();
+    window.addEventListener("hashchange", arrive);
+    return () => {
+      window.removeEventListener("hashchange", arrive);
+      cancelAnimationFrame(frame);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- on arrival and on a new #part only
+  }, []);
   // The client's note on a check-in sits by its date (a bubble); Reply there is a message linked to that check-in.
   const replyTo = (period: string) => message({ label: `${CAD[logCadence].label} check-in · ${whenOf(period, logShown.periods.find((p) => p.key === period)?.label ?? period)}`, link: { kind: "checkin", section: logCadence, period } });
 
@@ -1162,7 +1194,7 @@ function CheckinTable({ view, whole, cadence, summaryOf, onReply }: { view: Logg
         })}
         {view.periods.map((p, i) => (
           <div key={p.key} className="contents">
-            <span className={`rm-td date${i === 0 ? " now" : ""}`}>
+            <span className={`rm-td date${i === 0 ? " now" : ""}`} data-checkin={`${cadence}-${p.key}`}>
               <span className="rd-logdate">{logWhen(p.key, p.label, cadence)}</span>
               {view.notes[p.key] && <NoteBubble text={view.notes[p.key]} onReply={() => onReply(p.key)} />}
             </span>
@@ -1207,7 +1239,7 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
         // A row opens only when it has something in it (21 Oct, Alex): nothing submitted, no chevron and no click.
         const opens = filled.length > 0 || !!note;
         return (
-          <div key={p.key} className={`rd-row rn-day${isOpen && opens ? " open" : ""}`}>
+          <div key={p.key} className={`rd-row rn-day${isOpen && opens ? " open" : ""}`} data-checkin={`${cadence}-${p.key}`}>
             {/* A click anywhere opens it; for the keyboard the date is the button, the note and the message its siblings. */}
             <div className={`rd-row-main${opens ? "" : " static"}`} style={grid} onClick={opens ? () => setOpen((x) => (x === p.key ? null : p.key)) : undefined}>
               <span className="rd-ex">

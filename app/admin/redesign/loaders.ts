@@ -1007,10 +1007,11 @@ export function messageLinkHref(clientId: number, link: MessageLink, week: numbe
       return tab("nutrition", `#day-${link.date}`);
     case "nutrition":
       return tab("nutrition");
+    // That rhythm's log on the page with that check-in, and that sheet's row (21 Oct: both opened their tab at its top).
     case "checkin":
-      return tab("measurements");
+      return tab("measurements", `#checkin-${link.section}${link.period ? `-${link.period}` : ""}`);
     case "photos":
-      return tab("pictures");
+      return tab("pictures", link.period ? `#sheet-${link.period}` : "");
   }
 }
 

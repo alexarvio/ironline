@@ -5707,10 +5707,12 @@ export function sendChatMessage(
     ...(answers != null ? { reply_to: answers } : {}),
   });
   persist();
-  if (sender === "coach" && getClientPreferences(clientId).coach_notes) {
-    // The notification is the message. There is no chat screen in this
-    // beta, so the client reads it in full right there.
-    logCoachActivity(clientId, text || `Your coach sent you ${mediaWords(media?.type ?? null)}`, { kind: "coach_note" });
+  if (sender === "coach") {
+    // The row is the message's unread mark (the Chat tab's dot, Home's count;
+    // the bell leaves coach_note out), so it is written whatever the client
+    // chose (21 Oct: with "Messages from your coach" off, a new message never
+    // showed as unread). The setting decides the buzz on the lock screen.
+    logCoachActivity(clientId, text || `Your coach sent you ${mediaWords(media?.type ?? null)}`, { kind: "coach_note", push: getClientPreferences(clientId).coach_notes });
   }
 }
 
@@ -5753,15 +5755,33 @@ export function editChatMessage(clientId: number, messageId: number, text: strin
   persist();
 }
 
-/** Takes a coach message back: from the chat, the client's Home and their notifications. */
-export function deleteChatMessage(clientId: number, messageId: number) {
+/** Takes a coach message back: from the chat, the client's Home and their notifications. Returns its file to delete from the bucket, when nothing else shows it (chatFileLeft). */
+export function deleteChatMessage(clientId: number, messageId: number): string | null {
   const data = getData();
   const msg = coachMessage(clientId, messageId);
-  if (!msg) return;
+  if (!msg) return null;
   const note = noteFor(msg);
   data.chat_messages = data.chat_messages.filter((m) => m !== msg);
   if (note) data.coach_activity = data.coach_activity.filter((a) => a !== note);
   persist();
+  return chatFileLeft(msg.media_path);
+}
+
+/**
+ * A deleted message's photo, video or file (21 Oct: it stayed at its address
+ * after "Delete for both of you"): off the disk here, and its path back for
+ * the caller to take out of the bucket. Null while another message or a form
+ * review on an exercise still shows it.
+ */
+function chatFileLeft(mediaPath: string | null): string | null {
+  if (!mediaPath) return null;
+  const data = getData();
+  if (data.chat_messages.some((m) => m.media_path === mediaPath)) return null;
+  if (data.video_requests.some((r) => r.file_path === mediaPath || r.reply_file_path === mediaPath)) return null;
+  const clean = mediaPath.split("?")[0];
+  if (!clean.startsWith("/uploads/")) return null;
+  fs.rmSync(path.join(DATA_DIR, clean.replace(/^\//, "")), { force: true });
+  return mediaPath;
 }
 
 /** The client rewords one of their own messages (never the coach's). */
@@ -5774,12 +5794,14 @@ export function editClientChatMessage(clientId: number, messageId: number, text:
   persist();
 }
 
-/** The client takes back one of their own messages (never the coach's). */
-export function deleteClientChatMessage(clientId: number, messageId: number) {
+/** The client takes back one of their own messages (never the coach's). Returns its file to delete, as deleteChatMessage. */
+export function deleteClientChatMessage(clientId: number, messageId: number): string | null {
   const data = getData();
-  const before = data.chat_messages.length;
-  data.chat_messages = data.chat_messages.filter((m) => !(m.id === messageId && m.client_id === clientId && m.sender === "client"));
-  if (data.chat_messages.length !== before) persist();
+  const msg = data.chat_messages.find((m) => m.id === messageId && m.client_id === clientId && m.sender === "client");
+  if (!msg) return null;
+  data.chat_messages = data.chat_messages.filter((m) => m !== msg);
+  persist();
+  return chatFileLeft(msg.media_path);
 }
 
 /** Points a sent message at one thing in the client's app, or takes the link off (null). */
@@ -7404,8 +7426,8 @@ export function logCoachActivity(
         : opts.kind === "report" ? `New progress report from ${coach}`
         : opts.kind === "programme" ? `New program from ${coach}`
         : `Update from ${coach}`;
-      // Tapped, it opens where the news is: the Invoices screen for an invoice, else the app.
-      const lockScreen = { title, body: message, url: opts.actionTab === "invoices" ? "/client?open=invoices" : "/client", tag: opts.dedupeKey };
+      // Tapped, it opens where the news is: the Invoices screen for an invoice, the chat for a message (21 Oct: it opened whatever tab was last), else the app.
+      const lockScreen = { title, body: message, url: opts.actionTab === "invoices" ? "/client?open=invoices" : opts.kind === "coach_note" ? "/client?open=messages" : "/client", tag: opts.dedupeKey };
       void import("./push").then((push) => push.sendPushInBackground(user.id, lockScreen)).catch(() => {});
     }
   }

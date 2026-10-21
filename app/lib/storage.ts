@@ -130,8 +130,8 @@ export async function deleteUpload(publicPath: string | null | undefined) {
   const b = bucket();
   const key = publicPath ? keyOf(publicPath) : null;
   if (!key) return;
-  // Its small copies go with it (19 Oct), wherever they were made.
-  const smalls = SMALL_WIDTHS.map((w) => smallKey(key, w)).filter((k): k is string => !!k);
+  // Its small copies go with it (19 Oct), wherever they were made, and a video's poster (21 Oct).
+  const smalls = [...SMALL_WIDTHS.map((w) => smallKey(key, w)), posterKey(key)].filter((k): k is string => !!k);
   for (const k of smalls) dropDiskCopy(k);
   if (!b) return;
   for (const k of [key, ...smalls]) {
@@ -172,33 +172,144 @@ async function readUpload(key: string): Promise<Buffer | null> {
   return fs.existsSync(file) ? fs.readFileSync(file) : null;
 }
 
+// ---- Made once, kept in the browser (21 Oct, Alex: the chat's pictures and
+// videos were slow). A chat upload's name (and a client's exercise video's) is
+// a stamp that is never used again, so its small copies and poster can stay
+// in the browser for good. They are sent by the app rather than through a
+// link into the bucket: that link is signed afresh every few minutes and on
+// every restart, and each new one was downloaded again, every picture of the
+// thread on every open.
+const keptForGood = (key: string) => /^(chat|videos)\//.test(key);
+const smallCache = (key: string) => (keptForGood(key) ? "private, max-age=31536000, immutable" : "private, max-age=86400");
+const webp = (bytes: Buffer, cache: string) =>
+  new Response(new Uint8Array(bytes), { headers: { "Content-Type": "image/webp", "Content-Length": String(bytes.length), "Cache-Control": cache } });
+
+// Two asks for one copy at once (the panel and the send's own) make it once.
+const making = new Map<string, Promise<Buffer | null>>();
+function once(key: string, make: () => Promise<Buffer | null>): Promise<Buffer | null> {
+  let p = making.get(key);
+  if (!p) {
+    p = make().finally(() => making.delete(key));
+    making.set(key, p);
+  }
+  return p;
+}
+
+/** A made copy, beside its original: in the bucket when it is on, else on the disk. */
+async function keepCopy(copy: string, bytes: Buffer) {
+  if (bucket()) return putUpload(`/uploads/${copy}`, bytes, "image/webp");
+  const onDisk = path.join(DATA_DIR, "uploads", copy);
+  fs.mkdirSync(path.dirname(onDisk), { recursive: true });
+  fs.writeFileSync(onDisk, bytes);
+}
+
+async function shrink(original: Buffer, w: number): Promise<Buffer> {
+  const sharp = (await import("sharp")).default;
+  return sharp(original, { failOn: "none" }).rotate().resize({ width: w, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
+}
+
+async function makeSmall(key: string, small: string, w: number, original?: Buffer | null): Promise<Buffer | null> {
+  const from = original ?? (await readUpload(key));
+  if (!from) return null;
+  const out = await shrink(from, w);
+  await keepCopy(small, out);
+  return out;
+}
+
 /**
- * The small copy as a response: a link into the bucket once it is there, or
- * the bytes. Made on the first ask. Null (serve the original) when the file
- * is not a picture, cannot be read, or sharp is missing.
+ * The small copy as a response: the bytes for a file kept for good, else a
+ * link into the bucket once it is there, or the bytes. Made at the send for
+ * the chat (prepareChatMedia), else on the first ask. Null (serve the
+ * original) when the file is not a picture, cannot be read, or sharp is missing.
  */
 export async function smallCopy(key: string, w: number): Promise<Response | null> {
   const small = smallKey(key, w);
   if (!small || !SMALL_WIDTHS.includes(w)) return null;
-  const cache = "private, max-age=86400";
-  const link = await bucketLink(small);
-  if (link) return new Response(null, { status: 302, headers: { Location: link, "Cache-Control": `private, max-age=${LINK_CACHE_SECONDS}` } });
-  const onDisk = path.join(DATA_DIR, "uploads", small);
-  if (!bucket() && fs.existsSync(onDisk)) return new Response(new Uint8Array(fs.readFileSync(onDisk)), { headers: { "Content-Type": "image/webp", "Cache-Control": cache } });
+  if (!keptForGood(key)) {
+    const link = await bucketLink(small);
+    if (link) return new Response(null, { status: 302, headers: { Location: link, "Cache-Control": `private, max-age=${LINK_CACHE_SECONDS}` } });
+  }
   try {
-    const original = await readUpload(key);
-    if (!original) return null;
-    const sharp = (await import("sharp")).default;
-    const out = await sharp(original, { failOn: "none" }).rotate().resize({ width: w, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
-    if (bucket()) await putUpload(`/uploads/${small}`, out, "image/webp");
-    else {
-      fs.mkdirSync(path.dirname(onDisk), { recursive: true });
-      fs.writeFileSync(onDisk, out);
-    }
-    return new Response(new Uint8Array(out), { headers: { "Content-Type": "image/webp", "Content-Length": String(out.length), "Cache-Control": cache } });
+    const bytes = (await readUpload(small)) ?? (await once(small, () => makeSmall(key, small, w)));
+    return bytes ? webp(bytes, smallCache(key)) : null;
   } catch (error) {
     console.error(`[uploads] no small copy of ${key}:`, error instanceof Error ? error.message : error);
     return null;
+  }
+}
+
+// ---- A video's poster (21 Oct): its first frame as a small WebP, so a chat
+// shows every video at once without fetching any of it. Before, the phone was
+// asked for a time (#t=0.001) to draw a frame at all, and fetched megabytes of
+// each video to do it. "chat/9/abc.mp4" -> "chat/9/_poster/abc.webp".
+export function posterKey(key: string): string | null {
+  if (!/\.(mp4|mov|m4v|webm)$/i.test(key)) return null;
+  const parts = key.split("/");
+  if (parts.length < 3) return null;
+  const [kind, owner, ...rest] = parts;
+  return `${kind}/${owner}/_poster/${rest.join("/").replace(/\.[^.]+$/, "")}.webp`;
+}
+
+// Videos ffmpeg couldn't read (or no ffmpeg): not tried again until the server restarts.
+const noPoster = new Set<string>();
+
+async function makePoster(key: string, poster: string): Promise<Buffer | null> {
+  if (noPoster.has(key)) return null;
+  const onDisk = path.join(DATA_DIR, "uploads", key);
+  const source = fs.existsSync(onDisk) ? onDisk : await bucketLink(key);
+  if (!source) return null;
+  const { firstFrame } = await import("./transcode");
+  let frame = await firstFrame(source);
+  if (!frame) {
+    noPoster.add(key);
+    return null;
+  }
+  const sharp = (await import("sharp")).default;
+  // A recording that opens on black (the coach's form reviews do) is shown a second in.
+  const dark = async (jpg: Buffer) => (await sharp(jpg).stats()).channels.slice(0, 3).every((c) => c.mean < 12);
+  if (await dark(frame)) frame = (await firstFrame(source, 1)) ?? frame;
+  const out = await sharp(frame, { failOn: "none" }).resize({ width: 720, withoutEnlargement: true }).webp({ quality: 74 }).toBuffer();
+  await keepCopy(poster, out);
+  return out;
+}
+
+/** The poster as a response ("?poster=1"); null when the file is not a video or no frame could be had. */
+export async function posterCopy(key: string): Promise<Response | null> {
+  const poster = posterKey(key);
+  if (!poster) return null;
+  try {
+    const bytes = (await readUpload(poster)) ?? (await once(poster, () => makePoster(key, poster)));
+    return bytes ? webp(bytes, smallCache(key)) : null;
+  } catch (error) {
+    console.error(`[uploads] no poster for ${key}:`, error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+/**
+ * Right after a chat send (21 Oct): a picture's small copies and a video's
+ * poster, so the first person to open the chat gets them at once. Before, the
+ * first open of a thread made each one then: the whole original read from the
+ * bucket and shrunk, about three seconds a picture.
+ */
+export async function prepareChatMedia(publicPath: string, type: "image" | "video") {
+  const key = keyOf(publicPath);
+  if (!key) return;
+  try {
+    if (type === "video") {
+      const poster = posterKey(key);
+      if (poster) await once(poster, () => makePoster(key, poster));
+      return;
+    }
+    if (!smallKey(key, SMALL_WIDTHS[0])) return;
+    const original = await readUpload(key);
+    if (!original) return;
+    for (const w of SMALL_WIDTHS) {
+      const small = smallKey(key, w)!;
+      await once(small, () => makeSmall(key, small, w, original));
+    }
+  } catch (error) {
+    console.error(`[uploads] could not prepare ${key}:`, error instanceof Error ? error.message : error);
   }
 }
 

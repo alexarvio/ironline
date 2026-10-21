@@ -362,18 +362,28 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   // Arriving from a link in a message (#day-YYYY-MM-DD): that day's page,
   // the day unfolded and in view. After the first paint, so the server's
   // closed rows match.
+  // And on a later link that changes only the #part (21 Oct: a second day from the chat did nothing).
   useEffect(() => {
-    const m = /^#day-(\d{4}-\d{2}-\d{2})$/.exec(window.location.hash);
-    if (!m) return;
-    const date = m[1];
-    const idx = view.days.findIndex((d) => d.date === date);
-    if (idx < 0) return;
-    const frame = requestAnimationFrame(() => {
-      setPage(Math.floor(idx / PAGE) + 1);
-      setOpen(date);
-      setTimeout(() => document.getElementById(`day-${date}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
-    });
-    return () => cancelAnimationFrame(frame);
+    let frame = 0;
+    const arrive = () => {
+      const m = /^#day-(\d{4}-\d{2}-\d{2})$/.exec(window.location.hash);
+      if (!m) return;
+      const date = m[1];
+      const idx = view.days.findIndex((d) => d.date === date);
+      if (idx < 0) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setPage(Math.floor(idx / PAGE) + 1);
+        setOpen(date);
+        setTimeout(() => document.getElementById(`day-${date}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+      });
+    };
+    arrive();
+    window.addEventListener("hashchange", arrive);
+    return () => {
+      window.removeEventListener("hashchange", arrive);
+      cancelAnimationFrame(frame);
+    };
   }, [view.days]);
   // Comments left here, under the meal they were left on.
   const [said, setSaid] = useState<Record<string, MealComment[]>>({});

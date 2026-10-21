@@ -605,24 +605,34 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // message dialog as before.
   const openChat = useOpenChat();
   const replyTo = (label: string, link: MessageLink, focus: number | null = null, draft?: string) => (openChat ? openChat({ area: "Training", label, link, ...(draft ? { draft } : {}) }, focus) : setDlg({ kind: "message", label, link }));
+  // And on a later link that changes only the #part (21 Oct): a second
+  // session of the same week from the chat left the page as it was.
   useEffect(() => {
-    const m = /^#session-(\d+)(?:-ex-(\d+))?$/.exec(window.location.hash);
-    if (!m) return;
-    const id = Number(m[1]);
-    const row = m[2] ? Number(m[2]) : null;
+    let frame = 0;
     let clear: ReturnType<typeof setTimeout> | undefined;
-    const frame = requestAnimationFrame(() => {
-      setOpen(id);
-      setTimeout(() => {
-        const target = (row != null && document.getElementById(`row-${row}`)) || document.getElementById(`session-${id}`);
-        target?.scrollIntoView({ behavior: "smooth", block: row != null ? "center" : "start" });
-        if (row != null) {
-          setFlashRow(row);
-          clear = setTimeout(() => setFlashRow(null), 2400);
-        }
-      }, 80);
-    });
+    const arrive = () => {
+      const m = /^#session-(\d+)(?:-ex-(\d+))?$/.exec(window.location.hash);
+      if (!m) return;
+      const id = Number(m[1]);
+      const row = m[2] ? Number(m[2]) : null;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setOpen(id);
+        setTimeout(() => {
+          const target = (row != null && document.getElementById(`row-${row}`)) || document.getElementById(`session-${id}`);
+          target?.scrollIntoView({ behavior: "smooth", block: row != null ? "center" : "start" });
+          if (row != null) {
+            setFlashRow(row);
+            if (clear) clearTimeout(clear);
+            clear = setTimeout(() => setFlashRow(null), 2400);
+          }
+        }, 80);
+      });
+    };
+    arrive();
+    window.addEventListener("hashchange", arrive);
     return () => {
+      window.removeEventListener("hashchange", arrive);
       cancelAnimationFrame(frame);
       if (clear) clearTimeout(clear);
     };
