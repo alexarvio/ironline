@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useDismiss } from "./useDismiss";
-import { discardSessionAction, endSessionAction } from "../lib/actions";
+import { discardSessionAction, endSessionAction, setExerciseUnitAction } from "../lib/actions";
 import { ChatIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenMessages } from "./CheckInContext";
 import type { GymOption } from "./GymPickerDialog";
@@ -11,7 +11,7 @@ import GymPickerDialog from "./GymPickerDialog";
 import RestTimerPill, { useRestTimer } from "./RestTimer";
 import SwipeToEnd from "./SwipeToEnd";
 import FreeAddPage from "./FreeAddPage";
-import type { LibraryPick } from "./workoutShared";
+import type { LibraryPick, WeightUnit } from "./workoutShared";
 import {
   CardioCard,
   clock,
@@ -454,12 +454,24 @@ export default function WorkoutScreen({
                     const complete = pageDone(q);
                     const count = ex ? loggedCount(ex) : null;
                     const status = day.free && ex ? (count ? `${count} set${count === 1 ? "" : "s"}` : "Not started") : complete ? "Done" : ex && count ? `${count} of ${ex.sets}` : "Not started";
+                    const name = ex ? shownName(ex) : day.cardio[q.index].name;
+                    // Kg or lbs beside Done (21 Oct, Alex): a weighted exercise with sets logged, its words alone.
+                    const showUnit = !!ex && !!count && (ex.targetWeight != null || day.free);
+                    // The whole row opens the exercise (a stretched button under it), so the unit switch can sit in it.
                     return (
-                      <button key={j} type="button" className={`wo-check-row${complete ? " done" : ""}`} onClick={() => jumpTo(j)}>
-                        <span className={`wo-check-circle${complete ? " done" : ""}`}>{complete ? "✓" : j + 1}</span>
-                        <span className="wo-check-name">{ex ? shownName(ex) : day.cardio[q.index].name}</span>
-                        <span className={`wo-check-status${complete ? " done" : count ? " part" : ""}`}>{status}</span>
-                      </button>
+                      <div key={j} className={`wo-check-row${complete ? " done" : ""}`}>
+                        <button type="button" className="wo-check-hit" onClick={() => jumpTo(j)} aria-label={`${name}: ${status}`} />
+                        <span className={`wo-check-circle${complete ? " done" : ""}`} aria-hidden="true">
+                          {complete ? "✓" : j + 1}
+                        </span>
+                        <span className="wo-check-name" aria-hidden="true">
+                          {name}
+                        </span>
+                        {showUnit && ex && <CheckUnit key={`${ex.id}:${ex.unit ?? "kg"}`} ex={ex} disabled={locked} />}
+                        <span className={`wo-check-status${complete ? " done" : count ? " part" : ""}`} aria-hidden="true">
+                          {status}
+                        </span>
+                      </div>
                     );
                   })}
                 </div>
@@ -563,6 +575,27 @@ function MenuIcon({ kind }: { kind: keyof typeof MENU_ICONS }) {
         <path key={d} d={d} />
       ))}
     </svg>
+  );
+}
+
+// Kg or lbs on the finish list, beside Done (21 Oct, Alex): the words alone, the one on in ink, the other grey; a tap
+// switches the exercise's logged sets (the weights stay kg) and it opens in it next time. Shown at once, saved behind.
+function CheckUnit({ ex, disabled }: { ex: SessionExercise; disabled: boolean }) {
+  const [unit, setUnit] = useState<WeightUnit>(ex.unit ?? "kg");
+  const [, start] = useTransition();
+  const pick = (u: WeightUnit) => {
+    if (disabled || u === unit) return;
+    setUnit(u);
+    start(() => setExerciseUnitAction(ex.id, u));
+  };
+  return (
+    <span className="wo-check-unit" role="radiogroup" aria-label={`Weight unit for ${shownName(ex)}`}>
+      {(["kg", "lb"] as const).map((u) => (
+        <button key={u} type="button" role="radio" aria-checked={unit === u} className={unit === u ? "on" : ""} onClick={() => pick(u)} disabled={disabled}>
+          {u === "kg" ? "kg" : "lbs"}
+        </button>
+      ))}
+    </span>
   );
 }
 

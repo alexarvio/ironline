@@ -1,116 +1,95 @@
-/* The Feed in the redesign (25 Sep). Prefix rfd- (fd- is the old one). */
-/* Fills the width of the screen, like the Calendar (26 Sep). */
-.rfd { display: flex; flex-direction: column; gap: 18px; }
-.rfd-head { display: flex; flex-direction: column; gap: 12px; }
-.rfd-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
-.rfd-filters { display: inline-flex; flex-wrap: wrap; align-self: flex-start; gap: 4px; padding: 4px; border-radius: 12px; background: #e9edf3; }
-.rfd-filter { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 9px; font-size: 13px; font-weight: 700; color: #5b6474; text-decoration: none; }
-.rfd-filter:hover { color: #141a24; }
-.rfd-filter.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 3px rgba(20, 26, 36, 0.12); }
-.rfd-count { min-width: 20px; justify-content: center; padding: 0 6px; background: #1e3a6e; color: #fff; font-size: 11px; }
-.rfd-empty { margin: 0; font-size: 14px; color: #8b93a1; }
+/* The coach's Feed (21 Oct, Alex: built from the Feed mockup, root "rd trn rls rh rfd"): Training's header, Home's
+   Since line, then Needs you, Clients and Activity, each a section title on the page over one hairline card, no line
+   above a card's first row. It wears Home's classes (rh-) for what it shares, and the room it has, not the window, sets
+   the layout (Home's container rh). Ink, never navy; weights 500 and 600. Overrides of a shared class carry an extra
+   class (.rd.trn.rfd, .rd.rh.rfd), whichever file the dev server loads last. */
 
-.rfd-locks { border-color: #f3d6c9; }
-.rfd-lock-list { display: flex; flex-direction: column; gap: 10px; }
-.rfd-lock { display: grid; grid-template-columns: 10px 1fr; gap: 10px; align-items: start; }
-.rfd-lock-dot { width: 8px; height: 8px; margin-top: 6px; border-radius: 999px; background: #c3c9d2; }
-.rfd-lock-dot.on { background: #d9480f; }
-.rfd-lock-text { font-size: 13.5px; color: #141a24; }
-.rfd-lock-text a { color: #1e3a6e; font-weight: 700; }
-.rfd-lock-meta { margin-top: 2px; font-size: 12px; color: #8b93a1; }
+/* ---- A section's title with its count or facts right after it, on its line (Training's status grey). */
+.rd.trn.rfd .trn-weekhead > div.rfd-titled { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; min-width: 0; }
+.rd.trn.rfd .trn-weekhead > div.rfd-titled > span { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-.rfd-day { display: flex; flex-direction: column; gap: 8px; }
-.rfd-day-label { margin: 0; padding: 0 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
-.rfd-card > [data-slot] { padding: 0; }
-.rfd-rows { display: flex; flex-direction: column; padding: 4px 0 !important; }
-.rfd-row { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; align-items: start; gap: 14px; padding: 12px 18px; border-top: 1px solid #eef1f5; color: inherit; text-decoration: none; }
-.rfd-row:first-child { border-top: 0; }
-.rfd-row:hover { background: #f7f9fc; }
-.rfd-cat { justify-content: center; }
-.rfd-cat.training, .rfd-cat.notes { background: #e6e4fa; color: #3a3390; }
-.rfd-cat.nutrition { background: #dff1ef; color: #1d7a70; }
-.rfd-cat.measurements { background: #efede6; color: #a08a5c; }
-.rfd-cat.billing { background: #fff3dc; color: #8a5a12; }
-.rfd-cat.messages { background: #e3ecf8; color: #1e3a6e; }
-.rfd-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.rfd-text { font-size: 13.5px; line-height: 1.45; color: #313851; }
-.rfd-text b { color: #141a24; }
-.rfd-note { font-size: 13px; color: #5b6474; font-style: italic; }
-.rfd-thumbs { display: flex; gap: 6px; }
-.rfd-thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; }
-.rfd-when { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* ---- The cards: rows edge to edge, a hairline between them, the whole row a way in. */
+.rd.rh.rfd .rls-card.rfd-card { padding: 0; }
+.rd.rh.rfd .rfd-card .rls-none { padding: 16px 18px; }
+.rd.rfd .rfd-rows > .rls-row:first-child { border-top: 0; }
+.rd.rfd .rfd-row .rls-row-main { min-height: 52px; padding: 0 12px 0 18px; column-gap: 16px; cursor: pointer; }
+.rd.rfd .rfd-row.still .rls-row-main { cursor: default; }
+/* Done on Needs you: the row fades at once, then leaves. */
+.rd.rfd .rfd-row.out { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+@media (prefers-reduced-motion: reduce) { .rd.rfd .rfd-row.out { transition: none; } }
 
-.rfd-pager { display: flex; align-items: center; gap: 4px; }
-.rfd-page { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid #dfe3e8; border-radius: 9px; background: #fff; font-size: 13px; font-weight: 700; color: #141a24; text-decoration: none; }
-.rfd-page.on { background: #1e3a6e; border-color: #1e3a6e; color: #fff; }
-.rfd-page.off { opacity: 0.35; }
-.rfd-gap { padding: 0 4px; color: #8b93a1; }
-.rfd-pager-count { margin-left: 10px; font-size: 12.5px; color: #8b93a1; }
+/* The face (24px) and the name semi-bold; the name is the row's own link (keyboard focus underlines it). */
+.rd.rfd .rfd-who { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; }
+.rd.rfd a.rfd-who:focus-visible, .rd.rfd a.rfd-hit:focus-visible { outline: none; text-decoration: none; }
+.rd.rfd a.rfd-who:focus-visible .rfd-name, .rd.rfd a.rfd-hit:focus-visible .rd-logdate { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
+.rd.rfd a.rfd-hit { text-decoration: none; }
+.rd.rfd .rfd-face { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 11px; font-weight: 600; line-height: 1; color: #141a24; }
+.rd.rfd .rfd-face img { width: 100%; height: 100%; object-fit: cover; }
+.rd.rfd .rfd-name { min-width: 0; overflow: hidden; font-size: 14.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rfd .rfd-dash { color: #98a2b3; }
 
-/* One table (26 Sep): who, what kind, what, when, the same on every page
-   and every kind; the client picker beside the kinds. */
-.rfd-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-.rfd-tools .rfd-filters { align-self: auto; }
-.rfd-tools .rd-picker.rfd-client { flex: 0 0 210px; height: 40px; border-radius: 12px; }
-.rfd-row { grid-template-columns: 190px 110px minmax(0, 1fr) auto; align-items: center; }
-.rfd-who { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 13.5px; color: #141a24; }
-.rfd-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rfd-avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; overflow: hidden; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; font-size: 12px; font-weight: 800; }
-.rfd-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.rfd-row.still { cursor: default; }
-.rfd-row.still:hover { background: none; }
+/* ---- Needs you: who, the thing and their words (cut to the one line), the wait, the action's white pill, ⋯ on hover. */
+.rd.rfd .rfd-need { grid-template-columns: 200px minmax(0, 1fr) 88px 136px 30px; }
+.rd.rfd .rfd-thing { display: flex; align-items: baseline; gap: 10px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.rd.rfd .rfd-what { flex: 0 1 auto; min-width: 0; overflow: hidden; font-size: 14px; font-weight: 500; color: #141a24; text-overflow: ellipsis; }
+.rd.rfd .rfd-words { flex: 1 1 6em; min-width: 0; overflow: hidden; font-size: 13px; font-weight: 500; color: #8b93a1; text-overflow: ellipsis; }
+.rd.rfd .rfd-wait { font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rd.rfd .rfd-wait.late { font-weight: 600; color: #b8471f; }
+.rd.rfd .rfd-act { display: flex; justify-content: flex-end; min-width: 0; }
+.rd.trn.rfd .rfd-act .trn-pill { background: #fff; text-decoration: none; }
+.rd.rfd .rfd-more { display: flex; justify-content: flex-end; }
 
-/* Two lanes (12 Oct): Needs you over Activity. The title row carries the
-   client picker; each lane has its own heading, Activity's with the kinds. */
-.rfd-head { flex-direction: row; align-items: center; justify-content: space-between; }
-.rfd-lane { display: flex; flex-direction: column; gap: 10px; }
-/* The pager under the last day's card: 12px of air, as under every other log's. */
-.rfd-lane > .rpg { margin-top: 2px; }
-.rfd-lane-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
-.rfd-lane-title { margin: 0; font-size: 15px; font-weight: 700; color: #141a24; }
-.rfd-lane-title span { font-weight: 500; color: #8b93a1; }
+/* ---- Clients: who, the last 14 days, this week's sessions, last active (the date, the time in its own column), the
+   pills (two columns' worth, each pill one width, the word centred). */
+.rd.rfd .rfd-client { grid-template-columns: minmax(140px, 1fr) 110px 52px var(--rfd-date, 84px) 44px 284px; }
+/* Home's Consistency strip made small: three rows of a 6px square a day in the tracks' order; a day done its track's
+   colour soft inside (18%) with its full-strength edge, else grey. */
+.rd.rfd .rfd-strip { display: flex; flex-direction: column; gap: 2px; }
+.rd.rfd .rfd-strip-row { display: flex; gap: 2px; }
+.rd.rfd .rfd-strip-row i { display: block; flex: none; width: 6px; height: 6px; border-radius: 1.5px; background: #eef0f3; }
+.rd.rfd .rfd-strip-row i.on { background: var(--t, #eef0f3); box-shadow: inset 0 0 0 1px var(--c, #141a24); }
+.rd.rfd .rfd-sessions { font-size: 13.5px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rd.rfd .rfd-sessions.none { color: #98a2b3; }
+.rd.rfd .rfd-pills { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+/* The state pill (design rules 8): the coach's side rust (warn), the client's grey; a way to the tab that fixes it. */
+.rd.trn.rfd .trn-state.rfd-pill { justify-content: center; width: 139px; padding: 0 8px; box-sizing: border-box; text-decoration: none; transition: box-shadow 0.15s; }
+.rd.trn.rfd .trn-state.rfd-pill > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rd.trn.rfd a.trn-state.rfd-pill:hover, .rd.trn.rfd a.trn-state.rfd-pill:focus-visible { outline: none; box-shadow: inset 0 0 0 1px #8b93a1; }
+.rd.trn.rfd a.trn-state.rfd-pill.warn:hover, .rd.trn.rfd a.trn-state.rfd-pill.warn:focus-visible { box-shadow: inset 0 0 0 1px #b8471f; }
+@media (prefers-reduced-motion: reduce) { .rd.trn.rfd .trn-state.rfd-pill { transition: none; } }
+/* The key under the card: the three colours as the strip draws them | Last 14 days. */
+.rd.rh.rfd .rfd-key { margin-top: -2px; padding: 0 4px; }
+.rd.rh.rfd .rh-key i.rfd-sw { width: 8px; height: 8px; border-radius: 2px; background: var(--t); box-shadow: inset 0 0 0 1px var(--c); }
+.rd.rh.rfd .rfd-key > .rd-sep { margin: 0; }
 
-/* A Needs-you row: who, how pressing, what (and their words), which tab, how long. */
-.rfd-row.rfd-need { grid-template-columns: 190px 72px minmax(0, 1fr) auto auto; }
-.rfd-tone { box-sizing: border-box; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; white-space: nowrap; background: #eef0f3; color: #5b6474; }
-.rfd-tone.due { background: #fbeee6; color: #a8501f; }
-.rfd-tone.urgent { background: #fbeaea; color: #a32d2d; }
-.rfd-tone.note { background: #fff3dc; color: #8a5a12; }
-.rfd-detail { font-size: 13px; color: #5b6474; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rfd-detail.quote { font-style: italic; }
-.rfd-tab { padding: 3px 8px; border-radius: 999px; background: #eef0f3; font-size: 11px; font-weight: 700; color: #5b6474; white-space: nowrap; }
+/* ---- Activity: the date, the time centred in its own column, the client, the kind's icon, the thing in body grey
+   and the rest grey after it on the one line. New and Earlier as small caps inside the card. */
+.rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 48px 150px 16px minmax(0, 1fr); column-gap: 12px; }
+.rd.rfd .rfd-log .rfd-name { font-size: 14px; }
+.rd.rfd .rfd-kind { display: inline-flex; align-items: center; justify-content: center; width: 16px; color: var(--c, #5b6474); }
+.rd.rfd .rfd-kind svg { flex: none; width: 16px; height: 16px; }
+.rd.rfd .rfd-line { display: flex; align-items: baseline; column-gap: 10px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.rd.rfd .rfd-title { flex: 0 1 auto; min-width: 0; overflow: hidden; font-size: 14px; font-weight: 500; color: #3a4250; text-overflow: ellipsis; }
+.rd.rfd .rfd-rest { flex: 1 1 7em; min-width: 0; overflow: hidden; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; text-overflow: ellipsis; }
+/* 34px a label (35 with the hairline over Earlier): GROUP_H in FeedDraft.tsx keeps the steady height's room for them. */
+.rd.rfd .rfd-group { margin: 0; padding: 14px 18px 4px; font-size: 10.5px; font-weight: 600; line-height: 16px; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.rd.rfd .rfd-rows > .rfd-group:not(:first-child) { border-top: 1px solid #eef0f3; }
+.rd.rfd .rfd-group + .rls-row { border-top: 0; }
 
-/* One client's day folded to a line; open, each thing is its own row under it. */
-.rfd-fold { border-top: 1px solid #eef1f5; }
-.rfd-fold:first-child { border-top: 0; }
-.rfd-fold-sum { border-top: 0; cursor: pointer; list-style: none; }
-.rfd-fold-sum::-webkit-details-marker { display: none; }
-.rfd-fold[open] .rfd-fold-sum { background: #f7f9fc; }
-.rfd-kinds { display: flex; flex-wrap: wrap; gap: 4px; }
-.rfd-fold-body { padding-bottom: 4px; background: #fbfcfd; }
-.rfd-row.in-fold { padding-top: 9px; padding-bottom: 9px; border-top: 1px solid #f1f3f6; }
-.rfd-row.in-fold:first-child { border-top: 1px solid #eef1f5; }
-
-/* Start here (12 Oct): three buckets in the order to take them, a client
-   once, every reason on the row; then everyone else as names. */
-.rfd-bucket { padding-bottom: 4px; }
-.rfd-bucket + .rfd-bucket { border-top: 1px solid #eef1f5; }
-.rfd-bucket-title { margin: 0; padding: 12px 18px 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #a32d2d; }
-.rfd-bucket.check .rfd-bucket-title { color: #a8501f; }
-.rfd-bucket.setup .rfd-bucket-title { color: #5b6474; }
-.rfd-bucket-title span { font-weight: 600; letter-spacing: 0; text-transform: none; color: #8b93a1; }
-.rfd-row.rfd-need { grid-template-columns: 190px minmax(0, 1fr) auto; }
-.rfd-bucket .rfd-row.rfd-need:first-of-type { border-top: 0; }
-.rfd-quote { font-weight: 500; font-style: italic; color: #5b6474; }
-.rfd-ontrack { margin: 0; padding: 0 4px; font-size: 13px; line-height: 1.5; color: #8b93a1; }
-.rfd-ontrack b { color: #1b7a4b; }
-
-/* Calmer (12 Oct): one line a client, the words cut to fit, "+N" for the rest, five a bucket. */
-.rfd-row.rfd-need { grid-template-columns: 190px minmax(0, 1fr) 36px 72px; padding-top: 10px; padding-bottom: 10px; }
-.rfd-one { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rfd-moreto { justify-self: center; padding: 2px 7px; border-radius: 999px; background: #eef0f3; font-size: 11px; font-weight: 700; color: #5b6474; cursor: help; }
-.rfd-need .rfd-when { justify-self: end; }
-.rfd-more > summary { list-style: none; padding: 8px 18px 10px 228px; font-size: 12.5px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
-.rfd-more > summary::-webkit-details-marker { display: none; }
-.rfd-more > summary:hover { text-decoration: underline; }
-.rfd-more[open] > summary { display: none; }
+/* ---- A narrower page: the columns give way, the time of last active goes, the pills wrap under each other. */
+@container rh (max-width: 860px) {
+  .rd.rfd .rfd-need { grid-template-columns: 168px minmax(0, 1fr) 80px 136px 30px; }
+  .rd.rfd .rfd-client { grid-template-columns: minmax(120px, 1fr) 110px 52px var(--rfd-date, 84px) 139px; }
+  .rd.rfd .rfd-client > .rd-logtime { display: none; }
+  .rd.rfd .rfd-client > .rfd-pills { padding: 8px 0; }
+  .rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 44px 120px 16px minmax(0, 1fr); }
+}
+@container rh (max-width: 600px) {
+  .rd.rfd .rfd-need { grid-template-columns: 120px minmax(0, 1fr) 136px 30px; }
+  .rd.rfd .rfd-need > .rfd-wait { display: none; }
+  .rd.rfd .rfd-client { grid-template-columns: minmax(0, 1fr) 110px 52px; }
+  .rd.rfd .rfd-client > .rfd-last { display: none; }
+  .rd.rfd .rfd-client > .rfd-pills { grid-column: 1 / -1; padding: 0 0 10px; }
+  .rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 100px minmax(0, 1fr); }
+  .rd.rfd .rfd-log > .rd-logtime, .rd.rfd .rfd-log > .rfd-kind { display: none; }
+}

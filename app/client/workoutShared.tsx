@@ -324,7 +324,8 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
           disabled={pending}
           onClick={() => startTransition(() => setCardioDoneAction(cardio.id, !done))}
         >
-          {done ? "Done ✓ · tap to undo" : "Mark as done"}
+          {/* Just Done (21 Oct, Alex: no "tap to undo"); a tap on it still takes it back. */}
+          {done ? "Done" : "Mark as done"}
         </button>
       )}
       {!readOnly && !free && (

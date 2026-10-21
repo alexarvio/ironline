@@ -36,6 +36,8 @@ Read this before touching any client screen. One hero language, one everyday lan
 - Primary: ink pill `#141a24`, white text, height 38–44, 600. One per screen at most.
 - Secondary: white pill with the hairline inset, ink text.
 - Text action: 12–13px, 600, ink or `#5b6474`, no underline.
+- Facts in a row are parted by a short drawn upright bar, never a middle dot (21 Oct, Alex: the workout's targets, `15 min | 6 km/h | 8%`), as the coach admin does.
+- The workout's finish list (21 Oct, Alex): a weighted exercise with sets logged shows `kg  lbs` before its Done, the words alone as Done is (no pill), the one on in ink, the other grey; a tap switches the exercise's logged sets and it opens in that unit next time. A cardio marked done just says `Done` in green (a tap still takes it back), no "tap to undo".
 - A pill that opens a list (Saved days, Supplements; 17 Oct): closed, the white hairline pill; open, the pill stays as the header and the list drops out under it flat on the page, tied to the pill's icon by a thin line down the left that runs behind the rows. No white box round the list.
 - Segments and chips: white with the hairline, the active one ink with white text.
 - Anything on/off (17 Oct, Alex): white while off, ink while on. The rest timer, KG/LBS, filter chips, Settings switches, the current tab in the nav. An action like Demo is not a toggle: it stays a white secondary pill.

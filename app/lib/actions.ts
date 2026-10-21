@@ -132,6 +132,7 @@ import {
   markNotificationRead,
   markReportOpened,
   logSet,
+  setAssignmentUnit,
   OTHER_ITEMS,
   removeReportTemplateSection,
   sendReport,
@@ -687,6 +688,17 @@ export async function saveProgramNoteAction(formData: FormData) {
   const owner = getClientIdForProgram(programId);
   if (owner == null || !(await canAccessClient(owner))) return;
   setClientProgramNote(owner, programId, String(formData.get("text") ?? ""));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// Kg or lbs for one exercise's logged sets, from the workout's finish list (21 Oct, Alex). The same ownership rule as
+// logging a set: the assignment says whose, the session whether the caller may.
+export async function setExerciseUnitAction(assignmentId: number, unit: "kg" | "lb") {
+  const owner = getClientIdForAssignment(Number(assignmentId));
+  if (owner == null || !(await canAccessClient(owner))) return;
+  if (unit !== "kg" && unit !== "lb") return;
+  setAssignmentUnit(Number(assignmentId), unit);
   revalidatePath("/client");
   revalidatePath("/admin");
 }

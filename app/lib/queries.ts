@@ -1601,6 +1601,19 @@ export function getPublishedWeek(clientId: number, week: number): ProgramDay[] {
     .sort((a, b) => a.day_of_week - b.day_of_week);
 }
 
+/** Kg or lbs for an exercise's logged sets in this session (21 Oct, Alex: the switch on the workout's finish list).
+    The weights stay in kg; only the unit the sets read in changes, and the exercise opens in it next time. */
+export function setAssignmentUnit(workoutAssignmentId: number, unit: "kg" | "lb") {
+  const data = getData();
+  let changed = false;
+  for (const sl of data.set_logs) {
+    if (sl.workout_assignment_id !== workoutAssignmentId || sl.unit === unit) continue;
+    sl.unit = unit;
+    changed = true;
+  }
+  if (changed) persist();
+}
+
 export function logSet(
   workoutAssignmentId: number,
   setNumber: number,
@@ -2621,7 +2634,22 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
         break;
       }
     }
-    if (!completedAt) return;
+    if (!completedAt) {
+      // Ended on the app before every set was in (21 Oct, the Feed): news too, at the moment it was ended. The same id
+      // as a completed one, so a session finished later is the one row.
+      if (!day.session_ended_at) return;
+      const done = assignments.filter((wa) => (seen.get(wa.id) ?? 0) >= wa.sets).length;
+      add(day.client_id, {
+        id: `workout-${dayId}`,
+        category: "training",
+        at: stampMs(day.session_ended_at),
+        tab: "training",
+        dayId,
+        target: { kind: "session", dayId, week: day.week_number },
+        text: `ended ${dayTitle(day)} · ${done} of ${plural(assignments.length, "exercise")}, ${plural(logs.length, "set")}`,
+      });
+      return;
+    }
     add(day.client_id, {
       id: `workout-${dayId}`,
       category: "training",
@@ -2677,6 +2705,27 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       note: c.note?.trim() || null,
     });
   }
+  // The food diary (21 Oct, the Feed): a row a diary day, at its latest entry, with the day's total so far.
+  const diary = new Map<string, { clientId: number; date: string; kcal: number; items: number; latest: string | null }>();
+  for (const f of data.food_entries ?? []) {
+    const key = `${f.client_id}:${f.date}`;
+    const d = diary.get(key) ?? { clientId: f.client_id, date: f.date, kcal: 0, items: 0, latest: null };
+    d.kcal += Number(f.kcal) || 0;
+    d.items++;
+    d.latest = latestOf(d.latest, f.logged_at);
+    diary.set(key, d);
+  }
+  diary.forEach((d) => {
+    add(d.clientId, {
+      id: `food-${d.clientId}-${d.date}`,
+      category: "nutrition",
+      at: d.latest ? stampMs(d.latest) : middayMs(d.date),
+      timeKnown: !!d.latest,
+      tab: "nutrition",
+      target: { kind: "food", date: d.date },
+      text: `logged food for ${feedDay(d.date)} · ${Math.round(d.kcal).toLocaleString("en-GB")} kcal, ${plural(d.items, "item")}`,
+    });
+  });
 
   // ---- Measurements: check-ins, measurements, progress pictures ----
   // One row per check-in, not per number: the daily check-in for a day, the

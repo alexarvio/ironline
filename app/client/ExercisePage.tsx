@@ -85,6 +85,12 @@ export default function ExercisePage({
   // already logged in lbs this session keeps it in lbs on coming back.
   // Nothing is remembered for the next exercise or the next session.
   const [unit, setUnit] = useState<Unit>(exercise.unit ?? "kg");
+  // Switched on the finish list (21 Oct): the sets' unit comes back from the server, and the page follows it.
+  const [unitSeen, setUnitSeen] = useState<Unit | null>(exercise.unit ?? null);
+  if ((exercise.unit ?? null) !== unitSeen) {
+    setUnitSeen(exercise.unit ?? null);
+    if (exercise.unit) setUnit(exercise.unit);
+  }
   const uLabel = labelOf(unit);
 
   // The weight for the gym trained at: a machine there is its own machine,

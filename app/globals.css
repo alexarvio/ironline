@@ -20077,6 +20077,16 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-wrap .wo-check-status { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
 .wo-wrap .wo-check-status.done { font-weight: 600; color: #2f7a3f; }
 .wo-wrap .wo-check-status.part { font-weight: 600; color: #a8761f; }
+/* A finish-list row is a line with a stretched button under it (the whole row opens the exercise), so the kg | lbs
+   switch can sit in it, above that button (21 Oct, Alex). */
+.wo-check-row { position: relative; }
+.wo-check-hit { position: absolute; inset: 0; z-index: 0; margin: 0; padding: 0; border: 0; border-radius: inherit; background: none; cursor: pointer; }
+.wo-check-hit:focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
+/* Kg | lbs beside Done: the words alone, as Done is, the one on in ink, the other grey; no pill. */
+.wo-check-unit { position: relative; z-index: 1; flex: none; display: inline-flex; align-items: center; gap: 10px; margin-right: 6px; }
+.wo-check-unit button { margin: 0; padding: 8px 2px; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 500; color: #98a2b3; cursor: pointer; }
+.wo-check-unit button.on { font-weight: 600; color: #141a24; }
+.wo-check-unit button:disabled { cursor: default; }
 .wo-wrap .wo-ask, .wo-wrap .wo-coach-note { gap: 14px; padding: 14px 4px 0; border-top: 1px solid #E1E5EB; border-radius: 0; background: none; }
 .wo-wrap .wo-coach-note { gap: 6px; }
 .wo-wrap .wo-note-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
@@ -20363,7 +20373,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-target { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 18px; }
 .lw-target-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
 .lw-target-vals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 0; font-size: 18px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
-.lw-target-vals > span + span::before { content: "·"; margin: 0 9px; color: #98A2B3; font-weight: 500; }
+/* Parted by a short drawn upright bar, not a dot (21 Oct, Alex: the bar the admin uses), as tall as the figures' capitals. */
+.lw-target-vals > span + span::before { content: ""; display: inline-block; width: 1px; height: 0.72em; margin: 0 12px; background: #C9CFD8; vertical-align: baseline; }
 
 /* 19 Oct (Alex): the workout's video card keeps its amber camera without the dot on it. */
 .lw .wo-video.wo-video .wo-video-tile::after { content: none; }

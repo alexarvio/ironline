@@ -1130,6 +1130,8 @@ type User = {
   video_library?: { id: number; path: string; name: string; at: string; /** File size in bytes (from 6 Oct; absent before). */ bytes?: number }[];
   /** When the coach last had Business on screen (epoch ms) and the visit before it, 30 minutes apart being one visit: the Business board's "Since" line (21 Oct). */
   business_looked?: { at: number; prev: number | null };
+  /** When the coach last had the Feed on screen (epoch ms) and the visit before it, 30 minutes apart being one visit: the Feed's "Since" line and its New rows (21 Oct). */
+  feed_looked?: { at: number; prev: number | null };
 };
 
 /** What a coach's invoices say about who sends them. Every field optional: filled in over time.
