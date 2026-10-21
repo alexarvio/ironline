@@ -142,7 +142,6 @@ const AXES: MuscleGroup[] = ["Back", "Chest", "Core", "Legs", "Shoulders", "Arms
     written out here: homeBoard.ts's values would bring the server's reader into the browser). */
 const STRENGTH_GROUPS: MuscleGroup[] = ["Back", "Chest", "Shoulders", "Arms", "Legs", "Core"];
 type Measure = "sets" | "volume";
-type Span = "7d" | "30d" | "phase" | "plan";
 /** Strength's windows, in Muscle balance's order (21 Oct, Alex: the same toggle). */
 type StrengthSpan = "7d" | "30d" | "phase";
 const STRENGTH_SPANS: { id: StrengthSpan; label: string }[] = [
@@ -274,7 +273,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
 
       {/* ---- Consistency, and beside it the calls and the invoices, each a card that opens its tab. */}
       <div className="rh-trio">
-        <ConsistencyCard days={board.days} />
+        <ConsistencyCard days={board.days} phaseDays={board.phaseDays} />
         <MeetingsCard next={board.nextCall} last={board.lastCall} onOpen={() => onOpenTab("meetings")} />
         <InvoicesCard owed={board.outstanding} paid={board.lastPaid} next={board.nextInvoice} onOpen={() => onOpenTab("invoices")} />
       </div>
@@ -476,59 +475,96 @@ function PhaseTile({ tile, onOpen }: { tile: HomeBoard["tracks"][number]; onOpen
   );
 }
 
-// ---- Muscle balance: sets (or volume) per group in a window, as a hexagon, against the window before; or the
-// programme's week, planned against done.
+// ---- Muscle balance: sets (or volume) per group as a hexagon. 7d, 30d and Phase can be on together (21 Oct, Alex: "so
+// I can compare easily"), each its own colour: one on, it against the window before it (dashed grey); more, each its own
+// shape. Plan is a view of its own: the programme's week, planned against done.
+type Window = "7d" | "30d" | "phase";
+const WINDOWS: Window[] = ["7d", "30d", "phase"];
+/** A colour a window: 7d the training purple, 30d rose, Phase ink; none of them another track's. */
+const WINDOW_COLOR: Record<Window, string> = { "7d": TRACK_ACCENT.training, "30d": "#c2417a", phase: "#141a24" };
+const BEFORE_GREY = "#98a2b3";
+type Shape = { v: PerGroup; color: string; dashed?: boolean; fill?: number };
 function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
   const [measure, setMeasure] = useState<Measure>("sets");
-  const [want, setWant] = useState<Span>("7d");
-  // A window that went away (no phase, no programme any more) falls back to the week.
-  const span: Span = (want === "phase" && !muscles.phase) || (want === "plan" && !muscles.plan) ? "7d" : want;
-  const spans: { id: Span; label: string }[] = [
+  const [picked, setPicked] = useState<Window[]>(["7d"]);
+  const [planOn, setPlanOn] = useState(false);
+  // A window that went away (no phase any more) drops out; nothing left falls back to the week.
+  const live = picked.filter((w) => w !== "phase" || !!muscles.phase);
+  const windows: Window[] = live.length ? live : ["7d"];
+  const plan = planOn && muscles.plan ? muscles.plan : null;
+  const toggle = (w: Window) => {
+    if (plan) {
+      setPlanOn(false);
+      setPicked([w]);
+      return;
+    }
+    // At least one stays on; the order is always 7d, 30d, Phase.
+    setPicked((p) => (p.includes(w) ? (p.length > 1 ? p.filter((x) => x !== w) : p) : WINDOWS.filter((x) => x === w || p.includes(x))));
+  };
+  const winOf = (w: Window): MuscleWindow => (w === "phase" && muscles.phase ? muscles.phase : w === "30d" ? muscles["30d"] : muscles["7d"]);
+  const nameOf = (w: Window) => (w === "phase" ? `Since ${dayMonth(winOf("phase").from)}` : `Last ${w}`);
+  const valuesOf = (w: Window) => (measure === "volume" ? winOf(w).volume : winOf(w).sets);
+
+  let shapes: Shape[];
+  let shown: { v: PerGroup; color?: string }[];
+  let of: PerGroup | undefined;
+  let key: { label: string; color: string; dashed?: boolean }[];
+  let missed: ReactNode = null;
+  if (plan) {
+    // The plan is in sets: done against planned, each axis "9 of 14".
+    shapes = [
+      { v: plan.planned, color: BEFORE_GREY, dashed: true },
+      { v: plan.done, color: WINDOW_COLOR["7d"], fill: 0.12 },
+    ];
+    shown = [{ v: plan.done }];
+    of = plan.planned;
+    key = [
+      { label: "Done", color: WINDOW_COLOR["7d"] },
+      { label: "Planned", color: BEFORE_GREY, dashed: true },
+    ];
+    const gap = AXES.map((g) => ({ g, short: (plan.planned[g] ?? 0) - (plan.done[g] ?? 0) })).sort((a, b) => b.short - a.short)[0];
+    if (gap && gap.short > 0) missed = `${gap.g} ${setsOf(plan.done[gap.g] ?? 0)} of ${setsOf(plan.planned[gap.g] ?? 0)} planned`;
+  } else if (windows.length === 1) {
+    const w = windows[0];
+    const win = winOf(w);
+    const before = measure === "volume" ? win.prevVolume : win.prevSets;
+    shapes = [
+      { v: before, color: BEFORE_GREY, dashed: true },
+      { v: valuesOf(w), color: WINDOW_COLOR[w], fill: 0.12 },
+    ];
+    shown = [{ v: valuesOf(w) }];
+    key = [
+      { label: nameOf(w), color: WINDOW_COLOR[w] },
+      { label: w === "phase" ? "Before" : `${w} before`, color: BEFORE_GREY, dashed: true },
+    ];
+  } else {
+    // Several at once: each its own shape, lightly filled so the ones under still show; the longest window drawn first.
+    shapes = [...windows].reverse().map((w) => ({ v: valuesOf(w), color: WINDOW_COLOR[w], fill: 0.07 }));
+    shown = windows.map((w) => ({ v: valuesOf(w), color: WINDOW_COLOR[w] }));
+    key = windows.map((w) => ({ label: nameOf(w), color: WINDOW_COLOR[w] }));
+  }
+  const most = Math.max(0, ...shapes.flatMap((s) => AXES.map((g) => s.v[g] ?? 0)));
+  const byVolume = !plan && measure === "volume";
+  const fmt = byVolume ? volumeIn(most) : setsOf;
+  const empty = shapes.every((s) => AXES.every((g) => !(s.v[g] > 0)));
+  // Said in full for a screen reader: the measure, and every shape on the chart.
+  const each = (v: PerGroup, out?: PerGroup) => AXES.map((g) => `${g} ${fmt(v[g] ?? 0)}${out ? ` of ${fmt(out[g] ?? 0)}` : ""}`).join(", ");
+  const said = plan
+    ? `Sets done of planned, week ${plan.week}: ${each(plan.done, plan.planned)}`
+    : `${byVolume ? "Volume" : "Sets"}. ${key.map((k, i) => `${k.label}: ${each(windows.length === 1 ? (i === 0 ? valuesOf(windows[0]) : shapes[0].v) : valuesOf(windows[i]))}`).join(". ")}`;
+
+  const spanButtons: { id: Window | "plan"; label: string }[] = [
     { id: "7d", label: "7d" },
     { id: "30d", label: "30d" },
     ...(muscles.phase ? [{ id: "phase" as const, label: "Phase" }] : []),
     ...(muscles.plan ? [{ id: "plan" as const, label: "Plan" }] : []),
   ];
-
-  let now: PerGroup;
-  let before: PerGroup;
-  let of: PerGroup | undefined;
-  let nowKey: string;
-  let beforeKey: string;
-  let missed: ReactNode = null;
-  if (span === "plan" && muscles.plan) {
-    // The plan is in sets: done against planned, each axis "9 of 14".
-    now = muscles.plan.done;
-    before = muscles.plan.planned;
-    of = muscles.plan.planned;
-    nowKey = "Done";
-    beforeKey = "Planned";
-    const gap = AXES.map((g) => ({ g, short: (before[g] ?? 0) - (now[g] ?? 0) })).sort((a, b) => b.short - a.short)[0];
-    if (gap && gap.short > 0) missed = `${gap.g} ${setsOf(now[gap.g] ?? 0)} of ${setsOf(before[gap.g] ?? 0)} planned`;
-  } else {
-    const w: MuscleWindow = span === "phase" && muscles.phase ? muscles.phase : span === "30d" ? muscles["30d"] : muscles["7d"];
-    now = measure === "volume" ? w.volume : w.sets;
-    before = measure === "volume" ? w.prevVolume : w.prevSets;
-    nowKey = span === "phase" ? `Since ${dayMonth(w.from)}` : `Last ${span}`;
-    beforeKey = span === "phase" ? "Before" : `${span} before`;
-  }
-  const most = Math.max(0, ...AXES.map((g) => Math.max(now[g] ?? 0, before[g] ?? 0)));
-  const byVolume = span !== "plan" && measure === "volume";
-  const fmt = byVolume ? volumeIn(most) : setsOf;
-  const empty = AXES.every((g) => !(now[g] > 0) && !(before[g] > 0));
-  // Said in full for a screen reader: the measure, the window, and the window before (the dashed shape).
-  const each = (v: PerGroup, out?: PerGroup) => AXES.map((g) => `${g} ${fmt(v[g] ?? 0)}${out ? ` of ${fmt(out[g] ?? 0)}` : ""}`).join(", ");
-  const said =
-    span === "plan" && muscles.plan
-      ? `Sets done of planned, week ${muscles.plan.week}: ${each(now, of)}`
-      : `${byVolume ? "Volume" : "Sets"}, ${nowKey.toLowerCase()}: ${each(now)}. ${beforeKey}: ${each(before)}`;
-
   return (
     <section className="rls-card rh-panel rh-muscles" aria-label="Muscle balance" style={{ "--rh-c": TRACK_ACCENT.training } as CSSProperties}>
       <div className="rh-panel-head tall">
         <h2 className="rh-panel-title">Muscle balance</h2>
         {/* The plan is counted in sets alone: no Volume to offer there. */}
-        {span !== "plan" && (
+        {!plan && (
           <div className="rd-btn-group" role="group" aria-label="Count">
             {(["sets", "volume"] as const).map((m) => (
               <button key={m} type="button" className={measure === m ? "on" : ""} aria-pressed={measure === m} onClick={() => setMeasure(m)}>
@@ -538,29 +574,31 @@ function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
           </div>
         )}
       </div>
-      <div className="rd-btn-group rh-spans" role="group" aria-label="Window">
-        {spans.map((s) => (
-          <button key={s.id} type="button" className={span === s.id ? "on" : ""} aria-pressed={span === s.id} onClick={() => setWant(s.id)}>
-            {s.label}
-          </button>
-        ))}
+      {/* 7d, 30d and Phase each on or off (one at least); Plan alone. */}
+      <div className="rd-btn-group rh-spans" role="group" aria-label="Windows">
+        {spanButtons.map((s) => {
+          const on = s.id === "plan" ? !!plan : !plan && windows.includes(s.id);
+          return (
+            <button key={s.id} type="button" className={on ? "on" : ""} aria-pressed={on} onClick={() => (s.id === "plan" ? setPlanOn(true) : toggle(s.id))}>
+              {s.label}
+            </button>
+          );
+        })}
       </div>
       {empty ? (
         <p className="rls-none">None yet</p>
       ) : (
         <>
           <div className="rh-radar-wrap">
-            <Radar now={now} before={before} fmt={fmt} of={of} label={said} />
+            <Radar shapes={shapes} shown={shown} of={of} fmt={fmt} label={said} />
           </div>
           <div className="rh-key">
-            <span>
-              <i className="line" aria-hidden="true" />
-              {nowKey}
-            </span>
-            <span>
-              <i className="dash" aria-hidden="true" />
-              {beforeKey}
-            </span>
+            {key.map((k) => (
+              <span key={k.label}>
+                <i className={k.dashed ? "dash" : "line"} style={k.dashed ? undefined : { background: k.color }} aria-hidden="true" />
+                {k.label}
+              </span>
+            ))}
             {missed && <span className="miss">{missed}</span>}
           </div>
         </>
@@ -604,8 +642,8 @@ function roundedPath(pts: (readonly [number, number])[], r: number) {
   });
   return `M${f(cuts[0].out)}` + cuts.slice(1).map((c) => `L${f(c.into)}Q${f(c.at)} ${f(c.out)}`).join("") + `L${f(cuts[0].into)}Q${f(cuts[0].at)} ${f(cuts[0].out)}Z`;
 }
-function Radar({ now, before, fmt, of, label }: { now: PerGroup; before: PerGroup; fmt: (v: number) => string; of?: PerGroup; label: string }) {
-  const scale = Math.max(1, ...AXES.map((g) => Math.max(now[g] ?? 0, before[g] ?? 0)));
+function Radar({ shapes, shown, of, fmt, label }: { shapes: Shape[]; shown: { v: PerGroup; color?: string }[]; of?: PerGroup; fmt: (v: number) => string; label: string }) {
+  const scale = Math.max(1, ...shapes.flatMap((s) => AXES.map((g) => s.v[g] ?? 0)));
   const shape = (v: PerGroup) => roundedPath(AXES.map((g, i) => corner(i, (RR * Math.max(0, v[g] ?? 0)) / scale)), ROUND);
   const ring = (f: number) => AXES.map((_, i) => corner(i, RR * f).join(",")).join(" ");
   return (
@@ -617,8 +655,13 @@ function Radar({ now, before, fmt, of, label }: { now: PerGroup; before: PerGrou
         const [x, y] = corner(i, RR);
         return <line key={g} x1={CX} y1={CY} x2={x} y2={y} stroke="#e1e5eb" strokeWidth={1} />;
       })}
-      <path d={shape(before)} fill="none" stroke="#98a2b3" strokeWidth={1.5} strokeDasharray="4 3" strokeLinejoin="round" />
-      <path d={shape(now)} fill={TRACK_ACCENT.training} fillOpacity={0.12} stroke={TRACK_ACCENT.training} strokeWidth={2} strokeLinejoin="round" />
+      {shapes.map((s, i) =>
+        s.dashed ? (
+          <path key={i} d={shape(s.v)} fill="none" stroke={s.color} strokeWidth={1.5} strokeDasharray="4 3" strokeLinejoin="round" />
+        ) : (
+          <path key={i} d={shape(s.v)} fill={s.color} fillOpacity={s.fill ?? 0} stroke={s.color} strokeWidth={2} strokeLinejoin="round" />
+        )
+      )}
       {AXES.map((g, i) => {
         const [x, y] = corner(i, RR + 10);
         // Top and bottom: centred over / under the corner; the sides: beside it, the two lines either side of its height.
@@ -629,8 +672,13 @@ function Radar({ now, before, fmt, of, label }: { now: PerGroup; before: PerGrou
             <text className="rh-radar-name" x={x} y={nameY} textAnchor={anchor}>
               {g}
             </text>
+            {/* Several windows: each figure in its window's colour, side by side. */}
             <text className="rh-radar-val" x={x} y={valueY} textAnchor={anchor}>
-              {fmt(now[g] ?? 0)}
+              {shown.map((s, j) => (
+                <tspan key={j} dx={j ? 7 : 0} fill={s.color}>
+                  {fmt(s.v[g] ?? 0)}
+                </tspan>
+              ))}
               {of && <tspan className="rh-radar-of"> of {fmt(of[g] ?? 0)}</tspan>}
             </text>
           </g>
@@ -761,14 +809,33 @@ const CONS: { key: "trained" | "food" | "checkIn"; label: string; track: PhaseTr
   { key: "trained", label: "Trained", track: "training", yes: "trained", no: "no session" },
   { key: "food", label: "Food", track: "nutrition", yes: "food logged", no: "no food logged" },
 ];
-function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
+function ConsistencyCard({ days: last30, phaseDays }: { days: HomeBoard["days"]; phaseDays: HomeBoard["phaseDays"] }) {
+  // 30 days | Phase (21 Oct, Alex): the phase from its first day, at least 30 squares (days to come stay empty).
+  const [span, setSpan] = useState<"30" | "phase">("30");
+  const days = span === "phase" && phaseDays ? phaseDays.days : last30;
   // A Monday starts a week: a little more air before it, so the weeks read.
   const monday = days.map((d, i) => i > 0 && new Date(timeOf(d.date)).getDay() === 1);
   return (
     <section className="rls-card rh-panel rh-cons" aria-label="Consistency">
       <div className="rh-panel-head">
         <h2 className="rh-panel-title">Consistency</h2>
-        {days.length > 0 && <span className="rh-panel-aside">Last {days.length} days</span>}
+        <span className="rh-cons-tools">
+          {span === "phase" && phaseDays && <span className="rh-panel-aside">Since {dayMonth(phaseDays.since)}</span>}
+          {phaseDays ? (
+            <span className="rd-btn-group" role="group" aria-label="Span">
+              {([
+                ["30", "30 days"],
+                ["phase", "Phase"],
+              ] as const).map(([id, word]) => (
+                <button key={id} type="button" className={span === id ? "on" : ""} aria-pressed={span === id} onClick={() => setSpan(id)}>
+                  {word}
+                </button>
+              ))}
+            </span>
+          ) : (
+            days.length > 0 && <span className="rh-panel-aside">Last {days.length} days</span>
+          )}
+        </span>
       </div>
       {days.length === 0 ? (
         <p className="rls-none">None yet</p>
@@ -783,7 +850,7 @@ function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
                 </span>
                 <span className="rh-cons-days" role="img" aria-label={`${c.label}: ${done} of the last ${days.length} days`}>
                   {days.map((d, i) => (
-                    <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${monday[i] ? " mon" : ""}`} title={`${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />
+                    <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${d.future ? " ahead" : ""}${monday[i] ? " mon" : ""}`} title={d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />
                   ))}
                 </span>
               </div>

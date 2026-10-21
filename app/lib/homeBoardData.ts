@@ -307,6 +307,7 @@ export function getHomeBoard(clientId: number): HomeBoard {
     strength: safe("strength", () => strengthOf(ctx), empty.strength),
     weight: safe("weight", () => weightOf(ctx), null),
     days: safe("days", () => daysOf(ctx), empty.days),
+    phaseDays: safe("phaseDays", () => phaseDaysOf(ctx), null),
   };
 }
 
@@ -327,6 +328,7 @@ function emptyBoard(today: string): HomeBoard {
     strength: { "7d": null, "30d": null, phase: null },
     weight: null,
     days: lastDays(today).map((date) => ({ date, trained: false, food: false, checkIn: false })),
+    phaseDays: null,
   };
 }
 
@@ -699,12 +701,27 @@ function weightOf(ctx: Ctx): HomeBoard["weight"] {
 
 /** Trained: a counted set logged that day (as the training tile counts a session), or a session the calendar has on it
     (ended there, done in full, or kept from before a coach's edit). Checked in: anything but what the workout answers. */
-function daysOf(ctx: Ctx): HomeBoard["days"] {
+function daysOf(ctx: Ctx, dates: string[] = lastDays(ctx.today)): HomeBoard["days"] {
   const setDays = new Set(ctx.sets.filter((s) => s.counts).map((s) => s.day));
-  return lastDays(ctx.today).map((date) => {
+  return dates.map((date) => {
     const d = ctx.calendar.get(date);
     return { date, trained: !!d?.sessions.length || setDays.has(date), food: !!d?.food, checkIn: !!d?.checkIns.some((n) => !ctx.fedNames.has(n)) };
   });
+}
+
+/** The phase's days for the consistency strip: from the earliest live phase's first day (at most 120 days back) to today. */
+const PHASE_DAYS_MAX = 120;
+function phaseDaysOf(ctx: Ctx): HomeBoard["phaseDays"] {
+  const starts = [ctx.phases.lifestyle, ctx.phases.training, ctx.phases.nutrition].map((p) => p?.start_week).filter((d): d is string => !!d && d <= ctx.today).sort();
+  if (!starts.length) return null;
+  const floor = addDays(ctx.today, -(PHASE_DAYS_MAX - 1));
+  const since = starts[0] < floor ? floor : starts[0];
+  const dates: string[] = [];
+  for (let d = since; d <= ctx.today; d = addDays(d, 1)) dates.push(d);
+  // Always 30 at least: a young phase runs on into the days still to come, empty, filling in as they pass.
+  const ahead: HomeBoard["days"] = [];
+  for (let d = addDays(ctx.today, 1); dates.length + ahead.length < CONSISTENCY_DAYS; d = addDays(d, 1)) ahead.push({ date: d, trained: false, food: false, checkIn: false, future: true });
+  return { since, days: [...daysOf(ctx, dates), ...ahead] };
 }
 
 // ---- The coach's look -------------------------------------------------------------------------------

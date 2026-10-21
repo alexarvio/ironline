@@ -16,6 +16,9 @@ export const MUSCLE_GROUPS = ["Back", "Chest", "Shoulders", "Arms", "Legs", "Cor
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 export type PerGroup = Record<MuscleGroup, number>;
 
+/** One day of the consistency strip. */
+export type ConsistencyDay = { date: string; trained: boolean; food: boolean; checkIn: boolean; /** A day still to come: a young phase shows 30 days all the same, filling in as they pass (21 Oct, Alex). */ future?: boolean };
+
 /** One window of the strength card. */
 export type StrengthWindow = { since: string; groups: { group: MuscleGroup; pct: number; exercises: number }[] };
 
@@ -85,7 +88,11 @@ export type HomeBoard = {
   } | null;
   /** The last 30 days, oldest first (21 Oct, Alex: 30, not four weeks): trained (a set logged that day, or a session ended or done in full on it), food
       logged, checked in. */
-  days: { date: string; trained: boolean; food: boolean; checkIn: boolean }[];
+  days: ConsistencyDay[];
+  /** Consistency over the phase (21 Oct, Alex: a 30 days | Phase toggle): every day from the earliest live phase's
+      first day (at most 120 days back) to today, oldest first, and at least 30 days: a phase younger than that runs on
+      into the days still to come (future), so the strip fills up as they pass. Null with no live phase. */
+  phaseDays: { since: string; days: ConsistencyDay[] } | null;
 };
 
 export { getHomeBoard, noteHomeLooked } from "./homeBoardData";
