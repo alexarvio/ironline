@@ -87,16 +87,16 @@
 
 /* ---- All sheets: a log, a row a sheet, the rows together (as every log in the app), newest first. */
 .rd.rp .rp-table { padding: 0; overflow: hidden; }
-.rd.rp .rp-thead, .rd.rp .rp-trow { display: grid; grid-template-columns: minmax(120px, 150px) 110px 100px minmax(0, 1fr) 104px; align-items: center; gap: 12px; }
+.rd.rp .rp-thead, .rd.rp .rp-trow { display: grid; grid-template-columns: 112px minmax(64px, 96px) 110px 100px minmax(0, 1fr) 104px; align-items: center; gap: 12px; }
 .rd.rp .rp-thead { padding: 12px 18px; border-bottom: 1px solid #e1e5eb; font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98a2b3; white-space: nowrap; }
 .rd.rp .rp-thead .end { text-align: center; }
 .rd.rp .rp-trow { width: 100%; min-height: 54px; padding: 8px 18px; border: 0; border-top: 1px solid #eef0f3; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
 .rd.rp .rp-thead + .rp-trow { border-top: 0; }
 .rd.rp .rp-trow:hover { background: #fafbfc; }
 .rd.rp .rp-trow:focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
+.rd.rp .rp-tdate { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .rd.rp .rp-tsheet { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
 .rd.rp .rp-tsheet b { font-size: 14px; font-weight: 500; }
-.rd.rp .rp-tsheet small { font-size: 12px; font-weight: 500; color: #98a2b3; font-variant-numeric: tabular-nums; }
 /* A bar an angle, on one line: past five they share the column's width. */
 .rd.rp .rp-bars { display: flex; align-items: center; flex-wrap: nowrap; gap: 3px; min-width: 0; }
 .rd.rp .rp-bars i { display: block; flex: 0 1 18px; min-width: 6px; height: 3px; border-radius: 3px; background: #e1e5eb; }
@@ -112,8 +112,8 @@
 .rd.rp .rp-tstate .trn-state { flex: 1; justify-content: center; box-sizing: border-box; }
 /* A narrow tab: the phases column steps aside (they show on the newest sheet). */
 @container rp (max-width: 640px) {
-  .rd.rp .rp-thead, .rd.rp .rp-trow { grid-template-columns: minmax(0, 1fr) 96px 90px 104px; }
-  .rd.rp .rp-thead > :nth-child(4), .rd.rp .rp-trow > .rp-phases { display: none; }
+  .rd.rp .rp-thead, .rd.rp .rp-trow { grid-template-columns: 112px minmax(0, 1fr) 96px 90px 104px; }
+  .rd.rp .rp-thead > :nth-child(5), .rd.rp .rp-trow > .rp-phases { display: none; }
 }
 .rd.rp .rp-showall { align-self: flex-start; padding: 0 0 0 4px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
 .rd.rp .rp-showall:hover { color: #5b6474; }

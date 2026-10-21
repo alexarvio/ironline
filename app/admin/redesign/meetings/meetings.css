@@ -121,8 +121,7 @@
 .rt-tzp-item em { flex: none; font-style: normal; font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .rt-tzp-none { margin: 6px 8px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 
-/* Past calls as Training's sessions: the date light and grey with the chevron after it, the call semi-bold. */
-.rd.rt .rt-date { font-size: 13.5px; font-weight: 500; color: #5b6474; font-variant-numeric: tabular-nums; }
+/* Past calls as every log: the date first (.rd-logdate, draft.css) with the chevron after it, the call semi-bold. */
 .rd.rt .rt-call { font-size: 15px; font-weight: 600; color: #141a24; }
 
 /* Also scheduled (21 Oct, Alex): a row a call, its title with the chevron after it, its facts in grey; it opens on what

@@ -1,53 +1,57 @@
 "use client";
 
 import Pager from "../Pager";
-import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { useMemo, useRef, useState, useTransition, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { deleteClientConfirmedAction, dismissHomeActionAction, saveCoachNoteAction, sendChatMessageAction, setEngagementPartsAction } from "../../../lib/actions";
+import { deleteClientConfirmedAction, saveCoachNoteAction, sendChatMessageAction } from "../../../lib/actions";
 import { useOpenChat } from "../ChatPanel";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import ClientCardEditor from "../../ClientCardEditor";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { AccountIcon, CalendarIcon, CameraIcon, ChatIcon, CheckIcon, ChevronDownIcon, MoreIcon, PhasesIcon, ReceiptIcon, TrashIcon } from "../../../components/icons";
-import type { ClientEngagement, HomeAction, OverviewInfoRow, OverviewPanel } from "../../../lib/queries";
+import { AccountIcon, ChatIcon, MoreIcon, TrashIcon } from "../../../components/icons";
+import type { OverviewInfoRow, OverviewPanel } from "../../../lib/queries";
+// Types only: homeBoard.ts re-exports the server's reader, which must never reach the browser.
+import type { HomeBoard, MuscleGroup, MuscleWindow, PerGroup } from "../../../lib/homeBoard";
 import { MessageDialog } from "../training/TrainingDraft";
 import AppAccessButton from "./AppAccessButton";
-import type { NeedView } from "../loaders";
 import type { ClientAccess } from "../../../lib/access-actions";
-import { dayMonth } from "../../../lib/dayMonth";
+import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { SepJoin } from "../Sep";
-import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
-import type { PhaseTrack } from "../../../lib/db";
+import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { TrackIcon } from "../plan/PlanDraft";
+import type { PhaseTrack } from "../../../lib/db";
 
-// The client's Home (21 Oct, Alex: rebuilt as the track tabs are, root "rd trn rls rh"): Training's header, the six
-// figures in one hairline card, then each section's title on the page over its card.
+// The client's Home (21 Oct, Alex: built from the Home mockup, root "rd trn rls rh"): Training's header, then the board.
 //
-// - The header: face, name, how long they have been a client; App access, Details and Message as white pills, ⋯ to delete.
-// - Keeping up: one score, and the behaviours it is the mean of.
-// - Needs you: what is waiting on the coach, a row each, leading to the thing; Reply and ✓ on hover.
-// - Activity: what they did, one kind at a time, a page at a time.
+// - The header: face, name (the whole of it, wrapping if it must), how long they have been a client on the name's line;
+//   App access, Details and Message as white pills, ⋯ to delete.
+// - Since: what they did since the coach last looked, one quiet line.
+// - The three tracks (Lifestyle, Training, Nutrition): the phase, its week and how far in, then the one figure that
+//   matters right under it. A tile opens its tab.
+// - Muscle balance (sets or volume per group, this window against the one before, or the week's plan against what was
+//   done) beside Strength (all six groups, since the phase began) and Weight (the phase's readings).
+// - Consistency (four weeks, a square a day, per behaviour) with Meetings (the next call, the last) and Invoices (what is
+//   owed, the next to be made) beside it; each of those two opens its tab.
+// - Activity: what they did, one kind at a time, a page at a time; every row leads with its date.
 // Details is a pop-up: member info, coaching info and the coach's own note.
 
-/** href: the thing itself (a session, a food day, an invoice), from feedHref. */
-export type DraftEvent = { id: string; category: string; text: string; note: string | null; when: string; tab: string; href: string | null };
+/** at: when it happened (ms), for the row's date. href: the thing itself (a session, a food day, an invoice), from feedHref. */
+export type DraftEvent = { id: string; category: string; text: string; note: string | null; at: number; when: string; tab: string; href: string | null };
 export type DraftHome = {
   name: string;
   initial: string;
   avatarPath: string | null;
   clientSince: string | null;
-  snapshot: OverviewPanel["snapshot"];
   /** The whole client card, for the live editor in the Details dialog. */
   panel: OverviewPanel;
   coachNote: { text: string; savedLabel: string | null };
-  actions: NeedView[];
   events: DraftEvent[];
-  eventTotal: number;
-  engagement: ClientEngagement;
   /** The client's login, for the App access button (read with the page: no second call). */
   access: ClientAccess;
+  /** The board: tracks, calls, invoices, muscle balance, strength, weight, consistency (app/lib/homeBoard.ts). */
+  board: HomeBoard;
 };
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
@@ -64,39 +68,34 @@ const DRAFT_TAB: Record<string, string> = {
   invoices: "invoices",
   billing: "invoices",
 };
-const TONE: Record<HomeAction["tone"], { text: string; cls: string }> = { urgent: { text: "Urgent", cls: "bad" }, due: { text: "Due", cls: "warn" }, note: { text: "To read", cls: "live" } };
-// The tab that deals with a Needs-you row, as a tag: a track's in its colour (design rules 3), the rest grey.
-const TRACK_OF: Record<string, PhaseTrack> = { training: "training", nutrition: "nutrition", measurements: "lifestyle" };
-const OTHER_TAG: Record<string, { label: string; icon: ReactNode }> = {
-  meetings: { label: "Meetings", icon: <CalendarIcon /> },
-  photos: { label: "Pictures", icon: <CameraIcon /> },
-  messages: { label: "Chat", icon: <ChatIcon /> },
-  invoices: { label: "Invoices", icon: <ReceiptIcon /> },
-  plan: { label: "Plan", icon: <PhasesIcon /> },
-};
-// Activity is read one kind at a time; every source category has a home here.
-const FILTERS = [
-  // A call asked for, an event added, a note on the programme: words from the
-  // client, so with the messages (12 Oct), not under Training.
-  { id: "training", label: "Training", holds: ["training"] },
-  { id: "nutrition", label: "Nutrition", holds: ["nutrition"] },
-  { id: "measurements", label: "Lifestyle", holds: ["measurements"] },
-  { id: "invoices", label: "Invoices", holds: ["billing"] },
-  { id: "messages", label: "Messages", holds: ["messages", "notes"] },
-] as const;
-type FilterId = (typeof FILTERS)[number]["id"];
-const PAGE = 12;
-const tone = (pct: number) => (pct >= 80 ? "good" : pct >= 50 ? "mid" : "low");
-/** A line the server writes with "a · b": its parts, for a bar between them (design rules 1). Never cut inside “…”:
-    the client's own words (an event called "Trip · Rome") stay whole. */
-const parts = (s: string) => {
+/** A track's tab in the shell (Lifestyle is "measurements"). */
+const TRACK_TAB: Record<PhaseTrack, string> = { lifestyle: "measurements", training: "training", nutrition: "nutrition" };
+const TRACK_ORDER: PhaseTrack[] = ["lifestyle", "training", "nutrition"];
+
+// Activity: All first, then one kind at a time; every source category has a home here.
+const FILTERS: { id: string; label: string; has: (e: DraftEvent) => boolean }[] = [
+  { id: "all", label: "All", has: () => true },
+  { id: "training", label: "Training", has: (e) => e.category === "training" },
+  { id: "nutrition", label: "Nutrition", has: (e) => e.category === "nutrition" },
+  { id: "lifestyle", label: "Lifestyle", has: (e) => e.category === "measurements" },
+  { id: "invoices", label: "Invoices", has: (e) => e.category === "billing" },
+  // A call asked for or a note on one: with the meetings, not the messages.
+  { id: "meetings", label: "Meetings", has: (e) => e.category === "meetings" || e.tab === "meetings" },
+  { id: "messages", label: "Messages", has: (e) => (e.category === "messages" || e.category === "notes") && e.tab !== "meetings" },
+];
+const PAGE = 20;
+
+/** A line the server writes with "a · b": its parts, for a bar between them (design rules 1). Never cut inside “…”: the
+    client's own words (an event called "Trip · Rome") stay whole. `bars`: " | " parts it too, for the board's own strings
+    alone (a tile's "P 200 | C 300 | F 80"); Activity's texts carry session names that may hold one ("Upper | Push"). */
+const parts = (s: string, bars = false) => {
   const out: string[] = [];
   let depth = 0;
   let from = 0;
   for (let i = 0; i < s.length; i++) {
     if (s[i] === "“") depth++;
     else if (s[i] === "”") depth = Math.max(0, depth - 1);
-    else if (depth === 0 && s.startsWith(" · ", i)) {
+    else if (depth === 0 && (s.startsWith(" · ", i) || (bars && s.startsWith(" | ", i)))) {
       out.push(s.slice(from, i));
       from = i + 3;
       i += 2;
@@ -108,6 +107,42 @@ const parts = (s: string) => {
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 /** The card's dates as every date in words is written (design rules 7): 25/5, 12/3/1994. */
 const dated = (rows: OverviewInfoRow[]) => rows.map((r) => (ISO_DAY.test(r.value) ? { ...r, value: dayMonth(r.value) } : r));
+/** A day or a moment, as a time: a yyyy-mm-dd day at its noon. */
+const timeOf = (d: string) => new Date(ISO_DAY.test(d) ? `${d}T12:00:00` : d).getTime();
+/** An Activity row's clock time ("18:48"), from the server's "21/10 · 18:48"; none when only the day is known. */
+const clockOf = (when: string) => parts(when).find((p) => /^\d{1,2}:\d{2}$/.test(p)) ?? null;
+
+// ---- Figures in words.
+const MINUS = "−";
+/** One decimal, with its sign: +1.2, −0.4, 0.0. */
+const signed1 = (n: number) => {
+  const r = Math.round(n * 10) / 10;
+  return `${r > 0 ? "+" : r < 0 ? MINUS : ""}${Math.abs(r).toFixed(1)}`;
+};
+const kg1 = (n: number) => `${(Math.round(n * 10) / 10).toFixed(1)} kg`;
+const money = (n: number, currency: string) => new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(n || 0);
+/** "2 sessions", "1 check-in"; nothing for none, so the part drops out. */
+const count = (n: number, one: string, many: string) => (n > 0 ? `${n} ${n === 1 ? one : many}` : null);
+/** Volume per group, one unit for the whole chart from its largest value: all in t once that reaches 1000 kg (one
+    decimal under 10 t: "4.2 t", "22 t"), else all in kg; nothing as "0". */
+const volumeIn = (max: number) => (v: number) => {
+  if (!(v > 0)) return "0";
+  if (max < 1000) return `${Math.round(v)} kg`;
+  const t = v / 1000;
+  return `${t < 10 ? Math.max(0.1, Math.round(t * 10) / 10) : Math.round(t)} t`;
+};
+const setsOf = (v: number) => String(Math.round(v));
+/** Strength's change: one decimal under 10%, whole above; a real minus. */
+const pctOf = (p: number) => (Math.abs(p) < 10 ? Math.round(p * 10) / 10 : Math.round(p));
+const pctText = (r: number) => (r === 0 ? "0%" : `${r > 0 ? "+" : MINUS}${Math.abs(r)}%`);
+
+// The radar's axes, clockwise from the top (21 Oct, Alex's mockup).
+const AXES: MuscleGroup[] = ["Back", "Chest", "Core", "Legs", "Shoulders", "Arms"];
+/** Strength's rows: the same six groups, always all of them (21 Oct, Alex), in the contract's order (MUSCLE_GROUPS,
+    written out here: homeBoard.ts's values would bring the server's reader into the browser). */
+const STRENGTH_GROUPS: MuscleGroup[] = ["Back", "Chest", "Shoulders", "Arms", "Legs", "Core"];
+type Measure = "sets" | "volume";
+type Span = "7d" | "30d" | "phase" | "plan";
 
 export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { clientId: number; firstName: string; home: DraftHome; onOpenTab: (tab: string) => void }) {
   const router = useRouter();
@@ -132,32 +167,17 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
   const [deleting, setDeleting] = useState(false);
   const [photo, setPhoto] = useState(false);
   const panel = useMemo(() => ({ ...home.panel, memberInfo: dated(home.panel.memberInfo), coachingInfo: dated(home.panel.coachingInfo) }), [home.panel]);
+  const board = home.board;
 
-  // Keeping up's pick, ahead of the server's answer, so the ticks move at once.
-  const [picked, setPicked] = useState<string[] | null>(null);
-  const chosenParts = picked ?? home.engagement.chosen;
-  const toggleSpart = (id: string) => {
-    const next = chosenParts.includes(id) ? chosenParts.filter((x) => x !== id) : [...chosenParts, id];
-    if (next.length === 0) return;
-    setPicked(next);
-    act(() => setEngagementPartsAction(clientId, next));
-  };
-  const eng = home.engagement;
-  const shift = eng.overall == null || eng.previous == null ? null : eng.overall - eng.previous;
-
-  // Marked as read: gone at once, the server catching up behind.
-  const [done, setDone] = useState<Set<string>>(() => new Set());
-  const needs = home.actions.filter((a) => !done.has(a.id));
-
-  const [filter, setFilter] = useState<FilterId>(FILTERS[0].id);
+  const [filter, setFilter] = useState(FILTERS[0].id);
   const [page, setPage] = useState(1);
-  const holds = FILTERS.find((f) => f.id === filter)!.holds as readonly string[];
-  const matching = home.events.filter((e) => holds.includes(e.category));
+  const has = (FILTERS.find((f) => f.id === filter) ?? FILTERS[0]).has;
+  const matching = home.events.filter(has);
   const pages = Math.max(1, Math.ceil(matching.length / PAGE));
   const at = Math.min(page, pages);
   const from = (at - 1) * PAGE;
   const shown = matching.slice(from, from + PAGE);
-  const pick = (id: FilterId) => {
+  const pick = (id: string) => {
     setFilter(id);
     setPage(1);
   };
@@ -167,16 +187,17 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
     if (t) onOpenTab(t);
   };
 
-  const needGrid = { gridTemplateColumns: "minmax(0, 1fr) 128px 84px 92px", columnGap: 16 } as const;
-  const actGrid = { gridTemplateColumns: "130px minmax(0, 1fr)", columnGap: 24 } as const;
+  // The date column holds "Wed, 30 Sep  18:48".
+  const actGrid = { gridTemplateColumns: "148px minmax(0, 1fr)", columnGap: 20 } as const;
 
   return (
     <div className="rd trn rls rh">
-      {/* ---- Header: Training's, with the face before the name. No fact line, so no room kept for one. */}
+      {/* ---- Header: Training's, with the face before the name. No fact line, so no room kept for one. The face and
+          "Client since" sit on the name's (first) line, however many lines the whole name takes. */}
       <header className="trn-head bare">
         <div className="trn-head-main">
           <span className="trn-eyebrow">Home</span>
-          <div className="trn-name-row">
+          <div className="trn-name-row rh-name-row">
             {/* The face opens large. */}
             <button
               type="button"
@@ -193,7 +214,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
                 home.initial
               )}
             </button>
-            <h1 className="trn-name">{home.name}</h1>
+            <h1 className="trn-name rh-name">{home.name}</h1>
             {home.clientSince && <span className="rh-since">{home.clientSince}</span>}
           </div>
         </div>
@@ -219,166 +240,43 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
         </div>
       </header>
 
-      {/* ---- The figures the coach checks first, in one hairline card. */}
-      <section className="rls-card rh-figs" aria-label="At a glance">
-        {home.snapshot.map((s) => (
-          <div key={s.label} className="rh-fig">
-            <span className="rh-fig-label">{s.label}</span>
-            <b className={s.attention ? "warn" : ""}>{s.value}</b>
-            {s.suffix && (
-              <small>
-                <SepJoin parts={parts(s.suffix)} />
-              </small>
-            )}
-          </div>
-        ))}
+      <SinceLine since={board.since} />
+
+      {/* ---- The three tracks, in their order: the phase, its week, the one figure. A tile opens its tab (Plan when none). */}
+      <section className="rh-tiles" aria-label="Phases">
+        {[...board.tracks]
+          .sort((a, b) => TRACK_ORDER.indexOf(a.track) - TRACK_ORDER.indexOf(b.track))
+          .map((t) => (
+            <PhaseTile key={t.track} tile={t} onOpen={() => onOpenTab(t.phase ? TRACK_TAB[t.track] : "plan")} />
+          ))}
       </section>
 
-      {/* ---- Keeping up: one score, the behaviours it is the mean of. */}
-      {eng.options.some((o) => o.available) && (
-        <section className="rls-section">
-          <div className="trn-weekhead">
-            <div>
-              <h2>Keeping up</h2>
-              <span title={eng.since ? `Counted from ${dayMonth(eng.since)}, their first day` : undefined}>Last {eng.days} days</span>
-            </div>
-            <div className="trn-weekhead-actions">
-              {/* What counts for this client (12 Oct): the coach's pick, at least one. */}
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className="trn-pill">
-                  What counts <ChevronDownIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="pb-menu">
-                  <div className="rh-parts-label">Counted in {firstName}&rsquo;s score</div>
-                  {eng.options.map((o) => (
-                    <DropdownMenuCheckboxItem
-                      key={o.id}
-                      checked={chosenParts.includes(o.id)}
-                      disabled={!o.available || (chosenParts.length === 1 && chosenParts.includes(o.id))}
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        toggleSpart(o.id);
-                      }}
-                    >
-                      <span className="rh-part-opt">
-                        {o.label}
-                        {o.why && <small>{o.why}</small>}
-                      </span>
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-          <div className="rls-card rh-board">
-            <div className="rh-score">
-              <Dial pct={eng.overall} />
-              <span className="rh-score-word">Overall</span>
-              {shift != null && (
-                <span className={`rh-trend ${shift > 0 ? "up" : shift < 0 ? "down" : "flat"}`}>
-                  {shift === 0 ? `Level with the ${eng.days} days before` : `${shift > 0 ? "▲" : "▼"} ${Math.abs(shift)}% vs the ${eng.days} days before`}
-                </span>
-              )}
-            </div>
-            <div className="rh-parts">
-              {eng.parts.map((p) => (
-                <div key={p.id} className="rh-part">
-                  <span className="rh-part-name">{p.label}</span>
-                  <span className="rh-part-pct">{p.pct}%</span>
-                  <span className="rh-part-track">
-                    <span className={`rh-part-fill ${tone(p.pct)}`} style={{ width: `${Math.max(0, Math.min(100, p.pct))}%` }} />
-                  </span>
-                  <span className="rh-part-detail">
-                    <SepJoin parts={[p.detail, p.note]} />
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ---- Needs you: what is waiting on the coach. A click opens the thing (12 Oct); on hover, Reply opens the chat
-          about it, and ✓ marks it read so it leaves. */}
-      <section className="rls-section">
-        <div className="trn-weekhead">
-          <div>
-            <h2>Needs you</h2>
-            {needs.length > 0 && <span>{needs.length} open</span>}
-          </div>
+      {/* ---- Muscle balance beside Strength and Weight. */}
+      <div className="rh-duo">
+        <MuscleCard muscles={board.muscles} />
+        <div className="rh-stack">
+          <StrengthCard strength={board.strength} />
+          <WeightCard weight={board.weight} />
         </div>
-        <div className="rls-card rh-card">
-          {needs.length === 0 ? (
-            <p className="rls-none">All clear</p>
-          ) : (
-            <div className="rh-rows">
-              {needs.map((a) => {
-                const t = TONE[a.tone];
-                // The title semi-bold; the rest of it and the detail grey after it, parted by bars. The client's own words in quotes.
-                const [head, ...rest] = parts(a.title);
-                const grey = [...rest, ...(a.detail ? (a.quote ? [`“${a.detail}”`] : parts(a.detail)) : [])];
-                return (
-                  <div key={a.id} className="rls-row rh-row">
-                    {/* A click anywhere opens it; for the keyboard the title is the button, the actions its siblings. */}
-                    <div className="rls-row-main" style={needGrid} onClick={() => router.push(a.open)}>
-                      <span className="rh-what">
-                        <button type="button" className="rd-row-hit rh-what-title">
-                          {head}
-                        </button>
-                        {grey.length > 0 && (
-                          <span className={`rh-what-note${a.quote ? " quote" : ""}`}>
-                            <SepJoin parts={grey} />
-                          </span>
-                        )}
-                      </span>
-                      <span>{a.tab && <TabTag tab={a.tab} />}</span>
-                      <span>
-                        <span className={`trn-state rh-state ${t.cls}`}>{t.text}</span>
-                      </span>
-                      <span className="rh-acts" onClick={(e) => e.stopPropagation()}>
-                        {a.reply && openChat && (
-                          <button
-                            type="button"
-                            className="rh-reply"
-                            onClick={() => {
-                              const r = a.reply!;
-                              openChat(r.link ? { area: r.area, label: r.label, link: r.link } : null, r.focus);
-                            }}
-                          >
-                            Reply
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="trn-row-more rh-done"
-                          onClick={() => {
-                            setDone((d) => new Set(d).add(a.id));
-                            act(() => dismissHomeActionAction(clientId, a.id));
-                          }}
-                          aria-label="Mark as read"
-                          title="Mark as read"
-                        >
-                          <CheckIcon />
-                        </button>
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
+      </div>
 
-      {/* ---- Activity: what they did, one kind at a time. A log (design rules 8): the date the light part, the thing
-          semi-bold, the rest in grey after it on the one line. A row opens the thing on its tab. */}
+      {/* ---- Consistency, and beside it the calls and the invoices, each a card that opens its tab. */}
+      <div className="rh-trio">
+        <ConsistencyCard days={board.days} />
+        <MeetingsCard next={board.nextCall} last={board.lastCall} onOpen={() => onOpenTab("meetings")} />
+        <InvoicesCard owed={board.outstanding} next={board.nextInvoice} onOpen={() => onOpenTab("invoices")} />
+      </div>
+
+      {/* ---- Activity: what they did, one kind at a time. A log (design rules 8): the date first as every log's
+          (logDate, .rd-logdate) with the time faint after it, the thing semi-bold, the rest in grey after it on the one
+          line. A row opens the thing on its tab. */}
       <section className="rls-section">
         <div className="trn-weekhead">
           <div>
             <h2>Activity</h2>
           </div>
-          <div className="trn-weekhead-actions">
-            <div className="rd-btn-group" role="group" aria-label="Which kind">
+          <div className="trn-weekhead-actions rh-kinds-wrap">
+            <div className="rd-btn-group rh-kinds" role="group" aria-label="Which kind">
               {FILTERS.map((f) => (
                 <button key={f.id} type="button" className={filter === f.id ? "on" : ""} aria-pressed={filter === f.id} onClick={() => pick(f.id)}>
                   {f.label}
@@ -394,11 +292,13 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
             <div className="rh-rows">
               {shown.map((e) => {
                 const [head, ...rest] = parts(e.text.charAt(0).toUpperCase() + e.text.slice(1));
+                const clock = clockOf(e.when);
                 return (
                   <div key={e.id} className="rls-row rh-row">
                     <div className="rls-row-main" style={actGrid} onClick={() => go(e)}>
                       <span className="rh-when">
-                        <SepJoin parts={parts(e.when)} />
+                        <span className="rd-logdate">{logDate(new Date(e.at))}</span>
+                        {clock && <span className="rh-clock">{clock}</span>}
                       </span>
                       <span className="rh-what">
                         <button type="button" className="rd-row-hit rh-what-title">
@@ -491,63 +391,452 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
   );
 }
 
-/** The tab that deals with a Needs-you row: a track's tag in its colour, the rest grey; one width down the column. */
-function TabTag({ tab }: { tab: string }) {
-  const track = TRACK_OF[tab];
-  if (track)
-    return (
-      <span className="rh-tag" style={{ color: TRACK_PALETTE[track].ink, background: TRACK_PALETTE[track].tint }}>
-        <TrackIcon track={track} size={12} />
-        {TRACK_LABEL[track]}
-      </span>
-    );
-  const o = OTHER_TAG[tab];
-  if (!o) return null;
+// ---- Since the coach last looked: one quiet line, the date in ink, each count only when there is one.
+function SinceLine({ since }: { since: HomeBoard["since"] }) {
+  if (!since) return null;
+  const w = since.weightChange == null || Math.round(since.weightChange * 10) === 0 ? null : `${signed1(since.weightChange)} kg`;
+  const facts = [
+    count(since.sessions, "session", "sessions"),
+    count(since.checkIns, "check-in", "check-ins"),
+    count(since.foodDays, "food day", "food days"),
+    w,
+    count(since.messages, "message", "messages"),
+  ];
+  if (facts.every((f) => f == null)) return null;
   return (
-    <span className="rh-tag grey">
-      {o.icon}
-      {o.label}
+    <p className="rh-sinceline">
+      <SepJoin
+        parts={[
+          <span key="from">
+            Since <b>{dayMonth(since.from)}</b>
+          </span>,
+          ...facts,
+        ]}
+      />
+    </p>
+  );
+}
+
+/** A tile's grey line, parted by bars; each part kept whole, so a narrow tile wraps between them ("P 200", "C 300"). */
+const tileLine = (s: string) => (
+  <SepJoin
+    parts={parts(s, true).map((p, i) => (
+      <span key={i} className="rh-nb">
+        {p}
+      </span>
+    ))}
+  />
+);
+
+// ---- A track's tile: its icon and label in its colour, the phase, the week and how far in over a thin bar, then the
+// figure right under it (the grid gives the three one height).
+function PhaseTile({ tile, onOpen }: { tile: HomeBoard["tracks"][number]; onOpen: () => void }) {
+  const p = tile.phase;
+  const pct = p && p.weeks > 0 ? Math.max(0, Math.min(100, (p.weekNow / p.weeks) * 100)) : 0;
+  return (
+    <button type="button" className="rls-card rh-tile" style={{ "--rh-c": TRACK_ACCENT[tile.track] } as CSSProperties} onClick={onOpen}>
+      <span className="rh-tile-track">
+        <TrackIcon track={tile.track} size={14} />
+        {TRACK_LABEL[tile.track]}
+      </span>
+      <span className={`rh-tile-name${p ? "" : " none"}`}>{p ? p.name : "No phase"}</span>
+      {p && (
+        <>
+          <span className="rh-tile-week">
+            <span>
+              Week {p.weekNow} of {p.weeks}
+            </span>
+            <span className="rh-tile-pct">{Math.round(pct)}%</span>
+          </span>
+          <span className="rh-tile-bar" aria-hidden="true">
+            <i style={{ width: `${pct}%` }} />
+          </span>
+        </>
+      )}
+      {tile.figure && (
+        <span className="rh-tile-fig">
+          <b>{tile.figure.value}</b>
+          {tile.figure.suffix && <small>{tileLine(tile.figure.suffix)}</small>}
+        </span>
+      )}
+      {tile.note && <span className="rh-tile-note">{tileLine(tile.note)}</span>}
+    </button>
+  );
+}
+
+// ---- Muscle balance: sets (or volume) per group in a window, as a hexagon, against the window before; or the
+// programme's week, planned against done.
+function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
+  const [measure, setMeasure] = useState<Measure>("sets");
+  const [want, setWant] = useState<Span>("7d");
+  // A window that went away (no phase, no programme any more) falls back to the week.
+  const span: Span = (want === "phase" && !muscles.phase) || (want === "plan" && !muscles.plan) ? "7d" : want;
+  const spans: { id: Span; label: string }[] = [
+    { id: "7d", label: "7d" },
+    { id: "30d", label: "30d" },
+    ...(muscles.phase ? [{ id: "phase" as const, label: "Phase" }] : []),
+    ...(muscles.plan ? [{ id: "plan" as const, label: "Plan" }] : []),
+  ];
+
+  let now: PerGroup;
+  let before: PerGroup;
+  let of: PerGroup | undefined;
+  let nowKey: string;
+  let beforeKey: string;
+  let missed: ReactNode = null;
+  if (span === "plan" && muscles.plan) {
+    // The plan is in sets: done against planned, each axis "9 of 14".
+    now = muscles.plan.done;
+    before = muscles.plan.planned;
+    of = muscles.plan.planned;
+    nowKey = "Done";
+    beforeKey = "Planned";
+    const gap = AXES.map((g) => ({ g, short: (before[g] ?? 0) - (now[g] ?? 0) })).sort((a, b) => b.short - a.short)[0];
+    if (gap && gap.short > 0) missed = `${gap.g} ${setsOf(now[gap.g] ?? 0)} of ${setsOf(before[gap.g] ?? 0)} planned`;
+  } else {
+    const w: MuscleWindow = span === "phase" && muscles.phase ? muscles.phase : span === "30d" ? muscles["30d"] : muscles["7d"];
+    now = measure === "volume" ? w.volume : w.sets;
+    before = measure === "volume" ? w.prevVolume : w.prevSets;
+    nowKey = span === "phase" ? `Since ${dayMonth(w.from)}` : `Last ${span}`;
+    beforeKey = span === "phase" ? "Before" : `${span} before`;
+  }
+  const most = Math.max(0, ...AXES.map((g) => Math.max(now[g] ?? 0, before[g] ?? 0)));
+  const byVolume = span !== "plan" && measure === "volume";
+  const fmt = byVolume ? volumeIn(most) : setsOf;
+  const empty = AXES.every((g) => !(now[g] > 0) && !(before[g] > 0));
+  // Said in full for a screen reader: the measure, the window, and the window before (the dashed shape).
+  const each = (v: PerGroup, out?: PerGroup) => AXES.map((g) => `${g} ${fmt(v[g] ?? 0)}${out ? ` of ${fmt(out[g] ?? 0)}` : ""}`).join(", ");
+  const said =
+    span === "plan" && muscles.plan
+      ? `Sets done of planned, week ${muscles.plan.week}: ${each(now, of)}`
+      : `${byVolume ? "Volume" : "Sets"}, ${nowKey.toLowerCase()}: ${each(now)}. ${beforeKey}: ${each(before)}`;
+
+  return (
+    <section className="rls-card rh-panel rh-muscles" aria-label="Muscle balance" style={{ "--rh-c": TRACK_ACCENT.training } as CSSProperties}>
+      <div className="rh-panel-head tall">
+        <h2 className="rh-panel-title">Muscle balance</h2>
+        {/* The plan is counted in sets alone: no Volume to offer there. */}
+        {span !== "plan" && (
+          <div className="rd-btn-group" role="group" aria-label="Count">
+            {(["sets", "volume"] as const).map((m) => (
+              <button key={m} type="button" className={measure === m ? "on" : ""} aria-pressed={measure === m} onClick={() => setMeasure(m)}>
+                {m === "sets" ? "Sets" : "Volume"}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="rd-btn-group rh-spans" role="group" aria-label="Window">
+        {spans.map((s) => (
+          <button key={s.id} type="button" className={span === s.id ? "on" : ""} aria-pressed={span === s.id} onClick={() => setWant(s.id)}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+      {empty ? (
+        <p className="rls-none">None yet</p>
+      ) : (
+        <>
+          <div className="rh-radar-wrap">
+            <Radar now={now} before={before} fmt={fmt} of={of} label={said} />
+          </div>
+          <div className="rh-key">
+            <span>
+              <i className="line" aria-hidden="true" />
+              {nowKey}
+            </span>
+            <span>
+              <i className="dash" aria-hidden="true" />
+              {beforeKey}
+            </span>
+            {missed && <span className="miss">{missed}</span>}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+// The hexagon: three hairline rings and six spokes, the window before as a dashed grey outline, this one filled in
+// training purple; each axis named outside its corner with this window's figure under the name. It scales with its
+// card up to 440px wide (21 Oct, Alex: "there's a lot of space"), its words with it: at full size the names read about
+// 13px and the figures 15px. The sides keep room for the longest name and figure ("Shoulders", "14 of 22").
+const RW = 384;
+const RH = 354;
+const CX = RW / 2;
+const CY = 176;
+const RR = 135;
+const corner = (i: number, r: number) => {
+  const a = ((-90 + 60 * i) * Math.PI) / 180;
+  return [Math.round((CX + r * Math.cos(a)) * 10) / 10, Math.round((CY + r * Math.sin(a)) * 10) / 10] as const;
+};
+function Radar({ now, before, fmt, of, label }: { now: PerGroup; before: PerGroup; fmt: (v: number) => string; of?: PerGroup; label: string }) {
+  const scale = Math.max(1, ...AXES.map((g) => Math.max(now[g] ?? 0, before[g] ?? 0)));
+  const shape = (v: PerGroup) => AXES.map((g, i) => corner(i, (RR * Math.max(0, v[g] ?? 0)) / scale).join(",")).join(" ");
+  const ring = (f: number) => AXES.map((_, i) => corner(i, RR * f).join(",")).join(" ");
+  return (
+    <svg className="rh-radar" viewBox={`0 0 ${RW} ${RH}`} role="img" aria-label={label}>
+      {[1 / 3, 2 / 3, 1].map((f) => (
+        <polygon key={f} points={ring(f)} fill="none" stroke="#e1e5eb" strokeWidth={1} />
+      ))}
+      {AXES.map((g, i) => {
+        const [x, y] = corner(i, RR);
+        return <line key={g} x1={CX} y1={CY} x2={x} y2={y} stroke="#e1e5eb" strokeWidth={1} />;
+      })}
+      <polygon points={shape(before)} fill="none" stroke="#98a2b3" strokeWidth={1.5} strokeDasharray="4 3" strokeLinejoin="round" />
+      <polygon points={shape(now)} fill={TRACK_ACCENT.training} fillOpacity={0.12} stroke={TRACK_ACCENT.training} strokeWidth={2} strokeLinejoin="round" />
+      {AXES.map((g, i) => {
+        const [x, y] = corner(i, RR + 10);
+        // Top and bottom: centred over / under the corner; the sides: beside it, the two lines either side of its height.
+        const anchor = i === 0 || i === 3 ? "middle" : i < 3 ? "start" : "end";
+        const [nameY, valueY] = i === 0 ? [y - 17, y - 2] : i === 3 ? [y + 12, y + 27] : [y - 3, y + 13];
+        return (
+          <g key={g} aria-hidden="true">
+            <text className="rh-radar-name" x={x} y={nameY} textAnchor={anchor}>
+              {g}
+            </text>
+            <text className="rh-radar-val" x={x} y={valueY} textAnchor={anchor}>
+              {fmt(now[g] ?? 0)}
+              {of && <tspan className="rh-radar-of"> of {fmt(of[g] ?? 0)}</tspan>}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ---- Strength: all six groups, each the change since the phase began as a thin ink bar and the %: green up, red
+// down; a group with nothing to compare an empty bar and a grey "–".
+function StrengthCard({ strength }: { strength: HomeBoard["strength"] }) {
+  const rows = STRENGTH_GROUPS.map((g) => {
+    const x = strength?.groups.find((s) => s.group === g);
+    return { group: g, r: x ? pctOf(x.pct) : null, exercises: x?.exercises ?? 0 };
+  });
+  const most = Math.max(0, ...rows.map((x) => Math.abs(x.r ?? 0)));
+  return (
+    <section className="rls-card rh-panel" aria-label="Strength">
+      <div className="rh-panel-head">
+        <h2 className="rh-panel-title">Strength</h2>
+        {strength && <span className="rh-panel-aside">since {dayMonth(strength.since)}</span>}
+      </div>
+      <div className="rh-str">
+        {rows.map((x) => (
+          <div key={x.group} className="rh-str-row" title={x.r == null ? undefined : `${x.exercises} exercise${x.exercises === 1 ? "" : "s"}`}>
+            <span className="rh-str-name">{x.group}</span>
+            <span className="rh-str-track" aria-hidden="true">
+              <i style={{ width: !x.r || most === 0 ? 0 : `max(2px, ${(Math.abs(x.r) / most) * 100}%)` }} />
+            </span>
+            {x.r == null ? (
+              <span className="rh-str-pct none">
+                <span aria-hidden="true">–</span>
+                <span className="sr-only">none yet</span>
+              </span>
+            ) : (
+              <span className={`rh-str-pct${x.r > 0 ? " up" : x.r < 0 ? " down" : ""}`}>{pctText(x.r)}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ---- Weight: the latest and the change on the title's line; the phase's readings as one ink line, the latest a dot
+// (from two readings); where they are heading, when there is a phase. "None yet" only with no weight at all.
+function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
+  const points = weight ? [...weight.points].sort((a, b) => timeOf(a.date) - timeOf(b.date)) : [];
+  const latest = weight ? (weight.now ?? points.at(-1)?.value ?? null) : null;
+  if (!weight || latest == null)
+    return (
+      <section className="rls-card rh-panel rh-weight" aria-label="Weight">
+        <div className="rh-panel-head">
+          <h2 className="rh-panel-title">Weight</h2>
+        </div>
+        <p className="rls-none">None yet</p>
+      </section>
+    );
+  const head = (
+    <div className="rh-panel-head">
+      <h2 className="rh-panel-title">Weight</h2>
+      <span className="rh-wt">
+        <SepJoin
+          parts={[
+            <b key="now">{kg1(latest)}</b>,
+            weight.change != null ? (
+              <span key="change">
+                {signed1(weight.change)} kg <small>since {dayMonth(weight.since)}</small>
+              </span>
+            ) : null,
+          ]}
+        />
+      </span>
+    </div>
+  );
+  if (points.length < 2)
+    return (
+      <section className="rls-card rh-panel rh-weight" aria-label="Weight">
+        {head}
+      </section>
+    );
+  const ts = points.map((p) => timeOf(p.date));
+  const span = ts[ts.length - 1] - ts[0] || 1;
+  const vs = points.map((p) => p.value);
+  const pad = Math.max((Math.max(...vs) - Math.min(...vs)) * 0.15, 0.4);
+  const lo = Math.min(...vs) - pad;
+  const hi = Math.max(...vs) + pad;
+  const xy = points.map((p, i) => [((ts[i] - ts[0]) / span) * 100, ((hi - p.value) / (hi - lo)) * 100] as const);
+  const d = xy.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)} ${y.toFixed(2)}`).join(" ");
+  const [lx, ly] = xy[xy.length - 1];
+  return (
+    <section className="rls-card rh-panel rh-weight" aria-label="Weight">
+      {head}
+      <div className="rh-spark" role="img" aria-label={`Weight from ${kg1(points[0].value)} on ${dayMonth(points[0].date)} to ${kg1(points[points.length - 1].value)} on ${dayMonth(points[points.length - 1].date)}`}>
+        {/* The line stretches to the card; its stroke and the dot keep their size. */}
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path d={d} fill="none" stroke="#141a24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        </svg>
+        <span className="rh-spark-dot" style={{ left: `${lx}%`, top: `${ly}%` }} aria-hidden="true" />
+      </div>
+      {weight.projection && (
+        <p className="rh-pace">
+          On pace for {kg1(weight.projection.value)} by {dayMonth(weight.projection.date)}
+        </p>
+      )}
+    </section>
+  );
+}
+
+// ---- Consistency: the last four weeks, a square a day per behaviour, filled in its track's colour when done.
+const CONS: { key: "trained" | "food" | "checkIn"; label: string; track: PhaseTrack; yes: string; no: string }[] = [
+  { key: "trained", label: "Trained", track: "training", yes: "trained", no: "no session" },
+  { key: "food", label: "Food", track: "nutrition", yes: "food logged", no: "no food logged" },
+  { key: "checkIn", label: "Check-in", track: "lifestyle", yes: "checked in", no: "no check-in" },
+];
+function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
+  // A Monday starts a week: a little more air before it, so the weeks read.
+  const monday = days.map((d, i) => i > 0 && new Date(timeOf(d.date)).getDay() === 1);
+  return (
+    <section className="rls-card rh-panel rh-cons" aria-label="Consistency">
+      <div className="rh-panel-head">
+        <h2 className="rh-panel-title">Consistency</h2>
+        <span className="rh-panel-aside">Last 4 weeks</span>
+      </div>
+      {days.length === 0 ? (
+        <p className="rls-none">None yet</p>
+      ) : (
+        <div className="rh-cons-rows">
+          {CONS.map((c) => {
+            const done = days.filter((d) => d[c.key]).length;
+            return (
+              <div key={c.key} className="rh-cons-row" style={{ "--rh-c": TRACK_ACCENT[c.track] } as CSSProperties}>
+                <span className="rh-cons-label">{c.label}</span>
+                <span className="rh-cons-days" role="img" aria-label={`${c.label}: ${done} of the last ${days.length} days`}>
+                  {days.map((d, i) => (
+                    <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${monday[i] ? " mon" : ""}`} title={`${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />
+                  ))}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** A small-caps label and its fact under it, in a card that opens a tab. */
+function SideFact({ label, children }: { label?: string; children: ReactNode }) {
+  return (
+    <span className="rh-side-fact">
+      {label && <span className="rh-side-label">{label}</span>}
+      <span className="rh-side-line">{children}</span>
     </span>
   );
 }
 
-// The overall, as one dial.
-const STROKE = 7;
-const SIZE = 112;
-const R = (SIZE - STROKE) / 2;
-const C = 2 * Math.PI * R;
-/** null: nothing to count yet (what the coach picked can't be counted for this client): an empty ring and a dash, no colour. */
-function Dial({ pct }: { pct: number | null }) {
-  const filled = pct == null ? 0 : (Math.max(0, Math.min(100, pct)) / 100) * C;
+// ---- Meetings, beside Consistency: the next call booked and the last one over, each its date and title. Opens Meetings.
+function MeetingsCard({ next, last, onOpen }: { next: HomeBoard["nextCall"]; last: HomeBoard["lastCall"]; onOpen: () => void }) {
   return (
-    <div className="rh-dial" style={{ width: SIZE, height: SIZE }}>
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} aria-hidden="true">
-        <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
-          <circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke="#eef0f3" strokeWidth={STROKE} />
-          <circle
-            className={`rh-dial-arc${pct == null ? "" : ` ${tone(pct)}`}`}
-            cx={SIZE / 2}
-            cy={SIZE / 2}
-            r={R}
-            fill="none"
-            strokeWidth={STROKE}
-            strokeLinecap="round"
-            strokeOpacity={filled > 0.5 ? 1 : 0}
-            style={{ strokeDasharray: `${filled} ${C}` }}
-          />
-        </g>
-      </svg>
-      <span className={`rh-dial-figure${pct == null ? " none" : ""}`}>
-        {pct == null ? (
-          "–"
+    <button type="button" className="rls-card rh-panel rh-side" onClick={onOpen}>
+      <span className="rh-panel-title">Meetings</span>
+      <span className="rh-side-facts">
+        <SideFact label="Next call">
+          {next ? (
+            <SepJoin
+              parts={[
+                <b key="d">
+                  {dayMonth(next.date)}
+                  {next.time ? `, ${next.time}` : ""}
+                </b>,
+                next.title ? (
+                  <span key="t" className="rh-side-what">
+                    {next.title}
+                  </span>
+                ) : null,
+              ]}
+            />
+          ) : (
+            <span className="rh-side-none">None booked</span>
+          )}
+        </SideFact>
+        <SideFact label="Last call">
+          {last ? (
+            <SepJoin
+              parts={[
+                <b key="d">{dayMonth(last.date)}</b>,
+                last.title ? (
+                  <span key="t" className="rh-side-what">
+                    {last.title}
+                  </span>
+                ) : null,
+                last.missed ? (
+                  <span key="m" className="rh-side-missed">
+                    Missed
+                  </span>
+                ) : null,
+              ]}
+            />
+          ) : (
+            <span className="rh-side-none">None yet</span>
+          )}
+        </SideFact>
+      </span>
+    </button>
+  );
+}
+
+// ---- Invoices, beside Meetings: what is owed (rust) and the next one a series will make. Opens Invoices.
+function InvoicesCard({ owed, next, onOpen }: { owed: HomeBoard["outstanding"]; next: HomeBoard["nextInvoice"]; onOpen: () => void }) {
+  return (
+    <button type="button" className="rls-card rh-panel rh-side" onClick={onOpen}>
+      <span className="rh-panel-title">Invoices</span>
+      <span className="rh-side-facts">
+        {owed ? (
+          <SideFact label="Outstanding">
+            <SepJoin
+              parts={[
+                <b key="a" className="owed">
+                  {money(owed.amount, owed.currency)}
+                </b>,
+                <span key="n" className="rh-side-what">
+                  {owed.count} invoice{owed.count === 1 ? "" : "s"}
+                </span>,
+              ]}
+            />
+          </SideFact>
         ) : (
-          <>
-            {Math.round(pct)}
-            <small>%</small>
-          </>
+          <SideFact>
+            <span className="rh-side-none">Nothing outstanding</span>
+          </SideFact>
+        )}
+        {next && (
+          <SideFact label="Next">
+            <SepJoin parts={[<b key="d">{dayMonth(next.date)}</b>, <span key="a">{money(next.amount, next.currency)}</span>]} />
+          </SideFact>
         )}
       </span>
-    </div>
+    </button>
   );
 }
 

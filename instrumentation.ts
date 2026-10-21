@@ -30,6 +30,22 @@ export async function register() {
     setInterval(remind, 5 * 60_000).unref?.();
     setTimeout(remind, 90_000).unref?.();
   }
+  // Recurring invoices (21 Oct): each series makes its next invoice on its day, checked every ten minutes. Locally
+  // too, so a series can be seen working; the client's buzz for a sent one only from the live server (as reminders).
+  if (process.env.RECURRING_INVOICES !== "off") {
+    const { runRecurringInvoices } = await import("./app/lib/queries");
+    const buzz = meetingRemindersOn();
+    const make = () => {
+      try {
+        const n = runRecurringInvoices(undefined, buzz);
+        if (n) console.log(`[invoices] made ${n} recurring`);
+      } catch (e) {
+        console.error("[invoices] recurring failed:", e instanceof Error ? e.message : e);
+      }
+    };
+    setInterval(make, 10 * 60_000).unref?.();
+    setTimeout(make, 60_000).unref?.();
+  }
   const { runBackup, msUntilNextRun, backupConfigured } = await import("./app/lib/backup");
   if (!backupConfigured()) return;
 

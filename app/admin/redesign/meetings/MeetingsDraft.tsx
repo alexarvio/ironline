@@ -17,7 +17,7 @@ import { allTimezones, SERVER_TZ, tzShort, zonedToUtc } from "../../../lib/timez
 import TimezonePicker from "./TimezonePicker";
 import Picker from "../Picker";
 import { useOpenChat } from "../ChatPanel";
-import { dayMonth } from "../../../lib/dayMonth";
+import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { SepJoin } from "../Sep";
 import { Fold } from "../Fold";
 
@@ -90,9 +90,8 @@ const addDaysIso = (iso: string, n: number) => {
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
 const monthCap = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short" });
 const dayNum = (d: string) => String(parse(d).getDate());
-/** Dates in words are day/month (dayMonth, 20 Oct, Alex); the day picker's head and the past calls' Date column keep their words. */
+/** Dates in words are day/month (dayMonth, 20 Oct, Alex); the day picker's head keeps its words, and the past calls lead with logDate (21 Oct). */
 const dayHead = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
-const dateCol = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 const toMin = (t: string) => {
   const [h, m] = t.split(":").map((x) => Number(x) || 0);
   return h * 60 + m;
@@ -445,9 +444,9 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                     {/* A click anywhere opens it; for the keyboard the date is the button, ⋯ its sibling. */}
                     <div className="rd-row-main" style={pGrid} onClick={() => setOpenPast((x) => (x === m.id ? null : m.id))}>
                       <span className="rd-ex">
-                        <span className="rd-ex-name rt-date">
+                        <span className="rd-ex-name">
                           <button type="button" className="rd-row-hit" aria-expanded={isOpen}>
-                            {dateCol(m.date)}
+                            <span className="rd-logdate">{logDate(m.date)}</span>
                             <Fold open={isOpen} />
                           </button>
                         </span>

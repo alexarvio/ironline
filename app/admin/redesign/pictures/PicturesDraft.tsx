@@ -22,7 +22,7 @@ import { MonthRange } from "../MonthRange";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
-import { dayMonth } from "../../../lib/dayMonth";
+import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
 
 // The Progress pictures tab (21 Oct, Alex), built as Training's header:
@@ -349,6 +349,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
           </div>
           <div ref={tableRef} className="rp-card rp-table">
             <div className="rp-thead" aria-hidden="true">
+              <span>Date</span>
               <span>Sheet</span>
               <span>Photos</span>
               <span>Weight</span>
@@ -360,11 +361,14 @@ function Pictures({ clientId, firstName, plan }: Props) {
               const isOpen = openRow === sh.period;
               return (
                 <div key={sh.period} className={`rp-tgroup${isOpen ? " open" : ""}`}>
-                  <button type="button" className="rp-trow" aria-expanded={isOpen} aria-label={`${sh.title}, ${sh.dateLabel}, ${sh.inCount} of ${sh.total} photos, ${st.text}`} onClick={() => setOpenRow((x) => (x === sh.period ? null : sh.period))}>
+                  <button type="button" className="rp-trow" aria-expanded={isOpen} aria-label={`${logDate(sh.period)}, ${sh.title}, ${sh.inCount} of ${sh.total} photos, ${st.text}`} onClick={() => setOpenRow((x) => (x === sh.period ? null : sh.period))}>
+                    {/* The date first, the chevron after it, then the sheet's name (21 Oct, Alex: as every log). */}
+                    <span className="rp-tdate">
+                      <span className="rd-logdate">{logDate(sh.period)}</span>
+                      <Fold open={isOpen} />
+                    </span>
                     <span className="rp-tsheet">
                       <b>{sh.title}</b>
-                      <small>{sh.dateLabel}</small>
-                      <Fold open={isOpen} />
                     </span>
                     <span className={`rp-bars${sh.complete ? " done" : ""}`} aria-hidden="true">
                       {sh.cells.map((c) => (

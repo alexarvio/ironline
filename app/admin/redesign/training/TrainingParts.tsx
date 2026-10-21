@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog } from "../../../components/ui/dialog";
 import { ConfirmDialog, type DraftAnswered, type DraftProgram } from "./TrainingDraft";
 import { SepJoin } from "../Sep";
+import { logDate } from "../../../lib/dayMonth";
 
 // The Training tab's restructure (19 Oct, Alex's spec): the header's goals
 // and note as two pills with one pop-over, the weeks as a rail of cards, and
@@ -346,7 +347,6 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
     if (a.kind === "text") return (a.text ?? "").trim() || "–";
     return a.value == null ? "–" : `${a.value}${a.kind === "number" && a.unit ? ` ${a.unit}` : ""}`;
   };
-  const when = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   // The question columns share the width (each wide enough for its name, its average and the ✕), so a wide screen isn't left empty.
   const grid = { gridTemplateColumns: `110px minmax(180px, 1.4fr) repeat(${labels.length}, minmax(210px, 1fr))` } as const;
   const minW = 110 + 180 + labels.length * 210;
@@ -404,7 +404,7 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
             ) : (
               rows.map((it) => (
                 <Link key={it.dayId} href={href(it)} scroll={false} className="trn-ans-row" style={grid} title={`Open ${it.name}, ${it.weekLabel}`}>
-                  <span>{when(it.ended)}</span>
+                  <span className="rd-logdate">{logDate(it.ended)}</span>
                   <span className="trn-ans-session">
                     {it.name} <small>{it.weekLabel}</small>
                   </span>

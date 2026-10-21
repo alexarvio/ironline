@@ -74,6 +74,9 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-fold svg { width: 16px; height: 16px; }
 .rd-fold.open { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) { .rd-fold { transition: none; } }
+/* A feed's or a log's date (21 Oct, Alex): the first thing in every row, `Tue, 21 Oct` (logDate in lib/dayMonth.ts), then
+   the thing's name. Drawn as the after-workout check's date on every tab: 13.5px, 500, body grey, tabular numerals. */
+.rd-logdate { flex: none; font-size: 13.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #3a4250; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* The button that opens such a row (its title and chevron): no look of its own, the row's click does the same and the
    ring goes round the whole row (nutrition.css, meetings.css). Controls in the row stay its siblings, never inside it. */
 .rd-row-hit { display: inline-flex; align-items: inherit; gap: inherit; min-width: 0; max-width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }

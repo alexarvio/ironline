@@ -21,7 +21,7 @@ import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan
 import PhaseSwitcher from "../PhaseSwitcher";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
-import { dayMonth } from "../../../lib/dayMonth";
+import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
 import { Sep } from "../Sep";
 import { Fold } from "../Fold";
@@ -102,12 +102,6 @@ const n = (v: number) => Math.round(v).toLocaleString("en-US");
 const PAGE = 20;
 // A typed change waits this long for the next keystroke before it goes.
 const QUIET_MS = 800;
-const fmtDay = (iso: string) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
 
 type MacroText = { protein: string; carbs: string; fats: string };
 const textOf = (m: Macros): MacroText => ({
@@ -1282,7 +1276,7 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
         <span className="rd-ex">
           <span className="rd-ex-name">
             <button type="button" className="rd-row-hit" aria-expanded={open}>
-              {fmtDay(day.date)}
+              <span className="rd-logdate">{logDate(day.date)}</span>
               <Fold open={open} />
             </button>
           </span>
@@ -1295,7 +1289,7 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
         </span>
         {/* The row's one action: a message about this day (on hover), not a menu. */}
         <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
-          <button type="button" className="rd-btn ghost sm" onClick={onMessage} aria-label={`Message about ${fmtDay(day.date)}`} title="Message about this day">
+          <button type="button" className="rd-btn ghost sm" onClick={onMessage} aria-label={`Message about ${logDate(day.date)}`} title="Message about this day">
             <ChatIcon />
           </button>
         </span>
@@ -1386,7 +1380,7 @@ function PhotoDialog({ firstName, date, meal, comments, onSend }: { firstName: s
         </DialogDescription>
       </DialogHeader>
       {/* eslint-disable-next-line @next/next/no-img-element -- client-uploaded file */}
-      <img className="rn-shotimg" src={meal.photo ?? ""} alt={`${meal.label} on ${fmtDay(date)}`} />
+      <img className="rn-shotimg" src={meal.photo ?? ""} alt={`${meal.label} on ${logDate(date)}`} />
       {comments.length > 0 && (
         <div className="rn-saidlist">
           {comments.map((c) => (

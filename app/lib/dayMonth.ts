@@ -14,3 +14,17 @@ export function dayMonthTime(d: string | Date): string {
   const x = typeof d === "string" ? new Date(d) : d;
   return `${dayMonth(x)}, ${x.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
 }
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * A feed's or a log's date (21 Oct, Alex): the weekday first, then the day and the month, `Tue, 21 Oct`; the year only
+ * when it isn't this one (`Tue, 21 Oct 2025`). The first thing in every feed and log row (Home's Activity, the
+ * after-workout check, check-ins, the Nutrition log, All sheets, past calls, the Events log), drawn as the after-workout
+ * check's date: 13.5px, 500, body grey. Pills, fact lines and buttons keep `dayMonth` (9/11).
+ */
+export function logDate(d: string | Date): string {
+  const x = typeof d === "string" ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T00:00:00` : d) : d;
+  return `${WEEKDAYS[x.getDay()]}, ${x.getDate()} ${MONTHS[x.getMonth()]}${x.getFullYear() !== new Date().getFullYear() ? ` ${x.getFullYear()}` : ""}`;
+}

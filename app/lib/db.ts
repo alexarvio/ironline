@@ -51,6 +51,10 @@ type Client = {
   // alone: the client never sees it.
   coach_note?: string;
   coach_note_at?: string;
+  // Invoices that make themselves again (21 Oct, Alex): each a series, every week, two weeks or month.
+  invoice_repeats?: InvoiceRepeat[];
+  // When the coach last had this client on screen (epoch ms) and the visit before it, 30 minutes apart being one visit: the Home board's "Since" line (21 Oct).
+  home_looked?: { at: number; prev: number | null };
 };
 // Each coach has their own library (seeded from presets.ts), so coach_id is
 // the owner. Optional only for rows from before multi-coach.
@@ -618,6 +622,16 @@ type Invoice = {
   stripe_session_id?: string;
 };
 export type InvoiceLine = { description: string; quantity: number; unit_price: number };
+/** A saved invoice to start from (21 Oct, Alex): its lines and note, the coach's for any client. "{month}" in them is the issue date's month. */
+export type InvoiceTemplate = { id: string; name: string; lines: InvoiceLine[]; note?: string };
+/** How often a recurring invoice comes back. */
+export type InvoiceEvery = "week" | "2weeks" | "month";
+/**
+ * An invoice that makes itself again (21 Oct, Alex): the same lines every week, two weeks or month, from `next`.
+ * `send`: each one goes to the client as it is made (Sent); otherwise it waits as a draft (Not sent) for the coach.
+ * `anchor_day`: the day of the month a monthly one keeps to (31 lands on a shorter month's last day, then back).
+ */
+export type InvoiceRepeat = { id: string; every: InvoiceEvery; next: string; anchor_day: number; lines: InvoiceLine[]; note?: string; send: boolean; template?: string; paused?: boolean; created_at: string; last_invoice_id?: number };
 export type InvoiceParty = CoachBusiness & Pick<CoachInvoicing, "iban" | "bic" | "sort_code" | "routing_number" | "bsb" | "account_number" | "bank_details" | "account_holder" | "tax_note" | "footer">;
 
 type MealMacros = { protein: number | null; fats: number | null; carbs: number | null };
@@ -1159,6 +1173,8 @@ export type CoachInvoicing = {
   /** Printed under the totals: "VAT exempt under article 25", "Reverse charge". */
   tax_note?: string;
   footer?: string;
+  /** Saved invoices to start a new one from (21 Oct). */
+  templates?: InvoiceTemplate[];
 };
 /** The coach's own Stripe account (lib/stripe.ts), once they start connecting it. */
 export type CoachPayments = { stripe_account_id?: string; stripe_status?: "pending" | "active"; stripe_checked_at?: string };

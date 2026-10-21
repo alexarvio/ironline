@@ -11,7 +11,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { PlusIcon } from "../../../components/icons";
 import { gridFor, MonthRange } from "./PlanDraft";
 import DateText from "../DateText";
-import { dayMonth } from "../../../lib/dayMonth";
+import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
 import { SepJoin } from "../Sep";
 import { Fold } from "../Fold";
@@ -429,28 +429,28 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                 <div key={e.id} className="rd-row">
                   <button type="button" className="rd-row-main rq-evrow" onClick={() => setDlg({ event: e })}>
                     <span className="rq-evrow-when">
-                      {/* Two dates get room between them (20 Oct, Alex): a faint arrow with air either side. */}
+                      {/* The date first, as every log (21 Oct, Alex: logDate); two get room between them (20 Oct): a faint arrow with air either side. */}
                       <b>
-                        {dayMonth(e.start)}
+                        <span className="rd-logdate">{logDate(e.start)}</span>
                         {(e.repeat || e.start !== e.end) && (
                           <>
                             <i aria-hidden="true">
                               <RangeArrow />
                             </i>
-                            {e.repeat && !e.repeat.until ? "no end" : dayMonth(e.end)}
+                            <span className="rd-logdate">{e.repeat && !e.repeat.until ? "no end" : logDate(e.end)}</span>
                           </>
                         )}
                       </b>
                       {e.repeat && <small>{repeatWords(e.repeat, { until: false })}</small>}
                     </span>
-                    <span className="rq-state" style={{ background: k.tint, color: k.ink }}>
-                      {k.label}
-                    </span>
-                    {/* The note runs on right after the title (21 Oct, Alex), so every row is one line high. */}
+                    {/* Then the title, its note running on right after it (21 Oct, Alex), so every row is one line high; the kind after them. */}
                     <span className="rq-evrow-main">
                       <b>{e.title}</b>
                       {e.byClient && <span className="rq-ev-by">From client</span>}
                       {e.note && <span className="rq-evrow-note">{e.note}</span>}
+                    </span>
+                    <span className="rq-state" style={{ background: k.tint, color: k.ink }}>
+                      {k.label}
                     </span>
                     <span className="rq-evrow-rel">
                       <SepJoin parts={standingParts(today, e)} />

@@ -2,7 +2,7 @@ import fs from "fs";
 import { sortReasons, type AttentionReason } from "./attentionReasons";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, mergeDuplicateMetricDefinitions, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion, MeetingRequest } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceEvery, InvoiceLine, InvoiceParty, InvoiceRepeat, InvoiceTemplate, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion, MeetingRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -9031,7 +9031,7 @@ export function sessionAnswers(day: ProgramDay): SessionAnswer[] {
 }
 
 /** Answered by the workout, so not asked in the check-in: named for a question this client is asked with a number. */
-function workoutFed(clientId: number, name: string): boolean {
+export function workoutFed(clientId: number, name: string): boolean {
   const kind = metricFromWorkout(name);
   return !!kind && getWorkoutQuestions(clientId).some((q) => q.id === kind && q.kind !== "text");
 }
@@ -12362,6 +12362,8 @@ export function saveCoachInvoicing(coachId: number, i: CoachInvoicing) {
       account_holder: clipText(i.account_holder, 80),
       tax_note: clipText(i.tax_note, 200),
       footer: clipText(i.footer, 400),
+      // The saved templates are not on the Settings form: kept as they are (21 Oct).
+      templates: getData().users.find((u) => u.id === coachId)?.coach_settings?.invoicing?.templates,
     }),
   });
 }
@@ -12408,11 +12410,18 @@ const formatNumber = (prefix: string, n: number, issueDate: string) => `${prefix
 
 export type NewInvoice = { issueDate: string; lines: InvoiceLine[]; note?: string; sent?: boolean };
 
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+/** "{month}" and "{year}" in a line or note, as of the day it is issued: "Coaching, {month}" → "Coaching, November". */
+export function fillInvoiceText(text: string, issueIso: string): string {
+  const d = new Date(`${issueIso}T12:00:00`);
+  return text.replace(/\{month\}/gi, MONTH_NAMES[d.getMonth()]).replace(/\{year\}/gi, String(d.getFullYear()));
+}
+
 export function createInvoice(coachId: number, clientId: number, v: NewInvoice): number | null {
-  const lines = (v.lines ?? [])
-    .map((l) => ({ description: String(l.description ?? "").trim().slice(0, 200), quantity: cents(Number(l.quantity) || 0), unit_price: cents(Number(l.unit_price) || 0) }))
-    .filter((l) => l.description && l.quantity > 0);
   const issue = /^\d{4}-\d{2}-\d{2}$/.test(String(v.issueDate)) ? String(v.issueDate) : localDateStr();
+  const lines = (v.lines ?? [])
+    .map((l) => ({ description: fillInvoiceText(String(l.description ?? "").trim(), issue).slice(0, 200), quantity: cents(Number(l.quantity) || 0), unit_price: cents(Number(l.unit_price) || 0) }))
+    .filter((l) => l.description && l.quantity > 0);
   if (lines.length === 0) return null;
   const data = getData();
   const user = data.users.find((u) => u.id === coachId && u.role === "coach");
@@ -12445,12 +12454,159 @@ export function createInvoice(coachId: number, clientId: number, v: NewInvoice):
     prices_include_vat: incl,
     subtotal: t.subtotal,
     vat: t.vat,
-    note: String(v.note ?? "").trim().slice(0, 600) || undefined,
+    note: fillInvoiceText(String(v.note ?? "").trim(), issue).slice(0, 600) || undefined,
     ...(sent ? { from: coachParty(coachId), to: clientParty(clientId) } : {}),
   });
   user.coach_settings = { ...(user.coach_settings ?? {}), invoicing: { ...inv, next_number: next + 1 } };
   persist();
   return id;
+}
+
+// ---- Invoice templates (21 Oct, Alex): the coach's saved invoices, picked to start a new one.
+
+const cleanLines = (lines: InvoiceLine[]) =>
+  (Array.isArray(lines) ? lines : [])
+    .map((l) => ({ description: String(l?.description ?? "").trim().slice(0, 200), quantity: cents(Number(l?.quantity) || 0), unit_price: cents(Number(l?.unit_price) || 0) }))
+    .filter((l) => l.description && l.quantity > 0)
+    .slice(0, 30);
+const newKey = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`);
+
+export function listInvoiceTemplates(coachId: number): InvoiceTemplate[] {
+  const user = getData().users.find((u) => u.id === coachId && u.role === "coach");
+  return [...(user?.coach_settings?.invoicing?.templates ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Saves the lines under a name; the same name (any case) is replaced, so saving again updates it. Returns its id. */
+export function saveInvoiceTemplate(coachId: number, v: { name: string; lines: InvoiceLine[]; note?: string }): string | null {
+  const name = String(v.name ?? "").trim().slice(0, 60);
+  const lines = cleanLines(v.lines);
+  if (!name || lines.length === 0) return null;
+  const user = getData().users.find((u) => u.id === coachId && u.role === "coach");
+  if (!user) return null;
+  const inv = user.coach_settings?.invoicing ?? {};
+  const list = [...(inv.templates ?? [])];
+  const same = list.findIndex((t) => t.name.toLowerCase() === name.toLowerCase());
+  // Fifty at most: a new one past that is refused, never one dropped quietly.
+  if (same < 0 && list.length >= 50) return null;
+  const id = same >= 0 ? list[same].id : newKey();
+  const note = String(v.note ?? "").trim().slice(0, 600) || undefined;
+  const t: InvoiceTemplate = { id, name, lines, ...(note ? { note } : {}) };
+  if (same >= 0) list[same] = t;
+  else list.push(t);
+  user.coach_settings = { ...(user.coach_settings ?? {}), invoicing: { ...inv, templates: list } };
+  persist();
+  return id;
+}
+
+export function deleteInvoiceTemplate(coachId: number, id: string) {
+  const user = getData().users.find((u) => u.id === coachId && u.role === "coach");
+  const inv = user?.coach_settings?.invoicing;
+  if (!user || !inv?.templates?.some((t) => t.id === id)) return;
+  user.coach_settings = { ...(user.coach_settings ?? {}), invoicing: { ...inv, templates: inv.templates.filter((t) => t.id !== id) } };
+  persist();
+}
+
+// ---- Recurring invoices (21 Oct, Alex): a series per client that makes the same invoice every week, two weeks or
+// month. The first is made by hand (New invoice, Repeat); the rest by runRecurringInvoices, on the day each is due.
+
+/** The day after `iso` a series comes back: a week or two on, or the same day next month (kept to the month's end). */
+export function nextInvoiceDate(iso: string, every: InvoiceEvery, anchorDay: number): string {
+  if (every === "week") return addDaysIso(iso, 7);
+  if (every === "2weeks") return addDaysIso(iso, 14);
+  const d = new Date(`${iso}T12:00:00`);
+  const y = d.getMonth() === 11 ? d.getFullYear() + 1 : d.getFullYear();
+  const m = (d.getMonth() + 1) % 12;
+  const last = new Date(y, m + 1, 0).getDate();
+  return localDateStr(new Date(y, m, Math.min(anchorDay, last), 12));
+}
+
+/** Starts a series whose first invoice was issued on `issueDate`: the next one is a period on. */
+export function addInvoiceRepeat(clientId: number, v: { every: InvoiceEvery; issueDate: string; lines: InvoiceLine[]; note?: string; send: boolean; template?: string; firstInvoiceId?: number }): string | null {
+  const client = getData().clients.find((c) => c.id === clientId);
+  const lines = cleanLines(v.lines);
+  if (!client || lines.length === 0 || !["week", "2weeks", "month"].includes(v.every) || !/^\d{4}-\d{2}-\d{2}$/.test(v.issueDate)) return null;
+  const anchor = Number(v.issueDate.slice(8, 10));
+  // A first invoice dated in the past never back-fills: the series starts at its next day still to come (as Resume).
+  const today = localDateStr();
+  let next = nextInvoiceDate(v.issueDate, v.every, anchor);
+  while (next <= today) next = nextInvoiceDate(next, v.every, anchor);
+  const id = newKey();
+  const note = String(v.note ?? "").trim().slice(0, 600) || undefined;
+  const template = String(v.template ?? "").trim().slice(0, 60) || undefined;
+  const r: InvoiceRepeat = { id, every: v.every, next, anchor_day: anchor, lines, send: !!v.send, created_at: new Date().toISOString(), ...(note ? { note } : {}), ...(template ? { template } : {}), ...(v.firstInvoiceId != null ? { last_invoice_id: v.firstInvoiceId } : {}) };
+  client.invoice_repeats = [...(client.invoice_repeats ?? []), r];
+  persist();
+  return id;
+}
+
+/** Paused, a series makes nothing; resumed, it picks up at its next day still to come (missed ones are not made late). */
+export function setInvoiceRepeatPaused(clientId: number, id: string, paused: boolean) {
+  const r = getData().clients.find((c) => c.id === clientId)?.invoice_repeats?.find((x) => x.id === id);
+  if (!r) return;
+  r.paused = paused;
+  if (!paused) {
+    const today = localDateStr();
+    while (r.next < today) r.next = nextInvoiceDate(r.next, r.every, r.anchor_day);
+  }
+  persist();
+}
+
+/** Stops a series for good. The invoices it made stay. */
+export function stopInvoiceRepeat(clientId: number, id: string) {
+  const client = getData().clients.find((c) => c.id === clientId);
+  if (!client?.invoice_repeats?.some((x) => x.id === id)) return;
+  client.invoice_repeats = client.invoice_repeats.filter((x) => x.id !== id);
+  persist();
+}
+
+/**
+ * Makes every recurring invoice that is due (its next day today or before), one per series per run, so a server that
+ * was down catches up a period at a time. A series that sends tells the client as a sent invoice does (a buzz when
+ * `push`). Returns how many were made.
+ */
+export function runRecurringInvoices(today: string = localDateStr(), push = false, onlyClient?: number): number {
+  const data = getData();
+  let made = 0;
+  let changed = false;
+  for (const c of data.clients) {
+    if (!c.invoice_repeats?.length || c.coach_id == null || (onlyClient != null && c.id !== onlyClient)) continue;
+    for (const r of c.invoice_repeats) {
+      if (r.paused || r.next > today) continue;
+      const issued = r.next;
+      r.next = nextInvoiceDate(issued, r.every, r.anchor_day);
+      changed = true;
+      const id = createInvoice(c.coach_id, c.id, { issueDate: issued, lines: r.lines, note: r.note, sent: r.send });
+      if (id == null) continue;
+      r.last_invoice_id = id;
+      made++;
+      if (r.send) {
+        const number = data.invoices.find((i) => i.id === id)?.number ?? "an invoice";
+        logCoachActivity(c.id, `Sent you invoice ${number}`, { kind: "general", actionTab: "invoices", actionLabel: "See your invoices", actionRef: id, dedupeKey: `invoice-sent:${id}:${localDateStr()}`, push });
+      }
+    }
+  }
+  if (changed) persist();
+  return made;
+}
+
+/** A client's series as the Invoices tab shows them: what for, how often, the next day, and the total each one comes to. */
+export function invoiceRepeatViews(clientId: number) {
+  const data = getData();
+  const client = data.clients.find((c) => c.id === clientId);
+  const coach = client?.coach_id != null ? data.users.find((u) => u.id === client.coach_id) : undefined;
+  const eff = invoicingFor(coach?.coach_settings?.business ?? {}, coach?.coach_settings?.invoicing ?? {});
+  return (client?.invoice_repeats ?? []).map((r) => ({
+    id: r.id,
+    every: r.every,
+    next: r.next,
+    lines: r.lines,
+    note: r.note ?? "",
+    send: r.send,
+    paused: !!r.paused,
+    template: r.template ?? null,
+    total: invoiceTotals(r.lines, eff.rate, eff.pricesIncludeVat).total,
+    currency: eff.currency,
+  }));
 }
 
 /** A status change; leaving "Not sent" freezes who it is from and for. */
@@ -12479,7 +12635,8 @@ export function setInvoiceStatusFrozen(invoiceId: number, status: Invoice["statu
 export function deleteUnsentInvoice(invoiceId: number): boolean {
   const data = getData();
   const inv = data.invoices.find((i) => i.id === invoiceId);
-  if (!inv || inv.status !== "unpaid") return false;
+  // Once it has reached the client (its details frozen), it is their record: never removed, even if set back to Not sent.
+  if (!inv || inv.status !== "unpaid" || inv.from) return false;
   data.invoices = data.invoices.filter((i) => i !== inv);
   const coachId = inv.coach_id ?? coachIdOfClient(inv.client_id);
   const user = data.users.find((u) => u.id === coachId);

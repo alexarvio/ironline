@@ -1,10 +1,13 @@
 import { GYM_COLORS, isGymColor } from "../../lib/gymColors";
 import { redirect } from "next/navigation";
-import { getData } from "../../lib/db";
+import { getData, type InvoiceTemplate } from "../../lib/db";
+import { meetingRemindersOn } from "../../lib/meetingReminders";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { clerkOn } from "../../lib/clerk";
-import { getCoachSettings, getInvoiceView, listInvoices, type FeedEvent, type HomeAction, type InvoiceView, listCoachVideos, exerciseClientCounts } from "../../lib/queries";
+import { getCoachSettings, getInvoiceView, listInvoices, listInvoiceTemplates, invoiceRepeatViews, runRecurringInvoices, type FeedEvent, type HomeAction, type InvoiceView, listCoachVideos, exerciseClientCounts, listMeetings } from "../../lib/queries";
+import { getHomeBoard, noteHomeLooked } from "../../lib/homeBoard";
+import { SERVER_TZ, zonedToUtc } from "../../lib/timezones";
 import { hasBankDetails, invoicingFor } from "../../lib/countries";
 import {
   clientAttention,
@@ -32,8 +35,7 @@ import {
   listClientEvents,
   getFreeSessions,
   listEventCategories,
-  getClientEngagement,
-  getClientHome,
+  feedTimeLabel,
   getOverviewPanel,
   describeMessageLink,
   getClient,
@@ -886,9 +888,76 @@ export function feedHref(e: Pick<FeedEvent, "clientId" | "tab" | "category" | "t
   return tab(route[e.tab] ?? e.tab);
 }
 
+/** Activity keeps each kind's newest this many rows (the screen's filters, HomeDraft FILTERS), so a filter pages through
+    its own history while the page stays bounded. */
+const HOME_KIND_ROWS = 200;
+/** HomeDraft's filters but All, as they sort a row: a row is kept while any kind it falls in has room. */
+const HOME_KINDS: ((e: { category: string; tab: string }) => boolean)[] = [
+  (e) => e.category === "training",
+  (e) => e.category === "nutrition",
+  (e) => e.category === "measurements",
+  (e) => e.category === "billing",
+  (e) => e.category === "meetings" || e.tab === "meetings",
+  (e) => (e.category === "messages" || e.category === "notes") && e.tab !== "meetings",
+];
+
 export function loadHome(clientId: number): DraftHome {
+  // The look is noted first: a new visit moves the last look into prev, so "Since" counts from the coach's previous visit
+  // on this first render too, and stays put on every re-read within the visit.
+  noteHomeLooked(clientId);
+  const board = getHomeBoard(clientId);
   const panel = getOverviewPanel(clientId);
-  const home = getClientHome(clientId);
+  // Activity is the client's whole feed (not the newest 60 rows), so Invoices or Meetings still has its history for a
+  // client who chats every day.
+  const coachId = getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0;
+  const mine = getActivityFeed(coachId).filter((e) => e.clientId === clientId);
+  // The calls that are over (21 Oct, the Home mockup), in Activity with the rest, by when they were: a timed call at its
+  // moment in its own timezone, a call with no time at its day's noon (as the feed files a day with no time).
+  const today = localDateStr();
+  const callAt = (date: string, time: string, tz: string | null | undefined) => {
+    if (!time) return new Date(`${date}T12:00:00`).getTime();
+    const t = zonedToUtc(date, time, tz || SERVER_TZ).getTime();
+    return Number.isFinite(t) ? t : new Date(`${date}T12:00:00`).getTime();
+  };
+  const calls = listMeetings(clientId)
+    .filter((m) => m.status === "completed" || m.status === "no-show" || (m.status === "scheduled" && m.date < today))
+    .map((m) => {
+      // A call's own title is quoted; without one, the kind in words ("had a check-in call"), never quoted as a title.
+      const own = m.summary_title?.trim() || m.topic?.trim();
+      const kind = m.meeting_type === "review" ? "review call" : m.meeting_type === "other" ? "call" : "check-in call";
+      const what = own ? `a call: “${own}”` : `a ${kind}`;
+      // A past call nobody marked held or missed is not said to have happened.
+      const text = m.status === "completed" ? `had ${what}` : m.status === "no-show" ? `missed ${what}` : `booked ${what} · not marked`;
+      const time = m.all_day ? "" : (m.time ?? "").trim();
+      const at = callAt(m.date, time, m.tz);
+      return {
+        id: `meeting-${m.id}`,
+        category: "meetings",
+        text,
+        note: null,
+        // As feedTimeLabel writes the other rows' times, so the screen parts them with the same bar.
+        when: time ? `${dayMonth(m.date)} · ${time}` : dayMonth(m.date),
+        tab: "meetings",
+        href: null as string | null,
+        at,
+        feed: null as FeedEvent | null,
+      };
+    });
+  const rows = [
+    ...mine.map((e) => ({ id: e.id, category: e.category as string, text: e.text, note: e.note, when: feedTimeLabel(e.at, e.timeKnown), tab: e.tab, href: null as string | null, at: e.at, feed: e as FeedEvent | null })),
+    ...calls,
+  ].sort((a, b) => b.at - a.at);
+  // Each kind's newest HOME_KIND_ROWS (a row in no kind counts as one of its own); a kept row's link is read after the cut.
+  const room = new Array(HOME_KINDS.length + 1).fill(0) as number[];
+  const events = rows
+    .filter((e) => {
+      const kinds = HOME_KINDS.flatMap((has, i) => (has(e) ? [i] : []));
+      if (!kinds.length) kinds.push(HOME_KINDS.length);
+      if (!kinds.some((i) => room[i] < HOME_KIND_ROWS)) return false;
+      for (const i of kinds) room[i]++;
+      return true;
+    })
+    .map(({ feed, ...e }) => ({ ...e, href: feed ? feedHref(feed) : e.href }));
   // The client's login, the same shape clientAccessAction gives, read here
   // so the App access button has it with the page (it used to fetch it
   // after every client switch: one more round trip).
@@ -907,17 +976,10 @@ export function loadHome(clientId: number): DraftHome {
     initial: panel.initial,
     avatarPath: panel.avatarPath,
     clientSince: panel.clientSince,
-    // "level this phase" under the weight said nothing; a real move still shows.
-    snapshot: panel.snapshot.map((s) => (s.label === "Weight" && s.suffix?.startsWith("level") ? { ...s, suffix: undefined } : s)),
     panel,
     coachNote: panel.coachNote,
-    actions: (() => {
-      const byId = new Map(home.events.map((e) => [e.id, e] as const));
-      return home.actions.map((a) => needView(clientId, a, byId));
-    })(),
-    events: home.events.map((e) => ({ id: e.id, category: e.category, text: e.text, note: e.note, when: e.when, tab: e.tab, href: feedHref(e) })),
-    eventTotal: home.eventTotal,
-    engagement: getClientEngagement(clientId),
+    events,
+    board,
   };
 }
 
@@ -983,10 +1045,17 @@ export type DraftInvoices = {
   invoices: InvoiceView[];
   defaults: { currency: string; vatRate: number; taxLabel: string; pricesIncludeVat: boolean; termsDays: number; nextNumber: string };
   missing: string[];
+  /** The coach's saved invoices to start from (21 Oct). */
+  templates: InvoiceTemplate[];
+  /** This client's recurring invoices (21 Oct). */
+  repeats: ReturnType<typeof invoiceRepeatViews>;
 };
 
 export function loadInvoices(coachId: number, clientId: number): DraftInvoices {
   const today = localDateStr();
+  // A series whose day has come shows its invoice here even before the ten-minute run gets to it; the client's buzz
+  // follows the same live-server rule as the timer, so who makes it never decides whether they hear of it.
+  runRecurringInvoices(today, meetingRemindersOn(), clientId);
   const s = getCoachSettings(coachId);
   const b = s.business ?? {};
   const i = s.invoicing ?? {};
@@ -1009,6 +1078,8 @@ export function loadInvoices(coachId: number, clientId: number): DraftInvoices {
       nextNumber: `${(i.number_prefix ?? "").replaceAll("{year}", today.slice(0, 4))}${String(next).padStart(4, "0")}`,
     },
     missing,
+    templates: listInvoiceTemplates(coachId),
+    repeats: invoiceRepeatViews(clientId),
   };
 }
 

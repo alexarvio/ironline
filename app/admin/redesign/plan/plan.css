@@ -215,8 +215,9 @@
 .rq-evlog { padding: 4px 10px 8px; border-top: 1px solid #eceff3; }
 .rq-evlog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px 10px 14px; }
 .rq-evlog-empty { margin: 0; padding: 8px 14px 12px; font-size: 13px; color: #8b93a1; }
-/* One line a row (20 Oct, Alex): when, the kind, the title with its note right after it (21 Oct), where it stands. */
-.rd-row-main.rq-evrow, .rq-evrow { display: grid; grid-template-columns: 150px 108px minmax(0, 1fr) 110px; column-gap: 16px; align-items: center; cursor: pointer; }
+/* One line a row (20 Oct, Alex): when (logDate, 21 Oct: room for `Wed, 30 Sep → Wed, 30 Sep`), the title with its note
+   right after it (21 Oct), the kind, where it stands. */
+.rd-row-main.rq-evrow, .rq-evrow { display: grid; grid-template-columns: 188px minmax(0, 1fr) 108px 110px; column-gap: 16px; align-items: center; cursor: pointer; }
 .rq-evrow:hover { background: #fafbfd; }
 .rq-evrow-when { display: flex; flex-direction: column; gap: 1px; font-variant-numeric: tabular-nums; }
 .rq-evrow-when b { display: flex; align-items: center; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; }

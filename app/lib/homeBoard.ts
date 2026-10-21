@@ -1,0 +1,84 @@
+// The client's Home board (21 Oct, Alex: built from the Home mockup): where each track stands, what the client did
+// since the coach last looked, the muscle balance, strength by muscle group, weight across the phase, and four weeks
+// of consistency. One read for the admin's Home tab (loaders.ts loadHome → DraftHome.board).
+//
+// Muscle groups come from each exercise's first muscle tag (exercises.muscle_tags, "chest,shoulders" → chest):
+// back/lats → Back; chest → Chest; shoulders/delts → Shoulders; arms/biceps/triceps/forearms → Arms;
+// legs/quads/hamstrings/glutes/calves → Legs; abs/core/obliques → Core. A coach's own library group ("g-shoulders")
+// counts by its name, the same way ("Shoulders" → Shoulders, "Glutes" → Legs). Cardio and untagged exercises count nowhere.
+//
+// A check-in is what the client sends from the check-in: a metric the workout answers (enjoyment, adherence: queries.ts
+// workoutFed) is not one, on the Lifestyle tile, in Since and in Consistency alike.
+
+import type { InvoiceEvery, PhaseTrack } from "./db";
+
+export const MUSCLE_GROUPS = ["Back", "Chest", "Shoulders", "Arms", "Legs", "Core"] as const;
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
+export type PerGroup = Record<MuscleGroup, number>;
+
+/** One window of the muscle balance: this period, and the one just before it of the same length. */
+export type MuscleWindow = {
+  /** Logged sets per group (a set with reps or weight), and the window before. */
+  sets: PerGroup;
+  prevSets: PerGroup;
+  /** Volume per group in kg (weight × reps, sets with both), and the window before. */
+  volume: PerGroup;
+  prevVolume: PerGroup;
+  /** yyyy-mm-dd, inclusive: the window shown, so the screen can say "7d" and the phase its dates. */
+  from: string;
+  to: string;
+};
+
+export type HomeBoard = {
+  /** The three tracks in their order (Lifestyle, Training, Nutrition), each with its live phase and the one figure that matters. */
+  tracks: {
+    track: PhaseTrack;
+    /** The phase running today; null when none (the tile then says so in one word and links to Plan). */
+    phase: { name: string; weekNow: number; weeks: number } | null;
+    /** The figure, big, and what it is (grey): "5" + "of 7 days checked in"; "2" + "of 4 sessions this week"; "2,900 kcal" + "P 200 | C 300 | F 80". */
+    figure: { value: string; suffix: string } | null;
+    /** A second quiet fact under the figure, when there is one: Nutrition's "logged avg 2,640" over the last 7 days with
+        food before today (today is still being logged). */
+    note: string | null;
+  }[];
+  /** The Meetings card (21 Oct, Alex): the next call booked, and the last one that is over (held or missed). A title is
+      the recap's title once written, else the topic, else the kind's name ("Check-in call", "Review call", "Call"). */
+  nextCall: { date: string; time: string | null; title: string } | null;
+  lastCall: { date: string; title: string; missed: boolean } | null;
+  /** The Invoices card: owed (invoices that reached the client and are not paid), and the next recurring invoice to be made. */
+  outstanding: { amount: number; currency: string; count: number } | null;
+  nextInvoice: { date: string; amount: number; currency: string; every: InvoiceEvery } | null;
+  /** What happened since the coach last looked at this client (any of their tabs, 30 minutes apart counting as one visit):
+      what was saved after that look, by its stamp (a row from before stamps, by its day). Check-ins are days: a daily
+      reading on its day, a weekly or monthly one on the day it was sent, a measurement on its date. The weight change is
+      the latest reading saved since against the one before it. */
+  since: { from: string; sessions: number; checkIns: number; foodDays: number; messages: number; weightChange: number | null } | null;
+  muscles: {
+    "7d": MuscleWindow;
+    "30d": MuscleWindow;
+    /** The live training phase, against the same number of days before it; null with no training phase. */
+    phase: MuscleWindow | null;
+    /** The programme's current week: sets prescribed per group, and how many of those were logged. Null with no live programme. */
+    plan: { week: number; planned: PerGroup; done: PerGroup } | null;
+  };
+  /** Strength since the training phase began (else the last 8 weeks): per group, the mean % change (one decimal) of each
+      exercise's best estimated one-rep max (Epley, weight × (1 + reps / 30)) between its first and its latest session in
+      that span. Only groups with data; the screen draws all six. */
+  strength: { since: string; groups: { group: MuscleGroup; pct: number; exercises: number }[] } | null;
+  /** Weight readings across the current phase (nutrition's, else training's, else lifestyle's; else the last 8 weeks). */
+  weight: {
+    points: { date: string; value: number }[];
+    now: number | null;
+    /** Change from the reading nearest the span's start. */
+    change: number | null;
+    since: string;
+    /** At the rate so far (a least-squares line through the points), where they land on the phase's last day. Null without
+        a phase, under 4 readings across 2 weeks, or when the phase's end is further ahead than twice the span read. */
+    projection: { date: string; value: number } | null;
+  } | null;
+  /** The last 28 days, oldest first: trained (a set logged that day, or a session ended or done in full on it), food
+      logged, checked in. */
+  days: { date: string; trained: boolean; food: boolean; checkIn: boolean }[];
+};
+
+export { getHomeBoard, noteHomeLooked } from "./homeBoardData";

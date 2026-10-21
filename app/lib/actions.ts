@@ -3,7 +3,7 @@
 import { isMeetingTypeId } from "./meetingTypes";
 
 import { redirect } from "next/navigation";
-import { getData, persist, type CoachBusiness, type CoachInvoicing, type MetricAskAt, type PhaseTrack } from "./db";
+import { getData, persist, type CoachBusiness, type CoachInvoicing, type InvoiceEvery, type InvoiceLine, type MetricAskAt, type PhaseTrack } from "./db";
 import { ASK_AT } from "./metricAskAt";
 import { isGymColor, isGymKind } from "./gymColors";
 import { listClientGyms } from "./queries";
@@ -213,6 +213,12 @@ import {
   saveCoachBusiness,
   saveCoachInvoicing,
   createInvoice,
+  addInvoiceRepeat,
+  deleteInvoiceTemplate,
+  listInvoiceTemplates,
+  saveInvoiceTemplate,
+  setInvoiceRepeatPaused,
+  stopInvoiceRepeat,
   setInvoiceStatusFrozen,
   deleteUnsentInvoice,
   getCoachPayments,
@@ -4313,14 +4319,45 @@ export async function saveCoachInvoicingAction(i: CoachInvoicing) {
 
 // ---- Invoices in the redesign (the client's Invoices tab) ----
 
-export async function createInvoiceAction(clientId: number, v: NewInvoice) {
+export async function createInvoiceAction(clientId: number, v: NewInvoice & { repeat?: InvoiceEvery | null; template?: string | null }) {
   const coach = await coachForClient(Number(clientId));
   if (!coach) return null;
   const id = createInvoice(coach.id, Number(clientId), v);
   if (id != null && v.sent) tellClientAboutInvoice(id, "unpaid");
+  // Repeat (21 Oct): this one is the first; the series makes the rest on their days.
+  if (id != null && v.repeat) addInvoiceRepeat(Number(clientId), { every: v.repeat, issueDate: v.issueDate, lines: v.lines, note: v.note, send: !!v.sent, template: v.template ?? undefined, firstInvoiceId: id });
   revalidatePath("/admin");
   revalidatePath("/client");
   return id;
+}
+
+// ---- Invoice templates and recurring invoices (21 Oct, Alex).
+
+/** Saves the lines as a template under a name (the same name replaces it). Whether it saved, and the coach's templates after. */
+export async function saveInvoiceTemplateAction(v: { name: string; lines: InvoiceLine[]; note?: string }) {
+  const coach = await requireCoach();
+  const id = saveInvoiceTemplate(coach.id, v);
+  revalidatePath("/admin");
+  return { ok: id != null, list: listInvoiceTemplates(coach.id) };
+}
+
+export async function deleteInvoiceTemplateAction(id: string) {
+  const coach = await requireCoach();
+  deleteInvoiceTemplate(coach.id, String(id));
+  revalidatePath("/admin");
+  return listInvoiceTemplates(coach.id);
+}
+
+export async function setInvoiceRepeatPausedAction(clientId: number, id: string, paused: boolean) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  setInvoiceRepeatPaused(Number(clientId), String(id), !!paused);
+  revalidatePath("/admin");
+}
+
+export async function stopInvoiceRepeatAction(clientId: number, id: string) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  stopInvoiceRepeat(Number(clientId), String(id));
+  revalidatePath("/admin");
 }
 
 export async function setInvoiceStatusByIdAction(invoiceId: number, status: "unpaid" | "sent" | "paid" | "due") {

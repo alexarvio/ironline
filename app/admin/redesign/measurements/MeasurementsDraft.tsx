@@ -21,7 +21,7 @@ import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
 import Pager from "../Pager";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
-import { dayMonth } from "../../../lib/dayMonth";
+import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { groupColour } from "../../../lib/categoryColors";
 import { defaultSummary, type MetricSummary } from "../../../lib/metricSummary";
 import { Sep, SepJoin } from "../Sep";
@@ -118,6 +118,8 @@ const CAD = {
 const CADENCES = ["daily", "weekly", "monthly"] as const;
 /** A check-in in words, for a message's link and a toast: a day as day/month (19/10); a month keeps its label. */
 const whenOf = (key: string, label: string) => (/^\d{4}-\d{2}-\d{2}$/.test(key) ? dayMonth(key) : label);
+/** A check-in's date, the first thing in its row (21 Oct, Alex: logDate, as every log): the day, or the week's Monday; a month keeps its name. */
+const logWhen = (key: string, label: string, cadence: Cadence) => (cadence === "monthly" || !/^\d{4}-\d{2}-\d{2}$/.test(key) ? label : logDate(key));
 const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"}`;
 
 type Dlg =
@@ -644,7 +646,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           ) : view.metrics.length === 0 ? (
             <p className="rls-none">None yet</p>
           ) : show === "table" ? (
-            <CheckinTable view={logPaged} whole={logShown} summaryOf={(m) => rows.find((r) => r.id === m.id)?.summary ?? m.summary} onReply={replyTo} />
+            <CheckinTable view={logPaged} whole={logShown} cadence={logCadence} summaryOf={(m) => rows.find((r) => r.id === m.id)?.summary ?? m.summary} onReply={replyTo} />
           ) : show === "graph" ? (
             <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
           ) : (
@@ -1085,7 +1087,7 @@ function NoteBubble({ text, onReply }: { text: string; onReply: () => void }) {
   );
 }
 
-function CheckinTable({ view, whole, summaryOf, onReply }: { view: LoggedValues; /** Every period in the range shown, all pages: what each head sums up. */ whole: LoggedValues; summaryOf: (m: LoggedMetric) => MetricSummary; onReply: (period: string) => void }) {
+function CheckinTable({ view, whole, cadence, summaryOf, onReply }: { view: LoggedValues; /** Every period in the range shown, all pages: what each head sums up. */ whole: LoggedValues; cadence: Cadence; summaryOf: (m: LoggedMetric) => MetricSummary; onReply: (period: string) => void }) {
   const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
   // Each column sums itself up in its head (21 Oct, Alex; rules §8: a summary lives in the column head, never a row
   // of data): its change from the first day shown to the last (weight), or its average (sleep, resting HR).
@@ -1137,7 +1139,7 @@ function CheckinTable({ view, whole, summaryOf, onReply }: { view: LoggedValues;
         {view.periods.map((p, i) => (
           <div key={p.key} className="contents">
             <span className={`rm-td date${i === 0 ? " now" : ""}`}>
-              {p.label}
+              <span className="rd-logdate">{logWhen(p.key, p.label, cadence)}</span>
               {view.notes[p.key] && <NoteBubble text={view.notes[p.key]} onReply={() => onReply(p.key)} />}
             </span>
             {view.metrics.map((m) => {
@@ -1185,7 +1187,7 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
               <span className="rd-ex">
                 <span className="rd-ex-name">
                   <button type="button" className="rd-row-hit" aria-expanded={isOpen}>
-                    {p.label}
+                    <span className="rd-logdate">{logWhen(p.key, p.label, cadence)}</span>
                     <Fold open={isOpen} />
                   </button>
                   {note && <NoteBubble text={note} onReply={() => onReply(p.key)} />}
