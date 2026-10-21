@@ -25,7 +25,10 @@
 /* The track as a tinted tag (§3), every one the column's width, the word centred. */
 .rd.pov .pov-tag { display: inline-flex; align-items: center; justify-content: center; gap: 5px; justify-self: stretch; height: 22px; padding: 0 9px; border-radius: 999px; background: rgba(var(--rgb), 0.12); color: var(--c); font-size: 11.5px; font-weight: 600; white-space: nowrap; box-sizing: border-box; }
 .rd.pov .pov-tag svg { flex: none; translate: 0 -0.5px; }
-.rd.pov .pov-who { display: flex; align-items: center; min-width: 0; white-space: nowrap; }
+/* The name and the programme on one baseline (21 Oct, Alex: they sat a hair apart, centred as boxes of two sizes); the
+   drawn bar between them stays centred. */
+.rd.pov .pov-who { display: flex; align-items: baseline; min-width: 0; white-space: nowrap; }
+.rd.pov .pov-who > .rd-sep { align-self: center; }
 .rd.pov .pov-who-name { flex: none; font-size: 14px; font-weight: 600; color: #141a24; text-decoration: none; }
 .rd.pov .pov-who-name:hover { text-decoration: underline; text-decoration-color: #c9cfd8; text-underline-offset: 3px; }
 .rd.pov .pov-who-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 500; color: #5b6474; }
@@ -33,7 +36,10 @@
 .rd.pov .pov-prog { display: block; height: 4px; border-radius: 999px; background: #eef0f3; overflow: hidden; }
 .rd.pov .pov-prog i { display: block; height: 100%; border-radius: 999px; background: var(--c); }
 .rd.pov .pov-actions { display: flex; justify-content: flex-end; gap: 8px; }
-@media (max-width: 900px) {
+/* Two lines when the list itself is narrow (the rail and the chat's tabs take from the window, so not the window's
+   width): the name keeps its room, days left and the line under it. */
+.rd.pov .pov-soon-list { container: pov-soon / inline-size; }
+@container pov-soon (max-width: 760px) {
   .rd.pov .pov-soon-row { grid-template-columns: 112px minmax(0, 1fr) auto; row-gap: 6px; padding: 10px 16px; }
   .rd.pov .pov-left { grid-column: 1; text-align: left; }
   .rd.pov .pov-prog { grid-column: 2; }
@@ -81,7 +87,6 @@
 .dlh .mvd-track svg { flex: none; translate: 0 -0.5px; }
 .dlh .phd-field { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .dlh .phd-none { margin: 0; font-size: 14px; font-weight: 500; color: #8b93a1; }
-.dlh .phd-none.bad { color: #b8471f; }
 .dlh .dlh-go[href] { display: inline-flex; align-items: center; text-decoration: none; }
 /* A phase: ending soon in rust on its fact line; the weeks as a strip, those behind in the track's colour. */
 .phd .phd-soon { font-weight: 600; color: #b8471f; }
@@ -93,10 +98,6 @@
 .phd .phd-goals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .phd .phd-goals li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; font-weight: 500; line-height: 1.4; color: #141a24; overflow-wrap: anywhere; }
 .phd .phd-goals li i { flex: none; width: 6px; height: 6px; margin-top: 7px; border-radius: 999px; background: var(--mv); }
-.phd .phd-after { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; }
-.phd .phd-after b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; color: #141a24; }
-.phd .phd-after .mvd-state { flex: none; }
-.phd .phd-after-when { flex: none; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* An event: From client and Past as hairline capsules; who added it and the note in body grey. */
 .evd .evd-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 11.5px; font-weight: 600; color: #5b6474; }
 .evd .evd-text { margin: 0; font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; white-space: pre-wrap; overflow-wrap: anywhere; }

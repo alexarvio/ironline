@@ -15,7 +15,7 @@ import { daysLeft, endingSoon, leftLabel, mondayOf, nextOnTrack, prevOnTrack, we
 
 // A phase's detail (14 Oct; the .dlh card since 21 Oct), from a bar on the
 // Phases timeline. Read-only: the name, its track and state tags, one fact
-// line, the weeks as a strip, its goals, what comes after on the track, and
+// line, the weeks as a strip, its goals (no "After this", 21 Oct, Alex), and
 // one way out: Open, to the track's own tab. ← and → move along the track.
 
 /** Where the phase is edited: the track's own tab, on this phase. */
@@ -36,7 +36,6 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
   const elapsed = segments.reduce((n, s) => n + s.days * s.fill, 0) / Math.max(1, segments.reduce((n, s) => n + s.days, 0));
   const next = nextOnTrack(p, client.phases);
   const prev = prevOnTrack(p, client.phases);
-  const nextState = next ? stateOf(next, today) : null;
   const goals = p.objectives.filter((g) => g.trim()).slice(0, 3);
   const openRef = useRef<HTMLAnchorElement>(null);
 
@@ -98,23 +97,6 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
               </li>
             ))}
           </ul>
-        )}
-      </div>
-
-      <div className="phd-field">
-        <span className="dlh-label">After this</span>
-        {next && nextState ? (
-          <p className="phd-after">
-            <b>{next.name}</b>
-            <span className="mvd-state" style={stateTagStyle(nextState)}>
-              {STATE_LABEL[nextState]}
-            </span>
-            <span className="phd-after-when">from {dayMonth(next.start)}</span>
-          </p>
-        ) : state === "past" ? (
-          <p className="phd-none">Nothing followed</p>
-        ) : (
-          <p className="phd-none bad">Nothing planned</p>
         )}
       </div>
 
