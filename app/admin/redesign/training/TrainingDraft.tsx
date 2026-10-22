@@ -1761,7 +1761,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             onClose={close}
             onLink={async (url) => {
               const row = rowById(dlg.rowId)!;
-              await setExerciseDemoLinkAction(fd({ exerciseId: row.exerciseId, variationId: row.variationId ?? null, demoUrl: url }));
+              // Refused (not a link, gone): say so, and keep the dialog open (it used to say "Demo updated" anyway).
+              const refused = await setExerciseDemoLinkAction(fd({ exerciseId: row.exerciseId, variationId: row.variationId ?? null, demoUrl: url }));
+              if (refused) throw new Error(refused);
               setDemos((d) => ({ ...d, [row.id]: { url, source: "library" } }));
               close();
               toast.success(`Demo updated${(row.demoClients ?? 1) > 1 ? ` for ${row.demoClients} clients` : ""}`);

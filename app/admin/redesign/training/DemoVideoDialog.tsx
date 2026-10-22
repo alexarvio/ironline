@@ -56,7 +56,10 @@ export default function DemoVideoDialog({
   onUpload,
   onRemove,
   onClose,
+  startTab,
 }: {
+  /** The part it opens on (the Library's Add link / Add video, 21 Oct); else the one picked last. */
+  startTab?: Tab;
   exerciseName: string;
   clientsUsing: number;
   current: DemoCurrent;
@@ -68,6 +71,7 @@ export default function DemoVideoDialog({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<Tab>(() => {
+    if (startTab) return startTab;
     try {
       const t = window.localStorage.getItem(TAB_KEY);
       return t === "file" || t === "mine" ? t : "link";

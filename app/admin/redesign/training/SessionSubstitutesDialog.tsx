@@ -2,7 +2,6 @@
 
 import "./substitutes.css";
 import { useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { createLibraryExerciseAction } from "../library/actions";
 import type { Library } from "./TrainingDraft";
@@ -139,9 +138,6 @@ export default function SessionSubstitutesDialog({
       <section className="sbh-sec">
         <h2 className="sbh-label-row">
           <span className="sbh-label">From the library</span>
-          <Link href="/admin/redesign/library" className="sbh-link">
-            Edit in library ↗
-          </Link>
         </h2>
         {row.librarySubstitutes.length === 0 ? (
           <p className="sbh-empty">None yet</p>

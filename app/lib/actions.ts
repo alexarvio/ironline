@@ -133,6 +133,7 @@ import {
   markCoachNotesRead,
   markNotificationRead,
   markReportOpened,
+  listCoachVideos,
   logSet,
   setAssignmentUnit,
   OTHER_ITEMS,
@@ -2798,7 +2799,9 @@ export async function setExerciseDemoLinkAction(formData: FormData): Promise<str
   if (!exerciseId || !coachOwnsExercise(coach.id, exerciseId)) return "That exercise no longer exists.";
   const url = String(formData.get("demoUrl") || "").trim();
   if (!url) return "Paste a link first.";
-  if (!/^https?:\/\//i.test(url)) return "That needs to start with http:// or https://";
+  // A web link, or one of the coach's own uploaded clips (Your videos in the demo dialog hands over its path).
+  const ownClip = listCoachVideos(coach.id).some((v) => v.path === url);
+  if (!ownClip && !/^https?:\/\//i.test(url)) return "That needs to start with http:// or https://";
   const variationId = Number(formData.get("variationId"));
   if (variationId > 0) setExerciseVariationVideo(exerciseId, variationId, url);
   else setExerciseVideoUrl(exerciseId, url);

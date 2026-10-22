@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import Link from "next/link";
 import { variationIdeas } from "../../../lib/variationIdeas";
 import { dayMonth } from "../../../lib/dayMonth";
 import { Sep, SepJoin } from "../Sep";
@@ -318,10 +317,8 @@ export default function VariationDialog({
         {error && <p className="vrp-error">{error}</p>}
       </div>
 
+      {/* No link to the Library (22 Oct): it holds demos only now, not variations. */}
       <footer className="vrp-foot">
-        <Link href="/admin/redesign/library" className="vrp-link">
-          Edit variations in library ↗
-        </Link>
         <button type="button" className="vrp-cancel" onClick={onClose}>
           Cancel
         </button>

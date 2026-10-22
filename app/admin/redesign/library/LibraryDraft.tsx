@@ -1,410 +1,698 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { createPortal } from "react-dom";
-import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Toaster } from "../../../components/ui/toast";
-import { Button, Card, CardContent, Tabs, TabsList, TabsTrigger } from "../../../components/ui/basics";
-import { Input } from "../../../components/ui/form";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { MoreIcon, PencilIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
-import { archiveLibraryExerciseAction, assignVideoToExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, uploadLibraryVideoAction } from "./actions";
-import type { LibraryData, LibraryItem, LibraryVideo } from "./load";
-import ExerciseEditor from "./ExerciseEditor";
-import ExerciseDrawer, { DRAWER_WIDTH } from "./ExerciseDrawer";
-import { groupColour } from "../../../lib/muscleGroups";
-import ExerciseLibraryGrid from "./ExerciseLibraryGrid";
-import { dayMonth } from "../../../lib/dayMonth";
-import { Sep, SepJoin } from "../Sep";
+import { Dialog } from "../../../components/ui/dialog";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
+import { ArrowRightIcon, EyeIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
+import { setExerciseDemoLinkAction } from "../../../lib/actions";
+import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
+import type { LibraryData, LibraryItem } from "./load";
+import { Fold } from "../Fold";
+import Picker from "../Picker";
+import DemoVideoDialog from "../training/DemoVideoDialog";
+import { ConfirmDialog } from "../training/TrainingDraft";
 
-// The coach's Library (5 Oct, rebuilt 6 Oct on the shadcn parts and the
-// Training tab's rows). Three shelves on tabs:
-// - Exercises: one folded row a muscle group, laid out like a session on the
-//   Training tab (chevron, name, "N exercises", a badge, ⋯), its exercises as
-//   rows inside, "+ New exercise" at the foot.
-// - Cardio: the movements filed under Cardio, the same way.
-// - Videos: the coach's own clips, uploaded by the session, each handed to
-//   an exercise (the one its file name matches is offered first).
-// A click on an exercise opens it: name, group, default cue, its demo and
-// its variations, with the videos underneath to drag onto any demo slot.
-// Taking an exercise out of the library (its row's bin) hides it from the
-// pickers; wherever it is already prescribed, it stays.
+// The coach's Library (21 Oct, Alex: "just the library for now"): every exercise of theirs and its demo, nothing else.
+// Training's header (Library, + Exercise, ⋯), one search bar, then each muscle group in the coach's order (Cardio
+// among them, Other last): its title with the count and the fold, one hairline card, an exercise a row A–Z.
+// A row: the demo's thumb (a click plays it by the row, or opens the link), the name, Add video / Add link or, on
+// hover, Replace / Remove, and ⋯ (Rename, Move to, Take out). Variations, substitutes and default cues are not on
+// this screen; their data stays (Training and the client app use them). A change shows at once and saves behind it.
 
-type Shelf = "exercises" | "cardio" | "videos";
+type Patch = Partial<Pick<LibraryItem, "name" | "group" | "video" | "archived">>;
+/** An exercise as a row; a new one is there (faded) before the server gives it its id. */
+type Row = { key: string; id: number; name: string; group: string; video: string | null; archived: boolean; pending: boolean };
+type Dlg = { kind: "demo"; id: number; tab?: "link" | "file" } | { kind: "remove"; id: number } | { kind: "takeout"; id: number } | null;
 
-/** "lat_pulldown-2" and "Lat Pulldown" compare the same. */
-const norm = (s: string) => s.toLowerCase().replace(/\.[a-z0-9]{2,5}$/, "").replace(/[^a-z0-9]+/g, " ").replace(/\b\d+\b/g, " ").replace(/\s+/g, " ").trim();
+const FOLD_KEY = "norcoach:library-folded";
+// What uploadLibraryVideoAction takes (serverActions.bodySizeLimit).
+const MAX_UPLOAD = 128 * 1024 * 1024;
+const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
+const isUpload = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
+/** A clip of the coach's, a YouTube video (both play by the row), or another link (opens in a new tab). */
+const demoKind = (url: string): "upload" | "youtube" | "link" => (isUpload(url) ? "upload" : ytId(url) ? "youtube" : "link");
+const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+
+const readFolded = (): string[] => {
+  try {
+    const v: unknown = JSON.parse(window.localStorage.getItem(FOLD_KEY) ?? "[]");
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+};
+const writeFolded = (v: string[]) => {
+  try {
+    window.localStorage.setItem(FOLD_KEY, JSON.stringify(v));
+  } catch {}
+};
+
+/** What the server now shows needs no stand-in: each patch keeps only the fields the server doesn't have yet. */
+function prune(patches: Record<number, Patch>, items: LibraryItem[]): Record<number, Patch> {
+  const next: Record<number, Patch> = {};
+  for (const [key, p] of Object.entries(patches)) {
+    const item = items.find((i) => i.id === Number(key));
+    if (!item) continue;
+    const left: Record<string, unknown> = {};
+    for (const f of Object.keys(p) as (keyof Patch)[]) if (p[f] !== item[f]) left[f] = p[f];
+    if (Object.keys(left).length) next[Number(key)] = left as Patch;
+  }
+  return next;
+}
 
 export default function LibraryDraft({ data }: { data: LibraryData }) {
   const router = useRouter();
-  const [, start] = useTransition();
-  const [shelf, setShelf] = useState<Shelf>("exercises");
-  const [showRemoved, setShowRemoved] = useState(false);
-  const [openId, setOpenId] = useState<number | null>(null);
-  // A substitute opened from an exercise's editor (14 Oct): the one to go back to.
-  const [openFrom, setOpenFrom] = useState<{ id: number; name: string } | null>(null);
-  // The editor keeps showing while the drawer slides out (14 Oct).
-  const [closingItem, setClosingItem] = useState<LibraryItem | null>(null);
-  const openItem = (id: number) => setOpenId(id);
-  const closeEditor = () => {
-    setClosingItem(open);
-    setOpenId(null);
-    setCreating(null);
-    setOpenFrom(null);
-    setTimeout(() => setClosingItem(null), 240);
+  const [q, setQ] = useState("");
+  const [showOut, setShowOut] = useState(false);
+  const [folded, setFolded] = useState<string[]>([]);
+  // ?edit=<id> (the old drawer's link): its group open, the row scrolled to.
+  const [landing, setLanding] = useState<number | null>(null);
+  const [patches, setPatches] = useState<Record<number, Patch>>({});
+  const [adding, setAdding] = useState<{ key: string; name: string; group: string; id: number | null }[]>([]);
+  const [renaming, setRenaming] = useState<number | null>(null);
+  // A group's name typed in place (Rename beside its title on hover); shown at once, saved behind.
+  const [renamingGroup, setRenamingGroup] = useState<string | null>(null);
+  const [groupNames, setGroupNames] = useState<Record<string, string>>({});
+  const renameGroup = (slug: string, was: string, typed: string) => {
+    setRenamingGroup(null);
+    const label = typed.trim().slice(0, 40);
+    if (!label || label === was) return;
+    setGroupNames((g) => ({ ...g, [slug]: label }));
+    void save(
+      () => renameLibraryGroupAction(slug, label),
+      () =>
+        setGroupNames((g) => {
+          const next = { ...g };
+          delete next[slug];
+          return next;
+        })
+    );
   };
-  // The drawer (14 Oct): the URL names the open exercise, so a reload or a shared link reopens it.
+  const [playing, setPlaying] = useState<number | null>(null);
+  const [dlg, setDlg] = useState<Dlg>(null);
+  // The floating create panel that is open: "head" (+ Exercise), "group" (New group), or a group's slug (its card's + Exercise).
+  const [panel, setPanel] = useState<string | null>(null);
+  // A menu item that hands the focus on (Rename, New group): the menu doesn't take it back to ⋯ as it closes.
+  const keepFocus = useRef(false);
+
+  // New data from the server: the stand-ins it now matches go.
+  const [seen, setSeen] = useState(data);
+  if (seen !== data) {
+    setSeen(data);
+    setPatches((p) => prune(p, data.items));
+    setAdding((a) => a.filter((x) => x.id == null || !data.items.some((i) => i.id === x.id)));
+  }
+
+  // The folds as the coach left them in this browser, and ?edit=<id>, once the page is on screen.
   useEffect(() => {
-    const id = Number(new URLSearchParams(window.location.search).get("edit"));
-    if (!id) return;
-    const t = setTimeout(() => setOpenId(id), 0);
+    const t = setTimeout(() => {
+      setFolded(readFolded());
+      const edit = Number(new URLSearchParams(window.location.search).get("edit"));
+      if (edit > 0) {
+        setLanding(edit);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("edit");
+        window.history.replaceState(null, "", url.toString());
+      }
+    }, 0);
     return () => clearTimeout(t);
   }, []);
   useEffect(() => {
-    const url = new URL(window.location.href);
-    if (openId != null) url.searchParams.set("edit", String(openId));
-    else url.searchParams.delete("edit");
-    window.history.replaceState(null, "", url.toString());
-  }, [openId]);
-  // The edited card stays in view: the page scrolls (never scrollIntoView) when the card sits under the drawer or off the screen.
-  useEffect(() => {
-    if (openId == null) return;
-    const t = setTimeout(() => {
-      const el = document.querySelector<HTMLElement>(`[data-exercise-id="${openId}"]`);
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const hidden = r.top < 80 || r.bottom > window.innerHeight - 20 || r.right > window.innerWidth - (window.innerWidth > 720 ? DRAWER_WIDTH : 0);
-      if (hidden) window.scrollTo({ top: Math.max(0, window.scrollY + r.top - 120), behavior: "smooth" });
-    }, 320);
-    return () => clearTimeout(t);
-  }, [openId]);
-  const [creating, setCreating] = useState<string | null>(null);
-  const act = (fn: () => Promise<unknown>, said?: string) =>
-    start(async () => {
-      await fn();
-      router.refresh();
-      if (said) toast.success(said);
+    if (landing == null) return;
+    const f = requestAnimationFrame(() => document.querySelector(`[data-exercise-id="${landing}"]`)?.scrollIntoView({ block: "center" }));
+    return () => cancelAnimationFrame(f);
+  }, [landing]);
+
+  const items = data.items.map((i) => ({ ...i, ...patches[i.id] }));
+  const itemOf = (id: number) => items.find((i) => i.id === id) ?? null;
+  const known = new Set(data.items.map((i) => i.id));
+  const slugs = new Set(data.groups.map((g) => g.slug));
+  const rows: Row[] = [
+    ...items.map((i) => ({ key: `e${i.id}`, id: i.id, name: i.name, group: slugs.has(i.group) ? i.group : "other", video: i.video, archived: i.archived, pending: false })),
+    ...adding.filter((a) => a.id == null || !known.has(a.id)).map((a) => ({ key: a.key, id: a.id ?? 0, name: a.name, group: a.group, video: null, archived: false, pending: true })),
+  ];
+  const outCount = items.filter((i) => i.archived).length;
+  const needle = q.trim().toLowerCase();
+  // A link to one that is taken out still lands on it (that row alone shows, greyed).
+  const shown = rows.filter((r) => (showOut || !r.archived || (!r.pending && r.id === landing)) && (!needle || r.name.toLowerCase().includes(needle)));
+  const sections = data.groups.map((g) => ({ ...g, rows: shown.filter((r) => r.group === g.slug).sort(byName) })).filter((s) => !needle || s.rows.length > 0);
+  const landingGroup = landing != null ? (rows.find((r) => !r.pending && r.id === landing)?.group ?? null) : null;
+  const isOpen = (slug: string) => !!needle || slug === landingGroup || !folded.includes(slug);
+
+  const setFolds = (next: string[]) => {
+    setFolded(next);
+    writeFolded(next);
+  };
+  const toggle = (slug: string) => {
+    const open = isOpen(slug);
+    if (slug === landingGroup) setLanding(null);
+    setFolds(open ? [...folded.filter((s) => s !== slug), slug] : folded.filter((s) => s !== slug));
+  };
+
+  const patch = (id: number, p: Patch) => setPatches((all) => ({ ...all, [id]: { ...all[id], ...p } }));
+  const unpatch = (id: number, field: keyof Patch) =>
+    setPatches((all) => {
+      const rest = { ...all[id] };
+      delete rest[field];
+      return { ...all, [id]: rest };
     });
+  /** Saves behind a change that already shows; a refusal puts it back and says so. */
+  // True once saved; false after undoing the change on screen and saying so.
+  const save = async (job: () => Promise<unknown>, undo: () => void): Promise<boolean> => {
+    try {
+      if ((await job()) === false) throw new Error("refused");
+      router.refresh();
+      return true;
+    } catch {
+      undo();
+      toast.error("Not saved. Try again.");
+      return false;
+    }
+  };
 
-  const groups = data.groups.filter((g) => g.slug !== "cardio");
-  const onShelf = data.items.filter((i) => (shelf === "cardio" ? i.group === "cardio" : i.group !== "cardio"));
-  const removedCount = onShelf.filter((i) => i.archived).length;
-  const open = openId != null ? data.items.find((i) => i.id === openId) ?? null : null;
-  // New in {Group} (14 Oct): the editor on a draft with no id; it exists once named.
-  const draft: LibraryItem | null = creating != null ? { id: 0, name: "", group: creating, video: null, cue: "", clients: 0, archived: false, variations: [], substitutes: [] } : null;
-  // What the editor shows: the open one, a draft, or the one it is closing on.
-  const shownItem = open ?? draft ?? closingItem;
+  const rename = (it: Row, typed: string) => {
+    setRenaming(null);
+    const name = typed.trim().slice(0, 60);
+    if (!name || name === it.name) return;
+    patch(it.id, { name });
+    void save(() => updateLibraryExerciseAction(it.id, { name }), () => unpatch(it.id, "name"));
+  };
+  const moveTo = (it: Row, group: string) => {
+    patch(it.id, { group });
+    void save(() => updateLibraryExerciseAction(it.id, { group }), () => unpatch(it.id, "group"));
+  };
+  const takeOut = (it: { id: number }, archived: boolean) => {
+    patch(it.id, { archived });
+    void save(() => archiveLibraryExerciseAction(it.id, archived), () => unpatch(it.id, "archived"));
+  };
+  // Throws when it didn't save, so the demo dialog keeps showing the demo (it clears only on success).
+  const removeDemo = async (it: { id: number }) => {
+    patch(it.id, { video: null });
+    if (!(await save(() => assignVideoToExerciseAction(it.id, null), () => unpatch(it.id, "video")))) throw new Error("not saved");
+  };
+  // The demo dialog's ways in: a link, one of the coach's own clips (Your videos: handed over by its id, the link
+  // action takes only http links), or a file into the coach's videos and onto the exercise (as the old editor did).
+  const setLink = async (it: { id: number }, url: string) => {
+    const clip = data.videos.find((v) => v.path === url);
+    if (clip) {
+      if (!(await assignVideoToExerciseAction(it.id, clip.id))) throw new Error("refused");
+    } else {
+      const f = new FormData();
+      f.set("exerciseId", String(it.id));
+      f.set("demoUrl", url);
+      const err = await setExerciseDemoLinkAction(f);
+      if (err) throw new Error(err);
+    }
+    patch(it.id, { video: url });
+    setDlg(null);
+    router.refresh();
+  };
+  const upload = async (it: { id: number }, file: File) => {
+    if (file.size > MAX_UPLOAD) throw new Error(`${Math.round(file.size / 1024 / 1024)} MB is over 128 MB`);
+    const f = new FormData();
+    f.set("file", file);
+    const r = await uploadLibraryVideoAction(f);
+    if (!r.ok) throw new Error(r.error);
+    if (!(await assignVideoToExerciseAction(it.id, r.id))) throw new Error("it didn’t go through");
+    setDlg(null);
+    router.refresh();
+  };
+  const addExercise = (name: string, group: string) => {
+    const key = `new-${Date.now()}`;
+    setPanel(null);
+    setAdding((a) => [...a, { key, name, group, id: null }]);
+    if (folded.includes(group)) setFolds(folded.filter((s) => s !== group));
+    void (async () => {
+      const id = await createLibraryExerciseAction(name, group, "").catch(() => null);
+      if (id == null) {
+        setAdding((a) => a.filter((x) => x.key !== key));
+        toast.error("Not saved. Try again.");
+        return;
+      }
+      setAdding((a) => a.map((x) => (x.key === key ? { ...x, id } : x)));
+      router.refresh();
+    })();
+  };
+  const addGroup = async (label: string) => {
+    const slug = await createLibraryGroupAction(label).catch(() => null);
+    if (!slug) {
+      toast.error("Not saved. Try again.");
+      return;
+    }
+    setPanel(null);
+    router.refresh();
+  };
 
-  const archive = (i: LibraryItem) => act(() => archiveLibraryExerciseAction(i.id, !i.archived), i.archived ? `${i.name} back in the library` : `${i.name} taken out of the library`);
+  // A name already in the library, where it is.
+  const exerciseTaken = (name: string) => {
+    const n = name.trim().toLowerCase();
+    const hit = n ? rows.find((r) => r.name.trim().toLowerCase() === n) : null;
+    if (!hit) return null;
+    return hit.archived ? `${hit.name} is taken out.` : `${hit.name} is already in ${data.groups.find((g) => g.slug === hit.group)?.label ?? "Other"}.`;
+  };
+  const groupTaken = (label: string) => {
+    const n = label.trim().toLowerCase();
+    const hit = n ? data.groups.find((g) => g.label.toLowerCase() === n) : null;
+    return hit ? `${hit.label} is already a group.` : null;
+  };
+  const groupOptions = data.groups.map((g) => ({ value: g.slug, label: g.label }));
+  const dlgItem = dlg ? itemOf(dlg.id) : null;
 
-  // An exercise, as a row inside its group: like an exercise inside a session.
-  return (
-    <div className={`rd lb${open ? " lb-drawer-open" : ""}`}>
-      <header className="rd-head">
-        <div className="rd-head-main">
-          <span className="rd-eyebrow">Library</span>
-          <h1 className="rd-title">{shelf === "cardio" ? "Cardio movements" : shelf === "videos" ? "Videos" : "Exercises"}</h1>
-          {shelf === "videos" && (
-            <span className="rd-sub">
-              {`${data.videos.length} ${data.videos.length === 1 ? "video" : "videos"}`}
-              <Sep />
-              {`${data.videos.filter((v) => v.usedBy.length === 0).length} not used yet`}
-            </span>
+  const rowView = (r: Row) => (
+    <div key={r.key} data-exercise-id={r.pending ? undefined : r.id} className={`rls-row lbx-row${r.archived ? " out" : ""}${r.pending ? " pending" : ""}`}>
+      <div className="rls-row-main lbx-row-main">
+        <Thumb row={r} playing={playing === r.id} onPlay={(on) => setPlaying(on ? r.id : null)} onAdd={() => setDlg({ kind: "demo", id: r.id })} />
+        {renaming === r.id ? <RenameField name={r.name} onDone={(v) => rename(r, v)} onCancel={() => setRenaming(null)} /> : <span className="lbx-name" title={r.name}>{r.name}</span>}
+        <span className="lbx-acts">
+          {r.pending ? null : r.archived ? (
+            <button type="button" className="lbx-act" onClick={() => takeOut(r, false)}>
+              Put back
+            </button>
+          ) : r.video ? (
+            <>
+              <button type="button" className="lbx-act hover" onClick={() => setDlg({ kind: "demo", id: r.id })}>
+                Replace
+              </button>
+              <button type="button" className="lbx-act hover" onClick={() => setDlg({ kind: "remove", id: r.id })}>
+                Remove
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="lbx-act" onClick={() => setDlg({ kind: "demo", id: r.id, tab: "file" })}>
+                Add video
+              </button>
+              <button type="button" className="lbx-act" onClick={() => setDlg({ kind: "demo", id: r.id, tab: "link" })}>
+                Add link
+              </button>
+            </>
           )}
+        </span>
+        {r.pending || r.archived ? (
+          <span aria-hidden="true" />
+        ) : (
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${r.name}`}>
+              <MoreIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="pb-menu"
+              onCloseAutoFocus={(e) => {
+                if (!keepFocus.current) return;
+                keepFocus.current = false;
+                e.preventDefault();
+              }}
+            >
+              <DropdownMenuItem
+                onSelect={() => {
+                  keepFocus.current = true;
+                  setRenaming(r.id);
+                }}
+              >
+                <PencilIcon /> Rename
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <ArrowRightIcon /> Move to
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="pb-menu">
+                  {data.groups
+                    .filter((g) => g.slug !== r.group)
+                    .map((g) => (
+                      <DropdownMenuItem key={g.slug} onSelect={() => moveTo(r, g.slug)}>
+                        {g.label}
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "takeout", id: r.id })}>
+                <TrashIcon /> Take out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="rd trn rls lbx">
+      {/* ---- Header: Training's, bare (no fact line, so no room kept for one). */}
+      <header className="trn-head bare">
+        <div className="trn-head-main">
+          <div className="trn-name-row">
+            <h1 className="trn-name">Library</h1>
+          </div>
         </div>
-        <div className="rd-head-actions">
-          <Tabs
-            value={shelf}
-            onValueChange={(v) => setShelf(v as Shelf)}
-          >
-            <TabsList aria-label="Shelf">
-              <TabsTrigger value="exercises">Exercises</TabsTrigger>
-              <TabsTrigger value="cardio">Cardio</TabsTrigger>
-              <TabsTrigger value="videos">Videos</TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="trn-head-actions">
+          <Popover open={panel === "head"} onOpenChange={(o) => setPanel(o ? "head" : null)}>
+            <PopoverTrigger asChild>
+              <button type="button" className={`trn-pill${panel === "head" ? " on" : ""}`}>
+                <PlusIcon /> Exercise
+              </button>
+            </PopoverTrigger>
+            {panel === "head" && <CreatePanel label="New exercise" align="end" groups={groupOptions} group={data.groups[0]?.slug ?? "other"} taken={exerciseTaken} onAdd={addExercise} onCancel={() => setPanel(null)} />}
+          </Popover>
+          <Popover open={panel === "group"} onOpenChange={(o) => !o && setPanel(null)}>
+            <PopoverAnchor asChild>
+              <span className="lbx-more">
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger className="trn-more" aria-label="More for the library">
+                    <MoreIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="pb-menu"
+                    onCloseAutoFocus={(e) => {
+                      if (!keepFocus.current) return;
+                      keepFocus.current = false;
+                      e.preventDefault();
+                    }}
+                  >
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        keepFocus.current = true;
+                        setPanel("group");
+                      }}
+                    >
+                      <PlusIcon /> New group
+                    </DropdownMenuItem>
+                    {(outCount > 0 || showOut) && (
+                      <DropdownMenuItem onSelect={() => setShowOut((v) => !v)}>
+                        <EyeIcon /> {showOut ? "Hide taken out" : "Show taken out"}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </span>
+            </PopoverAnchor>
+            {panel === "group" && <CreatePanel label="New group" align="end" taken={groupTaken} onAdd={(label) => addGroup(label)} onCancel={() => setPanel(null)} />}
+          </Popover>
         </div>
       </header>
 
-      {shelf === "videos" ? (
-        <VideosShelf
-          videos={data.videos}
-          items={data.items.filter((i) => !i.archived)}
-          onChanged={() => router.refresh()}
-          onAssign={(exerciseId, videoId, name) => act(() => assignVideoToExerciseAction(exerciseId, videoId), `Demo on ${name}`)}
-          onDelete={(v) => act(() => deleteLibraryVideoAction(v.id), `${v.name} deleted`)}
-          onRename={(v, name) => act(() => renameLibraryVideoAction(v.id, name), `Renamed to ${name}`)}
-        />
-      ) : (
-        <ExerciseLibraryGrid
-          items={onShelf.filter((i) => showRemoved || !i.archived)}
-          groups={groups}
-          cardio={shelf === "cardio"}
-          removedShown={showRemoved}
-          removedCount={removedCount}
-          onToggleRemoved={() => setShowRemoved((v) => !v)}
-          onOpen={openItem}
-          onNew={(slug) => setCreating(slug)}
-          onArchive={archive}
-          onChanged={() => router.refresh()}
-          editingId={openId}
-        />
-      )}
+      {/* ---- One search: by name, every group at once. */}
+      <div className="lbx-find">
+        <label className="lbx-search">
+          <SearchIcon />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setQ("");
+            }}
+            placeholder="Search exercises"
+            aria-label="Search the library"
+          />
+        </label>
+        {needle && sections.length === 0 && <p className="lbx-none">None</p>}
+      </div>
 
-      <ExerciseDrawer open={open != null || creating != null} colour={groupColour(shownItem?.group)} onClose={closeEditor} onCardUnder={(id) => openItem(id)}>
-        {shownItem && (
-          <ExerciseEditor
-            key={shownItem.id}
-            item={shownItem}
-            items={data.items}
+      {/* ---- A muscle group: its title, the count and the fold; an exercise a row, A–Z; + Exercise last. */}
+      {sections.map((s) => {
+        const open = isOpen(s.slug);
+        const count = s.rows.filter((r) => !r.archived).length;
+        const label = groupNames[s.slug] ?? s.label;
+        const head = (
+          <>
+            <span className="lbx-glabel">{label}</span>
+            <small>{count}</small>
+            <Fold open={open} />
+          </>
+        );
+        return (
+          <section key={s.slug} className="rls-section lbx-group" aria-label={label}>
+            <h2 className="lbx-gtitle">
+              {renamingGroup === s.slug ? (
+                <input
+                  className="lbx-grename"
+                  defaultValue={label}
+                  autoFocus
+                  maxLength={40}
+                  aria-label={`Rename ${label}`}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") renameGroup(s.slug, label, e.currentTarget.value);
+                    if (e.key === "Escape") setRenamingGroup(null);
+                  }}
+                  onBlur={(e) => renameGroup(s.slug, label, e.currentTarget.value)}
+                />
+              ) : needle ? (
+                <span className="lbx-gbtn">{head}</span>
+              ) : (
+                <>
+                  <button type="button" className="lbx-gbtn" aria-expanded={open} onClick={() => toggle(s.slug)}>
+                    {head}
+                  </button>
+                  <button type="button" className="lbx-grename-btn" onClick={() => setRenamingGroup(s.slug)}>
+                    Rename
+                  </button>
+                </>
+              )}
+            </h2>
+            {open && (
+              <div className="rls-card lbx-card">
+                {s.rows.map(rowView)}
+                {!needle && (
+                  <Popover open={panel === s.slug} onOpenChange={(o) => setPanel(o ? s.slug : null)}>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="lbx-addrow">
+                        <span className="lbx-addrow-plus" aria-hidden="true">
+                          <PlusIcon />
+                        </span>
+                        Exercise
+                      </button>
+                    </PopoverTrigger>
+                    {panel === s.slug && <CreatePanel label="New exercise" align="start" group={s.slug} taken={exerciseTaken} onAdd={addExercise} onCancel={() => setPanel(null)} />}
+                  </Popover>
+                )}
+              </div>
+            )}
+          </section>
+        );
+      })}
+
+      <Dialog open={dlg != null && dlgItem != null} onOpenChange={(o) => !o && setDlg(null)}>
+        {dlg?.kind === "demo" && dlgItem && (
+          <DemoVideoDialog
+            key={dlgItem.id}
+            startTab={dlg.tab}
+            exerciseName={dlgItem.name}
+            clientsUsing={0}
+            current={dlgItem.video ? { url: dlgItem.video, source: "library" } : null}
             videos={data.videos}
-            groups={data.groups}
-            siblings={data.items
-              .filter((i) => i.group === shownItem.group && !i.archived)
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map((i) => i.id)}
-            backTo={openFrom && openFrom.id !== shownItem.id ? openFrom : null}
-            onClose={closeEditor}
-            onSwitch={(id) => {
-              setOpenFrom(null);
-              setOpenId(id);
-            }}
-            onOpenOther={(id) => {
-              setOpenFrom(openFrom && id === openFrom.id ? null : { id: shownItem.id, name: shownItem.name });
-              setOpenId(id);
-            }}
-            onChanged={() => router.refresh()}
-            onCreated={(id) => {
-              setCreating(null);
-              setOpenId(id);
+            onClose={() => setDlg(null)}
+            onLink={(url) => setLink(dlgItem, url)}
+            onUpload={(file) => upload(dlgItem, file)}
+            onRemove={() => removeDemo(dlgItem)}
+          />
+        )}
+        {dlg?.kind === "remove" && dlgItem && (
+          <ConfirmDialog
+            title="Remove the demo?"
+            description={`It comes off ${dlgItem.name} for every client.`}
+            confirm="Remove"
+            danger
+            onConfirm={() => {
+              setDlg(null);
+              // A failure is already undone on screen and said in a toast.
+              removeDemo(dlgItem).catch(() => {});
             }}
           />
         )}
-      </ExerciseDrawer>
+        {dlg?.kind === "takeout" && dlgItem && (
+          <ConfirmDialog
+            title={`Take out ${dlgItem.name}?`}
+            description="Programmes that have it keep it."
+            confirm="Take out"
+            danger
+            onConfirm={() => {
+              setDlg(null);
+              takeOut(dlgItem, true);
+            }}
+          />
+        )}
+      </Dialog>
 
       <Toaster />
     </div>
   );
 }
 
-/** Uploads clips one after another; says how far it has got through `onProgress`. */
-async function uploadAll(files: File[], onProgress: (p: { done: number; total: number; current: string } | null) => void): Promise<{ count: number; errors: string[] }> {
-  const list = files.filter((f) => f.type.startsWith("video/"));
-  const errors: string[] = [];
-  for (let i = 0; i < list.length; i++) {
-    onProgress({ done: i, total: list.length, current: list[i].name });
-    const f = new FormData();
-    f.set("file", list[i]);
-    const r = await uploadLibraryVideoAction(f).catch(() => ({ ok: false as const, error: `${list[i].name} didn't upload.` }));
-    if (!r.ok) errors.push(r.error);
-  }
-  onProgress(null);
-  return { count: list.length, errors };
+const PLAY = "M8 5v14l11-7z";
+
+/** A demo clip's first frame, fetched only once its row comes near the screen. */
+function LazyClip({ src }: { src: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e?.isIntersecting) return;
+        setNear(true);
+        io.disconnect();
+      },
+      { rootMargin: "400px 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return <video ref={ref} src={near ? `${src}#t=0.5` : undefined} preload="metadata" muted playsInline tabIndex={-1} aria-hidden="true" />;
 }
 
 /**
- * The coach's own videos: upload a whole session's clips at once (one after
- * another, with how far it has got), then hand each to an exercise. The
- * exercise its file name matches is offered first, one click.
+ * The demo's thumb: a 3:4 poster for a clip or a YouTube link (a click plays it in a player floating by the row; Esc
+ * or a click away closes it), a link mark for another link (opens it in a new tab), a dashed + when there is none.
  */
-function VideosShelf({
-  videos,
-  items,
-  onChanged,
-  onAssign,
-  onDelete,
-  onRename,
-}: {
-  videos: LibraryVideo[];
-  items: LibraryItem[];
-  onChanged: () => void;
-  onAssign: (exerciseId: number, videoId: number | null, name: string) => void;
-  onDelete: (v: LibraryVideo) => void;
-  onRename: (v: LibraryVideo, name: string) => void;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  const [queue, setQueue] = useState<{ done: number; total: number; current: string } | null>(null);
-  const [drag, setDrag] = useState(false);
-  const [unusedOnly, setUnusedOnly] = useState(false);
-  // The clip whose name is being typed, in place of its title.
-  const [renaming, setRenaming] = useState<number | null>(null);
-  // The clip playing large, with sound.
-  const [playing, setPlaying] = useState<LibraryVideo | null>(null);
-  const upload = async (files: File[]) => {
-    const { count, errors } = await uploadAll(files, setQueue);
-    if (!count) return;
-    onChanged();
-    if (errors.length) toast.error(errors.join(" "));
-    else toast.success(`${count} ${count === 1 ? "video" : "videos"} uploaded`);
-  };
-  // The exercise a clip's file name matches, if one does and it has no demo yet.
-  const suggest = (v: LibraryVideo) => {
-    const n = norm(v.name);
-    if (!n) return null;
-    return items.find((i) => !i.video && norm(i.name) === n) ?? items.find((i) => !i.video && (n.includes(norm(i.name)) || norm(i.name).includes(n)) && norm(i.name).length > 3) ?? null;
-  };
-  const shown = unusedOnly ? videos.filter((v) => v.usedBy.length === 0) : videos;
+function Thumb({ row, playing, onPlay, onAdd }: { row: Row; playing: boolean; onPlay: (on: boolean) => void; onAdd: () => void }) {
+  const url = row.video;
+  if (!url)
+    return (
+      <button type="button" className="lbx-thumb none" aria-label={`Add a demo to ${row.name}`} disabled={row.pending || row.archived} onClick={onAdd}>
+        <PlusIcon />
+      </button>
+    );
+  const kind = demoKind(url);
+  if (kind === "link")
+    return (
+      <a className="lbx-thumb link" href={url} target="_blank" rel="noopener noreferrer" aria-label={`Open the demo of ${row.name}`} title={url}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+        </svg>
+      </a>
+    );
+  const yt = kind === "youtube" ? ytId(url) : null;
+  const tall = kind === "youtube" && /shorts\//i.test(url);
   return (
-    <>
-      <Card
-        className={`lb-drop${drag ? " over" : ""}`}
-        onDragOver={(e) => {
-          if (!e.dataTransfer.types.includes("Files")) return;
+    <Popover open={playing} onOpenChange={onPlay}>
+      <PopoverTrigger asChild>
+        <button type="button" className="lbx-thumb poster" aria-label={`Play the demo of ${row.name}`}>
+          {yt ? (
+            // eslint-disable-next-line @next/next/no-img-element -- YouTube's own thumbnail
+            <img src={`https://i.ytimg.com/vi/${yt}/mqdefault.jpg`} alt="" loading="lazy" draggable={false} />
+          ) : (
+            <LazyClip src={url} />
+          )}
+          <svg className="lbx-thumb-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d={PLAY} />
+          </svg>
+        </button>
+      </PopoverTrigger>
+      {playing && (
+        <PopoverContent className={`lbx-player${tall ? " tall" : ""}`} side="bottom" align="start" sideOffset={8} aria-label={`${row.name} demo`} onOpenAutoFocus={(e) => e.preventDefault()}>
+          {yt ? <iframe src={`https://www.youtube.com/embed/${yt}?autoplay=1&rel=0`} title={`${row.name} demo`} allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowFullScreen /> : <video src={url} controls autoPlay playsInline />}
+        </PopoverContent>
+      )}
+    </Popover>
+  );
+}
+
+/** The name typed in place: Enter or a click away keeps it (it shows at once), Esc leaves it. */
+function RenameField({ name, onDone, onCancel }: { name: string; onDone: (v: string) => void; onCancel: () => void }) {
+  const box = useRef<HTMLInputElement>(null);
+  const done = useRef(false);
+  useEffect(() => {
+    const f = requestAnimationFrame(() => {
+      box.current?.focus({ preventScroll: true });
+      box.current?.select();
+    });
+    return () => cancelAnimationFrame(f);
+  }, []);
+  const finish = (v: string | null) => {
+    if (done.current) return;
+    done.current = true;
+    if (v == null) onCancel();
+    else onDone(v);
+  };
+  return (
+    <input
+      ref={box}
+      className="lbx-rename"
+      defaultValue={name}
+      maxLength={60}
+      aria-label="Name"
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
           e.preventDefault();
-          setDrag(true);
-        }}
-        onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setDrag(false)}
-        onDrop={(e) => {
-          if (!e.dataTransfer.types.includes("Files")) return;
+          finish(e.currentTarget.value);
+        }
+        if (e.key === "Escape") {
           e.preventDefault();
-          setDrag(false);
-          if (!queue) void upload([...e.dataTransfer.files]);
+          finish(null);
+        }
+      }}
+      onBlur={(e) => finish(e.currentTarget.value)}
+    />
+  );
+}
+
+/**
+ * The floating create panel (design rules 6): a small-caps label, the name on a clean line (and the group, from the
+ * header's + Exercise), Cancel in words and an ink Add. A name already there holds Add back and says where it is.
+ */
+function CreatePanel({ label, align, groups, group: startGroup, taken, onAdd, onCancel }: { label: string; align: "start" | "end"; groups?: { value: string; label: string }[]; group?: string; taken: (name: string) => string | null; onAdd: (name: string, group: string) => void | Promise<void>; onCancel: () => void }) {
+  const box = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState("");
+  const [group, setGroup] = useState(startGroup ?? "other");
+  const [busy, setBusy] = useState(false);
+  const clash = taken(name);
+  const ok = name.trim().length > 0 && !clash && !busy;
+  const go = async () => {
+    if (!ok) return;
+    setBusy(true);
+    await onAdd(name.trim().slice(0, 60), group);
+    setBusy(false);
+  };
+  return (
+    <PopoverContent
+      className="rd-addpop lbx-create"
+      align={align}
+      sideOffset={6}
+      onOpenAutoFocus={(e) => {
+        e.preventDefault();
+        box.current?.focus({ preventScroll: true });
+      }}
+      // The group's list floats outside the panel; a pick in it doesn't close the panel.
+      onInteractOutside={(e) => {
+        if ((e.target as Element | null)?.closest?.('[data-slot="dropdown-menu-content"]')) e.preventDefault();
+      }}
+    >
+      <div
+        className="rd-addpop-create"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") {
+            e.preventDefault();
+            void go();
+          }
         }}
       >
-        <CardContent className="lb-drop-body">
-          {queue ? (
-            <span className="lb-drop-progress">
-              Uploading {queue.done + 1} of {queue.total}
-              <Sep />
-              <b>{queue.current}</b>
-              <i style={{ width: `${(queue.done / queue.total) * 100}%` }} />
-            </span>
-          ) : (
-            <>
-              <span>Drop a whole session&rsquo;s videos here, or</span>
-              <Button onClick={() => input.current?.click()}>
-                <PlusIcon /> Upload videos
-              </Button>
-              <small>Up to 128MB each. They stay here until you give them to an exercise.</small>
-            </>
-          )}
-          <input
-            ref={input}
-            type="file"
-            accept="video/*"
-            multiple
-            hidden
-            onChange={(e) => {
-              const files = [...(e.target.files ?? [])];
-              e.target.value = "";
-              void upload(files);
-            }}
-          />
-        </CardContent>
-      </Card>
-      {videos.length > 0 && (
-        <div className="lb-tools">
-          <Button variant={unusedOnly ? "default" : "outline"} size="sm" aria-pressed={unusedOnly} onClick={() => setUnusedOnly((v) => !v)}>
-            <span>
-              Not used yet<Sep />
-              {videos.filter((v) => v.usedBy.length === 0).length}
-            </span>
-          </Button>
+        <span className="rd-addpop-label">{label}</span>
+        <div className="rd-addpop-row">
+          <input ref={box} value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" maxLength={60} aria-label="Name" />
         </div>
-      )}
-      {shown.length === 0 ? (
-        <p className="lb-empty">{videos.length ? "Every video is in use." : "No videos yet."}</p>
-      ) : (
-        // The clips as cards (14 Oct, Alex), laid out as the exercises are: the clip, its length, its size and date; no title.
-        <div className="lib-grid lib-videos">
-          {shown.map((v, k) => (
-            <VideoCard key={v.id} v={v} index={k} hint={v.usedBy.length === 0 ? suggest(v) : null} renaming={renaming === v.id} onRename={(name) => { setRenaming(null); if (name && name !== v.name) onRename(v, name); }} onStartRename={() => setRenaming(v.id)} onDelete={() => onDelete(v)} onAssign={(ex) => onAssign(ex.id, v.id, ex.name)} onPlay={() => setPlaying(v)} />
-          ))}
-        </div>
-      )}
-      {playing &&
-        createPortal(
-          <div className="exm-lightbox" role="dialog" aria-label={playing.name} onClick={() => setPlaying(null)}>
-            <div className="exm-lightbox-card" onClick={(e) => e.stopPropagation()}>
-              <video src={playing.path} controls autoPlay playsInline />
-              <div className="exm-lightbox-row">
-                <span className="exm-lightbox-text">
-                  <b>{playing.name}</b>
-                  <small>{playing.usedBy.length ? `On ${playing.usedBy.map((e) => e.name).join(", ")}` : "Not on an exercise yet"}</small>
-                </span>
-                <button type="button" className="exm-close" onClick={() => setPlaying(null)} aria-label="Close">
-                  ✕
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
+        {groups && (
+          <div className="rd-addpop-row fill">
+            <Picker value={group} onChange={setGroup} label="Group" options={groups} />
+          </div>
         )}
-    </>
+        {clash && <p className="rd-addpop-warn">{clash}</p>}
+        <div className="rd-addpop-foot">
+          <button type="button" className="rd-addpop-cancel" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="button" className="rd-addpop-go" disabled={!ok} onClick={() => void go()}>
+            Add
+          </button>
+        </div>
+      </div>
+    </PopoverContent>
   );
 }
-
-const fmtDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
-const fmtBytes = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(n >= 10 * 1024 * 1024 ? 0 : 1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
-const FALLBACKS = ["linear-gradient(150deg,#55648a,#1a2030)", "linear-gradient(150deg,#4a6b7a,#162028)", "linear-gradient(150deg,#665a7d,#1c1828)", "linear-gradient(150deg,#5a6f5f,#18221c)"];
-
-/** One clip as a card: its first frame with a play disc and its length, then its size and date; ⋯ renames or deletes it; a matching exercise with no demo is offered. */
-function VideoCard({ v, index, hint, renaming, onRename, onStartRename, onDelete, onAssign, onPlay }: { v: LibraryVideo; index: number; hint: LibraryItem | null; renaming: boolean; onRename: (name: string) => void; onStartRename: () => void; onDelete: () => void; onAssign: (ex: LibraryItem) => void; onPlay: () => void }) {
-  const [seconds, setSeconds] = useState<number | null>(null);
-  return (
-    <div className="lib-card">
-      <div className="lib-thumb portrait" style={{ background: FALLBACKS[index % FALLBACKS.length] }}>
-        <video className="lib-poster" src={`${v.path}#t=0.5`} preload="metadata" muted playsInline onLoadedMetadata={(e) => Number.isFinite(e.currentTarget.duration) && setSeconds(e.currentTarget.duration)} />
-        <span className="lib-shade" aria-hidden="true" />
-        <button type="button" className="lib-play" aria-label={`Play ${v.name}`} onClick={onPlay}>
-          <PlayIcon />
-        </button>
-        {seconds != null && <span className="lib-chip-dur">{fmtDuration(seconds)}</span>}
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <button type="button" className="lib-edit" aria-label={`More for ${v.name}`}>
-              <MoreIcon />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="pb-menu">
-            <DropdownMenuItem onSelect={onStartRename}>
-              <PencilIcon /> Rename
-            </DropdownMenuItem>
-            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-              <TrashIcon /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      <div className="lib-body">
-        {renaming && (
-          <Input
-            autoFocus
-            className="h-8"
-            defaultValue={v.name}
-            maxLength={120}
-            aria-label="Video name"
-            onBlur={(e) => onRename(e.target.value.trim())}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
-              if (e.key === "Escape") {
-                e.currentTarget.value = v.name;
-                e.currentTarget.blur();
-              }
-            }}
-          />
-        )}
-        <span className="lib-cue" title={v.name}>
-          <SepJoin parts={[v.bytes != null ? fmtBytes(v.bytes) : null, dayMonth(v.at)]} />
-        </span>
-        <span className="lib-cardchips">
-          {v.usedBy.length > 0 ? (
-            <span className="lib-cardchip navy" title={v.usedBy.map((e) => e.name).join(", ")}>
-              On {v.usedBy.length === 1 ? v.usedBy[0].name : `${v.usedBy.length} exercises`}
-            </span>
-          ) : hint ? (
-            <button type="button" className="lib-cardchip navy lib-cardchip-btn" onClick={() => onAssign(hint)}>
-              Use for {hint.name}
-            </button>
-          ) : (
-            <span className="lib-cardchip">Not used yet</span>
-          )}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/** Under an exercise's rows in its dialog: every video of the coach's to drag up onto a demo slot, and new ones dropped or uploaded here. */
