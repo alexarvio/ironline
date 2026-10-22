@@ -98,7 +98,8 @@ export default function CalendarBoard({
                 <div className="rcl-chips">
                   {cell.chips.map((m) => {
                     const cls = `rcl-chip${m.clash ? " conflict" : ""}${m.done ? " done" : ""}${m.allDay ? " allday" : ""}`;
-                    const style = { background: m.tint, color: m.ink, boxShadow: m.clash ? `inset 0 0 0 1px ${m.line}` : m.allDay ? `inset 0 -2px 0 ${m.ink}` : undefined };
+                    // An all-day one: a straight line along its bottom (::after in calendar.css), in its ink, never an edge up the sides.
+                    const style = { background: m.tint, color: m.ink, boxShadow: m.clash ? `inset 0 0 0 1px ${m.line}` : undefined, "--ink": m.ink } as React.CSSProperties;
                     const words = (
                       <>
                         {!m.allDay && <b>{m.time || "–"}</b>} {m.label}
