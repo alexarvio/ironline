@@ -90,7 +90,9 @@
 .cdg { display: flex; flex-direction: column; gap: 12px; }
 .cdg-allday { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: start; gap: 8px; min-height: 30px; padding-bottom: 12px; border-bottom: 1px solid #eef0f3; }
 .cdg-allday-label { padding-top: 8px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #98a2b3; white-space: nowrap; }
-.cdg-allday-list { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* Always room for one all-day entry (22 Oct, Alex: going from day to day the hours jumped when one day had one): an
+   empty day's row is as tall as a day with one, so the hours never move. */
+.cdg-allday-list { display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 30px; }
 .cdg-allday-list .cdg-pill { height: 30px; }
 .cdg-allday-list .cdg-pill.open { height: auto; }
 
