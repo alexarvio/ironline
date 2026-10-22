@@ -1,14 +1,14 @@
 "use client";
 
 import Pager from "../Pager";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { addClientPhaseAction, applySupplementChangesAction, deletePhaseAction, deployPhaseNowAction, markSeenAction, saveAndSchedulePhaseOrSayWhyAction, saveCoachNutritionNoteAction, saveNutritionTargetsAction, sendChatMessageAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { CalendarIcon, CameraIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { LoggedDay, LoggedDaysView, LoggedMeal, MealComment } from "../../../lib/queries";
 import { ConfirmDialog, DeletePhaseDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
@@ -1404,57 +1404,92 @@ function DayRow({ day, open, due, grid, mealGrid, commentsOn, onToggle, onShot, 
   );
 }
 
-/** The client's picture of one meal, and the coach's word under it. */
+/** The client's picture of one meal, and the coach's word under it. The .dlh card (22 Oct, Alex: it was the old
+ *  pop-up): the meal and the day, the macros as the one fact line, the photo large, what you said on it before, and a
+ *  comment that sends (design rules 4: no line until something is typed; then the line, Cancel and Send). */
 function PhotoDialog({ firstName, date, meal, comments, onSend }: { firstName: string; date: string; meal: LoggedMeal; comments: MealComment[]; onSend: (text: string) => void }) {
   const [text, setText] = useState("");
+  const typed = !!text.trim();
+  const line = useRef<HTMLTextAreaElement>(null);
+  // The line grows with the words, up to 160px (the border under it counted), and scrolls only past that.
+  useLayoutEffect(() => {
+    const el = line.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const want = el.scrollHeight + 1;
+    el.style.height = `${Math.min(160, want)}px`;
+    el.style.overflowY = want > 160 ? "auto" : "hidden";
+  }, [text]);
   const send = () => {
     if (!text.trim()) return;
     onSend(text.trim());
     setText("");
   };
   return (
-    <DialogContent className="rd-dlg rn-shotdlg">
-      <DialogHeader>
-        <DialogTitle>
+    // The comment line takes the focus here, not by autoFocus, so the pop-up still knows the photo it was opened from and
+    // gives the focus back to it on closing; and the card opens at its top, not scrolled to the line.
+    <DialogContent
+      className="dlh rn-shotdlg"
+      onOpenAutoFocus={(e) => {
+        e.preventDefault();
+        line.current?.focus({ preventScroll: true });
+      }}
+    >
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">
           {meal.label}
           <Sep />
           {dayMonth(date)}
         </DialogTitle>
-        <DialogDescription>
-          {n(meal.kcal)} kcal
-          <Sep />
-          {meal.protein} g protein
-          <Sep />
-          {meal.carbs} g carbs
-          <Sep />
-          {meal.fat} g fat
-        </DialogDescription>
-      </DialogHeader>
-      {/* eslint-disable-next-line @next/next/no-img-element -- client-uploaded file */}
-      <img className="rn-shotimg" src={meal.photo ?? ""} alt={`${meal.label} on ${logDate(date)}`} />
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <DialogDescription className="dlh-what">
+        {n(meal.kcal)} kcal
+        <Sep />
+        {meal.protein} g protein
+        <Sep />
+        {meal.carbs} g carbs
+        <Sep />
+        {meal.fat} g fat
+      </DialogDescription>
+      {/* A stage of its own height, so the card doesn't move as the picture comes in; the picture in its own shape. */}
+      <div className="rn-shotstage">
+        {/* eslint-disable-next-line @next/next/no-img-element -- client-uploaded file */}
+        <img className="rn-shotimg" src={meal.photo ?? ""} alt={`${meal.label} on ${logDate(date)}`} />
+      </div>
       {comments.length > 0 && (
-        <div className="rn-saidlist">
+        <ul className="rn-shotsaid" aria-label="Your comments">
           {comments.map((c) => (
-            <p key={c.id} className="rn-said">
-              <b>
-                You<Sep />
-                {c.when}
-              </b>
-              {c.text}
-            </p>
+            <li key={c.id}>
+              <span className="rn-shotwhen">{c.when}</span>
+              <span>{c.text}</span>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-      <label className="rd-field">
-        <span>Comment</span>
-        <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder={`On ${firstName}'s ${meal.label.toLowerCase()}…`} onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && send()} />
-      </label>
-      <DialogFooter>
-        <DialogClose className="rd-btn">Close</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!text.trim()} onClick={send}>
-          Send
-        </button>
-      </DialogFooter>
+      <textarea
+        ref={line}
+        rows={1}
+        className={`dlh-line rn-shotline${typed ? " typed" : ""}`}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={`Add a comment for ${firstName}`}
+        aria-label={`Comment for ${firstName} on ${meal.label.toLowerCase()}`}
+        onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && send()}
+      />
+      {/* Cancel and Send once something is typed; their room is kept, so the card doesn't move as they come. */}
+      <div className="dlh-foot rn-shotfoot">
+        {typed && (
+          <>
+            <DialogClose className="dlh-cancel">Cancel</DialogClose>
+            <button type="button" className="dlh-go" onClick={send}>
+              Send
+            </button>
+          </>
+        )}
+      </div>
     </DialogContent>
   );
 }

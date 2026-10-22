@@ -8,7 +8,7 @@ import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan
 import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, deletePhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
@@ -2633,41 +2633,42 @@ function CreateExercise({ library, initial, onCreate, onCancel }: { library: Lib
 function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; current: Edits; library: Library; onSave: (v: { name?: string }) => void }) {
   const [name, setName] = useState(current.name ?? row.name);
   const [replacing, setReplacing] = useState(true);
+  // The .dlh card (22 Oct, Alex: it was the old pop-up): the title, the exercise on its line with Replace in words, the
+  // search under it while replacing, Cancel and the ink Save; nothing explained.
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>Edit {row.name}</DialogTitle>
-        <DialogDescription>
-          Replace the exercise in the programme
-          {row.logged.length ? (
-            <>
-              <Sep />
-              what the client logged stays
-            </>
-          ) : null}
-          .
-        </DialogDescription>
-      </DialogHeader>
-      <div className="rd-field">
-        <span>Exercise</span>
-        <span className="rd-about">{name}</span>
+    <DialogContent className="dlh dlh-wide">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Edit {row.name}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
       </div>
-      {replacing ? (
-        <div className="rd-field">
-          <span>Replace with</span>
+      <DialogDescription className="sr-only">
+        Replace {row.name} in the programme{row.logged.length ? "; what the client logged stays" : ""}
+      </DialogDescription>
+      <div className="dlh-field">
+        <span className="dlh-label">Exercise</span>
+        <div className="dlh-valrow">
+          <span className="dlh-value">{name}</span>
+          {!replacing && (
+            <button type="button" className="dlh-act" onClick={() => setReplacing(true)}>
+              Replace
+            </button>
+          )}
+        </div>
+      </div>
+      {replacing && (
+        <div className="dlh-field">
+          <span className="dlh-label">Replace with</span>
           <AddExerciseRow library={library} onPick={(n) => setName(n)} onClose={() => setReplacing(false)} />
         </div>
-      ) : (
-        <button type="button" className="rd-btn rd-alt-add" onClick={() => setReplacing(true)}>
-          Replace exercise
-        </button>
       )}
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" onClick={() => onSave(name !== row.name ? { name } : {})}>
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel">Cancel</DialogClose>
+        <button type="button" className="dlh-go" onClick={() => onSave(name !== row.name ? { name } : {})}>
           Save
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }
@@ -2868,6 +2869,19 @@ function AddCardioRow({ moves = [], onPick, onClose }: { /** The coach's cardio 
 
 // ---- Dialogs ------------------------------------------------------------------
 
+/** Words typed in a .dlh pop-up (a message, a reply, an ask): no box, a clean line under them that grows with the
+ *  words up to 160px, ink while typing (design rules 4). */
+function NoteLine({ value, onChange, ...rest }: Omit<React.ComponentProps<"textarea">, "value" | "onChange" | "rows" | "className"> & { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(160, el.scrollHeight + 1)}px`;
+  }, [value]);
+  return <textarea ref={ref} rows={1} className="dlh-line dlh-grow" value={value} onChange={(e) => onChange(e.target.value)} {...rest} />;
+}
+
 function reviewOf(row: DraftRow, video: NonNullable<DraftRow["video"]>, session: DraftSession | null, weekNo: number, firstName: string, weight: (kg: number | null) => string): MediaReview {
   const ms = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() : 0);
   const thread: ThreadItem[] = [];
@@ -2907,49 +2921,47 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
     if (seenId != null) void markVideoSeenAction(seenId);
   }, [seenId]);
   // A photo or video that came in opens the media review instead (12 Oct, MediaReviewModal); this dialog asks for one, waits, or says it is not here yet.
+  // The .dlh card (22 Oct, Alex: it was the old pop-up): the title and one fact line (the ask names the exercise alone,
+  // design rules 8), the words on clean lines, Cancel or Close in words and one ink pill; nothing explained.
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s ${video.media}${video.about === "swap" ? " of the substitute" : ""}`}</DialogTitle>
-        <DialogDescription>
-          <SepJoin parts={[row.name, where, video && video.state !== "asked" && video.fromClient && "sent unasked"]} />
-        </DialogDescription>
-      </DialogHeader>
+    <DialogContent className="dlh dlh-video">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s ${video.media}${video.about === "swap" ? " of the substitute" : ""}`}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <DialogDescription className="dlh-what">{!video ? row.name : <SepJoin parts={[row.name, where, video.state !== "asked" && video.fromClient && "sent unasked"]} />}</DialogDescription>
       {!video && (
         <>
-          <label className="rd-field">
-            <span>What you want to see</span>
-            <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Film the top set from the side, please." autoFocus />
-          </label>
-          <p className="rd-dlg-hint">It shows on this exercise in this session of {firstName}&rsquo;s app, with a camera to film or upload it. Up to two minutes.</p>
-          <DialogFooter>
-            <DialogClose className="rd-btn">Cancel</DialogClose>
-            <button type="button" className="rd-btn primary" onClick={() => onAsk(note.trim())}>
-              Ask {firstName}
+          <NoteLine value={note} onChange={setNote} placeholder="What you want to see" aria-label="What you want to see" autoFocus />
+          <div className="dlh-foot">
+            <DialogClose className="dlh-cancel">Cancel</DialogClose>
+            <button type="button" className="dlh-go" onClick={() => onAsk(note.trim())}>
+              Ask
             </button>
-          </DialogFooter>
+          </div>
         </>
       )}
       {video?.state === "asked" && (
         <>
-          <p className="rd-dlg-para">
-            Waiting for {firstName}. {video.note && <em>&ldquo;{video.note}&rdquo;</em>}
-          </p>
-          <DialogFooter>
-            <button type="button" className="rd-btn danger" onClick={onCancel}>
-              Withdraw the request
+          <p className="dlh-note">Waiting for {firstName}</p>
+          {video.note && <p className="dlh-words">&ldquo;{video.note}&rdquo;</p>}
+          <div className="dlh-foot">
+            <button type="button" className="dlh-delete dlh-start" onClick={onCancel}>
+              Withdraw
             </button>
-            <DialogClose className="rd-btn primary">Close</DialogClose>
-          </DialogFooter>
+            <DialogClose className="dlh-cancel">Close</DialogClose>
+          </div>
         </>
       )}
       {(video?.state === "in" || video?.state === "replied") && (
         <>
           {/* The video itself (9 Oct): the stub with a fixed "0:42" stood here, and the coach could not watch what the client sent. */}
           {video.src && video.media === "photo" ? (
-            <img className="rd-video" src={video.src} alt={`${firstName}'s photo`} />
+            <img className="dlh-media" src={video.src} alt={`${firstName}'s photo`} />
           ) : video.src ? (
-            <video className="rd-video" src={video.src} controls playsInline preload="metadata" aria-label={`${firstName}'s video`} />
+            <video className="dlh-media" src={video.src} controls playsInline preload="metadata" aria-label={`${firstName}'s video`} />
           ) : (
             <div className="rd-video-stub" role="img" aria-label={`${firstName}'s video`}>
               <PlayIcon />
@@ -2957,32 +2969,28 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
             </div>
           )}
           {video.clientNote && (
-            <p className="rd-dlg-para">
-              <b>{firstName} wrote</b> {video.clientNote}
-            </p>
+            <div className="dlh-field">
+              <span className="dlh-label">{firstName}</span>
+              <p className="dlh-words">{video.clientNote}</p>
+            </div>
           )}
-          {video.state === "replied" && video.replySrc && <video className="rd-video" src={video.replySrc} controls playsInline preload="metadata" aria-label="Your reply video" />}
+          {video.state === "replied" && video.replySrc && <video className="dlh-media" src={video.replySrc} controls playsInline preload="metadata" aria-label="Your reply video" />}
           {video.state === "replied" ? (
-            <p className="rd-dlg-para">
-              <b>Your reply</b> {video.reply}
-            </p>
+            <div className="dlh-field">
+              <span className="dlh-label">Your reply</span>
+              <p className="dlh-words">{video.reply}</p>
+            </div>
           ) : (
-            <>
-              <label className="rd-field">
-                <span>Your reply</span>
-                <textarea rows={3} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Depth is good. Keep the knees tracking over the toes on the way up." autoFocus />
-              </label>
-              <p className="rd-dlg-hint">A note, or a video of your own (a screen recording of theirs, drawn over). {firstName} gets a notification.</p>
-            </>
+            <NoteLine value={reply} onChange={setReply} placeholder="Your reply" aria-label="Your reply" autoFocus />
           )}
-          <DialogFooter>
-            <DialogClose className="rd-btn">Close</DialogClose>
+          <div className="dlh-foot">
+            <DialogClose className="dlh-cancel">{video.state === "in" ? "Cancel" : "Close"}</DialogClose>
             {video.state === "in" && (
-              <button type="button" className="rd-btn primary" disabled={!reply.trim()} onClick={() => onReply(reply.trim())}>
-                Send reply
+              <button type="button" className="dlh-go" disabled={!reply.trim()} onClick={() => onReply(reply.trim())}>
+                Send
               </button>
             )}
-          </DialogFooter>
+          </div>
         </>
       )}
     </DialogContent>
@@ -2991,26 +2999,26 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
 
 export function MessageDialog({ firstName, label, onSend }: { firstName: string; label: string; onSend: (text: string) => void }) {
   const [text, setText] = useState("");
+  // The .dlh card (22 Oct, Alex: it was the old pop-up): the title, what it is about as the one fact line (its parts
+  // parted by the drawn bar, the label itself kept as written), the message on a clean line, Cancel and the ink Send.
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>Message {firstName}</DialogTitle>
-      </DialogHeader>
-      <div className="rd-field">
-        <span>About</span>
-        <span className="rd-about">{label}</span>
+    <DialogContent className="dlh dlh-wide">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Message {firstName}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
       </div>
-      <label className="rd-field">
-        <span>Message</span>
-        <textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="What you noticed, and what to do about it." autoFocus onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && text.trim() && onSend(text.trim())} />
-      </label>
-      <DialogFooter>
-        <span className="rd-dlg-hint grow">Lands on {firstName}&rsquo;s Home, linked to this.</span>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!text.trim()} onClick={() => onSend(text.trim())}>
+      <DialogDescription className="dlh-what">
+        <SepJoin parts={label.split(" · ")} />
+      </DialogDescription>
+      <NoteLine value={text} onChange={setText} placeholder="Message" aria-label="Message" autoFocus onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && text.trim() && onSend(text.trim())} />
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel">Cancel</DialogClose>
+        <button type="button" className="dlh-go" disabled={!text.trim()} onClick={() => onSend(text.trim())}>
           Send
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }
@@ -3018,45 +3026,45 @@ export function MessageDialog({ firstName, label, onSend }: { firstName: string;
 function CopySessionDialog({ source, others, canAdd, nextNumber, laterLabel, onCopy }: { source: DraftSession; others: DraftSession[]; canAdd: boolean; nextNumber: number; laterLabel: string; onCopy: (to: "new" | number, also: boolean) => void }) {
   const [to, setTo] = useState<"new" | number>(canAdd ? "new" : (others[0]?.id ?? "new"));
   const [also, setAlso] = useState(false);
-  const count = `${source.rows.length} ${source.rows.length === 1 ? "exercise" : "exercises"}${source.cardio.length ? ` and ${source.cardio.length} cardio` : ""}`;
+  const count = contents(source);
+  const exercises = (n: number) => `${n} ${n === 1 ? "exercise" : "exercises"}`;
+  // Where it goes, as the Picker (no radio cards): a new session, or one of the others, its exercises as the hint.
+  const options = [...(canAdd ? [{ value: "new", label: "New session", hint: `Session ${nextNumber}` }] : []), ...others.map((o) => ({ value: String(o.id), label: o.name, hint: contents(o) }))];
+  // What a session holds, its cardio too: copying onto it replaces both (23 Oct; a cardio-only one read Empty).
+  function contents(o: { rows: unknown[]; cardio: unknown[] }) {
+    return [o.rows.length ? exercises(o.rows.length) : null, o.cardio.length ? `${o.cardio.length} cardio` : null].filter(Boolean).join(" and ") || "Empty";
+  }
+  const target = to === "new" ? null : others.find((o) => o.id === to);
+  // The .dlh card (22 Oct, Alex: it was the old pop-up): the title, what is copied as the one fact line, To as a picker,
+  // the later weeks as a tick, Cancel and the ink Copy.
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>Copy {source.name}</DialogTitle>
-        <DialogDescription>{count}, to:</DialogDescription>
-      </DialogHeader>
-      <div className="rd-choices" role="radiogroup">
-        {canAdd && (
-          <label className={`rd-choice${to === "new" ? " on" : ""}`}>
-            <input type="radio" name="to" checked={to === "new"} onChange={() => setTo("new")} />
-            <span>
-              <b>New session</b>
-              <small>Adds Session {nextNumber} to this week</small>
-            </span>
-          </label>
-        )}
-        {others.map((o) => (
-          <label key={o.id} className={`rd-choice${to === o.id ? " on" : ""}`}>
-            <input type="radio" name="to" checked={to === o.id} onChange={() => setTo(o.id)} />
-            <span>
-              <b>{o.name}</b>
-              <small>{o.rows.length ? `Replaces its ${o.rows.length} ${o.rows.length === 1 ? "exercise" : "exercises"}` : "Empty"}</small>
-            </span>
-          </label>
-        ))}
+    <DialogContent className="dlh">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Copy {source.name}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
       </div>
+      <DialogDescription className="dlh-what">{count}</DialogDescription>
+      <div className="dlh-field">
+        <span className="dlh-label">To</span>
+        <Picker value={String(to)} onChange={(v) => setTo(v === "new" ? "new" : Number(v))} label="Copy to" options={options} className="dlh-pick" />
+      </div>
+      {target && (target.rows.length > 0 || target.cardio.length > 0) && <p className="dlh-note">Replaces its {contents(target)}.</p>}
       {laterLabel && (
-        <label className="rd-tick">
-          <input type="checkbox" checked={also} onChange={(e) => setAlso(e.target.checked)} />
-          Also do this in the remaining weeks ({laterLabel})
-        </label>
-      )}
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" onClick={() => onCopy(to, also)}>
-          {to === "new" ? `Add as Session ${nextNumber}` : `Replace ${others.find((o) => o.id === to)?.name ?? "session"}`}
+        <button type="button" role="checkbox" aria-checked={also} className="dlh-ack" onClick={() => setAlso((x) => !x)}>
+          <span className={`dlh-box ink${also ? " on" : ""}`} aria-hidden="true">
+            {also ? "✓" : ""}
+          </span>
+          Also in {laterLabel}
         </button>
-      </DialogFooter>
+      )}
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel">Cancel</DialogClose>
+        <button type="button" className="dlh-go" onClick={() => onCopy(to, also)}>
+          Copy
+        </button>
+      </div>
     </DialogContent>
   );
 }
@@ -3135,21 +3143,23 @@ export function NewProgramDialog({ onCreate }: { onCreate: (v: { name: string; w
 }
 
 function NoteDialog({ firstName, note, onSeen }: { firstName: string; note: { text: string; when: string }; onSeen: () => void }) {
+  // The .dlh card (22 Oct, Alex: it was the old pop-up): the title, the note's date as the one fact line, the words,
+  // and the ink Seen (opening it already marked it read).
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>Note from {firstName}</DialogTitle>
-        <DialogDescription>
-          On this programme<Sep />
-          {note.when}
-        </DialogDescription>
-      </DialogHeader>
-      <p className="rd-dlg-para rd-note-text">{note.text}</p>
-      <DialogFooter>
-        <button type="button" className="rd-btn primary" onClick={onSeen}>
-          Got it
+    <DialogContent className="dlh dlh-wide">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Note from {firstName}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <DialogDescription className="dlh-what">{note.when}</DialogDescription>
+      <p className="dlh-words">{note.text}</p>
+      <div className="dlh-foot">
+        <button type="button" className="dlh-go" onClick={onSeen}>
+          Seen
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }

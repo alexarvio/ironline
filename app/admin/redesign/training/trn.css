@@ -293,7 +293,8 @@ textarea.dlh-line { resize: none; }
 .dlh-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
 /* A cardio's alternatives (22 Oct, Alex: was the old pop-up): a row each, the name semi-bold and its note on a clean line,
    ✕ on hover; under them a line for the next one, Add in words once something is typed. */
-.dlh-alts { width: min(520px, 100vw - 32px); }
+/* Doubled so it out-ranks .dlh.dlh's 400px (it read 400 wide). */
+.dlh.dlh.dlh-alts { width: min(520px, 100vw - 32px); }
 .dlh-alt-list { display: flex; flex-direction: column; margin: 4px 0 0; padding: 0; list-style: none; }
 .dlh-alt-row { display: grid; grid-template-columns: minmax(90px, 140px) minmax(0, 1fr) 24px; align-items: center; column-gap: 14px; }
 .dlh-alt-name { min-width: 0; overflow: hidden; font-size: 14.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
@@ -314,6 +315,34 @@ textarea.dlh-line { resize: none; }
 .dlh.dlh .rd-picker.dlh-daypick .rdt { font-size: 15px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; }
 .dlh.dlh .rd-picker.dlh-daypick .rdt.bad { color: #b42318; }
 .dlh-delete:disabled { background: none; color: rgba(180, 35, 24, 0.35); cursor: default; }
+/* The last of the old pop-ups in the card (22 Oct, Alex): Edit exercise, the video, Message, Copy session, a client's note.
+   Wider cards for a search's list, a message, a note; a video's card scrolls inside when it is taller than the window. */
+.dlh.dlh.dlh-wide { width: min(520px, 100vw - 32px); }
+.dlh.dlh.dlh-video { width: min(560px, 100vw - 32px); max-height: calc(100vh - 48px); overflow-y: auto; }
+/* A field's value, read not typed, with its action in words at the right (Edit exercise: Replace). */
+.dlh-valrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
+.dlh-value { min-width: 0; overflow: hidden; font-size: 15px; font-weight: 500; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
+.dlh-act { flex: none; height: 32px; padding: 0; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; cursor: pointer; }
+.dlh-act:hover { color: #5b6474; }
+.dlh-act:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; border-radius: 6px; }
+/* Words someone wrote (a client's note, a reply): body grey, their own line breaks kept. */
+.dlh-words { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.5; color: #3a4250; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Words typed in the card (NoteLine: a message, a reply, an ask): one line that grows with them up to 160px, then scrolls. */
+textarea.dlh-line.dlh-grow { min-height: 40px; max-height: 160px; overflow-y: auto; }
+/* What sits at the foot's left (Withdraw, a delete of something there already), its words in line with the card's edge. */
+.dlh-foot > .dlh-start { margin-right: auto; margin-left: -14px; }
+/* A photo or video in the card, fitting the window. */
+.dlh-media { display: block; align-self: center; width: auto; max-width: 100%; max-height: min(56vh, 520px); border-radius: 12px; background: #0b0f16; object-fit: contain; }
+/* A Picker in the card is a clean line as the rest (Copy session's To); its chosen row in ink, never navy. */
+.dlh.dlh .rd-picker.dlh-pick { display: flex; flex: none; width: 100%; height: 40px; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; background: none; box-shadow: none; font-size: 15px; font-weight: 500; color: #141a24; transition: border-color 0.15s; }
+.dlh.dlh .rd-picker.dlh-pick:hover { border-bottom-color: #c5ccd8; }
+.dlh.dlh .rd-picker.dlh-pick[data-state="open"], .dlh.dlh .rd-picker.dlh-pick:focus-visible { border-bottom-color: #141a24; box-shadow: none; outline: none; }
+body:has(.dlh) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background: #f5f6f8; color: #141a24; }
+/* The exercise search in the card (Edit exercise): the bar alone, its edge in ink, as on the session; no frame round it. */
+.dlh.dlh .rd-addrow { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.dlh.dlh .rd-addrow > .rd-addrow-bar { border: 1px solid #141a24; border-radius: 12px; box-shadow: none; background: #fff; }
+.dlh.dlh .rd-addrow-bar .rd-addrow-search { box-shadow: none; font-weight: 500; }
+.dlh.dlh .rd-addrow-chev:hover, .dlh.dlh .rd-addrow-chev.open { background: #f5f6f8; color: #141a24; }
 
 /* ---- Rogue sessions: a label row, then slim rows of their own */
 .rd.trn .trn-rogue { display: flex; flex-direction: column; gap: 8px; margin-top: -8px; }

@@ -108,11 +108,26 @@
 .rn-said { margin: 6px 32px 0 20px; padding: 8px 12px; border-radius: 10px; background: #f1f6fd; font-size: 12.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
 .rn-said b { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #1e3a6e; margin-bottom: 2px; }
 
-/* The picture of one meal, with the coach's comment under it. */
-.rn-shotdlg { max-width: 560px; }
-.rn-shotimg { display: block; width: 100%; max-height: 380px; object-fit: contain; border-radius: 12px; background: #0b0f16; }
-.rn-saidlist { display: flex; flex-direction: column; gap: 6px; }
-.rn-saidlist .rn-said { margin-left: 0; }
+/* The picture of one meal, with the coach's comment under it: the .dlh card (22 Oct, Alex). Wider than the usual card
+   so the picture is large; a stage of one height holds it in its own shape (no dark block round it), so nothing moves
+   as it loads. What you said before as lines, the day faint before the words; then the comment, a note that sends
+   (design rules 4): no line until something is typed, then the line (ink while typing), Cancel and Send in room kept
+   for them. Doubled up where it meets .dlh's own rules, which load from another file. */
+.dlh.dlh.rn-shotdlg { width: min(600px, 100vw - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.rn-shotdlg .dlh-title { font-variant-numeric: tabular-nums; }
+.rn-shotdlg .dlh-what { font-variant-numeric: tabular-nums; }
+.rn-shotstage { display: flex; align-items: center; justify-content: center; height: min(58vh, 520px); margin-top: 4px; }
+.rn-shotimg { display: block; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; border-radius: 12px; object-fit: contain; }
+.rn-shotsaid { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.rn-shotsaid li { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: baseline; font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rn-shotwhen { font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dlh .rn-shotline { border-bottom-color: transparent; }
+.dlh .rn-shotline:not(.typed):focus { border-bottom-color: transparent; }
+.dlh .rn-shotline.typed { border-bottom-color: #e1e5eb; }
+.dlh .rn-shotline.typed:focus { border-bottom-color: #141a24; }
+.dlh .rn-shotfoot { min-height: 36px; }
+/* Nothing in the card shrinks when it is taller than the window: it scrolls instead, so the comment line keeps its height. */
+.dlh.dlh.rn-shotdlg > * { flex-shrink: 0; }
 
 /* ---- The Nutrition tab as Training and Lifestyle (21 Oct, Alex): Training's header and pills (.rd.trn), the
    sections' title and status on the page and their content in one hairline card (.rd.rls: rls-section, rls-card,
