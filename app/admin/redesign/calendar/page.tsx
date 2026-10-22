@@ -2,13 +2,13 @@ import Link from "next/link";
 import { requireCoach } from "../../../lib/auth";
 import { clientReasons, getActivityFeed, getCalendarDay, getCalendarMonth, getMeetingConflicts, listCalendarCategories, listClients, localDateStr, type MeetingWithClient } from "../../../lib/queries";
 import { ATTENTION } from "../../../lib/attentionReasons";
-import { ChevronLeftIcon, ChevronRightIcon } from "../../../components/icons";
 import AutosaveNote from "../../AutosaveNote";
 import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import ChatDock from "../ChatDock";
 import "../messages/messages.css";
-import CalendarDay, { type CalEntry } from "./CalendarDay";
+import { type CalEntry } from "./CalendarDay";
+import CalendarBoard, { type BoardCell } from "./CalendarBoard";
 import { CLASH, entryChrome } from "./chrome";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
@@ -31,8 +31,6 @@ import { dayMonth } from "../../../lib/dayMonth";
 //   /admin/redesign/calendar?month=2026-09&day=2026-09-25
 export const dynamic = "force-dynamic";
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
 const toMin = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
@@ -54,9 +52,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const categories = listCalendarCategories(coach.id);
   const href = (month: string, day?: string) => `/admin/redesign/calendar?month=${month}${day ? `&day=${day}` : ""}`;
 
-  // The day on the right.
-  const d = new Date(`${selectedDay}T12:00:00`);
-  const dayEntries: CalEntry[] = getCalendarDay(coach.id, selectedDay).map((m) => ({
+  // Every day of the six weeks with its entries, so a day opens in the browser at once (CalendarBoard); the day asked
+  // for joins them when it lies outside the grid.
+  const entryOf = (m: MeetingWithClient): CalEntry => ({
     id: m.id,
     time: m.time,
     durationMinutes: m.duration_minutes,
@@ -68,7 +66,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     category: m.category ?? null,
     note: m.prep_notes ?? "",
     conflict: conflictIds.has(m.id),
-  }));
+  });
+  const entries: Record<string, CalEntry[]> = {};
+  for (const cell of calendar.weeks.flat()) entries[cell.date] = cell.meetings.map(entryOf);
+  if (!(selectedDay in entries)) entries[selectedDay] = getCalendarDay(coach.id, selectedDay).map(entryOf);
   // Each with why they need the coach, as the rail says it (14 Oct), for the With picker.
   const feed = getActivityFeed(coach.id);
   const clients = listClients(coach.id).map((c) => {
@@ -78,9 +79,24 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   // eslint-disable-next-line react-hooks/purity -- a server render reads the clock once, on purpose
   const renderedAt = Date.now();
 
-  // All-day entries first in a cell, then by time.
+  // All-day entries first in a cell, then by time; four shown, the rest as +N more.
   const cellOrder = (list: MeetingWithClient[]) => [...list].sort((a, b) => Number(!!b.all_day) - Number(!!a.all_day) || (a.time < b.time ? -1 : 1));
   const span = (m: MeetingWithClient) => `${m.time}–${hhmm(toMin(m.time) + m.duration_minutes)}`;
+  const cells: BoardCell[] = calendar.weeks.flat().map((cell) => {
+    const list = cellOrder(cell.meetings);
+    return {
+      date: cell.date,
+      inMonth: cell.inMonth,
+      isToday: cell.isToday,
+      more: Math.max(0, list.length - 4),
+      chips: list.slice(0, 4).map((m) => {
+        const clash = conflictIds.has(m.id);
+        const c = clash ? CLASH : entryChrome(categories, m.category, m.client_id != null);
+        const label = whoOf(m);
+        return { id: m.id, label, time: m.time, allDay: !!m.all_day, done: m.status === "completed", clash, tint: c.tint, ink: c.ink, line: c.line, clientId: m.client_id, title: `${m.all_day ? "All day" : m.time} · ${label}${m.topic && m.client_id != null ? ` · ${m.topic}` : ""}` };
+      }),
+    };
+  });
 
   return (
     <div className="rd-frame">
@@ -117,79 +133,18 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             </section>
           )}
 
-          <div className="rcl-cols">
-            {/* ---- The month: a day opens on the right; a client's meeting opens their Meetings. */}
-            <section className="rcl-col" aria-label="Month">
-              <div className="rcl-head">
-                <h2>{calendar.label}</h2>
-                <div className="rcl-pan">
-                  <Link href={href(calendar.prevMonth)} scroll={false} className="trn-more" aria-label="Previous month">
-                    <ChevronLeftIcon />
-                  </Link>
-                  <Link href="/admin/redesign/calendar" scroll={false} className="trn-pill">
-                    Today
-                  </Link>
-                  <Link href={href(calendar.nextMonth)} scroll={false} className="trn-more" aria-label="Next month">
-                    <ChevronRightIcon />
-                  </Link>
-                </div>
-              </div>
-              <div className="rcl-card rcl-month">
-                <div className="rcl-weekdays" aria-hidden="true">
-                  {WEEKDAYS.map((w) => (
-                    <span key={w} className="rcl-weekday">
-                      {w}
-                    </span>
-                  ))}
-                </div>
-                <div className="rcl-grid">
-                  {calendar.weeks.flat().map((cell) => {
-                    const list = cellOrder(cell.meetings);
-                    return (
-                      <div key={cell.date} className={`rcl-cell${cell.inMonth ? "" : " outside"}${cell.isToday ? " today" : ""}${cell.date === selectedDay ? " selected" : ""}`}>
-                        <Link href={href(monthKey, cell.date)} scroll={false} className="rcl-cell-link" aria-label={`Open ${spokenDay(cell.date)}`} aria-current={cell.date === selectedDay ? "date" : undefined} />
-                        <span className="rcl-date">{Number(cell.date.slice(8, 10))}</span>
-                        <div className="rcl-chips">
-                          {list.slice(0, 4).map((m) => {
-                            const clash = conflictIds.has(m.id);
-                            const c = clash ? CLASH : entryChrome(categories, m.category, m.client_id != null);
-                            const label = whoOf(m);
-                            return (
-                              <Link
-                                key={m.id}
-                                href={m.client_id == null ? href(monthKey, cell.date) : `/admin/redesign/meetings?client=${m.client_id}`}
-                                scroll={false}
-                                className={`rcl-chip${clash ? " conflict" : ""}${m.status === "completed" ? " done" : ""}${m.all_day ? " allday" : ""}`}
-                                style={{ background: c.tint, color: c.ink, boxShadow: clash ? `inset 0 0 0 1px ${c.line}` : m.all_day ? `inset 2px 0 0 ${c.ink}` : undefined }}
-                                title={`${m.all_day ? "All day" : m.time} · ${label}${m.topic && m.client_id != null ? ` · ${m.topic}` : ""}`}
-                              >
-                                {!m.all_day && <b>{m.time || "–"}</b>} {label}
-                              </Link>
-                            );
-                          })}
-                          {list.length > 4 && <span className="rcl-more">+{list.length - 4} more</span>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </section>
-
-            {/* ---- The chosen day, hour by hour: its name and date on the page, what is booked on the right. */}
-            <section className="rcl-col" aria-label="Day">
-              <div className="rcl-head">
-                <div className="rcl-titled">
-                  <h2>{selectedDay === today ? "Today" : d.toLocaleDateString("en-GB", { weekday: "long" })}</h2>
-                  <span>{dayMonth(selectedDay)}</span>
-                </div>
-                <span className="rcl-count">{dayEntries.length === 0 ? "Nothing booked" : `${dayEntries.length} ${dayEntries.length === 1 ? "entry" : "entries"}`}</span>
-              </div>
-              <div className="rcl-card rcl-day">
-                <CalendarDay key={selectedDay} date={selectedDay} entries={dayEntries} categories={categories} clients={clients} />
-              </div>
-            </section>
-          </div>
+          <CalendarBoard
+            label={calendar.label}
+            monthKey={monthKey}
+            prevMonth={calendar.prevMonth}
+            nextMonth={calendar.nextMonth}
+            today={today}
+            initialDay={selectedDay}
+            cells={cells}
+            entries={entries}
+            categories={categories}
+            clients={clients}
+          />
         </div>
       </div>
     </div>

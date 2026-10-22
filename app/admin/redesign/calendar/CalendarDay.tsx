@@ -157,7 +157,6 @@ function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[
   const sub = who ? e.topic : "";
   const when = e.allDay ? "" : e.time ? `${e.time}` : "–";
   const tall = slots >= 3;
-  const end = e.time && !e.allDay ? hhmm(toMin(e.time) + e.durationMinutes) : "";
   const said = [when, title, sub, e.allDay ? "All day" : lengthLabel(e.durationMinutes)].filter(Boolean).join(" · ");
   return (
     <div
@@ -180,14 +179,11 @@ function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[
               {sub}
             </span>
           )}
-          {!tall && !e.allDay && <small>{lengthLabel(e.durationMinutes)}</small>}
         </span>
-        {tall && (
+        {/* No time on the right (22 Oct, Alex): the start is on the left and the bar's height is its length. */}
+        {tall && sub && (
           <span className="cdg-pill-line second">
-            {sub && <span className="cdg-pill-sub">{sub}</span>}
-            <small>
-              {e.time} – {end}
-            </small>
+            <span className="cdg-pill-sub">{sub}</span>
           </span>
         )}
       </span>
