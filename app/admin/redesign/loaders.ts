@@ -519,38 +519,42 @@ export function loadNutrition(clientId: number, params: { phase?: string }): Dra
 
 // ---- The rail ------------------------------------------------------------------
 
-/** Something the coach owes this client, in the Feed's Needs you words (Reply, Review, Book, Read, Add sessions, Unlock),
- *  and what it is. */
-export type RailNeed = { word: string; why: string };
-/** needs: what the coach owes, first first (22 Oct, Alex: the dot said "needs you" but not what). isNew: no phase or
- *  programme set yet, any state; the rail tags them New until there is one. */
-export type RailClient = { id: number; name: string; avatarPath: string | null; needs: RailNeed[]; isNew: boolean; notSignedIn: boolean };
+/** A screen of this client's that needs the coach: its name as the tabs say it (Training, Chat, Meetings…), where to
+ *  open it (the first thing on it), and how many things are there. */
+export type RailSpot = { screen: string; href: string; count: number };
+/** spots: the screens needing the coach, in the Feed's order; total: how many things across them, the rail's number
+ *  (22 Oct, Alex: a number by the name, its screens in a list under it, nothing more said in the rail). A client with no
+ *  phase or programme set yet, any state, counts one on Plan. */
+export type RailClient = { id: number; name: string; avatarPath: string | null; spots: RailSpot[]; total: number; notSignedIn: boolean };
 
-// The Feed's Needs you, as one word each.
-const NEED_WORDS: [RegExp, string][] = [
-  [/^week$/, "Add sessions"],
-  [/^locked$/, "Unlock"],
-  [/^reply-\d+$/, "Reply"],
-  [/^reply-video-\d+$/, "Review"],
-  [/^call-\d+$/, "Book"],
-  [/^read-/, "Read"],
-];
-/** In the Feed's order (needsOf in feedBoardData.ts), so the rail's first word is the Feed's first row: the blockers (an
- *  empty live week, then a sign-in lock), today's calls by time (Prep), then the rest oldest first. */
-function railNeeds(clientId: number, feed: ReturnType<typeof getActivityFeed>, today: string): RailNeed[] {
-  const ranked: { need: RailNeed; rank: number; ms: number }[] = [];
+// What the coach owes, as the Feed's Needs you has it (needFrom in feedBoardData.ts); statuses are the Feed's alone.
+const OWED = [/^week$/, /^locked$/, /^reply-\d+$/, /^reply-video-\d+$/, /^call-\d+$/, /^read-/];
+const SCREEN_OF: Record<string, string> = { home: "Home", plan: "Plan", measurements: "Lifestyle", training: "Training", nutrition: "Nutrition", pictures: "Shape update", meetings: "Meetings", invoices: "Invoices" };
+/** The screen a link opens: the chat when it carries one, else its tab. */
+const screenOf = (href: string) => (/[?&]chat=/.test(href) ? "Chat" : SCREEN_OF[/^\/admin\/redesign\/([a-z]+)/.exec(href)?.[1] ?? ""] ?? "Home");
+/** In the Feed's order (needsOf in feedBoardData.ts): a new client's set-up, the blockers (an empty live week, then a
+ *  sign-in lock), today's calls by time, then the rest oldest first; a screen sits where its first thing does. */
+function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEvent>, today: string, isNew: boolean): { spots: RailSpot[]; total: number } {
+  const ranked: { href: string; rank: number; ms: number }[] = [];
+  if (isNew) ranked.push({ href: `/admin/redesign/plan?client=${clientId}`, rank: -1, ms: 0 });
   for (const a of getClientHome(clientId, feed).actions) {
-    const word = NEED_WORDS.find(([re]) => re.test(a.id))?.[1];
-    if (!word) continue;
-    ranked.push({ need: { word, why: a.title }, rank: a.id === "week" ? 0 : a.id === "locked" ? 1 : 3, ms: a.at ?? Infinity });
+    if (!OWED.some((re) => re.test(a.id))) continue;
+    ranked.push({ href: needView(clientId, a, byId).open, rank: a.id === "week" ? 0 : a.id === "locked" ? 1 : 3, ms: a.at ?? Infinity });
   }
   for (const m of listMeetings(clientId)) {
     if (m.status !== "scheduled" || m.date !== today) continue;
     const time = m.all_day ? null : (m.time ?? "").trim() || null;
-    ranked.push({ need: { word: "Prep", why: `A call today${time ? ` at ${time}` : ""}` }, rank: 2, ms: time ? Number(time.replace(":", "")) || 0 : Infinity });
+    ranked.push({ href: `/admin/redesign/meetings?client=${clientId}`, rank: 2, ms: time ? Number(time.replace(":", "")) || 0 : Infinity });
   }
   ranked.sort((x, y) => x.rank - y.rank || (x.ms === y.ms ? 0 : x.ms < y.ms ? -1 : 1));
-  return ranked.map((r) => r.need);
+  const spots: RailSpot[] = [];
+  for (const r of ranked) {
+    const screen = screenOf(r.href);
+    const at = spots.find((s) => s.screen === screen);
+    if (at) at.count++;
+    else spots.push({ screen, href: r.href, count: 1 });
+  }
+  return { spots, total: ranked.length };
 }
 export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean };
 
@@ -559,12 +563,13 @@ export function loadRail(coach: { id: number; email: string; role: "coach" | "cl
   // A new coach sees the welcome steps first; every redesign page reads the rail, so this is the one gate.
   if (getData().users.find((u) => u.id === coach.id)?.onboarding) redirect("/welcome");
   const feed = getActivityFeed(coach.id);
+  const byId = new Map(feed.map((e) => [e.id, e]));
   const data = getData();
   const today = localDateStr();
   const clients = listClients(coach.id).map((c) => {
     const user = getUserForClient(c.id);
     const isNew = listClientPhases(c.id).length === 0 && !data.training_programs.some((p) => p.client_id === c.id);
-    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, needs: railNeeds(c.id, feed, today), isNew, notSignedIn: !user || user.must_change_password };
+    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, ...railSpots(c.id, feed, byId, today, isNew), notSignedIn: !user || user.must_change_password };
   });
   const profile = getCoachProfile(coach.id);
   return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: isOwner(coach), inviteReady: mailConfigured(), clerk: clerkOn() };

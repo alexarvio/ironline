@@ -53,8 +53,10 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "needs">("all");
   // Needs you: something owed, or a new client still to set up (22 Oct, Alex).
-  const needsMe = (c: RailClient) => c.needs.length > 0 || c.isNew;
+  const needsMe = (c: RailClient) => c.total > 0;
   const needsYou = rail.clients.filter(needsMe).length;
+  // The client whose screens are dropped open under their row: one at a time (22 Oct, Alex).
+  const [openId, setOpenId] = useState<number | null>(null);
   const q = query.trim().toLowerCase();
   const shown = rail.clients.filter((c) => (filter === "all" || needsMe(c)) && (!q || c.name.toLowerCase().includes(q)));
   const [adding, setAdding] = useState(false);
@@ -128,33 +130,50 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
           ) : (
             shown.map((c) => {
               const active = c.id === markedId;
+              const open = openId === c.id && c.total > 0;
               return (
-                <Link key={c.id} href={`/admin/redesign/home?client=${c.id}`} className={`rr-row${active ? " active" : ""}${pendingId === c.id ? " loading" : ""}`} aria-current={active ? "page" : undefined} onClick={() => setPendingId(c.id)}>
-                  <span className={`rr-avatar${c.notSignedIn ? " pending" : ""}`} title={c.notSignedIn ? "Hasn't signed in to the app yet" : undefined}>
-                    {c.avatarPath ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                      <img src={c.avatarPath} alt="" />
-                    ) : (
-                      c.name.slice(0, 1).toUpperCase()
+                <div key={c.id} className={`rr-item${open ? " open" : ""}`}>
+                  <div className="rr-head">
+                    <Link href={`/admin/redesign/home?client=${c.id}`} className={`rr-row${active ? " active" : ""}${pendingId === c.id ? " loading" : ""}`} aria-current={active ? "page" : undefined} onClick={() => setPendingId(c.id)}>
+                      <span className={`rr-avatar${c.notSignedIn ? " pending" : ""}`} title={c.notSignedIn ? "Hasn't signed in to the app yet" : undefined}>
+                        {c.avatarPath ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+                          <img src={c.avatarPath} alt="" />
+                        ) : (
+                          c.name.slice(0, 1).toUpperCase()
+                        )}
+                      </span>
+                      <span className="rr-name">{c.name}</span>
+                    </Link>
+                    {/* How many things need you, a rust number and nothing more said (22 Oct, Alex); a click drops the
+                        screens they are on open under the row. */}
+                    {c.total > 0 && (
+                      <button
+                        type="button"
+                        className="rr-need"
+                        aria-expanded={open}
+                        aria-controls={`rr-spots-${c.id}`}
+                        aria-label={`${c.total} for ${c.name}: ${c.spots.map((s) => s.screen).join(", ")}`}
+                        onClick={() => setOpenId(open ? null : c.id)}
+                      >
+                        {c.total}
+                      </button>
                     )}
-                  </span>
-                  <span className="rr-name">{c.name}</span>
-                  {/* What needs you, said (22 Oct, Alex: a dot didn't say what): New until they have a phase, then the first
-                      thing owed in the Feed's word, +N for the rest; every reason in its title. */}
-                  {c.isNew && (
-                    <span className="rr-tag" title="No phase yet">
-                      New
-                    </span>
+                  </div>
+                  {c.total > 0 && (
+                    // The screens alone, a dot (or how many) on the right; a row opens that screen at the thing.
+                    <div id={`rr-spots-${c.id}`} className="rr-spots" inert={!open}>
+                      <div className="rr-spots-in">
+                        {c.spots.map((s) => (
+                          <Link key={s.screen} href={s.href} className="rr-spot" onClick={() => setPendingId(c.id)}>
+                            <span>{s.screen}</span>
+                            {s.count > 1 ? <small>{s.count}</small> : <i aria-hidden="true" />}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                  {c.needs.length > 0 && (
-                    <span className="rr-tag" title={c.needs.map((n) => n.why).join("\n")}>
-                      {c.needs[0].word}
-                      {c.needs.length > 1 && <small>+{c.needs.length - 1}</small>}
-                      {/* The reasons for a screen reader too, which never hears a title. */}
-                      <span className="sr-only">: {c.needs.map((n) => n.why).join("; ")}</span>
-                    </span>
-                  )}
-                </Link>
+                </div>
               );
             })
           )}
