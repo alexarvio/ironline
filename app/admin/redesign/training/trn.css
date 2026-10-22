@@ -291,6 +291,20 @@ textarea.dlh-line { resize: none; }
    clean line as the rest (22 Oct: New programme). */
 .dlh-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .dlh-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+/* A cardio's alternatives (22 Oct, Alex: was the old pop-up): a row each, the name semi-bold and its note on a clean line,
+   ✕ on hover; under them a line for the next one, Add in words once something is typed. */
+.dlh-alts { width: min(520px, 100vw - 32px); }
+.dlh-alt-list { display: flex; flex-direction: column; margin: 4px 0 0; padding: 0; list-style: none; }
+.dlh-alt-row { display: grid; grid-template-columns: minmax(90px, 140px) minmax(0, 1fr) 24px; align-items: center; column-gap: 14px; }
+.dlh-alt-name { min-width: 0; overflow: hidden; font-size: 14.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
+.dlh-alt-x { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 999px; background: none; font-size: 11px; color: #8b93a1; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
+.dlh-alt-row:hover .dlh-alt-x, .dlh-alt-row:focus-within .dlh-alt-x, .dlh-alt-x:focus-visible { opacity: 1; }
+.dlh-alt-x:hover { background: #f5f6f8; color: #141a24; }
+@media (hover: none) { .dlh-alt-x { opacity: 1; } }
+.dlh-alt-add { display: flex; align-items: flex-end; gap: 12px; margin-top: 4px; }
+.dlh-alt-add .dlh-line { flex: 1; min-width: 0; }
+.dlh-alt-addbtn { display: inline-flex; flex: none; align-items: center; gap: 5px; height: 36px; padding: 0 4px; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; cursor: pointer; }
+.dlh-alt-addbtn svg { width: 13px; height: 13px; translate: 0 -0.5px; }
 .dlh-suffixed { display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid #e1e5eb; }
 .dlh-suffixed:focus-within { border-bottom-color: #141a24; }
 .dlh-suffixed .dlh-line { flex: 1; min-width: 0; border-bottom: 0; font-variant-numeric: tabular-nums; }

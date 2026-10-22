@@ -2690,29 +2690,36 @@ function CardioAlternativesDialog({ cardio, firstName, onSave }: { cardio: Draft
     if (name && name.toLowerCase() !== cardio.name.trim().toLowerCase() && !list.some((x) => x.name.toLowerCase() === name.toLowerCase())) setList((l) => [...l, { name, note: "" }]);
     setDraft("");
   };
+  // The .dlh card (22 Oct, Alex: it was the old pop-up): the title, the alternatives a row each with their note on a clean
+  // line, a line for the next one, Cancel and the ink Save; nothing explained.
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>Alternatives for {cardio.name}</DialogTitle>
-        <DialogDescription>What {firstName} can do instead when the machine is taken. They pick one from &ldquo;Substitute today&rdquo; in their workout, and it counts as done.</DialogDescription>
-      </DialogHeader>
+    <DialogContent className="dlh dlh-alts">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">Alternatives for {cardio.name}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <DialogDescription className="sr-only">
+        What {firstName} can do instead of {cardio.name}, each with a note
+      </DialogDescription>
       {list.length > 0 && (
-        <ul className="rd-alt-list">
+        <ul className="dlh-alt-list">
           {list.map((x, i) => (
-            <li key={x.name} className="rd-alt-row">
-              <span className="rd-alt-name">{x.name}</span>
-              <input className="rd-input" value={x.note} onChange={(e) => setList((l) => l.map((y, j) => (j === i ? { ...y, note: e.target.value } : y)))} placeholder="Note · optional, e.g. same time, keep it easy" maxLength={200} />
-              <button type="button" className="rd-btn ghost sm" onClick={() => setList((l) => l.filter((_, j) => j !== i))} aria-label={`Remove ${x.name}`}>
-                <TrashIcon />
+            <li key={x.name} className="dlh-alt-row">
+              <span className="dlh-alt-name">{x.name}</span>
+              <input className="dlh-line" value={x.note} onChange={(e) => setList((l) => l.map((y, j) => (j === i ? { ...y, note: e.target.value } : y)))} placeholder="Note" maxLength={200} aria-label={`Note on ${x.name}`} />
+              <button type="button" className="dlh-alt-x" onClick={() => setList((l) => l.filter((_, j) => j !== i))} aria-label={`Remove ${x.name}`} title="Remove">
+                ✕
               </button>
             </li>
           ))}
         </ul>
       )}
       {list.length < 8 && (
-        <div className="rd-alt-type">
+        <div className="dlh-alt-add">
           <input
-            className="rd-input"
+            className="dlh-line"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -2721,23 +2728,24 @@ function CardioAlternativesDialog({ cardio, firstName, onSave }: { cardio: Draft
                 add();
               }
             }}
-            placeholder="Rower, stair climber, incline walk…"
+            placeholder={list.length ? "Another alternative" : "An alternative"}
             maxLength={60}
             autoFocus
             aria-label="An alternative"
           />
-          <button type="button" className="rd-btn" onClick={add} disabled={!draft.trim()}>
-            <PlusIcon /> Add
-          </button>
+          {draft.trim() && (
+            <button type="button" className="dlh-alt-addbtn" onClick={add}>
+              <PlusIcon /> Add
+            </button>
+          )}
         </div>
       )}
-      <p className="rd-addrow-hint">Saved on this session for the rest of the programme.</p>
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" onClick={() => onSave(list)}>
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel">Cancel</DialogClose>
+        <button type="button" className="dlh-go" onClick={() => onSave(list)}>
           Save
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }
