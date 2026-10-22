@@ -60,7 +60,8 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
   // switch is a round trip to the server), then the real one takes over.
   const [pending, setPending] = useState<{ id: number; from: string } | null>(null);
   const here = `${clientId}:${path}`;
-  const pendingId = pending && pending.from === here ? pending.id : null;
+  // Not the client already open (22 Oct, Alex: a click on them changed nothing, so their face pulsed for good).
+  const pendingId = pending && pending.from === here && pending.id !== clientId ? pending.id : null;
   const markedId = pendingId ?? clientId;
   const setPendingId = (id: number) => setPending({ id, from: here });
 
