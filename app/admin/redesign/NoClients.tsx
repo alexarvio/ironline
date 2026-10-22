@@ -28,7 +28,7 @@ export default function NoClients({ rail }: { rail: RailData }) {
           </button>
         </div>
       </div>
-      {adding && <NewClientDialog inviteReady={rail.inviteReady} clerk={rail.clerk} onClose={() => setAdding(false)} />}
+      {adding && <NewClientDialog look="hairline" inviteReady={rail.inviteReady} clerk={rail.clerk} onClose={() => setAdding(false)} />}
     </div>
   );
 }

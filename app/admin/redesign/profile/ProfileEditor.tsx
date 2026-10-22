@@ -13,6 +13,8 @@ import { dayMonth } from "../../../lib/dayMonth";
 import Picker from "../Picker";
 import { Sep } from "../Sep";
 import SaveBar from "../settings/SaveBar";
+import { Dialog } from "../../../components/ui/dialog";
+import { ConfirmDialog } from "../training/TrainingDraft";
 
 // The coach's profile editor in the redesign, on the admin rules (22 Oct; root "rd trn rls rst rpf", Settings' parts):
 // Training's bare header with the state pill after the title, Your details | Public profile as the capsule, then the
@@ -428,6 +430,7 @@ function PhotoSlot({ coachId, kind, label, fact, path }: { coachId: number; kind
   const [over, setOver] = useState(false);
   const [busy, start] = useTransition();
   const [framing, setFraming] = useState<File | null>(null);
+  const [removing, setRemoving] = useState(false);
   const send = (file: File) => {
     const fd = new FormData();
     fd.set("coachId", String(coachId));
@@ -477,10 +480,25 @@ function PhotoSlot({ coachId, kind, label, fact, path }: { coachId: number; kind
         }}
       />
       {path && (
-        <button type="button" className="rst-danger rst-hover" onClick={remove} disabled={busy}>
+        <button type="button" className="rst-danger rst-hover" onClick={() => setRemoving(true)} disabled={busy}>
           Remove
         </button>
       )}
+      {/* Nothing destructive on one click (rule 4): Remove asks first. */}
+      <Dialog open={removing} onOpenChange={setRemoving}>
+        {removing && (
+          <ConfirmDialog
+            title={`Remove the ${label.toLowerCase()}?`}
+            description="It comes off your profile."
+            confirm="Remove"
+            danger
+            onConfirm={() => {
+              setRemoving(false);
+              remove();
+            }}
+          />
+        )}
+      </Dialog>
       <span className={`trn-state rst-state${path && !busy ? " good" : ""}`}>{busy ? "Uploading…" : path ? "Uploaded" : "None yet"}</span>
       <button type="button" className="trn-btn rpf-up" onClick={() => inputRef.current?.click()} disabled={busy}>
         {path ? "Replace" : "Upload"}

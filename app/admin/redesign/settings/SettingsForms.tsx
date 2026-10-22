@@ -13,6 +13,8 @@ import { COUNTRIES, CURRENCIES, countryCodeFromName, countryOf, currencyName, in
 import Picker from "../Picker";
 import { SepJoin } from "../Sep";
 import SaveBar from "./SaveBar";
+import { Dialog } from "../../../components/ui/dialog";
+import { ConfirmDialog } from "../training/TrainingDraft";
 
 // Settings' sections on the admin rules (22 Oct; docs/DESIGN-RULES-ADMIN.md): each section's title on the page over
 // one white hairline card, fields as small caps labels over clean lines (.dlh-label, .dlh-line), a choice of two as
@@ -218,6 +220,7 @@ function OnlinePayments({ state }: { state: PaymentsState }) {
   const router = useRouter();
   const [busy, start] = useTransition();
   const [error, setError] = useState("");
+  const [disconnecting, setDisconnecting] = useState(false);
   const go = () =>
     start(async () => {
       const r = await connectStripeAction();
@@ -242,18 +245,7 @@ function OnlinePayments({ state }: { state: PaymentsState }) {
             <b>Stripe</b>
           </span>
           {state.status !== "none" && state.status !== "off" && (
-            <button
-              type="button"
-              className="rst-danger rst-hover"
-              disabled={busy}
-              onClick={() =>
-                start(async () => {
-                  await disconnectStripeAction();
-                  router.refresh();
-                  toast.success("Stripe disconnected here");
-                })
-              }
-            >
+            <button type="button" className="rst-danger rst-hover" disabled={busy} onClick={() => setDisconnecting(true)}>
               Disconnect
             </button>
           )}
@@ -266,6 +258,25 @@ function OnlinePayments({ state }: { state: PaymentsState }) {
         </div>
         {error && <p className="rst-err rst-err-row">{error}</p>}
       </div>
+      {/* Nothing destructive on one click (rule 4): Disconnect asks first. */}
+      <Dialog open={disconnecting} onOpenChange={setDisconnecting}>
+        {disconnecting && (
+          <ConfirmDialog
+            title="Disconnect Stripe?"
+            description="Clients can't pay invoices online until it's connected again."
+            confirm="Disconnect"
+            danger
+            onConfirm={() => {
+              setDisconnecting(false);
+              start(async () => {
+                await disconnectStripeAction();
+                router.refresh();
+                toast.success("Stripe disconnected here");
+              });
+            }}
+          />
+        )}
+      </Dialog>
     </Section>
   );
 }

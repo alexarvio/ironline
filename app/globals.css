@@ -15519,6 +15519,12 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .nc-hl .nc-aside { font-weight: 500; letter-spacing: 0; color: #8b93a1; }
 .nc-hl .nc-input, .nc-hl .nc-static, .nc-hl .nc-dial { font-size: 15px; font-weight: 500; color: #141a24; }
 .nc-hl .nc-input::placeholder { font-weight: 500; color: #98a2b3; }
+/* The dial code: the floating Picker (never a native list), the code in ink and a quiet chevron, on the row's line. */
+.nc-hl .rd-picker.nc-dialpick { display: inline-flex; flex: none; align-items: center; gap: 6px; height: 28px; margin: 0; padding: 0 4px 0 0; border: 0; border-radius: 0; outline: none; background: none; box-shadow: none; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; cursor: pointer; }
+.nc-hl .rd-picker.nc-dialpick svg { width: 14px; height: 14px; color: #8b93a1; }
+.nc-hl .rd-picker.nc-dialpick:focus-visible { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
+/* Its list floats over the pop-up's scrim (z 100), not under it. */
+body:has(.nc-scrim) [data-radix-popper-content-wrapper] { z-index: 110 !important; }
 .nc-hl .nc-static.none { color: #98a2b3; }
 .nc-hl .nc-suffixed em { font-weight: 500; color: #8b93a1; }
 .nc-hl .nc-pills { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 2px; height: 36px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }

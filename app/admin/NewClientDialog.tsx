@@ -4,8 +4,11 @@ import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { checkLoginEmailAction, createClientWithLoginAction } from "../lib/actions";
-import { ageFrom, DEFAULT_DIAL, GenderPills, InfoRow, PhoneInput, Suffixed } from "./InfoRow";
+import { ageFrom, DEFAULT_DIAL, DIAL_CODES, GenderPills, InfoRow, PhoneInput, Suffixed } from "./InfoRow";
 import DatePick from "./redesign/DatePick";
+import Picker from "./redesign/Picker";
+
+const DIALS = DIAL_CODES.map(([iso, c]) => ({ value: c, label: `${iso} ${c}` }));
 
 // New client: the Member info card, the same rows (InfoRow) the coach edits
 // later. No login yet: the coach builds the client's plan first, then gives
@@ -221,7 +224,15 @@ export default function NewClientDialog({
                 />
               </InfoRow>
               <InfoRow label="Phone" as="div">
-                <PhoneInput code={draft.phoneCode} number={draft.phone} onCode={(v) => set("phoneCode", v)} onNumber={(v) => set("phone", v)} />
+                {hl ? (
+                  // Never the browser's own list (rule 6): the floating Picker, as Profile's phone.
+                  <span className="nc-phone">
+                    <Picker value={draft.phoneCode} onChange={(v) => set("phoneCode", v)} label="Country dial code" className="nc-dialpick" options={DIALS} />
+                    <input className="nc-input" type="tel" inputMode="tel" value={draft.phone} onChange={(e) => set("phone", e.target.value)} placeholder="6 12345678" aria-label="Phone number" autoComplete="off" />
+                  </span>
+                ) : (
+                  <PhoneInput code={draft.phoneCode} number={draft.phone} onCode={(v) => set("phoneCode", v)} onNumber={(v) => set("phone", v)} />
+                )}
               </InfoRow>
               <InfoRow label="Address">
                 <input className="nc-input" value={draft.address} onChange={(e) => set("address", e.target.value)} placeholder="Street, city" autoComplete="off" />
