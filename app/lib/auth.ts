@@ -473,6 +473,8 @@ export function createUser(
     if (claimUnownedRows() > 0) persist();
     seedCoachLibrary(user.id);
   }
+  // A new account starts clean: no sign-in lock recorded on this email before it existed carries over.
+  clearLoginLockouts(normalized);
   return user;
 }
 
@@ -498,6 +500,8 @@ export function createPasswordlessUser(email: string, role: Role, clientId: numb
   data.users.push(user);
   persist();
   // A coach gets their library when the owner lets them in (approveCoach).
+  // A new account starts clean: no sign-in lock recorded on this email before it existed carries over.
+  clearLoginLockouts(normalized);
   return user;
 }
 

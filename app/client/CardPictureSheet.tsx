@@ -11,7 +11,8 @@ import { coverJpeg } from "../lib/coverJpeg";
 // on Home, or the row in Settings, and this sheet comes up: the picture as
 // it is, "Choose from your photos" (the camera roll, cut to the card's
 // shape in the browser and uploaded), and "Use {coach}'s picture" to go
-// back to what the coach set. Up to six a track (14 Oct), taking turns on
+// back to what the coach set ("Use the default" when the coach chose none,
+// 22 Oct). Up to six a track (14 Oct), taking turns on
 // the card and behind the track's banner; kept across phases.
 
 export type CardCovers = Partial<Record<PhaseTrack, string[]>>;
@@ -72,6 +73,7 @@ export default function CardPictureSheet({
   coachName,
   own,
   coach,
+  coachChose,
   onSaved,
   onClose,
 }: {
@@ -82,6 +84,8 @@ export default function CardPictureSheet({
   own: string[];
   /** The coach's picture, behind the card when there is no own. */
   coach: string | null;
+  /** The coach chose that picture (22 Oct); else it is the default, not "{coach}'s picture". */
+  coachChose: boolean;
   /** The client's own pictures as they are now; empty, back to the coach's. */
   onSaved: (track: PhaseTrack, pictures: string[]) => void;
   onClose: () => void;
@@ -187,11 +191,7 @@ export default function CardPictureSheet({
             <h2 className="cv-title">
               {TRACK_LABEL[track]} card <span className="cv-count">{items.length}/{MAX_PICTURES}</span>
             </h2>
-            <p className="cv-sub">
-              {items.length === 0
-                ? `${coachName}'s picture shows. Yours go on the card on Home and behind the ${TRACK_LABEL[track]} screen; several take turns.`
-                : "On the card on Home and behind the screen, taking turns."}
-            </p>
+            {items.length === 0 && <p className="cv-sub">{`${coachChose ? `${coachName}'s picture` : "The default picture"} shows.`}</p>}
           </div>
         </div>
         <div className="cv-grid">
@@ -218,7 +218,7 @@ export default function CardPictureSheet({
           </button>
           {(items.length > 0 || own.length > 0) && (
             <button type="button" className="cv-btn plain" disabled={saving} onClick={reset}>
-              Use {coachName}&rsquo;s picture
+              {coachChose ? <>Use {coachName}&rsquo;s picture</> : "Use the default"}
             </button>
           )}
         </div>
@@ -231,7 +231,7 @@ export default function CardPictureSheet({
 
 /** Settings · Card pictures: a row a track with the picture as it is and
     Change, which opens the same sheet as a press-and-hold on Home. */
-export function CardPicturesRows({ clientId, coachName, rows }: { clientId: number; coachName: string; rows: { track: PhaseTrack; /** The client's own, in order; none, the coach's shows. */ own: string[]; /** The coach's, behind the card when there is no own. */ coach: string | null }[] }) {
+export function CardPicturesRows({ clientId, coachName, rows }: { clientId: number; coachName: string; rows: { track: PhaseTrack; /** The client's own, in order; none, the coach's shows. */ own: string[]; /** The coach's, behind the card when there is no own. */ coach: string | null; /** The coach chose it (22 Oct); else it is the default picture. */ coachChose: boolean }[] }) {
   const [open, setOpen] = useState<PhaseTrack | null>(null);
   // What was just chosen (or cleared), until the page comes back with it.
   const [fresh, setFresh] = useState<Partial<Record<PhaseTrack, string[]>>>({});
@@ -252,13 +252,13 @@ export function CardPicturesRows({ clientId, coachName, rows }: { clientId: numb
             </span>
             <div className="home-dark-row-body">
               <div className="home-dark-row-title">{TRACK_LABEL[r.track]}</div>
-              <div className="home-dark-row-detail">{own.length > 1 ? `${own.length} of your photos, taking turns` : own.length === 1 ? "Your photo" : `${coachName}'s picture`}</div>
+              <div className="home-dark-row-detail">{own.length > 1 ? `${own.length} of your photos, taking turns` : own.length === 1 ? "Your photo" : r.coachChose ? `${coachName}'s picture` : "Default picture"}</div>
             </div>
             <span className="st-link-go" aria-hidden="true">›</span>
           </button>
         );
       })}
-      {row && <CardPictureSheet clientId={clientId} track={row.track} coachName={coachName} own={ownOf(row)} coach={row.coach} onSaved={(t, pictures) => setFresh((f) => ({ ...f, [t]: pictures }))} onClose={close} />}
+      {row && <CardPictureSheet clientId={clientId} track={row.track} coachName={coachName} own={ownOf(row)} coach={row.coach} coachChose={row.coachChose} onSaved={(t, pictures) => setFresh((f) => ({ ...f, [t]: pictures }))} onClose={close} />}
     </>
   );
 }

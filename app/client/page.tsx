@@ -390,6 +390,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
         start: ph.start_week,
         end: phaseLastDay(ph.end_week),
         coverUrl: ph.cover_path ?? defaultPhaseCover(track, ph.id),
+        coachCover: !!ph.cover_path,
         objectives: ph.objectives ?? [],
         note: ph.nutrition?.coach_notes?.trim() || null,
         // The scheduled phase after this one on the track (9 Oct): the card names it, and charges up in its last week.
@@ -533,8 +534,11 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     return { kind: "message", title: latestNote.action_label ?? "Sent you a note", body: latestNote.message, cta: latestNote.action_tab ? "Open" : "Open chat", ...base };
   }
   // Nothing from the coach and no phase ever (8 Oct): say so, and offer the chat.
-  if (listClientPhases(clientId).length === 0) {
-    return { kind: "message", title: `Nothing from ${coachFirst} yet`, body: `Messages, notes and changes to your plan from ${coachFirst} land here.`, whenLabel: "", cta: "", unread: 0, unseen: false, moreThisWeek: 0 };
+  // A plan is set up once a phase has started (22 Oct): a draft or one still to come is not, as the client's tabs say.
+  // A new client hears nothing more than that: no sentence explaining what will land here.
+  const startedBy = localDateStr();
+  if (!listClientPhases(clientId).some((p) => !p.draft && p.start_week <= startedBy)) {
+    return { kind: "message", title: `Nothing from ${coachFirst} yet`, body: null, whenLabel: "", cta: "", unread: 0, unseen: false, moreThisWeek: 0 };
   }
   return {
     kind: "welcome",
@@ -668,7 +672,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
       })()}
 
       {days.length === 0 ? (
-        <p className="empty-note">Nothing deployed yet. Your coach is still building this week.</p>
+        // No programme at all (22 Oct, Alex: a new client is the start): two words, no sentence.
+        program ? <p className="empty-note">Nothing deployed yet. Your coach is still building this week.</p> : <p className="empty-note">No plan yet</p>
       ) : trainingDays.length === 0 ? (
         <p className="empty-note">
           Your coach published this week, but hasn&rsquo;t added any exercises yet. It&rsquo;s all
@@ -854,7 +859,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           <FitTitle className="tr-name">Your nutrition</FitTitle>
         </header>
         <div className="tr-body">
-          <p className="empty-note">Your phase will be deployed soon.</p>
+          <p className="empty-note">No plan yet</p>
         </div>
       </div>
     );
@@ -1151,7 +1156,8 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
               const ph = getCurrentPhase(CLIENT_ID, track);
               const own = getClientCardPictures(CLIENT_ID)[track] ?? [];
               const coach = ph ? (ph.cover_path ?? defaultPhaseCover(track, ph.id)) : track === "lifestyle" ? "/img/lifestyle-bottle.jpg" : defaultPhaseCover(track, 0);
-              return { track, own, coach };
+              // A stock cover the coach never chose is the default, not theirs (22 Oct).
+              return { track, own, coach, coachChose: !!ph?.cover_path };
             })}
           />
         </div>
@@ -1437,8 +1443,9 @@ export default async function ClientPage({
     const weekIndex = deployedProgram ? Math.min(deployedProgram.total_weeks, Math.max(1, currentWeekNum - deployedProgram.start_week + 1)) : null;
     return (
       <>
-        <div className="tr-kicker">Programme</div>
-        <FitTitle className="tr-name">{deployedProgram?.name || "Your programme"}</FitTitle>
+        {/* No programme (22 Oct): bare, as the Nutrition and Lifestyle banners. */}
+        <div className="tr-kicker">{deployedProgram ? "Programme" : "Training"}</div>
+        <FitTitle className="tr-name">{deployedProgram ? deployedProgram.name || "Your programme" : "Your training"}</FitTitle>
         {deployedProgram && start && (
           <>
             <div

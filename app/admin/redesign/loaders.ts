@@ -636,7 +636,7 @@ export function loadRail(coach: { id: number; email: string; role: "coach" | "cl
   const clients = listClients(coach.id).map((c) => {
     const user = getUserForClient(c.id);
     const isNew = listClientPhases(c.id).length === 0 && !data.training_programs.some((p) => p.client_id === c.id);
-    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, ...railSpots(c.id, feed, byId, today, isNew), notSignedIn: !user || user.must_change_password };
+    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, ...railSpots(c.id, feed, byId, today, isNew), notSignedIn: !user || (!user.clerk_user_id && (user.must_change_password || !user.password_hash)) };
   });
   const profile = getCoachProfile(coach.id);
   return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: isOwner(coach), inviteReady: mailConfigured(), clerk: clerkOn() };

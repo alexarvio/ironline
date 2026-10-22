@@ -27,6 +27,8 @@ export type HomePhase = {
   end: string | null;
   /** The coach's cover, a stock one, or the track's default; null: its colour. */
   coverUrl: string | null;
+  /** The coach chose the cover (22 Oct): a stock one they never picked is not "{coach}'s picture". */
+  coachCover?: boolean;
   objectives: string[];
   note: string | null;
   /** The phase the coach has scheduled after this one on the same track (9 Oct); null, none yet. */
@@ -219,11 +221,12 @@ function Cover({ ph, eager }: { ph: HomePhase; eager?: boolean }) {
 
 // A track with nothing deployed yet (17 Oct, Alex): the same card, its picture
 // washed out, the track chip, "No plan yet" and what is coming, if anything.
-function EmptyPhaseCard({ ph, coachName, eager, onOpen }: { ph: HomePhase; coachName: string; eager?: boolean; onOpen: () => void }) {
+// Nothing coming: "No plan yet" alone (22 Oct, Alex: a new client is the start, nothing said to be under way).
+function EmptyPhaseCard({ ph, eager, onOpen }: { ph: HomePhase; eager?: boolean; onOpen: () => void }) {
   const label = TRACK_LABEL[ph.track];
-  const sub = ph.next ? `${ph.next.name} starts ${short(ph.next.start)}` : `${coachName} is building your ${label.toLowerCase()} phase.`;
+  const sub = ph.next ? `${ph.next.name} starts ${short(ph.next.start)}` : null;
   return (
-    <article className="pc-card pc-empty" data-track={ph.track} aria-label={`${label}: no plan yet. ${sub}`} onClick={onOpen}>
+    <article className="pc-card pc-empty" data-track={ph.track} aria-label={`${label}: no plan yet${sub ? `. ${sub}` : ""}`} onClick={onOpen}>
       <Cover ph={ph} eager={eager} />
       <span className="pc-scrim" aria-hidden="true" />
       <div className="pc-top">
@@ -238,7 +241,7 @@ function EmptyPhaseCard({ ph, coachName, eager, onOpen }: { ph: HomePhase; coach
             <span className="pc-name">No plan yet</span>
           </h3>
         </div>
-        <p className="pc-empty-sub">{sub}</p>
+        {sub && <p className="pc-empty-sub">{sub}</p>}
       </div>
     </article>
   );
@@ -258,6 +261,8 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
   const [holdTrack, setHoldTrack] = useState<HomePhase["track"] | null>(null);
   const ownFor = (track: HomePhase["track"]): string[] => override[track] ?? ownCovers[track] ?? [];
   const coachCoverOf = (track: HomePhase["track"]) => phases.find((p) => p.track === track)?.coverUrl ?? null;
+  // Only a cover the coach chose is theirs (22 Oct); a stock one is the default.
+  const coachChoseOf = (track: HomePhase["track"]) => !!phases.find((p) => p.track === track)?.coachCover;
   // The client's own pictures, taking turns (14 Oct); none, the coach's one.
   const coverFor = (track: HomePhase["track"]): string[] => {
     const own = ownFor(track);
@@ -336,7 +341,7 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
       <div ref={scroller} className="pc-scroller" role="region" aria-label="Your phases" tabIndex={0} onScroll={onScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
         {phases.map((ph, i) =>
           ph.placeholder ? (
-            <EmptyPhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track)[0] ?? ph.coverUrl }} coachName={coachName} eager={i === 0} onOpen={() => open(ph, i)} />
+            <EmptyPhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track)[0] ?? ph.coverUrl }} eager={i === 0} onOpen={() => open(ph, i)} />
           ) : (
           <PhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track)[0] ?? null }} pictures={coverFor(ph.track)} eager={i === 0} coachName={coachName} today={today} nextSession={nextSession} food={food} weekDone={weekDone} checkInCount={checkInCount} onOpen={() => open(ph, i)} onHold={() => setHoldTrack(ph.track)} onLog={checkIn ? () => setLogOpen(true) : undefined} />
           )
@@ -357,6 +362,7 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
           coachName={coachName}
           own={ownFor(holdTrack)}
           coach={coachCoverOf(holdTrack)}
+          coachChose={coachChoseOf(holdTrack)}
           onSaved={(t, pictures) => setOverride((o) => ({ ...o, [t]: pictures }))}
           onClose={() => setHoldTrack(null)}
         />

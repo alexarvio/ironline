@@ -38,9 +38,9 @@ export default function AdminSidebar({
       name: c.name,
       avatarPath: c.avatar_path ?? null,
       attention: clientAttention(c.id, feed),
-      // No login yet, or a temporary password never replaced: they have not
-      // signed in to the app themselves.
-      notSignedIn: !user || user.must_change_password,
+      // No login yet, a temporary password never replaced, or an invite never
+      // used (no password, no Clerk link): they have not signed in themselves.
+      notSignedIn: !user || (!user.clerk_user_id && (user.must_change_password || !user.password_hash)),
     };
   });
   const needsYou = clients.filter((c) => c.attention).length;

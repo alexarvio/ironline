@@ -172,7 +172,8 @@ export default function HomeHub({
     checkInCount && checkInCount.done < checkInCount.total ? "check-in" : null,
     progressPics?.status === "due" ? "pictures" : null,
     session && (session.live || !trainedToday) ? "training" : null,
-    food && !foodDone ? "food" : null,
+    // Food is a to-do only once nutrition is set up (22 Oct): a target, or a nutrition phase live.
+    food && !foodDone && (!!food.target || plan.some((p) => p.track === "nutrition")) ? "food" : null,
   ].filter((x): x is string => !!x);
   return (
     <div className="hm">
@@ -181,7 +182,7 @@ export default function HomeHub({
         {/* The spine (8 Oct): Today, Your plan, then the coach, so Home is never
             empty. The cards below say what is due; Today speaks only when
             nothing is, so the top of the page still says something true. */}
-        {todoItems.length === 0 && <TodayCard next={todayNext} coachName={coach.firstName} hasPlan={plan.length > 0} nextPhaseStart={planGap?.next?.start ?? null} />}
+        {todoItems.length === 0 && <TodayCard next={todayNext} hasPlan={plan.length > 0} nextPhaseStart={planGap?.next?.start ?? null} />}
         {/* "Your plan" (12 Oct): one swipe, lifestyle → training → nutrition, every card the same size.
             The lifestyle card's Log opens today's check-in in a pop-up (13 Oct); the card itself opens the screen. */}
         {cards.length > 0 && (
@@ -217,13 +218,15 @@ export default function HomeHub({
 
 // ---- 0 · Today: one line, always. What is left, or that nothing is --------
 
-function TodayCard({ next, coachName, hasPlan, nextPhaseStart }: { next: string | null; coachName: string; hasPlan: boolean; /** Between phases: when the next one starts. */ nextPhaseStart: string | null }) {
+function TodayCard({ next, hasPlan, nextPhaseStart }: { next: string | null; hasPlan: boolean; /** Between phases: when the next one starts. */ nextPhaseStart: string | null }) {
   const until = nextPhaseStart ? new Date(`${nextPhaseStart}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : null;
+  // No plan and none coming (22 Oct, Alex): "Nothing to do today" alone, no sentence on what will come.
+  const sub = next ?? (hasPlan ? "Rest up." : until ? `Rest up until ${until}.` : null);
   return (
     <section className="hm-today" aria-label="Today">
       <span className="hm-eyebrow">Today</span>
       <b className="hm-today-main">Nothing to do today</b>
-      <small className="hm-today-next">{next ?? (hasPlan ? "Rest up." : until ? `Rest up until ${until}.` : `What to do each day shows here once ${coachName} sets up your plan.`)}</small>
+      {sub && <small className="hm-today-next">{sub}</small>}
     </section>
   );
 }

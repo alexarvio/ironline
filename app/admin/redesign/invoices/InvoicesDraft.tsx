@@ -152,28 +152,30 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
         </section>
       )}
 
-      {/* ---- The figures, in one hairline card (as Home's). */}
-      <section className="rls-card rls-figs" aria-label="At a glance">
-        <div className="rls-fig">
-          <span className="rls-fig-label">Outstanding</span>
-          <b className={outstanding > 0 ? "warn" : ""}>{money(outstanding, cur)}</b>
-          <small>
-            {owed.length} invoice{owed.length === 1 ? "" : "s"}
-          </small>
-        </div>
-        <div className="rls-fig">
-          <span className="rls-fig-label">Paid</span>
-          <b>{money(paid, cur)}</b>
-          <small>All time</small>
-        </div>
-        <div className="rls-fig">
-          <span className="rls-fig-label">Next number</span>
-          <b>{plan.defaults.nextNumber}</b>
-          <small>
-            <SepJoin parts={[`${plan.defaults.taxLabel} ${plan.defaults.vatRate}%`, `${plan.defaults.termsDays} days to pay`]} />
-          </small>
-        </div>
-      </section>
+      {/* ---- The figures, in one hairline card (as Home's); only once there is an invoice or a series (22 Oct, Alex: a new client has nothing). */}
+      {(plan.invoices.length > 0 || plan.repeats.length > 0) && (
+        <section className="rls-card rls-figs" aria-label="At a glance">
+          <div className="rls-fig">
+            <span className="rls-fig-label">Outstanding</span>
+            <b className={outstanding > 0 ? "warn" : ""}>{money(outstanding, cur)}</b>
+            <small>
+              {owed.length} invoice{owed.length === 1 ? "" : "s"}
+            </small>
+          </div>
+          <div className="rls-fig">
+            <span className="rls-fig-label">Paid</span>
+            <b>{money(paid, cur)}</b>
+            <small>All time</small>
+          </div>
+          <div className="rls-fig">
+            <span className="rls-fig-label">Next number</span>
+            <b>{plan.defaults.nextNumber}</b>
+            <small>
+              <SepJoin parts={[`${plan.defaults.taxLabel} ${plan.defaults.vatRate}%`, `${plan.defaults.termsDays} days to pay`]} />
+            </small>
+          </div>
+        </section>
+      )}
 
       {/* ---- Recurring (21 Oct, Alex): each series makes the same invoice on its day, sent to the client or kept as a draft. */}
       {plan.repeats.length > 0 && (

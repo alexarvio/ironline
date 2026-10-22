@@ -150,7 +150,8 @@ export default function CheckInScreen({
           <div className="tr-body">
             {/* The coach's note reaches the client even before anything is asked (21 Oct): "Read it" lands here. */}
             <CoachCard flat coachName={coachFirst} photoPath={coach?.photoPath ?? null} note={coachNote?.text ?? null} noteDate={coachNote?.date ?? null} />
-            <p className="empty-note">Your phase will be deployed soon.</p>
+            {/* "No plan yet" only when nothing is asked at all: a weekly-only phase before its day has a plan (22 Oct). */}
+            {sections.every((s) => s.metrics.length === 0) && <p className="empty-note">No plan yet</p>}
           </div>
         </div>
       </div>

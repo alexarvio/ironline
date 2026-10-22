@@ -239,9 +239,12 @@ function Pictures({ clientId, firstName, plan }: Props) {
           <button type="button" className="rp-setup-btn" aria-haspopup="dialog" onClick={() => setDlg({ kind: "setup" })}>
             <SlidersIcon />
             Sheet setup
-            <small>
-              <SepJoin parts={[plural(active, "angle"), RHYTHM[plan.cadence]]} />
-            </small>
+            {/* Its facts only once an angle is set (22 Oct, Alex: a new client has nothing set up). */}
+            {plan.slots.length > 0 && (
+              <small>
+                <SepJoin parts={[plural(active, "angle"), RHYTHM[plan.cadence]]} />
+              </small>
+            )}
           </button>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="trn-more" aria-label="More for shape updates">
