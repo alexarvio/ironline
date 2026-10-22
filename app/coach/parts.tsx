@@ -32,6 +32,8 @@ const PATHS = {
   edit: "M4.5 19.5l1-4L16 5a2.1 2.1 0 0 1 3 3L8.5 18.5zM14 7l3 3",
   trash: "M5 7h14M10 4h4M7 7l.8 12.5h8.4L17 7M10.5 11v5M13.5 11v5",
   check: "M5 12.5l4.5 4.5L19 7.5",
+  calendar: "M5 5.5h14v14H5zM5 9.5h14M9 3.5v4M15 3.5v4",
+  forward: "M9 5l7 7-7 7",
 } as const;
 export type IconName = keyof typeof PATHS;
 
@@ -78,7 +80,7 @@ export function Facts({ parts }: { parts: ReactNode[] }) {
 }
 
 /** A plain white sheet from the bottom over a dimmed screen; a tap outside or Esc closes it. */
-export function Sheet({ children, onClose, label }: { children: ReactNode; onClose: () => void; label: string }) {
+export function Sheet({ children, onClose, label, className }: { children: ReactNode; onClose: () => void; label: string; /** "tall": a long sheet that scrolls inside. */ className?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   useEffect(() => {
@@ -92,7 +94,7 @@ export function Sheet({ children, onClose, label }: { children: ReactNode; onClo
   }, []);
   return (
     <div className="cph-scrim" onClick={onClose}>
-      <div ref={box} className="cph-sheet" role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
+      <div ref={box} className={`cph-sheet${className ? ` ${className}` : ""}`} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <span className="cph-sheet-grip" aria-hidden="true" />
         {children}
       </div>

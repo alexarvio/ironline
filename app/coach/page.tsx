@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { requireCoach } from "../lib/auth";
-import { getCoachProfile } from "../lib/queries";
+import { getCoachProfile, localDateStr } from "../lib/queries";
+import { loadPhoneCalendar } from "./calendar";
 import { listPhoneVideos } from "../lib/coachPhone";
 import { pushPublicKey } from "../lib/push";
 import { fcmConfigured } from "../lib/fcm";
@@ -8,13 +9,14 @@ import { loadChatDock } from "../admin/redesign/loaders";
 import CoachApp from "./CoachApp";
 import "./coach.css";
 
-// The coach's phone (21 Oct, Alex: built from the mockup). Two things only:
-// answer every client's chat, and reply to the videos they send from an
-// exercise. Phases, programmes and everything else stay on the laptop
-// (/admin/redesign). The native app opens here when a coach signs in
-// (NativeCoachRedirect); in a phone's browser it is just this address.
+// The coach's phone (21 Oct, Alex: built from the mockup): answer every
+// client's chat, reply to the videos they send from an exercise, and since
+// 22 Oct the coach's Calendar. Phases, programmes and everything else stay
+// on the laptop (/admin/redesign). The native app opens here when a coach
+// signs in (NativeCoachRedirect); in a phone's browser it is just this address.
 //   /coach              the chats
 //   /coach?tab=videos   the videos
+//   /coach?tab=calendar the calendar
 //   /coach?c=ID         one client's chat
 //   /coach?v=ID         one video, to review
 export const dynamic = "force-dynamic";
@@ -29,5 +31,17 @@ export default async function CoachPage() {
   const profile = getCoachProfile(coach.id);
   const local = coach.email.split("@")[0] ?? "";
   const name = profile?.display_name?.trim() || local.split(/[._-]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") || "Coach";
-  return <CoachApp inbox={{ chats: loadChatDock(coach), videos: listPhoneVideos(coach.id) }} coach={{ name, photoPath: profile?.avatar_path ?? null }} push={{ publicKey: pushPublicKey(), nativeReady: fcmConfigured() }} />;
+  // This week of the Calendar comes with the page, so its tab opens at once.
+  const today = localDateStr();
+  const monday = new Date(`${today}T12:00:00`);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return (
+    <CoachApp
+      inbox={{ chats: loadChatDock(coach), videos: listPhoneVideos(coach.id) }}
+      calendar={loadPhoneCalendar(coach.id, localDateStr(monday), today)}
+      today={today}
+      coach={{ name, photoPath: profile?.avatar_path ?? null }}
+      push={{ publicKey: pushPublicKey(), nativeReady: fcmConfigured() }}
+    />
+  );
 }

@@ -1,14 +1,16 @@
 "use server";
 
 import { coachForClient, requireCoach } from "../lib/auth";
-import { getClientIdForVideoRequest } from "../lib/queries";
+import { getClientIdForVideoRequest, localDateStr } from "../lib/queries";
+import { loadPhoneCalendar, type PhoneCalendar } from "./calendar";
 import { listPhoneVideos, phoneReview, type PhoneReview, type PhoneVideos } from "../lib/coachPhone";
 import { loadChatDock, loadMessages, type DockChat } from "../admin/redesign/loaders";
 import type { DraftMessages } from "../admin/redesign/messages/MessagesDraft";
 import { noteCoachReading } from "../lib/coachPush";
 
 // The coach's phone (21 Oct): what its lists ask for every 15 s while open,
-// one client's chat, and the one video the review screen opens. The chat is
+// one client's chat, the one video the review screen opens, and a week of
+// the Calendar (22 Oct; its entries are written with the laptop's actions). The chat is
 // the laptop's loader (loadMessages), and every send, reaction and reply goes
 // through the same actions as the laptop's.
 
@@ -26,6 +28,13 @@ export async function coachThreadAction(clientId: number): Promise<DraftMessages
   if (!coach) return null;
   noteCoachReading(coach.id, id);
   return loadMessages(id);
+}
+
+/** One week of the Calendar (from its Monday), as the phone's Calendar tab draws it; today is the phone's, for the clashes still to come. */
+export async function coachCalendarAction(monday: string, today: string): Promise<PhoneCalendar> {
+  const coach = await requireCoach();
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(String(today)) ? String(today) : localDateStr();
+  return loadPhoneCalendar(coach.id, String(monday), day);
 }
 
 export async function coachReviewAction(requestId: number): Promise<PhoneReview | null> {

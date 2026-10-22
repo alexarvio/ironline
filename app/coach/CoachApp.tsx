@@ -10,13 +10,16 @@ import type { PhoneVideo } from "../lib/coachPhone";
 import ChatThread from "./ChatThread";
 import PhoneReview from "./PhoneReview";
 import { Avatar, Facts, Icon, Sheet } from "./parts";
+import CoachCalendar, { useCalendarState, type CalendarState } from "./CoachCalendar";
+import type { PhoneCalendar } from "./calendar";
 import ChatLastLine from "../components/ChatLastLine";
 import { PushSwitch } from "../client/PushToggle";
 import { NativePush } from "../client/NativePush";
 
 // The coach's phone (21 Oct, Alex): Chats and Videos on a floating tab bar,
-// a chat or a video over them. Where it is lives in the address (?c=, ?v=,
-// ?tab=videos), moved with the browser's own history so the phone's Back
+// and since 22 Oct the Calendar (CoachCalendar.tsx); a chat or a video over
+// them. Where it is lives in the address (?c=, ?v=, ?tab=videos,
+// ?tab=calendar), moved with the browser's own history so the phone's Back
 // works and nothing is fetched to switch screens. The lists ask for
 // themselves every 15 s while the app is showing, as the chat does.
 // Notifications are turned on in the account sheet (the coach's face); a
@@ -26,12 +29,16 @@ import { NativePush } from "../client/NativePush";
 const POLL_MS = 15000;
 
 type Push = { publicKey: string | null; nativeReady: boolean };
+type Tab = "chats" | "videos" | "calendar";
 
-export default function CoachApp({ inbox: fromPage, coach, push }: { inbox: CoachInbox; coach: { name: string; photoPath: string | null }; push: Push }) {
+export default function CoachApp({ inbox: fromPage, calendar, today, coach, push }: { inbox: CoachInbox; calendar: PhoneCalendar; /** The server's day, for the first paint. */ today: string; coach: { name: string; photoPath: string | null }; push: Push }) {
   const params = useSearchParams();
   const chatId = Number(params.get("c")) || null;
   const videoId = Number(params.get("v")) || null;
-  const tab: "chats" | "videos" = params.get("tab") === "videos" ? "videos" : "chats";
+  const asked = params.get("tab");
+  const tab: Tab = asked === "videos" || asked === "calendar" ? asked : "chats";
+  // The Calendar's week and day, kept here so a chat opened from it comes back to them.
+  const cal = useCalendarState(calendar);
 
   const [inbox, setInbox] = useState(fromPage);
   const pageKey = JSON.stringify(fromPage);
@@ -103,6 +110,8 @@ export default function CoachApp({ inbox: fromPage, coach, push }: { inbox: Coac
       <Lists
         tab={tab}
         inbox={inbox}
+        cal={cal}
+        today={today}
         coach={coach}
         push={push}
         onOpenChat={(id) => {
@@ -125,6 +134,10 @@ export default function CoachApp({ inbox: fromPage, coach, push }: { inbox: Coac
           Videos
           {waiting > 0 && <b aria-label={`${waiting} waiting`}>{waiting}</b>}
         </button>
+        <button type="button" className={`cph-tab${tab === "calendar" ? " on" : ""}`} aria-current={tab === "calendar" ? "page" : undefined} onClick={() => tab !== "calendar" && go("tab=calendar", "replace")}>
+          <Icon name="calendar" />
+          Calendar
+        </button>
       </nav>
     </div>
   );
@@ -133,7 +146,7 @@ export default function CoachApp({ inbox: fromPage, coach, push }: { inbox: Coac
 /** Where each list was left, for coming back from a chat or a video. */
 const listY: Record<string, number> = {};
 
-function Lists({ tab, inbox, coach, push, onOpenChat, onOpenVideo }: { tab: "chats" | "videos"; inbox: CoachInbox; coach: { name: string; photoPath: string | null }; push: Push; onOpenChat: (id: number) => void; onOpenVideo: (id: number) => void }) {
+function Lists({ tab, inbox, cal, today, coach, push, onOpenChat, onOpenVideo }: { tab: Tab; inbox: CoachInbox; cal: CalendarState; today: string; coach: { name: string; photoPath: string | null }; push: Push; onOpenChat: (id: number) => void; onOpenVideo: (id: number) => void }) {
   const [q, setQ] = useState("");
   const [account, setAccount] = useState(false);
   // Back from a chat or a video: the list where it was left.
@@ -143,17 +156,24 @@ function Lists({ tab, inbox, coach, push, onOpenChat, onOpenVideo }: { tab: "cha
   const needle = q.trim().toLowerCase();
   const chats = inbox.chats.filter((c) => !needle || c.name.toLowerCase().includes(needle));
   const now = new Date();
+  const me = (
+    <button type="button" className="cph-me" onClick={() => setAccount(true)} aria-label={`${coach.name}: sign out`}>
+      <Avatar name={coach.name} src={coach.photoPath} size={30} />
+    </button>
+  );
 
   return (
     <main className="cph-list">
-      <header className="cph-head">
-        <h1>{tab === "chats" ? "Chats" : "Videos"}</h1>
-        <button type="button" className="cph-me" onClick={() => setAccount(true)} aria-label={`${coach.name}: sign out`}>
-          <Avatar name={coach.name} src={coach.photoPath} size={30} />
-        </button>
-      </header>
+      {tab !== "calendar" && (
+        <header className="cph-head">
+          <h1>{tab === "chats" ? "Chats" : "Videos"}</h1>
+          {me}
+        </header>
+      )}
 
-      {tab === "chats" ? (
+      {tab === "calendar" ? (
+        <CoachCalendar state={cal} serverToday={today} me={me} onOpenChat={onOpenChat} />
+      ) : tab === "chats" ? (
         <>
           <label className="cph-search">
             <Icon name="search" />
