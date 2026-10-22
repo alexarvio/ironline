@@ -68,7 +68,6 @@
 .rd.pov .pov-sub.ev { margin-top: 10px; }
 .rd.pov .pov-sub.ev::before { content: ""; position: absolute; top: 0; left: calc(10px + var(--pov-tab)); right: 0; border-top: 1px dashed #dce1e8; }
 .rd.pov .pov-sub-label { display: inline-flex; align-items: baseline; gap: 10px; padding-left: calc(10px + var(--pov-tab)); font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98a2b3; white-space: nowrap; }
-.rd.pov .pov-sub-label em { font-style: normal; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #8b93a1; }
 .rd.pov .pov-add { grid-column: 2; justify-self: end; position: sticky; right: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
 .rd.pov .pov-add svg { width: 13px; height: 13px; translate: 0 -0.5px; }
 .rd.pov .pov-add:hover { color: #141a24; }

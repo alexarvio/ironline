@@ -709,15 +709,31 @@ function ClientBlock({
         );
       })}
 
-      {/* Events: their own head, then a row a kind with something on the grid; none on the grid, None yet in the head. */}
+      {/* Events: their own head, then a row a kind with something on the grid; none on the grid, one lane that says
+          None yet + Add from this week, as the phases' tracks (22 Oct, Alex), its weeks a way in too. */}
       <div className="pov-sub ev">
-        <span className="pov-sub-label">
-          Events{groups.length === 0 && <em>None yet</em>}
-        </span>
+        <span className="pov-sub-label">Events</span>
         <button type="button" className="pov-add" onClick={() => onNewEvent(today)} aria-label={`New event for ${c.name}`}>
           <PlusIcon /> Add
         </button>
       </div>
+      {groups.length === 0 && (
+        <div className="rq-tl-row">
+          <LaneLabel />
+          <div className="rq-tl-clip">
+            <div className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `${EV_LANE}px` }}>
+              {weeks.map((w, i) => (
+                <span key={w} className="rq-cell add" style={{ gridColumn: i + 1, gridRow: 1 }} role="button" tabIndex={-1} aria-label={`New event for ${c.name} in the week of ${dayMonth(w)}`} onClick={(ev) => addAt(w, ev)} />
+              ))}
+              {emptyAt && (
+                <button type="button" className="rq-empty" style={emptyAt} onClick={() => onNewEvent(today)}>
+                  None yet <b>+ Add</b>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {groups.map((g, gi) => (
           <div key={g.id ?? "none"} className="rq-tl-row">
             <LaneLabel icon={<KindIcon id={g.id} size={16} />} color={g.chrome.ink} label={g.chrome.label} />
