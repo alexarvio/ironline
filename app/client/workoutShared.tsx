@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { clearCardioSwapAction, saveSkipReasonAction, setCardioDoneAction, setFreeCardioAction, swapCardioAction } from "../lib/actions";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import ExerciseCoachNote from "./ExerciseCoachNote";
@@ -242,8 +242,32 @@ export function CoachNote({ assignmentId, note }: { assignmentId: number | null;
 // Cardio: the targets as tiles, the coach's note, one button to tick it
 // off, a second tap to undo. Bike taken: Swap says what was done instead
 // (the coach's alternatives, or typed), which ticks it off too (28 Sep).
-export function CardioCard({ cardio, index, readOnly = false, coachName = "Your coach", sessionLabel = null, position = null, free = false }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: string | null; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean }) {
+export function CardioCard({ cardio, index, readOnly = false, coachName = "Your coach", sessionLabel = null, position = null, free = false, nextName = null, onNext }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: string | null; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean; /** What comes after it, for the line on the way there. */ nextName?: string | null; /** On to what's next, as an exercise moves on once its last set is in (23 Oct, Alex: Done on a cardio stayed put). */ onNext?: (line?: string) => void }) {
   const [pending, startTransition] = useTransition();
+  // Marked done: 1.4s, as an exercise's last set, then on to the next; taking it back in that time stays here.
+  const nextTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestNext = useRef({ onNext, line: nextName ? `${cardio.swap ?? cardio.name} done · on to ${nextName}` : undefined });
+  useEffect(() => {
+    latestNext.current = { onNext, line: nextName ? `${cardio.swap ?? cardio.name} done · on to ${nextName}` : undefined };
+  });
+  useEffect(
+    () => () => {
+      if (nextTimer.current) clearTimeout(nextTimer.current);
+    },
+    []
+  );
+  const toggleDone = () => {
+    const marking = !cardio.done;
+    if (nextTimer.current) clearTimeout(nextTimer.current);
+    nextTimer.current = null;
+    startTransition(() => setCardioDoneAction(cardio.id, marking));
+    if (marking && latestNext.current.onNext) {
+      nextTimer.current = setTimeout(() => {
+        nextTimer.current = null;
+        latestNext.current.onNext?.(latestNext.current.line);
+      }, 1400);
+    }
+  };
   // What was done, typed in (a free session): kept here, saved as each box is left.
   const [did, setDid] = useState({ time: cardio.time, distance: cardio.distance, pace: cardio.pace, incline: cardio.incline });
   const saveDid = (k: keyof typeof did) => {
@@ -322,7 +346,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
           type="button"
           className={`wo-cardio-done${done ? " is-done" : ""}`}
           disabled={pending}
-          onClick={() => startTransition(() => setCardioDoneAction(cardio.id, !done))}
+          onClick={toggleDone}
         >
           {/* Just Done (21 Oct, Alex: no "tap to undo"); a tap on it still takes it back. */}
           {done ? "Done" : "Mark as done"}

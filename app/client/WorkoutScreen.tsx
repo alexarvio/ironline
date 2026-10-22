@@ -434,7 +434,23 @@ export default function WorkoutScreen({
               />
             ) : p.kind === "cardio" ? (
               <div className="wo-page-inner lw">
-                <CardioCard cardio={day.cardio[p.index]} index={day.exercises.length + p.index + 1} coachName={coachName} sessionLabel={editing ? `Editing · ${day.title}` : day.title} position={{ n: p.index + 1, total: day.cardio.length }} free={!!day.free && !editing} />
+                <CardioCard
+                  cardio={day.cardio[p.index]}
+                  index={day.exercises.length + p.index + 1}
+                  coachName={coachName}
+                  sessionLabel={editing ? `Editing · ${day.title}` : day.title}
+                  position={{ n: p.index + 1, total: day.cardio.length }}
+                  free={!!day.free && !editing}
+                  // On to what's next once it's done, as an exercise does (23 Oct, Alex).
+                  nextName={(() => {
+                    const n = pages[nextOpen(i)];
+                    return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;
+                  })()}
+                  onNext={(line) => {
+                    if (line) setToast(line);
+                    jumpTo(nextOpen(i));
+                  }}
+                />
               </div>
             ) : (
               <div className="wo-page-inner wo-wrap">
@@ -588,13 +604,14 @@ function CheckUnit({ ex, disabled }: { ex: SessionExercise; disabled: boolean })
     setUnit(u);
     start(() => setExerciseUnitAction(ex.id, u));
   };
+  // The unit it was logged in alone (23 Oct, Alex: no "lbs" beside "kg"); a tap switches it.
+  const other: WeightUnit = unit === "kg" ? "lb" : "kg";
+  const word = (u: WeightUnit) => (u === "kg" ? "kg" : "lbs");
   return (
-    <span className="wo-check-unit" role="radiogroup" aria-label={`Weight unit for ${shownName(ex)}`}>
-      {(["kg", "lb"] as const).map((u) => (
-        <button key={u} type="button" role="radio" aria-checked={unit === u} className={unit === u ? "on" : ""} onClick={() => pick(u)} disabled={disabled}>
-          {u === "kg" ? "kg" : "lbs"}
-        </button>
-      ))}
+    <span className="wo-check-unit">
+      <button type="button" className="on" onClick={() => pick(other)} disabled={disabled} aria-label={`${shownName(ex)} in ${word(unit)}; switch to ${word(other)}`} title={`Switch to ${word(other)}`}>
+        {word(unit)}
+      </button>
     </span>
   );
 }
