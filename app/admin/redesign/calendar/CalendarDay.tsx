@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Dialog } from "../../../components/ui/dialog";
-import { ChevronDownIcon } from "../../../components/icons";
-import { entryColors, type Category } from "../palette";
+import { type Category } from "../palette";
 import EntryDialog, { type EntryClient, type Open } from "./EntryDialog";
 import { Sep } from "../Sep";
+import { Fold } from "../Fold";
+import { CLASH, entryChrome } from "./chrome";
 
 // The Calendar's chosen day, hour by hour, and the dialog that adds to it or
-// changes an entry. Every entry is a pill in its category's colour, on one
-// line when it is short; one with a note has a chevron that opens the note
-// under it. All-day entries sit above the hours. A click on a quarter hour
-// adds something there; a click on a pill opens it.
+// changes an entry. Every entry is a bar in its category's colour, drawn as
+// the Plan draws an event (a wash, its words and edge in the colour), on one
+// line when it is short; one with a note has the chevron right after its
+// title (Fold, design rules 8) that opens the note under it. All-day entries
+// sit above the hours. A click on a quarter hour adds something there; a
+// click on a bar opens it. Today has the Plan's NOW: an ink line, its dot
+// pulsing.
 
 export type CalEntry = {
   id: number;
@@ -37,12 +41,22 @@ const toMin = (t: string) => {
   return (h || 0) * 60 + (m || 0);
 };
 const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-const hourLabel = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? "AM" : "PM"}`;
+// 24-hour, as every time the entries show (22 Oct: "9 AM" beside "09:00").
+const hourLabel = (h: number) => `${String(h).padStart(2, "0")}:00`;
 const lengthLabel = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`);
 
+// The browser's clock to the minute, for the NOW line; none on the server, so the first paint matches it.
+const subscribeMinute = (tick: () => void) => {
+  const id = window.setInterval(tick, 15000);
+  return () => window.clearInterval(id);
+};
+const minuteNow = () => Math.floor(Date.now() / 60000);
+const noMinute = () => null;
+const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 export default function CalendarDay({ date, entries, categories, clients }: { date: string; entries: CalEntry[]; categories: Category[]; clients: EntryClient[] }) {
   const [dlg, setDlg] = useState<Open | null>(null);
+  const minute = useSyncExternalStore<number | null>(subscribeMinute, minuteNow, noMinute);
 
   const startMin = FIRST_HOUR * 60;
   const endMin = (LAST_HOUR + 1) * 60;
@@ -85,6 +99,11 @@ export default function CalendarDay({ date, entries, categories, clients }: { da
 
   const top = [...allDay, ...outside];
 
+  // NOW: on this day only, while the clock is inside the hours shown.
+  const at = minute == null ? null : new Date(minute * 60000);
+  const nowMin = at && isoOf(at) === date ? at.getHours() * 60 + at.getMinutes() : null;
+  const nowTop = nowMin != null && nowMin >= startMin && nowMin < endMin ? ((nowMin - startMin) / SLOT_MIN) * SLOT_PX : null;
+
   return (
     <div className="cdg">
       <div className="cdg-allday">
@@ -118,6 +137,7 @@ export default function CalendarDay({ date, entries, categories, clients }: { da
             );
           })}
         </div>
+        {nowTop != null && <span className="cdg-now" style={{ top: nowTop }} title={`Now, ${hhmm(nowMin!)}`} aria-hidden="true" />}
       </div>
 
       <Dialog open={!!dlg} onOpenChange={(o) => !o && setDlg(null)}>
@@ -127,25 +147,33 @@ export default function CalendarDay({ date, entries, categories, clients }: { da
   );
 }
 
-// ---- One entry on the day: its colour, the time and who, on one line when short.
+// ---- One entry on the day: its colour, the time and who, on one line when short. The whole bar opens it (a button
+// under the words); the chevron after the title opens its note in place.
 function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[]; slots: number; height?: number; onOpen: () => void }) {
   const [open, setOpen] = useState(false);
-  const c = entryColors(cats, e.category, e.clientId != null);
+  const c = entryChrome(cats, e.category, e.clientId != null);
   const who = e.clientId != null ? e.clientName : null;
   const title = who ?? (e.topic || "Busy");
   const sub = who ? e.topic : "";
   const when = e.allDay ? "" : e.time ? `${e.time}` : "–";
   const tall = slots >= 3;
   const end = e.time && !e.allDay ? hhmm(toMin(e.time) + e.durationMinutes) : "";
+  const said = [when, title, sub, e.allDay ? "All day" : lengthLabel(e.durationMinutes)].filter(Boolean).join(" · ");
   return (
     <div
       className={`cdg-pill${tall ? " tall" : ""}${slots === 1 ? " tiny" : ""}${open ? " open" : ""}${e.conflict ? " conflict" : ""}${e.status === "completed" ? " done" : ""}`}
-      style={{ background: c.tint, color: c.ink, borderColor: e.conflict ? "#e5b39a" : c.line, ...(height && !open ? { height } : { minHeight: height }) }}
+      style={{ background: c.tint, color: c.ink, borderColor: e.conflict ? CLASH.line : c.line, ...(height && !open ? { height } : { minHeight: height }) }}
     >
-      <button type="button" className="cdg-pill-main" onClick={onOpen} title={[when, title, sub, e.allDay ? "All day" : lengthLabel(e.durationMinutes)].filter(Boolean).join(" · ")}>
+      <button type="button" className="cdg-pill-hit" onClick={onOpen} title={said} aria-label={`Open ${said}`} />
+      <span className="cdg-pill-body">
         <span className="cdg-pill-line">
           {when && <b className="cdg-pill-time">{when}</b>}
           <span className="cdg-pill-title">{title}</span>
+          {e.note && (
+            <button type="button" className="cdg-pill-chev" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? "Hide the note" : "Show the note"}>
+              <Fold open={open} />
+            </button>
+          )}
           {!tall && sub && (
             <span className="cdg-pill-sub">
               <Sep />
@@ -162,14 +190,8 @@ function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[
             </small>
           </span>
         )}
-      </button>
-      {e.note && (
-        <button type="button" className="cdg-pill-chev" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? "Hide the note" : "Show the note"}>
-          <ChevronDownIcon />
-        </button>
-      )}
+      </span>
       {open && e.note && <p className="cdg-pill-note">{e.note}</p>}
     </div>
   );
 }
-

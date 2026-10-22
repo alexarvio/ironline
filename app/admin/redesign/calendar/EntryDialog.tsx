@@ -8,30 +8,32 @@ import { Popover as PopoverPrimitive } from "radix-ui";
 import { toast } from "sonner";
 import { addCalendarEntryAction, removeCalendarEntryAction, updateCalendarEntryAction } from "../../../lib/actions";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { SearchIcon, TrashIcon } from "../../../components/icons";
-import DatePick from "../DatePick";
+import { SearchIcon } from "../../../components/icons";
+import DateText from "../DateText";
+import { MonthRange } from "../MonthRange";
 import { paletteOf, type Category } from "../palette";
 import type { CalEntry } from "./CalendarDay";
-import { dayMonth } from "../../../lib/dayMonth";
 import { TRAINING_ICON } from "../../../lib/eventTypes";
-import { Sep } from "../Sep";
 
-// The Calendar's entry pop-up (14 Oct): the New event and New phase
-// dialogs' language. A glow and a title pill in the category's colour,
-// the categories as tinted tiles (six, three a row; Other grey), filled
-// fields, navy day and time boxes, a navy Save. A client can be picked
-// from a list that floats over the pop-up, with the line that says why
-// they need the coach, as the rail shows it.
+// The Calendar's entry pop-up, built as the meeting scheduler (22 Oct, the
+// .npd pattern): the title and the category as its tinted tag; the
+// categories as tiles across the row, the icon in its colour, the chosen one
+// ink; What and With as clean lines; the month on the left (MonthRange, in
+// the category's colour) with the day typed or picked, the times and the
+// length on the right; the note a clean line; Remove in red words on the
+// left, Cancel in words and one black pill. A client is picked from a list
+// that floats over the pop-up, with the line that says why they need the
+// coach, as the rail shows it. Removing asks first, as a .dlh card.
 
 export type EntryClient = { id: number; name: string; avatarPath: string | null; /** Why they need the coach, as the rail says it; null: all good. */ reason: { text: string; color: string; rgb: string } | null };
 export type Open = { entry: CalEntry | null; date: string; time: string };
 
 const PRESET: Record<string, { icon: string; placeholder: string; length: number }> = {
-  call: { icon: "M3 7h12v10H3zM15 10.5l6-3.5v10l-6-3.5", placeholder: "e.g. Week 1 check-in", length: 30 },
-  training: { icon: TRAINING_ICON, placeholder: "e.g. Session with Mattia", length: 60 },
-  admin: { icon: "M6 3h12v18H6zM9 8h6M9 12h6M9 16h4", placeholder: "e.g. Write programmes", length: 60 },
-  personal: { icon: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", placeholder: "e.g. Gym, lunch, school run", length: 60 },
-  content: { icon: "M4 8h3.5l2-3h5l2 3H20v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z", placeholder: "e.g. Film the week's reels", length: 60 },
+  call: { icon: "M3 7h12v10H3zM15 10.5l6-3.5v10l-6-3.5", placeholder: "Week 1 check-in", length: 30 },
+  training: { icon: TRAINING_ICON, placeholder: "Session with Mattia", length: 60 },
+  admin: { icon: "M6 3h12v18H6zM9 8h6M9 12h6M9 16h4", placeholder: "Write programmes", length: 60 },
+  personal: { icon: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", placeholder: "Gym, lunch, school run", length: 60 },
+  content: { icon: "M4 8h3.5l2-3h5l2 3H20v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z", placeholder: "Film the week's reels", length: 60 },
   other: { icon: "M5 12h.01M12 12h.01M19 12h.01", placeholder: "What is it?", length: 60 },
 };
 const TAG_ICON = "M20 12l-8 8-9-9V4h7l10 8zM7.5 7.5h.01";
@@ -49,6 +51,7 @@ const toMin = (t: string) => {
 const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 const lengthLabel = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : `${m / 60} h`);
 const longDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const SLOTS = Array.from({ length: ((22 - 5) * 60) / 15 + 1 }, (_, i) => hhmm(5 * 60 + i * 15));
 /** "1530", "15.30", "3pm" and "15:30" all read as 15:30. */
 function parseTime(raw: string): string | null {
@@ -70,13 +73,39 @@ function browserZone(): string | null {
   }
 }
 
-function CatIcon({ d, size = 14, stroke = 2.2 }: { d: string; size?: number; stroke?: number }) {
+function CatIcon({ d, size = 14 }: { d: string; size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d={d} />
     </svg>
   );
 }
+
+/** Two times in a row get air (design rules 8): a faint grey arrow, as the event pop-up's. */
+function RangeArrow() {
+  return (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+/** The client's face, 24px (28 in the list): their photo, else their initial on a hairline ring, as the Feed's. */
+function Face({ name, src }: { name: string; src: string | null }) {
+  return (
+    <span className="cal-face" aria-hidden="true">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+        <img src={src} alt="" />
+      ) : (
+        name.trim().charAt(0).toUpperCase()
+      )}
+    </span>
+  );
+}
+
+/** The tiles across the whole row (design rules 5), equal widths: up to six a row, more spread over rows that hold about as many. */
+const tileCols = (n: number) => (n <= 6 ? Math.max(1, n) : Math.ceil(n / Math.ceil(n / 6)));
 
 export default function EntryDialog({ open, cats, clients, dayEntries, onDone }: { open: Open; cats: Category[]; clients: EntryClient[]; /** The day's other entries, for the overlap line. */ dayEntries: CalEntry[]; onDone: () => void }) {
   const router = useRouter();
@@ -100,12 +129,17 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
   const [clientQ, setClientQ] = useState("");
   const [note, setNote] = useState(e?.note ?? "");
   const [removing, setRemoving] = useState(false);
+  // Back from the Remove confirm by Cancel: the focus lands on Remove again, not the top of the pop-up.
+  const [cameBack, setCameBack] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeOpen, setTimeOpen] = useState(false);
   const [timeTyped, setTimeTyped] = useState("");
   const [endOpen, setEndOpen] = useState(false);
   const [endTyped, setEndTyped] = useState("");
+  // The month on the left: the day's month, moved by a day typed or picked further off.
+  const [today] = useState(() => isoOf(new Date()));
+  const [cursor, setCursor] = useState((open.date || today).slice(0, 7));
   const titleRef = useRef<HTMLInputElement>(null);
 
   const current = cats.find((c) => c.id === cat) ?? cats[0];
@@ -136,6 +170,10 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
       window.localStorage.setItem(LAST_CAT_KEY, id);
     } catch {}
   };
+  const pickDate = (d: string) => {
+    setDate(d);
+    setCursor(d.slice(0, 7));
+  };
   const save = async () => {
     if (!ok || saving) return;
     setSaving(true);
@@ -150,7 +188,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
       toast.success(e ? `${title} · saved` : `${title} · added`);
       onDone();
     } catch {
-      setError("That didn’t save. Try again.");
+      setError("Not saved. Try again.");
     }
     setSaving(false);
   };
@@ -181,93 +219,99 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
     return clients.filter((c) => !q || c.name.toLowerCase().includes(q)).sort((a, b) => Number(!!b.reason) - Number(!!a.reason) || a.name.localeCompare(b.name));
   }, [clients, clientQ]);
 
-  return (
-    <DialogContent
-      className="cal-entry"
-      style={{ "--c": ink, "--rgb": rgb } as React.CSSProperties}
-      aria-describedby={undefined}
-      onPointerDownOutside={(ev) => {
-        ev.preventDefault();
-        tryClose();
-      }}
-      onEscapeKeyDown={(ev) => {
-        ev.preventDefault();
-        tryClose();
-      }}
-    >
-      <span className="cal-entry-glow" aria-hidden="true" />
-      <span className="cal-entry-wash" aria-hidden="true" />
-      <div className="cal-entry-body">
-        <header className="cal-entry-head">
-          <div className="cal-entry-head-text">
-            <div className="cal-entry-title-row">
-              <DialogTitle className="cal-entry-title">{e ? "Edit entry" : "New entry"}</DialogTitle>
-              <span className="cal-entry-pill">
-                <CatIcon d={iconOf(cat)} size={11} stroke={2.4} />
-                {current?.label}
-              </span>
-            </div>
-            <DialogDescription className="cal-entry-sub">
-              {date ? dayMonth(date) : "No day yet"}
-              {client && (
-                <>
-                  <Sep />
-                  <Link href={`/admin/redesign/meetings?client=${client.id}`} className="cal-entry-link">
-                    Open {first(client.name)}&rsquo;s meetings
-                  </Link>
-                </>
-              )}
-            </DialogDescription>
-          </div>
-          <button type="button" className="cal-entry-x" onClick={tryClose} aria-label="Close">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </header>
+  const outside = {
+    onPointerDownOutside: (ev: Event) => {
+      ev.preventDefault();
+      tryClose();
+    },
+    onEscapeKeyDown: (ev: KeyboardEvent) => {
+      ev.preventDefault();
+      tryClose();
+    },
+  };
 
-        {/* Category tiles, three a row, each in its own colour; the picked one solid. Other is grey. */}
-        <div className="cal-entry-tiles" role="radiogroup" aria-label="Category">
+  // Removing asks first (design rules 4): the .dlh card, red Remove in words, Cancel back to the entry.
+  if (removing && e)
+    return (
+      <DialogContent className="dlh" role="alertdialog" {...outside}>
+        <div className="dlh-head">
+          <DialogTitle className="dlh-title">Remove {e.topic || "this entry"}?</DialogTitle>
+          <button type="button" className="dlh-x" onClick={tryClose} aria-label="Close">
+            ✕
+          </button>
+        </div>
+        <DialogDescription className="dlh-what">This permanently removes the entry. It can&rsquo;t be undone.</DialogDescription>
+        <div className="dlh-foot">
+          <button
+            type="button"
+            className="dlh-cancel"
+            onClick={() => {
+              setCameBack(true);
+              setRemoving(false);
+            }}
+            autoFocus
+          >
+            Cancel
+          </button>
+          <button type="button" className="dlh-delete" onClick={() => void remove()} disabled={saving}>
+            Remove
+          </button>
+        </div>
+      </DialogContent>
+    );
+
+  return (
+    <DialogContent className="npd cal-npd" style={{ "--npd-c": ink, "--npd-rgb": rgb } as React.CSSProperties} aria-describedby={undefined} {...outside}>
+      <div className="npd-head">
+        <DialogTitle className="npd-title">{e ? e.topic || "Edit entry" : "New entry"}</DialogTitle>
+        <span className="npd-tools">
+          {client && (
+            <Link href={`/admin/redesign/meetings?client=${client.id}`} className="npd-open" title={`Open ${first(client.name)}’s meetings`} aria-label={`Open ${first(client.name)}’s meetings`}>
+              Open
+            </Link>
+          )}
+          <button type="button" className="npd-x" onClick={tryClose} aria-label="Close">
+            ✕
+          </button>
+        </span>
+      </div>
+      <div className="npd-tags">
+        <span className="npd-track">
+          <CatIcon d={iconOf(cat)} size={12} />
+          {current?.label}
+        </span>
+      </div>
+
+      {/* The categories as tiles across the row, the icon in its colour; the chosen one ink. */}
+      <div className="npd-field">
+        <span className="npd-label">Category</span>
+        <div className="npd-tiles" role="radiogroup" aria-label="Category" style={{ gridTemplateColumns: `repeat(${tileCols(cats.length)}, minmax(0, 1fr))` }}>
           {cats.map((c) => {
-            const cInk = paletteOf(c.color).ink;
             const on = c.id === cat;
             return (
-              <button key={c.id} type="button" role="radio" aria-checked={on} className={`cal-entry-tile${on ? " on" : ""}${c.color === "grey" ? " other" : ""}`} style={{ "--tc": cInk, "--trgb": hexRgb(cInk) } as React.CSSProperties} onClick={() => pickCat(c.id)}>
-                <span className="cal-entry-disc">
-                  <CatIcon d={iconOf(c.id)} size={22} stroke={2} />
-                </span>
-                {c.label}
+              <button key={c.id} type="button" role="radio" aria-checked={on} className={`npd-tile${on ? " on" : ""}`} style={{ "--tc": paletteOf(c.color).ink } as React.CSSProperties} onClick={() => pickCat(c.id)}>
+                <CatIcon d={iconOf(c.id)} size={18} />
+                <span className="cal-tile-name">{c.label}</span>
               </button>
             );
           })}
         </div>
+      </div>
 
-        {/* What */}
-        <label className="cal-entry-field">
-          <span className="cal-entry-label">What</span>
-          <span className={`cal-entry-what${topic.trim() ? " ring" : ""}`}>
-            <CatIcon d={iconOf(cat)} size={16} stroke={2} />
-            <input ref={titleRef} value={topic} onChange={(x) => setTopic(x.target.value)} placeholder={suggested ?? placeholder} maxLength={80} autoFocus={!e} aria-label="What" />
-          </span>
+      {/* What over the month, With over the times: two clean lines side by side. With is on every category (14 Oct), so switching tiles never makes the pop-up jump. */}
+      <div className="cal-pair">
+        <label className="npd-field">
+          <span className="npd-label">What</span>
+          <input ref={titleRef} className="npd-line" value={topic} onChange={(x) => setTopic(x.target.value)} placeholder={suggested ?? placeholder} maxLength={80} autoFocus={!e} aria-label="What" />
         </label>
-        {/* With, on every category (14 Oct): the pop-up keeps one height, so switching tiles never makes it jump. */}
-        <div className="cal-entry-field">
-          <span className="cal-entry-label">With</span>
+        <div className="npd-field">
+          <span className="npd-label">With</span>
           {client && !picking ? (
-            <div className="cal-entry-client" style={client.reason ? ({ "--rc": client.reason.color } as React.CSSProperties) : undefined}>
-              <span className="cal-entry-avatar">
-                {client.avatarPath ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                  <img src={client.avatarPath} alt="" />
-                ) : (
-                  client.name.slice(0, 1).toUpperCase()
-                )}
-              </span>
-              <span className="cal-entry-client-text">
-                <b>{client.name}</b>
-                <small className={client.reason ? "reason" : ""}>{client.reason ? client.reason.text : "All good"}</small>
-              </span>
-              <button type="button" className="cal-entry-change" onClick={() => setPicking(true)}>
+            <div className="cal-with" style={client.reason ? ({ "--rc": client.reason.color } as React.CSSProperties) : undefined}>
+              <Face name={client.name} src={client.avatarPath} />
+              <span className="cal-with-name">{client.name}</span>
+              <small className={client.reason ? "reason" : ""}>{client.reason ? client.reason.text : "All good"}</small>
+              <button type="button" className="npd-act" onClick={() => setPicking(true)}>
                 Change
               </button>
             </div>
@@ -275,7 +319,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
             /* The list floats over the pop-up (a portal), so the pop-up keeps its size; a click anywhere else closes it. Modal: its own scroll lock, else the dialog's swallows the wheel. */
             <PopoverPrimitive.Root open modal onOpenChange={(o) => !o && (setPicking(false), setClientQ(""))}>
               <PopoverPrimitive.Anchor asChild>
-                <span className="cal-entry-what ring">
+                <span className="cal-with on">
                   <SearchIcon />
                   <input
                     autoFocus
@@ -295,13 +339,14 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                 </span>
               </PopoverPrimitive.Anchor>
               <PopoverPrimitive.Portal>
-                <PopoverPrimitive.Content align="start" sideOffset={6} className="cal-entry-drop" role="listbox" onOpenAutoFocus={(ev) => ev.preventDefault()} onCloseAutoFocus={(ev) => ev.preventDefault()}>
+                <PopoverPrimitive.Content align="start" sideOffset={6} className="cal-drop" role="listbox" onOpenAutoFocus={(ev) => ev.preventDefault()} onCloseAutoFocus={(ev) => ev.preventDefault()}>
                   {clientId != null && (
-                    <button type="button" role="option" aria-selected={false} className="cal-entry-opt" onClick={() => (setClientId(null), setPicking(false))}>
-                      <span className="cal-entry-avatar none">–</span>
-                      <span className="cal-entry-client-text">
+                    <button type="button" role="option" aria-selected={false} className="cal-opt" onClick={() => (setClientId(null), setPicking(false))}>
+                      <span className="cal-face none" aria-hidden="true">
+                        –
+                      </span>
+                      <span className="cal-opt-text">
                         <b>Just you</b>
-                        <small>no client</small>
                       </span>
                     </button>
                   )}
@@ -311,7 +356,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                       type="button"
                       role="option"
                       aria-selected={c.id === clientId}
-                      className="cal-entry-opt"
+                      className="cal-opt"
                       style={c.reason ? ({ "--rc": c.reason.color } as React.CSSProperties) : undefined}
                       onClick={() => {
                         setClientId(c.id);
@@ -319,80 +364,78 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                         setClientQ("");
                       }}
                     >
-                      <span className="cal-entry-avatar">
-                        {c.avatarPath ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                          <img src={c.avatarPath} alt="" />
-                        ) : (
-                          c.name.slice(0, 1).toUpperCase()
-                        )}
-                      </span>
-                      <span className="cal-entry-client-text">
+                      <Face name={c.name} src={c.avatarPath} />
+                      <span className="cal-opt-text">
                         <b>{c.name}</b>
                         <small className={c.reason ? "reason" : ""}>{c.reason ? c.reason.text : "All good"}</small>
                       </span>
                     </button>
                   ))}
-                  {sortedClients.length === 0 && <p className="cal-entry-none">No client by that name.</p>}
+                  {sortedClients.length === 0 && <p className="cal-none">No match</p>}
                 </PopoverPrimitive.Content>
               </PopoverPrimitive.Portal>
             </PopoverPrimitive.Root>
           ) : (
-            <button type="button" className="cal-entry-pickbtn" onClick={() => setPicking(true)}>
+            <button type="button" className="cal-with pick" onClick={() => setPicking(true)}>
               <SearchIcon />
-              <span>
-                Pick a client<Sep />
-                optional
-              </span>
+              <span>Pick a client</span>
             </button>
           )}
-          {e && client && <small className="cal-entry-faint">{first(client.name)} sees this in their app.</small>}
         </div>
+      </div>
 
-        {/* When */}
-        <div className="cal-entry-field">
-          <div className="cal-entry-when-head">
-            <span className="cal-entry-label">When</span>
-            <span className="cal-entry-seg" role="radiogroup" aria-label="Timed or all day">
+      <div className="npd-cols">
+        {/* The month (MonthRange, the one calendar), the day in the category's colour. */}
+        <MonthRange from={date} to={date} onPick={pickDate} planned={[]} cursor={cursor} setCursor={setCursor} today={today} plain legend={null} />
+        <div className="npd-side">
+          <div className="npd-when">
+            <span className="npd-label">When</span>
+            <div className="npd-seg" role="radiogroup" aria-label="Timed or all day">
               <button type="button" role="radio" aria-checked={!allDay} className={allDay ? "" : "on"} onClick={() => setAllDay(false)}>
                 Timed
               </button>
               <button type="button" role="radio" aria-checked={allDay} className={allDay ? "on" : ""} onClick={() => setAllDay(true)}>
                 All day
               </button>
-            </span>
+            </div>
           </div>
-          <div className="cal-entry-boxes">
-            <span className="cal-entry-box">
-              <span className="cal-entry-box-head">Day</span>
-              {/* Typed or picked, as every date field (20 Oct, Alex). */}
-              <DatePick value={date} onChange={setDate} label={`Day, ${date ? longDate(date) : "none"}`} className="cal-entry-daypick" />
-            </span>
+          {/* The day typed or picked (design rules 7): typed here, picked on the month. */}
+          <div className="npd-dates">
+            <div className="npd-date arm">
+              <span className="npd-date-head">Date</span>
+              <DateText value={date} onChange={pickDate} label={`Day, ${date ? longDate(date) : "none"}`} />
+            </div>
+          </div>
+          <div className="npd-dates cal-times-row">
             {allDay ? (
+              /* All day: the time boxes and the lengths stay, quiet, so the pop-up keeps its height. */
               <>
-                <span className="cal-entry-box off" aria-hidden="true">
-                  <span className="cal-entry-box-head">Starts</span>
-                  <span className="cal-entry-box-val">All day</span>
+                <span className="npd-date cal-still off" aria-hidden="true">
+                  <span className="npd-date-head">Starts</span>
+                  <b>All day</b>
                 </span>
-                <span className="cal-entry-box ends off" aria-hidden="true">
-                  <span className="cal-entry-box-head">Ends</span>
-                  <span className="cal-entry-box-val">—</span>
+                <span className="npd-arrow" aria-hidden="true">
+                  <RangeArrow />
+                </span>
+                <span className="npd-date cal-still off" aria-hidden="true">
+                  <span className="npd-date-head">Ends</span>
+                  <b>—</b>
                 </span>
               </>
             ) : (
               <>
                 <PopoverPrimitive.Root open={timeOpen} modal onOpenChange={setTimeOpen}>
-                  <PopoverPrimitive.Trigger className="cal-entry-box" aria-label={`Starts, ${time}`}>
-                    <span className="cal-entry-box-head">Starts</span>
-                    <span className="cal-entry-box-val">{time}</span>
+                  <PopoverPrimitive.Trigger className="npd-date" aria-label={`Starts, ${time}`}>
+                    <span className="npd-date-head">Starts</span>
+                    <b>{time}</b>
                   </PopoverPrimitive.Trigger>
                   <PopoverPrimitive.Portal>
-                    <PopoverPrimitive.Content align="start" sideOffset={6} className="pb-menu cal-entry-times">
+                    <PopoverPrimitive.Content align="start" sideOffset={6} className="cal-times">
                       <input
-                        className="cal-entry-input small"
+                        className="cal-times-type"
                         value={timeTyped}
                         onChange={(x) => setTimeTyped(x.target.value)}
-                        placeholder="Type a time, e.g. 1530"
+                        placeholder="1530"
                         aria-label="Type a time"
                         onKeyDown={(x) => {
                           if (x.key === "Enter") {
@@ -405,12 +448,12 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                           }
                         }}
                       />
-                      <div className="cal-entry-timelist">
+                      <div className="cal-times-list">
                         {SLOTS.map((t) => (
                           <button
                             key={t}
                             type="button"
-                            className={`cal-entry-time${t === time ? " on" : ""}`}
+                            className={`cal-time${t === time ? " on" : ""}`}
                             ref={(el) => {
                               if (el && t === time) el.scrollIntoView({ block: "center" });
                             }}
@@ -426,20 +469,23 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                     </PopoverPrimitive.Content>
                   </PopoverPrimitive.Portal>
                 </PopoverPrimitive.Root>
+                <span className="npd-arrow" aria-hidden="true">
+                  <RangeArrow />
+                </span>
                 {customLength ? (
                   /* Custom: the end is picked like the start (15 Oct), typed or from the list; the browser's time field fought every keystroke. */
                   <PopoverPrimitive.Root open={endOpen} modal onOpenChange={setEndOpen}>
-                    <PopoverPrimitive.Trigger className="cal-entry-box" aria-label={`Ends, ${hhmm(endMin)}`}>
-                      <span className="cal-entry-box-head">Ends</span>
-                      <span className="cal-entry-box-val">{hhmm(endMin)}</span>
+                    <PopoverPrimitive.Trigger className="npd-date" aria-label={`Ends, ${hhmm(endMin)}`}>
+                      <span className="npd-date-head">Ends</span>
+                      <b>{hhmm(endMin)}</b>
                     </PopoverPrimitive.Trigger>
                     <PopoverPrimitive.Portal>
-                      <PopoverPrimitive.Content align="start" sideOffset={6} className="pb-menu cal-entry-times">
+                      <PopoverPrimitive.Content align="start" sideOffset={6} className="cal-times">
                         <input
-                          className="cal-entry-input small"
+                          className="cal-times-type"
                           value={endTyped}
                           onChange={(x) => setEndTyped(x.target.value)}
-                          placeholder="Type a time, e.g. 1530"
+                          placeholder="1530"
                           aria-label="Type the end time"
                           autoFocus
                           onKeyDown={(x) => {
@@ -454,12 +500,12 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                             }
                           }}
                         />
-                        <div className="cal-entry-timelist">
+                        <div className="cal-times-list">
                           {SLOTS.filter((t) => toMin(t) > toMin(time)).map((t) => (
                             <button
                               key={t}
                               type="button"
-                              className={`cal-entry-time${t === hhmm(endMin) ? " on" : ""}`}
+                              className={`cal-time${t === hhmm(endMin) ? " on" : ""}`}
                               ref={(el) => {
                                 if (el && t === hhmm(endMin)) el.scrollIntoView({ block: "center" });
                               }}
@@ -476,74 +522,68 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                     </PopoverPrimitive.Portal>
                   </PopoverPrimitive.Root>
                 ) : (
-                  <span className="cal-entry-box ends" aria-live="polite">
-                    <span className="cal-entry-box-head">Ends</span>
-                    <span className="cal-entry-box-val">{hhmm(endMin)}</span>
+                  <span className="npd-date cal-still" aria-live="polite">
+                    <span className="npd-date-head">Ends</span>
+                    <b>{hhmm(endMin)}</b>
                   </span>
                 )}
               </>
             )}
           </div>
-          {/* All day keeps the rows (14 Oct): the boxes read All day and the lengths go quiet, so the pop-up never changes size. */}
-          <div className={`cal-entry-chips${allDay ? " off" : ""}`} role="radiogroup" aria-label="Length" aria-disabled={allDay}>
-            {LENGTHS.map((m) => (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                disabled={allDay}
-                aria-checked={!allDay && !customLength && length === m}
-                className={`cal-entry-chip${!allDay && !customLength && length === m ? " on" : ""}`}
-                onClick={() => {
-                  setLength(m);
-                  setCustomLength(false);
-                }}
-              >
-                {lengthLabel(m)}
+          {/* All day keeps the row (14 Oct): the lengths go quiet, so the pop-up never changes size. */}
+          <div className="npd-field">
+            <span className="npd-label">Length</span>
+            <div className={`npd-seg cal-lengths${allDay ? " off" : ""}`} role="radiogroup" aria-label="Length" aria-disabled={allDay}>
+              {LENGTHS.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="radio"
+                  disabled={allDay}
+                  aria-checked={!allDay && !customLength && length === m}
+                  className={!allDay && !customLength && length === m ? "on" : ""}
+                  onClick={() => {
+                    setLength(m);
+                    setCustomLength(false);
+                  }}
+                >
+                  {lengthLabel(m)}
+                </button>
+              ))}
+              <button type="button" role="radio" disabled={allDay} aria-checked={!allDay && customLength} className={!allDay && customLength ? "on" : ""} onClick={() => setCustomLength(true)}>
+                Custom
               </button>
-            ))}
-            <button type="button" role="radio" disabled={allDay} aria-checked={!allDay && customLength} className={`cal-entry-chip${!allDay && customLength ? " on" : ""}`} onClick={() => setCustomLength(true)}>
-              Custom
-            </button>
+            </div>
           </div>
           {/* Always a line, so an overlap appearing never moves the pop-up. */}
-          <small className="cal-entry-overlap">{overlap ?? "\u00a0"}</small>
+          <small className="cal-overlap">{overlap ?? " "}</small>
         </div>
-
-        {/* Note */}
-        <label className="cal-entry-field">
-          <span className="cal-entry-label">Note</span>
-          <textarea className="cal-entry-note" value={note} onChange={(x) => setNote(x.target.value)} placeholder="What to bring up, what to prepare…" maxLength={2000} rows={3} />
-        </label>
-        {error && <p className="cal-entry-error">{error}</p>}
       </div>
 
-      <footer className="cal-entry-foot">
-        {e &&
-          (removing ? (
-            <span className="cal-entry-confirm">
-              Remove entry?
-              <button type="button" className="cal-entry-danger" onClick={() => void remove()} disabled={saving}>
-                Yes, remove
-              </button>
-              <button type="button" className="cal-entry-cancel" onClick={() => setRemoving(false)}>
-                Keep
-              </button>
-            </span>
-          ) : (
-            <button type="button" className="cal-entry-remove" onClick={() => setRemoving(true)}>
-              <TrashIcon /> Remove
-            </button>
-          ))}
-        <span className="cal-entry-spacer" />
-        <button type="button" className="cal-entry-cancel" onClick={tryClose}>
+      <label className="npd-field">
+        <span className="npd-label">Note</span>
+        <textarea className="npd-line cal-note" value={note} onChange={(x) => setNote(x.target.value)} placeholder="What to bring up, what to prepare…" maxLength={2000} rows={2} />
+      </label>
+
+      <div className="npd-foot">
+        {e && (
+          <button type="button" className="npd-delete" onClick={() => setRemoving(true)} autoFocus={cameBack}>
+            Remove
+          </button>
+        )}
+        {error && (
+          <span className="cal-error" role="alert">
+            {error}
+          </span>
+        )}
+        <button type="button" className="npd-cancel" onClick={tryClose}>
           Cancel
         </button>
-        <button type="button" className="cal-entry-save" disabled={!ok || saving} aria-disabled={!ok || saving} onClick={() => void save()}>
-          {saving ? <span className="cal-entry-spin" aria-hidden="true" /> : null}
+        <button type="button" className="npd-save" disabled={!ok || saving} aria-disabled={!ok || saving} onClick={() => void save()}>
+          {saving ? <span className="cal-spin" aria-hidden="true" /> : null}
           {e ? "Save" : "Add"}
         </button>
-      </footer>
+      </div>
     </DialogContent>
   );
 }
