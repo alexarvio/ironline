@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { addClientPhaseAction, applySupplementChangesAction, deletePhaseAction, deployPhaseNowAction, saveAndSchedulePhaseOrSayWhyAction, saveCoachNutritionNoteAction, saveNutritionTargetsAction, sendChatMessageAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientPhaseAction, applySupplementChangesAction, deletePhaseAction, deployPhaseNowAction, markSeenAction, saveAndSchedulePhaseOrSayWhyAction, saveCoachNutritionNoteAction, saveNutritionTargetsAction, sendChatMessageAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
@@ -159,7 +159,18 @@ function SaveStatus({ busy, failed, onRetry, solo = false }: { busy: boolean; fa
   );
 }
 
-export default function NutritionDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftNutrition }) {
+export default function NutritionDraft({
+  clientId,
+  firstName,
+  plan,
+  dueFood,
+}: {
+  clientId: number;
+  firstName: string;
+  plan: DraftNutrition;
+  /** The dot trail (dots.ts): days (yyyy-mm-dd) with a note of theirs still to read → those notes' feed ids. */
+  dueFood?: Record<string, string[]>;
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   // A header action goes to the server, then the page re-reads; what is on screen follows.
@@ -804,10 +815,19 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                   key={d.date}
                   day={d}
                   open={open === d.date}
+                  due={!!dueFood?.[d.date]?.length}
                   grid={lGrid}
                   mealGrid={mGrid}
                   commentsOn={commentsOn}
-                  onToggle={() => setOpen((x) => (x === d.date ? null : d.date))}
+                  onToggle={() => {
+                    // Opening a day with their note on it is reading it: the dot goes, and the rail's number with it.
+                    const ids = open === d.date ? null : dueFood?.[d.date];
+                    setOpen((x) => (x === d.date ? null : d.date));
+                    if (ids?.length) startTransition(async () => {
+                      await markSeenAction(clientId, { ids });
+                      router.refresh();
+                    });
+                  }}
                   onShot={(meal) => setDlg({ kind: "photo", date: d.date, meal })}
                   onMessage={() => message({ label: `Food diary · ${dayMonth(d.date)}`, link: { kind: "food", date: d.date } })}
                 />
@@ -1288,7 +1308,7 @@ function Split({ p, c, f }: { p: number; c: number; f: number }) {
 }
 
 
-function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMessage }: { day: LoggedDay; open: boolean; grid: React.CSSProperties; mealGrid: React.CSSProperties; commentsOn: (d: string, m: LoggedMeal) => MealComment[]; onToggle: () => void; onShot: (meal: string) => void; onMessage: () => void }) {
+function DayRow({ day, open, due, grid, mealGrid, commentsOn, onToggle, onShot, onMessage }: { day: LoggedDay; open: boolean; due: boolean; grid: React.CSSProperties; mealGrid: React.CSSProperties; commentsOn: (d: string, m: LoggedMeal) => MealComment[]; onToggle: () => void; onShot: (meal: string) => void; onMessage: () => void }) {
   return (
     <div id={`day-${day.date}`} className={`rd-row rn-day${open ? " open" : ""}`}>
       {/* The row opens on a click anywhere; for the keyboard the date is the button (no controls nested in a button). */}
@@ -1298,6 +1318,7 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
             <button type="button" className="rd-row-hit" aria-expanded={open}>
               <span className="rd-logdate">{logDate(day.date)}</span>
               <Fold open={open} />
+              {due && <span className="sr-only">, needs you</span>}
             </button>
             {/* A note from the client: the chat icon in the row, the words once it is opened (21 Oct, Alex). */}
             {day.note && (
@@ -1305,6 +1326,8 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
                 <ChatIcon />
               </span>
             )}
+            {/* The dot trail's last step (dots.ts, 22 Oct, Alex): their note on this day still to read; opening the day reads it. */}
+            {due && <i className="rd-due" role="img" aria-label="needs you" />}
           </span>
         </span>
         <span className="rd-num">{n(day.kcal)}</span>

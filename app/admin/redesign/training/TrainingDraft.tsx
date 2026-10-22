@@ -5,7 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
-import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, deletePhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, deletePhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
@@ -35,6 +35,7 @@ import DatePick from "../DatePick";
 import { dayMonth } from "../../../lib/dayMonth";
 import { Sep, SepJoin } from "../Sep";
 import { useSaidSaved } from "../useSaveQueue";
+import { weekDue, type DotTrail } from "../dots";
 
 // The calmer builder, as a draft on real data. Nothing here saves: every
 // action ends in a toast. What it settles, against the current builder:
@@ -223,7 +224,7 @@ type Dlg =
   | { kind: "deletePhase" }
   | null;
 
-export default function TrainingDraft({ clientId, firstName, program, library, cardioMoves = [], coachVideos = [] }: { clientId: number; firstName: string; program: DraftProgram; library: Library; cardioMoves?: CardioMove[]; coachVideos?: CoachClip[] }) {
+export default function TrainingDraft({ clientId, firstName, program, library, cardioMoves = [], coachVideos = [], dots }: { clientId: number; firstName: string; program: DraftProgram; library: Library; cardioMoves?: CardioMove[]; coachVideos?: CoachClip[]; /** The dot trail (dots.ts): the weeks and sessions with something the coach owes; an exercise's own is its video mark in rust. */ dots?: DotTrail }) {
   // An exercise added from the library starts with its default cue as the note (5 Oct).
   const cueOf = (exerciseId: number | null) => (exerciseId == null ? "" : library.flatMap((g) => g.exercises).find((e) => e.id === exerciseId)?.cue ?? "");
   const router = useRouter();
@@ -574,6 +575,22 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const [demos, setDemos] = useState<Record<number, DraftRow["demo"]>>({});
   // Every session starts folded; the coach opens the one they want.
   const [open, setOpen] = useState<number | null>(null);
+  // Opening a session with their note on it is reading it (the dot trail, dots.ts; 22 Oct): its notes are marked read
+  // and the dot goes, the rail's number with it. A video waits for the reply, whatever is opened.
+  const markRead = useRef<(id: number) => void>(() => {});
+  useEffect(() => {
+    markRead.current = (id) => {
+      if (!dots?.training.days.includes(id)) return;
+      startTransition(async () => {
+        await markSeenAction(clientId, { dayId: id });
+        router.refresh();
+      });
+    };
+  });
+  const openSession = (id: number | null) => {
+    setOpen(id);
+    if (id != null) markRead.current(id);
+  };
   // Another week loaded (a week chip, a link): the screen stays (units,
   // columns, scroll), the week on it changes and its sessions start folded.
   const [seenWeekIdx, setSeenWeekIdx] = useState(program.weekIdx);
@@ -620,6 +637,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         setOpen(id);
+        markRead.current(id);
         setTimeout(() => {
           const target = (row != null && document.getElementById(`row-${row}`)) || document.getElementById(`session-${id}`);
           target?.scrollIntoView({ behavior: "smooth", block: row != null ? "center" : "start" });
@@ -769,7 +787,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                   <button type="button" className="trn-name-btn" onClick={() => setRenaming(shownName)} title="Rename">
                     {shownName}
                   </button>
-                  <PhaseSwitcher name="" currentId={program.id} items={program.programs} hrefFor={(id) => `/admin/redesign/training?client=${clientId}&program=${id}`} label="Switch programme" newLabel="New programme" onNew={() => setDlg({ kind: "newProgram" })} />
+                  <PhaseSwitcher name="" currentId={program.id} items={program.programs} hrefFor={(id) => `/admin/redesign/training?client=${clientId}&program=${id}`} dueIds={Object.keys(dots?.training.weeks ?? {}).map(Number)} label="Switch programme" newLabel="New programme" onNew={() => setDlg({ kind: "newProgram" })} />
                 </>
               )}
             </h1>
@@ -888,6 +906,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         onShow={showWeek}
         onAdd={addWeek}
         addFrom={addFrom}
+        due={(index) => weekDue(dots, program.id, index)}
       />
 
       {/* ---- The week's sessions. */}
@@ -1050,7 +1069,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 // grip, the buttons and (open) the name, which renames.
                 onClick={(ev) => {
                   if ((ev.target as HTMLElement).closest("input, textarea, select, button, a, [role=button], [role^=menuitem], .rd-grip")) return;
-                  setOpen(isOpen ? null : s.id);
+                  openSession(isOpen ? null : s.id);
                 }}
               >
                 <span className="rd-grip trn-grip" {...sessionGrip}>
@@ -1068,11 +1087,13 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     ) : null}
                   </small>
                   {/* The fold beside the title (20 Oct, Alex); the row's far end is the ··· menu. */}
-                  <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : s.id)} aria-expanded={isOpen} aria-label={isOpen ? `Fold ${name}` : `Open ${name}`}>
+                  <button type="button" className="trn-row-toggle" onClick={() => openSession(isOpen ? null : s.id)} aria-expanded={isOpen} aria-label={`${isOpen ? "Fold" : "Open"} ${name}${dots?.training.days.includes(s.id) ? ", needs you" : ""}`}>
                     <span className={`trn-chev${isOpen ? " open" : ""}`} aria-hidden="true">
                       <ChevronRightIcon />
                     </span>
                   </button>
+                  {/* The dot trail (dots.ts): a video or photo to review in it, or their note to read. Beside the chevron, so the name, its facts and the fold stay put when it comes and goes. */}
+                  {dots?.training.days.includes(s.id) && <i className="rd-due" role="img" aria-label="needs you" />}
                 </span>
                 {/* What wants the coach: the client's note, a video, extra sets, a swap. */}
                 <span className="trn-row-flags">

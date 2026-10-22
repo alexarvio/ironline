@@ -2,6 +2,7 @@ import { GYM_COLORS, isGymColor } from "../../lib/gymColors";
 import { redirect } from "next/navigation";
 import { getData, type InvoiceTemplate } from "../../lib/db";
 import { meetingRemindersOn } from "../../lib/meetingReminders";
+import type { DotTab, DotTrail } from "./dots";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { clerkOn } from "../../lib/clerk";
@@ -557,6 +558,72 @@ function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEv
   return { spots, total: ranked.length };
 }
 export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean };
+
+/** The dot trail on one client's screens (dots.ts): what the rail counts for them, each placed where it is. */
+export function loadDots(clientId: number): DotTrail {
+  const data = getData();
+  const client = data.clients.find((c) => c.id === clientId);
+  const dots: DotTrail = { tabs: [], training: { weeks: {}, days: [], exercises: [] }, food: {}, meetings: false, unlock: false };
+  if (!client) return dots;
+  const tab = (t: DotTab) => {
+    if (!dots.tabs.includes(t)) dots.tabs.push(t);
+  };
+  const once = <T,>(list: T[], v: T) => {
+    if (!list.includes(v)) list.push(v);
+  };
+  // A server week (week_number) to its programme's screen week.
+  const programs = listPrograms(clientId);
+  const placeWeek = (week: number) => {
+    const p = programs.find((x) => week >= x.start_week && week < x.start_week + x.total_weeks);
+    if (p) once((dots.training.weeks[p.id] ??= []), week - p.start_week + 1);
+  };
+  // A client with no phase or programme yet: their Plan, as the rail counts them.
+  if (listClientPhases(clientId).length === 0 && !data.training_programs.some((p) => p.client_id === clientId)) tab("plan");
+  const feed = getActivityFeed(client.coach_id ?? 0);
+  const byId = new Map(feed.map((e) => [e.id, e]));
+  for (const a of getClientHome(clientId, feed).actions) {
+    if (a.id === "week") {
+      const p = getDeployedProgram(clientId);
+      tab("training");
+      if (p) once((dots.training.weeks[p.id] ??= []), getProgramCurrentWeekIndex(p));
+    } else if (a.id === "locked") {
+      tab("home");
+      dots.unlock = true;
+    } else if (/^reply-video-\d+$/.test(a.id)) {
+      const v = data.video_requests.find((x) => x.id === Number(a.id.slice("reply-video-".length)));
+      const wa = v ? data.workout_assignments.find((w) => w.id === v.assignment_id) : undefined;
+      const day = wa ? data.program_days.find((d) => d.id === wa.program_day_id) : undefined;
+      tab("training");
+      if (wa) once(dots.training.exercises, wa.id);
+      if (day) {
+        once(dots.training.days, day.id);
+        placeWeek(day.week_number);
+      }
+    } else if (/^call-\d+$/.test(a.id)) {
+      tab("meetings");
+      dots.meetings = true;
+    } else if (a.id.startsWith("read-")) {
+      const t = a.eventId ? byId.get(a.eventId)?.target : undefined;
+      if (t?.kind === "session") {
+        tab("training");
+        once(dots.training.days, t.dayId);
+        placeWeek(t.week);
+      } else if (t?.kind === "food") {
+        tab("nutrition");
+        if (a.eventId) once((dots.food[t.date] ??= []), a.eventId);
+      } else if (a.tab && a.tab !== "messages") {
+        tab((NEED_TAB_ROUTE[a.tab] ?? a.tab) as DotTab);
+      }
+    }
+    // reply-<id>, a message: the chat tab's own dot.
+  }
+  const today = localDateStr();
+  if (listMeetings(clientId).some((m) => m.status === "scheduled" && m.date === today)) {
+    tab("meetings");
+    dots.meetings = true;
+  }
+  return dots;
+}
 
 /** The left rail's data: every client with whether they need the coach, and the coach at the foot. */
 export function loadRail(coach: { id: number; email: string; role: "coach" | "client" }): RailData {

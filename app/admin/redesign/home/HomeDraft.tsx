@@ -154,7 +154,20 @@ const tintOf = (hex: string, alpha: number) => {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 };
 
-export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { clientId: number; firstName: string; home: DraftHome; onOpenTab: (tab: string) => void }) {
+export default function HomeDraft({
+  clientId,
+  firstName,
+  home,
+  onOpenTab,
+  dueUnlock,
+}: {
+  clientId: number;
+  firstName: string;
+  home: DraftHome;
+  onOpenTab: (tab: string) => void;
+  /** The dot trail (dots.ts): locked out of signing in, so App access carries the dot. */
+  dueUnlock?: boolean;
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   // Every save goes to the server, then the page re-reads; what is on screen follows.
@@ -231,7 +244,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
         </div>
         <div className="trn-head-actions">
           {/* White pills with an icon, as every tab's own actions (design rules 9b). */}
-          <AppAccessButton key={clientId} clientId={clientId} firstName={firstName} initial={home.access} />
+          <AppAccessButton key={clientId} clientId={clientId} firstName={firstName} initial={home.access} due={!!dueUnlock} />
           <button type="button" className="trn-pill" onClick={() => setDetails(true)}>
             <AccountIcon /> Details
           </button>

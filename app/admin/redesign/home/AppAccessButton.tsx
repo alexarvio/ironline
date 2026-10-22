@@ -17,10 +17,14 @@ export default function AppAccessButton({
   clientId,
   firstName,
   initial,
+  due = false,
 }: {
   clientId: number;
   firstName: string;
   /** Read with the page, so the button shows at once with no round trip. */ initial: ClientAccess | null;
+  /** The dot trail (dots.ts): locked out of signing in. A new password here ends the lock, and the page's re-read
+   *  (the action revalidates) takes the dot away. */
+  due?: boolean;
 }) {
   const [access, setAccess] = useState<ClientAccess | null>(initial);
   const [shown, setShown] = useState(false);
@@ -73,9 +77,11 @@ export default function AppAccessButton({
 
   return (
     <>
-      {/* A white pill with an icon, as the header's others (design rules 9b). */}
-      <button type="button" className="trn-pill" onClick={open}>
+      {/* A white pill with an icon, as the header's others (design rules 9b). Locked out, the dot trail's rust dot sits
+          right after its words (home.css keeps the pill's width close to as it was). */}
+      <button type="button" className={`trn-pill${due ? " rh-due" : ""}`} onClick={open}>
         <LockIcon /> {hasLogin ? "App access" : "Give app access"}
+        {due && <i className="rd-due" role="img" aria-label="needs you" />}
       </button>
       <Dialog open={shown} onOpenChange={(o) => !o && setShown(false)}>
         {shown && (

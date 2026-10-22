@@ -131,6 +131,19 @@
 .rd.trn .trn-week-foot { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; font-weight: 500; color: var(--trn-muted); }
 .rd.trn .trn-week.add { background: transparent; box-shadow: inset 0 0 0 1px var(--trn-btnline); }
 .rd.trn .trn-week.add .trn-week-name { font-weight: 600; color: var(--trn-navy); }
+/* The dot trail (dots.ts, 22 Oct, Alex): a week with something owed carries the rust dot right after "Week 3", on the
+   numeral's middle. It takes no room, so the card and NOW never move when it comes or goes. Where the card is too narrow
+   for it to clear NOW (a week's top line under ~109px, ~117px for Week 10 on), it sits at the top right of the word
+   instead, as the client tabs carry theirs. */
+.rd.trn .trn-week-top { container: trn-week / inline-size; }
+.rd.trn .trn-week-name { position: relative; }
+.rd.trn .trn-week-name > .rd-due { position: absolute; top: 50%; left: calc(100% + 5px); translate: 0 -50%; }
+@container trn-week (max-width: 108px) {
+  .rd.trn .trn-week-top:has(.trn-now) .trn-week-name > .rd-due { top: -4px; left: calc(100% + 1px); translate: none; }
+}
+@container trn-week (max-width: 116px) {
+  .rd.trn .trn-week-top:has(.trn-now) .trn-week-name > .rd-due.trn-due-long { top: -4px; left: calc(100% + 1px); translate: none; }
+}
 
 /* ---- Week sessions */
 .rd.trn .trn-weekhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: -10px; }
@@ -158,6 +171,8 @@
 /* The fold beside the title, the ··· at the row's end. */
 .rd.trn .trn-row-name .trn-row-toggle { align-self: center; width: 24px; height: 24px; margin-left: -4px; border-radius: 999px; }
 .rd.trn .trn-row-name .trn-row-toggle:hover { background: var(--trn-page); }
+/* A session's dot (dots.ts) beside its chevron, level with it; after it nothing sits, so nothing moves. */
+.rd.trn .trn-row-name > .rd-due { align-self: center; margin-left: -8px; }
 .rd.trn .trn-row-flags { display: inline-flex; align-items: center; gap: 4px; }
 .rd.trn .trn-row-flags .rd-tag.note { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 24px; padding: 0; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px var(--trn-line); color: var(--trn-sec); }
 .rd.trn .trn-row-flags .rd-tag.note svg { width: 14px; height: 14px; }

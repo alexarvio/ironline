@@ -31,6 +31,7 @@ export default function PhaseSwitcher({
   label,
   newLabel,
   onNew,
+  dueIds = [],
 }: {
   /** The one on screen: its name is the button. */
   name: string;
@@ -41,6 +42,8 @@ export default function PhaseSwitcher({
   label: string;
   newLabel: string;
   onNew: () => void;
+  /** The dot trail (dots.ts): the ones with something owed in them. Another than the one on screen dots the ▾, its state and its row. */
+  dueIds?: number[];
 }) {
   const count = (s: State) => items.filter((p) => stateOf(p.state) === s).length;
   // The state of the phase on screen; with none on screen (no phase yet), the first state that has any (22 Oct, Alex:
@@ -49,11 +52,14 @@ export default function PhaseSwitcher({
   const [picked, setPicked] = useState<State | null>(null);
   const shown = picked ?? current;
   const list = items.filter((p) => stateOf(p.state) === shown);
+  const dueElsewhere = (p: SwitcherItem) => p.id !== currentId && dueIds.includes(p.id);
+  const dueAny = items.some(dueElsewhere);
   return (
     <DropdownMenu modal={false} onOpenChange={(open) => open && setPicked(null)}>
       <DropdownMenuTrigger className="rd-switch rd-keep" aria-label={label}>
         {name}
         <ChevronDownIcon />
+        {dueAny && <i className="rd-due rd-switch-due" role="img" aria-label="another needs you" />}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="pb-menu rd-switch-menu">
         {/* No phases at all: nothing to list, only New phase. */}
@@ -63,6 +69,7 @@ export default function PhaseSwitcher({
               <ToggleGroupItem key={s.key} value={s.key} disabled={count(s.key) === 0}>
                 {s.label}
                 {count(s.key) > 0 && <span className="rd-switch-count">{count(s.key)}</span>}
+                {items.some((p) => stateOf(p.state) === s.key && dueElsewhere(p)) && <i className="rd-due rd-switch-due" role="img" aria-label="needs you" />}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
@@ -71,6 +78,7 @@ export default function PhaseSwitcher({
           <DropdownMenuItem key={p.id} asChild>
             <Link href={hrefFor(p.id)} scroll={false} className={p.id === currentId ? "on" : ""}>
               <span className="rd-switch-name">{p.name}</span>
+              {dueElsewhere(p) && <i className="rd-due" role="img" aria-label="needs you" />}
               <small>
                 {p.weeks} {p.weeks === 1 ? "week" : "weeks"}
               </small>

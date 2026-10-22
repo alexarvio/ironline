@@ -15,6 +15,11 @@
 .rd.rh .rh-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .rd.rh .rh-avatar:disabled { cursor: default; }
 .rd.rh .rh-avatar:not(:disabled):hover { box-shadow: 0 0 0 1px #141a24; }
+/* Locked out of signing in (the dot trail, dots.ts, 22 Oct, Alex): App access carries the rust dot right after its
+   words. The dot comes a little closer than the pill's gap and the pill's right end gives up most of the dot's room,
+   so it grows only 5px, to the left (the header's actions sit right): Details and Message stay put. */
+.rd.trn.rh .trn-pill.rh-due { padding-right: 8px; }
+.rd.trn.rh .trn-pill.rh-due > .rd-due { margin-left: -2px; }
 
 /* ---- Since the coach last looked: one quiet line close under the header, the date in ink. */
 .rd.rh .rh-sinceline { margin: -6px 0 0; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }

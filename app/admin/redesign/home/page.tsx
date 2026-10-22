@@ -1,6 +1,6 @@
 import { requireCoach } from "../../../lib/auth";
 import { touchPresence } from "../../../lib/presence";
-import { loadHome, loadMeasurements, loadMeetings, loadMessages, loadNutrition, loadPictures, loadPlan, loadRail, loadTraining, pickClient, loadInvoices } from "../loaders";
+import { loadHome, loadMeasurements, loadMeetings, loadMessages, loadNutrition, loadPictures, loadPlan, loadRail, loadTraining, pickClient, loadInvoices, loadDots } from "../loaders";
 import RedesignShell from "../RedesignShell";
 import { tabFromParams } from "../tabs";
 import NoClients from "../NoClients";
@@ -40,6 +40,7 @@ export default async function HomeRedesignPage({ searchParams }: { searchParams:
       clientName={client.name ?? "Client"}
       firstName={firstName}
       rail={loadRail(coach)}
+      dots={loadDots(client.id)}
       initialTab={tabFromParams(params.tab, "home")}
       home={loadHome(client.id)}
       training={loadTraining(coach.id, client.id, params)}

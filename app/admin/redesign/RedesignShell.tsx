@@ -22,6 +22,7 @@ import RedesignRail from "./RedesignRail";
 import PhonePreview, { SCREEN_FOR_TAB } from "./PhonePreview";
 import type { PhoneScreen } from "../../client/AppShell";
 import type { DraftInvoices, RailData } from "./loaders";
+import type { DotTab, DotTrail } from "./dots";
 
 // The redesign drafts on one page: the rail on the left, and Training,
 // Nutrition and Measurements all loaded on the right, one shown at a time.
@@ -85,9 +86,11 @@ export type RedesignShellProps = {
   plan: DraftPlan;
   messages: DraftMessages;
   invoices: DraftInvoices;
+  /** What the coach owes this client, placed (dots.ts): a rust dot on the tab, and down to the thing on it. */
+  dots: DotTrail;
 };
 
-export default function RedesignShell({ clientId, clientName, firstName, rail, initialTab, home, training, nutrition, measurements, pictures, meetings, plan, messages, invoices }: RedesignShellProps) {
+export default function RedesignShell({ clientId, clientName, firstName, rail, initialTab, home, training, nutrition, measurements, pictures, meetings, plan, messages, invoices, dots }: RedesignShellProps) {
   const pageTab = (t: RedesignTab): PageTab => (t === "messages" ? "home" : t);
   const [tab, setTab] = useState<PageTab>(pageTab(initialTab));
   // The chat sliding in from the right (ChatPanel.tsx): mounted on first
@@ -307,16 +310,18 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           {TABS.map((t) => (
             <button key={t.key} type="button" className={t.key === tab ? "on" : ""} aria-current={t.key === tab ? "page" : undefined} onClick={() => show(t.key)}>
               {t.label}
+              {/* Something owed on this tab (22 Oct, Alex: the dot trail from the rail's number down to the thing). */}
+              {dots.tabs.includes(t.key as DotTab) && <i className="rd-due rd-nav-due" role="img" aria-label="needs you" />}
             </button>
           ))}
         </nav>
         <div hidden={tab !== "home"}>
           {/* Keyed per client: Home's own state (What counts, rows marked read, the filter) is one client's. */}
-          <HomeTab key={clientId} clientId={clientId} firstName={firstName} home={home} onOpenTab={openTab} />
+          <HomeTab key={clientId} clientId={clientId} firstName={firstName} home={home} onOpenTab={openTab} dueUnlock={dots.unlock} />
         </div>
         <div hidden={tab !== "training"}>
           {training.draft ? (
-            <TrainingTab key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} cardioMoves={training.cardioMoves} coachVideos={training.videos} />
+            <TrainingTab key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} cardioMoves={training.cardioMoves} coachVideos={training.videos} dots={dots} />
           ) : hasPhase("training") ? (
             <NoProgramme clientId={clientId} firstName={firstName} />
           ) : (
@@ -324,7 +329,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           )}
         </div>
         <div hidden={tab !== "nutrition"}>
-          {nutritionBlank ? <NoPhase clientId={clientId} firstName={firstName} track="nutrition" plan={plan} /> : <NutritionTab key={`${clientId}:${nutrition.id}`} clientId={clientId} firstName={firstName} plan={nutrition} />}
+          {nutritionBlank ? <NoPhase clientId={clientId} firstName={firstName} track="nutrition" plan={plan} /> : <NutritionTab key={`${clientId}:${nutrition.id}`} clientId={clientId} firstName={firstName} plan={nutrition} dueFood={dots.food} />}
         </div>
         <div hidden={tab !== "measurements"}>
           {measurementsBlank ? <NoPhase clientId={clientId} firstName={firstName} track="lifestyle" plan={plan} /> : <MeasurementsTab key={`${clientId}:${measurements.id}`} clientId={clientId} firstName={firstName} plan={measurements} />}

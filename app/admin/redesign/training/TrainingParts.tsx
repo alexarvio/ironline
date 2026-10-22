@@ -217,7 +217,7 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
 
 type Week = DraftProgram["weeks"][number];
 
-export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onAdd, addFrom }: { weeks: Week[]; viewIdx: number; dateOf: (index: number) => string | null; hrefFor: (index: number) => string; isLocal: (index: number) => boolean; onShow: (index: number) => void; /** null: a blank week; else the week it copies. */ onAdd: (from: number | null) => void; /** The weeks offered to copy, first the one before the new week. */ addFrom: { index: number; sessions: number }[] }) {
+export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onAdd, addFrom, due }: { weeks: Week[]; viewIdx: number; dateOf: (index: number) => string | null; hrefFor: (index: number) => string; isLocal: (index: number) => boolean; onShow: (index: number) => void; /** null: a blank week; else the week it copies. */ onAdd: (from: number | null) => void; /** The weeks offered to copy, first the one before the new week. */ addFrom: { index: number; sessions: number }[]; /** The dot trail (dots.ts): a week with something the coach owes in it. */ due?: (index: number) => boolean }) {
   return (
     // One row: up to 8 weeks share it evenly with + Week; more, and the rail scrolls sideways.
     <div className={`trn-rail${weeks.length > 8 ? " scroll" : ""}`} role="tablist" aria-label="Weeks" style={{ "--trn-cards": weeks.length + 1 } as React.CSSProperties}>
@@ -226,12 +226,13 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
         const total = w.trained.length;
         const on = w.index === viewIdx;
         const now = w.state === "live";
+        const owed = !!due?.(w.index);
         return (
           <Link
             key={w.index}
             role="tab"
             aria-selected={on}
-            aria-label={`Week ${w.index}${now ? ", current week" : ""}, ${done} of ${total} sessions done`}
+            aria-label={`Week ${w.index}${now ? ", current week" : ""}, ${done} of ${total} sessions done${owed ? ", needs you" : ""}`}
             href={hrefFor(w.index)}
             scroll={false}
             className={`trn-week${on ? " on" : ""}`}
@@ -244,7 +245,11 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
             }}
           >
             <span className="trn-week-top">
-              <span className="trn-week-name">Week {w.index}</span>
+              {/* The dot right after the name, taking no room (trn.css): the card and NOW stay where they are. */}
+              <span className="trn-week-name">
+                Week {w.index}
+                {owed && <i className={`rd-due${w.index >= 10 ? " trn-due-long" : ""}`} role="img" aria-label="needs you" />}
+              </span>
               {/* Black, a green pulse on its left (20 Oct, Alex). */}
               {now && (
                 <span className="trn-now" aria-hidden="true">

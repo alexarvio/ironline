@@ -73,6 +73,9 @@
 /* One row a day; the row itself opens the day. */
 .rn-day .rd-row-main { border-radius: 10px; }
 .rn-day.open > .rd-row-main { background: #fafbfd; }
+/* A day with their note still to read: the rust dot (.rd-due) right after the date, chevron and note mark, centred on
+   the line as the chevron is, a little closer than the row's gap so the 150px date column still holds it. */
+.rn-day .rd-ex-name > .rd-due { align-self: center; margin-left: -3px; }
 .rn-vs { font-size: 12.5px; white-space: nowrap; }
 .rn-vs.up { background: #dff3ea; color: #1b7a4b; }
 .rn-vs.down { background: #fdf3ee; color: #b3471d; }
