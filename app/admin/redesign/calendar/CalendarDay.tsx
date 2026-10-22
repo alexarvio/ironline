@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Dialog } from "../../../components/ui/dialog";
 import { type Category } from "../palette";
 import EntryDialog, { type EntryClient, type Open } from "./EntryDialog";
@@ -151,6 +151,22 @@ export default function CalendarDay({ date, entries, categories, clients }: { da
 // under the words); the chevron after the title opens its note in place.
 function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[]; slots: number; height?: number; onOpen: () => void }) {
   const [open, setOpen] = useState(false);
+  // The note shows at once on the line under the time and title (22 Oct, Alex); the chevron only when it doesn't fit
+  // the bar (watched as the bar's size changes), and open shows it whole.
+  const noteRef = useRef<HTMLSpanElement>(null);
+  // cut: more than the bar holds; none: not even one line fits, so only the chevron shows.
+  const [fit, setFit] = useState<{ cut: boolean; none: boolean }>({ cut: false, none: false });
+  const cut = fit.cut;
+  useEffect(() => {
+    const n = noteRef.current;
+    if (!n) return;
+    const ro = new ResizeObserver(() => {
+      const line = parseFloat(getComputedStyle(n).lineHeight) || 17;
+      setFit({ cut: n.scrollHeight > n.clientHeight + 1, none: n.clientHeight < line - 1 });
+    });
+    ro.observe(n);
+    return () => ro.disconnect();
+  }, [e.note]);
   const c = entryChrome(cats, e.category, e.clientId != null);
   const who = e.clientId != null ? e.clientName : null;
   const title = who ?? (e.topic || "Busy");
@@ -160,7 +176,7 @@ function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[
   const said = [when, title, sub, e.allDay ? "All day" : lengthLabel(e.durationMinutes)].filter(Boolean).join(" · ");
   return (
     <div
-      className={`cdg-pill${tall ? " tall" : ""}${slots === 1 ? " tiny" : ""}${open ? " open" : ""}${e.conflict ? " conflict" : ""}${e.status === "completed" ? " done" : ""}`}
+      className={`cdg-pill${tall ? " tall" : ""}${slots === 1 ? " tiny" : ""}${e.note ? " has-note" : ""}${open ? " open" : ""}${e.conflict ? " conflict" : ""}${e.status === "completed" ? " done" : ""}`}
       style={{ background: c.tint, color: c.ink, borderColor: e.conflict ? CLASH.line : c.line, ...(height && !open ? { height } : { minHeight: height }) }}
     >
       <button type="button" className="cdg-pill-hit" onClick={onOpen} title={said} aria-label={`Open ${said}`} />
@@ -168,8 +184,8 @@ function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[
         <span className="cdg-pill-line">
           {when && <b className="cdg-pill-time">{when}</b>}
           <span className="cdg-pill-title">{title}</span>
-          {e.note && (
-            <button type="button" className="cdg-pill-chev" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? "Hide the note" : "Show the note"}>
+          {e.note && (cut || open) && (
+            <button type="button" className="cdg-pill-chev" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? "Show less of the note" : "Show all of the note"}>
               <Fold open={open} />
             </button>
           )}
@@ -186,8 +202,12 @@ function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[
             <span className="cdg-pill-sub">{sub}</span>
           </span>
         )}
+        {e.note && (
+          <span ref={noteRef} className={`cdg-pill-note${cut && !open ? " cut" : ""}${fit.none && !open ? " none" : ""}`}>
+            {e.note}
+          </span>
+        )}
       </span>
-      {open && e.note && <p className="cdg-pill-note">{e.note}</p>}
     </div>
   );
 }

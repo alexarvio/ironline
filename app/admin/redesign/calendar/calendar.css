@@ -135,7 +135,14 @@
 .cdg-pill-chev .rd-fold svg { width: 14px; height: 14px; }
 .cdg-pill-chev:hover .rd-fold, .cdg-pill-chev:focus-visible .rd-fold { opacity: 1; }
 .cdg-pill-chev:focus-visible { outline: none; box-shadow: inset 0 0 0 1px currentColor; }
-.cdg-pill-note { position: relative; z-index: 1; margin: 0; padding: 2px 10px 8px; font-size: 12.5px; font-weight: 500; line-height: 1.45; color: #3a4250; white-space: pre-wrap; pointer-events: none; }
+/* The note on the line under the time and title, at once (22 Oct, Alex); cut by the bar's height it fades out and the
+   chevron after the title opens it whole. */
+.cdg-pill.has-note .cdg-pill-body { justify-content: flex-start; padding-top: 5px; padding-bottom: 5px; }
+.cdg-pill-note { display: block; flex: 1 1 auto; min-height: 0; margin: 1px 0 0; overflow: hidden; font-size: 12px; font-weight: 500; line-height: 1.4; color: #3a4250; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cdg-pill-note.cut { -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent); mask-image: linear-gradient(to bottom, #000 55%, transparent); }
+.cdg-pill.open .cdg-pill-note { flex: none; overflow: visible; }
+/* Not even one line fits (a short bar): the note keeps its room but stays unseen; the chevron opens it. */
+.cdg-pill-note.none { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .cdg-now::before { animation: none; }
   .rd.rcl .rcl-cell, .rd.rcl .rcl-chip, .cdg-quarter { transition: none; }
