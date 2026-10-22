@@ -2,7 +2,7 @@
    a full-height column of its own; only its client list scrolls.
    In the admin's voice (22 Oct, docs/DESIGN-RULES-ADMIN.md): white, hairlines,
    no shadows; 500 and 600 only; the view you are on an ink pill, the open
-   client's row outlined in ink; counts grey and tabular, what needs you
+   client's row on a soft grey; counts grey and tabular, what needs you
    rust. Never navy. */
 
 .rd-frame { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100vh; background: #f4f7fc; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
@@ -86,9 +86,9 @@
 @media (prefers-reduced-motion: reduce) { .rr-row.loading .rr-avatar { animation: none; } }
 .rr-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; box-sizing: border-box; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #5b6474; font-size: 12px; font-weight: 500; transition: box-shadow 0.2s ease; }
 .rr-avatar img { width: 100%; height: 100%; object-fit: cover; }
-/* The open client: their row outlined in ink (22 Oct, Alex: the ring round the face alone didn't say which client you
-   are in; a filled ink row hid the name), the name ink at 600. */
-.rr-row.active, .rr-row.active:hover { background: #fff; box-shadow: inset 0 0 0 1.5px #141a24; }
+/* The open client: their row on a soft grey, a step stronger than hover, the name ink at 600 (22 Oct, Alex: as the old
+   rail's selected row, in today's greys; the ring alone didn't say which client you are in, ink fill hid the name). */
+.rr-row.active, .rr-row.active:hover { background: #eef0f3; }
 .rr-row.active:focus-visible { outline-offset: 2px; }
 .rr-row.active .rr-avatar { color: #141a24; }
 /* Hasn't signed in to the app themselves yet: a dashed grey edge (not yet, as a draft's outline). */
