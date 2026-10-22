@@ -677,6 +677,14 @@ export function MoveEventDialog({ event: e, start, end, cats, onCancel, onSave }
         </span>
       </DialogDescription>
       <div className="mvd-rows">
+        {/* One rule for every Move pop-up (22 Oct, Alex): NEW over the new values, in the colour; the old ones struck through say themselves. */}
+        {rows.some((r) => r.was !== r.now) && (
+          <div className="mvd-row mvd-head" aria-hidden="true">
+            <span />
+            <span />
+            <span className="mvd-label mvd-newhead">New</span>
+          </div>
+        )}
         {rows.map((r) => (
           <div key={r.label} className={`mvd-row${r.was === r.now ? " same" : ""}`}>
             <span className="mvd-label">{r.label}</span>

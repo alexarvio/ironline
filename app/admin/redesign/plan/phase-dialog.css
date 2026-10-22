@@ -180,6 +180,10 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 .mvd .mvd-now { font-size: 14px; font-weight: 600; color: var(--mv); }
 .mvd .mvd-row.same .mvd-now { font-weight: 500; color: #141a24; }
 .mvd .mvd-was { font-size: 14px; font-weight: 500; color: #98a2b3; text-decoration-color: #c5ccd8; }
+/* NEW over the new values (22 Oct, Alex: every Move pop-up), small caps in the colour; no line under it. */
+.mvd .mvd-row.mvd-head { min-height: 20px; border-top: 0; }
+.mvd .mvd-head + .mvd-row { border-top: 0; }
+.mvd .mvd-newhead { color: var(--mv); }
 /* The typed date inside a Starts / Ends capsule: reads as the capsule's value, no box of its own. */
 .npd.npd .npd-date { cursor: pointer; }
 .npd.npd .npd-date.locked { cursor: default; }

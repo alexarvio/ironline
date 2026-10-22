@@ -1056,6 +1056,14 @@ export function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { 
         </span>
       </DialogDescription>
       <div className="mvd-rows">
+        {/* One rule for every Move pop-up (22 Oct, Alex): NEW over the new values, in the colour; the old ones struck through say themselves. */}
+        {rows.some((r) => r.was !== r.now) && (
+          <div className="mvd-row mvd-head" aria-hidden="true">
+            <span />
+            <span />
+            <span className="mvd-label mvd-newhead">New</span>
+          </div>
+        )}
         {rows.map((r) => (
           // Two columns, no arrows (21 Oct, Alex): what it was, struck through, then the new value in the track's ink.
           <div key={r.label} className={`mvd-row${r.was === r.now ? " same" : ""}`}>
