@@ -15494,6 +15494,49 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .cc-dialog .ad-btn-primary,
 .cc-dialog .ad-btn-secondary { height: 32px; border-radius: 8px; font-size: 12px; padding: 0 14px; }
 
+/* ---- New client in the redesign's look (look="hairline", the rail's; 22 Oct)
+   The .dlh card's voice (docs/DESIGN-RULES-ADMIN.md 4): white, radius 20, the
+   title 18/600 with a round ghost ✕; the fields clean lines, ink while typing;
+   the steps and Gender as the capsule, the chosen one ink; Cancel in words and
+   an ink pill, right-aligned, no line above. Scoped: the old admin keeps the
+   rules above. */
+.nc-scrim.nc-hl-scrim { background: rgba(20, 26, 36, 0.45); }
+.nc-dialog.nc-hl { width: min(560px, 100vw - 32px); max-width: none; padding: 20px 0 16px; border-radius: 20px; box-shadow: 0 30px 60px -24px rgba(16, 24, 40, 0.35), 0 0 0 1px #e1e5eb; color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; }
+.nc-hl .nc-head { align-items: flex-start; padding: 0 20px; background: none; }
+.nc-hl .nc-title { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; text-transform: none; color: #141a24; }
+.nc-hl .cc-dialog-x { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: -2px -4px 0 0; border-radius: 999px; font-size: 13px; color: #8b93a1; }
+.nc-hl .cc-dialog-x:hover { background: #f5f6f8; color: #141a24; }
+.nc-hl .nc-steps { display: inline-flex; align-self: flex-start; gap: 2px; height: 36px; margin: 12px 20px 0; padding: 4px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.nc-hl .nc-step { display: inline-flex; align-items: center; height: 28px; margin: 0; padding: 0 12px; border: 0; border-radius: 999px; background: none; font-size: 13px; font-weight: 500; color: #5b6474; white-space: nowrap; transition: background 0.2s ease, color 0.2s ease; }
+.nc-hl .nc-step:hover:not(.on):not(:disabled) { color: #141a24; }
+.nc-hl .nc-step.on { background: #141a24; font-weight: 600; color: #fff; }
+.nc-hl .nc-step:disabled { opacity: 0.4; }
+.nc-hl .nc-body { padding: 6px 20px 2px; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+.nc-hl .nc-row { border-bottom-color: #e1e5eb; }
+.nc-hl .nc-row:focus-within { border-bottom-color: #141a24; }
+.nc-hl .nc-row.bad, .nc-hl .nc-row.bad:focus-within { border-bottom-color: #b42318; }
+.nc-hl .nc-label { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.nc-hl .nc-aside { font-weight: 500; letter-spacing: 0; color: #8b93a1; }
+.nc-hl .nc-input, .nc-hl .nc-static, .nc-hl .nc-dial { font-size: 15px; font-weight: 500; color: #141a24; }
+.nc-hl .nc-input::placeholder { font-weight: 500; color: #98a2b3; }
+.nc-hl .nc-static.none { color: #98a2b3; }
+.nc-hl .nc-suffixed em { font-weight: 500; color: #8b93a1; }
+.nc-hl .nc-pills { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 2px; height: 36px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.nc-hl .nc-pills .pl-chip { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; box-shadow: none; font-size: 13px; font-weight: 500; color: #5b6474; }
+.nc-hl .nc-pills .pl-chip:hover:not(.on) { color: #141a24; }
+.nc-hl .nc-pills .pl-chip.on { background: #141a24; font-weight: 600; color: #fff; }
+.nc-hl .nc-access { gap: 0; padding-top: 4px; }
+.nc-hl .nc-foot { justify-content: flex-end; gap: 2px; margin-top: 14px; padding: 0 20px; border: 0; background: none; }
+.nc-hl .nc-status { font-size: 13px; font-weight: 500; color: #5b6474; }
+.nc-hl .nc-status.bad { color: #b42318; }
+.nc-hl .nc-foot .nc-secondary { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font-size: 13.5px; font-weight: 600; color: #5b6474; }
+.nc-hl .nc-foot .nc-secondary:hover { color: #141a24; text-decoration: none; }
+.nc-hl .nc-foot .nc-secondary:disabled { opacity: 0.45; cursor: default; }
+.nc-hl .nc-foot .pl-primary { height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; font-size: 13.5px; font-weight: 600; color: #fff; }
+.nc-hl .nc-foot .pl-primary:hover:not(:disabled) { background: #262e3b; }
+.nc-hl .nc-foot .pl-primary:disabled, .nc-hl .nc-foot .pl-primary:disabled:hover { background: #c9cfd8; opacity: 1; cursor: default; }
+.nc-hl .nc-foot .pl-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(20, 26, 36, 0.18); }
+
 /* ==================== Figures on the coach side are Archivo ==============
    Newsreader stays for a dialog title and for the client app's display lines
    (the "Hello, Name." greeting). It is NOT for numbers: a serif figure beside

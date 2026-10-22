@@ -1,94 +1,87 @@
-/* The coach profile editor in the redesign (25 Sep). Prefix rpf-. */
-.rpf { display: flex; flex-direction: column; gap: 18px; }
-.rpf-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
-.rpf-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
-.rpf-sub { margin: 4px 0 0; font-size: 13.5px; color: #5b6474; }
-.rpf-head-right { display: flex; align-items: center; gap: 10px; }
-.rpf-state { background: #eef1f5; color: #5b6474; }
-.rpf-state.on { background: #dff3ea; color: #1b7a4b; }
-.rpf-select { width: auto; min-width: 220px; height: 36px; }
-.rpf-empty { color: #8b93a1; }
+/* The coach profile editor in the redesign, on the admin rules (22 Oct; root "rd trn rls rst rpf"): it wears
+   Settings' parts (settings.css: the cards of fields, clean lines, rows, the Picker, the bar at the foot) and adds
+   what only a profile has. Ink, never navy; weights 500 and 600. Prefix rpf-. */
 
-.rpf-cols { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
-@media (max-width: 1100px) { .rpf-cols { grid-template-columns: 1fr; } .rpf-preview { display: none; } }
-.rpf-form { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.rpf-fields { display: flex; flex-direction: column; gap: 14px; }
-.rpf-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
-.rpf-field { display: flex; flex-direction: column; gap: 6px; }
-.rpf-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.rpf-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; }
-.rpf-count { font-size: 11.5px; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.rpf-count.full { color: #b3471d; font-weight: 700; }
-.rpf-field .rd-input { height: 38px; }
-.rpf-field .rpf-textarea { height: auto; min-height: 96px; padding: 9px 12px; resize: vertical; line-height: 1.5; }
+/* The page uses the full width: the form and the phone beside it. */
+.rd.rst.rpf { max-width: none; }
+.rd.rpf .rpf-empty { margin: 0; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
+/* Whose profile (the owner): the floating list on a white pill, as the header's pills. */
+.rd.rst.rpf .rd-picker.rpf-who { display: inline-flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; width: auto; min-width: 220px; max-width: 320px; height: 36px; margin: 0; padding: 0 12px 0 16px; border: 0; border-radius: 999px; outline: none; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }
+.rd.rst.rpf .rd-picker.rpf-who:hover, .rd.rst.rpf .rd-picker.rpf-who[data-state="open"], .rd.rst.rpf .rd-picker.rpf-who:focus-visible { box-shadow: inset 0 0 0 1px #141a24; }
+.rd.rst.rpf .rd-picker.rpf-who:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
+.rd.rst.rpf .rd-picker.rpf-who > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rst.rpf .rd-picker.rpf-who svg { flex: none; width: 15px; height: 15px; color: #8b93a1; }
+/* Your details | Public profile: the capsule, under the header. */
+.rd.rpf .rpf-tabs { align-self: flex-start; margin-top: -4px; }
 
-.rpf-photos { display: grid; grid-template-columns: 150px 1fr 1fr; gap: 16px; }
-.rpf-photo { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.rpf-drop { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 3 / 4; border: 1.5px dashed #c9d2df; border-radius: 14px; background: #f7f9fc center / cover no-repeat; font: inherit; color: #8b93a1; cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
-.rpf-photo.avatar .rpf-drop { aspect-ratio: 1; border-radius: 999px; }
-.rpf-drop.over { border-color: #2f5d8f; background-color: #eef3f9; }
-.rpf-drop.has { border-style: solid; border-color: #e3e8ef; }
-.rpf-drop.busy { opacity: 0.55; }
-.rpf-drop-text { padding: 0 12px; font-size: 12.5px; font-weight: 600; text-align: center; }
-.rpf-photo-actions { display: flex; gap: 6px; }
-.rpf-danger { color: #b3471d; }
-.rpf-hint { font-size: 11.5px; color: #8b93a1; }
+/* ---- Public profile: the form, and the phone beside it (gone on a narrower page). */
+.rd.rpf .rpf-cols { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; align-items: start; }
+@media (max-width: 1100px) { .rd.rpf .rpf-cols { grid-template-columns: minmax(0, 1fr); } .rd.rpf .rpf-preview { display: none; } }
+.rd.rpf .rpf-form { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.rd.rpf .rpf-preview { position: sticky; top: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.rd.rpf .rpf-preview-note { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
 
-.rpf-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.rpf-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px 4px 10px; background: #e6ecf3; color: #1e3a6e; font-size: 12.5px; }
-.rpf-chip button { border: 0; background: none; padding: 0 2px; font-size: 15px; line-height: 1; color: #5b6474; cursor: pointer; }
-.rpf-chip-input { flex: 1; min-width: 180px; height: 32px; padding: 0 10px; border: 1px dashed #d5dce6; border-radius: 999px; font: inherit; font-size: 13px; }
-.rpf-chip-input:focus { outline: none; border-color: #2f5d8f; border-style: solid; }
+/* A label with its count at the right ("120 / 500"), the count rust once full. */
+.rd.rpf .rpf-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.rd.rpf .rpf-count { font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rd.rpf .rpf-count.full { font-weight: 600; color: #b8471f; }
+/* A longer text: the clean line, as tall as its words. */
+.rd.rpf textarea.dlh-line.rpf-text { min-height: 72px; field-sizing: content; }
 
-.rpf-list { display: flex; flex-direction: column; gap: 10px; }
-.rpf-rows { display: flex; flex-direction: column; gap: 8px; }
-.rpf-row { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.3fr) 90px 32px; align-items: center; gap: 8px; }
-.rpf-row.exp { grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr) 32px; }
-.rpf-row .rd-input { height: 36px; }
-.rpf-add { align-self: flex-start; }
+/* Photos: a row each, the name and what it takes, the state pill, Replace or Upload; Remove on hover. A file dropped
+   on the row uploads it; the row shades while one is over it. */
+.rd.rpf .rpf-photo { transition: background-color 0.15s; }
+.rd.rpf .rpf-photo.over { background: #f5f6f8; }
+.rd.rpf .rpf-photo.busy { opacity: 0.6; }
+.rd.trn.rpf .trn-btn.rpf-up { flex: none; justify-content: center; min-width: 84px; }
+.rd.trn.rpf .trn-btn.rpf-up:disabled { opacity: 0.55; cursor: default; }
 
-.rpf-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; gap: 14px; padding: 12px 16px; border: 1px solid #e3e8ef; border-radius: 14px; background: rgba(255, 255, 255, 0.96); box-shadow: 0 10px 24px -14px rgba(20, 26, 36, 0.35); }
-.rpf-saved { font-size: 13px; color: #8b93a1; }
-.rpf-saved.dirty { color: #9a5b00; font-weight: 600; }
-.rpf-error { font-size: 13px; font-weight: 600; color: #b3471d; }
-.rpf-publish { display: flex; align-items: center; gap: 10px; margin-left: auto; font-size: 13px; color: #5b6474; }
-.rpf-publish b { color: #141a24; }
-.rpf-switch { position: relative; flex: none; width: 40px; height: 24px; border: 0; border-radius: 999px; background: #d5dce6; cursor: pointer; transition: background-color 0.15s ease; }
-.rpf-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); transition: transform 0.15s ease; }
-.rpf-switch.on { background: #1b7a4b; }
-.rpf-switch.on::after { transform: translateX(16px); }
-.rpf-switch:disabled { opacity: 0.6; }
+/* Specialties: white chips with a hairline, ✕ in each; the line to type the next one on after them. */
+.rd.rpf .rpf-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 14px 18px 16px; }
+.rd.rpf .rpf-chip { display: inline-flex; align-items: center; gap: 2px; height: 32px; padding: 0 4px 0 12px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; box-sizing: border-box; font-size: 13px; font-weight: 600; color: #141a24; }
+.rd.rpf .rpf-chip button { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 10px; color: #8b93a1; cursor: pointer; }
+.rd.rpf .rpf-chip button:hover { background: #f5f6f8; color: #141a24; }
+.rd.rpf .rpf-chip-input { flex: 1; min-width: 180px; height: 32px; margin-left: 6px; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: none; box-shadow: none; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; }
+.rd.rpf .rpf-chip-input:focus { border-bottom-color: #141a24; }
+.rd.rpf .rpf-chip-input::placeholder { color: #98a2b3; }
 
-.rpf-preview { position: sticky; top: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.rpf-preview-note { font-size: 12px; color: #8b93a1; }
-/* On the shadcn form parts (25 Sep): the old input overrides no longer apply. */
-.rpf-select { width: 260px; }
-.rpf-chip-input { flex: 1; min-width: 180px; width: auto; height: 32px; border-style: dashed; border-radius: 999px; }
-.rpf-row [data-slot="input"] { height: 36px; }
-.rpf-publish-label { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; }
-.rpf-publish-label b { color: #141a24; font-weight: 700; }
+/* Studies and Experience: a row each on clean lines, dragged by the grip on the left; ✕ on hover. */
+.rd.rpf .rpf-list { display: flex; flex-direction: column; padding: 8px 14px 10px 10px; }
+.rd.rpf .rpf-rows { display: flex; flex-direction: column; gap: 2px; }
+.rd.rpf .rpf-rows .dl-grip { width: 16px; color: #c5ccd8; letter-spacing: -3px; text-align: center; }
+.rd.rpf .rpf-rows .dl-grip:hover, .rd.rpf .rpf-rows.dl-dragging .dl-row.lifted .dl-grip { color: #5b6474; }
+.rd.rpf .rpf-rows.dl-dragging .dl-row.lifted { border-radius: 12px; background: #fff; box-shadow: 0 14px 32px -12px rgba(16, 24, 40, 0.35), 0 0 0 1px #e1e5eb; }
+.rd.rpf .rpf-row { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.3fr) 90px 24px; align-items: center; gap: 14px; }
+.rd.rpf .rpf-row.exp { grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr) 24px; }
+.rd.rpf .rpf-in { width: 100%; min-width: 0; height: 40px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: none; box-shadow: none; box-sizing: border-box; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; }
+.rd.rpf .rpf-in:focus { border-bottom-color: #141a24; }
+.rd.rpf .rpf-in::placeholder { color: #98a2b3; }
+.rd.rpf .rpf-x { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 999px; background: none; font-size: 11px; color: #8b93a1; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
+.rd.rpf .rpf-row:hover .rpf-x, .rd.rpf .rpf-row:focus-within .rpf-x, .rd.rpf .rpf-x:focus-visible { opacity: 1; }
+@media (hover: none) { .rd.rpf .rpf-x { opacity: 1; } }
+.rd.rpf .rpf-x:hover { background: #f5f6f8; color: #141a24; }
+/* + Study, + Role: words with the plus, no pill (as + Metric). */
+.rd.rls.rpf .rls-add.rpf-add { align-self: flex-start; margin: 6px 0 0 14px; }
 
-/* Two tabs (26 Sep): Your details and Public profile; the page uses the full width. */
-.rpf-tabs { display: flex; flex-direction: column; gap: 16px; }
-.rpf-tablist { align-self: flex-start; }
-.rpf-details { display: flex; flex-direction: column; gap: 14px; }
-.rpf-grid3 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.4fr); gap: 12px 14px; }
-.rpf-readonly { background: #f4f7fc; color: #5b6474; }
-.rpf-select-menu { max-height: 300px; }
-.rpf-details [data-slot="input"], .rpf-details [data-slot="select-trigger"] { height: 38px; }
-.rpf-details .nc-phone .nc-input, .rpf-details .nc-phone .nc-dial { height: 38px; }
-/* Photos as rows, not big pictures (26 Sep): the preview phone shows them. */
-.rpf-photos { display: flex; flex-direction: column; gap: 0; grid-template-columns: none; }
-.rpf-photo { display: flex; flex-direction: row; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid #eef1f5; border-radius: 8px; }
-.rpf-photo:first-child { border-top: 0; }
-.rpf-photo.over { background: #eef3f9; }
-.rpf-photo.busy { opacity: 0.6; }
-.rpf-photo-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; color: #141a24; }
-.rpf-photo-state { font-size: 12.5px; font-weight: 600; color: #8b93a1; }
-.rpf-photo-state.on { color: #1b7a4b; }
-.rpf-photo-actions { display: flex; gap: 6px; }
+/* The foot when all is saved: when it was, and the Published switch on the right, ink while on. */
+.rd.rpf .rpf-saved { color: #8b93a1; }
+.rd.rpf .rpf-error { font-size: 13px; font-weight: 500; color: #b42318; }
+.rd.rpf .rpf-pub { display: inline-flex; flex: none; align-items: center; gap: 10px; height: 36px; margin-left: auto; padding: 0 8px 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; cursor: pointer; }
+.rd.rpf .rpf-pub:focus-visible { outline: none; background: #f5f6f8; }
+.rd.rpf .rpf-pub:disabled { opacity: 0.6; cursor: default; }
+.rd.rpf .rpf-pub-sw { position: relative; flex: none; width: 36px; height: 22px; border-radius: 999px; background: #d5dae3; transition: background-color 0.2s; }
+.rd.rpf .rpf-pub-sw i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(16, 24, 40, 0.25); transition: left 0.2s; }
+.rd.rpf .rpf-pub[aria-checked="true"] .rpf-pub-sw { background: #141a24; }
+.rd.rpf .rpf-pub[aria-checked="true"] .rpf-pub-sw i { left: 17px; }
 
-/* The × on a study or experience row shows on hover only (6 Oct, as across the admin). */
-.rpf-row > [data-slot="button"] { opacity: 0; transition: opacity 0.12s; }
-.rpf-row:hover > [data-slot="button"], .rpf-row:focus-within > [data-slot="button"] { opacity: 1; }
-@media (hover: none) { .rpf-row > [data-slot="button"] { opacity: 0.7; } }
+/* ---- Your details: the sections one under another, at Settings' width. */
+.rd.rpf .rpf-details { display: flex; flex-direction: column; gap: 22px; max-width: 760px; }
+.rd.rpf .rpf-grid3 { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.4fr); }
+@media (max-width: 700px) { .rd.rpf .rpf-grid3 { grid-template-columns: minmax(0, 1fr); } }
+/* The phone: the dial code's list and the number on one clean line each, side by side. */
+.rd.rpf .rpf-phone { display: flex; align-items: flex-end; gap: 14px; }
+.rd.rst.rpf .rd-picker.rpf-dial { flex: 0 0 104px; width: 104px; font-variant-numeric: tabular-nums; }
+.rd.rpf .rpf-phone .dlh-line { flex: 1; min-width: 0; height: 40px; padding-top: 0; padding-bottom: 0; font-variant-numeric: tabular-nums; }
+/* A list with nothing chosen yet reads its word faint, as a placeholder. */
+.rd.rst.rpf .rd-picker.rst-pick.empty > span { color: #98a2b3; }
+@media (prefers-reduced-motion: reduce) { .rd.rpf .rpf-photo, .rd.rpf .rpf-x, .rd.rpf .rpf-pub-sw, .rd.rpf .rpf-pub-sw i { transition: none; } }

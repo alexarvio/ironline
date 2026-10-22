@@ -1,104 +1,134 @@
 /* The redesign's left rail, and the two-column frame it sits in. The rail is
-   a full-height column of its own; only its client list scrolls. */
+   a full-height column of its own; only its client list scrolls.
+   In the admin's voice (22 Oct, docs/DESIGN-RULES-ADMIN.md): white, hairlines,
+   no shadows; 500 and 600 only; the view you are on an ink pill, the open
+   client's face ringed in ink as All chats rings the page's client; counts
+   grey and tabular, what needs you rust. Never navy. */
 
 .rd-frame { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100vh; background: #f4f7fc; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
 .rd-frame > .rd-page { min-height: 0; }
 
-.rr { position: sticky; top: 0; display: flex; flex-direction: column; height: 100vh; background: #fff; border-right: 1px solid #e6eaf0; }
+.rr { position: sticky; top: 0; display: flex; flex-direction: column; height: 100vh; background: #fff; border-right: 1px solid #e1e5eb; }
 
 .rr-brand { flex: none; display: flex; align-items: center; gap: 10px; padding: 16px 16px 14px; }
-.rr-mark { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; background: #1e3a6e; }
+.rr-mark { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; background: #141a24; }
 .rr-mark img { height: 15px; width: auto; display: block; filter: brightness(0) invert(1); }
-.rr-brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
-.rr-brand-text b { font-size: 13.5px; font-weight: 800; color: #141a24; }
-.rr-brand-text small { font-size: 10.5px; font-weight: 600; color: #8b93a1; }
+.rr-brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.rr-brand-text b { font-size: 13.5px; font-weight: 600; color: #141a24; }
+.rr-brand-text small { font-size: 11px; font-weight: 500; color: #8b93a1; }
 
-.rr-nav { flex: none; display: flex; flex-direction: column; gap: 2px; padding: 4px 10px 10px; }
-.rr-navrow { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; padding: 8px 10px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #313851; text-align: left; text-decoration: none; cursor: pointer; }
-.rr-navrow svg { width: 16px; height: 16px; flex: none; color: #5b6474; }
-.rr-navrow span { flex: 1; min-width: 0; }
-.rr-navrow:hover { background: #f4f6fa; color: #141a24; }
-.rr-navrow.active { background: #e6ecf3; color: #1e3a6e; }
-.rr-navrow.active svg { color: #1e3a6e; }
-.rr-badge { flex: none; padding: 1px 7px; border-radius: 999px; background: #fdf3ee; color: #b3471d; font-size: 10.5px; font-style: normal; font-weight: 800; font-variant-numeric: tabular-nums; }
+/* The views (and Settings' pages): a row each; the one you are on ink, its words white. */
+.rr-nav { flex: none; display: flex; flex-direction: column; gap: 2px; padding: 4px 10px 12px; }
+.rr-navrow { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; height: 34px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: #3a4250; text-align: left; text-decoration: none; cursor: pointer; transition: background 0.2s ease, color 0.2s ease; }
+.rr-navrow svg { width: 16px; height: 16px; flex: none; color: #5b6474; transition: color 0.2s ease; }
+.rr-navrow span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rr-navrow:hover { background: #f5f6f8; color: #141a24; }
+.rr-navrow:hover svg { color: #141a24; }
+.rr-navrow:focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
+.rr-navrow.active { background: #141a24; color: #fff; font-weight: 600; }
+.rr-navrow.active svg { color: #fff; }
+.rr-navrow.active:focus-visible { outline-offset: 2px; }
+/* How many clients need you, on Feed: the count in rust words, no pill. */
+.rr-badge { flex: none; font-size: 12px; font-style: normal; font-weight: 600; color: #b3471d; font-variant-numeric: tabular-nums; }
+.rr-navrow.active .rr-badge { color: rgba(255, 255, 255, 0.7); }
 
 /* Clients and Settings share the height between the views and the coach:
    one grows while the other folds (flex-grow animates). */
-.rr-clients-head { flex: none; display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 14px 8px; border: 0; border-top: 1px solid #eceff3; background: none; font: inherit; color: inherit; text-align: left; }
+.rr-clients-head { flex: none; display: flex; align-items: center; gap: 8px; margin: 0; padding: 14px 16px 8px 22px; border: 0; border-top: 1px solid #eef0f3; background: none; font: inherit; color: inherit; text-align: left; transition: background 0.2s ease; }
 .rr-clients-head:disabled { cursor: default; }
 .rr-clients-head .rr-label { flex: 1; }
-.rr-clients-head.folded { cursor: pointer; padding-bottom: 12px; }
-.rr-clients-head.folded:hover { background: #f4f6fa; }
+.rr-clients-head.folded { cursor: pointer; padding-bottom: 14px; }
+.rr-clients-head.folded:hover { background: #f5f6f8; }
+.rr-clients-head.folded:hover .rr-label { color: #141a24; }
+.rr-clients-head:focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
 .rr-clients-head svg { width: 14px; height: 14px; flex: none; color: #8b93a1; }
-.rr-clients { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: 0 10px 10px; overflow: hidden; transition: flex-grow 0.32s ease, opacity 0.2s ease, padding 0.32s ease; }
+.rr-clients { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: 0 10px 12px; overflow: hidden; transition: flex-grow 0.32s ease, opacity 0.2s ease, padding 0.32s ease; }
 .rr-clients.folded { flex-grow: 0; padding-bottom: 0; opacity: 0; }
 .rr-settings { flex: 0 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; padding: 0 10px; overflow: hidden; opacity: 0; transition: flex-grow 0.32s ease, opacity 0.2s ease, padding 0.32s ease; }
-.rr-settings.open { flex-grow: 1; padding: 12px 10px 8px; border-top: 1px solid #eceff3; opacity: 1; }
-.rr-settings > .rr-label { margin: 0 10px 2px; }
+.rr-settings.open { flex-grow: 1; padding: 14px 10px 10px; border-top: 1px solid #eef0f3; opacity: 1; }
+.rr-settings > .rr-label { margin: 0 12px 2px; }
 .rr-settings-list { display: flex; flex-direction: column; gap: 2px; }
-.rr-signout { margin-top: 4px; border-top: 1px solid #eceff3 !important; border-radius: 0 0 10px 10px; color: #a32d2d; }
-.rr-signout:hover { background: #fbeaea; color: #a32d2d; }
-@media (prefers-reduced-motion: reduce) { .rr-clients, .rr-settings { transition: none; } }
-.rr-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; }
-.rr-count { font-size: 11px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.rr-search { flex: none; display: flex; align-items: center; gap: 7px; padding: 0 10px; height: 34px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; }
-.rr-search:focus-within { border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
-.rr-search svg { width: 13px; height: 13px; flex: none; color: #8b93a1; }
-.rr-search input { flex: 1; min-width: 0; border: 0; padding: 0; background: none; outline: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; }
-.rr-search input::placeholder { color: #8b93a1; font-weight: 500; }
-.rr-filter { flex: none; display: flex; gap: 2px; margin: 8px 0; padding: 3px; border-radius: 999px; background: #eef0f3; }
-.rr-filter button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 26px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6474; cursor: pointer; }
-.rr-filter button.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.08); }
-.rr-filter small { font-size: 10px; font-weight: 800; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.rr-filter button.on small { color: #b3471d; }
+/* Sign out: its words in red, no line over it; the space parts it from the pages. */
+.rr-navrow.rr-signout { margin-top: 6px; color: #b42318; }
+.rr-navrow.rr-signout:hover { background: #fdf1ef; color: #b42318; }
+@media (prefers-reduced-motion: reduce) { .rr-clients, .rr-settings, .rr-navrow, .rr-navrow svg, .rr-row, .rr-avatar, .rr-search, .rr .rr-filter button, .rr-new, .rr-coach, .rr-clients-head { transition: none; } }
+
+/* Small caps, as every label in the admin. */
+.rr-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.rr-count { font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+
+/* Search: the white pill with a hairline, ink while typing (as All chats' search). */
+.rr-search { flex: none; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; transition: box-shadow 0.2s ease; }
+.rr-search:focus-within { box-shadow: inset 0 0 0 1px #141a24; }
+.rr-search svg { width: 14px; height: 14px; flex: none; color: #8b93a1; }
+.rr-search input { flex: 1; min-width: 0; border: 0; padding: 0; background: none; outline: none; font: inherit; font-size: 13px; font-weight: 500; color: #141a24; }
+.rr-search input::placeholder { color: #98a2b3; font-weight: 500; }
+
+/* All | Needs you: the capsule (.rd-btn-group, design rules 5) across the rail's
+   width, the chosen one ink. Written out here too: not every page with the
+   rail loads measurements.css. */
+.rr .rr-filter { flex: none; display: flex; width: 100%; height: 36px; gap: 2px; margin: 8px 0; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.rr .rr-filter button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; box-shadow: none; font: inherit; font-size: 13px; font-weight: 500; color: #5b6474; white-space: nowrap; cursor: pointer; transition: background 0.2s ease, color 0.2s ease; }
+.rr .rr-filter button:hover:not(.on) { color: #141a24; }
+.rr .rr-filter button.on { background: #141a24; font-weight: 600; color: #fff; }
+.rr .rr-filter button:focus-visible { outline: 2px solid #141a24; outline-offset: 1px; }
+.rr .rr-filter small { font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rr .rr-filter button.on small { color: rgba(255, 255, 255, 0.65); }
 
 /* The one part that scrolls; a thin bar rather than none, so the length shows. */
-.rr-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; margin: 0 -4px; padding: 0 4px; scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent; }
-.rr-row { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 10px; text-decoration: none; color: inherit; }
-.rr-row:hover { background: #f4f6fa; }
-.rr-row.active { background: #e6ecf3; }
+.rr-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; margin: 0 -4px; padding: 0 4px; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+.rr-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 12px; text-decoration: none; color: inherit; transition: background 0.2s ease; }
+.rr-row:hover { background: #f5f6f8; }
+.rr-row:focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
 /* Clicked, page on its way: the row is marked at once and its avatar pulses until it lands. */
 .rr-row.loading .rr-avatar { animation: rr-pulse 0.9s ease-in-out infinite; }
 @keyframes rr-pulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .rr-row.loading .rr-avatar { animation: none; } }
-.rr-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; overflow: hidden; border-radius: 999px; background: #eef0f3; color: #1e3a6e; font-size: 12px; font-weight: 800; }
+.rr-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; box-sizing: border-box; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #5b6474; font-size: 12px; font-weight: 500; transition: box-shadow 0.2s ease; }
 .rr-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.rr-row.active .rr-avatar { background: #1e3a6e; color: #fff; }
-/* Amber ring: hasn't signed in to the app themselves yet. */
-.rr-avatar.pending { box-shadow: 0 0 0 1.5px #e0a87f; }
-.rr-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: #313851; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rr-row.active .rr-name { font-weight: 800; color: #141a24; }
-.rr-dot { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #b3471d; }
-.rr-empty { margin: 8px 4px; font-size: 12.5px; color: #8b93a1; }
-.rr-new { flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; padding: 9px; border: 1px dashed #c3c9d2; border-radius: 10px; background: none; font: inherit; font-size: 12.5px; font-weight: 700; color: #5b6474; cursor: pointer; }
-.rr-new svg { width: 14px; height: 14px; }
-.rr-new:hover { border-color: #8b93a1; color: #141a24; }
+/* The open client: a ring round the face, in ink (as All chats marks the page's client). */
+.rr-row.active .rr-avatar { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #141a24; color: #141a24; }
+/* Hasn't signed in to the app themselves yet: a dashed grey edge (not yet, as a draft's outline). */
+.rr-avatar.pending { border: 1px dashed #98a2b3; box-shadow: none; }
+.rr-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; color: #3a4250; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rr-row:hover .rr-name { color: #141a24; }
+.rr-row.active .rr-name { font-weight: 600; color: #141a24; }
+.rr-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; background: #b3471d; }
+.rr-empty { margin: 8px 8px; font-size: 13px; font-weight: 500; color: #8b93a1; }
+/* New client: a white pill with its icon and a hairline (the admin's own actions, trn-pill), ink on hover. */
+.rr-new { flex: none; display: flex; align-items: center; justify-content: center; gap: 7px; height: 36px; margin-top: 8px; padding: 0 14px 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; transition: box-shadow 0.2s ease; }
+.rr-new svg { width: 15px; height: 15px; flex: none; translate: 0 -0.5px; }
+.rr-new:hover { box-shadow: inset 0 0 0 1px #141a24; }
+.rr-new:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
 
-.rr-coach { flex: none; display: flex; align-items: center; gap: 9px; width: 100%; padding: 10px 12px 10px 14px; border: 0; border-top: 1px solid #eceff3; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-.rr-coach:hover, .rr-coach.open { background: #f4f6fa; }
+/* The coach at the foot: a quiet row, the face on a hairline, a click opens Settings. */
+.rr-coach { flex: none; display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px 10px 16px; border: 0; border-top: 1px solid #eef0f3; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: background 0.2s ease; }
+.rr-coach:hover { background: #f5f6f8; }
+.rr-coach:focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
 .rr-coach-chev { flex: none; display: inline-flex; color: #8b93a1; }
+.rr-coach:hover .rr-coach-chev { color: #141a24; }
 .rr-coach-chev svg { width: 16px; height: 16px; transform: rotate(180deg); transition: transform 0.2s ease; }
 .rr-coach.open .rr-coach-chev svg { transform: none; }
-.rr-coach-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; overflow: hidden; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; font-size: 12px; font-weight: 800; }
+.rr-coach-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #5b6474; font-size: 12px; font-weight: 500; }
 .rr-coach-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.rr-coach-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
-.rr-coach-text b { font-size: 12.5px; font-weight: 800; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rr-coach-text small { font-size: 10.5px; font-weight: 600; color: #8b93a1; }
+.rr-coach-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
+.rr-coach-text b { font-size: 13px; font-weight: 600; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rr-coach-text small { font-size: 12px; font-weight: 500; color: #8b93a1; }
 .pb-menu a { display: flex; align-items: center; gap: 9px; color: inherit; text-decoration: none; }
 
 /* No clients yet (NoClients.tsx, 26 Sep): a welcome and one button. */
 .rnc { max-width: 520px; margin: 12vh auto 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.rnc-title { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
-.rnc-lead { margin: 0 0 8px; font-size: 15px; line-height: 1.5; color: #5b6474; }
+.rnc-title { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
+.rnc-lead { margin: 0 0 8px; font-size: 15px; font-weight: 500; line-height: 1.5; color: #5b6474; }
 .rnc-btn { height: 40px; padding: 0 18px; }
 
 /* The tour of the rail (RailTour.tsx, 26 Sep): the part lit, the rest dimmed, a card beside it. */
 .rtour { position: fixed; inset: 0; z-index: 200; }
 .rtour-lit { position: fixed; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(20, 26, 36, 0.45); outline: 2px solid #fff; transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease; pointer-events: none; }
-.rtour-card { position: fixed; display: flex; flex-direction: column; gap: 6px; width: 300px; padding: 16px 16px 12px; border-radius: 14px; background: #fff; box-shadow: 0 18px 44px -18px rgba(8, 20, 50, 0.55); transition: top 0.25s ease; }
-.rtour-count { font-size: 11.5px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.rtour-title { font-size: 15px; color: #141a24; }
-.rtour-text { margin: 0 0 6px; font-size: 13.5px; line-height: 1.5; color: #5b6474; }
+.rtour-card { position: fixed; display: flex; flex-direction: column; gap: 6px; width: 300px; padding: 16px 16px 12px; border-radius: 14px; background: #fff; box-shadow: 0 30px 60px -24px rgba(16, 24, 40, 0.35), 0 0 0 1px #e1e5eb; transition: top 0.25s ease; }
+.rtour-count { font-size: 11.5px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rtour-title { font-size: 15px; font-weight: 600; color: #141a24; }
+.rtour-text { margin: 0 0 6px; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #5b6474; }
 .rtour-actions { display: flex; align-items: center; justify-content: space-between; }
 .rtour-go { display: flex; gap: 6px; }
 @media (prefers-reduced-motion: reduce) { .rtour-lit, .rtour-card { transition: none; } }

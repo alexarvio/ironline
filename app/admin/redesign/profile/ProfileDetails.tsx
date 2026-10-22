@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/basics";
-import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/form";
-import { DEFAULT_DIAL, PhoneInput } from "../../InfoRow";
+import { DEFAULT_DIAL, DIAL_CODES } from "../../InfoRow";
 import { saveCoachContactAction } from "../../../lib/actions";
-import { Sep } from "../Sep";
+import Picker from "../Picker";
+import SaveBar from "../settings/SaveBar";
 
-// Your profile → Your details (26 Sep): the account basics any profile has,
-// the sign-in email, a phone and an address. Only the coach (and the owner)
-// sees these; the public profile is the other tab.
+// Your profile → Your details (26 Sep; on the admin rules 22 Oct): the account basics any profile has, the sign-in
+// email, a phone and an address, each section's title over one hairline card, fields on clean lines. Only the coach
+// (and the owner) sees these; the public profile is the other tab.
 
 export type ProfileDetailsData = {
   email: string;
@@ -20,6 +19,8 @@ export type ProfileDetailsData = {
   city: string;
   countryCode: string;
 };
+
+const NONE = "";
 
 export default function ProfileDetails({ coachId, data, countries }: { coachId: number; data: ProfileDetailsData; countries: { code: string; name: string }[] }) {
   const [d, setD] = useState({ ...data, phoneCode: data.phoneCode || DEFAULT_DIAL });
@@ -42,81 +43,70 @@ export default function ProfileDetails({ coachId, data, countries }: { coachId: 
       const res = await saveCoachContactAction(fd);
       if (res.ok) setSaved(JSON.stringify(d));
     });
+  // The dial codes as the floating list (design rules 6); a code saved before that isn't on it stays, first.
+  const dials = [...(DIAL_CODES.some(([, c]) => c === d.phoneCode) ? [] : [{ value: d.phoneCode, label: d.phoneCode }]), ...DIAL_CODES.map(([iso, c]) => ({ value: c, label: `${iso} ${c}` }))];
 
   return (
     <div className="rpf-details">
-      <Card>
-        <CardHeader>
-          <CardTitle>Account</CardTitle>
-        </CardHeader>
-        <CardContent className="rpf-fields">
-          <div className="rpf-field">
-            <Label htmlFor="pd-email">Email</Label>
-            <Input id="pd-email" value={d.email} readOnly className="rpf-readonly" />
-            <span className="rpf-hint">The email you sign in with.</span>
+      <section className="rls-section">
+        <div className="trn-weekhead">
+          <div>
+            <h2>Account</h2>
           </div>
-          <div className="rpf-field">
-            <Label>Phone</Label>
-            <PhoneInput code={d.phoneCode} number={d.phone} onCode={set("phoneCode")} onNumber={set("phone")} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Address</CardTitle>
-          <CardDescription>Yours, not the business on your invoices (that is in Settings)</CardDescription>
-        </CardHeader>
-        <CardContent className="rpf-fields">
-          <div className="rpf-field">
-            <Label htmlFor="pd-address">Street and number</Label>
-            <Input id="pd-address" value={d.address} onChange={(e) => set("address")(e.target.value)} autoComplete="street-address" placeholder="Hämeenkatu 12 B 4" maxLength={160} />
-          </div>
-          <div className="rpf-grid3">
-            <div className="rpf-field">
-              <Label htmlFor="pd-postcode">Postcode</Label>
-              <Input id="pd-postcode" value={d.postcode} onChange={(e) => set("postcode")(e.target.value)} autoComplete="postal-code" placeholder="33100" maxLength={20} />
-            </div>
-            <div className="rpf-field">
-              <Label htmlFor="pd-city">City</Label>
-              <Input id="pd-city" value={d.city} onChange={(e) => set("city")(e.target.value)} autoComplete="address-level2" placeholder="Tampere" maxLength={80} />
-            </div>
-            <div className="rpf-field">
-              <Label>Country</Label>
-              <Select value={d.countryCode || undefined} onValueChange={set("countryCode")}>
-                <SelectTrigger aria-label="Country">
-                  <SelectValue placeholder="Choose" />
-                </SelectTrigger>
-                <SelectContent className="rpf-select-menu">
-                  {countries.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Changes: the app's one blue bar (30 Sep); nothing when all is saved. */}
-      {dirty && (
-        <div className="rd-pending rd-pending-sticky" role="region" aria-label="Unsaved changes">
-          <span className="rd-pending-count">{changed || 1}</span>
-          <span className="rd-pending-text">
-            {changed === 1 ? "change" : "changes"} to your details
-            <Sep />
-            only you and the app see them
-          </span>
-          <button type="button" className="rd-pending-ghost" onClick={() => setD(JSON.parse(saved))} disabled={pending}>
-            Discard
-          </button>
-          <button type="button" className="rd-pending-apply" onClick={save} disabled={pending}>
-            {pending ? "Saving…" : "Save"}
-          </button>
         </div>
-      )}
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            <div className="rst-field">
+              <span className="dlh-label">Email</span>
+              <span className="rst-static">{d.email}</span>
+            </div>
+            <div className="rst-field">
+              <span className="dlh-label">Phone</span>
+              <span className="rpf-phone">
+                <Picker value={d.phoneCode} onChange={set("phoneCode")} label="Country dial code" className="rst-pick rpf-dial" options={dials} />
+                <input className="dlh-line" type="tel" inputMode="tel" value={d.phone} onChange={(e) => set("phone")(e.target.value)} placeholder="6 12345678" aria-label="Phone number" autoComplete="off" />
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rls-section">
+        <div className="trn-weekhead">
+          <div>
+            <h2>Address</h2>
+          </div>
+        </div>
+        <div className="rls-card rst-card">
+          <div className="rst-grid rpf-grid3">
+            <label className="rst-field wide">
+              <span className="dlh-label">Street and number</span>
+              <input className="dlh-line" value={d.address} onChange={(e) => set("address")(e.target.value)} autoComplete="street-address" placeholder="Hämeenkatu 12 B 4" maxLength={160} />
+            </label>
+            <label className="rst-field">
+              <span className="dlh-label">Postcode</span>
+              <input className="dlh-line" value={d.postcode} onChange={(e) => set("postcode")(e.target.value)} autoComplete="postal-code" placeholder="33100" maxLength={20} />
+            </label>
+            <label className="rst-field">
+              <span className="dlh-label">City</span>
+              <input className="dlh-line" value={d.city} onChange={(e) => set("city")(e.target.value)} autoComplete="address-level2" placeholder="Tampere" maxLength={80} />
+            </label>
+            <div className="rst-field">
+              <span className="dlh-label">Country</span>
+              <Picker
+                value={d.countryCode || NONE}
+                onChange={set("countryCode")}
+                label="Country"
+                className={`rst-pick${d.countryCode ? "" : " empty"}`}
+                options={[...(d.countryCode ? [] : [{ value: NONE, label: "Choose" }]), ...countries.map((c) => ({ value: c.code, label: c.name }))]}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Changed: Cancel and Save at the foot; nothing when all is saved. */}
+      {dirty && <SaveBar count={changed} busy={pending} onSave={save} onCancel={() => setD(JSON.parse(saved))} />}
     </div>
   );
 }

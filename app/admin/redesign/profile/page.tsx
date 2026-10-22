@@ -7,13 +7,16 @@ import RedesignRail from "../RedesignRail";
 import ProfileEditor from "./ProfileEditor";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
+import "../training/trn.css";
+import "../measurements/measurements.css";
 import "../rail.css";
+import "../settings/settings.css";
 import "./profile.css";
 
 // "Your profile" in the redesign, the rail on its left (replaces
 // /admin/profile): the coach writes what their clients read on their Account
 // tab, with the client's own screen beside the form. The owner can open any
-// coach's profile with ?coachId=.
+// coach's profile with ?coachId=. On the admin rules (22 Oct): Settings' parts.
 //   /admin/redesign/profile
 export const dynamic = "force-dynamic";
 
@@ -41,7 +44,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     <div className="rd-frame">
       <RedesignRail rail={loadRail(coach)} clientId={0} settings="profile" />
       <div className="rd-page">
-        {profile ? <ProfileEditor key={coachId} profile={profile} coaches={coaches} currentCoachId={coach.id} details={details} countries={countries} /> : <p className="rpf-empty">This account has no coach profile.</p>}
+        {profile ? (
+          <ProfileEditor key={coachId} profile={profile} coaches={coaches} currentCoachId={coach.id} details={details} countries={countries} />
+        ) : (
+          <div className="rd trn rls rst rpf">
+            <p className="rpf-empty">No coach profile</p>
+          </div>
+        )}
       </div>
     </div>
   );

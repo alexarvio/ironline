@@ -8,45 +8,49 @@ import { connectStripeAction, disconnectStripeAction, saveCoachBusinessAction, s
 import type { PaymentsState } from "../../../lib/payments";
 import { changeOwnPasswordAction, logoutAction } from "../../../lib/auth-actions";
 import type { CoachBusiness, CoachInvoicing } from "../../../lib/db";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/basics";
-import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Textarea } from "../../../components/ui/form";
 import { ArrowRightIcon } from "../../../components/icons";
-import { COUNTRIES, CURRENCIES, countryCodeFromName, countryOf, currencyName, formatMoney, invoicingFor } from "../../../lib/countries";
-import { Sep, SepJoin } from "../Sep";
+import { COUNTRIES, CURRENCIES, countryCodeFromName, countryOf, currencyName, invoicingFor } from "../../../lib/countries";
+import Picker from "../Picker";
+import { SepJoin } from "../Sep";
+import SaveBar from "./SaveBar";
 
-// Settings' sections, on the shadcn parts: cards of fields, and a bar at the
-// foot that appears once something is changed, with Save and Discard. Each
-// form is keyed on what was saved (the page does it), so a save that comes
-// back unchanged never throws away what is being typed.
+// Settings' sections on the admin rules (22 Oct; docs/DESIGN-RULES-ADMIN.md): each section's title on the page over
+// one white hairline card, fields as small caps labels over clean lines (.dlh-label, .dlh-line), a choice of two as
+// the capsule, lists as the floating Picker. A form that saves on Save shows the bar at its foot once something is
+// changed (SaveBar). Each form is keyed on what was saved (the page does it), so a save that comes back unchanged
+// never throws away what is being typed.
 
-function Field({ label, hint, wide = false, children }: { label: string; hint?: string; wide?: boolean; children: React.ReactNode }) {
-  return (
-    <div className={`rst-field${wide ? " wide" : ""}`}>
-      <Label>{label}</Label>
+/** A label over its field. `group` for a field that is not one input (a capsule, a list), so a click on the label
+ *  never presses the first of its buttons. */
+function Field({ label, fact, wide = false, group = false, error, children }: { label: string; fact?: ReactNode; wide?: boolean; group?: boolean; error?: string; children: ReactNode }) {
+  const inner = (
+    <>
+      <span className="dlh-label">{fact ? <SepJoin parts={[label, <small key="fact">{fact}</small>]} /> : label}</span>
       {children}
-      {hint && <small className="rst-hint">{hint}</small>}
-    </div>
+      {error && <small className="rst-err">{error}</small>}
+    </>
   );
+  const cls = `rst-field${wide ? " wide" : ""}`;
+  return group ? <div className={cls}>{inner}</div> : <label className={cls}>{inner}</label>;
 }
 
-// The app's one changes bar (rd-pending, 30 Sep), kept in view at the foot of the form.
-function SaveBar({ dirty, count, busy, onSave, onDiscard, error }: { dirty: boolean; count: number; busy: boolean; onSave: () => void; onDiscard: () => void; error?: string }) {
-  if (!dirty) return null;
+/** A section: its title (and one quiet fact) on the page, its controls on the right, the content in one card. */
+function Section({ title, fact, actions, children }: { title: ReactNode; fact?: ReactNode; actions?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="rd-pending rd-pending-sticky" role="region" aria-label="Unsaved changes">
-      <span className="rd-pending-count">{count}</span>
-      <span className="rd-pending-text">{error || `${count === 1 ? "change" : "changes"} not saved yet`}</span>
-      <button type="button" className="rd-pending-ghost" onClick={onDiscard} disabled={busy}>
-        Discard
-      </button>
-      <button type="button" className="rd-pending-apply" onClick={onSave} disabled={busy || !!error}>
-        {busy ? "Saving…" : "Save"}
-      </button>
-    </div>
+    <section className="rls-section">
+      <div className="trn-weekhead">
+        <div>
+          <h2>{title}</h2>
+          {fact && <span>{fact}</span>}
+        </div>
+        {actions && <div className="trn-weekhead-actions">{actions}</div>}
+      </div>
+      {children}
+    </section>
   );
 }
 
-/** A form's working copy, what it started from, and Save / Discard. */
+/** A form's working copy, what it started from, and Save / Cancel. */
 function useDraft<T extends Record<string, unknown>>(initial: T, save: (v: T) => Promise<unknown>, said: string) {
   const router = useRouter();
   const [v, setV] = useState<T>(initial);
@@ -91,50 +95,49 @@ export function AccountSettings({ email }: { email: string }) {
       toast.success("Password changed");
     });
   return (
-    <div className="rst-cards">
-      <Card>
-        <CardHeader>
-          <CardTitle>Sign-in</CardTitle>
-        </CardHeader>
-        <CardContent className="rst-grid">
-          <Field label="Email" hint="The address you sign in with." wide>
-            <Input value={email} readOnly disabled />
-          </Field>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Password</CardTitle>
-        </CardHeader>
-        <CardContent className="rst-grid">
-          <Field label="Current password" wide>
-            <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
-          </Field>
-          <Field label="New password">
-            <Input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" aria-invalid={!!problem && next.length < 8} />
-          </Field>
-          <Field label="New password again">
-            <Input type="password" value={again} onChange={(e) => setAgain(e.target.value)} autoComplete="new-password" aria-invalid={!!again && next !== again} />
-          </Field>
-          <div className="rst-row-end wide">
-            <span className={`rst-note${problem || error ? " bad" : ""}`}>{problem || error}</span>
-            <Button onClick={change} disabled={!ok || busy}>
-              {busy ? "Changing…" : "Change password"}
-            </Button>
+    <>
+      <Section title="Sign-in">
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            <div className="rst-field wide">
+              <span className="dlh-label">Email</span>
+              <span className="rst-static">{email}</span>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>This device</CardTitle>
-          <Button variant="outline" onClick={() => logoutAction()}>
+      <Section title="Password">
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            <Field label="Current password" wide>
+              <input className="dlh-line" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+            </Field>
+            <Field label="New password">
+              <input className="dlh-line" type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" aria-invalid={!!problem && next.length < 8} />
+            </Field>
+            <Field label="New password again">
+              <input className="dlh-line" type="password" value={again} onChange={(e) => setAgain(e.target.value)} autoComplete="new-password" aria-invalid={!!again && next !== again} />
+            </Field>
+            <div className="rst-foot wide">
+              <span className="rst-err">{problem || error}</span>
+              <button type="button" className="dlh-go" onClick={change} disabled={!ok || busy}>
+                {busy ? "Changing…" : "Change"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      <Section
+        title="This device"
+        actions={
+          <button type="button" className="trn-pill rst-pill" onClick={() => logoutAction()}>
             Sign out
-          </Button>
-        </CardHeader>
-      </Card>
-    </div>
+          </button>
+        }
+      />
+    </>
   );
 }
 
@@ -145,70 +148,64 @@ const OTHER = "other";
 export function BusinessSettings({ initial }: { initial: CoachBusiness }) {
   const d = useDraft<CoachBusiness>({ ...initial, country_code: initial.country_code ?? countryCodeFromName(initial.country) }, saveCoachBusinessAction, "Business details saved");
   const country = countryOf(d.v.country_code);
-  const text = (k: keyof CoachBusiness, label: string, opts: { hint?: string; wide?: boolean; placeholder?: string; type?: string } = {}) => (
-    <Field label={label} hint={opts.hint} wide={opts.wide}>
-      <Input type={opts.type ?? "text"} value={d.v[k] ?? ""} onChange={(e) => d.set(k, e.target.value)} placeholder={opts.placeholder} />
+  const text = (k: keyof CoachBusiness, label: string, opts: { wide?: boolean; placeholder?: string; type?: string } = {}) => (
+    <Field label={label} wide={opts.wide}>
+      <input className="dlh-line" type={opts.type ?? "text"} value={d.v[k] ?? ""} onChange={(e) => d.set(k, e.target.value)} placeholder={opts.placeholder} />
     </Field>
   );
   return (
-    <div className="rst-cards">
-      <Card>
-        <CardHeader>
-          <CardTitle>Where you do business</CardTitle>
-        </CardHeader>
-        <CardContent className="rst-grid">
-          <Field label="Country" hint="Names the numbers below, and sets the tax, currency and bank fields your invoices use.">
-            <Select value={country.code || OTHER} onValueChange={(v) => d.set("country_code", v === OTHER ? "" : v)}>
-              <SelectTrigger aria-label="Country">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="max-h-80">
-                {COUNTRIES.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-                <SelectItem value={OTHER}>Somewhere else</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          {!country.code && text("country", "Country name", { placeholder: "Where you are registered" })}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Business</CardTitle>
-        </CardHeader>
-        <CardContent className="rst-grid">
-          {text("business_name", "Business name", { placeholder: "Full Potential Coaching" })}
-          {text("legal_name", "Legal name", { placeholder: "As registered" })}
-          {text("company_number", country.registration ?? "Business registration", { hint: country.registration ? undefined : "If you have one." })}
-          {text("vat_number", country.taxId, { hint: country.code === "US" ? "Leave empty if you invoice as yourself." : undefined })}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Address</CardTitle>
-        </CardHeader>
-        <CardContent className="rst-grid">
-          {text("address", "Street and number", { wide: true })}
-          {text("city", "City")}
-          {country.region && text("region", country.region)}
-          {text("postcode", country.postcode)}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Contact on invoices</CardTitle>
-        </CardHeader>
-        <CardContent className="rst-grid">
-          {text("billing_email", "Billing email", { type: "email", placeholder: "billing@…" })}
-          {text("phone", "Phone")}
-          {text("website", "Website", { wide: true, placeholder: "https://" })}
-        </CardContent>
-      </Card>
-      <SaveBar dirty={d.dirty} count={d.count} busy={d.busy} onSave={d.commit} onDiscard={d.discard} />
-    </div>
+    <>
+      <Section title="Where you do business">
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            <Field label="Country" group>
+              <Picker
+                value={country.code || OTHER}
+                onChange={(v) => d.set("country_code", v === OTHER ? "" : v)}
+                label="Country"
+                className="rst-pick"
+                options={[...COUNTRIES.map((c) => ({ value: c.code, label: c.name })), { value: OTHER, label: "Somewhere else" }]}
+              />
+            </Field>
+            {!country.code && text("country", "Country name", { placeholder: "Where you are registered" })}
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Business">
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            {text("business_name", "Business name", { placeholder: "Full Potential Coaching" })}
+            {text("legal_name", "Legal name", { placeholder: "As registered" })}
+            {text("company_number", country.registration ?? "Business registration")}
+            {text("vat_number", country.taxId)}
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Address">
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            {text("address", "Street and number", { wide: true })}
+            {text("city", "City")}
+            {country.region && text("region", country.region)}
+            {text("postcode", country.postcode)}
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Contact on invoices">
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            {text("billing_email", "Billing email", { type: "email", placeholder: "billing@…" })}
+            {text("phone", "Phone")}
+            {text("website", "Website", { wide: true, placeholder: "https://" })}
+          </div>
+        </div>
+      </Section>
+
+      {d.dirty && <SaveBar count={d.count} busy={d.busy} onSave={d.commit} onCancel={d.discard} />}
+    </>
   );
 }
 
@@ -216,6 +213,7 @@ export function BusinessSettings({ initial }: { initial: CoachBusiness }) {
 // country from Business details fills in what is left open.
 // Online payments: the coach's own Stripe account (lib/stripe.ts). Off until
 // the server has Stripe's keys; then Connect, finish on Stripe, Connected.
+// Where it stands is a state pill; the fix is its pill beside it.
 function OnlinePayments({ state }: { state: PaymentsState }) {
   const router = useRouter();
   const [busy, start] = useTransition();
@@ -226,47 +224,49 @@ function OnlinePayments({ state }: { state: PaymentsState }) {
       if (r.url) window.location.href = r.url;
       else setError(r.error ?? "Stripe did not answer. Try again.");
     });
-  const badge =
-    state.status === "active" ? <Badge className="rst-ok">Connected</Badge> : state.status === "pending" ? <Badge className="rst-warn">Not finished</Badge> : state.status === "off" ? <Badge className="rst-soon">Soon</Badge> : null;
+  const pill =
+    state.status === "active" ? (
+      <span className="trn-state good rst-state">Connected</span>
+    ) : state.status === "pending" ? (
+      <span className="trn-state warn rst-state">Not finished</span>
+    ) : state.status === "off" ? (
+      <span className="trn-state rst-state">Soon</span>
+    ) : (
+      <span className="trn-state rst-state">Not connected</span>
+    );
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          Online payments
-          {state.testMode ? (
-            <>
-              <Sep />
-              test mode
-            </>
-          ) : null}
-        </CardTitle>
-        {badge}
-      </CardHeader>
-      <CardContent className="rst-pay">
-        <p className="rst-para">
-          {state.status === "active"
-            ? "Clients see a Pay button on every invoice you send, and pay by card, iDEAL, PayPal or whatever you have switched on in Stripe. Paid invoices mark themselves paid. The money goes to your Stripe account."
-            : state.status === "pending"
-              ? "Stripe still needs a few details before your clients can pay you online."
-              : "Clients pay an invoice in the app by card, iDEAL, PayPal or whatever works where they are, and it marks itself paid. Through your own Stripe account, connected here."}
-        </p>
-        {state.status !== "off" && (
-          <div className="rst-row-end">
-            <span className={`rst-note${error ? " bad" : ""}`}>{error}</span>
-            {state.status !== "none" && (
-              <Button variant="ghost" disabled={busy} onClick={() => start(async () => { await disconnectStripeAction(); router.refresh(); toast.success("Stripe disconnected here"); })}>
-                Disconnect
-              </Button>
-            )}
-            {state.status !== "active" && (
-              <Button onClick={go} disabled={busy}>
-                {busy ? "Opening Stripe…" : state.status === "pending" ? "Finish on Stripe" : "Connect Stripe"}
-              </Button>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <Section title="Online payments" fact={state.testMode ? "Test mode" : undefined}>
+      <div className="rls-card rst-card">
+        <div className="rst-row">
+          <span className="rst-row-main">
+            <b>Stripe</b>
+          </span>
+          {state.status !== "none" && state.status !== "off" && (
+            <button
+              type="button"
+              className="rst-danger rst-hover"
+              disabled={busy}
+              onClick={() =>
+                start(async () => {
+                  await disconnectStripeAction();
+                  router.refresh();
+                  toast.success("Stripe disconnected here");
+                })
+              }
+            >
+              Disconnect
+            </button>
+          )}
+          {pill}
+          {state.status !== "off" && state.status !== "active" && (
+            <button type="button" className="trn-pill rst-pill" onClick={go} disabled={busy}>
+              {busy ? "Opening Stripe…" : state.status === "pending" ? "Finish on Stripe" : "Connect Stripe"}
+            </button>
+          )}
+        </div>
+        {error && <p className="rst-err rst-err-row">{error}</p>}
+      </div>
+    </Section>
   );
 }
 
@@ -275,228 +275,200 @@ export function InvoicingSettings({ initial, business, payments }: { initial: Co
   const country = eff.country;
   const d = useDraft<CoachInvoicing>({ currency: eff.currency, vat_rate: eff.rate, prices_include_vat: eff.pricesIncludeVat, payment_terms_days: eff.termsDays, number_prefix: "", next_number: 1, ...initial }, saveCoachInvoicingAction, "Invoicing saved");
   const num = (k: "vat_rate" | "payment_terms_days" | "next_number", s: string) => d.set(k, s === "" ? undefined : Number(s));
-  const text = (k: keyof CoachInvoicing, label: string, opts: { hint?: string; wide?: boolean; placeholder?: string; upper?: boolean; bad?: boolean } = {}) => (
-    <Field label={label} hint={opts.hint} wide={opts.wide}>
-      <Input value={String(d.v[k] ?? "")} onChange={(e) => d.set(k, (opts.upper ? e.target.value.toUpperCase() : e.target.value) as never)} placeholder={opts.placeholder} aria-invalid={opts.bad} />
+  const text = (k: keyof CoachInvoicing, label: string, opts: { wide?: boolean; placeholder?: string; upper?: boolean; error?: string } = {}) => (
+    <Field label={label} wide={opts.wide} error={opts.error}>
+      <input className="dlh-line" value={String(d.v[k] ?? "")} onChange={(e) => d.set(k, (opts.upper ? e.target.value.toUpperCase() : e.target.value) as never)} placeholder={opts.placeholder} aria-invalid={!!opts.error} />
     </Field>
   );
   const year = new Date().getFullYear();
   const example = `${(d.v.number_prefix ?? "").replaceAll("{year}", String(year))}${String(d.v.next_number ?? 1).padStart(4, "0")}`;
   const ibanBad = !!d.v.iban && !/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(d.v.iban.replace(/\s+/g, "").toUpperCase());
+  const ibanError = ibanBad ? "Not an IBAN" : undefined;
   const tax = country.tax;
   const currencies = CURRENCIES.includes(d.v.currency ?? "") ? CURRENCIES : [d.v.currency ?? "EUR", ...CURRENCIES];
-  const where = country.code ? country.name : "your country";
-  const rateHint =
-    country.code === "US"
-      ? "Coaching is usually not taxed in the US; if your state taxes it, put its rate here."
-      : country.code
-        ? `${country.rate}% is the standard rate in ${country.name}; 0% if you are exempt or below the threshold.`
-        : "0% if you don't charge tax.";
+  // The country's standard rate, as a quiet fact by the field (not in the US, where coaching is usually untaxed).
+  const standard = country.code && country.code !== "US" ? `standard ${country.rate}%` : undefined;
   return (
-    <div className="rst-cards">
-      <Card>
-        <CardHeader>
-          <CardTitle>Prices and {tax}</CardTitle>
-          {country.code && <Badge className="rst-example">{country.name}</Badge>}
-        </CardHeader>
-        <CardContent className="rst-grid">
-          <Field label="Currency">
-            <Select value={d.v.currency ?? eff.currency} onValueChange={(v) => d.set("currency", v)}>
-              <SelectTrigger aria-label="Currency">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="max-h-80">
-                {currencies.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                    <Sep />
-                    {currencyName(c)}
-                  </SelectItem>
+    <>
+      <Section title={`Prices and ${tax}`} fact={country.code ? country.name : undefined}>
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            <Field label="Currency" group>
+              <Picker value={d.v.currency ?? eff.currency} onChange={(v) => d.set("currency", v)} label="Currency" className="rst-pick" options={currencies.map((c) => ({ value: c, label: c, hint: currencyName(c) }))} />
+            </Field>
+            <Field label={`${tax} rate`} fact={standard}>
+              <span className="rst-suffixed">
+                <input className="dlh-line" type="number" inputMode="decimal" min={0} max={50} step={0.1} value={d.v.vat_rate ?? ""} onChange={(e) => num("vat_rate", e.target.value)} />
+                <em>%</em>
+              </span>
+            </Field>
+            <Field label="Prices you type" group>
+              <div className="rd-btn-group rst-cap" role="radiogroup" aria-label="Prices you type">
+                {[true, false].map((inc) => (
+                  <button key={String(inc)} type="button" role="radio" aria-checked={!!d.v.prices_include_vat === inc} className={!!d.v.prices_include_vat === inc ? "on" : ""} onClick={() => d.set("prices_include_vat", inc)}>
+                    {inc ? `Include ${tax}` : `Exclude ${tax}`}
+                  </button>
                 ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label={`${tax} rate`} hint={rateHint}>
-            <div className="rst-suffixed">
-              <Input type="number" inputMode="decimal" min={0} max={50} step={0.1} value={d.v.vat_rate ?? ""} onChange={(e) => num("vat_rate", e.target.value)} />
-              <em>%</em>
-            </div>
-          </Field>
-          <Field label="Prices you type" wide>
-            <label className="rst-switch">
-              <Switch checked={!!d.v.prices_include_vat} onCheckedChange={(v) => d.set("prices_include_vat", v)} />
-              <span>{d.v.prices_include_vat ? `Include ${tax}: ${formatMoney(120, d.v.currency ?? eff.currency, country.code)} is what the client pays` : `Exclude ${tax}: it is added on top`}</span>
-            </label>
-          </Field>
-          <Field label="Payment terms">
-            <div className="rst-suffixed">
-              <Input type="number" inputMode="numeric" min={0} max={120} value={d.v.payment_terms_days ?? ""} onChange={(e) => num("payment_terms_days", e.target.value)} />
-              <em>days</em>
-            </div>
-          </Field>
-          {text("tax_note", `${tax} note on invoices`, { placeholder: country.code === "NL" ? "Vrijgesteld van btw (KOR)" : "VAT exempt, reverse charge…", hint: "Optional; printed under the totals." })}
-        </CardContent>
-      </Card>
+              </div>
+            </Field>
+            <Field label="Payment terms">
+              <span className="rst-suffixed">
+                <input className="dlh-line" type="number" inputMode="numeric" min={0} max={120} value={d.v.payment_terms_days ?? ""} onChange={(e) => num("payment_terms_days", e.target.value)} />
+                <em>days</em>
+              </span>
+            </Field>
+            {text("tax_note", `${tax} note on invoices`, { wide: true, placeholder: country.code === "NL" ? "Vrijgesteld van btw (KOR)" : "VAT exempt, reverse charge…" })}
+          </div>
+        </div>
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Numbering</CardTitle>
-          <Badge className="rst-example">{example}</Badge>
-        </CardHeader>
-        <CardContent className="rst-grid">
-          <Field label="Prefix" hint="{year} becomes the year.">
-            <Input value={d.v.number_prefix ?? ""} onChange={(e) => d.set("number_prefix", e.target.value)} placeholder="FP-{year}-" />
-          </Field>
-          <Field label="Next number">
-            <Input type="number" inputMode="numeric" min={1} value={d.v.next_number ?? ""} onChange={(e) => num("next_number", e.target.value)} />
-          </Field>
-        </CardContent>
-      </Card>
+      <Section title="Numbering" fact={`Next ${example}`}>
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            <Field label="Prefix">
+              <input className="dlh-line" value={d.v.number_prefix ?? ""} onChange={(e) => d.set("number_prefix", e.target.value)} placeholder="FP-{year}-" />
+            </Field>
+            <Field label="Next number">
+              <input className="dlh-line" type="number" inputMode="numeric" min={1} value={d.v.next_number ?? ""} onChange={(e) => num("next_number", e.target.value)} />
+            </Field>
+          </div>
+        </div>
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Bank transfer</CardTitle>
-          {!country.code && (
-            <Link href="/admin/redesign/settings/business" className="rst-open">
+      <Section
+        title="Bank transfer"
+        fact={country.code ? undefined : "No country set"}
+        actions={
+          !country.code && (
+            <Link href="/admin/redesign/settings/business" className="trn-pill rst-pill">
               Set your country
             </Link>
-          )}
-        </CardHeader>
-        <CardContent className="rst-grid">
-          {text("account_holder", "Account holder", { placeholder: business.legal_name || business.business_name || "", wide: country.bank === "other" })}
-          {country.bank === "iban" && (
-            <>
-              {text("iban", "IBAN", { upper: true, placeholder: `${country.code || "NL"}00 BANK 0123 4567 89`, hint: ibanBad ? "That doesn't look like an IBAN." : undefined, bad: ibanBad })}
-              {text("bic", "BIC / SWIFT", { upper: true })}
-            </>
-          )}
-          {country.bank === "uk" && (
-            <>
-              {text("sort_code", "Sort code", { placeholder: "12-34-56" })}
-              {text("account_number", "Account number", { placeholder: "12345678" })}
-              {text("iban", "IBAN", { upper: true, hint: ibanBad ? "That doesn't look like an IBAN." : "For clients paying from abroad.", bad: ibanBad })}
-              {text("bic", "BIC / SWIFT", { upper: true })}
-            </>
-          )}
-          {country.bank === "us" && (
-            <>
-              {text("routing_number", "Routing number (ABA)", { placeholder: "021000021" })}
-              {text("account_number", "Account number")}
-            </>
-          )}
-          {country.bank === "au" && (
-            <>
-              {text("bsb", "BSB", { placeholder: "062-000" })}
-              {text("account_number", "Account number")}
-            </>
-          )}
-          {country.bank === "other" && (
-            <Field label="How to pay you" hint={`Your bank details as clients in ${where} would use them.`} wide>
-              <Textarea value={d.v.bank_details ?? ""} onChange={(e) => d.set("bank_details", e.target.value)} rows={3} placeholder="Bank, account number, and any code the bank needs" />
-            </Field>
-          )}
-        </CardContent>
-      </Card>
+          )
+        }
+      >
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            {text("account_holder", "Account holder", { placeholder: business.legal_name || business.business_name || "", wide: country.bank === "other" })}
+            {country.bank === "iban" && (
+              <>
+                {text("iban", "IBAN", { upper: true, placeholder: `${country.code || "NL"}00 BANK 0123 4567 89`, error: ibanError })}
+                {text("bic", "BIC / SWIFT", { upper: true })}
+              </>
+            )}
+            {country.bank === "uk" && (
+              <>
+                {text("sort_code", "Sort code", { placeholder: "12-34-56" })}
+                {text("account_number", "Account number", { placeholder: "12345678" })}
+                {text("iban", "IBAN", { upper: true, error: ibanError })}
+                {text("bic", "BIC / SWIFT", { upper: true })}
+              </>
+            )}
+            {country.bank === "us" && (
+              <>
+                {text("routing_number", "Routing number (ABA)", { placeholder: "021000021" })}
+                {text("account_number", "Account number")}
+              </>
+            )}
+            {country.bank === "au" && (
+              <>
+                {text("bsb", "BSB", { placeholder: "062-000" })}
+                {text("account_number", "Account number")}
+              </>
+            )}
+            {country.bank === "other" && (
+              <Field label="How to pay you" wide>
+                <textarea className="dlh-line rst-text" value={d.v.bank_details ?? ""} onChange={(e) => d.set("bank_details", e.target.value)} rows={3} placeholder="Bank, account number, and any code the bank needs" />
+              </Field>
+            )}
+          </div>
+        </div>
+      </Section>
 
       <OnlinePayments state={payments} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoice footer</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea value={d.v.footer ?? ""} onChange={(e) => d.set("footer", e.target.value)} placeholder="Thank you for training with us. Questions about this invoice: billing@…" rows={3} />
-        </CardContent>
-      </Card>
+      <Section title="Invoice footer">
+        <div className="rls-card rst-card">
+          <div className="rst-grid">
+            <Field label="Footer" wide>
+              <textarea className="dlh-line rst-text" value={d.v.footer ?? ""} onChange={(e) => d.set("footer", e.target.value)} placeholder="Thank you for training with us. Questions about this invoice: billing@…" rows={3} />
+            </Field>
+          </div>
+        </div>
+      </Section>
 
-      <SaveBar dirty={d.dirty} count={d.count} busy={d.busy} onSave={d.commit} onDiscard={d.discard} error={ibanBad ? "Check the IBAN before saving." : undefined} />
-    </div>
+      {/* A bad IBAN is said once, by its field; the bar only holds Save back. */}
+      {d.dirty && <SaveBar count={d.count} busy={d.busy} onSave={d.commit} onCancel={d.discard} problem={null} blocked={ibanBad} />}
+    </>
   );
 }
 
 // ---- Privacy & legal: the documents clients see, and what happens to their data.
 export function PrivacySettings({ company, country, contactEmail, updated }: { company: string; country: string; contactEmail: string; updated: string }) {
-  const doc = (label: string, href: string | null, note: ReactNode) => (
-    <li className="rst-line">
-      <span>
-        <b>{label}</b>
-        <small>{note}</small>
-      </span>
-      {href ? (
-        <Link href={href} target="_blank" className="rst-open">
+  // A document: the whole row opens it in a new tab (Open shows on hover); one still to come wears a grey Soon.
+  const doc = (label: string, href: string | null, note?: ReactNode) =>
+    href ? (
+      <Link href={href} target="_blank" className="rst-row opens">
+        <span className="rst-row-main">
+          <b>{label}</b>
+          {note && <small>{note}</small>}
+        </span>
+        <span className="rst-open">
           Open <ArrowRightIcon />
-        </Link>
-      ) : (
-        <Badge className="rst-soon">Soon</Badge>
-      )}
-    </li>
+        </span>
+      </Link>
+    ) : (
+      <div className="rst-row">
+        <span className="rst-row-main">
+          <b>{label}</b>
+          {note && <small>{note}</small>}
+        </span>
+        <span className="trn-state rst-state">Soon</span>
+      </div>
+    );
+  const fact = (label: string, text: ReactNode) => (
+    <div className="rst-row">
+      <span className="rst-row-main stack">
+        <b>{label}</b>
+        <small>{text}</small>
+      </span>
+    </div>
   );
   return (
-    <div className="rst-cards">
-      <Card>
-        <CardHeader>
-          <CardTitle>Documents</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="rst-lines">
-            {doc("Privacy policy", "/privacy", <SepJoin parts={[`Updated ${updated}`, "linked from the app and the App Store"]} />)}
-            {doc("Support page", "/support", "Where clients find help")}
-            {doc("Terms of service", null, "What clients agree to when they sign up")}
-            {doc("Data processing agreement", null, "Between you and the app, for clients' health data")}
-          </ul>
-        </CardContent>
-      </Card>
+    <>
+      <Section title="Documents">
+        <div className="rls-card rst-card rst-rows">
+          {doc("Privacy policy", "/privacy", `Updated ${updated}`)}
+          {doc("Support page", "/support")}
+          {doc("Terms of service", null)}
+          {doc("Data processing agreement", null)}
+        </div>
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Who is behind the app</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="rst-lines">
-            <li className="rst-line">
-              <span>
-                <b>{company}</b>
-                <small>Registered in {country}</small>
-              </span>
-            </li>
-            <li className="rst-line">
-              <span>
-                <b>Privacy contact</b>
-                <small>{contactEmail || "Not set yet: the policy and support page say so"}</small>
-              </span>
-              {!contactEmail && <Badge className="rst-warn">Missing</Badge>}
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
+      <Section title="Who is behind the app">
+        <div className="rls-card rst-card rst-rows">
+          <div className="rst-row">
+            <span className="rst-row-main">
+              <b>{company}</b>
+              <small>Registered in {country}</small>
+            </span>
+          </div>
+          <div className="rst-row">
+            <span className="rst-row-main">
+              <b>Privacy contact</b>
+              {contactEmail && <small>{contactEmail}</small>}
+            </span>
+            {!contactEmail && <span className="trn-state rst-state">Missing</span>}
+          </div>
+        </div>
+      </Section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your clients&rsquo; data</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="rst-lines">
-            <li className="rst-line">
-              <span>
-                <b>Clients delete their own account</b>
-                <small>In the app, under Account; their data goes straight away.</small>
-              </span>
-            </li>
-            <li className="rst-line">
-              <span>
-                <b>Invoices stay</b>
-                <small>Up to 7 years, the business record the law asks you to keep, with only the client&rsquo;s name.</small>
-              </span>
-            </li>
-            <li className="rst-line">
-              <span>
-                <b>Backups</b>
-                <small>Nightly; a deleted account is gone from them within 30 days.</small>
-              </span>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-    </div>
+      <Section title={<>Your clients&rsquo; data</>}>
+        <div className="rls-card rst-card rst-rows">
+          {fact("Clients delete their own account", "In the app, under Account; their data goes straight away.")}
+          {fact("Invoices stay", <>Up to 7 years, the business record the law asks you to keep, with only the client&rsquo;s name.</>)}
+          {fact("Backups", "Nightly; a deleted account is gone from them within 30 days.")}
+        </div>
+      </Section>
+    </>
   );
 }

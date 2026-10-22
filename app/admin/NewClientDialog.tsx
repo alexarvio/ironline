@@ -69,10 +69,26 @@ function useNewClientForm(start: Partial<Draft> | undefined, requireEmail: boole
 /** The onboarding board's copy: opens on a step with a draft filled in, and never creates anyone. */
 export type NewClientPreview = { step: 1 | 2; draft?: Partial<Draft> };
 
-export default function NewClientDialog({ onClose, preview = null, clerk = false }: { onClose: () => void; inviteReady?: boolean; preview?: NewClientPreview | null; /** Sign-in through Clerk: no password, the invite link goes straight away. */ clerk?: boolean }) {
+export default function NewClientDialog({
+  onClose,
+  preview = null,
+  clerk = false,
+  look,
+}: {
+  onClose: () => void;
+  inviteReady?: boolean;
+  preview?: NewClientPreview | null;
+  /** Sign-in through Clerk: no password, the invite link goes straight away. */
+  clerk?: boolean;
+  /** "hairline": the redesign's look (22 Oct, the rail's): the .dlh card's voice, no hints or explanations (design rules 1, 4). The old admin keeps its own. */
+  look?: "hairline";
+}) {
+  const hl = look === "hairline";
   const router = useRouter();
   const form = useNewClientForm(preview?.draft, clerk);
   const { draft, set } = form;
+  // Something typed: only then is what is still missing a problem worth a line (hairline look).
+  const typed = (Object.keys(EMPTY) as (keyof Draft)[]).some((k) => draft[k] !== EMPTY[k]);
   const [step, setStep] = useState<1 | 2>(clerk ? (preview?.step ?? 1) : 1);
   const [error, setError] = useState<string | null>(null);
   // Made, but the invite did not go.
@@ -115,23 +131,28 @@ export default function NewClientDialog({ onClose, preview = null, clerk = false
     if (saving) return { text: "Creating…", bad: false };
     return { text: clerk ? `${form.name} will appear in your client list straight away` : `${form.name} can't sign in yet: give them access from their Home when you're ready`, bad: false };
   })();
+  // The hairline look says only a real problem (design rules 1: no footer hints); what is
+  // missing once something is typed, so a fresh form opens quiet and Create stays held back.
+  const statusShown = !hl || (status.bad && (typed || made != null || !!error));
+  const createLabel = hl ? (saving ? "Creating…" : clerk ? "Create and invite" : "Create") : clerk ? "Create and invite" : "Create client";
 
   return createPortal(
-    <div className="nc-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="nc-dialog" role="dialog" aria-modal="true" aria-label="New client">
+    <div className={`nc-scrim${hl ? " nc-hl-scrim" : ""}`} role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={`nc-dialog${hl ? " nc-hl" : ""}`} role="dialog" aria-modal="true" aria-label="New client">
         <header className="nc-head">
           <div>
             <div className="nc-title">New client</div>
-            {clerk && <div className="nc-sub">{step === 1 ? "Step 1 of 2 · who they are" : "Step 2 of 2 · how they get into the app"}</div>}
+            {clerk && !hl && <div className="nc-sub">{step === 1 ? "Step 1 of 2 · who they are" : "Step 2 of 2 · how they get into the app"}</div>}
           </div>
           <button type="button" className="cc-dialog-x" onClick={onClose} aria-label="Close">
-            ×
+            {hl ? "✕" : "×"}
           </button>
         </header>
 
         {/* Both steps can be clicked, so a coach can go back and correct
             something without losing what is typed. Step 2 once step 1 has
             what it needs. */}
+        {/* Hairline: the two steps are the capsule under the title (design rules 5), the names alone. */}
         {clerk && (
           <div className="nc-steps" role="tablist">
             {[
@@ -147,11 +168,17 @@ export default function NewClientDialog({ onClose, preview = null, clerk = false
                 onClick={() => setStep(t.n)}
                 disabled={t.n === 2 && !form.step1Ok}
               >
-                <span className={`nc-step-n${step >= t.n ? " reached" : ""}`}>{t.n}</span>
-                <span>
-                  <b>{t.name}</b>
-                  <small>{t.hint}</small>
-                </span>
+                {hl ? (
+                  t.name
+                ) : (
+                  <>
+                    <span className={`nc-step-n${step >= t.n ? " reached" : ""}`}>{t.n}</span>
+                    <span>
+                      <b>{t.name}</b>
+                      <small>{t.hint}</small>
+                    </span>
+                  </>
+                )}
               </button>
             ))}
           </div>
@@ -200,6 +227,13 @@ export default function NewClientDialog({ onClose, preview = null, clerk = false
                 <input className="nc-input" value={draft.address} onChange={(e) => set("address", e.target.value)} placeholder="Street, city" autoComplete="off" />
               </InfoRow>
             </div>
+          ) : hl ? (
+            // The fact alone, on a clean line as the rows of step 1; no explanation (design rules 1).
+            <div className="nc-access">
+              <InfoRow label="Invite goes to" as="div">
+                {draft.email.trim() ? <span className="nc-static">{draft.email.trim().toLowerCase()}</span> : <span className="nc-static none">Add an email on step 1</span>}
+              </InfoRow>
+            </div>
           ) : (
             <div className="nc-access">
               <p className="nc-explain">
@@ -219,7 +253,7 @@ export default function NewClientDialog({ onClose, preview = null, clerk = false
         </div>
 
         <footer className="nc-foot">
-          <span className={`nc-status${status.bad ? " bad" : ""}`}>{status.text}</span>
+          {statusShown && <span className={`nc-status${status.bad ? " bad" : ""}`}>{status.text}</span>}
           {made != null ? (
             <button type="button" className="pl-primary nc-btn" onClick={() => open(made)}>
               Open client
@@ -239,7 +273,7 @@ export default function NewClientDialog({ onClose, preview = null, clerk = false
                 {clerk ? "Back" : "Cancel"}
               </button>
               <button type="button" className="pl-primary nc-btn" onClick={create} disabled={!form.step1Ok || saving}>
-                {clerk ? "Create and invite" : "Create client"}
+                {createLabel}
               </button>
             </>
           )}

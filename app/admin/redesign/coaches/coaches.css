@@ -1,0 +1,40 @@
+/* The owner's Coaches (22 Oct, Alex: the old /admin?view=coaches in the new style, root "rd trn rls rco"): Training's
+   bare header, the sign-ups waiting and the coach accounts each a list in one hairline card (rls-card, rls-row), no
+   line above the first row, the actions in words on hover. Ink, never navy; weights 500 and 600. Overrides of a
+   shared class carry an extra class (.rd.rls.rco), whichever file the dev server loads last. */
+
+.rd.rls.rco .rls-card.rco-card { padding: 0 0 6px; }
+.rd.rls.rco .rco-card .rls-none { padding: 16px 18px 10px; }
+.rd.rls.rco .rco-card > .rls-row:first-child, .rd.rls.rco .rco-card .rls-cols + .rls-row { border-top: 0; }
+.rd.rls.rco .rls-cols.rco-cols { padding: 6px 12px 0 18px; }
+.rd.rls.rco .rco-row .rls-row-main { min-height: 52px; padding: 0 12px 0 18px; }
+/* A row whose action is on its way: faded until the page comes back. */
+.rd.rls.rco .rco-row.busy .rls-row-main { opacity: 0.5; }
+
+/* The name semi-bold, the email (and the rest) grey after it, cut with an ellipsis. */
+.rd.rls.rco .rls-name b { flex: none; max-width: 60%; font-size: 15px; }
+.rd.rls.rco .rls-name small { flex: 0 1 auto; min-width: 0; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rco .rco-num { font-size: 14px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
+.rd.rco .rco-when { min-width: 0; overflow: hidden; font-size: 13.5px; font-weight: 500; color: #3a4250; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rco .rco-when small { margin-left: 8px; font-size: 12.5px; font-weight: 500; color: #8b93a1; }
+.rd.rco .rco-when.none { color: #98a2b3; }
+/* The password's state pill (design rules 8), the column's width, the word centred. */
+.rd.trn.rco .trn-state.rco-state { justify-content: center; width: 100%; box-sizing: border-box; }
+
+/* The actions: words, shown on hover (or while one has the keyboard), always on a touch screen. */
+.rd.rco .rco-acts { display: flex; align-items: center; justify-content: flex-end; gap: 2px; min-width: 0; white-space: nowrap; }
+.rd.rco .rco-act { display: inline-flex; align-items: center; height: 30px; padding: 0 8px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; opacity: 0; transition: color 0.12s, background-color 0.12s, opacity 0.12s; }
+.rd.rco .rco-act:hover { color: #141a24; }
+.rd.rco .rco-act.ink { color: #141a24; }
+.rd.rco .rco-act.danger { color: #b42318; }
+.rd.rco .rco-act.danger:hover { background: #fdf1ef; }
+.rd.rco .rco-act.off { color: #98a2b3; cursor: default; }
+.rd.rco .rco-act:disabled { cursor: default; }
+.rd.rco .rco-act:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
+.rd.rls.rco .rls-row:hover .rco-act, .rd.rls.rco .rls-row:focus-within .rco-act { opacity: 1; }
+@media (hover: none) { .rd.rco .rco-act { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rd.rco .rco-act { transition: none; } }
+
+/* ---- Add coach and Reset password: the .dlh card (portaled, so never under .rd); the form keeps its column. */
+.rco-dlg .rco-form { display: flex; flex-direction: column; gap: 10px; }
+.rco-dlg .rco-field { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }

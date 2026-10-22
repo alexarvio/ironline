@@ -28,6 +28,7 @@ const VIEWS = [
 ] as const;
 // Views already redrawn here open in the redesign; the rest where they always were.
 const REDRAWN: Partial<Record<string, string>> = { feed: "/admin/redesign/feed", calendar: "/admin/redesign/calendar", phases: "/admin/redesign/phases", business: "/admin/redesign/business", library: "/admin/redesign/library" };
+const COACHES = "/admin/redesign/coaches";
 
 
 export default function RedesignRail({ rail, clientId, settings }: { rail: RailData; clientId: number; /** The settings page open, if any: the rail opens on Settings. */ settings?: SettingsKey }) {
@@ -91,8 +92,9 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
             )}
           </Link>
         ))}
+        {/* Owner only, as before; the coaches page in the redesign (22 Oct). */}
         {rail.isOwner && (
-          <Link href="/admin?view=coaches" className="rr-navrow">
+          <Link href={COACHES} className={`rr-navrow${path?.startsWith(COACHES) ? " active" : ""}`} aria-current={path?.startsWith(COACHES) ? "page" : undefined}>
             <AccountIcon />
             <span>Coaches</span>
           </Link>
@@ -109,7 +111,7 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
           <SearchIcon />
           <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search clients" aria-label="Search clients" autoComplete="off" />
         </label>
-        <div className="rr-filter" role="group" aria-label="Which clients">
+        <div className="rd-btn-group rr-filter" role="group" aria-label="Which clients">
           <button type="button" className={filter === "all" ? "on" : ""} aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
             All
           </button>
@@ -119,7 +121,7 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
         </div>
         <div className="rr-list">
           {shown.length === 0 ? (
-            <p className="rr-empty">{rail.clients.length === 0 ? "No clients yet." : "No client matches that."}</p>
+            <p className="rr-empty">{rail.clients.length === 0 ? "None yet" : "No match"}</p>
           ) : (
             shown.map((c) => {
               const active = c.id === markedId;
@@ -188,7 +190,7 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
         </span>
       </button>
       {touring && <RailTour />}
-      {adding && <NewClientDialog inviteReady={rail.inviteReady} clerk={rail.clerk} onClose={() => setAdding(false)} />}
+      {adding && <NewClientDialog look="hairline" inviteReady={rail.inviteReady} clerk={rail.clerk} onClose={() => setAdding(false)} />}
     </aside>
   );
 }
