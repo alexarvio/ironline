@@ -150,6 +150,8 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
                     <span className="rr-tag" title={c.needs.map((n) => n.why).join("\n")}>
                       {c.needs[0].word}
                       {c.needs.length > 1 && <small>+{c.needs.length - 1}</small>}
+                      {/* The reasons for a screen reader too, which never hears a title. */}
+                      <span className="sr-only">: {c.needs.map((n) => n.why).join("; ")}</span>
                     </span>
                   )}
                 </Link>

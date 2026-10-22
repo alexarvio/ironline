@@ -14,7 +14,7 @@ const STEPS: { find: string; title: string; text: string }[] = [
   { find: '.rr-nav a[href="/admin/redesign/calendar"]', title: "Calendar", text: "Your calls with clients and your own time, a month at a time." },
   { find: '.rr-nav a[href="/admin/redesign/phases"]', title: "Phases", text: "Every client's plan side by side: training, nutrition and lifestyle phases." },
   { find: '.rr-nav a[href="/admin/redesign/business"]', title: "Business", text: "How the business is doing: clients, revenue, and what's still outstanding." },
-  { find: ".rr-clients-head", title: "Your clients", text: "Everyone you coach. A dot means something needs you; Needs you shows just those." },
+  { find: ".rr-clients-head", title: "Your clients", text: "Everyone you coach. A word by a name says what needs you, New for someone still to set up; Needs you shows just those." },
   { find: ".rr-new", title: "New client", text: "Add a client here. They get an email with a link to join the app." },
   { find: ".rr-coach", title: "You", text: "Your profile, business details and invoicing, whenever you want to change them." },
 ];

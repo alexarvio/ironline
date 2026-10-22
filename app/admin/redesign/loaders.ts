@@ -526,20 +526,31 @@ export type RailNeed = { word: string; why: string };
  *  programme set yet, any state; the rail tags them New until there is one. */
 export type RailClient = { id: number; name: string; avatarPath: string | null; needs: RailNeed[]; isNew: boolean; notSignedIn: boolean };
 
-// The Feed's Needs you, as one word each, in the order they show: a blocker first, then replies, then reading.
+// The Feed's Needs you, as one word each.
 const NEED_WORDS: [RegExp, string][] = [
-  [/^locked$/, "Unlock"],
   [/^week$/, "Add sessions"],
+  [/^locked$/, "Unlock"],
   [/^reply-\d+$/, "Reply"],
   [/^reply-video-\d+$/, "Review"],
   [/^call-\d+$/, "Book"],
   [/^read-/, "Read"],
 ];
-function railNeeds(clientId: number, feed: ReturnType<typeof getActivityFeed>): RailNeed[] {
-  const out: RailNeed[] = [];
-  const actions = getClientHome(clientId, feed).actions;
-  for (const [re, word] of NEED_WORDS) for (const a of actions) if (re.test(a.id)) out.push({ word, why: a.title });
-  return out;
+/** In the Feed's order (needsOf in feedBoardData.ts), so the rail's first word is the Feed's first row: the blockers (an
+ *  empty live week, then a sign-in lock), today's calls by time (Prep), then the rest oldest first. */
+function railNeeds(clientId: number, feed: ReturnType<typeof getActivityFeed>, today: string): RailNeed[] {
+  const ranked: { need: RailNeed; rank: number; ms: number }[] = [];
+  for (const a of getClientHome(clientId, feed).actions) {
+    const word = NEED_WORDS.find(([re]) => re.test(a.id))?.[1];
+    if (!word) continue;
+    ranked.push({ need: { word, why: a.title }, rank: a.id === "week" ? 0 : a.id === "locked" ? 1 : 3, ms: a.at ?? Infinity });
+  }
+  for (const m of listMeetings(clientId)) {
+    if (m.status !== "scheduled" || m.date !== today) continue;
+    const time = m.all_day ? null : (m.time ?? "").trim() || null;
+    ranked.push({ need: { word: "Prep", why: `A call today${time ? ` at ${time}` : ""}` }, rank: 2, ms: time ? Number(time.replace(":", "")) || 0 : Infinity });
+  }
+  ranked.sort((x, y) => x.rank - y.rank || (x.ms === y.ms ? 0 : x.ms < y.ms ? -1 : 1));
+  return ranked.map((r) => r.need);
 }
 export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean };
 
@@ -549,10 +560,11 @@ export function loadRail(coach: { id: number; email: string; role: "coach" | "cl
   if (getData().users.find((u) => u.id === coach.id)?.onboarding) redirect("/welcome");
   const feed = getActivityFeed(coach.id);
   const data = getData();
+  const today = localDateStr();
   const clients = listClients(coach.id).map((c) => {
     const user = getUserForClient(c.id);
     const isNew = listClientPhases(c.id).length === 0 && !data.training_programs.some((p) => p.client_id === c.id);
-    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, needs: railNeeds(c.id, feed), isNew, notSignedIn: !user || user.must_change_password };
+    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, needs: railNeeds(c.id, feed, today), isNew, notSignedIn: !user || user.must_change_password };
   });
   const profile = getCoachProfile(coach.id);
   return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: isOwner(coach), inviteReady: mailConfigured(), clerk: clerkOn() };

@@ -6385,7 +6385,10 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
   if (!getCurrentPhase(clientId, "training") && !getCurrentPhase(clientId, "nutrition")) {
     actions.push({ id: "no-phase", tone: "due", group: "setup", title: "No phase running", detail: "Their Home says so until a training or nutrition phase is live. Create or schedule one on Plan.", tab: "plan" });
   }
-  const program = getDeployedProgram(clientId);
+  // A programme whose weeks have run out has no week they are in (22 Oct: the clamped index kept its last empty week
+  // asking for sessions for good); the Training tab treats it as all over too.
+  const deployed = getDeployedProgram(clientId);
+  const program = deployed && programWeekNow(deployed) <= deployed.total_weeks ? deployed : null;
   if (program) {
     const index = getProgramCurrentWeekIndex(program);
     const liveWeek = program.start_week + index - 1;
@@ -6424,10 +6427,12 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
     }
   }
   // Last week's sessions not done (12 Oct): the week is over, so these are
-  // missed, not pending. Only inside the programme's own weeks.
-  if (program) {
-    const index = getProgramCurrentWeekIndex(program);
-    const lastWeek = program.start_week + index - 2;
+  // missed, not pending. Only inside the programme's own weeks: the week after its last still looks back on its last,
+  // then it stops (22 Oct: the clamped index re-reported its second-to-last week for good).
+  const recent = deployed && programWeekNow(deployed) <= deployed.total_weeks + 1 ? deployed : null;
+  if (recent) {
+    const program = recent;
+    const lastWeek = program.start_week + Math.max(1, programWeekNow(program)) - 2;
     if (lastWeek >= program.start_week) {
       const sessions = getWeek(clientId, lastWeek).filter((d) => getAssignmentsForDay(d.id).length > 0 || listCardioForDay(d.id).length > 0);
       const missed = sessions.filter((d) => {
