@@ -379,7 +379,7 @@ import { COACH_PROFILE_LIMITS } from "./coachProfileView";
 import { deleteUpload, keyOf, prepareChatMedia, putUpload } from "./storage";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
-import { clearPhotoOpenSheet, getPhotoCadence, getPhotoInstructions, getPhotoStartDate, listActivePhotoSlots, listPhotoSlots, listPhotoUploads, photoSheetFor, photoSheetForClient, resetPhotoOpenSheet } from "./queries";
+import { clearPhotoOpenSheet, getPhotoCadence, getPhotoOpenPeriod, getPhotoInstructions, getPhotoStartDate, listActivePhotoSlots, listPhotoSlots, listPhotoUploads, photoSheetFor, photoSheetForClient, resetPhotoOpenSheet } from "./queries";
 import { dayMonth } from "./dayMonth";
 import { isTimezone, SERVER_TZ, tzShort, zonedToUtc } from "./timezones";
 import { inZone } from "./viewZone";
@@ -1256,6 +1256,16 @@ export async function syncHealthStepsAction(days: { date: string; steps: number 
   return { tracked: true, saved };
 }
 
+/** A change to the shape update is news to the client only once one has been asked of them: a sheet open now or photos
+ *  sent before (22 Oct, Alex: a new client's app said "Changed your shape update" while the coach was still setting it up). */
+function shapeUpdateStarted(clientId: number): boolean {
+  const data = getData();
+  const slots = new Set(data.photo_slots.filter((x) => x.client_id === clientId).map((x) => x.id));
+  if (data.photo_uploads.some((u) => slots.has(u.slot_id))) return true;
+  const held = getPhotoOpenPeriod(clientId);
+  return !!held && held <= localDateStr();
+}
+
 export async function addPhotoSlotAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   if (!(await coachForClient(clientId))) return;
@@ -1264,7 +1274,7 @@ export async function addPhotoSlotAction(formData: FormData) {
   // The first angle asked for: the schedule starts afresh from now (nothing held from before).
   if (listActivePhotoSlots(clientId).length === 0) clearPhotoOpenSheet(clientId);
   addPhotoSlot(clientId, label);
-  noteChange(clientId, `Changed your shape update: Added a ${label} picture`, { tab: "home", label: "See your tasks", key: "photos", detail: `Added a ${label} picture` });
+  if (shapeUpdateStarted(clientId)) noteChange(clientId, `Changed your shape update: Added a ${label} picture`, { tab: "home", label: "See your tasks", key: "photos", detail: `Added a ${label} picture` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1308,7 +1318,7 @@ export async function setPhotoCadenceAction(formData: FormData) {
   if (!cadence) return;
   if (getPhotoCadence(clientId) !== cadence) resetPhotoOpenSheet(clientId, localDateStr());
   setPhotoCadence(clientId, cadence);
-  noteChange(clientId, `Changed your shape update: Now every ${CADENCE_WORDS[cadence]}`, { tab: "home", label: "See your tasks", key: "photos", detail: `Now every ${CADENCE_WORDS[cadence]}` });
+  if (shapeUpdateStarted(clientId)) noteChange(clientId, `Changed your shape update: Now every ${CADENCE_WORDS[cadence]}`, { tab: "home", label: "See your tasks", key: "photos", detail: `Now every ${CADENCE_WORDS[cadence]}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1351,7 +1361,7 @@ export async function savePhotoScheduleAction(
   setPhotoInstructions(clientId, String(schedule.instructions ?? "").slice(0, 600));
   if (moved) resetPhotoOpenSheet(clientId, localDateStr());
   const words = wordsFor(cadence, startDate, String(schedule.instructions ?? ""));
-  if (words !== before) noteChange(clientId, `Changed your shape update: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
+  if (words !== before && shapeUpdateStarted(clientId)) noteChange(clientId, `Changed your shape update: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1392,7 +1402,7 @@ export async function savePhotoSetupAction(clientId: number, setup: PhotoSetup):
   // A new start or rhythm: the calendar decides which sheet is open again (21 Oct).
   if (moved) resetPhotoOpenSheet(clientId, localDateStr());
   const words = wordsFor(cadence, startDate, String(setup.instructions ?? ""));
-  if (words !== before) noteChange(clientId, `Changed your shape update: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
+  if (words !== before && shapeUpdateStarted(clientId)) noteChange(clientId, `Changed your shape update: ${words}`, { tab: "home", label: "See your tasks", key: "photos-schedule", replace: true });
 
   // The angles: gone, changed, new, then the order as listed.
   const said: string[] = [];
@@ -1419,7 +1429,7 @@ export async function savePhotoSetupAction(clientId: number, setup: PhotoSetup):
   reorderPhotoSlots(clientId, order);
   // The first angle asked for: the schedule starts afresh from now.
   if (askedBefore === 0 && setup.angles.some((a) => !a.paused)) clearPhotoOpenSheet(clientId);
-  if (said.length) noteChange(clientId, `Changed your shape update: ${said.join(", ")}`, { tab: "home", label: "See your tasks", key: "photos", detail: said.join(", ") });
+  if (said.length && shapeUpdateStarted(clientId)) noteChange(clientId, `Changed your shape update: ${said.join(", ")}`, { tab: "home", label: "See your tasks", key: "photos", detail: said.join(", ") });
   revalidatePath("/admin");
   revalidatePath("/client");
   return { ok: true };

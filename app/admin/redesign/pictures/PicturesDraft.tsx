@@ -14,7 +14,7 @@ import { Fold } from "../Fold";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
 import { CameraIcon, ChatIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
-import { MessageDialog, useClickAway } from "../training/TrainingDraft";
+import { ConfirmDialog, MessageDialog, useClickAway } from "../training/TrainingDraft";
 import { GripIcon } from "../training/TrainingParts";
 import { TrackIcon } from "../plan/PlanDraft";
 import DateText from "../DateText";
@@ -70,7 +70,7 @@ export type DraftPictures = {
   remindedToday: boolean;
 };
 
-type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "photo"; period: string; slotId: number; /** Opened from Compare: closing it goes back there. */ back?: string[] } | { kind: "setup" } | { kind: "compare"; periods: string[] } | null;
+type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "photo"; period: string; slotId: number; /** Opened from Compare: closing it goes back there. */ back?: string[] } | { kind: "setup" } | { kind: "compare"; periods: string[] } | { kind: "drop"; slotId: number; label: string } | null;
 
 const ROWS_SHOWN = 12;
 const REPEATS: { value: Cadence; label: string }[] = [
@@ -281,16 +281,17 @@ function Pictures({ clientId, firstName, plan }: Props) {
                   <div key={c.slotId} className="rp-slot">
                     <div className="rp-tilewrap">
                       <Tile cell={c} sheet={top} label={c.label} tag={c.shotDay} emptyText={top.live ? "Waiting" : ""} onOpen={(slotId) => setDlg({ kind: "photo", period: top.period, slotId })} />
-                      {/* An empty place can go: the client isn't asked for it any more (its earlier photos stay). */}
-                      {!c.src && (
-                        <button type="button" className="rp-drop" onClick={() => dropAngle(c.slotId)} aria-label={`Stop asking for ${c.label}`} title="Take it off">
-                          ×
-                        </button>
-                      )}
                     </div>
                     <div className="rp-cap">
                       <b>{c.label}</b>
                       {status && <span className={`rp-cap-state ${status}`}>{status === "in" ? "In" : "Waiting"}</span>}
+                      {/* An empty place can go (22 Oct, Alex: "the option to delete from here"): Remove in words on hover, as
+                          row actions are, asking first; the client isn't asked for it any more, photos already sent stay. */}
+                      {!c.src && (
+                        <button type="button" className="rp-cap-remove" onClick={() => setDlg({ kind: "drop", slotId: c.slotId, label: c.label })} aria-label={`Remove ${c.label}`}>
+                          Remove
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -462,6 +463,18 @@ function Pictures({ clientId, firstName, plan }: Props) {
             onSaved={() => {
               close();
               reRead();
+            }}
+          />
+        )}
+        {dlg?.kind === "drop" && (
+          <ConfirmDialog
+            title={`Remove ${dlg.label}?`}
+            description={`${firstName} isn't asked for it any more. Photos already sent stay.`}
+            confirm="Remove"
+            danger
+            onConfirm={() => {
+              dropAngle(dlg.slotId);
+              close();
             }}
           />
         )}
