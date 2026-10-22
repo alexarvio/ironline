@@ -4,8 +4,6 @@
 // a row, the newest first, New over Earlier). Money lives on Business, so no invoices here.
 // One read: getFeedBoard (feedBoardData.ts). Dates yyyy-mm-dd; moments ISO strings.
 
-import type { PhaseTrack } from "./db";
-
 /** A task for the coach, one a row (not one a client). */
 export type NeedRow = {
   /** Stable and unique across clients: "<clientId>:<HomeAction id>", or "<clientId>:meeting-<meetingId>" for a call today
@@ -33,31 +31,6 @@ export type NeedRow = {
   dismissId: string | null;
 };
 
-/** A day of a client's last 14, as Home's Consistency counts it. */
-export type ClientDay = { date: string; checkIn: boolean; trained: boolean; food: boolean };
-
-/** A state pill on a client's row: the coach's side (no phase, a phase ending with nothing after) or the client's
-    (missed sessions, quiet, a check-in missing). */
-export type ClientPill = { text: string; side: "coach" | "client"; href: string; track?: PhaseTrack };
-
-export type ClientRow = {
-  clientId: number;
-  name: string;
-  avatarPath: string | null;
-  /** Their last 14 days, oldest first, today last. */
-  days: ClientDay[];
-  /** This week's sessions in their live programme: done of planned; null with no live programme, or none planned this
-      week (as Home's training tile: the empty week is a Needs-you row). */
-  sessions: { done: number; planned: number } | null;
-  /** The latest thing they did (ISO), from the activity they make; null when never. */
-  lastActive: string | null;
-  /** At most two, the coach's side first. */
-  pills: ClientPill[];
-  /** Shown under Needs attention: has a pill. */
-  attention: boolean;
-  /** Their Home. */
-  href: string;
-};
 
 export type ActivityKind = "training" | "nutrition" | "lifestyle" | "meetings" | "messages";
 
@@ -92,14 +65,6 @@ export type FeedBoard = {
   since: { from: string; sessions: number; checkIns: number; foodDays: number; messages: number; shapeUpdates: number } | null;
   /** Blockers first (an empty week, a lockout), then today's calls by time, then the longest wait. */
   needs: NeedRow[];
-  clients: {
-    /** Last active first; never active last, by name. */
-    rows: ClientRow[];
-    /** Did something this week (Monday on). */
-    activeThisWeek: number;
-    /** Nothing in the last 7 days. */
-    quiet: number;
-  };
   /** Newest first: each kind's newest 200. */
   activity: ActivityRow[];
 };

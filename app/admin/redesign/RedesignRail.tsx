@@ -55,6 +55,7 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
   // Needs you: something owed, or a new client still to set up (22 Oct, Alex).
   const needsMe = (c: RailClient) => c.total > 0;
   const needsYou = rail.clients.filter(needsMe).length;
+  const feedOwed = rail.clients.reduce((n, c) => n + c.owed, 0);
   // The client whose screens are dropped open under their row: one at a time (22 Oct, Alex).
   const [openId, setOpenId] = useState<number | null>(null);
   const q = query.trim().toLowerCase();
@@ -90,9 +91,11 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
           <Link key={key} href={REDRAWN[key] ?? `/admin?view=${key}`} className={`rr-navrow${REDRAWN[key] && path?.startsWith(REDRAWN[key]!) ? " active" : ""}`} aria-current={REDRAWN[key] && path?.startsWith(REDRAWN[key]!) ? "page" : undefined}>
             <Icon />
             <span>{label}</span>
-            {key === "feed" && needsYou > 0 && (
-              <em className="rr-badge" title={`${needsYou} client${needsYou === 1 ? "" : "s"} need you`}>
-                {needsYou}
+            {/* The Feed's own Needs you, counted as it lists them (22 Oct: it counted clients, a new one too, and read
+                1 over a Feed that said None). */}
+            {key === "feed" && feedOwed > 0 && (
+              <em className="rr-badge" title={`${feedOwed} thing${feedOwed === 1 ? "" : "s"} need you`}>
+                {feedOwed}
               </em>
             )}
           </Link>

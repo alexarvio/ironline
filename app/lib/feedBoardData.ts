@@ -2,29 +2,23 @@
 // every client at once, and the note of when the coach looked, so "Since 20/10" and the New rows count from the visit
 // before this one. Never throws: a coach with no clients, no logs and no calls gets nulls, zeros and empty lists.
 
-import type { ActivityKind, ActivityRow, ClientDay, ClientPill, ClientRow, FeedBoard, NeedRow } from "./feedBoard";
-import { getData, persist, type Data, type PhaseTrack } from "./db";
+import type { ActivityKind, ActivityRow, FeedBoard, NeedRow } from "./feedBoard";
+import { getData, persist, type Data } from "./db";
 import {
   getActivityFeed,
   getClientHome,
-  getCurrentPhase,
   getDeployedProgram,
   getProgramCurrentWeekIndex,
-  getWeek,
   isSessionComplete,
-  listClientPhases,
   listMeetings,
   localDateStr,
   mediaWords,
-  weekStart,
   workoutFed,
   type FeedEvent,
   type HomeAction,
 } from "./queries";
-import { phaseLastDay } from "./phases";
 import { dayMonth } from "./dayMonth";
 import { SERVER_TZ, zonedToUtc } from "./timezones";
-import { endingSoon, type OverviewPhase } from "../admin/redesign/phases/timeline";
 import { feedHref, needView } from "../admin/redesign/loaders";
 
 type UserRow = Data["users"][number];
@@ -38,25 +32,15 @@ type CallRow = ReturnType<typeof listMeetings>[number];
 const VISIT_GAP_MS = 30 * 60000;
 /** Within a visit, the look's time moves on at most once a minute, so a page re-read after every save doesn't write the store each time. */
 const LOOK_STEP_MS = 60000;
-/** The strip on a client's row: their last 14 days. */
-const STRIP_DAYS = 14;
 /** Activity keeps each kind's newest this many rows, so a kind pages through its own history while the page stays bounded. */
 const KIND_ROWS = 200;
 /** A sign-in lock lasts this long (lib/loginLockout.ts). */
 const LOCK_MS = 15 * 60000;
-const TRACK_ORDER: PhaseTrack[] = ["lifestyle", "training", "nutrition"];
-const TRACK_NAME: Record<PhaseTrack, string> = { lifestyle: "Lifestyle", training: "Training", nutrition: "Nutrition" };
 const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 // ---- Dates ----------------------------------------------------------------------
 
-const DAY_MS = 86400000;
 const parseDay = (iso: string) => new Date(`${iso}T00:00:00`);
-const addDays = (iso: string, n: number) => {
-  const d = parseDay(iso);
-  d.setDate(d.getDate() + n);
-  return localDateStr(d);
-};
 const LOCAL_STAMP = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/;
 const PLAIN_DAY = /^\d{4}-\d{2}-\d{2}$/;
 /** A stored stamp as epoch ms: "2026-10-21 14:05:00" (server-local, as localStamp writes) or ISO. NaN when unreadable. */
@@ -254,7 +238,7 @@ function safe<T>(part: string, fn: () => T, fallback: T): T {
 
 export function getFeedBoard(coachId: number): FeedBoard {
   const today = localDateStr();
-  const empty: FeedBoard = { today, since: null, needs: [], clients: { rows: [], activeThisWeek: 0, quiet: 0 }, activity: [] };
+  const empty: FeedBoard = { today, since: null, needs: [], activity: [] };
   let ctx: Ctx;
   try {
     ctx = context(coachId, today);
@@ -266,7 +250,6 @@ export function getFeedBoard(coachId: number): FeedBoard {
     today,
     since: safe("since", () => sinceOf(ctx), null),
     needs: safe("needs", () => needsOf(ctx), []),
-    clients: safe("clients", () => clientsOf(ctx), empty.clients),
     activity: safe("activity", () => activityOf(ctx), []),
   };
 }
@@ -432,183 +415,6 @@ function needsOf(ctx: Ctx): NeedRow[] {
       (a.row.key < b.row.key ? -1 : 1)
   );
   return ranked.map((r) => r.row);
-}
-
-// ---- Clients ----------------------------------------------------------------------------------------
-
-/** Each client's own latest doing (epoch ms): the newest of their activity (not an invoice the coach changed) and their newest set. */
-function lastActiveAll(ctx: Ctx): Map<number, number> {
-  const out = new Map(ctx.lastSet);
-  for (const e of ctx.feed) {
-    if (e.category === "billing" || e.target?.kind === "gone") continue;
-    if (e.at > (out.get(e.clientId) ?? -Infinity)) out.set(e.clientId, e.at);
-  }
-  return out;
-}
-
-/** Every client's last 14 days in one pass, as Home's Consistency counts a day (getActivityCalendar, read here for all at
-    once): trained (a counted set, or a session the calendar has on the day: ended there, done in full, or kept from before
-    a coach's edit), food (the diary, or a typed day's calories), checked in (anything but what the workout answers). */
-function stripsOf(ctx: Ctx): Map<number, ClientDay[]> {
-  const { data, ids, today } = ctx;
-  const dates = Array.from({ length: STRIP_DAYS }, (_, i) => addDays(today, i - (STRIP_DAYS - 1)));
-  const from = dates[0];
-  type Marks = Map<number, Set<string>>;
-  const trained: Marks = new Map();
-  const food: Marks = new Map();
-  const checkIn: Marks = new Map();
-  const has = (m: Marks, clientId: number, day: string) => !!m.get(clientId)?.has(day);
-  const mark = (m: Marks, clientId: number, day: string) => {
-    if (day < from || day > today) return;
-    let s = m.get(clientId);
-    if (!s) m.set(clientId, (s = new Set()));
-    s.add(day);
-  };
-
-  for (const [clientId, days] of ctx.setDays) for (const d of days) mark(trained, clientId, d);
-  for (const d of ctx.daysById.values()) {
-    if (d.session_ended_at) {
-      mark(trained, d.client_id, stampDay(d.session_ended_at));
-      continue;
-    }
-    const last = ctx.lastLogByDay.get(d.id);
-    if (last == null) continue;
-    const day = localDateStr(new Date(last));
-    if (day >= from && day <= today && !has(trained, d.client_id, day) && isSessionComplete(d.id)) mark(trained, d.client_id, day);
-  }
-  for (const c of ctx.clients) {
-    const fed = ctx.fedNames.get(c.id);
-    for (const k of c.kept_activity ?? []) {
-      if (k.kind === "training") mark(trained, c.id, k.date);
-      else if (!fed?.has(k.name)) mark(checkIn, c.id, k.date);
-    }
-  }
-
-  for (const f of data.food_entries ?? []) if (ids.has(f.client_id)) mark(food, f.client_id, f.date);
-  for (const c of data.calorie_logs) if (ids.has(c.client_id) && c.kcal > 0) mark(food, c.client_id, c.date);
-
-  const defs = new Map(data.metric_definitions.filter((m) => ids.has(m.client_id) && !ctx.fedIds.get(m.client_id)?.has(m.id)).map((m) => [m.id, m] as const));
-  for (const e of data.metric_entries) {
-    const def = defs.get(e.metric_definition_id);
-    if (!def || e.value == null) continue;
-    const day = def.frequency === "daily" ? (e.period ?? "").slice(0, 10) : e.logged_at ? stampDay(e.logged_at) : null;
-    if (day) mark(checkIn, def.client_id, day);
-  }
-  const fields = new Map(data.measurement_fields.filter((f) => ids.has(f.client_id)).map((f) => [f.id, f] as const));
-  for (const v of data.measurement_values) {
-    const f = fields.get(v.field_id);
-    if (f && v.value != null && !ctx.fedNames.get(f.client_id)?.has(f.name)) mark(checkIn, f.client_id, v.date.slice(0, 10));
-  }
-
-  return new Map(ctx.clients.map((c) => [c.id, dates.map((date) => ({ date, checkIn: has(checkIn, c.id, date), trained: has(trained, c.id, date), food: has(food, c.id, date) }))] as const));
-}
-
-/** This week's sessions in the live programme, as Home's training tile counts them: one with an exercise is planned, one
-    with a set logged is done. Null with no live programme, or nothing planned this week (that is a Needs-you row). */
-function sessionsOf(ctx: Ctx, clientId: number): ClientRow["sessions"] {
-  const program = getDeployedProgram(clientId);
-  if (!program) return null;
-  const week = program.start_week + getProgramCurrentWeekIndex(program) - 1;
-  let planned = 0;
-  let done = 0;
-  for (const d of getWeek(clientId, week)) {
-    const as = ctx.byDay.get(d.id) ?? [];
-    if (!as.length) continue;
-    planned++;
-    if (as.some((a) => (ctx.logCount.get(a.id) ?? 0) > 0)) done++;
-  }
-  return planned ? { done, planned } : null;
-}
-
-/** Every phase of the client's as the Phases overview reads it, for "ending with nothing after" (Business's rule). */
-function overviewPhases(ctx: Ctx, clientId: number): OverviewPhase[] {
-  const programs = new Map((ctx.programsByClient.get(clientId) ?? []).map((p) => [p.id, p] as const));
-  return ctx.data.client_phases
-    .filter((p) => p.client_id === clientId)
-    .map((p) => {
-      const program = p.program_id != null ? programs.get(p.program_id) : undefined;
-      // A draft: the phase's own flag, or its programme still a draft (phases/load.ts).
-      const programDraft = !!program && program.status !== "deployed" && !program.scheduled_at;
-      return {
-        id: p.id,
-        track: p.track,
-        name: p.name,
-        start: p.start_week,
-        end: phaseLastDay(p.end_week),
-        endWeek: p.end_week,
-        draft: !!p.draft || programDraft,
-        objectives: p.objectives ?? [],
-        programId: program?.id ?? null,
-        gap: null,
-      };
-    });
-}
-
-/** The row's pills, the coach's side first, at most two. */
-function pillsOf(ctx: Ctx, clientId: number, lastMs: number | null): ClientPill[] {
-  const actions = ctx.actions.get(clientId) ?? [];
-  const live = Object.fromEntries(TRACK_ORDER.map((t) => [t, !!getCurrentPhase(clientId, t)])) as Record<PhaseTrack, boolean>;
-  const coach: ClientPill[] = [];
-  const client: ClientPill[] = [];
-
-  // No phase: nothing live on any track (a Lifestyle phase alone is a phase running, so never No phase beside Quiet).
-  const noneLive = !live.lifestyle && !live.training && !live.nutrition;
-  // New until they have a phase or programme of any state (22 Oct, Alex), as the rail tags them; then No phase.
-  const isNew = listClientPhases(clientId).length === 0 && !ctx.data.training_programs.some((p) => p.client_id === clientId);
-  if (isNew) coach.push({ text: "New", side: "coach", href: tab("plan", clientId) });
-  else if (noneLive) coach.push({ text: "No phase", side: "coach", href: tab("plan", clientId) });
-  // A running phase ending within 14 days with nothing after it on its track, soonest first: their Plan, to plan the next.
-  const phases = overviewPhases(ctx, clientId);
-  for (const p of phases.filter((x) => endingSoon(x, phases, ctx.today)).sort((a, b) => (a.end < b.end ? -1 : a.end > b.end ? 1 : 0))) {
-    coach.push({ text: `${TRACK_NAME[p.track]} ends ${dayMonth(p.end)}`, side: "coach", href: tab("plan", clientId), track: p.track });
-  }
-
-  // The client's side, from their Home's check items. Quiet and a missing check-in say nothing while no phase is live at
-  // all: nothing is asked of them, the same fact as No phase.
-  const missed = actions.find((a) => a.id === "missed-sessions");
-  const m = missed ? /Missed (\d+) of (\d+)/.exec(missed.title) : null;
-  if (m) {
-    const w = liveWeek(clientId);
-    client.push({ text: `Missed ${m[1]} of ${m[2]}`, side: "client", href: w && w.index > 1 ? tab("training", clientId, `&program=${w.programId}&week=${w.index - 1}`) : tab("training", clientId), track: "training" });
-  }
-  if (!noneLive) {
-    // Quiet by the row's own Last active (every set counts, invoices don't), 7 days and more, as the header counts it.
-    const quietDays = lastMs != null ? Math.floor((ctx.now - lastMs) / DAY_MS) : null;
-    if (quietDays != null && quietDays >= 7) client.push({ text: `Quiet ${quietDays} days`, side: "client", href: tab("messages", clientId) });
-    if (actions.some((a) => a.id.startsWith("checkin-"))) client.push({ text: "Check-in missing", side: "client", href: tab("measurements", clientId), track: "lifestyle" });
-  }
-  return [...coach, ...client].slice(0, 2);
-}
-
-function clientsOf(ctx: Ctx): FeedBoard["clients"] {
-  const monday = weekStart(ctx.today);
-  const weekAgo = ctx.now - 7 * DAY_MS;
-  let activeThisWeek = 0;
-  let quiet = 0;
-  const last = safe("lastActive", () => lastActiveAll(ctx), new Map<number, number>());
-  const strips = safe("days", () => stripsOf(ctx), new Map<number, ClientDay[]>());
-  const blank = Array.from({ length: STRIP_DAYS }, (_, i): ClientDay => ({ date: addDays(ctx.today, i - (STRIP_DAYS - 1)), checkIn: false, trained: false, food: false }));
-  const rows = ctx.clients.map((c): { row: ClientRow; ms: number | null } => {
-    const ms = last.get(c.id) ?? null;
-    if (ms != null && localDateStr(new Date(ms)) >= monday) activeThisWeek++;
-    if (ms == null || ms < weekAgo) quiet++;
-    const pills = safe(`pills ${c.id}`, () => pillsOf(ctx, c.id, ms), []);
-    const row: ClientRow = {
-      clientId: c.id,
-      name: c.name ?? "Client",
-      avatarPath: c.avatar_path ?? null,
-      days: strips.get(c.id) ?? blank,
-      sessions: safe(`sessions ${c.id}`, () => sessionsOf(ctx, c.id), null),
-      lastActive: iso(ms),
-      pills,
-      attention: pills.length > 0,
-      href: tab("home", c.id),
-    };
-    return { row, ms };
-  });
-  // Last active first; never active last, by name.
-  rows.sort((a, b) => (a.ms == null ? (b.ms == null ? a.row.name.localeCompare(b.row.name) : 1) : b.ms == null ? -1 : b.ms - a.ms || a.row.name.localeCompare(b.row.name)));
-  return { rows: rows.map((r) => r.row), activeThisWeek, quiet };
 }
 
 // ---- Activity ------------------------------------------------------------------------------------

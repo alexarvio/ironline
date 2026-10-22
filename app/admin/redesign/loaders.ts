@@ -526,7 +526,7 @@ export type RailSpot = { screen: string; href: string; count: number };
 /** spots: the screens needing the coach, in the Feed's order; total: how many things across them, the rail's number
  *  (22 Oct, Alex: a number by the name, its screens in a list under it, nothing more said in the rail). A client with no
  *  phase or programme set yet, any state, counts one on Plan. */
-export type RailClient = { id: number; name: string; avatarPath: string | null; spots: RailSpot[]; total: number; notSignedIn: boolean };
+export type RailClient = { id: number; name: string; avatarPath: string | null; spots: RailSpot[]; total: number; /** total without a new client's set-up: what the Feed's Needs you lists for them. */ owed: number; notSignedIn: boolean };
 
 // What the coach owes, as the Feed's Needs you has it (needFrom in feedBoardData.ts); statuses are the Feed's alone.
 const OWED = [/^week$/, /^locked$/, /^reply-\d+$/, /^reply-video-\d+$/, /^call-\d+$/, /^read-/];
@@ -535,7 +535,7 @@ const SCREEN_OF: Record<string, string> = { home: "Home", plan: "Plan", measurem
 const screenOf = (href: string) => (/[?&]chat=/.test(href) ? "Chat" : SCREEN_OF[/^\/admin\/redesign\/([a-z]+)/.exec(href)?.[1] ?? ""] ?? "Home");
 /** In the Feed's order (needsOf in feedBoardData.ts): a new client's set-up, the blockers (an empty live week, then a
  *  sign-in lock), today's calls by time, then the rest oldest first; a screen sits where its first thing does. */
-function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEvent>, today: string, isNew: boolean): { spots: RailSpot[]; total: number } {
+function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEvent>, today: string, isNew: boolean): { spots: RailSpot[]; total: number; owed: number } {
   const ranked: { href: string; rank: number; ms: number }[] = [];
   if (isNew) ranked.push({ href: `/admin/redesign/plan?client=${clientId}`, rank: -1, ms: 0 });
   for (const a of getClientHome(clientId, feed).actions) {
@@ -555,7 +555,7 @@ function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEv
     if (at) at.count++;
     else spots.push({ screen, href: r.href, count: 1 });
   }
-  return { spots, total: ranked.length };
+  return { spots, total: ranked.length, owed: ranked.filter((r) => r.rank !== -1).length };
 }
 export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean };
 

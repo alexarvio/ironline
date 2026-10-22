@@ -9,20 +9,18 @@ import { Toaster } from "../../../components/ui/toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { CalendarIcon, ChatIcon, CheckIcon, EyeIcon, LockIcon, MoreIcon, PlayIcon, PlusIcon } from "../../../components/icons";
 import Pager from "../Pager";
-import { Sep, SepJoin } from "../Sep";
+import { SepJoin } from "../Sep";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
 import { meetingTypeOf } from "../../../lib/meetingTypes";
 import { TRACK_ACCENT } from "../../phaseChrome";
 import { TrackIcon } from "../plan/PlanDraft";
 import type { PhaseTrack } from "../../../lib/db";
 // Types only: feedBoard.ts re-exports the server's reader, which must never reach the browser.
-import type { ActivityKind, ActivityRow, ClientDay, FeedBoard, NeedRow } from "../../../lib/feedBoard";
+import type { ActivityKind, ActivityRow, FeedBoard, NeedRow } from "../../../lib/feedBoard";
 
 // The coach's Feed (21 Oct, Alex: built from the Feed mockup, root "rd trn rls rh rfd"): every client at once, clear at a
 // glance. Training's header, Home's Since line, then
 // - Needs you: one task a row (not a client a row), its wait, its action as a white pill; ⋯ Done clears it;
-// - Clients: a row a client, the last active first: their last 14 days as Home's Consistency strip made small, this
-//   week's sessions, when they were last active, at most two state pills; All clients | Needs attention;
 // - Activity: a log, one line a row, New over Earlier, one kind at a time, 20 a page.
 // Facts, not explanations; dates d/m (dayMonth), a log's rows by logDate; ink, never navy; weights 500 and 600.
 
@@ -32,11 +30,6 @@ const DAY_MS = 24 * HOUR_MS;
 
 /** "2 sessions", "1 check-in"; nothing for none, so the part drops out. */
 const count = (n: number, one: string, many: string) => (n > 0 ? `${n} ${n === 1 ? one : many}` : null);
-/** A track's colour at a strength (a hex from phaseChrome): the soft fill under its full-strength edge. */
-const tintOf = (hex: string, alpha: number) => {
-  const n = parseInt(hex.slice(1, 7), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-};
 /** A moment's clock time, "18:48". */
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
@@ -81,7 +74,6 @@ export default function FeedDraft({ board, now, kind }: { board: FeedBoard; /** 
 
       <SinceLine since={board.since} />
       <NeedsYou needs={board.needs} now={now} />
-      <Clients clients={board.clients} />
       <Activity rows={board.activity} kind={kind} />
       <Toaster />
     </div>
@@ -239,117 +231,6 @@ function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
           </div>
         )}
       </div>
-    </section>
-  );
-}
-
-// ---- Clients: a row a client, the last active first. The face and name, their last 14 days as Home's Consistency
-// strip made small, this week's sessions, when they were last active (the date, the time faint in its own column), at
-// most two state pills (the coach's side rust, the client's grey). The row opens their Home; a pill the tab that fixes it.
-/** The three behaviours of a day in the tracks' order, as Home's Consistency (21 Oct, Alex). */
-const STRIP: { key: "checkIn" | "trained" | "food"; label: string; track: PhaseTrack; yes: string; no: string }[] = [
-  { key: "checkIn", label: "Check-in", track: "lifestyle", yes: "checked in", no: "no check-in" },
-  { key: "trained", label: "Trained", track: "training", yes: "trained", no: "no session" },
-  { key: "food", label: "Food", track: "nutrition", yes: "food logged", no: "no food logged" },
-];
-const stripColours = (track: PhaseTrack) => {
-  const c = TRACK_ACCENT[track];
-  return { "--c": c, "--t": tintOf(c, 0.18) } as CSSProperties;
-};
-
-function Strip({ days }: { days: ClientDay[] }) {
-  const said = STRIP.map((s) => `${s.label} ${days.filter((d) => d[s.key]).length} of ${days.length}`).join(", ");
-  return (
-    <span className="rfd-strip" role="img" aria-label={`Last ${days.length} days: ${said}`}>
-      {STRIP.map((s) => (
-        <span key={s.key} className="rfd-strip-row" style={stripColours(s.track)}>
-          {days.map((d) => (
-            <i key={d.date} className={d[s.key] ? "on" : undefined} title={`${dayMonth(d.date)}: ${d[s.key] ? s.yes : s.no}`} />
-          ))}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-function Clients({ clients }: { clients: FeedBoard["clients"] }) {
-  const open = useRowOpen();
-  const [view, setView] = useState<"all" | "attention">("all");
-  const attention = clients.rows.filter((c) => c.attention);
-  const rows = view === "attention" ? attention : clients.rows;
-  // The date column as wide as the whole list's widest date, so it never moves between views.
-  const dateW = useMemo(() => logDateWidth(clients.rows.map((c) => c.lastActive).filter((d): d is string => !!d)), [clients.rows]);
-  const span = clients.rows.find((c) => c.days.length > 0)?.days.length ?? 14;
-  const facts = [clients.activeThisWeek > 0 && `${clients.activeThisWeek} active this week`, clients.quiet > 0 && `${clients.quiet} quiet`];
-
-  return (
-    <section className="rls-section" aria-label="Clients">
-      <div className="trn-weekhead">
-        <Titled title="Clients">{facts.some(Boolean) ? <SepJoin parts={facts} /> : null}</Titled>
-        <div className="trn-weekhead-actions">
-          <div className="rd-btn-group" role="group" aria-label="Which clients">
-            <button type="button" className={view === "all" ? "on" : ""} aria-pressed={view === "all"} onClick={() => setView("all")}>
-              All clients
-              <Sep />
-              {clients.rows.length}
-            </button>
-            <button type="button" className={view === "attention" ? "on" : ""} aria-pressed={view === "attention"} onClick={() => setView("attention")}>
-              Needs attention
-              <Sep />
-              {attention.length}
-            </button>
-          </div>
-        </div>
-      </div>
-      <div className="rls-card rfd-card" style={{ "--rfd-date": `${dateW}px` } as CSSProperties}>
-        {rows.length === 0 ? (
-          <p className="rls-none">{clients.rows.length === 0 ? "No clients yet" : "None"}</p>
-        ) : (
-          <div className="rfd-rows">
-            {rows.map((c) => (
-              <div key={c.clientId} className="rls-row rfd-row">
-                <div className="rls-row-main rfd-client" onClick={(e) => open(e, c.href)}>
-                  <Link href={c.href} prefetch={false} className="rd-row-hit rfd-who">
-                    <Face name={c.name} src={c.avatarPath} />
-                    <span className="rfd-name">{c.name}</span>
-                  </Link>
-                  <Strip days={c.days} />
-                  {c.sessions ? (
-                    <span className="rfd-sessions" title={`${c.sessions.done} of ${c.sessions.planned} sessions this week`}>
-                      {c.sessions.done} of {c.sessions.planned}
-                    </span>
-                  ) : (
-                    <span className="rfd-sessions none" title="No sessions this week">
-                      –
-                    </span>
-                  )}
-                  <span className="rd-logdate rfd-last">{c.lastActive ? logDate(new Date(c.lastActive)) : <span className="rfd-dash">–</span>}</span>
-                  <span className="rd-logtime">{c.lastActive ? clock(c.lastActive) : ""}</span>
-                  <span className="rfd-pills">
-                    {c.pills.slice(0, 2).map((p, i) => (
-                      <Link key={i} href={p.href} prefetch={false} className={`trn-state rfd-pill${p.side === "coach" ? " warn" : ""}`} title={p.text}>
-                        <span>{p.text}</span>
-                      </Link>
-                    ))}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {clients.rows.length > 0 && (
-        <div className="rh-key rfd-key">
-          {STRIP.map((s) => (
-            <span key={s.key}>
-              <i className="rfd-sw" style={stripColours(s.track)} aria-hidden="true" />
-              {s.label}
-            </span>
-          ))}
-          <Sep />
-          <span>Last {span} days</span>
-        </div>
-      )}
     </section>
   );
 }

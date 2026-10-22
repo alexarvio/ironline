@@ -1,5 +1,5 @@
 /* The coach's Feed (21 Oct, Alex: built from the Feed mockup, root "rd trn rls rh rfd"): Training's header, Home's
-   Since line, then Needs you, Clients and Activity, each a section title on the page over one hairline card, no line
+   Since line, then Needs you and Activity, each a section title on the page over one hairline card, no line
    above a card's first row. It wears Home's classes (rh-) for what it shares, and the room it has, not the window, sets
    the layout (Home's container rh). Ink, never navy; weights 500 and 600. Overrides of a shared class carry an extra
    class (.rd.trn.rfd, .rd.rh.rfd), whichever file the dev server loads last. */
@@ -26,7 +26,6 @@
 .rd.rfd .rfd-face { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 11px; font-weight: 600; line-height: 1; color: #141a24; }
 .rd.rfd .rfd-face img { width: 100%; height: 100%; object-fit: cover; }
 .rd.rfd .rfd-name { min-width: 0; overflow: hidden; font-size: 14.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
-.rd.rfd .rfd-dash { color: #98a2b3; }
 
 /* ---- Needs you: who, the thing and their words (cut to the one line), the wait, the action's white pill, ⋯ on hover. */
 .rd.rfd .rfd-need { grid-template-columns: 200px minmax(0, 1fr) 88px 136px 30px; }
@@ -38,29 +37,6 @@
 .rd.rfd .rfd-act { display: flex; justify-content: flex-end; min-width: 0; }
 .rd.trn.rfd .rfd-act .trn-pill { background: #fff; text-decoration: none; }
 .rd.rfd .rfd-more { display: flex; justify-content: flex-end; }
-
-/* ---- Clients: who, the last 14 days, this week's sessions, last active (the date, the time in its own column), the
-   pills (two columns' worth, each pill one width, the word centred). */
-.rd.rfd .rfd-client { grid-template-columns: minmax(140px, 1fr) 110px 52px var(--rfd-date, 84px) 44px 284px; }
-/* Home's Consistency strip made small: three rows of a 6px square a day in the tracks' order; a day done its track's
-   colour soft inside (18%) with its full-strength edge, else grey. */
-.rd.rfd .rfd-strip { display: flex; flex-direction: column; gap: 2px; }
-.rd.rfd .rfd-strip-row { display: flex; gap: 2px; }
-.rd.rfd .rfd-strip-row i { display: block; flex: none; width: 6px; height: 6px; border-radius: 1.5px; background: #eef0f3; }
-.rd.rfd .rfd-strip-row i.on { background: var(--t, #eef0f3); box-shadow: inset 0 0 0 1px var(--c, #141a24); }
-.rd.rfd .rfd-sessions { font-size: 13.5px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rd.rfd .rfd-sessions.none { color: #98a2b3; }
-.rd.rfd .rfd-pills { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
-/* The state pill (design rules 8): the coach's side rust (warn), the client's grey; a way to the tab that fixes it. */
-.rd.trn.rfd .trn-state.rfd-pill { justify-content: center; width: 139px; padding: 0 8px; box-sizing: border-box; text-decoration: none; transition: box-shadow 0.15s; }
-.rd.trn.rfd .trn-state.rfd-pill > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.rd.trn.rfd a.trn-state.rfd-pill:hover, .rd.trn.rfd a.trn-state.rfd-pill:focus-visible { outline: none; box-shadow: inset 0 0 0 1px #8b93a1; }
-.rd.trn.rfd a.trn-state.rfd-pill.warn:hover, .rd.trn.rfd a.trn-state.rfd-pill.warn:focus-visible { box-shadow: inset 0 0 0 1px #b8471f; }
-@media (prefers-reduced-motion: reduce) { .rd.trn.rfd .trn-state.rfd-pill { transition: none; } }
-/* The key under the card: the three colours as the strip draws them | Last 14 days. */
-.rd.rh.rfd .rfd-key { margin-top: -2px; padding: 0 4px; }
-.rd.rh.rfd .rh-key i.rfd-sw { width: 8px; height: 8px; border-radius: 2px; background: var(--t); box-shadow: inset 0 0 0 1px var(--c); }
-.rd.rh.rfd .rfd-key > .rd-sep { margin: 0; }
 
 /* ---- Activity: the date, the time centred in its own column, the client, the kind's icon, the thing in body grey
    and the rest grey after it on the one line. New and Earlier as small caps inside the card. */
@@ -76,20 +52,14 @@
 .rd.rfd .rfd-rows > .rfd-group:not(:first-child) { border-top: 1px solid #eef0f3; }
 .rd.rfd .rfd-group + .rls-row { border-top: 0; }
 
-/* ---- A narrower page: the columns give way, the time of last active goes, the pills wrap under each other. */
+/* ---- A narrower page: the columns give way. */
 @container rh (max-width: 860px) {
   .rd.rfd .rfd-need { grid-template-columns: 168px minmax(0, 1fr) 80px 136px 30px; }
-  .rd.rfd .rfd-client { grid-template-columns: minmax(120px, 1fr) 110px 52px var(--rfd-date, 84px) 139px; }
-  .rd.rfd .rfd-client > .rd-logtime { display: none; }
-  .rd.rfd .rfd-client > .rfd-pills { padding: 8px 0; }
   .rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 44px 120px 16px minmax(0, 1fr); }
 }
 @container rh (max-width: 600px) {
   .rd.rfd .rfd-need { grid-template-columns: 120px minmax(0, 1fr) 136px 30px; }
   .rd.rfd .rfd-need > .rfd-wait { display: none; }
-  .rd.rfd .rfd-client { grid-template-columns: minmax(0, 1fr) 110px 52px; }
-  .rd.rfd .rfd-client > .rfd-last { display: none; }
-  .rd.rfd .rfd-client > .rfd-pills { grid-column: 1 / -1; padding: 0 0 10px; }
   .rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 100px minmax(0, 1fr); }
   .rd.rfd .rfd-log > .rd-logtime, .rd.rfd .rfd-log > .rfd-kind { display: none; }
 }
