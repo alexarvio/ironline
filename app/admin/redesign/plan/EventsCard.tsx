@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { addClientEventAction, deleteClientEventAction, updateClientEventAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { PlusIcon } from "../../../components/icons";
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../../components/icons";
 import { MonthRange } from "../MonthRange";
 import { AddCells, chromeOf, EmptyLane, eventIsPast, eventLanes, EventMark, eventPlace, gridFor, LANE, LaneRow, rgbOf, standingParts, Timeline, type Category, type PlanEvent } from "./timelineParts";
 import DateText from "../DateText";
@@ -104,7 +104,9 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
       window.localStorage.setItem(EV_WIN_KEY, String(w));
     } catch {}
   };
-  const grid = gridFor(win, thisWeek, intoWeek);
+  // ‹ › step back into the past a month at a time, Today comes back, as the Phases card above (22 Oct, Alex).
+  const [back, setBack] = useState(0);
+  const grid = gridFor(win, thisWeek, intoWeek, back);
   const { count, weeks } = grid;
   const [busy, start] = useTransition();
   useEffect(() => {
@@ -223,6 +225,18 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
       <div className="rn-card-head">
         <h2>Events</h2>
         <div className="rq-ev-tools">
+          <div className="rq-pan" role="group" aria-label="Move the events in time">
+            <button type="button" className="rd-btn ghost" onClick={() => setBack((b) => b + 4)} aria-label="Earlier" title="Earlier">
+              <ChevronLeftIcon />
+            </button>
+            {/* Always there, so the arrows never move under the pointer; at today it rests, greyed. */}
+            <button type="button" className="rd-btn ghost rq-today" disabled={back === 0} onClick={() => setBack(0)}>
+              Today
+            </button>
+            <button type="button" className="rd-btn ghost" disabled={back === 0} onClick={() => setBack((b) => Math.max(0, b - 4))} aria-label="Later" title="Later">
+              <ChevronRightIcon />
+            </button>
+          </div>
           <div className="rd-btn-group" role="group" aria-label="Time shown">
             {windows.map((w) => (
               <button key={w.weeks} type="button" className={win === w.weeks ? "on" : ""} aria-pressed={win === w.weeks} onClick={() => onWin(w.weeks)}>

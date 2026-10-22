@@ -22,7 +22,7 @@ import PhaseSwitcher from "../PhaseSwitcher";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
-import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
+import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
 import { Sep } from "../Sep";
 import { Fold } from "../Fold";
 
@@ -142,6 +142,9 @@ type Dlg =
 
 /** A section's status, as Training's week line: Saving…, ✓ All changes saved, or Not saved · Retry. */
 function SaveStatus({ busy, failed, onRetry, solo = false }: { busy: boolean; failed: boolean; onRetry: () => void; solo?: boolean }) {
+  // Nothing until something is saved (22 Oct, Alex).
+  const said = useSaidSaved(busy);
+  if (!failed && !said) return null;
   return failed ? (
     <span className={`trn-allsaved failed${solo ? " solo" : ""}`} role="alert">
       Not saved<Sep />
@@ -475,9 +478,10 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
       )}
       {/* ---- Header (21 Oct, as Training's and Lifestyle's): the name to click and type, the ▾ to switch phase,
           the state tag as its menu; the facts under it; on the right the goals and note pills and the menu. */}
-      <header className="trn-head">
+      {/* No fact line, no room kept for one; no phase, the track's name is the title and the eyebrow goes (22 Oct, Alex). */}
+      <header className={`trn-head${plan.startDate ? "" : " bare"}`}>
         <div className="trn-head-main">
-          <span className="trn-eyebrow">Nutrition</span>
+          {phaseId != null && <span className="trn-eyebrow">Nutrition</span>}
           <div className="trn-name-row">
             <h1 className="trn-name">
               {renaming != null ? (
@@ -502,9 +506,10 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                       {shownName}
                     </button>
                   ) : (
-                    plan.name
+                    "Nutrition"
                   )}
-                  <PhaseSwitcher name="" currentId={plan.id} items={plan.phases} hrefFor={(id) => `/admin/redesign/nutrition?client=${clientId}&phase=${id}`} label="Switch phase" newLabel="New phase" onNew={() => setDlg({ kind: "newPhase" })} />
+                  {/* Real phases only: with none, nothing is live (22 Oct, Alex: the client-level targets showed as a live phase). */}
+                  <PhaseSwitcher name="" currentId={plan.id} items={plan.phases.filter((p) => p.id > 0)} hrefFor={(id) => `/admin/redesign/nutrition?client=${clientId}&phase=${id}`} label="Switch phase" newLabel="New phase" onNew={() => setDlg({ kind: "newPhase" })} />
                 </>
               )}
             </h1>
@@ -589,7 +594,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => message({ label: plan.name, link: { kind: "nutrition" } })}>
+              <DropdownMenuItem onSelect={() => message({ label: phaseId != null ? plan.name : "Nutrition", link: { kind: "nutrition" } })}>
                 <ChatIcon /> Message about nutrition
               </DropdownMenuItem>
               {phaseId != null && (

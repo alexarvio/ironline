@@ -31,9 +31,12 @@
 .rq-track { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
 .rq-lanes { position: relative; padding: 6px 0; }
 .rq-cell { border-left: 1px solid #f1f3f6; min-height: 38px; }
-.rq-empty { display: flex; align-items: center; margin: 4px 0; padding: 0 12px; border: 1px dashed #c3c9d2; border-radius: 10px; background: none; font: inherit; font-size: 12.5px; color: #8b93a1; cursor: pointer; z-index: 1; }
+/* An empty lane is its words alone, no box (22 Oct, Alex): None yet + Add where the box's words were. The button still
+   spans the weeks the box did, so a week's hover + never draws behind the words. */
+.rq-empty { display: flex; align-items: center; margin: 4px 0; padding: 0 12px; border: 0; border-radius: 0; background: none; outline: none; font: inherit; font-size: 12.5px; font-weight: 500; color: #8b93a1; cursor: pointer; z-index: 1; }
 .rq-empty b { color: #141a24; font-weight: 600; margin-left: 4px; }
-.rq-empty:hover { border-color: #8b93a1; color: #141a24; }
+.rq-empty:hover { color: #141a24; }
+.rq-empty:focus-visible b { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
 .rq-bar { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; margin: 3px 1px; padding: 0 12px 0 14px; border: 1px solid; border-radius: 10px; font: inherit; text-align: left; cursor: grab; user-select: none; overflow: hidden; min-width: 0; }
 .rq-bar.fixed { cursor: pointer; }
 .rq-bar.dragging { opacity: 0.85; box-shadow: 0 8px 24px -12px rgba(16, 24, 40, 0.35); }

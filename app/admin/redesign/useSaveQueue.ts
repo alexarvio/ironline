@@ -46,6 +46,14 @@ export function useSaveQueue(afterwards: () => void) {
   return { save, saving, failed, retry: () => void run() };
 }
 
+/** Whether the status line has anything to say yet (22 Oct, Alex: "All changes saved" on a tab nobody had touched):
+ *  false until the first save starts on this screen, then true for good, so Saving… turns into ✓ All changes saved. */
+export function useSaidSaved(busy: boolean): boolean {
+  const [seen, setSeen] = useState(false);
+  if (busy && !seen) setSeen(true);
+  return seen;
+}
+
 /** Leaving while something is still on its way: the browser asks first. */
 export function useHoldWhile(busy: boolean) {
   useEffect(() => {

@@ -368,7 +368,7 @@ function needFrom(ctx: Ctx, c: ClientData, a: HomeAction): NeedRow | null {
   }
   if (/^reply-\d+$/.test(a.id)) {
     const n = Number(/^(\d+) messages/.exec(a.title)?.[1]) || 1;
-    // One with no words: what it was ("A picture", "A voice message").
+    // One with no words: what it was ("A photo", "A voice message").
     const what = n > 1 ? `${n} messages` : a.quote ? "1 message" : cap(a.detail.replace(/^Sent /, "").replace(/\.$/, ""));
     return { ...base, kind: "reply", what, words: a.quote ? a.detail : null, since: iso(a.at), action: "Reply", href: open };
   }

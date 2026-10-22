@@ -7514,9 +7514,9 @@ export function markAllNotificationsRead(clientId: number) {
 // Chat attachments: same "write to DATA_DIR/uploads, store the public path"
 // pattern as savePhotoUpload — one file per message, kept under its own
 // client-scoped folder so nothing collides across clients.
-/** "a picture", "a voice message": what a message with no words is. */
+/** "a photo", "a voice message": what a message with no words is (22 Oct: "photo", as the chat lists name it). */
 export function mediaWords(type: ChatMediaType | null): string {
-  return type === "video" ? "a video" : type === "audio" ? "a voice message" : type === "file" ? "a file" : "a picture";
+  return type === "video" ? "a video" : type === "audio" ? "a voice message" : type === "file" ? "a file" : "a photo";
 }
 
 export function saveChatMedia(clientId: number, buffer: Buffer, mimeType: string, originalName?: string | null): ChatMedia {

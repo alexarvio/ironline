@@ -272,6 +272,18 @@ body:has(.rd-addpop) .rd-picker-menu [data-slot="dropdown-menu-item"].on { backg
 .dlh-line:focus { border-bottom-color: #141a24; }
 .dlh-line::placeholder { color: #98a2b3; }
 textarea.dlh-line { resize: none; }
+/* A label over its line; two side by side; a figure with its unit after it; a day typed or picked (DatePick) on a
+   clean line as the rest (22 Oct: New programme). */
+.dlh-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dlh-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+.dlh-suffixed { display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid #e1e5eb; }
+.dlh-suffixed:focus-within { border-bottom-color: #141a24; }
+.dlh-suffixed .dlh-line { flex: 1; min-width: 0; border-bottom: 0; font-variant-numeric: tabular-nums; }
+.dlh-suffixed small { flex: none; font-size: 13px; font-weight: 500; color: #8b93a1; }
+.dlh .rd-picker.dlh-daypick { height: 40px; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; background: none; box-shadow: none; gap: 8px; transition: border-color 0.15s; }
+.dlh .rd-picker.dlh-daypick:focus-within { border-bottom-color: #141a24; }
+.dlh.dlh .rd-picker.dlh-daypick .rdt { font-size: 15px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; }
+.dlh.dlh .rd-picker.dlh-daypick .rdt.bad { color: #b42318; }
 .dlh-delete:disabled { background: none; color: rgba(180, 35, 24, 0.35); cursor: default; }
 
 /* ---- Rogue sessions: a label row, then slim rows of their own */

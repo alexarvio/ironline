@@ -26,6 +26,7 @@ import { phaseDays, phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import { SortableItem, SortableList } from "../Sortable";
 import { Sep, SepJoin } from "../Sep";
 import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
+import { useSaidSaved } from "../useSaveQueue";
 import { AddCells, EmptyLane, gridFor, LaneRow, packLanes, PhaseBar, rgbOf, Timeline, weekSpan, weeksBetween } from "./timelineParts";
 
 // The calmer Plan tab, as a draft on real data, in the Training draft's
@@ -141,6 +142,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   const [planSaving, start] = useTransition();
   // The Events card's saves too, for the one status beside the title (21 Oct, Alex).
   const [eventsSaving, setEventsSaving] = useState(false);
+  const saidSaved = useSaidSaved(planSaving || eventsSaving);
   // Every save goes to the server, then the page re-reads; what is on screen
   // is a working copy that follows the server's answer.
   const act = (fn: () => Promise<unknown>, said?: string) =>
@@ -292,9 +294,12 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           <h1 className="rd-title">
             {firstName}&rsquo;s plan
             {/* Every change saves as it is made; the status beside the title (21 Oct, Alex), as on Training, Lifestyle and Nutrition. */}
-            <span className={`pln-allsaved${planSaving || eventsSaving ? " saving" : ""}`} role="status">
-              {planSaving || eventsSaving ? "Saving…" : "All changes saved"}
-            </span>
+            {/* Nothing until something is saved (22 Oct, Alex). */}
+            {saidSaved && (
+              <span className={`pln-allsaved${planSaving || eventsSaving ? " saving" : ""}`} role="status">
+                {planSaving || eventsSaving ? "Saving…" : "All changes saved"}
+              </span>
+            )}
           </h1>
         </div>
       </header>
@@ -305,7 +310,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
         <div className="rn-card-head">
           <h2>Phases</h2>
           <div className="rq-ev-tools">
-            <div className="rq-pan" role="group" aria-label="Move in time">
+            <div className="rq-pan" role="group" aria-label="Move the phases in time">
               <button type="button" className="rd-btn ghost" onClick={() => setBack((b) => b + 4)} aria-label="Earlier" title="Earlier">
                 <ChevronLeftIcon />
               </button>

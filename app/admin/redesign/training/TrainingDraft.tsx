@@ -34,6 +34,7 @@ import ExerciseProgressDialog from "./ExerciseProgressDialog";
 import DatePick from "../DatePick";
 import { dayMonth } from "../../../lib/dayMonth";
 import { Sep, SepJoin } from "../Sep";
+import { useSaidSaved } from "../useSaveQueue";
 
 // The calmer builder, as a draft on real data. Nothing here saves: every
 // action ends in a toast. What it settles, against the current builder:
@@ -564,6 +565,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   }, [landing, router]);
   const weekFailed = Object.values(failed).some(Boolean);
   const weekSaving = anyPending || Object.values(saving).some(Boolean);
+  const saidSaved = useSaidSaved(weekSaving);
   const retry = () => {
     setFailed({});
     for (const [key, p] of Object.entries(pending)) if (pendingCount(p) > 0) flush(Number(key));
@@ -809,9 +811,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 </button>
               </span>
             ) : (
-              <span className={`trn-allsaved${weekSaving ? " saving" : ""}`} role="status">
-                {weekSaving ? "Saving…" : "All changes saved"}
-              </span>
+              // Nothing until something is saved (22 Oct, Alex).
+              saidSaved && (
+                <span className={`trn-allsaved${weekSaving ? " saving" : ""}`} role="status">
+                  {weekSaving ? "Saving…" : "All changes saved"}
+                </span>
+              )
             )}
           </div>
           {/* The facts parted by a short upright line, not a dot (21 Oct, Alex); the dates last. */}
@@ -3064,35 +3069,38 @@ export function NewProgramDialog({ onCreate }: { onCreate: (v: { name: string; w
   const weeks = Math.round(Number(weeksText));
   const weeksOk = Number.isFinite(weeks) && weeks >= 1 && weeks <= 52;
   const [start, setStart] = useState("");
+  // The .dlh card (22 Oct, Alex: the old pop-up was left behind Training's empty screen): the title, clean lines, no explanation.
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>New programme</DialogTitle>
-        <DialogDescription>A draft: only you see it until it is scheduled. It lands on the Plan tab&rsquo;s training lane.</DialogDescription>
-      </DialogHeader>
-      <label className="rd-field">
-        <span>Name</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Strength Block" maxLength={60} autoFocus />
+    <DialogContent className="dlh" aria-describedby={undefined}>
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">New programme</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <label className="dlh-field">
+        <span className="dlh-label">Name</span>
+        <input className="dlh-line" value={name} onChange={(e) => setName(e.target.value)} placeholder="Strength Block" maxLength={60} autoFocus />
       </label>
-      <div className="rd-field-row">
-        <label className="rd-field rd-field-weeks">
-          <span>Length</span>
-          <span className="rd-weeks-field">
-            <input type="number" inputMode="numeric" min={1} max={52} step={1} value={weeksText} onChange={(e) => setWeeksText(e.target.value)} aria-label="Length in weeks" />
+      <div className="dlh-pair">
+        <label className="dlh-field">
+          <span className="dlh-label">Length</span>
+          <span className="dlh-suffixed">
+            <input className="dlh-line" type="text" inputMode="numeric" value={weeksText} onChange={(e) => setWeeksText(e.target.value.replace(/\D/g, "").slice(0, 2))} aria-label="Length in weeks" />
             <small>{weeksOk && weeks === 1 ? "week" : "weeks"}</small>
           </span>
         </label>
-        <label className="rd-field">
-          <span>Starts</span>
-          <DatePick value={start} onChange={setStart} label="Starts" placeholder="Pick the start" />
-        </label>
+        <div className="dlh-field">
+          <span className="dlh-label">Starts</span>
+          <DatePick value={start} onChange={setStart} label="Starts" className="dlh-daypick" />
+        </div>
       </div>
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!weeksOk} onClick={() => onCreate({ name: name.trim(), weeks, start })}>
-          Create draft
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel">Cancel</DialogClose>
+        <button type="button" className="dlh-go" disabled={!weeksOk} onClick={() => onCreate({ name: name.trim(), weeks, start })}>
+          Create
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }

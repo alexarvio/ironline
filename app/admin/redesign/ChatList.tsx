@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon } from "../../components/icons";
+import ChatLastLine from "../../components/ChatLastLine";
 import { dayMonth } from "../../lib/dayMonth";
 import type { DockChat } from "./loaders";
 
@@ -66,7 +67,9 @@ export default function ChatList({ chats, title, here = null, isUnread, onPick, 
                     <span className="rd-dock-when">{c.last ? chatWhen(c.last.at, now) : ""}</span>
                   </span>
                   <span className="rd-dock-bottom">
-                    <small>{c.last ? `${c.last.mine ? "You: " : ""}${c.last.text.split("\n")[0]}` : "No messages yet"}</small>
+                    <small>
+                      <ChatLastLine last={c.last} />
+                    </small>
                     {unread && <i className="rd-dock-dot" role="img" aria-label="Unread" />}
                   </span>
                 </span>

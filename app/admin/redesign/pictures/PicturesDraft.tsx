@@ -21,7 +21,7 @@ import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
-import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
+import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
 
@@ -104,6 +104,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
   const [, startRefresh] = useTransition();
   const reRead = () => startRefresh(() => router.refresh());
   const q = useSaveQueue(reRead);
+  const saidSaved = useSaidSaved(q.saving);
   const [dlg, setDlg] = useState<Dlg>(null);
   // A photo opened from Compare goes back to Compare when it closes.
   const close = () => setDlg((d) => (d?.kind === "photo" && d.back ? { kind: "compare", periods: d.back } : null));
@@ -224,9 +225,12 @@ function Pictures({ clientId, firstName, plan }: Props) {
                 </button>
               </span>
             ) : (
-              <span className={`trn-allsaved${q.saving ? " saving" : ""}`} role="status">
-                {q.saving ? "Saving…" : "All changes saved"}
-              </span>
+              // Nothing until something is saved (22 Oct, Alex: it said saved on a client nobody had touched).
+              saidSaved && (
+                <span className={`trn-allsaved${q.saving ? " saving" : ""}`} role="status">
+                  {q.saving ? "Saving…" : "All changes saved"}
+                </span>
+              )
             )}
           </div>
         </div>

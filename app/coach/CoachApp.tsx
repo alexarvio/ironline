@@ -10,6 +10,7 @@ import type { PhoneVideo } from "../lib/coachPhone";
 import ChatThread from "./ChatThread";
 import PhoneReview from "./PhoneReview";
 import { Avatar, Facts, Icon, Sheet } from "./parts";
+import ChatLastLine from "../components/ChatLastLine";
 import { PushSwitch } from "../client/PushToggle";
 import { NativePush } from "../client/NativePush";
 
@@ -164,10 +165,6 @@ function Lists({ tab, inbox, coach, push, onOpenChat, onOpenVideo }: { tab: "cha
             <ul className="cph-rows">
               {chats.map((c) => {
                 const n = c.unreadCount ?? (c.unread ? 1 : 0);
-                const media = c.last?.media ?? null;
-                // A file with no words says what it is; with words, the words.
-                const bare = !!media && /^an? (picture|video|voice message|file)$/.test(c.last?.text ?? "");
-                const words = !c.last ? "No messages yet" : `${c.last.mine ? "You: " : ""}${bare && media ? MEDIA_WORDS[media] : c.last.text.split("\n")[0]}`;
                 return (
                   <li key={c.id}>
                     <button type="button" className={`cph-chat${n > 0 ? " unread" : ""}`} onClick={() => onOpenChat(c.id)}>
@@ -179,8 +176,7 @@ function Lists({ tab, inbox, coach, push, onOpenChat, onOpenVideo }: { tab: "cha
                         </span>
                         <span className="cph-chat-bottom">
                           <span className="cph-chat-line">
-                            {media && <Icon name={MEDIA_ICON[media]} small />}
-                            {words}
+                            <ChatLastLine last={c.last} />
                           </span>
                           {n > 0 && <i className="cph-count" aria-label={`${n} unread`}>{n}</i>}
                         </span>
@@ -236,8 +232,6 @@ function Lists({ tab, inbox, coach, push, onOpenChat, onOpenVideo }: { tab: "cha
   );
 }
 
-const MEDIA_WORDS = { image: "Photo", video: "Video", audio: "Voice message", file: "File" } as const;
-const MEDIA_ICON = { image: "photo", video: "video", audio: "mic", file: "file" } as const;
 
 /** How long it has waited: minutes, hours, then days (rust past a day, as the Feed's waits). */
 function waitFor(since: number, now: number): { text: string; late: boolean } {

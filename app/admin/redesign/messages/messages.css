@@ -295,6 +295,8 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
 .rd-dock-when { flex: none; font-size: 12px; font-weight: 500; color: #8b93a1; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rd-dock-row.unread .rd-dock-when { color: #141a24; font-weight: 600; }
 .rd-dock-row.unread .rd-dock-bottom small { color: #3a4250; }
+/* A photo, video, voice message or file: its icon before the words (ChatLastLine, 22 Oct). */
+.rd-dock-bottom small .chat-last-ico { display: inline-block; margin-right: 4px; vertical-align: -2.5px; }
 .rd-dock-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; background: #b3471d; }
 .rd-dock-empty { margin: 0; padding: 12px 10px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
+import { MEDIA_PATHS } from "../components/ChatLastLine";
 
 // The small pieces every screen of the coach's phone shares: the icons
 // (stroke 1.6, round, no fills; design rules 5), a face, facts parted by a
@@ -8,12 +9,12 @@ import { Fragment, useEffect, useRef, type ReactNode } from "react";
 
 const PATHS = {
   chat: "M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.1A8 8 0 1 1 20 11.5z",
-  video: "M3.5 7.5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2zM15.5 10.5l5-3v9l-5-3",
+  video: MEDIA_PATHS.video,
   search: "M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM20 20l-4.8-4.8",
-  photo: "M4 7a2.5 2.5 0 0 1 2.5-2.5h11A2.5 2.5 0 0 1 20 7v10a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17zM4.5 16l4.5-4.5 3.5 3 3-2.5 4 3.5M9 10.2a1.3 1.3 0 1 0 0-.01",
-  mic: "M9 6a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0zM5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6",
+  photo: MEDIA_PATHS.image,
+  mic: MEDIA_PATHS.audio,
   micoff: "M9 6a3 3 0 0 1 6 0v5a3 3 0 0 1-.4 1.5M5.5 11a6.5 6.5 0 0 0 10.6 5M18.5 11a6.5 6.5 0 0 1-.4 2.2M12 17.5V21M9 21h6M4 4l16 16",
-  file: "M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8zM14 3.5V8h4.5",
+  file: MEDIA_PATHS.file,
   play: "M8 5.5v13l10.5-6.5z",
   pause: "M8.5 5.5v13M15.5 5.5v13",
   back: "M15 5l-7 7 7 7",

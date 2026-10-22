@@ -26,6 +26,7 @@ import { groupColour } from "../../../lib/categoryColors";
 import { defaultSummary, type MetricSummary } from "../../../lib/metricSummary";
 import { Sep, SepJoin } from "../Sep";
 import { Fold } from "../Fold";
+import { useSaidSaved } from "../useSaveQueue";
 
 // The Lifestyle tab, built as Training is (21 Oct, Alex): the phase's name
 // to click and type, its state tag as the menu of what can be done with it,
@@ -166,6 +167,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const running = useRef(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  const saidSaved = useSaidSaved(saving);
   const run = async () => {
     if (running.current) return;
     running.current = true;
@@ -398,9 +400,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       )}
       {/* ---- Header (21 Oct, as Training's): the name to click and type, the ▾ to switch phase, the state tag as its menu;
           the weeks and dates under it; on the right the goals and note pills and the menu. */}
-      <header className="trn-head">
+      {/* No fact line, no room kept for one; no phase, the track's name is the title and the eyebrow goes (22 Oct, Alex). */}
+      <header className={`trn-head${plan.startDate ? "" : " bare"}`}>
         <div className="trn-head-main">
-          <span className="trn-eyebrow">Lifestyle</span>
+          {phaseId != null && <span className="trn-eyebrow">Lifestyle</span>}
           <div className="trn-name-row">
             <h1 className="trn-name">
               {renaming != null ? (
@@ -425,9 +428,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                       {shownName}
                     </button>
                   ) : (
-                    plan.name
+                    "Lifestyle"
                   )}
-                  <PhaseSwitcher name="" currentId={plan.id} items={plan.phases} hrefFor={(id) => `/admin/redesign/measurements?client=${clientId}&phase=${id}`} label="Switch phase" newLabel="New phase" onNew={() => setDlg({ kind: "newPhase" })} />
+                  {/* Real phases only: with none, nothing is live (22 Oct, Alex: the client-level sheet showed as a live phase). */}
+                  <PhaseSwitcher name="" currentId={plan.id} items={plan.phases.filter((p) => p.id > 0)} hrefFor={(id) => `/admin/redesign/measurements?client=${clientId}&phase=${id}`} label="Switch phase" newLabel="New phase" onNew={() => setDlg({ kind: "newPhase" })} />
                 </>
               )}
             </h1>
@@ -471,9 +475,12 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                   </button>
                 </span>
               ) : (
-                <span className={`trn-allsaved${saving ? " saving" : ""}`} role="status">
-                  {saving ? "Saving…" : "All changes saved"}
-                </span>
+                // Nothing until something is saved (22 Oct, Alex).
+                saidSaved && (
+                  <span className={`trn-allsaved${saving ? " saving" : ""}`} role="status">
+                    {saving ? "Saving…" : "All changes saved"}
+                  </span>
+                )
               ))}
           </div>
           {plan.startDate && (

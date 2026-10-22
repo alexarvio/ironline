@@ -4,45 +4,40 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Dialog } from "../../components/ui/dialog";
-import { PlusIcon } from "../../components/icons";
 import { addClientPhaseAction } from "../../lib/actions";
 import type { PhaseTrack } from "../../lib/db";
 import { PhaseDialog, phaseForm, type DraftPlan } from "./plan/PlanDraft";
 
-// Training, Nutrition or Measurements the first time, before the client has
-// a phase on that track and nothing is set up there: one button, "Create a
-// training phase" (or nutrition, or lifestyle), which opens the Plan's own
-// phase dialog, the calendar and all. Once the phase is made, the tab shows
-// its usual screen (26 Sep).
+// Training, Nutrition or Lifestyle the first time, before the client has a phase on that track and nothing is set up
+// there. In the admin's voice (22 Oct, Alex: the old centred card and navy button were left over): the track's name as
+// the title, no eyebrow and no room for a fact line, then one hairline card, `No phase yet` and New phase, as
+// Lifestyle's Tracked metrics says it. New phase opens the Plan's own phase dialog; once the phase is made, the tab
+// shows its usual screen.
 
-const WORD: Record<PhaseTrack, string> = { training: "training", nutrition: "nutrition", lifestyle: "lifestyle" };
-// The tab's own header, as its usual screen has it.
-const HEAD: Record<PhaseTrack, { eyebrow: string; title: string }> = {
-  training: { eyebrow: "Training", title: "Programme" },
-  nutrition: { eyebrow: "Nutrition", title: "Targets" },
-  lifestyle: { eyebrow: "Lifestyle", title: "Check-ins" },
-};
+const TITLE: Record<PhaseTrack, string> = { training: "Training", nutrition: "Nutrition", lifestyle: "Lifestyle" };
 
 export default function NoPhase({ clientId, firstName, track, plan }: { clientId: number; firstName: string; track: PhaseTrack; plan: DraftPlan }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   return (
-    <div className="rd">
-      <header className="rd-head">
-        <div className="rd-head-main">
-          <span className="rd-eyebrow">{HEAD[track].eyebrow}</span>
-          <h1 className="rd-title">{HEAD[track].title}</h1>
+    <div className="rd trn rls">
+      <header className="trn-head bare">
+        <div className="trn-head-main">
+          <div className="trn-name-row">
+            <h1 className="trn-name">{TITLE[track]}</h1>
+          </div>
         </div>
       </header>
-      {/* One card, everything centred in it: what is missing, and the button. */}
-      <section className="rd-session open rd-nophase">
-        <b className="rd-nophase-title">
-          {firstName} has no {WORD[track]} phase yet
-        </b>
-        <button type="button" className="rd-btn primary rd-nophase-btn" onClick={() => setOpen(true)} disabled={pending}>
-          <PlusIcon /> Create a {WORD[track]} phase
-        </button>
+      <section className="rls-section">
+        <div className="rls-card">
+          <div className="rls-empty">
+            <span>No phase yet</span>
+            <button type="button" className="trn-btn primary" onClick={() => setOpen(true)} disabled={pending}>
+              New phase
+            </button>
+          </div>
+        </div>
       </section>
       <Dialog open={open} onOpenChange={setOpen}>
         {open && (

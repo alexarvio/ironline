@@ -68,7 +68,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 ## 10. The coach's phone (`/coach`, 21 Oct, Alex: built from the mockup)
 - Two things only: every client's chat, and the videos clients send from an exercise. Planning and editing stay on the laptop. Classes `cph-` (app/coach/coach.css).
 - This file's language: the pushed screens' page, Archivo 500/600, ink. Chats and Videos on a floating white tab bar, the tab on screen in ink, an ink count on each.
-- Chats: newest first, a client a row, space between rows; unread is the name and time at 600, the line in body grey, and an ink count.
+- Chats: newest first, a client a row, space between rows; unread is the name and time at 600, the line in body grey, and an ink count. A photo or video sent last shows its icon then `Photo` or `Video` (with words, the icon then the words; a voice message and a file the same), as the laptop's list (`ChatLastLine`, 22 Oct, Alex).
 - A chat: theirs white with a hairline on the left, the coach's a neutral tint on the right. Hold a message for its sheet: the reactions, then Reply, Copy, Edit, Pin, Delete (Delete asks). + sends a photo, video or file, the mic a voice message, the ink arrow the words.
 - Videos: Waiting (a wait past a day in rust), then Replied, greyed. A video opens on the recorder, as the laptop's review does: the tools on the dark stage, one ink Record review, a few words on the underline instead.
 - Notifications: a switch in the account sheet (the coach's face), white while off and ink while on. A push is the client's name over their first line (or `Video of Squat`); a tap opens that chat or video. None for a chat open on the phone.

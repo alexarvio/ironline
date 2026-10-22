@@ -1,6 +1,8 @@
 import { getData } from "./db";
 import { sendPushInBackground } from "./push";
 import { coachIdOfClient } from "./tenancy";
+// The kind's name, as the chat lists say it (one source, app/components/ChatLastLine.tsx).
+import { MEDIA_NAME, type ChatMediaKind } from "../components/ChatLastLine";
 
 // The coach's phone buzzes (21 Oct): for what a client writes in the chat
 // and for a photo or video of an exercise, each opening its place on /coach.
@@ -23,15 +25,14 @@ export function noteCoachReading(coachId: number, clientId: number) {
 
 const readingNow = (coachId: number, clientId: number) => Date.now() - (reading.get(key(coachId, clientId)) ?? 0) < READING_MS;
 
-const MEDIA_WORDS = { image: "Photo", video: "Video", audio: "Voice message", file: "File" } as const;
 
 /** A client wrote in the chat: their name, the first line (or what they sent), and a tap opens the chat. */
-export function pushCoachMessage(clientId: number, message: { text: string; media?: keyof typeof MEDIA_WORDS | null }) {
+export function pushCoachMessage(clientId: number, message: { text: string; media?: ChatMediaKind | null }) {
   const coachId = coachIdOfClient(clientId);
   if (coachId == null || readingNow(coachId, clientId)) return;
   const name = getData().clients.find((c) => c.id === clientId)?.name?.trim() || "A client";
   const line = message.text.trim().split("\n")[0].slice(0, 160);
-  const body = line || (message.media ? MEDIA_WORDS[message.media] : "");
+  const body = line || (message.media ? MEDIA_NAME[message.media] : "");
   if (!body) return;
   // One notification a chat on the lock screen, the newest words in it.
   sendPushInBackground(coachId, { title: name, body, url: `/coach?c=${clientId}`, tag: `chat:${clientId}` });

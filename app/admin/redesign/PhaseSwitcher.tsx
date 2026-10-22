@@ -42,10 +42,12 @@ export default function PhaseSwitcher({
   newLabel: string;
   onNew: () => void;
 }) {
-  const current = stateOf(items.find((p) => p.id === currentId)?.state ?? "live");
+  const count = (s: State) => items.filter((p) => stateOf(p.state) === s).length;
+  // The state of the phase on screen; with none on screen (no phase yet), the first state that has any (22 Oct, Alex:
+  // LIVE stood picked on a track with no phase at all).
+  const current = stateOf(items.find((p) => p.id === currentId)?.state ?? STATES.find((s) => count(s.key) > 0)?.key ?? "live");
   const [picked, setPicked] = useState<State | null>(null);
   const shown = picked ?? current;
-  const count = (s: State) => items.filter((p) => stateOf(p.state) === s).length;
   const list = items.filter((p) => stateOf(p.state) === shown);
   return (
     <DropdownMenu modal={false} onOpenChange={(open) => open && setPicked(null)}>
@@ -54,14 +56,17 @@ export default function PhaseSwitcher({
         <ChevronDownIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="pb-menu rd-switch-menu">
-        <ToggleGroup type="single" value={shown} onValueChange={(v) => v && setPicked(v as State)} aria-label="Which to list" className="rd-switch-states">
-          {STATES.map((s) => (
-            <ToggleGroupItem key={s.key} value={s.key} disabled={count(s.key) === 0}>
-              {s.label}
-              {count(s.key) > 0 && <span className="rd-switch-count">{count(s.key)}</span>}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        {/* No phases at all: nothing to list, only New phase. */}
+        {items.length > 0 && (
+          <ToggleGroup type="single" value={shown} onValueChange={(v) => v && setPicked(v as State)} aria-label="Which to list" className="rd-switch-states">
+            {STATES.map((s) => (
+              <ToggleGroupItem key={s.key} value={s.key} disabled={count(s.key) === 0}>
+                {s.label}
+                {count(s.key) > 0 && <span className="rd-switch-count">{count(s.key)}</span>}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        )}
         {list.map((p) => (
           <DropdownMenuItem key={p.id} asChild>
             <Link href={hrefFor(p.id)} scroll={false} className={p.id === currentId ? "on" : ""}>
@@ -72,7 +77,7 @@ export default function PhaseSwitcher({
             </Link>
           </DropdownMenuItem>
         ))}
-        <DropdownMenuSeparator />
+        {items.length > 0 && <DropdownMenuSeparator />}
         <DropdownMenuItem onSelect={onNew}>
           <PlusIcon /> {newLabel}
         </DropdownMenuItem>
