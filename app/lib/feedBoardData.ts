@@ -12,6 +12,7 @@ import {
   getProgramCurrentWeekIndex,
   getWeek,
   isSessionComplete,
+  listClientPhases,
   listMeetings,
   localDateStr,
   mediaWords,
@@ -552,7 +553,10 @@ function pillsOf(ctx: Ctx, clientId: number, lastMs: number | null): ClientPill[
 
   // No phase: nothing live on any track (a Lifestyle phase alone is a phase running, so never No phase beside Quiet).
   const noneLive = !live.lifestyle && !live.training && !live.nutrition;
-  if (noneLive) coach.push({ text: "No phase", side: "coach", href: tab("plan", clientId) });
+  // New until they have a phase or programme of any state (22 Oct, Alex), as the rail tags them; then No phase.
+  const isNew = listClientPhases(clientId).length === 0 && !ctx.data.training_programs.some((p) => p.client_id === clientId);
+  if (isNew) coach.push({ text: "New", side: "coach", href: tab("plan", clientId) });
+  else if (noneLive) coach.push({ text: "No phase", side: "coach", href: tab("plan", clientId) });
   // A running phase ending within 14 days with nothing after it on its track, soonest first: their Plan, to plan the next.
   const phases = overviewPhases(ctx, clientId);
   for (const p of phases.filter((x) => endingSoon(x, phases, ctx.today)).sort((a, b) => (a.end < b.end ? -1 : a.end > b.end ? 1 : 0))) {

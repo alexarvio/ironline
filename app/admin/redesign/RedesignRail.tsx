@@ -8,7 +8,7 @@ import { AccountIcon, BusinessIcon, CalendarIcon, ChevronDownIcon, DumbbellIcon,
 import { SETTINGS, type SettingsKey } from "./settingsNav";
 import { logoutAction } from "../../lib/auth-actions";
 import NewClientDialog from "../NewClientDialog";
-import type { RailData } from "./loaders";
+import type { RailClient, RailData } from "./loaders";
 import { Sep } from "./Sep";
 import NativeCoachRedirect from "../../coach/NativeCoachRedirect";
 
@@ -52,9 +52,11 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
   const touring = useSearchParams().get("tour") === "1";
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "needs">("all");
-  const needsYou = rail.clients.filter((c) => c.attention).length;
+  // Needs you: something owed, or a new client still to set up (22 Oct, Alex).
+  const needsMe = (c: RailClient) => c.needs.length > 0 || c.isNew;
+  const needsYou = rail.clients.filter(needsMe).length;
   const q = query.trim().toLowerCase();
-  const shown = rail.clients.filter((c) => (filter === "all" || c.attention) && (!q || c.name.toLowerCase().includes(q)));
+  const shown = rail.clients.filter((c) => (filter === "all" || needsMe(c)) && (!q || c.name.toLowerCase().includes(q)));
   const [adding, setAdding] = useState(false);
   // The client just clicked is marked at once, before the page arrives (a
   // switch is a round trip to the server), then the real one takes over.
@@ -137,8 +139,19 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
                     )}
                   </span>
                   <span className="rr-name">{c.name}</span>
-                  {/* One dot, the reason in its title: "who needs me", not "how many things". */}
-                  {c.attention && <i className="rr-dot" title={c.attention} aria-label={c.attention} />}
+                  {/* What needs you, said (22 Oct, Alex: a dot didn't say what): New until they have a phase, then the first
+                      thing owed in the Feed's word, +N for the rest; every reason in its title. */}
+                  {c.isNew && (
+                    <span className="rr-tag" title="No phase yet">
+                      New
+                    </span>
+                  )}
+                  {c.needs.length > 0 && (
+                    <span className="rr-tag" title={c.needs.map((n) => n.why).join("\n")}>
+                      {c.needs[0].word}
+                      {c.needs.length > 1 && <small>+{c.needs.length - 1}</small>}
+                    </span>
+                  )}
                 </Link>
               );
             })
