@@ -339,8 +339,16 @@ const lastDays = (today: string) => Array.from({ length: CONSISTENCY_DAYS }, (_,
 function tracksOf(ctx: Ctx): HomeBoard["tracks"] {
   return TRACK_ORDER.map((track) => {
     const ph = ctx.phases[track];
-    const phase = ph ? { name: ph.name, weekNow: phaseWeekIndex(ph.start_week, ph.end_week, ctx.today), weeks: phaseWeeks(ph.start_week, ph.end_week) } : null;
-    const figure = safe(`figure ${track}`, () => (track === "lifestyle" ? lifestyleFigure(ctx) : track === "training" ? trainingFigure(ctx) : nutritionFigure(ctx)), null);
+    // A programme running with no training phase behind it (made before phases) is the phase: its name and weeks, never
+    // "No phase" over its sessions (22 Oct).
+    const prog = !ph && track === "training" ? safe("running programme", () => getDeployedProgram(ctx.clientId), null) : null;
+    const phase = ph
+      ? { name: ph.name, weekNow: phaseWeekIndex(ph.start_week, ph.end_week, ctx.today), weeks: phaseWeeks(ph.start_week, ph.end_week) }
+      : prog
+        ? { name: prog.name?.trim() || "Programme", weekNow: getProgramCurrentWeekIndex(prog), weeks: prog.total_weeks }
+        : null;
+    // No phase, no figure (22 Oct, Alex: "No phase" over "0 of 4 days checked in" read as a phase that wasn't there).
+    const figure = phase ? safe(`figure ${track}`, () => (track === "lifestyle" ? lifestyleFigure(ctx) : track === "training" ? trainingFigure(ctx) : nutritionFigure(ctx)), null) : null;
     const note = track === "nutrition" ? safe("food note", () => foodNote(ctx), null) : null;
     return { track, phase, figure, note };
   });

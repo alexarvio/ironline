@@ -296,7 +296,8 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   const hasPhase = (track: string) => plan.phases.some((p) => p.track === track);
   const noMacros = (m: { protein: number | null; carbs: number | null; fats: number | null }) => m.protein == null && m.carbs == null && m.fats == null;
   const nutritionBlank = !hasPhase("nutrition") && noMacros(nutrition.training) && noMacros(nutrition.rest) && nutrition.waterL == null && !nutrition.note.trim() && nutrition.supplements.length === 0 && nutrition.logged.days.length === 0;
-  const measurementsBlank = !hasPhase("lifestyle") && measurements.metrics.length === 0 && measurements.daily.periods.length === 0 && measurements.weekly.periods.length === 0 && measurements.notes.length === 0;
+  // A metric line with no phase and nothing logged is no lifestyle set up (22 Oct, Alex: "has to be completely empty").
+  const measurementsBlank = !hasPhase("lifestyle") && measurements.daily.periods.length === 0 && measurements.weekly.periods.length === 0 && (measurements.monthly?.periods.length ?? 0) === 0 && measurements.notes.length === 0;
   return (
     <OpenChatContext.Provider value={openChat}>
     <div className="rd-frame" data-chat={chat.open ? "open" : undefined}>

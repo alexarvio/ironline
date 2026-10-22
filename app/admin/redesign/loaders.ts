@@ -56,6 +56,7 @@ import {
   listClientPhases,
   listClients,
   listLifestylePhases,
+  dropUnusedAutoWeight,
   listMetricsForPhase,
   metricsInCustomOrder,
   listExercisesByGroup,
@@ -543,6 +544,9 @@ function nameFromEmail(email: string): string {
 // ---- Measurements ---------------------------------------------------------------
 
 export function loadMeasurements(clientId: number, params: { phase?: string }): DraftMeasurements {
+  // The Weight line once added by itself, never used: gone here too, not only when the client opens their app
+  // (22 Oct, Alex: a new client's Lifestyle showed it). Only that exact untouched line; anything set up stays.
+  dropUnusedAutoWeight(clientId);
   const today = localDateStr();
   // The lifestyle phase being set up: the one asked for, else whatever is running.
   const real = listLifestylePhases(clientId);

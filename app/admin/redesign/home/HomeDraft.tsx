@@ -258,7 +258,8 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
         {[...board.tracks]
           .sort((a, b) => TRACK_ORDER.indexOf(a.track) - TRACK_ORDER.indexOf(b.track))
           .map((t) => (
-            <PhaseTile key={t.track} tile={t} onOpen={() => onOpenTab(t.phase ? TRACK_TAB[t.track] : "plan")} />
+            // Its own tab, phase or not (22 Oct, Alex): with none, that tab is where New phase is.
+            <PhaseTile key={t.track} tile={t} onOpen={() => onOpenTab(TRACK_TAB[t.track])} />
           ))}
       </section>
 
