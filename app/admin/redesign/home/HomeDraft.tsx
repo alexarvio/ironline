@@ -267,7 +267,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
       <div className="rh-duo">
         <MuscleCard muscles={board.muscles} />
         <div className="rh-stack">
-          <StrengthCard strength={board.strength} />
+          <StrengthCard strength={board.strength} hasPhase={board.tracks.some((t) => t.track === "training" && t.phase != null)} />
           <WeightCard weight={board.weight} />
         </div>
       </div>
@@ -527,7 +527,8 @@ function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
   const most = Math.max(0, ...shapes.flatMap((s) => AXES.map((g) => s.v[g] ?? 0)));
   const byVolume = measure === "volume";
   const fmt = byVolume ? volumeIn(most) : setsOf;
-  // No data in what is picked: None yet. Nothing picked: the hexagon alone.
+  // No data in what is picked, or nothing picked: the hexagon alone, its rings, spokes and names (22 Oct, Alex: the shape
+  // even when empty, not None yet).
   const empty = windows.length > 0 && shapes.every((s) => AXES.every((g) => !(s.v[g] > 0)));
   // Said in full for a screen reader: the measure, and every shape on the chart.
   const each = (v: PerGroup) => AXES.map((g) => `${g} ${fmt(v[g] ?? 0)}`).join(", ");
@@ -563,22 +564,18 @@ function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
           );
         })}
       </div>
-      {empty ? (
-        <p className="rls-none">None yet</p>
-      ) : (
-        <>
-          <div className="rh-radar-wrap">
-            <Radar shapes={shapes} shown={shown} fmt={fmt} label={said} />
-          </div>
-          <div className="rh-key">
-            {key.map((k) => (
-              <span key={k.label}>
-                <i className={k.dashed ? "dash" : "line"} style={k.dashed ? undefined : { background: k.color }} aria-hidden="true" />
-                {k.label}
-              </span>
-            ))}
-          </div>
-        </>
+      <div className="rh-radar-wrap">
+        <Radar shapes={empty ? [] : shapes} shown={empty ? [] : shown} fmt={fmt} label={empty ? "Muscle balance: none yet" : said} />
+      </div>
+      {!empty && (
+        <div className="rh-key">
+          {key.map((k) => (
+            <span key={k.label}>
+              <i className={k.dashed ? "dash" : "line"} style={k.dashed ? undefined : { background: k.color }} aria-hidden="true" />
+              {k.label}
+            </span>
+          ))}
+        </div>
       )}
     </section>
   );
@@ -667,8 +664,10 @@ function Radar({ shapes, shown, fmt, label }: { shapes: Shape[]; shown: { v: Per
 // ---- Strength: all six groups, each the change over the window picked (7d | 30d | Phase, as Muscle balance; Phase
 // at first) as a thin ink bar and the %: green up, red down; a group with nothing to compare an empty bar and a grey "–",
 // every group so in a window with nothing.
-function StrengthCard({ strength }: { strength: HomeBoard["strength"] }) {
-  const [span, setSpan] = useState<StrengthSpan>("phase");
+function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"]; /** A training phase (or a programme standing for one): Phase is there to pick. */ hasPhase: boolean }) {
+  const [picked, setSpan] = useState<StrengthSpan>("phase");
+  // No training phase: no Phase to pick, 7d instead (22 Oct), as Muscle balance. A phase with nothing logged keeps it.
+  const span: StrengthSpan = picked === "phase" && !hasPhase ? "7d" : picked;
   const w = strength?.[span] ?? null;
   const rows = STRENGTH_GROUPS.map((g) => {
     const x = w?.groups.find((s) => s.group === g);
@@ -681,7 +680,7 @@ function StrengthCard({ strength }: { strength: HomeBoard["strength"] }) {
         <h2 className="rh-panel-title">Strength</h2>
         <span className="rh-panel-tools">
           <span className="rd-btn-group" role="group" aria-label="Window">
-            {STRENGTH_SPANS.map((s) => (
+            {STRENGTH_SPANS.filter((s) => s.id !== "phase" || hasPhase).map((s) => (
               <button key={s.id} type="button" className={span === s.id ? "on" : ""} aria-pressed={span === s.id} onClick={() => setSpan(s.id)}>
                 {s.label}
               </button>

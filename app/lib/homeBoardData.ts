@@ -637,7 +637,8 @@ function strengthOf(ctx: Ctx): HomeBoard["strength"] {
     phaseChanges.push({ group: ex.group, pct: ((last - first) / first) * 100 });
   }
 
-  return { "7d": rolling(7), "30d": rolling(30), phase: strengthWindow(phaseSince, phaseChanges) };
+  // No training phase, no Phase window (22 Oct: it was quietly the last 8 weeks under the word Phase), as Muscle balance.
+  return { "7d": rolling(7), "30d": rolling(30), phase: ctx.phases.training ? strengthWindow(phaseSince, phaseChanges) : null };
 }
 
 // ---- Weight ----------------------------------------------------------------------------------------
