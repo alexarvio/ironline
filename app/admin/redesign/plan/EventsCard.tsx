@@ -252,7 +252,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
 
       <div className="pln-card">
       {/* The same grid as the phases (timelineParts.tsx): months, the Mondays, and a row of lanes an event kind. */}
-      <Timeline grid={grid} minWidth={Math.round(win * 63)} weekNumbers={false}>
+      <Timeline grid={grid} minWidth={Math.round(win * 63)} weekNumbers={false} onStep={(n) => setBack((b) => Math.max(0, b - n))}>
         {groups.length === 0 && (
           <LaneRow grid={grid} lanes={1} events gridRef={lanesRef}>
             <AddCells grid={grid} lanes={1} label={(w) => `New event in the week of ${dayMonth(w)}`} onAdd={(w, ev) => addAt(w, ev)} />

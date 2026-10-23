@@ -16,7 +16,7 @@ import type { PhaseTrack } from "../../../lib/db";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { gridFor, MoveDialog, PhaseDialog, phaseForm, TrackIcon, WINDOWS, type Win } from "../plan/PlanDraft";
 import { chromeOf, EV_LANE, EventDialog, KindIcon, MoveEventDialog, rgbOf, type Category } from "../plan/EventsCard";
-import { EventMark, eventIsPast, eventPlace, LaneLabel, MonthsRow, packLanes, PhaseBar, weekSpan, weeksBetween, WeeksRow, type Grid } from "../plan/timelineParts";
+import { EventMark, eventIsPast, eventPlace, LaneLabel, MonthsRow, packLanes, PhaseBar, useSideScroll, weekSpan, weeksBetween, WeeksRow, type Grid } from "../plan/timelineParts";
 import type { PlanPhaseRow } from "../../../lib/queries";
 import DatePick from "../DatePick";
 import { Sep } from "../Sep";
@@ -83,6 +83,8 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
   // The window, the Plan's: last week for context, this week second, the NOW line in it; ‹ steps back a month at a time.
   const [back, setBack] = useState(0);
   const grid = gridFor(prefs.win, thisWeek, intoWeek, back);
+  // Sideways scrolling moves it a week a notch, as the Plan's (23 Oct, Alex).
+  const sideScroll = useSideScroll((n) => setBack((b) => Math.max(0, b - n)));
 
   // The three readings of the same data: the list, the toggle's count, the order.
   const soonRows = useMemo(
@@ -236,7 +238,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
           ) : shown.length === 0 ? (
             <p className="pov-empty">Nobody</p>
           ) : (
-            <div className="rq-tl-scroll">
+            <div className="rq-tl-scroll" ref={sideScroll}>
               <div className="rq-tl" style={{ minWidth: Math.round(grid.count * 63) }}>
                 <MonthsRow grid={grid} />
                 <div className="rq-tl-body">

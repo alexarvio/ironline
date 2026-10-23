@@ -159,7 +159,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 
 ## 10. Timeline (Plan)
 - Phase bars: the grab handles at both ends show while the pointer is on the bar, darker on the end itself.
-- ‹ › step back into the past a month at a time; Today comes back. The Phases card and the Events card each (22 Oct, Alex), beside their own window.
+- ‹ › step back into the past a month at a time; Today comes back. The Phases card and the Events card each (22 Oct, Alex), beside their own window. Sideways scrolling (a mouse's side wheel, a trackpad, Shift and the wheel) moves the window a week a notch, earlier to the left, later to the right (23 Oct, Alex), on the Plan's two cards and the Phases screen; up and down still scrolls the page (`useSideScroll`, timelineParts.tsx).
 - A phase with nothing in it yet (no sessions, no targets, no metrics asked) wears a small rust warning sign before its state pill; hovering it says what is missing (20 Oct, Alex). Not on a past phase.
 - An empty week on a lane is a way in: a + on hover, a click opens New phase on that track from that week.
 - A lane with nothing on it says `None yet + Add` from this week, the words alone, no box round them (22 Oct, Alex): the Plan's lanes, its Events, the Phases screen.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type React from "react";
 import type { PhaseTrack } from "../../../lib/db";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
@@ -123,9 +123,44 @@ export function WeeksRow({ grid, gridRef, numbers = true }: { grid: Grid; gridRe
 }
 
 /** A whole timeline: the months, then under the NOW line the weeks and the rows given (LaneRow). */
-export function Timeline({ grid, minWidth = Math.round(grid.count * 63), weeksRef, weekNumbers, children }: { grid: Grid; minWidth?: number; weeksRef?: React.Ref<HTMLDivElement>; weekNumbers?: boolean; children: React.ReactNode }) {
+/** Sideways scrolling moves the window (23 Oct, Alex: a mouse with a side wheel): a week a notch (about 48px of
+    sideways travel), earlier to the left, later to the right. Up and down still scrolls the page; while the timeline
+    itself overflows (a narrow page), it scrolls its own width first. */
+const WEEK_PX = 48;
+export function useSideScroll(onStep?: (weeks: number) => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  const step = useRef(onStep);
+  useEffect(() => {
+    step.current = onStep;
+  });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let travel = 0;
+    const wheel = (e: WheelEvent) => {
+      if (!step.current) return;
+      const dx = e.shiftKey && e.deltaX === 0 ? e.deltaY : e.deltaX;
+      if (Math.abs(dx) <= Math.abs(e.shiftKey ? 0 : e.deltaY)) return;
+      // The timeline's own scroll first, while it has room that way.
+      if (dx < 0 ? el.scrollLeft > 0 : el.scrollLeft + el.clientWidth < el.scrollWidth - 1) return;
+      e.preventDefault();
+      travel += e.deltaMode === 1 ? dx * 16 : dx;
+      const weeks = Math.trunc(travel / WEEK_PX);
+      if (weeks !== 0) {
+        travel -= weeks * WEEK_PX;
+        step.current(weeks);
+      }
+    };
+    el.addEventListener("wheel", wheel, { passive: false });
+    return () => el.removeEventListener("wheel", wheel);
+  }, []);
+  return ref;
+}
+
+export function Timeline({ grid, minWidth = Math.round(grid.count * 63), weeksRef, weekNumbers, onStep, children }: { grid: Grid; minWidth?: number; weeksRef?: React.Ref<HTMLDivElement>; weekNumbers?: boolean; /** Sideways scrolling: weeks later (+) or earlier (−). */ onStep?: (weeks: number) => void; children: React.ReactNode }) {
+  const scroll = useSideScroll(onStep);
   return (
-    <div className="rq-tl-scroll">
+    <div className="rq-tl-scroll" ref={scroll}>
       <div className="rq-tl" style={{ minWidth }}>
         <MonthsRow grid={grid} />
         <div className="rq-tl-body">

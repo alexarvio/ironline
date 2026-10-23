@@ -338,7 +338,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
         </div>
         <div className="pln-card">
           {/* The timeline is plan/timelineParts.tsx, as on the Phases screen: months over weeks, the NOW line, a row of lanes a track. */}
-          <Timeline grid={grid}>
+          <Timeline grid={grid} onStep={(n) => setBack((b) => Math.max(0, b - n))}>
             {TRACKS.map((t) => {
               const mine = phases.filter((p) => p.track === t.id).sort((a, b) => (a.start_week < b.start_week ? -1 : 1));
               // Phases that share a week column on one track stack into lanes, judged by the columns they are drawn in.
