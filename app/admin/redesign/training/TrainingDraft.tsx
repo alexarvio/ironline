@@ -947,8 +947,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           )}
           {/* Build one week, fill the rest in one go (20 Oct, Alex). */}
           {later.length > 0 && sessions.length > 0 && forwardChanges && (
-            <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyForward" })}>
-              <CopyIcon /> Copy to {forwardLabel}
+            // What it does, not where (23 Oct, Alex: "Copy to weeks 4–6" → "Apply to the rest"); the weeks it reaches in its title.
+            <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyForward" })} title={`Apply ${week.label}'s changes to ${forwardLabel}`} aria-label={`Apply ${week.label}'s changes to ${forwardLabel}`}>
+              <CopyIcon /> Apply to the rest
             </button>
           )}
           {/* Which columns the week's tables show, beside KG/LBS (21 Oct, Alex: it was in the programme's ··· menu). */}
@@ -1919,10 +1920,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
 
         {dlg?.kind === "copyForward" && forwardTo.length > 0 && (
           <ConfirmDialog
-            title={`Copy ${week.label} to ${forwardLabel}?`}
-            // Said plainly (20 Oct, Alex: "what does this mean?").
+            title={`Apply ${week.label} to the rest?`}
+            // Said plainly (20 Oct, Alex: "what does this mean?"), the weeks it reaches named.
             description={`${forwardLabel.charAt(0).toUpperCase()}${forwardLabel.slice(1)} ${forwardTo.length === 1 ? "becomes" : "become"} ${week.label}, cardio included. Sessions with logged sets stay as they are.`}
-            confirm="Copy"
+            confirm="Apply"
             onConfirm={() => {
               const from = weekNo(viewIdx);
               const targets = forwardTo.map((w) => weekNo(w.index));
@@ -1932,7 +1933,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               act(async () => {
                 await settle(Object.keys(pendingRef.current).map(Number));
                 for (const to of targets) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to }));
-              }, `${label} copied to ${toWords}`);
+              }, `${label} applied to ${toWords}`);
             }}
           />
         )}

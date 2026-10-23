@@ -12,7 +12,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - Empty states are one or two words: `None yet`, `No gyms yet`.
 - Say a thing once (20 Oct): the week rail dates every week, so the week's own line doesn't (`0 of 5 sessions done`, no date).
 - Every section answers one question (22 Oct, Alex), and a screen holds only sections that belong to its question. The Feed: what do I owe (Needs you) and what happened (Activity). How each client is doing is a status board, not the Feed's question. Before adding a section, name its question; if the screen already answers a different one, it goes elsewhere.
-- Don't offer an action that would change nothing (20 Oct): no "Copy week 3 here" when the weeks already match, no copy from an empty week, no "Copy to weeks 5–6" when they're the same.
+- Don't offer an action that would change nothing (20 Oct): no "Copy week 3 here" when the weeks already match, no copy from an empty week, no "Copy to weeks 5–6" when they're the same. Carrying a week's changes forward is **Apply to the rest** (23 Oct, Alex; was "Copy to weeks 4–6"), only while a later week differs, the weeks it reaches in its tooltip and its confirm.
 
 ## 2. Tokens
 - Page `#F5F6F8` · surface `#fff` · ink `#141a24` · body `#3a4250` · secondary `#5b6474` · muted `#8b93a1` · faint `#98A2B3`.
