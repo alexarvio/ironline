@@ -966,7 +966,7 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
         />
       </span>
       {/* No "On pace for…" under it (23 Oct, Alex: take the prediction out). */}
-      {grid ? <WeightChart key={span} points={points} from={w.from} grid={grid} gridText={gridText} /> : charted ? <div className="rh-wempty" aria-hidden="true" /> : null}
+      {grid ? <WeightChart key={span} points={points} grid={grid} gridText={gridText} /> : charted ? <div className="rh-wempty" aria-hidden="true" /> : null}
     </section>
   );
 }
@@ -976,15 +976,16 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
     size). The line joins every reading, solid, and dashed (4 3) over a stretch where weigh-ins were missed (23 Oct, Alex:
     "connect the dots anyway but have a dashed line"; `missed`, by the client's rhythm). Hovering reads the nearest
     reading by its date, never a point on the line between; with focus, ← → step the readings, Home and End the ends.
-    Weigh-ins missed before the window's first reading start it at the window's first day (`from`), the missed days
-    empty space before the first dot. */
-function WeightChart({ points, from, grid, gridText }: { points: WeightPoint[]; from: string; grid: { lines: [number, number, number] }; gridText: string[] }) {
+    The axis runs from the window's first reading to its last, across the whole width (23 Oct, Alex). */
+function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: { lines: [number, number, number] }; gridText: string[] }) {
   const plot = useRef<HTMLDivElement>(null);
   // The reading being read; none while the chart is only looked at.
   const [sel, setSel] = useState<number | null>(null);
   const last = points.length - 1;
   const ts = points.map((p) => timeOf(p.date));
-  const t0 = points[0].missed && from < points[0].date ? timeOf(from) : ts[0];
+  // From the first reading in the window (23 Oct, Alex: "20 days of 30 logged, show the full axis as 20 days"): a newer
+  // client's chart fills out day by day until it holds the window, never empty room on the left.
+  const t0 = ts[0];
   // Whole days from the chart's first day: a clock change between two readings must not move anything, since the server and
   // the coach's browser can sit in different time zones (one with the change, one without) and both draw the chart.
   const dayAt = ts.map((t) => Math.round((t - t0) / DAY_MS));
