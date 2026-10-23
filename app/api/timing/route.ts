@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "../../lib/auth";
+import { getRequestUser } from "../../lib/auth";
 import { timingReport } from "../../lib/timing";
 
 // The admin screens' server render times (23 Oct; app/lib/timing.ts): the last 200 renders newest first, and per
@@ -10,8 +10,9 @@ export const dynamic = "force-dynamic";
 
 const notFound = () => NextResponse.json({ error: "Not found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
 
-export async function GET() {
-  const user = await getSessionUser();
+export async function GET(request: Request) {
+  // Read from the request (23 Oct): with Clerk on, the proxy does not run on /api, so the page's own reader saw no one.
+  const user = await getRequestUser(request);
   if (!user || user.pending || user.role !== "coach") return notFound();
   return NextResponse.json(timingReport(), { headers: { "Cache-Control": "no-store" } });
 }
