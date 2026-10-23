@@ -19372,6 +19372,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ntf-item.read .ntf-body { color: #5b6474; }
 /* The drawn upright bar between facts, as the workout's targets (23 Oct). */
 .ntf-sep { display: inline-block; width: 1px; height: 10px; margin: 0 7px; background: #c9cfd8; vertical-align: -1px; }
+/* The client app's drawn bar between facts (Bars.tsx; 23 Oct, Alex: "Set 3 | Extra"), scaled to its line. */
+.cl-sep { display: inline-block; width: 1px; height: 0.8em; margin: 0 0.5em; background: #c9cfd8; vertical-align: -0.08em; }
 .ntf-text.open .ntf-title, .ntf-text.open .ntf-body { display: block; -webkit-line-clamp: unset; overflow: visible; }
 .ntf-more { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: -4px -6px 0 0; padding: 0; border: 0; border-radius: 50%; background: none; color: #98A2B3; cursor: pointer; }
 .ntf-more svg { transition: transform 0.25s; }

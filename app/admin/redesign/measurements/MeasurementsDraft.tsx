@@ -745,6 +745,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         )}
         {dlg?.kind === "dates" && (
           <PhaseDatesDialog
+            track="lifestyle"
             title="Dates"
             name={plan.name}
             start={plan.startDate}
@@ -779,6 +780,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         )}
         {dlg?.kind === "deploy" && !startHasCome && (
           <PhaseDatesDialog
+            track="lifestyle"
             title={`Schedule ${plan.name}`}
             start={plan.startDate}
             end={plan.endDate}

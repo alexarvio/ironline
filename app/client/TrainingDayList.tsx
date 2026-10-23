@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { Bars } from "./Bars";
 import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, pickGymAction, removeFreeSessionAction, startSessionAction } from "../lib/actions";
 import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
@@ -256,18 +257,16 @@ export default function TrainingDayList({
           const minutes = durationMinutes(d);
           const sub =
             status === "done" || status === "unfinished"
-              ? [d.endedAt ? shortDate(d.endedAt) : "Logged", minutes != null ? `${minutes} min` : null, status === "unfinished" && planned ? `${logged} of ${planned} sets` : gymName].filter(Boolean).join(" · ")
+              ? [d.endedAt ? shortDate(d.endedAt) : "Logged", minutes != null ? `${minutes} min` : null, status === "unfinished" && planned ? `${logged} of ${planned} sets` : gymName]
               : status === "live"
-              ? `In progress · ${clock(elapsedMs(d.startedAt, null, now))}`
+              ? ["In progress", clock(elapsedMs(d.startedAt, null, now))]
               : status === "skipped"
-              ? `Couldn't train · ${d.skipReason}`
+              ? ["Couldn't train", d.skipReason]
               : [
                   `${d.exercises.length} exercise${d.exercises.length === 1 ? "" : "s"}`,
                   planned ? `${planned} sets` : null,
                   d.cardio.length ? `${d.cardio.length} cardio` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ");
+                ];
           const tone = status === "done" ? "done" : status === "unfinished" ? "unfinished" : status === "live" ? "live" : isNext ? "next" : status;
           // A session swiped to its end (16 Oct, Alex) opens in place with what was done; the full screen is a link inside.
           const ended = (status === "done" || status === "unfinished") && !!d.endedAt;
@@ -278,7 +277,9 @@ export default function TrainingDayList({
               <span className={`tr-row-tile ${tone}`}>{d.index}</span>
               <span className="tr-row-main">
                 <span className="tr-row-title">{d.title}</span>
-                <span className="tr-row-sub">{sub}</span>
+                <span className="tr-row-sub">
+                  <Bars parts={sub} />
+                </span>
               </span>
               {(status !== "upcoming" || isNext || logged > 0) && (
               <span className={`tr-row-pill ${tone}`}>
@@ -302,7 +303,9 @@ export default function TrainingDayList({
                           ) : (
                             sets.map((l) => (
                               <span key={l.id} className="tr-x-set">
-                                <span className="tr-x-n">{l.setNumber > ex.sets ? `Set ${l.setNumber} · extra` : `Set ${l.setNumber}`}</span>
+                                <span className="tr-x-n">
+                                  <Bars parts={[`Set ${l.setNumber}`, l.setNumber > ex.sets && "Extra"]} />
+                                </span>
                                 <span className="tr-x-v">
                                   {l.weight != null ? `${roundTo(l.weight, 2)} kg` : "–"} × {l.reps ?? "–"}
                                   {l.rpe != null && <small> · RPE {l.rpe}</small>}

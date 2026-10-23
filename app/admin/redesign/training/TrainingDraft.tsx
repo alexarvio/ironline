@@ -2276,6 +2276,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
 
         {dlg?.kind === "dates" && (
           <PhaseDatesDialog
+            track="training"
             title="Dates"
             name={program.name}
             weeks={weeks.length}

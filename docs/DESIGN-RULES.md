@@ -36,7 +36,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 - Primary: ink pill `#141a24`, white text, height 38–44, 600. One per screen at most.
 - Secondary: white pill with the hairline inset, ink text.
 - Text action: 12–13px, 600, ink or `#5b6474`, no underline.
-- Facts in a row are parted by a short drawn upright bar, never a middle dot (21 Oct, Alex: the workout's targets, `15 min | 6 km/h | 8%`), as the coach admin does.
+- Facts in a row are parted by a short drawn upright bar, never a middle dot (21 Oct, Alex: the workout's targets, `15 min | 6 km/h | 8%`), as the coach admin does: `Bars` (app/client/Bars.tsx, `.cl-sep`), e.g. a session's `Wed 21 Oct | 46 min | Muscle Factory` and an extra set's `Set 3 | Extra` (23 Oct, Alex).
 - The workout's finish list (21 Oct, Alex): a weighted exercise with sets logged shows the unit it was logged in before its Done, `kg` or `lbs` alone (23 Oct, Alex: not both), the word alone in ink as Done is (no pill); a tap switches it, the exercise's logged sets with it, and it opens in that unit next time. A cardio marked done just says `Done` in green (a tap still takes it back), no "tap to undo". Marking it done moves on to what is next after 1.4s, as an exercise does once its last set is in (23 Oct, Alex); taking it back in that time stays.
 - A pill that opens a list (Saved days, Supplements; 17 Oct): closed, the white hairline pill; open, the pill stays as the header and the list drops out under it flat on the page, tied to the pill's icon by a thin line down the left that runs behind the rows. No white box round the list.
 - Segments and chips: white with the hairline, the active one ink with white text.

@@ -938,6 +938,7 @@ export default function NutritionDraft({
         )}
         {dlg?.kind === "dates" && (
           <PhaseDatesDialog
+            track="nutrition"
             title="Dates"
             name={plan.name}
             start={plan.startDate}
@@ -972,6 +973,7 @@ export default function NutritionDraft({
         )}
         {dlg?.kind === "deploy" && !startHasCome && (
           <PhaseDatesDialog
+            track="nutrition"
             title={`Schedule ${plan.name}`}
             start={plan.startDate}
             end={plan.endDate}

@@ -895,9 +895,9 @@ type WeightPoint = NonNullable<HomeBoard["weight"]>["points"][number];
 
 // 7d | 30d | Phase (23 Oct, Alex: "the coaches want to see 7 days, 30 days and phase"), laid out as Strength above it: the
 // capsule on the head's right, the latest and the change over the window on the line under the title. Phase at first,
-// and only with a phase (else 30d). The chart, its dates, scale and dots follow the window; where they land by the
-// phase's end only in Phase. A window with under two readings draws no chart, but keeps its room (and the pace line's)
-// while another window has one, so switching never moves the card.
+// and only with a phase (else 30d). The chart, its dates, scale and dots follow the window; no prediction (23 Oct,
+// Alex). A window with under two readings draws no chart, but keeps its room while another window has one, so
+// switching never moves the card.
 function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
   const [picked, setSpan] = useState<StrengthSpan>("phase");
   const all = weight ? [...weight.points].sort((a, b) => timeOf(a.date) - timeOf(b.date)) : [];
@@ -917,8 +917,6 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
   const inWindow = (from: string) => all.filter((p) => p.date >= from);
   const points = inWindow(w.from);
   const charted = [weight.windows["7d"], weight.windows["30d"], weight.windows.phase].some((x) => x != null && inWindow(x.from).length >= 2);
-  const paced = hasPhase && weight.projection != null;
-  const projection = span === "phase" ? weight.projection : null;
   const grid = points.length >= 2 ? weightGrid(points.map((p) => p.value)) : null;
   const gridText = grid ? grid.lines.map((v) => v.toFixed(grid.decimals)) : [];
   // The gutter on the right holds the longest of the grid's kg (11px numerals, about 6.3px a character, 8px from the lines).
@@ -949,18 +947,8 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
           ]}
         />
       </span>
+      {/* No "On pace for…" under it (23 Oct, Alex: take the prediction out). */}
       {grid ? <WeightChart key={span} points={points} from={w.from} grid={grid} gridText={gridText} /> : charted ? <div className="rh-wempty" aria-hidden="true" /> : null}
-      {projection ? (
-        <p className="rh-pace">
-          On pace for {kg1(projection.value)} by {dayMonth(projection.date)}
-        </p>
-      ) : (
-        paced && (
-          <p className="rh-pace" aria-hidden="true">
-            &nbsp;
-          </p>
-        )
-      )}
     </section>
   );
 }

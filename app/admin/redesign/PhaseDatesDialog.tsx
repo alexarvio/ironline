@@ -7,6 +7,9 @@ import DateText from "./DateText";
 import { MonthRange } from "./MonthRange";
 import { dayMonth } from "../../lib/dayMonth";
 import { SepJoin } from "./Sep";
+import { TRACK_ACCENT } from "../phaseChrome";
+import { rgbOf } from "./plan/timelineParts";
+import type { PhaseTrack } from "../../lib/db";
 
 // When a programme or phase reaches the client: a month to click the dates
 // on, and the same dates as fields to type into. A programme runs Monday to
@@ -16,8 +19,9 @@ import { SepJoin } from "./Sep";
 // In the admin hairline style (20 Oct, Alex): the title, one quiet line of
 // the length and the dates, the name and the dates as clean lines. The month
 // is the phase pop-up's MonthRange (21 Oct, Alex: one calendar, scrolling a
-// week per wheel step), in ink and grey: these are dates, not a category, so
-// no track colour. No explanations. Classes are pdh-, in phase-dates.css.
+// week per wheel step), the range in the phase's track colour (23 Oct, Alex:
+// as the Phases screen draws it: a soft band with a fine outline, its first and
+// last days solid). No explanations. Classes are pdh-, in phase-dates.css.
 
 const DAY = 86400000;
 const parse = (d: string) => new Date(`${d}T00:00:00`);
@@ -33,6 +37,7 @@ const weeksBetween = (start: string, end: string) => Math.max(1, Math.round((par
 const today = () => isoOf(new Date());
 
 export default function PhaseDatesDialog({
+  track,
   title,
   name,
   weeks,
@@ -41,6 +46,8 @@ export default function PhaseDatesDialog({
   confirm,
   onConfirm,
 }: {
+  /** The phase's track: the calendar's range in its colour. */
+  track?: PhaseTrack;
   title: string;
   /** Editable when given: a draft programme is named here too. */
   name?: string;
@@ -102,7 +109,10 @@ export default function PhaseDatesDialog({
   const now = today();
 
   return (
-    <DialogContent className="pdh">
+    <DialogContent
+      className={`pdh${track ? " tinted" : ""}`}
+      style={track ? ({ "--npd-c": TRACK_ACCENT[track], "--npd-rgb": rgbOf(TRACK_ACCENT[track]) } as React.CSSProperties) : undefined}
+    >
       <div className="pdh-head">
         <DialogTitle className="pdh-title">{title}</DialogTitle>
       </div>
