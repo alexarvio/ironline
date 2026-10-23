@@ -41,7 +41,10 @@
 .dmvh-seg button:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
 .dmvh-seg button.on { background: #141a24; color: #fff; }
 .dmvh-seg button.on:focus-visible { background: #2a3242; }
-.dmvh-panel { display: flex; flex-direction: column; gap: 8px; }
+/* One height for the three tabs (23 Oct, Alex: switching made the pop-up jump): the drop zone fills it, Your videos scrolls in it. */
+.dmvh-panel { display: flex; flex-direction: column; gap: 8px; height: 176px; }
+.dmvh-panel .dmvh-drop { flex: 1 1 auto; height: auto; min-height: 112px; }
+.dmvh-panel.mine { overflow-y: auto; margin: 0 -4px; padding: 0 4px; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
 
 /* The link: a clean line. */
 .dmvh-field { display: flex; align-items: center; gap: 10px; height: 40px; border-bottom: 1px solid #e1e5eb; transition: border-color 0.15s; }

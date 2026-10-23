@@ -310,7 +310,7 @@ export default function DemoVideoDialog({
           )}
 
           {tab === "mine" && (
-            <div className="dmvh-panel" role="tabpanel">
+            <div className="dmvh-panel mine" role="tabpanel">
               {videos.length > 12 && <input className="dmvh-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search your videos" />}
               {videos.length === 0 ? (
                 <p className="dmvh-none">None yet</p>

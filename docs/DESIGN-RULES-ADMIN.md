@@ -30,6 +30,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 
 ## 4. Pop-ups: one pattern
 - Opening or closing a pop-up never moves the page (21 Oct, Alex): the admin keeps its scrollbar, and the scroll lock's stand-in margin is cancelled in app/globals.css. Don't add a lock of your own.
+- A pop-up with tabs keeps one height across them, so switching never moves it (23 Oct, Alex): the demo video's Paste a link | Upload a file | Your videos share one panel height, the drop zone filling it, the list scrolling in it.
 - A field in a `.dlh` card is `.dlh-line` (a clean line) under a `.dlh-label`.
 - Use the `.dlh` card (`training/trn.css`) or, for pop-ups with a calendar, `.npd` (`plan/phase-dialog.css`). Use the existing components before writing a new one: `ConfirmDialog`, `RemoveDialog`, `DeletePhaseDialog`, `DeleteSessionDialog` (training), `MoveDialog`, `PhaseDialog`, `ScheduleDialog`.
 - Card: white, radius 20, padding 20/20/16, shadow `0 30px 60px -24px rgba(16,24,40,.35)` plus a 1px `#E1E5EB` ring, no border. No gradients, glows, washes, big header icons, coloured header bands or chips in navy/indigo fills.
