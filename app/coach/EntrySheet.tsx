@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { addCalendarEntryAction, updateCalendarEntryAction } from "../lib/actions";
 import { TRAINING_ICON } from "../lib/eventTypes";
+import { takesClient } from "../lib/calendarKinds";
 import { dayMonth } from "../lib/dayMonth";
 import { MonthRange } from "../admin/redesign/MonthRange";
 import { paletteOf, type Category } from "../admin/redesign/palette";
@@ -20,6 +21,8 @@ import { Avatar, Icon, Sheet } from "./parts";
 // The sheet's voice (design rules 1): white, titles at 600, small grey
 // uppercase labels, fields white with a hairline (ink while typing), the
 // chosen choice ink, the category's colour on its icon, one ink pill.
+// With is only for a Client call or Training (23 Oct, Alex; calendarKinds.ts):
+// on any other category the row keeps its room unseen, and no client is saved.
 
 /** A preset category's icon, its placeholder and its usual length, as the laptop's pop-up has them. A coach's own category wears the tag. */
 export const ENTRY_PRESET: Record<string, { icon: string; placeholder: string; length: number }> = {
@@ -110,7 +113,9 @@ export default function EntrySheet({
   const [cursor, setCursor] = useState(open.date.slice(0, 7));
 
   const current = categories.find((c) => c.id === cat) ?? categories[0];
-  const client = clientId != null ? clients.find((c) => c.id === clientId) ?? null : null;
+  // Only a Client call or Training is with a client.
+  const withClient = takesClient(cat);
+  const client = withClient && clientId != null ? clients.find((c) => c.id === clientId) ?? null : null;
   const first = (name: string) => name.split(" ")[0];
   const endMin = toMin(time) + length;
   const ok = !!date && (allDay || !!time);
@@ -128,6 +133,7 @@ export default function EntrySheet({
 
   const pickCat = (id: string) => {
     setCat(id);
+    // The client picked stays in hand (a tile tapped by mistake and back loses nothing); save sends it only with With.
     if (!e && !customLength) setLength(ENTRY_PRESET[id]?.length ?? 60);
     try {
       window.localStorage.setItem(LAST_CAT_KEY, id);
@@ -138,7 +144,7 @@ export default function EntrySheet({
     setSaving(true);
     setError(null);
     // The time is in this phone's timezone, as every time on the Calendar reads.
-    const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: length, allDay, topic: title, clientId, category: cat, note: note.trim() };
+    const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: length, allDay, topic: title, clientId: withClient ? clientId : null, category: cat, note: note.trim() };
     try {
       if (e) await updateCalendarEntryAction(e.id, v);
       else if ((await addCalendarEntryAction(v)) == null) throw new Error("not saved");
@@ -166,7 +172,7 @@ export default function EntrySheet({
     </button>
   );
 
-  if (page === "with")
+  if (page === "with" && withClient)
     return (
       <Sheet onClose={onClose} label="With" className="tall">
         <div className="cph-ent-sub">
@@ -279,21 +285,25 @@ export default function EntrySheet({
         </label>
         <input id="cph-ent-what" className="cph-ent-box" value={topic} onChange={(x) => setTopic(x.target.value)} placeholder={suggested ?? ENTRY_PRESET[cat]?.placeholder ?? "What is it?"} maxLength={80} enterKeyHint="done" />
 
-        <span className="cph-ent-label">With</span>
-        <button type="button" className="cph-ent-box cph-ent-with" onClick={() => setPage("with")}>
-          {client ? (
-            <>
-              <Avatar name={client.name} src={client.avatarPath} size={26} />
-              <b>{client.name}</b>
-              <span className="cph-ent-act">Change</span>
-            </>
-          ) : (
-            <>
-              <Icon name="search" small />
-              <span className="cph-ent-quiet">Pick a client</span>
-            </>
-          )}
-        </button>
+        {/* With on a Client call or Training alone (23 Oct, Alex); on any other category it keeps its room unseen (not
+            read out, not reached), so tapping tiles never makes the sheet jump, as the laptop's pop-up. */}
+        <div className={`cph-ent-withrow${withClient ? "" : " off"}`} aria-hidden={withClient ? undefined : true} inert={!withClient}>
+          <span className="cph-ent-label">With</span>
+          <button type="button" className="cph-ent-box cph-ent-with" onClick={() => setPage("with")}>
+            {client ? (
+              <>
+                <Avatar name={client.name} src={client.avatarPath} size={26} />
+                <b>{client.name}</b>
+                <span className="cph-ent-act">Change</span>
+              </>
+            ) : (
+              <>
+                <Icon name="search" small />
+                <span className="cph-ent-quiet">Pick a client</span>
+              </>
+            )}
+          </button>
+        </div>
 
         <div className="cph-ent-two">
           <div>

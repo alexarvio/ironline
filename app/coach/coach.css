@@ -265,6 +265,9 @@ body:has(.cph) { background: #F5F6F8; }
 .cph-sheet.tall > .cph-ent { overflow-y: auto; overscroll-behavior: contain; }
 .cph-ent { display: flex; flex-direction: column; padding: 2px 12px 4px; }
 .cph-ent-title { margin: 0 4px 6px; font-size: 18px; font-weight: 600; }
+/* With on a Client call or Training alone; on any other category its room stays, unseen. */
+.cph-ent-withrow { display: flex; flex-direction: column; }
+.cph-ent-withrow.off { visibility: hidden; }
 .cph-ent-label { display: block; margin: 14px 4px 6px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
 .cph-ent-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .cph-ent-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 0; height: 60px; padding: 0 4px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12.5px; color: #141a24; transition: background 0.2s ease, color 0.2s ease; }

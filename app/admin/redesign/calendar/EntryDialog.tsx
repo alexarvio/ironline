@@ -14,6 +14,7 @@ import { MonthRange } from "../MonthRange";
 import { paletteOf, type Category } from "../palette";
 import type { CalEntry } from "./CalendarDay";
 import { TRAINING_ICON } from "../../../lib/eventTypes";
+import { isClientCall, takesClient } from "../../../lib/calendarKinds";
 
 // The Calendar's entry pop-up, built as the meeting scheduler (22 Oct, the
 // .npd pattern): the title and the category as its tinted tag; the
@@ -24,6 +25,8 @@ import { TRAINING_ICON } from "../../../lib/eventTypes";
 // left, Cancel in words and one black pill. A client is picked from a list
 // that floats over the pop-up, with the line that says why they need the
 // coach, as the rail shows it. Removing asks first, as a .dlh card.
+// With is only for a Client call or Training (23 Oct, Alex; calendarKinds.ts):
+// on any other category it keeps its room unseen, and no client is saved.
 
 export type EntryClient = { id: number; name: string; avatarPath: string | null; /** Why they need the coach, as the rail says it; null: all good. */ reason: { text: string; color: string; rgb: string } | null };
 export type Open = { entry: CalEntry | null; date: string; time: string };
@@ -117,7 +120,8 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
       return null;
     }
   })();
-  const [cat, setCat] = useState<string>(e?.category ?? (lastCat && cats.some((c) => c.id === lastCat) ? lastCat : "call"));
+  // An entry with none keeps the colour it wears, as the phone's sheet: a client's call blue, the coach's own grey.
+  const [cat, setCat] = useState<string>(e ? e.category ?? (e.clientId != null ? "call" : "other") : lastCat && cats.some((c) => c.id === lastCat) ? lastCat : "call");
   const [topic, setTopic] = useState(e?.topic ?? "");
   const [date, setDate] = useState(open.date);
   const [allDay, setAllDay] = useState(e?.allDay ?? false);
@@ -147,7 +151,9 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
   const rgb = hexRgb(ink);
   const iconOf = (id: string) => PRESET[id]?.icon ?? TAG_ICON;
   const placeholder = PRESET[cat]?.placeholder ?? "What is it?";
-  const client = clientId != null ? clients.find((c) => c.id === clientId) ?? null : null;
+  // Only a Client call or Training is with a client.
+  const withClient = takesClient(cat);
+  const client = withClient && clientId != null ? clients.find((c) => c.id === clientId) ?? null : null;
   const first = (name: string) => name.split(" ")[0];
   const endMin = toMin(time) + length;
   const ok = topic.trim().length > 0 && !!date && (allDay || !!time);
@@ -165,6 +171,12 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
 
   const pickCat = (id: string) => {
     setCat(id);
+    // A category with no client closes the picker; the client picked stays in hand (a tile tapped by mistake and back
+    // loses nothing), and save sends it only with With.
+    if (!takesClient(id)) {
+      setPicking(false);
+      setClientQ("");
+    }
     if (!e && !customLength) setLength(PRESET[id]?.length ?? 60);
     try {
       window.localStorage.setItem(LAST_CAT_KEY, id);
@@ -180,7 +192,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
     setError(null);
     const title = topic.trim() || suggested || "";
     // The time is in this browser's timezone, as every time on the Calendar reads.
-    const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: length, allDay, topic: title, clientId, category: cat, note: note.trim() };
+    const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: length, allDay, topic: title, clientId: withClient ? clientId : null, category: cat, note: note.trim() };
     try {
       if (e) await updateCalendarEntryAction(e.id, v);
       else await addCalendarEntryAction(v);
@@ -265,7 +277,8 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
       <div className="npd-head">
         <DialogTitle className="npd-title">{e ? e.topic || "Edit entry" : "New entry"}</DialogTitle>
         <span className="npd-tools">
-          {client && (
+          {/* Their Meetings hold their calls alone (23 Oct, Alex), so Open is a call's. */}
+          {client && isClientCall(cat) && (
             <Link href={`/admin/redesign/meetings?client=${client.id}`} className="npd-open" title={`Open ${first(client.name)}’s meetings`} aria-label={`Open ${first(client.name)}’s meetings`}>
               Open
             </Link>
@@ -298,13 +311,13 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
         </div>
       </div>
 
-      {/* What over the month, With over the times: two clean lines side by side. With is on every category (14 Oct), so switching tiles never makes the pop-up jump. */}
+      {/* What over the month, With over the times: two clean lines side by side. With only on a Client call or Training (23 Oct, Alex); on any other category it keeps its room unseen (not read out, not reached by Tab), so switching tiles never makes the pop-up jump. */}
       <div className="cal-pair">
         <label className="npd-field">
           <span className="npd-label">What</span>
           <input ref={titleRef} className="npd-line" value={topic} onChange={(x) => setTopic(x.target.value)} placeholder={suggested ?? placeholder} maxLength={80} autoFocus={!e} aria-label="What" />
         </label>
-        <div className="npd-field">
+        <div className={`npd-field${withClient ? "" : " cal-with-off"}`} aria-hidden={withClient ? undefined : true} inert={!withClient}>
           <span className="npd-label">With</span>
           {client && !picking ? (
             <div className="cal-with" style={client.reason ? ({ "--rc": client.reason.color } as React.CSSProperties) : undefined}>

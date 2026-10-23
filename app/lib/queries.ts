@@ -10,6 +10,7 @@ import type { LinkView, MessageLink } from "./messageLinks";
 import { coachIdOfClient } from "./tenancy";
 import { inViewZone } from "./viewZone";
 import { isTimezone } from "./timezones";
+import { isClientCall, takesClient } from "./calendarKinds";
 import { dayMonth } from "./dayMonth";
 import { countryOf, invoicingFor } from "./countries";
 import { LOCK_MS, type LockScope } from "./loginLockout";
@@ -271,8 +272,10 @@ export function removeClient(clientId: number, opts: { keepInvoices?: boolean } 
   const data = getData();
   const client = data.clients.find((c) => c.id === clientId);
   if (!client) return;
+  // A Personal block that still has them saved is the coach's own: it stays.
+  detachStrayEntryClients();
 
-  const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+  const dayIds =new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
   const assignmentIds = new Set(
     data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id)
   );
@@ -1144,6 +1147,7 @@ function separateOverlappingPrograms() {
 export function applyDueProgramDeployments() {
   migrateDaysToSessions();
   separateOverlappingPrograms();
+  detachStrayEntryClients();
   const data = getData();
   const now = new Date().toISOString();
   // A deployed programme whose start was moved into a later week before
@@ -5276,9 +5280,11 @@ export function settleOpenMeetingRequest(clientId: number, meetingId: number) {
   if (r) settleMeetingRequest(clientId, r.id, "booked", meetingId);
 }
 
+/** A client's calls: what their screens and the coach's screens for them show and count. A Calendar entry of another
+ *  kind (a training session, or an older Personal one with a client on it) is the coach's Calendar alone (23 Oct, Alex). */
 export function listMeetings(clientId: number): Meeting[] {
   return getData()
-    .meetings.filter((m) => m.client_id === clientId)
+    .meetings.filter((m) => m.client_id === clientId && isClientCall(m.category))
     // On the coach's screens: in the timezone of whoever is looking (viewZone.ts).
     .map((m) => inViewZone({ ...m, duration_minutes: m.duration_minutes || DEFAULT_MEETING_DURATION }))
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? 1 : -1) : a.date < b.date ? 1 : -1));
@@ -5385,12 +5391,16 @@ const cleanEntry = (v: CalendarEntryInput) => {
 };
 const entryOk = (c: ReturnType<typeof cleanEntry>) => /^\d{4}-\d{2}-\d{2}$/.test(c.date) && (c.all_day || !!c.time);
 
+/** The entry's client: none unless its category takes one (a Client call or Training; calendarKinds.ts). */
+const entryClient = (v: CalendarEntryInput, c: ReturnType<typeof cleanEntry>) => (v.clientId == null || !takesClient(c.category) ? null : v.clientId);
+
 /** A new Calendar entry: a client's meeting, or the coach's own block when clientId is null. */
 export function addCalendarEntry(coachId: number, v: CalendarEntryInput): number | null {
   const c = cleanEntry(v);
   if (!entryOk(c)) return null;
   const id = allocId("meetings");
-  getData().meetings.push({ id, client_id: v.clientId, coach_id: v.clientId == null ? coachId : null, ...c, status: "scheduled", link: null });
+  const clientId = entryClient(v, c);
+  getData().meetings.push({ id, client_id: clientId, coach_id: clientId == null ? coachId : null, ...c, status: "scheduled", link: null });
   persist();
   return id;
 }
@@ -5404,8 +5414,22 @@ export function updateCalendarEntry(coachId: number, id: number, v: CalendarEntr
   const row = getData().meetings.find((m) => m.id === id);
   const c = cleanEntry(v);
   if (!row || !entryOk(c)) return;
-  Object.assign(row, c, { client_id: v.clientId, coach_id: v.clientId == null ? coachId : null });
+  const clientId = entryClient(v, c);
+  Object.assign(row, c, { client_id: clientId, coach_id: clientId == null ? coachId : null });
   persist();
+}
+
+/** Entries saved with a client before 23 Oct whose category takes none (a Personal block with Anna on it) become the
+ *  coach's own, so removing that client no longer takes them along. Idempotent and cheap: rides on every request. */
+export function detachStrayEntryClients() {
+  let changed = false;
+  for (const m of getData().meetings) {
+    if (m.client_id == null || takesClient(m.category)) continue;
+    m.coach_id = coachIdOfClient(m.client_id);
+    m.client_id = null;
+    changed = true;
+  }
+  if (changed) persist();
 }
 
 export function listMeetingNotes(meetingId: number): MeetingNote[] {
@@ -5445,11 +5469,15 @@ export function listAllMeetings(coachId: number): MeetingWithClient[] {
   return data.meetings
     .filter((m) => (m.client_id != null ? mine.has(m.client_id) : m.coach_id === coachId))
     .map((m) => {
-      const client = m.client_id == null ? null : data.clients.find((c) => c.id === m.client_id);
+      // An entry whose category takes no client (one saved with one before 23 Oct) is drawn as the coach's own.
+      const clientId = m.client_id != null && takesClient(m.category) ? m.client_id : null;
+      const client = clientId == null ? null : data.clients.find((c) => c.id === clientId);
       return inViewZone({
         ...m,
+        client_id: clientId,
+        coach_id: clientId == null ? coachId : m.coach_id,
         duration_minutes: m.duration_minutes || DEFAULT_MEETING_DURATION,
-        clientName: m.client_id == null ? "Just you" : client?.name ?? "Unknown client",
+        clientName: clientId == null ? "Just you" : client?.name ?? "Unknown client",
       });
     })
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
@@ -5971,7 +5999,8 @@ export function deleteEventCategory(coachId: number, id: number) {
   data.event_categories = data.event_categories.filter((c) => c !== row);
   const key = `c${id}`;
   for (const e of data.client_events) if (e.kind === key) e.kind = null;
-  for (const m of data.meetings) if (m.category === key) m.category = null;
+  // A Calendar entry goes grey as Other, not to none: none reads as a client call (calendarKinds.ts).
+  for (const m of data.meetings) if (m.category === key) m.category = "other";
   persist();
 }
 
@@ -10724,7 +10753,8 @@ export function getMeetingsWorkspaceData(clientId: number) {
         durationMinutes: m.duration_minutes,
         name: m.clientName,
         topic: m.topic,
-        mine: m.client_id === clientId,
+        // The client's calls; a training session with them is just busy time here.
+        mine: m.client_id === clientId && isClientCall(m.category),
         completed: m.status === "completed",
       })),
     others: all

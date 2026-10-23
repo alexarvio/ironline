@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCalendarMonth, getMeetingConflicts, localDateStr, MeetingWithClient } from "../lib/queries";
+import { isClientCall } from "../lib/calendarKinds";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -89,7 +90,7 @@ export default function CalendarPanel({ coachId, month, day }: { coachId: number
                     <Link
                       key={m.id}
                       href={
-                        m.client_id == null
+                        m.client_id == null || !isClientCall(m.category)
                           ? `/admin?view=calendar&month=${monthKey}&day=${cell.date}`
                           : `/admin?client=${m.client_id}&tab=meetings`
                       }

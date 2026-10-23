@@ -9,6 +9,7 @@
 // afternoon gets the hour reminder, never a "tomorrow".
 
 import { getData, persist } from "./db";
+import { isClientCall } from "./calendarKinds";
 import { getCoachFirstName } from "./queries";
 import { SERVER_TZ, zonedToUtc } from "./timezones";
 
@@ -30,7 +31,8 @@ export async function runMeetingReminders(now: number = Date.now()): Promise<num
   let sent = 0;
   let changed = false;
   for (const m of data.meetings) {
-    if (m.client_id == null || m.status !== "scheduled" || !m.time) continue;
+    // A client's calls alone: a training session or the coach's own entry on the Calendar is never theirs to be reminded of.
+    if (m.client_id == null || !isClientCall(m.category) || m.status !== "scheduled" || !m.time) continue;
     const start = zonedToUtc(m.date, m.time, m.tz || SERVER_TZ).getTime();
     if (!Number.isFinite(start) || start < now) continue;
     const startIso = new Date(start).toISOString();

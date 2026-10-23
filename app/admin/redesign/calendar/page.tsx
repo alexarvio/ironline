@@ -19,6 +19,7 @@ import "../rail.css";
 import "../ncdialog.css";
 import "./calendar.css";
 import { dayMonth } from "../../../lib/dayMonth";
+import { isClientCall } from "../../../lib/calendarKinds";
 
 // The Calendar in the redesign, the rail on its left (replaces
 // /admin?view=calendar): every meeting across clients plus the coach's own
@@ -94,7 +95,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         const c = clash ? CLASH : entryChrome(categories, m.category, m.client_id != null);
         // The entry's title on the chip, its client in the tooltip after it (23 Oct, Alex: the title is always the title).
         const label = m.topic || whoOf(m);
-        return { id: m.id, label, time: m.time, allDay: !!m.all_day, done: m.status === "completed", clash, tint: c.tint, ink: c.ink, line: c.line, clientId: m.client_id, title: `${m.all_day ? "All day" : m.time} · ${label}${m.topic && m.client_id != null ? ` · ${m.clientName}` : ""}` };
+        // Only a client call opens their Meetings (it is there); a training session with them opens its day.
+        return { id: m.id, label, time: m.time, allDay: !!m.all_day, done: m.status === "completed", clash, tint: c.tint, ink: c.ink, line: c.line, clientId: isClientCall(m.category) ? m.client_id : null, title: `${m.all_day ? "All day" : m.time} · ${label}${m.topic && m.client_id != null ? ` · ${m.clientName}` : ""}` };
       }),
     };
   });

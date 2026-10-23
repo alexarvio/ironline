@@ -1,6 +1,7 @@
 "use server";
 
 import { isMeetingTypeId } from "./meetingTypes";
+import { isClientCall, takesClient } from "./calendarKinds";
 
 import { redirect } from "next/navigation";
 import { getData, persist, type CoachBusiness, type CoachInvoicing, type InvoiceEvery, type InvoiceLine, type MetricAskAt, type PhaseTrack } from "./db";
@@ -2266,7 +2267,9 @@ export async function removeMeetingAction(formData: FormData) {
   const coach = await requireCoach();
   const id = Number(formData.get("id"));
   if (!coachOwnsMeeting(coach.id, id)) return;
-  const meetingClient = getClientIdForMeeting(id);
+  // The old Calendar's day panel removes any entry here: only a call was ever on the client's screens.
+  const stored = getCalendarEntry(id);
+  const meetingClient = stored && isClientCall(stored.category) ? stored.client_id : null;
   // A repeating call can take the rest of its series with it.
   const later = formData.get("following") === "1" ? laterInSeries(id) : [];
   removeMeeting(id);
@@ -3082,10 +3085,12 @@ export async function addCalendarEventAction(formData: FormData) {
 // refreshes; answers with the entry's id.
 export async function addCalendarEntryAction(v: CalendarEntryInput) {
   const coach = await requireCoach();
-  const clientId = v.clientId == null ? null : Number(v.clientId);
+  // Only a Client call or Training takes a client (23 Oct, Alex); any other entry is the coach's own, whatever is sent.
+  const clientId = v.clientId == null || !takesClient(v.category) ? null : Number(v.clientId);
   if (clientId != null && !(await coachForClient(clientId))) return null;
   const id = addCalendarEntry(coach.id, { ...v, clientId });
-  if (id != null && clientId != null) {
+  // The client hears of a call; a training session with them stays on the coach's Calendar.
+  if (id != null && clientId != null && isClientCall(v.category)) {
     const topic = String(v.topic ?? "").trim();
     logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule", actionRef: id });
   }
@@ -3096,7 +3101,8 @@ export async function addCalendarEntryAction(v: CalendarEntryInput) {
 
 export async function updateCalendarEntryAction(id: number, v: CalendarEntryInput) {
   const coach = await requireCoach();
-  const clientId = v.clientId == null ? null : Number(v.clientId);
+  // Only a Client call or Training takes a client (23 Oct, Alex): one switched to another category loses it.
+  const clientId = v.clientId == null || !takesClient(v.category) ? null : Number(v.clientId);
   if (!coachOwnsMeeting(coach.id, Number(id))) return;
   if (clientId != null && !(await coachForClient(clientId))) return;
   // The entry as it stood, in the timezone the new time was typed in, so an
@@ -3104,9 +3110,19 @@ export async function updateCalendarEntryAction(id: number, v: CalendarEntryInpu
   const stored = getCalendarEntry(Number(id));
   const before = stored && stored.time && !stored.all_day && v.tz && isTimezone(String(v.tz)) ? { ...stored, ...inZone(stored.date, stored.time, stored.tz || SERVER_TZ, String(v.tz)) } : stored;
   updateCalendarEntry(coach.id, Number(id), { ...v, clientId });
-  // The client hears when their call moves, not when the coach's note or colour changes.
-  if (clientId != null && before && (before.client_id !== clientId || before.date !== v.date || before.time !== (v.allDay ? "" : v.time))) {
-    noteChange(clientId, "Moved your call", { tab: "home", label: "See your meetings", key: `meeting-move:${id}`, ref: Number(id), push: true });
+  // The client hears when their call moves, not when the coach's note or colour changes. Only calls are theirs to hear
+  // of: one that stops being their call (another client, another category) is cancelled for them.
+  const wasCallOf = before && before.client_id != null && isClientCall(before.category) ? before.client_id : null;
+  const callOf = clientId != null && isClientCall(v.category) ? clientId : null;
+  if (wasCallOf != null && wasCallOf !== callOf) {
+    noteChange(wasCallOf, "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, ref: Number(id), push: true });
+  }
+  if (callOf != null && before && wasCallOf !== callOf) {
+    // New to this client's screens: as a call added.
+    const topic = String(v.topic ?? "").trim();
+    logCoachActivity(callOf, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule", actionRef: Number(id) });
+  } else if (callOf != null && before && (before.date !== v.date || before.time !== (v.allDay ? "" : v.time))) {
+    noteChange(callOf, "Moved your call", { tab: "home", label: "See your meetings", key: `meeting-move:${id}`, ref: Number(id), push: true });
   }
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -3115,7 +3131,9 @@ export async function updateCalendarEntryAction(id: number, v: CalendarEntryInpu
 export async function removeCalendarEntryAction(id: number) {
   const coach = await requireCoach();
   if (!coachOwnsMeeting(coach.id, Number(id))) return;
-  const meetingClient = getClientIdForMeeting(Number(id));
+  // Only a call was ever on the client's screens, so only a call is cancelled for them.
+  const stored = getCalendarEntry(Number(id));
+  const meetingClient = stored && isClientCall(stored.category) ? stored.client_id : null;
   removeMeeting(Number(id));
   noteChange(meetingClient, "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, ref: Number(id), push: true });
   revalidatePath("/admin");
