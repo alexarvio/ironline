@@ -18,13 +18,15 @@ import { ConfirmDialog } from "../training/TrainingDraft";
 
 // The coach's Library (21 Oct, Alex: "just the library for now"): every exercise of theirs and its demo, nothing else.
 // Training's header (Library, + Exercise, ⋯), one search bar, then each muscle group in the coach's order (Cardio
-// among them, Other last): its title with the count and the fold, one hairline card, an exercise a row A–Z.
-// A row: the demo's thumb (a click plays it by the row, or opens the link), the name, Add video / Add link or, on
-// hover, Replace / Remove, and ⋯ (Rename, Move to, Take out). Variations, substitutes and default cues are not on
-// this screen; their data stays (Training and the client app use them). A change shows at once and saves behind it.
+// among them, Other last): its title with the count and the fold, then a grid of cards, an exercise a card A–Z
+// (23 Oct, Alex: the rows' thumbs were way too small). A card: the demo big on top at 3:4 (a click plays it in a
+// player floating by the card, or opens the link; Add video / Add link on a dashed stage when there is none), the
+// name under it, Replace / Remove on hover, and ⋯ over the poster's corner (Rename, Move to, Take out); + Exercise
+// the grid's last tile. Variations, substitutes and default cues are not on this screen; their data stays (Training
+// and the client app use them). A change shows at once and saves behind it.
 
 type Patch = Partial<Pick<LibraryItem, "name" | "group" | "video" | "archived">>;
-/** An exercise as a row; a new one is there (faded) before the server gives it its id. */
+/** An exercise as a card; a new one is there (faded) before the server gives it its id. */
 type Row = { key: string; id: number; name: string; group: string; video: string | null; archived: boolean; pending: boolean };
 type Dlg = { kind: "demo"; id: number; tab?: "link" | "file" } | { kind: "remove"; id: number } | { kind: "takeout"; id: number } | null;
 
@@ -33,7 +35,7 @@ const FOLD_KEY = "norcoach:library-folded";
 const MAX_UPLOAD = 128 * 1024 * 1024;
 const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
 const isUpload = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
-/** A clip of the coach's, a YouTube video (both play by the row), or another link (opens in a new tab). */
+/** A clip of the coach's, a YouTube video (both play by the card), or another link (opens in a new tab). */
 const demoKind = (url: string): "upload" | "youtube" | "link" => (isUpload(url) ? "upload" : ytId(url) ? "youtube" : "link");
 const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
@@ -69,7 +71,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   const [q, setQ] = useState("");
   const [showOut, setShowOut] = useState(false);
   const [folded, setFolded] = useState<string[]>([]);
-  // ?edit=<id> (the old drawer's link): its group open, the row scrolled to.
+  // ?edit=<id> (the old drawer's link): its group open, the card scrolled to.
   const [landing, setLanding] = useState<number | null>(null);
   const [patches, setPatches] = useState<Record<number, Patch>>({});
   const [adding, setAdding] = useState<{ key: string; name: string; group: string; id: number | null }[]>([]);
@@ -137,7 +139,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   ];
   const outCount = items.filter((i) => i.archived).length;
   const needle = q.trim().toLowerCase();
-  // A link to one that is taken out still lands on it (that row alone shows, greyed).
+  // A link to one that is taken out still lands on it (that card alone shows, greyed).
   const shown = rows.filter((r) => (showOut || !r.archived || (!r.pending && r.id === landing)) && (!needle || r.name.toLowerCase().includes(needle)));
   const sections = data.groups.map((g) => ({ ...g, rows: shown.filter((r) => r.group === g.slug).sort(byName) })).filter((s) => !needle || s.rows.length > 0);
   const landingGroup = landing != null ? (rows.find((r) => !r.pending && r.id === landing)?.group ?? null) : null;
@@ -262,84 +264,79 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   const groupOptions = data.groups.map((g) => ({ value: g.slug, label: g.label }));
   const dlgItem = dlg ? itemOf(dlg.id) : null;
 
-  const rowView = (r: Row) => (
-    <div key={r.key} data-exercise-id={r.pending ? undefined : r.id} className={`rls-row lbx-row${r.archived ? " out" : ""}${r.pending ? " pending" : ""}`}>
-      <div className="rls-row-main lbx-row-main">
-        <Thumb row={r} playing={playing === r.id} onPlay={(on) => setPlaying(on ? r.id : null)} onAdd={() => setDlg({ kind: "demo", id: r.id })} />
-        {renaming === r.id ? <RenameField name={r.name} onDone={(v) => rename(r, v)} onCancel={() => setRenaming(null)} /> : <span className="lbx-name" title={r.name}>{r.name}</span>}
-        <span className="lbx-acts">
-          {r.pending ? null : r.archived ? (
-            <button type="button" className="lbx-act" onClick={() => takeOut(r, false)}>
-              Put back
-            </button>
-          ) : r.video ? (
-            <>
-              <button type="button" className="lbx-act hover" onClick={() => setDlg({ kind: "demo", id: r.id })}>
-                Replace
-              </button>
-              <button type="button" className="lbx-act hover" onClick={() => setDlg({ kind: "remove", id: r.id })}>
-                Remove
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" className="lbx-act" onClick={() => setDlg({ kind: "demo", id: r.id, tab: "file" })}>
-                Add video
-              </button>
-              <button type="button" className="lbx-act" onClick={() => setDlg({ kind: "demo", id: r.id, tab: "link" })}>
-                Add link
-              </button>
-            </>
-          )}
-        </span>
-        {r.pending || r.archived ? (
-          <span aria-hidden="true" />
-        ) : (
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${r.name}`}>
-              <MoreIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="pb-menu"
-              onCloseAutoFocus={(e) => {
-                if (!keepFocus.current) return;
-                keepFocus.current = false;
-                e.preventDefault();
-              }}
-            >
-              <DropdownMenuItem
-                onSelect={() => {
-                  keepFocus.current = true;
-                  setRenaming(r.id);
+  const tileView = (r: Row) => {
+    const kind = r.video ? demoKind(r.video) : null;
+    const stage = kind == null ? `none${r.pending || r.archived ? " off" : ""}` : kind === "link" ? "link" : "poster";
+    return (
+      <div key={r.key} data-exercise-id={r.pending ? undefined : r.id} className={`lbx-tile${r.archived ? " out" : ""}${r.pending ? " pending" : ""}`}>
+        <div className={`lbx-stage ${stage}`}>
+          <Demo row={r} playing={playing === r.id} onPlay={(on) => setPlaying(on ? r.id : null)} onAdd={(tab) => setDlg({ kind: "demo", id: r.id, tab })} />
+          {!r.pending && !r.archived && (
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger className="lbx-tile-more" aria-label={`More for ${r.name}`}>
+                <MoreIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="pb-menu"
+                onCloseAutoFocus={(e) => {
+                  if (!keepFocus.current) return;
+                  keepFocus.current = false;
+                  e.preventDefault();
                 }}
               >
-                <PencilIcon /> Rename
-              </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <ArrowRightIcon /> Move to
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="pb-menu">
-                  {data.groups
-                    .filter((g) => g.slug !== r.group)
-                    .map((g) => (
-                      <DropdownMenuItem key={g.slug} onSelect={() => moveTo(r, g.slug)}>
-                        {g.label}
-                      </DropdownMenuItem>
-                    ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "takeout", id: r.id })}>
-                <TrashIcon /> Take out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+                <DropdownMenuItem
+                  onSelect={() => {
+                    keepFocus.current = true;
+                    setRenaming(r.id);
+                  }}
+                >
+                  <PencilIcon /> Rename
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <ArrowRightIcon /> Move to
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="pb-menu">
+                    {data.groups
+                      .filter((g) => g.slug !== r.group)
+                      .map((g) => (
+                        <DropdownMenuItem key={g.slug} onSelect={() => moveTo(r, g.slug)}>
+                          {g.label}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "takeout", id: r.id })}>
+                  <TrashIcon /> Take out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+        <div className="lbx-tile-foot">
+          {renaming === r.id ? <RenameField name={r.name} onDone={(v) => rename(r, v)} onCancel={() => setRenaming(null)} /> : <span className="lbx-name" title={r.name}>{r.name}</span>}
+          <span className="lbx-acts">
+            {r.pending ? null : r.archived ? (
+              <button type="button" className="lbx-act" onClick={() => takeOut(r, false)}>
+                Put back
+              </button>
+            ) : r.video ? (
+              <>
+                <button type="button" className="lbx-act hover" aria-label={`Replace the demo of ${r.name}`} onClick={() => setDlg({ kind: "demo", id: r.id })}>
+                  Replace
+                </button>
+                <button type="button" className="lbx-act hover" aria-label={`Remove the demo of ${r.name}`} onClick={() => setDlg({ kind: "remove", id: r.id })}>
+                  Remove
+                </button>
+              </>
+            ) : null}
+          </span>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="rd trn rls lbx">
@@ -414,7 +411,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         {needle && sections.length === 0 && <p className="lbx-none">None</p>}
       </div>
 
-      {/* ---- A muscle group: its title, the count and the fold; an exercise a row, A–Z; + Exercise last. */}
+      {/* ---- A muscle group: its title, the count and the fold; a grid of cards, A–Z; + Exercise the last tile. */}
       {sections.map((s) => {
         const open = isOpen(s.slug);
         const count = s.rows.filter((r) => !r.archived).length;
@@ -457,19 +454,17 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
               )}
             </h2>
             {open && (
-              <div className="rls-card lbx-card">
-                {s.rows.map(rowView)}
+              <div className="lbx-grid">
+                {s.rows.map(tileView)}
                 {!needle && (
                   <Popover open={panel === s.slug} onOpenChange={(o) => setPanel(o ? s.slug : null)}>
                     <PopoverTrigger asChild>
-                      <button type="button" className="lbx-addrow">
-                        <span className="lbx-addrow-plus" aria-hidden="true">
-                          <PlusIcon />
-                        </span>
-                        Exercise
+                      <button type="button" className="lbx-addtile">
+                        <PlusIcon />
+                        <span>Exercise</span>
                       </button>
                     </PopoverTrigger>
-                    {panel === s.slug && <CreatePanel label="New exercise" align="start" group={s.slug} taken={exerciseTaken} onAdd={addExercise} onCancel={() => setPanel(null)} />}
+                    {panel === s.slug && <CreatePanel label="New exercise" side="right" align="start" group={s.slug} taken={exerciseTaken} onAdd={addExercise} onCancel={() => setPanel(null)} />}
                   </Popover>
                 )}
               </div>
@@ -527,7 +522,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
 
 const PLAY = "M8 5v14l11-7z";
 
-/** A demo clip's first frame, fetched only once its row comes near the screen. */
+/** A demo clip's first frame, fetched only once its card comes near the screen. */
 function LazyClip({ src }: { src: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [near, setNear] = useState(false);
@@ -549,21 +544,34 @@ function LazyClip({ src }: { src: string }) {
 }
 
 /**
- * The demo's thumb: a 3:4 poster for a clip or a YouTube link (a click plays it in a player floating by the row; Esc
- * or a click away closes it), a link mark for another link (opens it in a new tab), a dashed + when there is none.
+ * The card's stage, its demo big at 3:4: a poster for a clip or a YouTube link (a click plays it in a player floating
+ * by the card; Esc or a click away closes it), the link mark for another link (opens it in a new tab), and with none
+ * a + with Add video and Add link under it (a + alone while it is new or taken out).
  */
-function Thumb({ row, playing, onPlay, onAdd }: { row: Row; playing: boolean; onPlay: (on: boolean) => void; onAdd: () => void }) {
+function Demo({ row, playing, onPlay, onAdd }: { row: Row; playing: boolean; onPlay: (on: boolean) => void; onAdd: (tab: "file" | "link") => void }) {
   const url = row.video;
   if (!url)
-    return (
-      <button type="button" className="lbx-thumb none" aria-label={`Add a demo to ${row.name}`} disabled={row.pending || row.archived} onClick={onAdd}>
+    return row.pending || row.archived ? (
+      <span className="lbx-stage-plus" aria-hidden="true">
         <PlusIcon />
-      </button>
+      </span>
+    ) : (
+      <>
+        <button type="button" className="lbx-stage-add" aria-label={`Add video to ${row.name}`} onClick={() => onAdd("file")}>
+          <span className="lbx-stage-plus" aria-hidden="true">
+            <PlusIcon />
+          </span>
+          <span className="lbx-stage-word">Add video</span>
+        </button>
+        <button type="button" className="lbx-stage-link" aria-label={`Add link to ${row.name}`} onClick={() => onAdd("link")}>
+          Add link
+        </button>
+      </>
     );
   const kind = demoKind(url);
   if (kind === "link")
     return (
-      <a className="lbx-thumb link" href={url} target="_blank" rel="noopener noreferrer" aria-label={`Open the demo of ${row.name}`} title={url}>
+      <a className="lbx-stage-hit" href={url} target="_blank" rel="noopener noreferrer" aria-label={`Open the demo of ${row.name}`} title={url}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
         </svg>
@@ -574,20 +582,20 @@ function Thumb({ row, playing, onPlay, onAdd }: { row: Row; playing: boolean; on
   return (
     <Popover open={playing} onOpenChange={onPlay}>
       <PopoverTrigger asChild>
-        <button type="button" className="lbx-thumb poster" aria-label={`Play the demo of ${row.name}`}>
+        <button type="button" className="lbx-stage-hit" aria-label={`Play the demo of ${row.name}`}>
           {yt ? (
             // eslint-disable-next-line @next/next/no-img-element -- YouTube's own thumbnail
-            <img src={`https://i.ytimg.com/vi/${yt}/mqdefault.jpg`} alt="" loading="lazy" draggable={false} />
+            <img src={`https://i.ytimg.com/vi/${yt}/hqdefault.jpg`} alt="" loading="lazy" draggable={false} />
           ) : (
             <LazyClip src={url} />
           )}
-          <svg className="lbx-thumb-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <svg className="lbx-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={PLAY} />
           </svg>
         </button>
       </PopoverTrigger>
       {playing && (
-        <PopoverContent className={`lbx-player${tall ? " tall" : ""}`} side="bottom" align="start" sideOffset={8} aria-label={`${row.name} demo`} onOpenAutoFocus={(e) => e.preventDefault()}>
+        <PopoverContent className={`lbx-player${tall ? " tall" : ""}`} side="right" align="start" sideOffset={10} aria-label={`${row.name} demo`} onOpenAutoFocus={(e) => e.preventDefault()}>
           {yt ? <iframe src={`https://www.youtube.com/embed/${yt}?autoplay=1&rel=0`} title={`${row.name} demo`} allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowFullScreen /> : <video src={url} controls autoPlay playsInline />}
         </PopoverContent>
       )}
@@ -638,7 +646,7 @@ function RenameField({ name, onDone, onCancel }: { name: string; onDone: (v: str
  * The floating create panel (design rules 6): a small-caps label, the name on a clean line (and the group, from the
  * header's + Exercise), Cancel in words and an ink Add. A name already there holds Add back and says where it is.
  */
-function CreatePanel({ label, align, groups, group: startGroup, taken, onAdd, onCancel }: { label: string; align: "start" | "end"; groups?: { value: string; label: string }[]; group?: string; taken: (name: string) => string | null; onAdd: (name: string, group: string) => void | Promise<void>; onCancel: () => void }) {
+function CreatePanel({ label, side = "bottom", align, groups, group: startGroup, taken, onAdd, onCancel }: { label: string; side?: "bottom" | "right"; align: "start" | "end"; groups?: { value: string; label: string }[]; group?: string; taken: (name: string) => string | null; onAdd: (name: string, group: string) => void | Promise<void>; onCancel: () => void }) {
   const box = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [group, setGroup] = useState(startGroup ?? "other");
@@ -654,8 +662,9 @@ function CreatePanel({ label, align, groups, group: startGroup, taken, onAdd, on
   return (
     <PopoverContent
       className="rd-addpop lbx-create"
+      side={side}
       align={align}
-      sideOffset={6}
+      sideOffset={side === "right" ? 10 : 6}
       onOpenAutoFocus={(e) => {
         e.preventDefault();
         box.current?.focus({ preventScroll: true });
