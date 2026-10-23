@@ -202,16 +202,21 @@ export default function NewClientDialog({
               <InfoRow label="Gender" as="div">
                 <GenderPills value={draft.gender} onChange={(v) => set("gender", v)} />
               </InfoRow>
-              <InfoRow label="Height">
-                <Suffixed unit="cm">
-                  <input className="nc-input" type="number" inputMode="decimal" min={0} value={draft.heightCm} onChange={(e) => set("heightCm", e.target.value)} placeholder="180" />
-                </Suffixed>
-              </InfoRow>
-              <InfoRow label="Starting weight">
-                <Suffixed unit="kg">
-                  <input className="nc-input" type="number" inputMode="decimal" min={0} step="0.1" value={draft.startingWeightKg} onChange={(e) => set("startingWeightKg", e.target.value)} placeholder="82.5" />
-                </Suffixed>
-              </InfoRow>
+              {/* No height or weight in the redesign's New client (23 Oct, Alex): the client's weight is what they log. */}
+              {!hl && (
+                <>
+                  <InfoRow label="Height">
+                    <Suffixed unit="cm">
+                      <input className="nc-input" type="number" inputMode="decimal" min={0} value={draft.heightCm} onChange={(e) => set("heightCm", e.target.value)} placeholder="180" />
+                    </Suffixed>
+                  </InfoRow>
+                  <InfoRow label="Starting weight">
+                    <Suffixed unit="kg">
+                      <input className="nc-input" type="number" inputMode="decimal" min={0} step="0.1" value={draft.startingWeightKg} onChange={(e) => set("startingWeightKg", e.target.value)} placeholder="82.5" />
+                    </Suffixed>
+                  </InfoRow>
+                </>
+              )}
               <InfoRow label="Email" full bad={form.emailTaken || (form.emailBad && !!draft.email)}>
                 <input
                   className="nc-input"
