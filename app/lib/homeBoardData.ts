@@ -815,3 +815,36 @@ export function noteHomeLooked(clientId: number): void {
     console.error("[homeBoard] noteHomeLooked:", e);
   }
 }
+
+// ---- Training's 7 and 30 days cells -----------------------------------------------------------------
+
+/** Each exercise's change in its best estimated one-rep max (Epley), by the calendar as Home's Strength counts it
+    (23 Oct, Alex: Training's 7 days and 30 days cells read the same as Home): the last 7 (30) days' best against the 7
+    (30) days just before, only when the exercise was done in both; one decimal. Keyed as the board keys an exercise,
+    "exerciseId:variationId" (a swap counts as what was done). */
+export function exerciseTrends(clientId: number, today: string = localDateStr()): Map<string, { d7: number | null; d30: number | null }> {
+  const ctx = context(clientId, today);
+  const byKey = new Map<string, Map<string, number>>();
+  for (const s of ctx.sets) {
+    if (!s.exerciseKey || s.day > today) continue;
+    if (s.weight == null || s.reps == null || !(s.weight > 0) || !(s.reps > 0)) continue;
+    const e1rm = s.weight * (1 + s.reps / 30);
+    let days = byKey.get(s.exerciseKey);
+    if (!days) byKey.set(s.exerciseKey, (days = new Map()));
+    if (e1rm > (days.get(s.day) ?? 0)) days.set(s.day, e1rm);
+  }
+  const change = (days: Map<string, number>, n: number): number | null => {
+    const from = addDays(today, -(n - 1));
+    const prevFrom = addDays(from, -n);
+    let cur = 0;
+    let prev = 0;
+    for (const [day, v] of days) {
+      if (day >= from) cur = Math.max(cur, v);
+      else if (day >= prevFrom) prev = Math.max(prev, v);
+    }
+    return cur > 0 && prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : null;
+  };
+  const out = new Map<string, { d7: number | null; d30: number | null }>();
+  for (const [key, days] of byKey) out.set(key, { d7: change(days, 7), d30: change(days, 30) });
+  return out;
+}

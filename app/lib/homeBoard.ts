@@ -23,7 +23,7 @@ export type ConsistencyDay = { date: string; trained: boolean; food: boolean; ch
     (`days`; the current week up to today), how many had each. A week still to come is `future`, its counts 0. */
 export type ConsistencyWeek = { start: string; /** Its week of the phase, from 1. */ week: number; days: number; trained: number; food: number; checkIn: number; future?: boolean };
 
-/** One window of the strength card. */
+/** One window of Muscle balance's Strength (23 Oct, Alex: on the hexagon, no card of its own). */
 export type StrengthWindow = {
   since: string;
   groups: { group: MuscleGroup; pct: number; exercises: number }[];

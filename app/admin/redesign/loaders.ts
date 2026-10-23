@@ -102,6 +102,7 @@ import { clientPlanId, listCoachPlans } from "../../lib/coachPlans";
 import { coachIdOfClient } from "../../lib/tenancy";
 import { getCoachFocus } from "../../lib/focus";
 import { supportUnreadForCoach, supportUnreadForOwner } from "../../lib/support";
+import { exerciseTrends } from "../../lib/homeBoardData";
 
 // What the redesign drafts read, gathered on the server for the shell that
 // shows them side by side. Read-only: the drafts save nothing.
@@ -314,6 +315,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     list.push({ id: m.id, mine: m.sender === "coach", text: m.text || (m.media_path ? "" : "A file"), when: dayMonthTime(m.created_at), at: new Date(m.created_at).getTime(), media: m.media_path ? { path: m.media_path, type: m.media_type ?? "file" } : null });
     aboutExercise.set(m.link.assignmentId, list);
   }
+  // Each exercise's 7 and 30 day change, as Home counts it (23 Oct).
+  const trends = exerciseTrends(clientId);
   const sessions = days.map((d, si) => {
     const assignments = getAssignmentsForDay(d.id);
     const videos = videoRequestsFor(assignments.map((a) => a.id));
@@ -367,16 +370,9 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
           current: i + 1 === weekIdx,
         };
       }).filter((h): h is NonNullable<typeof h> => h != null);
-      const logged = history.filter((h) => h.sets.length > 0);
-      const thisWeek = history.find((h) => h.current) ?? null;
-      // 7 days: this week's estimated one-rep max against last week's. 30 days:
-      // against the earliest logged week within the last four.
-      const pct = (from: (typeof history)[number] | null) =>
-        thisWeek?.e1rm != null && from?.e1rm != null && from !== thisWeek && from.e1rm > 0 ? Math.round(((thisWeek.e1rm - from.e1rm) / from.e1rm) * 1000) / 10 : null;
-      // Last week means the week before, logged: an older week is not "7 days"
-      // (week 1 against week 6 read as +650%).
-      const lastWeek = thisWeek ? logged.find((h) => h.week === thisWeek.week - 1) ?? null : null;
-      const monthBack = thisWeek ? logged.filter((h) => h.week < thisWeek.week && h.week >= thisWeek.week - 4)[0] ?? null : null;
+      // 7 days and 30 days by the calendar, as Home's Strength (23 Oct, Alex): the exercise's best estimated one-rep max
+      // in the last 7 (30) days against the 7 (30) before (exerciseTrends), so a row is its share of its group on Home.
+      const trend = trends.get(`${a.exercise_id}:${a.variation_id ?? ""}`);
       return {
         id: a.id,
         exerciseId: a.exercise_id,
@@ -414,8 +410,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         libraryOff: !!a.library_substitutes_off,
         libraryHidden: a.library_substitutes_hidden ?? [],
         variationLast: variationLastFor(a.exercise_id, dayGymId(d.id)),
-        d7: pct(lastWeek),
-        d30: pct(monthBack),
+        d7: trend?.d7 ?? null,
+        d30: trend?.d30 ?? null,
       };
     });
     const cardio = listCardioForDay(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: isCardioDone(c.id), swap: c.swap?.name ?? null, alternatives: (c.alternatives ?? []).map((a) => ({ name: a.name, note: a.note ?? "" })) }));

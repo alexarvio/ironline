@@ -30,8 +30,8 @@ import type { PhaseTrack } from "../../../lib/db";
 // - Since: what they did since the coach last looked, one quiet line.
 // - The three tracks (Lifestyle, Training, Nutrition): the phase, its week and how far in, then the one figure that
 //   matters right under it. A tile opens its tab.
-// - Muscle balance (sets or volume per group over 7d, 30d or the phase, one against the window before or several
-//   together) beside Strength (all six groups, over 7d, 30d or the phase) and Weight (the phase's readings).
+// - Muscle balance (sets per group, or strength per group as an index around 100, over 7d, 30d or the phase, one
+//   against the window before or several together) beside Weight (the phase's readings), its full height.
 // - Consistency (the last 30 days, a square a day, per behaviour) with Meetings (the next call big, the last at the foot)
 //   and Invoices (what is owed big; the last paid and the next to be made at the foot) beside it; each opens its tab.
 // - Activity: what they did, one kind at a time, a page at a time; every row leads with its date.
@@ -124,32 +124,19 @@ const kg1 = (n: number) => `${(Math.round(n * 10) / 10).toFixed(1)} kg`;
 const money = (n: number, currency: string) => new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(n || 0);
 /** "2 sessions", "1 check-in"; nothing for none, so the part drops out. */
 const count = (n: number, one: string, many: string) => (n > 0 ? `${n} ${n === 1 ? one : many}` : null);
-/** Volume per group, one unit for the whole chart from its largest value: all in t once that reaches 1000 kg (one
-    decimal under 10 t: "4.2 t", "22 t"), else all in kg; nothing as "0". */
-const volumeIn = (max: number) => (v: number) => {
-  if (!(v > 0)) return "0";
-  if (max < 1000) return `${Math.round(v)} kg`;
-  const t = v / 1000;
-  return `${t < 10 ? Math.max(0.1, Math.round(t * 10) / 10) : Math.round(t)} t`;
-};
 const setsOf = (v: number) => String(Math.round(v));
-/** Strength's change: one decimal under 10%, whole above; a real minus. */
+/** Strength's Overall: one decimal under 10%, whole above; a real minus. */
 const pctOf = (p: number) => (Math.abs(p) < 10 ? Math.round(p * 10) / 10 : Math.round(p));
 const pctText = (r: number) => (r === 0 ? "0%" : `${r > 0 ? "+" : MINUS}${Math.abs(r)}%`);
+/** A group's strength as an index (23 Oct, Alex): 100 and its mean % change, one decimal ("103.4"). */
+const indexText = (pct: number) => (100 + Math.round(pct * 10) / 10).toFixed(1);
+/** Where the index sits on the hexagon: a fixed 80 to 120, 100 halfway; a change past ±20% stays at the edge. */
+const indexAt = (pct: number) => Math.min(1, Math.max(0, (pct + 20) / 40));
 
 // The radar's axes, clockwise from the top (21 Oct, Alex's mockup).
 const AXES: MuscleGroup[] = ["Back", "Chest", "Core", "Legs", "Shoulders", "Arms"];
-/** Strength's rows: the same six groups, always all of them (21 Oct, Alex), in the contract's order (MUSCLE_GROUPS,
-    written out here: homeBoard.ts's values would bring the server's reader into the browser). */
-const STRENGTH_GROUPS: MuscleGroup[] = ["Back", "Chest", "Shoulders", "Arms", "Legs", "Core"];
-type Measure = "sets" | "volume";
-/** Strength's windows, in Muscle balance's order (21 Oct, Alex: the same toggle). */
-type StrengthSpan = "7d" | "30d" | "phase";
-const STRENGTH_SPANS: { id: StrengthSpan; label: string }[] = [
-  { id: "7d", label: "7d" },
-  { id: "30d", label: "30d" },
-  { id: "phase", label: "Phase" },
-];
+/** Sets per group, or strength per group (23 Oct, Alex: Strength took Volume's place). */
+type Measure = "sets" | "strength";
 /** A track's colour at a strength (a hex from phaseChrome): the soft fill under its full-strength edge, as a phase's bar. */
 const tintOf = (hex: string, alpha: number) => {
   const n = parseInt(hex.slice(1, 7), 16);
@@ -278,13 +265,10 @@ export default function HomeDraft({
           ))}
       </section>
 
-      {/* ---- Muscle balance beside Strength and Weight. */}
+      {/* ---- Muscle balance beside Weight, the two one height (23 Oct, Alex: strength is on the hexagon, no card of its own). */}
       <div className="rh-duo">
-        <MuscleCard muscles={board.muscles} />
-        <div className="rh-stack">
-          <StrengthCard strength={board.strength} hasPhase={board.tracks.some((t) => t.track === "training" && t.phase != null)} />
-          <WeightCard weight={board.weight} />
-        </div>
+        <MuscleCard muscles={board.muscles} strength={board.strength} />
+        <WeightCard weight={board.weight} />
       </div>
 
       {/* ---- Consistency, and beside it the calls and the invoices, each a card that opens its tab. */}
@@ -525,63 +509,118 @@ function PhaseTile({ tile, onOpen }: { tile: HomeBoard["tracks"][number]; onOpen
   );
 }
 
-// ---- Muscle balance: sets (or volume) per group as a hexagon. 7d, 30d and Phase can be on together (21 Oct, Alex: "so
-// I can compare easily"), each its own colour: one on, it against the window before it (dashed grey); more, each its own
-// shape; none, an empty hexagon (21 Oct, Alex: the last one clicks off too). No Plan view (21 Oct, Alex: just the three).
+// ---- Muscle balance: sets or strength per group as a hexagon (23 Oct, Alex: Sets | Strength, Strength in Volume's
+// place). 7d, 30d and Phase can be on together (21 Oct, Alex: "so I can compare easily"), each its own colour; none, an
+// empty hexagon (21 Oct, Alex: the last one clicks off too). No Plan view (21 Oct, Alex: just the three).
+// - Sets: one window on, it against the window before it (dashed grey); more, each its own shape.
+// - Strength: each group's index, 100 and its mean % change in estimated one-rep max (Epley; 7d and 30d against the
+//   window before, Phase since the phase began), on a fixed 80 to 120 with 100 a dashed grey ring; a group with nothing
+//   to compare sits at 100, its figure a dash. One window on, its Overall and new bests on the capsule's row.
 type Window = "7d" | "30d" | "phase";
 const WINDOWS: Window[] = ["7d", "30d", "phase"];
 /** A colour a window: 7d the training purple, 30d rose, Phase ink; none of them another track's. */
 const WINDOW_COLOR: Record<Window, string> = { "7d": TRACK_ACCENT.training, "30d": "#c2417a", phase: "#141a24" };
 const BEFORE_GREY = "#98a2b3";
-type Shape = { v: PerGroup; color: string; dashed?: boolean; fill?: number };
-function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
+/** Strength's figures with one window on: green over 100, red under, ink at 100. */
+const UP = "#2f7a3f";
+const DOWN = "#b42318";
+const INK = "#141a24";
+/** The hairline rings: thirds for Sets; for Strength the outer one alone, 100 being the dashed ring halfway. */
+const SET_RINGS = [1 / 3, 2 / 3, 1];
+const STRENGTH_RINGS = [1];
+/** A shape on the hexagon: each group's reach, 0 at the centre to 1 on the outer ring. */
+type Shape = { at: PerGroup; color: string; dashed?: boolean; fill?: number };
+/** One window's figures under the axis names: each group's words, and their colour (none: the figure's ink). */
+type Figures = Record<MuscleGroup, { text: string; color?: string }>;
+const perGroup = <T,>(f: (g: MuscleGroup) => T) => Object.fromEntries(AXES.map((g) => [g, f(g)])) as Record<MuscleGroup, T>;
+function MuscleCard({ muscles, strength }: { muscles: HomeBoard["muscles"]; strength: HomeBoard["strength"] }) {
   const [measure, setMeasure] = useState<Measure>("sets");
   const [picked, setPicked] = useState<Window[]>(["7d"]);
-  // A window that went away (no phase any more) drops out.
+  // A window that went away (no phase any more) drops out: Phase only with a training phase, Sets and Strength alike.
   const windows = picked.filter((w) => w !== "phase" || !!muscles.phase);
   // Each on or off, all off too (an empty hexagon); the order is always 7d, 30d, Phase.
   const toggle = (w: Window) => setPicked((p) => (p.includes(w) ? p.filter((x) => x !== w) : WINDOWS.filter((x) => x === w || p.includes(x))));
   const winOf = (w: Window): MuscleWindow => (w === "phase" && muscles.phase ? muscles.phase : w === "30d" ? muscles["30d"] : muscles["7d"]);
   const nameOf = (w: Window) => (w === "phase" ? `Since ${dayMonth(winOf("phase").from)}` : `Last ${w}`);
-  const valuesOf = (w: Window) => (measure === "volume" ? winOf(w).volume : winOf(w).sets);
+  const one = windows.length === 1;
 
-  let shapes: Shape[];
-  let shown: { v: PerGroup; color?: string }[];
-  let key: { label: string; color: string; dashed?: boolean }[];
-  if (windows.length === 1) {
-    const w = windows[0];
-    const win = winOf(w);
-    const before = measure === "volume" ? win.prevVolume : win.prevSets;
-    shapes = [
-      { v: before, color: BEFORE_GREY, dashed: true },
-      { v: valuesOf(w), color: WINDOW_COLOR[w], fill: 0.12 },
-    ];
-    shown = [{ v: valuesOf(w) }];
-    key = [
-      { label: nameOf(w), color: WINDOW_COLOR[w] },
-      { label: w === "phase" ? "Before" : `${w} before`, color: BEFORE_GREY, dashed: true },
-    ];
-  } else if (windows.length > 1) {
-    // Several at once: each its own shape, lightly filled so the ones under still show; the longest window drawn first.
-    shapes = [...windows].reverse().map((w) => ({ v: valuesOf(w), color: WINDOW_COLOR[w], fill: 0.07 }));
-    shown = windows.map((w) => ({ v: valuesOf(w), color: WINDOW_COLOR[w] }));
-    key = windows.map((w) => ({ label: nameOf(w), color: WINDOW_COLOR[w] }));
+  let shapes: Shape[] = [];
+  let figures: Figures[] = [];
+  let key: { label: string; color: string; dashed?: boolean }[] = [];
+  let empty: boolean;
+  let said: string;
+  if (measure === "sets") {
+    const valuesOf = (w: Window) => winOf(w).sets;
+    let drawn: { v: PerGroup; color: string; dashed?: boolean; fill?: number }[] = [];
+    let shown: { v: PerGroup; color?: string }[] = [];
+    if (one) {
+      const w = windows[0];
+      drawn = [
+        { v: winOf(w).prevSets, color: BEFORE_GREY, dashed: true },
+        { v: valuesOf(w), color: WINDOW_COLOR[w], fill: 0.12 },
+      ];
+      shown = [{ v: valuesOf(w) }];
+      key = [
+        { label: nameOf(w), color: WINDOW_COLOR[w] },
+        { label: w === "phase" ? "Before" : `${w} before`, color: BEFORE_GREY, dashed: true },
+      ];
+    } else if (windows.length > 1) {
+      // Several at once: each its own shape, lightly filled so the ones under still show; the longest window drawn first.
+      drawn = [...windows].reverse().map((w) => ({ v: valuesOf(w), color: WINDOW_COLOR[w], fill: 0.07 }));
+      shown = windows.map((w) => ({ v: valuesOf(w), color: WINDOW_COLOR[w] }));
+      key = windows.map((w) => ({ label: nameOf(w), color: WINDOW_COLOR[w] }));
+    }
+    // The largest figure on the chart reaches the outer ring.
+    const scale = Math.max(1, ...drawn.flatMap((s) => AXES.map((g) => s.v[g] ?? 0)));
+    shapes = drawn.map((s) => ({ at: perGroup((g) => Math.max(0, s.v[g] ?? 0) / scale), color: s.color, dashed: s.dashed, fill: s.fill }));
+    figures = shown.map((s) => perGroup((g) => ({ text: setsOf(s.v[g] ?? 0), color: s.color })));
+    // No data in what is picked: the hexagon alone, its rings, spokes and names (22 Oct, Alex: the shape even when
+    // empty, not None yet).
+    empty = windows.length > 0 && drawn.every((s) => AXES.every((g) => !(s.v[g] > 0)));
+    // Said in full for a screen reader: every shape on the chart.
+    const each = (v: PerGroup) => AXES.map((g) => `${g} ${setsOf(v[g] ?? 0)}`).join(", ");
+    said = `Sets. ${key.map((k, i) => `${k.label}: ${each(one ? (i === 0 ? valuesOf(windows[0]) : drawn[0].v) : valuesOf(windows[i]))}`).join(". ")}`;
   } else {
-    shapes = [];
-    shown = [];
-    key = [];
+    /** A window's change per group; null where the group has nothing to compare. */
+    const pctsOf = (w: Window) => perGroup((g) => strength[w]?.groups.find((x) => x.group === g)?.pct ?? null);
+    const drawnOf = (w: Window, fill: number): Shape => {
+      const p = pctsOf(w);
+      return { at: perGroup((g) => indexAt(p[g] ?? 0)), color: WINDOW_COLOR[w], fill };
+    };
+    if (windows.length) {
+      // 100, no change: the dashed grey ring halfway out, under the windows' shapes.
+      // A window with nothing to compare draws no shape (it would sit on 100 and read as no change); its figures are dashes.
+      const withData = windows.filter((w) => !!strength[w]);
+      shapes = [{ at: perGroup(() => indexAt(0)), color: BEFORE_GREY, dashed: true }, ...(one ? withData.map((w) => drawnOf(w, 0.12)) : [...withData].reverse().map((w) => drawnOf(w, 0.07)))];
+      figures = windows.map((w) => {
+        const p = pctsOf(w);
+        return perGroup((g) => {
+          const v = p[g];
+          if (v == null) return { text: "–", color: one ? BEFORE_GREY : WINDOW_COLOR[w] };
+          const r = Math.round(v * 10) / 10;
+          // Several side by side: whole numbers, so three fit beside a side corner; one window keeps its decimal.
+          return { text: one ? indexText(v) : String(Math.round(100 + v)), color: one ? (r > 0 ? UP : r < 0 ? DOWN : INK) : WINDOW_COLOR[w] };
+        });
+      });
+      key = [...windows.map((w) => ({ label: nameOf(w), color: WINDOW_COLOR[w] })), { label: "100, no change", color: BEFORE_GREY, dashed: true }];
+    }
+    // Nothing to compare in any window picked: the hexagon alone, as Sets with nothing logged.
+    empty = windows.length > 0 && windows.every((w) => !strength[w]);
+    said = `Strength, 100 is no change. ${windows
+      .map((w) => {
+        const p = pctsOf(w);
+        return `${nameOf(w)}: ${AXES.map((g) => {
+          const v = p[g];
+          return `${g} ${v == null ? "none" : indexText(v)}`;
+        }).join(", ")}`;
+      })
+      .join(". ")}`;
   }
-  const most = Math.max(0, ...shapes.flatMap((s) => AXES.map((g) => s.v[g] ?? 0)));
-  const byVolume = measure === "volume";
-  const fmt = byVolume ? volumeIn(most) : setsOf;
-  // No data in what is picked, or nothing picked: the hexagon alone, its rings, spokes and names (22 Oct, Alex: the shape
-  // even when empty, not None yet).
-  const empty = windows.length > 0 && shapes.every((s) => AXES.every((g) => !(s.v[g] > 0)));
-  // Said in full for a screen reader: the measure, and every shape on the chart.
-  const each = (v: PerGroup) => AXES.map((g) => `${g} ${fmt(v[g] ?? 0)}`).join(", ");
-  const said = !windows.length
-    ? "Muscle balance: no window picked"
-    : `${byVolume ? "Volume" : "Sets"}. ${key.map((k, i) => `${k.label}: ${each(windows.length === 1 ? (i === 0 ? valuesOf(windows[0]) : shapes[0].v) : valuesOf(windows[i]))}`).join(". ")}`;
+  if (!windows.length) said = "Muscle balance: no window picked";
+  // Strength with one window on: its Overall and how many set a new best, on the capsule's row (23 Oct, Alex: the old
+  // Strength card's line); several or none, nothing there. The row is the capsule's height either way.
+  const over = measure === "strength" && one ? strength[windows[0]] : null;
+  const overall = over ? pctOf(over.overall) : 0;
 
   const spanButtons: { id: Window; label: string }[] = [
     { id: "7d", label: "7d" },
@@ -592,46 +631,61 @@ function MuscleCard({ muscles }: { muscles: HomeBoard["muscles"] }) {
     <section className="rls-card rh-panel rh-muscles" aria-label="Muscle balance" style={{ "--rh-c": TRACK_ACCENT.training } as CSSProperties}>
       <div className="rh-panel-head tall">
         <h2 className="rh-panel-title">Muscle balance</h2>
-        <div className="rd-btn-group" role="group" aria-label="Count">
-          {(["sets", "volume"] as const).map((m) => (
+        <div className="rd-btn-group" role="group" aria-label="Measure">
+          {(["sets", "strength"] as const).map((m) => (
             <button key={m} type="button" className={measure === m ? "on" : ""} aria-pressed={measure === m} onClick={() => setMeasure(m)}>
-              {m === "sets" ? "Sets" : "Volume"}
+              {m === "sets" ? "Sets" : "Strength"}
             </button>
           ))}
         </div>
       </div>
       {/* 7d, 30d and Phase each on or off, all off for an empty hexagon. */}
-      <div className="rd-btn-group rh-spans" role="group" aria-label="Windows">
-        {spanButtons.map((s) => {
-          const on = windows.includes(s.id);
-          return (
-            <button key={s.id} type="button" className={on ? "on" : ""} aria-pressed={on} onClick={() => toggle(s.id)}>
-              {s.label}
-            </button>
-          );
-        })}
+      <div className="rh-spans-row">
+        <div className="rd-btn-group rh-spans" role="group" aria-label="Windows">
+          {spanButtons.map((s) => {
+            const on = windows.includes(s.id);
+            return (
+              <button key={s.id} type="button" className={on ? "on" : ""} aria-pressed={on} onClick={() => toggle(s.id)}>
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+        {over && (
+          <span className="rh-overall">
+            <SepJoin
+              parts={[
+                <span key="o">
+                  Overall <b className={overall > 0 ? "up" : overall < 0 ? "down" : ""}>{pctText(overall)}</b>
+                </span>,
+                `${over.bests} of ${over.of} at a new best`,
+              ]}
+            />
+          </span>
+        )}
       </div>
       <div className="rh-radar-wrap">
-        <Radar shapes={empty ? [] : shapes} shown={empty ? [] : shown} fmt={fmt} label={empty ? "Muscle balance: none yet" : said} />
+        <Radar shapes={empty ? [] : shapes} figures={empty ? [] : figures} rings={measure === "sets" ? SET_RINGS : STRENGTH_RINGS} label={empty ? "Muscle balance: none yet" : said} />
       </div>
-      {!empty && (
-        <div className="rh-key">
-          {key.map((k) => (
+      {/* Always there, empty or not, so the card keeps its height. */}
+      <div className="rh-key">
+        {!empty &&
+          key.map((k) => (
             <span key={k.label}>
               <i className={k.dashed ? "dash" : "line"} style={k.dashed ? undefined : { background: k.color }} aria-hidden="true" />
               {k.label}
             </span>
           ))}
-        </div>
-      )}
+      </div>
     </section>
   );
 }
 
-// The hexagon: three hairline rings and six spokes, the window before as a dashed grey outline, this one filled in
-// training purple; each axis named outside its corner with this window's figure under the name. It scales with its
-// card up to 440px wide (21 Oct, Alex: "there's a lot of space"), its words with it: at full size the names read about
-// 13px and the figures 15px. The sides keep room for the longest name and figure ("Shoulders", "14 of 22").
+// The hexagon: hairline rings and six spokes, the shapes over them (Sets: the window before as a dashed grey outline,
+// this one filled in training purple; Strength: 100 as the dashed grey ring); each axis named outside its corner with
+// the windows' figures under the name. It scales with its card up to 440px wide (21 Oct, Alex: "there's a lot of
+// space"), its words with it: at full size the names read about 13px and the figures 15px. The sides keep room for the
+// longest name and figure ("Shoulders", "14 of 22").
 const RW = 384;
 const RH = 354;
 const CX = RW / 2;
@@ -663,13 +717,12 @@ function roundedPath(pts: (readonly [number, number])[], r: number) {
   });
   return `M${f(cuts[0].out)}` + cuts.slice(1).map((c) => `L${f(c.into)}Q${f(c.at)} ${f(c.out)}`).join("") + `L${f(cuts[0].into)}Q${f(cuts[0].at)} ${f(cuts[0].out)}Z`;
 }
-function Radar({ shapes, shown, fmt, label }: { shapes: Shape[]; shown: { v: PerGroup; color?: string }[]; fmt: (v: number) => string; label: string }) {
-  const scale = Math.max(1, ...shapes.flatMap((s) => AXES.map((g) => s.v[g] ?? 0)));
-  const shape = (v: PerGroup) => roundedPath(AXES.map((g, i) => corner(i, (RR * Math.max(0, v[g] ?? 0)) / scale)), ROUND);
+function Radar({ shapes, figures, rings, label }: { shapes: Shape[]; figures: Figures[]; rings: number[]; label: string }) {
+  const shape = (at: PerGroup) => roundedPath(AXES.map((g, i) => corner(i, RR * Math.max(0, at[g] ?? 0))), ROUND);
   const ring = (f: number) => AXES.map((_, i) => corner(i, RR * f).join(",")).join(" ");
   return (
     <svg className="rh-radar" viewBox={`0 0 ${RW} ${RH}`} role="img" aria-label={label}>
-      {[1 / 3, 2 / 3, 1].map((f) => (
+      {rings.map((f) => (
         <polygon key={f} points={ring(f)} fill="none" stroke="#e1e5eb" strokeWidth={1} />
       ))}
       {AXES.map((g, i) => {
@@ -678,9 +731,9 @@ function Radar({ shapes, shown, fmt, label }: { shapes: Shape[]; shown: { v: Per
       })}
       {shapes.map((s, i) =>
         s.dashed ? (
-          <path key={i} d={shape(s.v)} fill="none" stroke={s.color} strokeWidth={1.5} strokeDasharray="4 3" strokeLinejoin="round" />
+          <path key={i} d={shape(s.at)} fill="none" stroke={s.color} strokeWidth={1.5} strokeDasharray="4 3" strokeLinejoin="round" />
         ) : (
-          <path key={i} d={shape(s.v)} fill={s.color} fillOpacity={s.fill ?? 0} stroke={s.color} strokeWidth={2} strokeLinejoin="round" />
+          <path key={i} d={shape(s.at)} fill={s.color} fillOpacity={s.fill ?? 0} stroke={s.color} strokeWidth={2} strokeLinejoin="round" />
         )
       )}
       {AXES.map((g, i) => {
@@ -695,9 +748,9 @@ function Radar({ shapes, shown, fmt, label }: { shapes: Shape[]; shown: { v: Per
             </text>
             {/* Several windows: each figure in its window's colour, side by side. */}
             <text className="rh-radar-val" x={x} y={valueY} textAnchor={anchor}>
-              {shown.map((s, j) => (
-                <tspan key={j} dx={j ? 7 : 0} fill={s.color}>
-                  {fmt(s.v[g] ?? 0)}
+              {figures.map((s, j) => (
+                <tspan key={j} dx={j ? 7 : 0} fill={s[g].color}>
+                  {s[g].text}
                 </tspan>
               ))}
             </text>
@@ -705,77 +758,6 @@ function Radar({ shapes, shown, fmt, label }: { shapes: Shape[]; shown: { v: Per
         );
       })}
     </svg>
-  );
-}
-
-// ---- Strength: all six groups, each the change over the window picked (7d | 30d | Phase, as Muscle balance; Phase
-// at first) as a thin ink bar and the %: green up, red down; a group with nothing to compare an empty bar and a grey "–",
-// every group so in a window with nothing.
-function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"]; /** A training phase (or a programme standing for one): Phase is there to pick. */ hasPhase: boolean }) {
-  const [picked, setSpan] = useState<StrengthSpan>("phase");
-  // No training phase: no Phase to pick, 7d instead (22 Oct), as Muscle balance. A phase with nothing logged keeps it.
-  const span: StrengthSpan = picked === "phase" && !hasPhase ? "7d" : picked;
-  const w = strength?.[span] ?? null;
-  const rows = STRENGTH_GROUPS.map((g) => {
-    const x = w?.groups.find((s) => s.group === g);
-    return { group: g, r: x ? pctOf(x.pct) : null, exercises: x?.exercises ?? 0 };
-  });
-  const most = Math.max(0, ...rows.map((x) => Math.abs(x.r ?? 0)));
-  // Overall and new bests under the title (23 Oct, Alex), as Business's charts carry their facts; the line keeps its room
-  // across the windows once any of them has something, so switching never moves the rows.
-  const overall = w ? pctOf(w.overall) : null;
-  const anyWindow = !!(strength?.["7d"] || strength?.["30d"] || strength?.phase);
-  return (
-    <section className="rls-card rh-panel" aria-label="Strength">
-      <div className="rh-panel-head tall">
-        <h2 className="rh-panel-title">Strength</h2>
-        <span className="rh-panel-tools">
-          <span className="rd-btn-group" role="group" aria-label="Window">
-            {STRENGTH_SPANS.filter((s) => s.id !== "phase" || hasPhase).map((s) => (
-              <button key={s.id} type="button" className={span === s.id ? "on" : ""} aria-pressed={span === s.id} onClick={() => setSpan(s.id)}>
-                {s.label}
-              </button>
-            ))}
-          </span>
-        </span>
-      </div>
-      {/* Its own line under the head (the review, 23 Oct): beside the title it pushed the capsule onto a second line at
-          middling widths, and the title out of line with Muscle balance's. */}
-      {anyWindow && (
-        <span className="rh-under">
-          {w && overall != null ? (
-            <SepJoin
-              parts={[
-                <span key="o">
-                  Overall <b className={overall > 0 ? "up" : overall < 0 ? "down" : ""}>{pctText(overall)}</b>
-                </span>,
-                `${w.bests} of ${w.of} at a new best`,
-              ]}
-            />
-          ) : (
-            <span aria-hidden="true">&nbsp;</span>
-          )}
-        </span>
-      )}
-      <div className="rh-str">
-        {rows.map((x) => (
-          <div key={x.group} className="rh-str-row" title={x.r == null ? undefined : `${x.exercises} exercise${x.exercises === 1 ? "" : "s"}`}>
-            <span className="rh-str-name">{x.group}</span>
-            <span className="rh-str-track" aria-hidden="true">
-              <i style={{ width: !x.r || most === 0 ? 0 : `max(2px, ${(Math.abs(x.r) / most) * 100}%)` }} />
-            </span>
-            {x.r == null ? (
-              <span className="rh-str-pct none">
-                <span aria-hidden="true">–</span>
-                <span className="sr-only">none yet</span>
-              </span>
-            ) : (
-              <span className={`rh-str-pct${x.r > 0 ? " up" : x.r < 0 ? " down" : ""}`}>{pctText(x.r)}</span>
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 
