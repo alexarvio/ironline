@@ -22,6 +22,8 @@ import { SepJoin } from "../Sep";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { TrackIcon } from "../plan/PlanDraft";
 import type { PhaseTrack } from "../../../lib/db";
+import KindMark from "../KindMark";
+import type { ActivityMark } from "../../../lib/activityMark";
 
 // The client's Home (21 Oct, Alex: built from the Home mockup, root "rd trn rls rh"): Training's header, then the board.
 //
@@ -31,14 +33,18 @@ import type { PhaseTrack } from "../../../lib/db";
 // - The three tracks (Lifestyle, Training, Nutrition): the phase, its week and how far in, then the one figure that
 //   matters right under it. A tile opens its tab.
 // - Muscle balance (sets per group, or strength per group as an index around 100, over 7d, 30d or the phase, one
-//   against the window before or several together) beside Weight (the phase's readings), its full height.
+//   against the window before or several together) beside Strength (all six groups, over 7d, 30d or the phase) and
+//   Weight (the phase's readings over their dates and kg).
 // - Consistency (the last 30 days, a square a day, per behaviour) with Meetings (the next call big, the last at the foot)
 //   and Invoices (what is owed big; the last paid and the next to be made at the foot) beside it; each opens its tab.
 // - Activity: what they did, one kind at a time, a page at a time; every row leads with its date.
 // Details is a pop-up: the face and one fact line, Contact, Coaching, the coach's own note, Delete at the foot.
 
-/** at: when it happened (ms), for the row's date. href: the thing itself (a session, a food day, an invoice), from feedHref. */
-export type DraftEvent = { id: string; category: string; text: string; note: string | null; at: number; when: string; tab: string; href: string | null };
+/** at: when it happened (ms), for the row's date. href: the thing itself (a session, a food day, an invoice), from feedHref.
+    text: the thing alone (FeedEvent.thing; 23 Oct, Alex: no facts after it); note: the client's own words, or none.
+    mark: its icon (KindMark). timeKnown: the hour is known, written from at in the browser's zone as the Feed's.
+    allDay: a call with no time, "All day" where the time goes. */
+export type DraftEvent = { id: string; category: string; text: string; note: string | null; at: number; timeKnown: boolean; allDay?: boolean; mark: ActivityMark; tab: string; href: string | null };
 export type DraftHome = {
   name: string;
   initial: string;
@@ -110,8 +116,8 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const dated = (rows: OverviewInfoRow[]) => rows.map((r) => (ISO_DAY.test(r.value) ? { ...r, value: dayMonth(r.value) } : r));
 /** A day or a moment, as a time: a yyyy-mm-dd day at its noon. */
 const timeOf = (d: string) => new Date(ISO_DAY.test(d) ? `${d}T12:00:00` : d).getTime();
-/** An Activity row's clock time ("18:48"), from the server's "21/10 · 18:48"; none when only the day is known. */
-const clockOf = (when: string) => parts(when).find((p) => /^\d{1,2}:\d{2}$/.test(p)) ?? null;
+/** An Activity row's clock time ("18:48") in the coach's own zone, as the Feed's (its date is logDate's, the same). */
+const clockOf = (at: number) => new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
 // ---- Figures in words.
 const MINUS = "−";
@@ -135,8 +141,18 @@ const indexAt = (pct: number) => Math.min(1, Math.max(0, (pct + 20) / 40));
 
 // The radar's axes, clockwise from the top (21 Oct, Alex's mockup).
 const AXES: MuscleGroup[] = ["Back", "Chest", "Core", "Legs", "Shoulders", "Arms"];
+/** Strength's rows: the same six groups, always all of them (21 Oct, Alex), in the contract's order (MUSCLE_GROUPS,
+    written out here: homeBoard.ts's values would bring the server's reader into the browser). */
+const STRENGTH_GROUPS: MuscleGroup[] = ["Back", "Chest", "Shoulders", "Arms", "Legs", "Core"];
 /** Sets per group, or strength per group (23 Oct, Alex: Strength took Volume's place). */
 type Measure = "sets" | "strength";
+/** Strength's windows, in Muscle balance's order (21 Oct, Alex: the same toggle). */
+type StrengthSpan = "7d" | "30d" | "phase";
+const STRENGTH_SPANS: { id: StrengthSpan; label: string }[] = [
+  { id: "7d", label: "7d" },
+  { id: "30d", label: "30d" },
+  { id: "phase", label: "Phase" },
+];
 /** A track's colour at a strength (a hex from phaseChrome): the soft fill under its full-strength edge, as a phase's bar. */
 const tintOf = (hex: string, alpha: number) => {
   const n = parseInt(hex.slice(1, 7), 16);
@@ -200,9 +216,10 @@ export default function HomeDraft({
   };
 
   // The date at the left of its column, the time centred in one of its own (21 Oct, Alex: every time lines up), then
-  // the thing. The date column is as wide as the whole feed's widest date, so it never moves between kinds or pages.
+  // the kind's icon (23 Oct, Alex: as the Feed's), then the thing. The date column is as wide as the whole feed's widest
+  // date, so it never moves between kinds or pages.
   const dateW = useMemo(() => logDateWidth(home.events.map((e) => new Date(e.at))), [home.events]);
-  const actGrid = { gridTemplateColumns: `${dateW}px 48px minmax(0, 1fr)`, columnGap: 12 } as const;
+  const actGrid = { gridTemplateColumns: `${dateW}px 48px 16px minmax(0, 1fr)`, columnGap: 12 } as const;
 
   return (
     <div className="rd trn rls rh">
@@ -265,10 +282,13 @@ export default function HomeDraft({
           ))}
       </section>
 
-      {/* ---- Muscle balance beside Weight, the two one height (23 Oct, Alex: strength is on the hexagon, no card of its own). */}
+      {/* ---- Muscle balance beside Strength and Weight (23 Oct, Alex: the Strength card back, above Weight). */}
       <div className="rh-duo">
         <MuscleCard muscles={board.muscles} strength={board.strength} />
-        <WeightCard weight={board.weight} />
+        <div className="rh-stack">
+          <StrengthCard strength={board.strength} hasPhase={board.tracks.some((t) => t.track === "training" && t.phase != null)} />
+          <WeightCard weight={board.weight} />
+        </div>
       </div>
 
       {/* ---- Consistency, and beside it the calls and the invoices, each a card that opens its tab. */}
@@ -279,8 +299,9 @@ export default function HomeDraft({
       </div>
 
       {/* ---- Activity: what they did, one kind at a time. A log (design rules 8): the date first as every log's
-          (logDate, .rd-logdate) with the time centred in its own column (.rd-logtime), the thing semi-bold, the rest in grey after it on the one
-          line. A row opens the thing on its tab. */}
+          (logDate, .rd-logdate) with the time centred in its own column (.rd-logtime), the kind's icon in its colour, the
+          thing semi-bold, and only the client's own words grey after it on the one line (23 Oct, Alex). One row a
+          session, its cardio in it. A row opens the thing on its tab. */}
       <section className="rls-section">
         <div className="trn-weekhead">
           <div>
@@ -305,22 +326,19 @@ export default function HomeDraft({
           ) : (
             <div className="rh-rows">
               {shown.map((e) => {
-                const [head, ...rest] = parts(e.text.charAt(0).toUpperCase() + e.text.slice(1));
-                const clock = clockOf(e.when);
+                const clock = e.timeKnown ? clockOf(e.at) : e.allDay ? "All day" : null;
                 return (
                   <div key={e.id} className="rls-row rh-row">
                     <div className="rls-row-main" style={actGrid} onClick={() => go(e)}>
                       <span className="rd-logdate">{logDate(new Date(e.at))}</span>
                       <span className="rd-logtime">{clock}</span>
+                      <KindMark mark={e.mark} />
+                      {/* The thing, then only the client's own words (23 Oct, Alex): no facts after it. */}
                       <span className="rh-what">
                         <button type="button" className="rd-row-hit rh-what-title">
-                          {head}
+                          {e.text}
                         </button>
-                        {(rest.length > 0 || e.note) && (
-                          <span className="rh-what-note">
-                            <SepJoin parts={[...rest, e.note ? `“${e.note}”` : null]} />
-                          </span>
-                        )}
+                        {e.note && <span className="rh-what-note">&ldquo;{e.note}&rdquo;</span>}
                       </span>
                     </div>
                   </div>
@@ -645,7 +663,8 @@ function MuscleCard({ muscles, strength }: { muscles: HomeBoard["muscles"]; stre
           {spanButtons.map((s) => {
             const on = windows.includes(s.id);
             return (
-              <button key={s.id} type="button" className={on ? "on" : ""} aria-pressed={on} onClick={() => toggle(s.id)}>
+              // A window on is its colour on the hexagon as an outline and words, not the ink fill (23 Oct, Alex).
+              <button key={s.id} type="button" className={on ? "on" : ""} style={{ "--win": WINDOW_COLOR[s.id] } as React.CSSProperties} aria-pressed={on} onClick={() => toggle(s.id)}>
                 {s.label}
               </button>
             );
@@ -761,8 +780,115 @@ function Radar({ shapes, figures, rings, label }: { shapes: Shape[]; figures: Fi
   );
 }
 
-// ---- Weight: the latest and the change on the title's line; the phase's readings as one ink line, the latest a dot
-// (from two readings); where they are heading, when there is a phase. "None yet" only with no weight at all.
+// ---- Strength: all six groups, each the change over the window picked (7d | 30d | Phase, as Muscle balance; Phase
+// at first) as a thin ink bar and the %: green up, red down; a group with nothing to compare an empty bar and a grey "–",
+// every group so in a window with nothing.
+function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"]; /** A training phase (or a programme standing for one): Phase is there to pick. */ hasPhase: boolean }) {
+  const [picked, setSpan] = useState<StrengthSpan>("phase");
+  // No training phase: no Phase to pick, 7d instead (22 Oct), as Muscle balance. A phase with nothing logged keeps it.
+  const span: StrengthSpan = picked === "phase" && !hasPhase ? "7d" : picked;
+  const w = strength?.[span] ?? null;
+  const rows = STRENGTH_GROUPS.map((g) => {
+    const x = w?.groups.find((s) => s.group === g);
+    return { group: g, r: x ? pctOf(x.pct) : null, exercises: x?.exercises ?? 0 };
+  });
+  const most = Math.max(0, ...rows.map((x) => Math.abs(x.r ?? 0)));
+  // Overall and new bests under the title (23 Oct, Alex), as Business's charts carry their facts; the line keeps its room
+  // across the windows once any of them has something, so switching never moves the rows.
+  const overall = w ? pctOf(w.overall) : null;
+  const anyWindow = !!(strength?.["7d"] || strength?.["30d"] || strength?.phase);
+  return (
+    <section className="rls-card rh-panel" aria-label="Strength">
+      <div className="rh-panel-head tall">
+        <h2 className="rh-panel-title">Strength</h2>
+        <span className="rh-panel-tools">
+          <span className="rd-btn-group" role="group" aria-label="Window">
+            {STRENGTH_SPANS.filter((s) => s.id !== "phase" || hasPhase).map((s) => (
+              <button key={s.id} type="button" className={span === s.id ? "on" : ""} aria-pressed={span === s.id} onClick={() => setSpan(s.id)}>
+                {s.label}
+              </button>
+            ))}
+          </span>
+        </span>
+      </div>
+      {/* Its own line under the head (the review, 23 Oct): beside the title it pushed the capsule onto a second line at
+          middling widths, and the title out of line with Muscle balance's. */}
+      {anyWindow && (
+        <span className="rh-under">
+          {w && overall != null ? (
+            <SepJoin
+              parts={[
+                <span key="o">
+                  Overall <b className={overall > 0 ? "up" : overall < 0 ? "down" : ""}>{pctText(overall)}</b>
+                </span>,
+                `${w.bests} of ${w.of} at a new best`,
+              ]}
+            />
+          ) : (
+            <span aria-hidden="true">&nbsp;</span>
+          )}
+        </span>
+      )}
+      <div className="rh-str">
+        {rows.map((x) => (
+          <div key={x.group} className="rh-str-row" title={x.r == null ? undefined : `${x.exercises} exercise${x.exercises === 1 ? "" : "s"}`}>
+            <span className="rh-str-name">{x.group}</span>
+            <span className="rh-str-track" aria-hidden="true">
+              <i style={{ width: !x.r || most === 0 ? 0 : `max(2px, ${(Math.abs(x.r) / most) * 100}%)` }} />
+            </span>
+            {x.r == null ? (
+              <span className="rh-str-pct none">
+                <span aria-hidden="true">–</span>
+                <span className="sr-only">none yet</span>
+              </span>
+            ) : (
+              <span className={`rh-str-pct${x.r > 0 ? " up" : x.r < 0 ? " down" : ""}`}>{pctText(x.r)}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ---- Weight: the latest and the change on the title's line; the phase's readings over their time frame and scale (23
+// Oct, Alex: "there is no time frame or anything"), the latest a dot (from two readings); where they are heading, when
+// there is a phase. "None yet" only with no weight at all.
+/** A grid axis's day keeps its month's name (design rules 7): "5 Oct", "5 Oct 2025" in another year. */
+const AXIS_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const axisDay = (ms: number) => {
+  const x = new Date(ms);
+  return `${x.getDate()} ${AXIS_MONTHS[x.getMonth()]}${x.getFullYear() !== new Date().getFullYear() ? ` ${x.getFullYear()}` : ""}`;
+};
+const DAY_MS = 86_400_000;
+/** The steps Weight's grid may take, in tenths of a kg: 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50. */
+const WEIGHT_STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500];
+/** Weight's scale: three lines a round step apart that frame the readings, the lowest at or under the lightest and the
+    highest at or over the heaviest; the smallest step that does it. Tenths only when the step is under a kg, which takes
+    readings within 2 kg of each other. A near-flat run is framed around its middle. Worked in tenths, so 84.3 stays 84.3. */
+function weightGrid(vs: number[]): { lines: [number, number, number]; decimals: number } {
+  let min = Math.min(...vs);
+  let max = Math.max(...vs);
+  if (max - min < 0.2) {
+    const mid = (min + max) / 2;
+    min = mid - 0.1;
+    max = mid + 0.1;
+  }
+  const minT = Math.floor(min * 10 + 1e-6);
+  const maxT = Math.ceil(max * 10 - 1e-6);
+  let s = WEIGHT_STEPS[WEIGHT_STEPS.length - 1];
+  let base = Math.floor(minT / s) * s;
+  for (const step of WEIGHT_STEPS) {
+    const b = Math.floor(minT / step) * step;
+    if (b + 2 * step >= maxT) {
+      s = step;
+      base = b;
+      break;
+    }
+  }
+  return { lines: [base / 10, (base + s) / 10, (base + 2 * s) / 10], decimals: s < 10 ? 1 : 0 };
+}
+
 function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
   const points = weight ? [...weight.points].sort((a, b) => timeOf(a.date) - timeOf(b.date)) : [];
   const latest = weight ? (weight.now ?? points.at(-1)?.value ?? null) : null;
@@ -798,31 +924,123 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
         {head}
       </section>
     );
-  const ts = points.map((p) => timeOf(p.date));
-  const span = ts[ts.length - 1] - ts[0] || 1;
-  const vs = points.map((p) => p.value);
-  const pad = Math.max((Math.max(...vs) - Math.min(...vs)) * 0.15, 0.4);
-  const lo = Math.min(...vs) - pad;
-  const hi = Math.max(...vs) + pad;
-  const xy = points.map((p, i) => [((ts[i] - ts[0]) / span) * 100, ((hi - p.value) / (hi - lo)) * 100] as const);
-  const d = xy.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)} ${y.toFixed(2)}`).join(" ");
-  const [lx, ly] = xy[xy.length - 1];
+  const grid = weightGrid(points.map((p) => p.value));
+  const gridText = grid.lines.map((v) => v.toFixed(grid.decimals));
+  // The gutter on the right holds the longest of the grid's kg (11px numerals, about 6.3px a character, 8px from the lines).
+  const gutter = Math.max(28, Math.ceil(8 + Math.max(...gridText.map((t) => t.length)) * 6.3));
   return (
-    <section className="rls-card rh-panel rh-weight" aria-label="Weight">
+    <section className="rls-card rh-panel rh-weight" aria-label="Weight" style={{ "--rh-wgut": `${gutter}px` } as CSSProperties}>
       {head}
-      <div className="rh-spark" role="img" aria-label={`Weight from ${kg1(points[0].value)} on ${dayMonth(points[0].date)} to ${kg1(points[points.length - 1].value)} on ${dayMonth(points[points.length - 1].date)}`}>
-        {/* The line stretches to the card; its stroke and the dot keep their size. */}
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path d={d} fill="none" stroke="#141a24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-        </svg>
-        <span className="rh-spark-dot" style={{ left: `${lx}%`, top: `${ly}%` }} aria-hidden="true" />
-      </div>
+      <WeightChart points={points} grid={grid} gridText={gridText} />
       {weight.projection && (
         <p className="rh-pace">
           On pace for {kg1(weight.projection.value)} by {dayMonth(weight.projection.date)}
         </p>
       )}
     </section>
+  );
+}
+
+/** Weight's chart, from two readings: the grid's three lines (top, middle, bottom of the plot) with their kg on the right,
+    the readings placed by their dates, the dates under it. It stretches to the card (the stroke and the dots keep their
+    size). Hovering reads the nearest reading by its date; with focus, ← → step the readings, Home and End the ends. */
+function WeightChart({ points, grid, gridText }: { points: { date: string; value: number }[]; grid: { lines: [number, number, number] }; gridText: string[] }) {
+  const plot = useRef<HTMLDivElement>(null);
+  // The reading being read; none while the chart is only looked at.
+  const [sel, setSel] = useState<number | null>(null);
+  const last = points.length - 1;
+  const ts = points.map((p) => timeOf(p.date));
+  // Whole days from the first reading: a clock change between two readings must not move anything, since the server and
+  // the coach's browser can sit in different time zones (one with the change, one without) and both draw the chart.
+  const dayAt = ts.map((t) => Math.round((t - ts[0]) / DAY_MS));
+  const days = dayAt[last];
+  const [lo, , hi] = grid.lines;
+  const xs = dayAt.map((n) => (days > 0 ? (n / days) * 100 : 0));
+  const ys = points.map((p) => ((hi - p.value) / (hi - lo)) * 100);
+  const d = xs.map((x, i) => `${i ? "L" : "M"}${x.toFixed(2)} ${ys[i].toFixed(2)}`).join(" ");
+  // A dot a reading while they can be told apart (up to 20); the latest always, bigger.
+  const dots = points.length <= 20;
+  // The dates under it: the first reading's day, the day halfway (rounded down), the last's (none twice).
+  const midT = ts[0] + Math.floor(days / 2) * DAY_MS;
+  const showMid = days >= 2;
+  const showEnd = days > 0;
+
+  /** The reading whose date sits nearest the pointer. */
+  const nearest = (clientX: number) => {
+    const el = plot.current;
+    if (!el) return last;
+    const r = el.getBoundingClientRect();
+    const at = ((clientX - r.left) / Math.max(1, r.width)) * 100;
+    let best = 0;
+    xs.forEach((x, i) => {
+      if (Math.abs(x - at) <= Math.abs(xs[best] - at)) best = i;
+    });
+    return best;
+  };
+  const read = sel == null ? null : points[sel];
+  const readText = read ? `${kg1(read.value)}, ${dayMonth(read.date)}` : "";
+  const label = `Weight, ${axisDay(ts[0])} to ${axisDay(ts[last])}: ${kg1(points[0].value)} to ${kg1(points[last].value)}, ${points.length} readings`;
+
+  return (
+    <div className="rh-wbox">
+      <div
+        className="rh-wchart"
+        role="img"
+        aria-label={label}
+        tabIndex={0}
+        onPointerMove={(e) => setSel(nearest(e.clientX))}
+        onPointerDown={(e) => setSel(nearest(e.clientX))}
+        onPointerLeave={() => setSel(null)}
+        onFocus={() => setSel((s) => s ?? last)}
+        onBlur={() => setSel(null)}
+        onKeyDown={(e) => {
+          const at = sel ?? last;
+          if (e.key === "ArrowLeft") setSel(Math.max(0, at - 1));
+          else if (e.key === "ArrowRight") setSel(Math.min(last, at + 1));
+          else if (e.key === "Home") setSel(0);
+          else if (e.key === "End") setSel(last);
+          else return;
+          e.preventDefault();
+        }}
+      >
+        <div className="rh-wplot" ref={plot}>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            {grid.lines.map((v) => {
+              const y = ((hi - v) / (hi - lo)) * 100;
+              return <line key={v} x1={0} x2={100} y1={y} y2={y} stroke="#e1e5eb" strokeWidth={1} vectorEffect="non-scaling-stroke" shapeRendering="crispEdges" />;
+            })}
+            <path d={d} fill="none" stroke="#141a24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          </svg>
+          {grid.lines.map((v, i) => (
+            <span key={v} className="rh-wgrid" style={{ top: `${((hi - v) / (hi - lo)) * 100}%` }} aria-hidden="true">
+              {gridText[i]}
+            </span>
+          ))}
+          {dots && xs.slice(0, last).map((x, i) => <span key={i} className="rh-wdot" style={{ left: `${x}%`, top: `${ys[i]}%` }} aria-hidden="true" />)}
+          <span className="rh-wdot last" style={{ left: `${xs[last]}%`, top: `${ys[last]}%` }} aria-hidden="true" />
+          {sel != null && read && (
+            <>
+              <span className="rh-wguide" style={{ left: `${xs[sel]}%` }} aria-hidden="true" />
+              <span className="rh-wring" style={{ left: `${xs[sel]}%`, top: `${ys[sel]}%` }} aria-hidden="true" />
+              {/* Over the chart at the reading's date, kept inside the card at either end: 64px holds half the widest pill
+                  (about 150px, `102.4 kg | 23/12/2025` for a reading from another year) within the card's 18px padding. */}
+              <span className="rh-wtip" style={{ left: `clamp(64px, ${xs[sel]}%, calc(100% + var(--rh-wgut, 32px) - 64px))` }} aria-hidden="true">
+                <SepJoin parts={[kg1(read.value), <span key="d" className="rh-wtip-day">{dayMonth(read.date)}</span>]} />
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="rh-waxis" aria-hidden="true">
+        <span>{axisDay(ts[0])}</span>
+        {showMid && <span className="mid">{axisDay(midT)}</span>}
+        {showEnd && <span className="end">{axisDay(ts[last])}</span>}
+      </div>
+      {/* Outside the role="img" box, whose children a screen reader skips. */}
+      <span className="sr-only" aria-live="polite">
+        {readText}
+      </span>
+    </div>
   );
 }
 

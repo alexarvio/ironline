@@ -4,6 +4,8 @@
 // a row, the newest first, New over Earlier). Money lives on Business, so no invoices here.
 // One read: getFeedBoard (feedBoardData.ts). Dates yyyy-mm-dd; moments ISO strings.
 
+import type { ActivityMark } from "./activityMark";
+
 /** A task for the coach, one a row (not one a client). */
 export type NeedRow = {
   /** Stable and unique across clients: "<clientId>:<HomeAction id>", or "<clientId>:meeting-<meetingId>" for a call today
@@ -34,22 +36,26 @@ export type NeedRow = {
 
 export type ActivityKind = "training" | "nutrition" | "lifestyle" | "meetings" | "messages";
 
-/** One line of the log: the date and time, the client, the kind's icon, the thing and the rest of it in grey. */
+/** One line of the log: the date and time, the client, the kind's icon, the thing, and the client's words in grey. */
 export type ActivityRow = {
   /** The FeedEvent's id. */
   id: string;
   clientId: number;
   client: string;
+  /** Which filter it is under. */
   kind: ActivityKind;
+  /** Its icon in its colour (KindMark): the kind's, a shape update's camera under Lifestyle. */
+  mark: ActivityMark;
   /** ISO moment. */
   at: string;
   /** False when only the day is known (older check-ins): no time shown. */
   timeKnown: boolean;
-  /** "Session 2", "Daily check-in", "Food", "Shape update". */
+  /** A call that took the whole day: "All day" where the time goes. */
+  allDay?: boolean;
+  /** The thing alone, as Home's Activity says it (FeedEvent.thing; 23 Oct, Alex: no facts after it): "Completed
+      Session 2", "Did the daily check-in", "Logged food for 15/10", "Had a check-in call". */
   title: string;
-  /** The rest, parted on screen with Sep: "Week 2", "22 sets". */
-  rest: string[];
-  /** The client's own words, in quotes after the rest. */
+  /** The client's own words, in quotes after it (a note, a message); nothing else follows the thing. */
   quote: string | null;
   /** Where it opens (feedHref). */
   href: string;

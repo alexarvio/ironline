@@ -3,14 +3,18 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
-import { RULES, isAssisted, judge, liftedKg, nudgeFor, repRange, rowStatus, type Session, type Verdict } from "../../../lib/progressRules";
+import { RULES, isAssisted, judge, liftedKg, nudgeFor, repRange, rowStatus, type Judged, type Session, type Verdict } from "../../../lib/progressRules";
 import { Fold } from "../Fold";
 import { Sep, SepJoin } from "../Sep";
 
 // An exercise's progress, for the coach (23 Oct, Alex: mockup B). The .dlh card: the name, the verdict as a state pill
-// with the targets and the gym as facts, the estimated one-rep max now with its change and the best set, 30 days | All
-// time, a stall's fix, the e1RM per session as a line spaced by date, the sessions as a log. The maths lives in
+// with the targets and the gym as facts, the estimated one-rep max now with its change and the best set, 7 days | 30
+// days | All time, a stall's fix, the e1RM per session as a line spaced by date, the sessions as a log. The maths lives in
 // lib/progressRules.ts.
+//
+// Its sessions are every session the Training row's 7 days and 30 days cells count (exerciseTrends: the exercise across
+// the client's logs, any programme, any gym, by the calendar; 23 Oct, Alex: "I click on 30 days... it still shows 1
+// week"). It opens on the window clicked, on All gyms; in 7 days and 30 days the change is the cell's own figure.
 
 const VERDICT: Record<Verdict, { label: string; tone: string }> = {
   progressing: { label: "Progressing", tone: "good" },
@@ -26,9 +30,19 @@ const CH = { h: 220, l: 34, r: 10, t: 16, b: 26 };
 /** A yyyy-mm-dd day (read as that calendar day) or a timestamp, in ms; NaN when there is none. */
 const dayMs = (d: string | null) => (d ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T00:00:00` : d).getTime() : NaN);
 const reps = (lo: number, hi: number) => (lo === hi ? `${lo}` : `${lo}–${hi}`);
+/** The yyyy-mm-dd n days before a yyyy-mm-dd day, counted in UTC both ways so the day isn't shifted by the time zone. */
+const daysBefore = (day: string, n: number) => {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d) - n * DAY).toISOString().slice(0, 10);
+};
 
 /** assisted and bodyKg: that session's, as the loader read them (23 Oct): its exercise and variation, the weight that day. */
 export type ProgressSession = Session & { gym: string | null; assisted?: boolean; bodyKg?: number | null };
+/** A window: the last 7 or 30 days, today among them (as the cells count), or every session. */
+type Win = "7" | "30" | "all";
+const WIN_LABEL: Record<Win, string> = { "7": "7 days", "30": "30 days", all: "All time" };
+/** A change as the cell writes it: one decimal, "=" for none, a dash with nothing to compare. */
+const cellText = (dv: number | null) => (dv == null ? "—" : dv === 0 ? "=" : `${dv > 0 ? "+" : "−"}${Math.abs(dv).toFixed(1)}%`);
 
 export default function ExerciseProgressDialog({
   exerciseName,
@@ -37,6 +51,8 @@ export default function ExerciseProgressDialog({
   gyms,
   sessions: all,
   today,
+  window: clicked,
+  trend,
   lbs,
   assisted: assistedRow,
   bodyKg,
@@ -49,9 +65,14 @@ export default function ExerciseProgressDialog({
   targets: { sets: number; reps: string; kg: number | null; rpe: number | null };
   /** The client's gyms, the home one first. */
   gyms: string[];
-  /** Every session of this exercise, any gym, any time. */
+  /** Every session of this exercise, any gym, any time: the ones the 7 days and 30 days cells count. */
   sessions: ProgressSession[];
+  /** yyyy-mm-dd, the day the cells count from (the server's). */
   today: string;
+  /** The cell clicked (7 days or 30 days): the window it opens on, always offered. */
+  window?: "7" | "30";
+  /** The cells' own figures, the change shown in their windows on All gyms, so the two never disagree. */
+  trend?: { d7: number | null; d30: number | null };
   /** The coach reads weights in pounds. */
   lbs: boolean;
   /** An assisted lift, as the loader knows it (the exercise's name or its variation's); else by the name here. */
@@ -65,25 +86,57 @@ export default function ExerciseProgressDialog({
   const range = repRange(targets.reps);
   // An assisted lift's kg is help: less is stronger, so it is weighed by what was lifted (body weight less the help).
   const assisted = assistedRow ?? isAssisted(exerciseName);
-  // The gym: the home one, unless the latest session was elsewhere; the coach can switch.
-  const latest = [...all].sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? 1 : -1))[0];
+  // The gyms the sessions were at, the client's own first (home first). All gyms is the first choice and the one it opens
+  // on; a gym narrows to the sessions logged there (one with no gym recorded is under All gyms alone). The switch only
+  // while a gym narrows anything: two gyms, or one and sessions with none recorded.
   const gymOptions = useMemo(() => {
+    const at = new Set(all.map((s) => s.gym ?? ""));
     const seen = new Set<string>();
-    return [...gyms, ...all.map((s) => s.gym ?? "")].filter((g) => g && !seen.has(g) && seen.add(g));
+    return [...gyms, ...all.map((s) => s.gym ?? "")].filter((g) => g && at.has(g) && !seen.has(g) && seen.add(g));
   }, [gyms, all]);
-  const [gym, setGym] = useState<string | null>(gymOptions.length > 1 ? (latest?.gym && gymOptions.includes(latest.gym) ? latest.gym : gymOptions[0]) : null);
-  const atGym = useMemo(() => (gym ? all.filter((s) => (s.gym ?? gymOptions[0]) === gym) : all), [all, gym, gymOptions]);
-  // Counted in UTC both ways, so the day isn't shifted by the time zone.
-  const [ty, tm, td] = today.split("-").map(Number);
-  const since30 = new Date(Date.UTC(ty, tm - 1, td) - 30 * DAY).toISOString().slice(0, 10);
-  const last30 = useMemo(() => atGym.filter((s) => (s.date ?? "") >= since30), [atGym, since30]);
-  const [rangeKey, setRangeKey] = useState<"30" | "all">(last30.filter((s) => s.sets.length).length >= 3 ? "30" : "all");
-  // Each session weighed as the loader weighed it: that week's exercise assisted or not, the body weight that day.
-  const j30 = useMemo(() => judge(last30, (w, s) => liftedKg(w, s.assisted ?? assisted, s.bodyKg ?? bodyKg)), [last30, assisted, bodyKg]);
-  const jAll = useMemo(() => judge(atGym, (w, s) => liftedKg(w, s.assisted ?? assisted, s.bodyKg ?? bodyKg)), [atGym, assisted, bodyKg]);
-  // 30 days | All time only while the two hold different sessions (no choice that changes nothing); else all time.
-  const both = j30.sessions.length > 0 && j30.sessions.length < jAll.sessions.length;
-  const judged = both && rangeKey === "30" ? j30 : jAll;
+  const gymSwitch = gymOptions.length > 1 || (gymOptions.length === 1 && all.some((s) => !s.gym));
+  const [gym, setGym] = useState<string | null>(null);
+  const atGym = useMemo(() => (gym ? all.filter((s) => s.gym === gym) : all), [all, gym]);
+  // Each window judged, every session weighed as the loader weighed it: that day's exercise assisted or not, the body
+  // weight that day. The windows are the cells': the last 7 (30) days with today.
+  const js = useMemo(() => {
+    const load = (w: number, s: ProgressSession) => liftedKg(w, s.assisted ?? assisted, s.bodyKg ?? bodyKg);
+    const within = (from: string) => atGym.filter((s) => !!s.date && s.date.slice(0, 10) >= from && s.date.slice(0, 10) <= today);
+    const out: Record<Win, Judged> = { "7": judge(within(daysBefore(today, 6)), load), "30": judge(within(daysBefore(today, 29)), load), all: judge(atGym, load) };
+    return out;
+  }, [atGym, assisted, bodyKg, today]);
+  // Opened from a cell, on its window; else 30 days with three sessions in it, else all time.
+  const [rangeKey, setRangeKey] = useState<Win>(() => clicked ?? (js["30"].sessions.length >= 3 ? "30" : "all"));
+  // A window only while it holds other sessions than the next wider one (no choice that changes nothing), the one
+  // clicked always; All time with them. One left: no capsule.
+  const n7 = js["7"].sessions.length;
+  const n30 = js["30"].sessions.length;
+  const nAll = js.all.sessions.length;
+  const offered: Win[] = [
+    ...(clicked === "7" || (n7 > 0 && n7 < n30) ? (["7"] as const) : []),
+    ...(clicked === "30" || (n30 > 0 && n30 < nAll) ? (["30"] as const) : []),
+    "all",
+  ];
+  const view: Win = offered.includes(rangeKey) ? rangeKey : "all";
+  const judged = js[view];
+  // The change in a window: the best e1RM in it against the best in the window before, as the cell (exerciseTrends);
+  // on All gyms the cell's own figure, a gym's own sessions worked the same way.
+  const windowChange = (() => {
+    if (view === "all") return null;
+    if (!gym && trend) return view === "7" ? trend.d7 : trend.d30;
+    const days = view === "7" ? 7 : 30;
+    const from = daysBefore(today, days - 1);
+    const prevFrom = daysBefore(today, 2 * days - 1);
+    let cur = 0;
+    let prev = 0;
+    for (const s of js.all.sessions) {
+      const d = (s.date ?? "").slice(0, 10);
+      if (!d || d > today) continue;
+      if (d >= from) cur = Math.max(cur, s.best.e1rm);
+      else if (d >= prevFrom) prev = Math.max(prev, s.best.e1rm);
+    }
+    return cur > 0 && prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : null;
+  })();
   const v = VERDICT[judged.verdict];
   const ss = judged.sessions;
   const n = ss.length;
@@ -120,14 +173,14 @@ export default function ExerciseProgressDialog({
     const next = at < 0 ? 0 : (at + (ev.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
     items[next]?.focus();
   };
-  const pickGym = (g: string) => {
+  const pickGym = (g: string | null) => {
     setGym(g);
     setMenu(false);
     setOpen(false);
     setHover(null);
     gymBtn.current?.focus();
   };
-  const pickRange = (r: "30" | "all") => {
+  const pickRange = (r: Win) => {
     setRangeKey(r);
     setOpen(false);
     setHover(null);
@@ -226,7 +279,7 @@ export default function ExerciseProgressDialog({
   const targetParts = [targets.sets ? `${targets.sets} × ${targets.reps || "?"}` : "", targets.kg != null ? `${kg(targets.kg)} ${unit}` : "", targets.rpe != null ? `RPE ${targets.rpe}` : ""];
 
   const gymFact =
-    gymOptions.length > 1 ? (
+    gymSwitch ? (
       <span
         className="exp-gw"
         ref={gymWrap}
@@ -238,7 +291,7 @@ export default function ExerciseProgressDialog({
       >
         <button ref={gymBtn} type="button" className="exp-gym" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
           <span className="exp-gn" title={gym ?? undefined}>
-            {gym}
+            {gym ?? "All gyms"}
           </span>
           <svg viewBox="0 0 24 24" width={14} height={14} fill="none" aria-hidden="true">
             <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
@@ -246,9 +299,9 @@ export default function ExerciseProgressDialog({
         </button>
         {menu && (
           <span className="exp-menu" role="menu" aria-label="Gym">
-            {gymOptions.map((g) => (
-              <button key={g} type="button" role="menuitemradio" aria-checked={g === gym} className={g === gym ? "on" : ""} title={g} onClick={() => pickGym(g)}>
-                <span>{g}</span>
+            {[null, ...gymOptions].map((g) => (
+              <button key={g ?? ""} type="button" role="menuitemradio" aria-checked={g === gym} className={g === gym ? "on" : ""} title={g ?? undefined} onClick={() => pickGym(g)}>
+                <span>{g ?? "All gyms"}</span>
                 {g === gym && (
                   <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="m5 12 5 5 9-10" />
@@ -267,16 +320,16 @@ export default function ExerciseProgressDialog({
       ""
     );
 
-  const seg = (
-    <div className="rd-btn-group" role="radiogroup" aria-label="Range">
-      <button type="button" role="radio" aria-checked={rangeKey === "30"} className={rangeKey === "30" ? "on" : ""} onClick={() => pickRange("30")}>
-        30 days
-      </button>
-      <button type="button" role="radio" aria-checked={rangeKey === "all"} className={rangeKey === "all" ? "on" : ""} onClick={() => pickRange("all")}>
-        All time
-      </button>
-    </div>
-  );
+  const seg =
+    offered.length > 1 ? (
+      <div className="rd-btn-group" role="radiogroup" aria-label="Range">
+        {offered.map((k) => (
+          <button key={k} type="button" role="radio" aria-checked={view === k} className={view === k ? "on" : ""} onClick={() => pickRange(k)}>
+            {WIN_LABEL[k]}
+          </button>
+        ))}
+      </div>
+    ) : null;
 
   const row = (s: (typeof ss)[number], i: number) => {
     const ws = s.sets.map((x) => x.weight);
@@ -333,9 +386,18 @@ export default function ExerciseProgressDialog({
         </span>
       </div>
 
-      {n === 0 ? (
+      {nAll === 0 ? (
         // An assisted lift is weighed by the body weight less the help: without a body weight, its sessions can't be judged.
         <div className="exp-empty">{assisted && bodyKg == null && atGym.some((s) => s.sets.length > 0) ? "No body weight yet" : "None yet"}</div>
+      ) : n === 0 ? (
+        // The window clicked holds no session (the others do): the capsule to reach them.
+        <>
+          <div className="exp-hl">
+            <div />
+            {seg}
+          </div>
+          <div className="exp-empty">None</div>
+        </>
       ) : (
         <>
           <div className="exp-hl">
@@ -345,12 +407,21 @@ export default function ExerciseProgressDialog({
                 <b>
                   {whole(last!.best.e1rm)} {unit}
                 </b>
-                {changePct != null && (
+                {view !== "all" ? (
+                  // The cell's own figure and comparison: the best in the window against the best in the one before.
                   <>
-                    <span className={`exp-chg${changePct > 0 ? " up" : changePct < 0 ? " down" : ""}`}>{`${changePct > 0 ? "+" : changePct < 0 ? "−" : ""}${Math.abs(changePct)}%`}</span>
-                    <small>since {ss[0].date ? dayMonth(ss[0].date) : "—"}</small>
+                    <span className={`exp-chg${windowChange != null && windowChange > 0 ? " up" : windowChange != null && windowChange < 0 ? " down" : ""}`}>{cellText(windowChange)}</span>
+                    <small>on the {WIN_LABEL[view]} before</small>
                     {heaviest && <Sep />}
                   </>
+                ) : (
+                  changePct != null && (
+                    <>
+                      <span className={`exp-chg${changePct > 0 ? " up" : changePct < 0 ? " down" : ""}`}>{`${changePct > 0 ? "+" : changePct < 0 ? "−" : ""}${Math.abs(changePct)}%`}</span>
+                      <small>since {ss[0].date ? dayMonth(ss[0].date) : "—"}</small>
+                      {heaviest && <Sep />}
+                    </>
+                  )
                 )}
                 {heaviest && (
                   <small>
@@ -359,7 +430,7 @@ export default function ExerciseProgressDialog({
                 )}
               </div>
             </div>
-            {both && seg}
+            {seg}
           </div>
 
           {stalling && suggest && (

@@ -6,6 +6,7 @@ import { ChevronRightIcon } from "../../../components/icons";
 import type { DraftRogue } from "./TrainingDraft";
 import { dayMonth } from "../../../lib/dayMonth";
 import { SepJoin } from "../Sep";
+import ClientNote from "./ClientNote";
 
 // The client's rogue sessions under the week's own (19 Oct, Alex): workouts
 // they made themselves, off the plan. Built from the session card's own parts
@@ -104,7 +105,8 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
                     </div>
                   );
                 })}
-                {r.note && <p className="rd-session-note">{firstName} wrote: &ldquo;{r.note}&rdquo;</p>}
+                {/* Their words as a planned session's (ClientNote, 23 Oct, Alex): no band, no tint. */}
+                {r.note && <ClientNote who={`${firstName} wrote`}>&ldquo;{r.note}&rdquo;</ClientNote>}
               </div>
             )}
           </section>

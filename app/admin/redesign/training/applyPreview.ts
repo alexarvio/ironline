@@ -1,0 +1,326 @@
+"use server";
+
+import { coachForClient } from "../../../lib/auth";
+import { getData } from "../../../lib/db";
+import { clientIdForProgramDay } from "../../../lib/tenancy";
+import { MAX_SESSIONS_PER_WEEK, getAssignmentsForDay, getProgramForWeek, getWeek, homeGymId, listCardioForDay, listClientGyms, listPrograms } from "../../../lib/queries";
+import { isAssisted } from "../../../lib/progressRules";
+
+// What Apply to the rest (copyProgramWeek, one target week at a time) and a session's Apply to remaining weeks
+// (copyProgramDayToLaterWeeks → copyProgramDay) would change in the later weeks (23 Oct, Alex: "naming nicely and
+// structured the changes that we are applying"). Read only: it walks the same weeks and slots the actions do and
+// compares what is there with what would land, as the Training tab shows it (a weight as the rule that writes it
+// forward will leave it, a video ask going with its row), so it never names a change the action won't make. The
+// week's copy leaves a session with anything logged as it is; a session's copy replaces it, logs and all, and says
+// what goes.
+
+/** One figure that changes: what it is, what it was, what it becomes. A weight is kg as stored (the screen rounds it in the coach's unit). */
+export type ApplyFig = { label: string; from: string | null; to: string | null; kg?: boolean; gym?: string; words?: boolean };
+export type ApplyItem = { name: string; cardio?: boolean; change: "added" | "removed" | "changed"; figs: ApplyFig[] };
+export type ApplySession = {
+  /** Its name once applied. */
+  name: string;
+  /** The name it had, when the copy renames it. */
+  was: string | null;
+  /** A session the copy makes (the later week had fewer), with what it brings. */
+  added: { exercises: number; cardio: number } | null;
+  reorder: boolean;
+  /** A session's copy replaces a logged session too: what of the client's goes. */
+  goes: { sets: number; cardio: number } | null;
+  items: ApplyItem[];
+};
+export type ApplyWeek = { index: number; sessions: ApplySession[] };
+export type ApplyPreview = { weeks: ApplyWeek[] };
+
+type Day = ReturnType<typeof getWeek>[number];
+type Row = ReturnType<typeof getAssignmentsForDay>[number];
+type Cardio = ReturnType<typeof listCardioForDay>[number];
+
+// As the screen shows a value (loaders' weekPrint): "" and none alike, 8 and "8" alike. A weight goes as stored: the
+// screen turns it into the coach's unit and rounds it there, as the Training tab does (135 lb is 61.235 kg).
+const txt = (v: unknown) => (v == null ? null : String(v).trim() || null);
+const num = (v: unknown) => (v == null || String(v).trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+const kgv = num;
+// As queries' stampMs: "YYYY-MM-DD HH:MM:SS" is server-local time, anything else an ISO instant.
+const stampMs = (at: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(at);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : new Date(at).getTime();
+};
+const restOf = (s: number | null) => (s == null ? null : s >= 60 && s % 60 === 0 ? `${s / 60} min` : s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${s}s`);
+const nameOf = (d: { label: string | null }, position: number) => txt(d.label) ?? `Session ${position}`;
+
+/** `gone`: the sessions the copy replaces, their rows (and what was logged or asked on them) with them. */
+function compare(clientId: number, gone: Set<number>) {
+  const data = getData();
+  const exName = new Map(data.exercises.map((e) => [e.id, e.name] as const));
+  const gyms = listClientGyms(clientId);
+  const home = homeGymId(clientId);
+  const awayGyms = gyms.length > 1 ? gyms.filter((g) => g.id !== home) : [];
+  const dayOf = new Map(data.program_days.map((d) => [d.id, d] as const));
+  const waOf = new Map(data.workout_assignments.map((w) => [w.id, w] as const));
+  const logsOf = new Map<number, (typeof data.set_logs)[number][]>();
+  for (const l of data.set_logs) logsOf.set(l.workout_assignment_id, [...(logsOf.get(l.workout_assignment_id) ?? []), l]);
+  const askOf = new Map<number, (typeof data.video_requests)[number]>();
+  for (const r of data.video_requests) if (!askOf.has(r.assignment_id)) askOf.set(r.assignment_id, r);
+  const recurring = data.video_requests.filter((r) => r.recurring && r.client_id === clientId && !r.from_client);
+
+  /**
+   * A copied row's weights once the rule that writes them forward (progressTargetFromLogs, on every request) has
+   * passed over it. The copy carries the source's target, pin and typed-at, so an earlier logged row of the same
+   * exercise that met its target raises it again, as it raised the row it replaces. The same rule, on the copy alone.
+   */
+  const landed = (row: Row, dest: Day): Row => {
+    const raw = waOf.get(row.id);
+    if (!raw || dest.free) return row;
+    let kg = row.target_weight_kg;
+    const gymKg: NonNullable<Row["gym_targets"]> = { ...(row.gym_targets ?? {}) };
+    for (const [id, logs] of logsOf) {
+      const wa = waOf.get(id);
+      const day = wa ? dayOf.get(wa.program_day_id) : undefined;
+      if (!wa || !day || wa.swap || day.free || wa.exercise_id === 0 || wa.exercise_id !== row.exercise_id || day.client_id !== clientId || gone.has(day.id)) continue;
+      if (!(dest.week_number > day.week_number || (dest.week_number === day.week_number && dest.day_of_week > day.day_of_week))) continue;
+      const ex = data.exercises.find((e) => e.id === wa.exercise_id);
+      const assisted = isAssisted(ex?.name) || (wa.variation_id != null && isAssisted(ex?.variations?.find((v) => v.id === wa.variation_id)?.name));
+      const reached = (best: number, target: number) => (assisted ? best <= target : best >= target);
+      const better = (a: number, b: number) => (assisted ? Math.min(a, b) : Math.max(a, b));
+      const lanes = new Map<number | null, typeof logs>();
+      for (const sl of logs) {
+        const gym = sl.gym_id == null || sl.gym_id === home ? null : sl.gym_id;
+        lanes.set(gym, [...(lanes.get(gym) ?? []), sl]);
+      }
+      for (const [gym, ls] of lanes) {
+        const weights = ls.map((sl) => sl.weight_kg).filter((w): w is number => w != null);
+        if (!weights.length) continue;
+        const best = assisted ? Math.min(...weights) : Math.max(...weights);
+        const last = Math.max(...ls.map((sl) => stampMs(sl.logged_at)));
+        if (gym == null) {
+          if (wa.target_weight_kg == null || !reached(best, wa.target_weight_kg)) continue;
+          if (raw.target_pinned || (raw.target_set_at && stampMs(raw.target_set_at) >= last)) continue;
+          kg = kg == null ? best : better(kg, best);
+          continue;
+        }
+        const own = wa.gym_targets?.[gym]?.kg ?? null;
+        if (own != null && !reached(best, own)) continue;
+        const entry = gymKg[gym];
+        if ((raw.target_pinned && entry?.kg != null) || (entry?.set_at && stampMs(entry.set_at) >= last)) continue;
+        gymKg[gym] = { kg: entry?.kg == null ? best : better(entry.kg, best), set_at: entry?.set_at ?? null };
+      }
+    }
+    return { ...row, target_weight_kg: kg, gym_targets: gymKg };
+  };
+
+  /** A recurring ask on an earlier session of the same name makes the copied row one of its own (resolveRecurringVideoAsks). */
+  const askRemade = (row: Row, dest: Day, label: string | null) => {
+    const name = (label ?? "").trim().toLowerCase();
+    if (!name) return false;
+    return recurring.some((p) => {
+      const pa = waOf.get(p.assignment_id);
+      const pd = pa ? dayOf.get(pa.program_day_id) : undefined;
+      return !!pa && !!pd && !gone.has(pd.id) && pa.exercise_id === row.exercise_id && (pd.label ?? "").trim().toLowerCase() === name && pd.week_number < dest.week_number;
+    });
+  };
+
+  const push = (out: ApplyFig[], label: string, from: string | number | null, to: string | number | null, more: Partial<ApplyFig> = {}) => {
+    const a = from == null ? null : String(from);
+    const b = to == null ? null : String(to);
+    if (a !== b) out.push({ label, from: a, to: b, ...more });
+  };
+  const subs = (r: Row) => (r.alternatives ?? []).filter((x) => exName.has(x.exercise_id));
+  const subsWords = (r: Row) => subs(r).map((x) => exName.get(x.exercise_id)!).join(", ") || null;
+  const libraryWords = (r: Row) => (r.library_substitutes_off ? "Off" : r.library_substitutes_hidden?.length ? `${r.library_substitutes_hidden.length} hidden` : "On");
+
+  const rowFigs = (from: Row, to: Row): ApplyFig[] => {
+    const out: ApplyFig[] = [];
+    push(out, "Sets", num(from.sets), num(to.sets));
+    push(out, "Reps", txt(from.reps), txt(to.reps));
+    push(out, "kg", kgv(from.target_weight_kg), kgv(to.target_weight_kg), { kg: true });
+    // Another gym's weight, only where one side has its own (else it follows the weight above).
+    for (const g of awayGyms) {
+      const own = (r: Row) => r.gym_targets?.[g.id]?.kg ?? null;
+      if (own(from) == null && own(to) == null) continue;
+      push(out, "kg", kgv(own(from) ?? from.target_weight_kg), kgv(own(to) ?? to.target_weight_kg), { kg: true, gym: g.name });
+    }
+    push(out, "RPE", num(from.rpe_target), num(to.rpe_target));
+    push(out, "Tempo", txt(from.tempo), txt(to.tempo));
+    push(out, "Rest", restOf(num(from.rest_seconds)), restOf(num(to.rest_seconds)));
+    push(out, "Time", txt(from.time), txt(to.time));
+    push(out, "Distance", txt(from.distance), txt(to.distance));
+    push(out, "Note", txt(from.notes), txt(to.notes), { words: true });
+    if (JSON.stringify(subs(from).map((x) => [x.exercise_id, txt(x.note)])) !== JSON.stringify(subs(to).map((x) => [x.exercise_id, txt(x.note)]))) {
+      out.push({ label: "Substitutes", from: subsWords(from), to: subsWords(to) });
+    }
+    const hidden = (r: Row) => JSON.stringify([!!r.library_substitutes_off, [...(r.library_substitutes_hidden ?? [])].sort((x, y) => x - y)]);
+    if (hidden(from) !== hidden(to)) out.push({ label: "Library substitutes", from: libraryWords(from), to: libraryWords(to) });
+    push(out, "Demo", from.demo_hidden ? "Hidden" : "Shown", to.demo_hidden ? "Hidden" : "Shown");
+    return out;
+  };
+  const cardioFigs = (from: Cardio, to: Cardio): ApplyFig[] => {
+    const out: ApplyFig[] = [];
+    push(out, "Time", txt(from.time), txt(to.time));
+    push(out, "Pace", txt(from.pace), txt(to.pace));
+    push(out, "Incline", txt(from.incline), txt(to.incline));
+    push(out, "Distance", txt(from.distance), txt(to.distance));
+    push(out, "Note", txt(from.notes), txt(to.notes), { words: true });
+    const alt = (c: Cardio) => (c.alternatives ?? []).map((x) => [txt(x.name), txt(x.note)]);
+    if (JSON.stringify(alt(from)) !== JSON.stringify(alt(to))) {
+      const words = (c: Cardio) => (c.alternatives ?? []).map((x) => x.name.trim()).filter(Boolean).join(", ") || null;
+      out.push({ label: "Substitutes", from: words(from), to: words(to) });
+    }
+    return out;
+  };
+
+  /** Pairs what is there with what lands, in the order it lands: the same exercise (and variation), else added / removed. */
+  function pair<T>(src: T[], dest: T[], key: (x: T) => string) {
+    const used = new Set<number>();
+    const pairs: { src: T; dest: T | null; at: number }[] = src.map((s) => {
+      const at = dest.findIndex((d, i) => !used.has(i) && key(d) === key(s));
+      if (at >= 0) used.add(at);
+      return { src: s, dest: at >= 0 ? dest[at] : null, at };
+    });
+    const removed = dest.filter((_, i) => !used.has(i));
+    const kept = pairs.filter((p) => p.dest != null).map((p) => p.at);
+    const reorder = kept.some((at, i) => i > 0 && at < kept[i - 1]);
+    return { pairs, removed, reorder };
+  }
+
+  /** What `dest` (null: made by the copy) becomes when `src` is copied onto it, at slot `position`. */
+  const session = (src: Day, dest: Day | null, position: number, logs: { sets: number; cardio: number } | null): ApplySession | null => {
+    const srcRows = getAssignmentsForDay(src.id);
+    const srcCardio = listCardioForDay(src.id);
+    const name = nameOf(src, position);
+    if (!dest) return { name, was: null, added: { exercises: srcRows.length, cardio: srcCardio.length }, reorder: false, goes: null, items: [] };
+    const destRows = getAssignmentsForDay(dest.id);
+    const destCardio = listCardioForDay(dest.id);
+    const items: ApplyItem[] = [];
+    const rows = pair(srcRows, destRows, (r) => `${r.exercise_id}:${r.variation_id ?? ""}:${txt(r.custom_name) ?? ""}`);
+    for (const p of rows.pairs) {
+      const name = p.src.exercise_name ?? "Exercise";
+      if (!p.dest) items.push({ name, change: "added", figs: [] });
+      else {
+        const figs = rowFigs(p.dest, landed(p.src, dest));
+        // An ask is the row's (videoRequestsFor), so it goes with the row the copy replaces, unless a recurring one makes it again.
+        const ask = askOf.get(p.dest.id);
+        if (ask) push(figs, "Video", ask.file_path ? "Sent" : "Asked", askRemade(p.src, dest, src.label) ? "Asked" : null);
+        if (figs.length) items.push({ name, change: "changed", figs });
+      }
+    }
+    for (const r of rows.removed) items.push({ name: r.exercise_name ?? "Exercise", change: "removed", figs: [] });
+    const cardio = pair(srcCardio, destCardio, (c) => (txt(c.name) ?? "").toLowerCase());
+    for (const p of cardio.pairs) {
+      const name = txt(p.src.name) ?? "Cardio";
+      if (!p.dest) items.push({ name, cardio: true, change: "added", figs: [] });
+      else {
+        const figs = cardioFigs(p.dest, p.src);
+        if (figs.length) items.push({ name, cardio: true, change: "changed", figs });
+      }
+    }
+    for (const c of cardio.removed) items.push({ name: txt(c.name) ?? "Cardio", cardio: true, change: "removed", figs: [] });
+    const was = nameOf(dest, position) !== name ? nameOf(dest, position) : null;
+    const reorder = rows.reorder || cardio.reorder;
+    // Replaced even when it reads the same: what the client logged on it goes all the same.
+    const goes = logs && (logs.sets > 0 || logs.cardio > 0) ? logs : null;
+    if (!items.length && !was && !reorder && !goes) return null;
+    return { name, was, added: null, reorder, goes, items };
+  };
+
+  /** What the client logged on a session: its sets, its ticked cardio. */
+  const logged = (dayId: number) => {
+    const rows = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === dayId).map((wa) => wa.id));
+    const cardio = new Set((data.cardio_entries ?? []).filter((c) => c.program_day_id === dayId).map((c) => c.id));
+    return { sets: data.set_logs.filter((l) => rows.has(l.workout_assignment_id)).length, cardio: (data.cardio_logs ?? []).filter((l) => cardio.has(l.cardio_entry_id)).length };
+  };
+
+  /**
+   * A later week as the copy finds it, slot by slot (sessionAt with create): a slot that isn't there is made, the
+   * week growing to reach it, unless the week is full or has a later slot already. Returns null when nothing lands.
+   */
+  const weekSlots = (week: number) => {
+    const days = getWeek(clientId, week);
+    const positions = new Set(days.map((d) => d.day_of_week));
+    let count = days.length;
+    let top = days.reduce((m, d) => Math.max(m, d.day_of_week), 0);
+    return (position: number): { dest: Day | null; made: number[] } | null => {
+      const hit = days.find((d) => d.day_of_week === position);
+      if (hit) return { dest: hit, made: [] };
+      // Made earlier in this walk: it lands on that new, empty session.
+      if (positions.has(position)) return { dest: null, made: [] };
+      if (top > position) return null;
+      const made: number[] = [];
+      while (top < position) {
+        if (count >= MAX_SESSIONS_PER_WEEK) return null;
+        top += 1;
+        count += 1;
+        positions.add(top);
+        made.push(top);
+      }
+      return { dest: null, made };
+    };
+  };
+
+  return { session, logged, weekSlots };
+}
+
+/** Apply to the rest: the week on screen copied onto each of `toWeeks` (copyProgramWeek). */
+export async function previewApplyWeekAction(clientId: number, fromWeek: number, toWeeks: number[]): Promise<ApplyPreview | null> {
+  if (!(await coachForClient(clientId))) return null;
+  const program = getProgramForWeek(clientId, fromWeek);
+  if (!program) return null;
+  const gone = new Set<number>();
+  const c = compare(clientId, gone);
+  const source = getWeek(clientId, fromWeek);
+  // Every week's landings first, so each copy is read against the sessions the whole action replaces.
+  const plan: { week: number; lands: { src: Day; dest: Day | null }[] }[] = [];
+  for (const week of toWeeks) {
+    if (week === fromWeek || !Number.isInteger(week)) continue;
+    const slot = c.weekSlots(week);
+    const lands: { src: Day; dest: Day | null }[] = [];
+    for (const src of source) {
+      const at = slot(src.day_of_week);
+      if (!at) continue;
+      if (at.dest) {
+        // A session the client has logged on stays as it is.
+        const l = c.logged(at.dest.id);
+        if (l.sets > 0 || l.cardio > 0) continue;
+        gone.add(at.dest.id);
+      }
+      lands.push({ src, dest: at.dest });
+    }
+    plan.push({ week, lands });
+  }
+  const weeks: ApplyWeek[] = plan.map(({ week, lands }) => ({
+    index: week - program.start_week + 1,
+    sessions: lands.map((l) => c.session(l.src, l.dest, l.src.day_of_week, null)).filter((s): s is ApplySession => s != null),
+  }));
+  return { weeks };
+}
+
+/** A session's Apply to remaining weeks: it, as it is, into the same slot of every later week (copyProgramDayToLaterWeeks). */
+export async function previewApplySessionAction(programDayId: number): Promise<ApplyPreview | null> {
+  const clientId = clientIdForProgramDay(programDayId);
+  if (clientId == null || !(await coachForClient(clientId))) return null;
+  const src = getData().program_days.find((d) => d.id === programDayId);
+  if (!src) return null;
+  const program = listPrograms(clientId).find((p) => src.week_number >= p.start_week && src.week_number < p.start_week + p.total_weeks);
+  if (!program) return null;
+  const gone = new Set<number>();
+  const c = compare(clientId, gone);
+  // Every week's slot first: the sessions it replaces go, logs and all, before any copy is read.
+  const slots: { week: number; at: ReturnType<ReturnType<typeof c.weekSlots>> }[] = [];
+  for (let week = src.week_number + 1; week < program.start_week + program.total_weeks; week++) {
+    const at = c.weekSlots(week)(src.day_of_week);
+    if (at?.dest) gone.add(at.dest.id);
+    slots.push({ week, at });
+  }
+  const weeks: ApplyWeek[] = [];
+  for (const { week, at } of slots) {
+    const sessions: ApplySession[] = [];
+    if (at) {
+      // The week grows to reach the slot: the sessions before it come empty.
+      for (const p of at.made.slice(0, -1)) sessions.push({ name: `Session ${p}`, was: null, added: { exercises: 0, cardio: 0 }, reorder: false, goes: null, items: [] });
+      const s = c.session(src, at.dest, src.day_of_week, at.dest ? c.logged(at.dest.id) : null);
+      if (s) sessions.push(s);
+    }
+    weeks.push({ index: week - program.start_week + 1, sessions });
+  }
+  return { weeks };
+}

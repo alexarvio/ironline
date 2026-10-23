@@ -10,11 +10,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { CalendarIcon, ChatIcon, CheckIcon, EyeIcon, LockIcon, MoreIcon, PlayIcon, PlusIcon } from "../../../components/icons";
 import Pager from "../Pager";
 import { SepJoin } from "../Sep";
+import KindMark from "../KindMark";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
-import { meetingTypeOf } from "../../../lib/meetingTypes";
-import { TRACK_ACCENT } from "../../phaseChrome";
-import { TrackIcon } from "../plan/PlanDraft";
-import type { PhaseTrack } from "../../../lib/db";
 // Types only: feedBoard.ts re-exports the server's reader, which must never reach the browser.
 import type { ActivityKind, ActivityRow, FeedBoard, NeedRow } from "../../../lib/feedBoard";
 
@@ -236,8 +233,9 @@ function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
 }
 
 // ---- Activity: a log (design rules 8), one line a row. The date, the time in its own column, the client semi-bold, the
-// kind's icon in its colour, the thing, the rest grey after it, their words in quotes. What came since the last look
-// under New, the rest under Earlier. One kind at a time, 20 a page, always a full page tall; a row opens its place.
+// kind's icon in its colour (KindMark, as Home's), the thing, and only their own words grey after it, in quotes (23 Oct,
+// Alex). What came since the last look under New, the rest under Earlier. One kind at a time, 20 a page, always a full
+// page tall; a row opens its place.
 type Filter = "all" | ActivityKind;
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
@@ -249,32 +247,6 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 /** ?cat= as the old Feed wrote it too ("measurements" was Lifestyle). */
 const filterOf = (cat: string | null | undefined): Filter => (cat === "measurements" ? "lifestyle" : (FILTERS.find((f) => f.id === cat)?.id ?? "all"));
-
-/** A kind's icon and colour: a track's own; a call the Check-in call's video in its blue; a message the chat bubble, grey. */
-const CALL = meetingTypeOf("checkin");
-const CHAT_ICON = "M4 5h16v11H9l-5 4z";
-const KIND: Record<ActivityKind, { label: string; color: string; track?: PhaseTrack; path?: string }> = {
-  training: { label: "Training", color: TRACK_ACCENT.training, track: "training" },
-  nutrition: { label: "Nutrition", color: TRACK_ACCENT.nutrition, track: "nutrition" },
-  lifestyle: { label: "Lifestyle", color: TRACK_ACCENT.lifestyle, track: "lifestyle" },
-  meetings: { label: "Meetings", color: CALL.color, path: CALL.icon },
-  messages: { label: "Message", color: "#5b6474", path: CHAT_ICON },
-};
-function KindMark({ kind }: { kind: ActivityKind }) {
-  const k = KIND[kind] ?? KIND.messages;
-  return (
-    <span className="rfd-kind" style={{ "--c": k.color } as CSSProperties} title={k.label}>
-      {k.track ? (
-        <TrackIcon track={k.track} size={16} />
-      ) : (
-        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d={k.path} />
-        </svg>
-      )}
-      <span className="sr-only">{k.label}</span>
-    </span>
-  );
-}
 
 /** A New / Earlier label's height in the card (34px, 35 with its hairline), for the log's steady height. */
 const GROUP_H = 35;
@@ -321,16 +293,13 @@ function Activity({ rows, kind }: { rows: ActivityRow[]; kind?: string | null })
           ) : (
             date
           )}
-          <span className="rd-logtime">{r.timeKnown ? clock(r.at) : ""}</span>
+          <span className="rd-logtime">{r.timeKnown ? clock(r.at) : r.allDay ? "All day" : ""}</span>
           <span className="rfd-name">{r.client}</span>
-          <KindMark kind={r.kind} />
+          <KindMark mark={r.mark} />
+          {/* The thing, then only the client's own words (23 Oct, Alex): no facts after it. */}
           <span className="rfd-line">
             <span className="rfd-title">{r.title}</span>
-            {(r.rest.length > 0 || r.quote) && (
-              <span className="rfd-rest">
-                <SepJoin parts={[...r.rest, r.quote ? `“${r.quote}”` : null]} />
-              </span>
-            )}
+            {r.quote && <span className="rfd-rest">&ldquo;{r.quote}&rdquo;</span>}
           </span>
         </div>
       </div>

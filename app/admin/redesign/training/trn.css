@@ -444,3 +444,33 @@ html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { box-shadow: in
 .rd.trn .rd-rows .rd-addrow:has(> .rd-addrow-bar) { margin: 8px 0 6px 10px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
 .rd.trn .rd-rows .rd-addrow > .rd-addrow-bar { border: 1px solid var(--trn-ink); border-radius: 12px; box-shadow: none; background: #fff; }
 .rd.trn .rd-rows .rd-addrow > .rd-addrow-bar .rd-addrow-search { box-shadow: none; }
+
+/* Apply to the rest, and a session's Apply to remaining weeks (23 Oct, Alex): what changes in the later weeks, by
+   session (ApplyChanges.tsx). A row an exercise or cardio: its name, then each figure that changes, the old struck
+   through in grey, the new in training purple (--apx-c), a bar between figures, no arrows. The list scrolls inside
+   the card, the foot stays put. Rows parted by space alone. */
+.dlh.dlh.apx { width: min(600px, 100vw - 32px); max-height: calc(100dvh - 48px); overflow: hidden; }
+.apx-list { flex: 0 1 auto; min-height: 0; overflow-y: auto; margin: 4px -20px 0; padding: 0 20px 2px; scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent; overscroll-behavior: contain; }
+.apx-none { margin: 0; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
+.apx-group + .apx-group { margin-top: 20px; }
+.apx-weeks { display: flex; align-items: center; margin: 0 0 8px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.apx-weeks small { display: inline-flex; align-items: center; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.apx-weeks small i { display: inline-flex; margin: 0 8px; color: #98a2b3; }
+.apx-session + .apx-session { margin-top: 14px; }
+.apx-shead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; margin-bottom: 2px; }
+.apx-shead b { font-size: 14px; font-weight: 600; color: #141a24; }
+.apx-shead small { font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.apx-shead small.apx-goes { color: #b3471d; }
+.apx-item { display: grid; grid-template-columns: minmax(0, 190px) minmax(0, 1fr); column-gap: 16px; align-items: baseline; padding: 5px 0; }
+.apx-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 500; color: #141a24; }
+.apx-name.faint { color: #8b93a1; }
+.apx-item.removed .apx-name s { color: #98a2b3; text-decoration-color: #c5ccd8; }
+.apx-figs { display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 4px; min-width: 0; font-size: 13.5px; font-weight: 500; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.apx-fig { min-width: 0; overflow-wrap: anywhere; }
+.apx-fig > * + * { margin-left: 6px; }
+.apx-lab { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.apx-was { color: #98a2b3; text-decoration-color: #c5ccd8; }
+.apx-now { font-weight: 600; color: var(--apx-c); }
+.apx-added, .apx-removed { font-style: normal; font-size: 12.5px; font-weight: 600; }
+.apx-added { color: #2f7a3f; }
+.apx-removed { font-weight: 500; color: #8b93a1; }

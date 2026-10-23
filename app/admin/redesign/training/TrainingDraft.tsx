@@ -13,6 +13,9 @@ import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/p
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
 import RogueSessions from "./RogueSessions";
+import ClientNote from "./ClientNote";
+import ApplyChangesDialog from "./ApplyChanges";
+import { previewApplySessionAction, previewApplyWeekAction } from "./applyPreview";
 import MediaReviewModal, { reviewable, type MediaReview, type ThreadItem } from "../media-review/MediaReviewModal";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
@@ -34,7 +37,7 @@ import DeleteSessionDialog from "./DeleteSessionDialog";
 import ScheduleDialog from "./ScheduleDialog";
 import { addDays } from "../phases/timeline";
 import { stateTagStyle } from "../../phaseChrome";
-import ExerciseProgressDialog from "./ExerciseProgressDialog";
+import ExerciseProgressDialog, { type ProgressSession } from "./ExerciseProgressDialog";
 import DatePick from "../DatePick";
 import { dayMonth } from "../../../lib/dayMonth";
 import { Sep, SepJoin } from "../Sep";
@@ -84,7 +87,8 @@ export type DraftRow = {
   demoClients?: number;
   /** The coach keeping that demo off this prescription for this client. */
   demoHidden: boolean;
-  history: { week: number; label: string; target: number | null; targetReps: string; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; e1rm: number | null; gym: string | null; /** yyyy-mm-dd of the session (15 Oct). */ date: string | null; /** That week assisted, and the body weight that day (23 Oct). */ assisted?: boolean; bodyKg?: number | null; current: boolean }[];
+  /** Every session of the exercise the 7 and 30 days cells count (23 Oct, Alex): any programme, any gym, by the calendar; the progress pop-up. */
+  history: ProgressSession[];
   /** An assisted lift, by the exercise's name or its variation's (23 Oct). */
   assisted?: boolean;
   /** What the client did instead, when they swapped the exercise. */
@@ -205,7 +209,7 @@ const emptyPending = (): Pending => ({ added: [], removed: [], cardioRemoved: []
 const pendingCount = (p: Pending) => p.added.length + p.removed.length + p.cardioRemoved.length + Object.keys(p.edits).length + Object.keys(p.cardioEdits).length + (p.order ? 1 : 0) + (p.renamed != null ? 1 : 0);
 
 type Dlg =
-  | { kind: "progress"; rowId: number }
+  | { kind: "progress"; rowId: number; /** The cell clicked: the pop-up opens on its window. */ window?: "7" | "30" }
   | { kind: "variation"; rowId: number }
   | { kind: "editExercise"; sessionId: number; rowId: number }
   | { kind: "editCardio"; sessionId: number; cardioId: number }
@@ -1218,20 +1222,16 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 <div className="rd-rows rd-rows-scroll" style={{ "--rd-minw": `${tableMinW}px` } as React.CSSProperties}>
                   {s.skip && <p className="rd-skip">{firstName} couldn&rsquo;t train: &ldquo;{s.skip}&rdquo;</p>}
                   {/* Answers in words only: the numbers are the head row's pills already. */}
+                  {/* Their words in the hairline voice (23 Oct, Alex: the blue band and navy Reply were the old way): ClientNote. */}
                   {!!s.answers?.some((a) => a.text != null) && (
-                    <p className="rd-session-note">
-                      {firstName} answered: <SepJoin parts={s.answers.filter((a) => a.text != null).map((a) => `${a.label}: “${a.text}”`)} />
-                    </p>
+                    <ClientNote who={`${firstName} answered`}>
+                      <SepJoin parts={s.answers.filter((a) => a.text != null).map((a) => `${a.label}: “${a.text}”`)} />
+                    </ClientNote>
                   )}
                   {s.note && (
-                    <p className="rd-session-note rd-session-note-reply">
-                      <span>
-                        {firstName} wrote: &ldquo;{s.note}&rdquo;
-                      </span>
-                      <button type="button" className="rd-note-reply" onClick={() => replyTo(`${name}, ${week.label}`, { kind: "session", dayId: s.id })}>
-                        <ChatIcon /> Reply
-                      </button>
-                    </p>
+                    <ClientNote who={`${firstName} wrote`} onReply={() => replyTo(`${name}, ${week.label}`, { kind: "session", dayId: s.id })}>
+                      &ldquo;{s.note}&rdquo;
+                    </ClientNote>
                   )}
                   <div className="rd-cols" aria-hidden="true" style={colStyle}>
                     <span />
@@ -1342,7 +1342,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                             )}
                           </span>
                           {[r.d7, r.d30].map((dv, i) => (
-                            <button key={i} type="button" className={`rd-trendcell rd-keep${dv == null ? " none" : dv > 0 ? " up" : dv < 0 ? " down" : " same"}`} title={`${r.name}: every set ${firstName} logged`} onClick={() => setDlg({ kind: "progress", rowId: r.id })}>
+                            <button key={i} type="button" className={`rd-trendcell rd-keep${dv == null ? " none" : dv > 0 ? " up" : dv < 0 ? " down" : " same"}`} title={`${r.name}: every set ${firstName} logged`} onClick={() => setDlg({ kind: "progress", rowId: r.id, window: i === 0 ? "7" : "30" })}>
                               {dv == null ? "—" : dv === 0 ? "=" : `${dv > 0 ? "+" : "−"}${Math.abs(dv).toFixed(1)}%`}
                             </button>
                           ))}
@@ -1797,10 +1797,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 firstName={firstName}
                 targets={{ sets: row.sets, reps: row.reps, kg: row.kg, rpe: row.rpe }}
                 gyms={[...gyms].sort((a, b) => Number(b.home) - Number(a.home)).map((g) => g.name)}
-                sessions={row.history
-                  .filter((h) => h.sets.some((x) => x.kg != null && x.reps != null))
-                  .map((h) => ({ date: h.date, planWeek: h.week, gym: h.gym, assisted: h.assisted, bodyKg: h.bodyKg, sets: h.sets.filter((x) => x.kg != null && x.reps != null).map((x) => ({ weight: x.kg!, reps: x.reps!, rpe: x.rpe })) }))}
-                today={today}
+                sessions={row.history}
+                // The server's day, as the cells count it; the cell clicked and its figures.
+                today={program.planCtx.today}
+                window={dlg.window}
+                trend={{ d7: row.d7, d30: row.d30 }}
                 lbs={lbs}
                 assisted={row.assisted}
                 bodyKg={program.bodyKg}
@@ -1995,11 +1996,21 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           />
         )}
 
+        {/* Both Apply confirms list what changes in the later weeks (23 Oct, Alex), read as the action would do it (applyPreview.ts). */}
         {dlg?.kind === "applyLater" && sessionById(dlg.sessionId) && (
-          <ConfirmDialog
+          <ApplyChangesDialog
+            key={`applyLater-${dlg.sessionId}`}
             title={`Apply ${sessionById(dlg.sessionId)!.name} to ${laterLabel}`}
             description={`${sessionById(dlg.sessionId)!.name} in each of those weeks becomes what it is in ${week.label}: its ${sessionById(dlg.sessionId)!.rows.length} ${sessionById(dlg.sessionId)!.rows.length === 1 ? "exercise" : "exercises"}${sessionById(dlg.sessionId)!.cardio.length ? " and cardio" : ""}. Anything the client logged on those sessions goes with them.`}
             confirm="Apply"
+            startDate={program.startDate}
+            lbs={lbs}
+            load={async () => {
+              // What is still waiting on it is saved first, as the action does, so the list reads what will be copied.
+              const id = dlg.sessionId;
+              await settle([id]);
+              return previewApplySessionAction(id);
+            }}
             onConfirm={() => {
               const src = sessionById(dlg.sessionId)!;
               close();
@@ -2009,11 +2020,20 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         )}
 
         {dlg?.kind === "copyForward" && forwardTo.length > 0 && (
-          <ConfirmDialog
+          <ApplyChangesDialog
+            key={`copyForward-${viewIdx}`}
             title={`Apply ${week.label} to the rest?`}
             // Said plainly (20 Oct, Alex: "what does this mean?"), the weeks it reaches named.
             description={`${forwardLabel.charAt(0).toUpperCase()}${forwardLabel.slice(1)} ${forwardTo.length === 1 ? "becomes" : "become"} ${week.label}, cardio included. Sessions with logged sets stay as they are.`}
             confirm="Apply"
+            startDate={program.startDate}
+            lbs={lbs}
+            load={async () => {
+              const from = weekNo(viewIdx);
+              const targets = forwardTo.map((w) => weekNo(w.index));
+              await settle(Object.keys(pendingRef.current).map(Number));
+              return previewApplyWeekAction(clientId, from, targets);
+            }}
             onConfirm={() => {
               const from = weekNo(viewIdx);
               const targets = forwardTo.map((w) => weekNo(w.index));

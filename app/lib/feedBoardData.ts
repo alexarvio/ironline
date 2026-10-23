@@ -5,19 +5,19 @@
 import type { ActivityKind, ActivityRow, FeedBoard, NeedRow } from "./feedBoard";
 import { getData, persist, type Data } from "./db";
 import {
+  activityWords,
+  callThing,
   getActivityFeed,
   getClientHome,
   getDeployedProgram,
   getProgramCurrentWeekIndex,
-  isSessionComplete,
   listMeetings,
   localDateStr,
-  mediaWords,
   workoutFed,
   type FeedEvent,
   type HomeAction,
 } from "./queries";
-import { dayMonth } from "./dayMonth";
+import { activityMarkOf } from "./activityMark";
 import { SERVER_TZ, zonedToUtc } from "./timezones";
 import { feedHref, needView } from "../admin/redesign/loaders";
 
@@ -36,7 +36,6 @@ const LOOK_STEP_MS = 60000;
 const KIND_ROWS = 200;
 /** A sign-in lock lasts this long (lib/loginLockout.ts). */
 const LOCK_MS = 15 * 60000;
-const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 // ---- Dates ----------------------------------------------------------------------
 
@@ -58,20 +57,10 @@ function stampDay(at: string): string {
   return Number.isFinite(t) ? localDateStr(new Date(t)) : at.slice(0, 10);
 }
 const iso = (ms: number | null | undefined) => (ms != null && Number.isFinite(ms) ? new Date(ms).toISOString() : null);
-/** "October", or "October 2025" when not this year; a month ("2026-10") or a day in it. */
-function monthName(period: string): string | null {
-  if (!/^\d{4}-\d{2}/.test(period)) return null;
-  const name = MONTH_LONG[+period.slice(5, 7) - 1];
-  if (!name) return null;
-  return period.slice(0, 4) === String(new Date().getFullYear()) ? name : `${name} ${period.slice(0, 4)}`;
-}
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-/** The parts kept: empty ones go, so Sep leaves no bar over. */
-const clean = (xs: (string | null | undefined | false)[]) => xs.map((x) => (x || "").trim()).filter(Boolean);
 
-/** A line the store writes with "a · b": its parts. Never cut inside “…”: the client's own words stay whole (as Home's Activity reads them). */
+/** A line the store writes with "a · b": its parts (a Needs-you item's title). Never cut inside “…”: the client's own words stay whole. */
 function parts(s: string): string[] {
   const out: string[] = [];
   let depth = 0;
@@ -264,15 +253,9 @@ function sinceOf(ctx: Ctx): FeedBoard["since"] {
   // Anything saved after the look counts, by its stamp; a row saved before rows carried one, by its day (after the look's).
   const savedSince = (at: string | null | undefined, day: string) => (at && Number.isFinite(stampMs(at)) ? stampMs(at) > prev : day > from);
 
-  // Sessions ended since, and those completed by their sets since (never ended, every set in): as Home counts them.
-  let sessions = 0;
-  for (const d of ctx.daysById.values()) {
-    if (d.session_ended_at) {
-      if (stampMs(d.session_ended_at) > prev) sessions++;
-      continue;
-    }
-    if ((ctx.lastLogByDay.get(d.id) ?? -Infinity) > prev && isSessionComplete(d.id)) sessions++;
-  }
+  // Sessions completed (every set and cardio in) or ended since, as Activity's one row a session dates them
+  // (sessionNews; 23 Oct, Alex): a session counts once, its cardio in it, and one done in part not at all. As Home counts.
+  const sessions = ctx.feed.filter((e) => (e.session === "completed" || e.session === "ended") && e.at > prev).length;
 
   // Days with a check-in sent since, client by client: a daily reading on its day, a weekly or monthly one on the day it
   // was sent, a measurement on its date. What the workout answers is not a check-in.
@@ -430,106 +413,6 @@ function kindOf(e: { category: string; tab: string }): ActivityKind | null {
   return "messages";
 }
 
-type Told = { title: string; rest: string[]; quote: string | null };
-
-/** "Session 2", or "Rogue session" for one the client made up. */
-const sessionName = (d: ProgramDayRow) => (d.free ? "Rogue session" : `Session ${d.day_of_week}`);
-/** The session's week inside its programme ("Week 3"). */
-function weekOf(ctx: Ctx, d: ProgramDayRow): string {
-  const p = (ctx.programsByClient.get(d.client_id) ?? []).find((x) => d.week_number >= x.start_week && d.week_number < x.start_week + x.total_weeks);
-  return `Week ${p ? d.week_number - p.start_week + 1 : d.week_number}`;
-}
-/** A day it is about, when that isn't the day the row is dated: "for 20/10". */
-const forDay = (day: string, at: number) => (PLAIN_DAY.test(day) && day !== localDateStr(new Date(at)) ? `for ${dayMonth(day)}` : null);
-
-/** The thing, the rest of it and the client's words, read from what the event is about (its id names it). */
-function toldExact(ctx: Ctx, e: FeedEvent): Told | null {
-  const { data } = ctx;
-  const id = e.id;
-  let m: RegExpExecArray | null;
-  if ((m = /^workout-(\d+)$/.exec(id))) {
-    const d = ctx.daysById.get(Number(m[1]));
-    if (!d) return null;
-    const sets = /(\d+ sets?)$/.exec(e.text)?.[1] ?? null;
-    return { title: sessionName(d), rest: clean([!d.free && d.label, weekOf(ctx, d), e.text.startsWith("ended ") && "ended early", sets]), quote: e.note };
-  }
-  if ((m = /^skip-(\d+)$/.exec(id))) {
-    const d = ctx.daysById.get(Number(m[1]));
-    if (!d) return null;
-    return { title: `Couldn't do ${sessionName(d)}`, rest: clean([!d.free && d.label, weekOf(ctx, d)]), quote: e.note };
-  }
-  if ((m = /^cardio-(\d+)$/.exec(id))) {
-    const log = (data.cardio_logs ?? []).find((l) => l.id === Number(m![1]));
-    const entry = log ? (data.cardio_entries ?? []).find((c) => c.id === log.cardio_entry_id) : undefined;
-    const d = entry ? ctx.daysById.get(entry.program_day_id) : undefined;
-    // A bare number gets its unit, as a cardio row's figures do on save (design rules 8): older rows kept "20".
-    const unit = (v: string | undefined, u: string) => (v && /^\d+(?:[.,]\d+)?$/.test(v.trim()) ? `${v.trim()} ${u}` : v);
-    return { title: "Cardio", rest: clean([entry?.swap?.name || entry?.name, unit(entry?.time, "min"), unit(entry?.distance, "km"), d && (d.label?.trim() || sessionName(d)), d && weekOf(ctx, d)]), quote: e.note };
-  }
-  if ((m = /^calories-(\d+)$/.exec(id))) {
-    const c = data.calorie_logs.find((x) => x.id === Number(m![1]));
-    if (!c) return null;
-    return { title: "Food", rest: clean([`${Math.round(c.kcal).toLocaleString("en-GB")} kcal`, forDay(c.date, e.at)]), quote: e.note };
-  }
-  if ((m = /^food-\d+-(\d{4}-\d{2}-\d{2})$/.exec(id))) {
-    // "logged food for 21/10 · 2,340 kcal, 5 items": the totals after the bar.
-    return { title: "Food", rest: clean([...(parts(e.text)[1] ?? "").split(", "), forDay(m[1], e.at)]), quote: e.note };
-  }
-  if ((m = /^checkin-\d+-(daily|weekly|monthly|measurements)-(.+)$/.exec(id))) {
-    const [, kind, period] = m;
-    const count = /· (\d+ metrics?)$/.exec(e.text)?.[1] ?? null;
-    const values = kind === "measurements" && e.text.startsWith("logged measurements") && e.text.includes(": ") ? e.text.slice(e.text.indexOf(": ") + 2) : null;
-    const when = kind === "weekly" ? (PLAIN_DAY.test(period) ? `Week of ${dayMonth(period)}` : null) : kind === "monthly" ? monthName(period) : forDay(period.slice(0, 10), e.at);
-    return { title: kind === "measurements" ? "Measurements" : `${cap(kind)} check-in`, rest: clean([when, count, values]), quote: e.note };
-  }
-  if (id.startsWith("photos-")) {
-    return { title: "Shape update", rest: e.thumbs.length ? [plural(e.thumbs.length, "photo")] : [], quote: e.note };
-  }
-  if ((m = /^video-(\d+)-/.exec(id))) {
-    const v = (data.video_requests ?? []).find((x) => x.id === Number(m![1]));
-    const a = v ? data.workout_assignments.find((w) => w.id === v.assignment_id) : undefined;
-    const d = a ? ctx.daysById.get(a.program_day_id) : undefined;
-    if (!v || !a) return null;
-    const name = data.exercises.find((x) => x.id === a.exercise_id)?.name ?? "an exercise";
-    return { title: `${v.media === "photo" ? "Photo" : "Video"} of ${v.about === "swap" ? `a swap for ${name}` : name}`, rest: clean([d && (d.label?.trim() || sessionName(d)), d && weekOf(ctx, d)]), quote: null };
-  }
-  if ((m = /^program-note-(\d+)$/.exec(id))) {
-    const n = (data.client_program_notes ?? []).find((x) => x.id === Number(m![1]));
-    const program = n ? data.training_programs.find((p) => p.id === n.program_id) : undefined;
-    return { title: `Note on ${program?.name?.trim() || "their programme"}`, rest: [], quote: e.note };
-  }
-  if ((m = /^chat-(\d+)$/.exec(id))) {
-    const msg = data.chat_messages.find((x) => x.id === Number(m![1]));
-    return { title: e.note ? "Message" : cap(mediaWords(msg?.media_type ?? null).replace(/^an? /, "")), rest: [], quote: e.note };
-  }
-  if ((m = /^meeting-request-(\d+)$/.exec(id))) {
-    const r = (data.meeting_requests ?? []).find((x) => x.id === Number(m![1]));
-    if (!r) return null;
-    return { title: "Asked for a call", rest: clean([r.when_suits]), quote: r.about?.trim() || null };
-  }
-  if ((m = /^event-(\d+)$/.exec(id))) {
-    const ev = data.client_events.find((x) => x.id === Number(m![1]));
-    if (!ev) return null;
-    // Two dates get the faint arrow with air either side (rule 8), not a dash.
-    const when = ev.start_date === ev.end_date ? dayMonth(ev.start_date) : `${dayMonth(ev.start_date)} → ${dayMonth(ev.end_date)}`;
-    return { title: "Event", rest: clean([ev.title, when]), quote: ev.note?.trim() || null };
-  }
-  if (id.startsWith("account-deleted-")) return { title: "Deleted their account", rest: [], quote: null };
-  return null;
-}
-
-/** The thing and the rest: read exactly from what it is about, else split from the store's words as Home's Activity does. */
-function told(ctx: Ctx, e: FeedEvent): Told {
-  try {
-    const t = toldExact(ctx, e);
-    if (t) return t;
-  } catch (err) {
-    console.error(`[feedBoard] told ${e.id}:`, err);
-  }
-  const [title = "", ...rest] = parts(cap(e.text));
-  return { title, rest, quote: e.note };
-}
-
 /** A call's moment: a timed call at its time in its own zone, one with no time at its day's noon (as the feed files a day with no time). */
 function callAt(date: string, time: string, tz: string | null | undefined): number {
   const noon = new Date(`${date}T12:00:00`).getTime();
@@ -541,12 +424,13 @@ function callAt(date: string, time: string, tz: string | null | undefined): numb
 function activityOf(ctx: Ctx): ActivityRow[] {
   const prev = ctx.prev;
   const isNew = (at: number) => prev != null && at > prev;
-  // What each row is, cheaply; its words and its link are read only for the rows kept (each kind's newest KIND_ROWS).
+  // What each row is, cheaply; its link is read only for the rows kept (each kind's newest KIND_ROWS). Words another row
+  // quotes already (a session's note, sent to the chat too) are left out.
   type Item = { kind: ActivityKind; at: number; id: string; feed: FeedEvent | null; call: { clientId: number; client: string; m: CallRow; time: string } | null };
   const items: Item[] = [];
   for (const e of ctx.feed) {
     const kind = kindOf(e);
-    if (kind) items.push({ kind, at: e.at, id: e.id, feed: e, call: null });
+    if (kind && !e.echo) items.push({ kind, at: e.at, id: e.id, feed: e, call: null });
   }
   // The calls that are over, as Home's Activity has them (loadHome): held, missed, or past and never marked.
   for (const c of ctx.clients) {
@@ -566,14 +450,15 @@ function activityOf(ctx: Ctx): ActivityRow[] {
     return true;
   });
 
+  // The thing alone and the client's own words (23 Oct, Alex: "only a subheading if the client left a note or sent a
+  // message"), in Home's words: one row a session, its cardio in it.
   const rows: ActivityRow[] = [];
   for (const r of kept) {
     if (r.feed) {
       const e = r.feed;
-      const t = told(ctx, e);
       // A client who deleted their account has no tab to open: the departure is on Business.
       const href = safe(`href ${e.id}`, () => feedHref(e), null) ?? (e.target?.kind === "gone" ? "/admin/redesign/business" : tab("home", e.clientId));
-      rows.push({ id: e.id, clientId: e.clientId, client: e.clientName, kind: r.kind, at: new Date(e.at).toISOString(), timeKnown: e.timeKnown, title: t.title, rest: t.rest, quote: t.quote, href, isNew: isNew(e.at) });
+      rows.push({ id: e.id, clientId: e.clientId, client: e.clientName, kind: r.kind, mark: activityMarkOf(e), at: new Date(e.at).toISOString(), timeKnown: e.timeKnown, title: e.thing || cap(e.text), quote: activityWords(e), href, isNew: isNew(e.at) });
     } else if (r.call) {
       const { m, time } = r.call;
       rows.push({
@@ -581,10 +466,12 @@ function activityOf(ctx: Ctx): ActivityRow[] {
         clientId: r.call.clientId,
         client: r.call.client,
         kind: "meetings",
+        mark: "meetings",
         at: new Date(r.at).toISOString(),
+        // Its start (no call keeps when it was booked); a call with no time says All day, as the Calendar draws it.
         timeKnown: !!time,
-        title: callTitle(m),
-        rest: m.status === "no-show" ? ["missed"] : m.status === "scheduled" ? ["not marked"] : [],
+        allDay: !time,
+        title: callThing(m),
         quote: null,
         href: tab("meetings", r.call.clientId),
         isNew: isNew(r.at),

@@ -561,7 +561,6 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-field > small.rd-dlg-hint { letter-spacing: 0; text-transform: none; font-weight: 500; }
 
 .rd-addrow-go { flex: none; height: 30px; padding: 0 12px; margin-right: 2px; }
-.rd-session-note { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: #eef3f9; font-size: 12.5px; color: #1e3a6e; }
 .rd-swap { margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: #FBF1DF; color: #9a5b0c; font-size: 11px; font-weight: 700; white-space: nowrap; }
 
 /* Alternatives for an exercise (25 Sep): a row per alternative with its note. */
@@ -790,11 +789,21 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-exchat-inline { position: sticky; left: 0; display: flex; flex-direction: column; gap: 10px; max-width: 640px; margin: 0 10px 12px 34px; padding: 12px; border-radius: 12px; background: #f1f6fd; }
 .rd-exchat-inline .rd-exchat-list { max-height: 260px; }
 .rd-row-main.has-chat { cursor: pointer; }
-/* Reply to what the client wrote (1 Oct): opens the chat panel, the reply pointing at it. */
-.rd-session-note-reply { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.rd-note-reply { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #1e3a6e; font: inherit; font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; }
-.rd-note-reply svg { width: 14px; height: 14px; }
-.rd-note-reply:hover { background: #2f5d8f; }
+/* The client's words in an opened session, and what they answered (ClientNote; 23 Oct, Alex: the blue band and navy
+   Reply were the old way): as Lifestyle's and Nutrition's opened notes, no band, no tint, never navy. The chat icon at
+   1.6, "{First} wrote" grey, their words in quotes, Reply the check-ins' small ink pill (.rm-reply) right after them.
+   Held at the card's left while the table scrolls sideways. */
+.rd-rows-scroll > .rd-cnote { min-width: 0; position: sticky; left: 0; }
+.rd-cnote { display: flex; align-items: center; gap: 8px; width: fit-content; max-width: min(100%, 760px); margin: 4px 0 10px 10px; box-sizing: border-box; }
+.rd-cnote-icon { flex: none; display: inline-flex; color: #5b6474; }
+.rd-cnote-icon svg { width: 16px; height: 16px; }
+.rd-cnote-icon svg path { stroke-width: 1.6; }
+.rd-cnote-body { min-width: 0; line-height: 1.45; }
+.rd-cnote-who { font-size: 13px; font-weight: 500; color: #8b93a1; }
+.rd-cnote-words { font-size: 14px; font-weight: 500; color: #3a4250; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rd-cnote-reply { flex: none; height: 30px; margin-left: 6px; padding: 0 14px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 12.5px; font-weight: 600; color: #fff; cursor: pointer; }
+.rd-cnote-reply:hover { background: #262e3b; }
+.rd-cnote-reply:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(20, 26, 36, 0.18); }
 .rd-exchat-reply { align-self: flex-start; }
 /* The whole session head opens and folds it (1 Oct), not only the chevron. */
 .rd-session-head { cursor: pointer; }
@@ -1102,8 +1111,8 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .exp-menu button:hover, .exp-menu button:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
 .exp-menu button.on { background: #f5f6f8; color: #141a24; font-weight: 600; }
 /* The headline: the e1RM now, its change and the best set; the range on the right. */
-.exp-hl { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 10px; }
-.exp-hl .rd-btn-group { flex: none; }
+.exp-hl { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 16px; margin-top: 10px; }
+.exp-hl .rd-btn-group { flex: none; margin-left: auto; }
 .exp-lab { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
 .exp-big { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; line-height: 26px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .exp-big b { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }

@@ -17,9 +17,9 @@ import {
   bodyWeightOn,
   bodyWeightReadings,
   invoiceRepeatViews,
-  isSessionComplete,
   listMeetings,
   localDateStr,
+  sessionNews,
   weekStart,
   workoutFed,
   type ActivityDay,
@@ -131,6 +131,8 @@ type LoggedSet = {
   counts: boolean;
   /** weight × reps, when both are there (an assisted lift: what it really lifted, liftedKg). */
   volume: number;
+  /** The set as it was logged (the kg, the RPE, the gym): the progress pop-up's sessions (exerciseTrends). */
+  log: SetLogRow;
 };
 
 type Ctx = {
@@ -224,7 +226,7 @@ function context(clientId: number, today: string): Ctx {
     const lifted = weight == null ? null : liftedKg(weight, assisted, assisted ? bodyOn(day) : null);
     const volume = lifted != null && reps != null && lifted > 0 && reps > 0 ? lifted * reps : 0;
     const group = doneGroup(a);
-    sets.push({ assignmentId: a.id, day, ms: stampMs(l.logged_at), group, exerciseKey: doneKey(a), assisted, weight: lifted, reps, counts, volume });
+    sets.push({ assignmentId: a.id, day, ms: stampMs(l.logged_at), group, exerciseKey: doneKey(a), assisted, weight: lifted, reps, counts, volume, log: l });
     if (group && counts) {
       let d = perDay.get(day);
       if (!d) perDay.set(day, (d = { sets: zero(), volume: zero() }));
@@ -481,16 +483,25 @@ function sinceOf(ctx: Ctx): HomeBoard["since"] {
   const data = getData();
   const from = localDateStr(new Date(prev));
 
-  // Sessions ended since, and those completed by their sets since (never ended, every set in).
+  // Sessions completed (every set and cardio in) or ended since, as Activity's one row a session dates them
+  // (sessionNews; 23 Oct, Alex): a session counts once, its cardio in it, and one done in part not at all.
+  const cardioByDay = new Map<number, { id: number }[]>();
+  const dayIds = new Set(ctx.days.map((d) => d.id));
+  for (const c of data.cardio_entries ?? []) {
+    if (!dayIds.has(c.program_day_id)) continue;
+    const list = cardioByDay.get(c.program_day_id);
+    if (list) list.push(c);
+    else cardioByDay.set(c.program_day_id, [c]);
+  }
+  const ticks = (data.cardio_logs ?? []).filter((l) => l.client_id === ctx.clientId);
   let sessions = 0;
   for (const d of ctx.days) {
-    if (d.session_ended_at) {
-      if (stampMs(d.session_ended_at) > prev) sessions++;
-      continue;
-    }
     const as = ctx.byDay.get(d.id) ?? [];
-    const last = Math.max(-Infinity, ...as.flatMap((a) => (ctx.logsByAssignment.get(a.id) ?? []).map((l) => stampMs(l.logged_at)).filter(Number.isFinite)));
-    if (last > prev && isSessionComplete(d.id)) sessions++;
+    const logs = as.flatMap((a) => ctx.logsByAssignment.get(a.id) ?? []);
+    const cardio = cardioByDay.get(d.id) ?? [];
+    if (logs.length === 0 && cardio.length === 0 && !d.session_ended_at) continue;
+    const news = sessionNews(d, as, logs, cardio, ticks);
+    if (news && news.state !== "part" && news.at > prev) sessions++;
   }
 
   // Anything saved after the look counts, by its stamp; a row saved before rows carried one, by its day (after the look's).
@@ -821,12 +832,46 @@ export function noteHomeLooked(clientId: number): void {
 /** Each exercise's change in its best estimated one-rep max (Epley), by the calendar as Home's Strength counts it
     (23 Oct, Alex: Training's 7 days and 30 days cells read the same as Home): the last 7 (30) days' best against the 7
     (30) days just before, only when the exercise was done in both; one decimal. Keyed as the board keys an exercise,
-    "exerciseId:variationId" (a swap counts as what was done). */
-export function exerciseTrends(clientId: number, today: string = localDateStr()): Map<string, { d7: number | null; d30: number | null }> {
+    "exerciseId:variationId" (a swap counts as what was done).
+    With each its sessions, for the progress pop-up the cells open (23 Oct, Alex: it held one programme's slot at one gym,
+    "it still shows 1 week"): every session of the exercise the cells count, any programme, any gym, oldest first. A session
+    is an assignment's sets logged on one day, dated by that day as the cells date a set; its kg as logged (an assisted
+    lift's help) with the body weight that day, so the pop-up weighs it as the cells do. */
+export type ExerciseSession = {
+  date: string | null;
+  /** The plan week of its session (program_days.week_number). */
+  weekNumber: number | null;
+  gymId: number | null;
+  assisted: boolean;
+  bodyKg: number | null;
+  sets: { weight: number; reps: number; rpe: number | null }[];
+};
+export function exerciseTrends(clientId: number, today: string = localDateStr()): Map<string, { d7: number | null; d30: number | null; sessions: ExerciseSession[] }> {
   const ctx = context(clientId, today);
   const byKey = new Map<string, Map<string, number>>();
+  const weekOfDay = new Map(ctx.days.map((d) => [d.id, d.week_number] as const));
+  const dayOf = new Map<number, number>();
+  for (const [dayId, list] of ctx.byDay) for (const a of list) dayOf.set(a.id, dayId);
+  let bodyOn: ((day: string | null | undefined) => number | null) | null = null;
+  // By exercise, then by assignment and day; its sets kept with their numbers until they are put in order.
+  const sessionsByKey = new Map<string, Map<string, Omit<ExerciseSession, "sets"> & { numbered: { n: number; set: ExerciseSession["sets"][number] }[] }>>();
   for (const s of ctx.sets) {
     if (!s.exerciseKey || s.day > today) continue;
+    const kg = s.log.weight_kg;
+    if (typeof kg === "number" && Number.isFinite(kg) && s.reps != null && s.reps > 0) {
+      let list = sessionsByKey.get(s.exerciseKey);
+      if (!list) sessionsByKey.set(s.exerciseKey, (list = new Map()));
+      const at = `${s.assignmentId}|${s.day}`;
+      let one = list.get(at);
+      if (!one) {
+        if (s.assisted && !bodyOn) bodyOn = bodyWeightOn(clientId);
+        const dayId = dayOf.get(s.assignmentId);
+        one = { date: s.day || null, weekNumber: dayId != null ? weekOfDay.get(dayId) ?? null : null, gymId: null, assisted: s.assisted, bodyKg: s.assisted && bodyOn ? bodyOn(s.day) : null, numbered: [] };
+        list.set(at, one);
+      }
+      if (one.gymId == null && s.log.gym_id != null) one.gymId = s.log.gym_id;
+      one.numbered.push({ n: s.log.set_number, set: { weight: kg, reps: s.reps, rpe: typeof s.log.rpe_actual === "number" ? s.log.rpe_actual : null } });
+    }
     if (s.weight == null || s.reps == null || !(s.weight > 0) || !(s.reps > 0)) continue;
     const e1rm = s.weight * (1 + s.reps / 30);
     let days = byKey.get(s.exerciseKey);
@@ -844,7 +889,13 @@ export function exerciseTrends(clientId: number, today: string = localDateStr())
     }
     return cur > 0 && prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : null;
   };
-  const out = new Map<string, { d7: number | null; d30: number | null }>();
-  for (const [key, days] of byKey) out.set(key, { d7: change(days, 7), d30: change(days, 30) });
+  const out = new Map<string, { d7: number | null; d30: number | null; sessions: ExerciseSession[] }>();
+  for (const key of new Set([...byKey.keys(), ...sessionsByKey.keys()])) {
+    const days = byKey.get(key);
+    const sessions = [...(sessionsByKey.get(key)?.values() ?? [])]
+      .map(({ numbered, ...one }) => ({ ...one, sets: numbered.sort((p, q) => p.n - q.n).map((x) => x.set) }))
+      .sort((p, q) => ((p.date ?? "") < (q.date ?? "") ? -1 : (p.date ?? "") > (q.date ?? "") ? 1 : 0));
+    out.set(key, { d7: days ? change(days, 7) : null, d30: days ? change(days, 30) : null, sessions });
+  }
   return out;
 }

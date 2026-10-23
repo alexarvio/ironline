@@ -39,11 +39,10 @@
 .rd.rfd .rfd-more { display: flex; justify-content: flex-end; }
 
 /* ---- Activity: the date, the time centred in its own column, the client, the kind's icon, the thing in body grey
-   and the rest grey after it on the one line. New and Earlier as small caps inside the card. */
+   and the client's own words grey after it on the one line. New and Earlier as small caps inside the card. */
 .rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 48px 150px 16px minmax(0, 1fr); column-gap: 12px; }
 .rd.rfd .rfd-log .rfd-name { font-size: 14px; }
-.rd.rfd .rfd-kind { display: inline-flex; align-items: center; justify-content: center; width: 16px; color: var(--c, #5b6474); }
-.rd.rfd .rfd-kind svg { flex: none; width: 16px; height: 16px; }
+/* The kind's icon is the shared KindMark (.rd-kind, home/home.css). */
 .rd.rfd .rfd-line { display: flex; align-items: baseline; column-gap: 10px; min-width: 0; overflow: hidden; white-space: nowrap; }
 .rd.rfd .rfd-title { flex: 0 1 auto; min-width: 0; overflow: hidden; font-size: 14px; font-weight: 500; color: #3a4250; text-overflow: ellipsis; }
 .rd.rfd .rfd-rest { flex: 1 1 7em; min-width: 0; overflow: hidden; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; text-overflow: ellipsis; }
@@ -61,5 +60,5 @@
   .rd.rfd .rfd-need { grid-template-columns: 120px minmax(0, 1fr) 136px 30px; }
   .rd.rfd .rfd-need > .rfd-wait { display: none; }
   .rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 100px minmax(0, 1fr); }
-  .rd.rfd .rfd-log > .rd-logtime, .rd.rfd .rfd-log > .rfd-kind { display: none; }
+  .rd.rfd .rfd-log > .rd-logtime, .rd.rfd .rfd-log > .rd-kind { display: none; }
 }

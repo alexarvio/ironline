@@ -2580,11 +2580,69 @@ export type FeedEvent = {
   target?: { kind: "session"; dayId: number; week: number } | { kind: "food"; date: string } | { kind: "program"; programId: number } | { kind: "invoice"; invoiceId: number } | { kind: "gone" } | { kind: "chat"; messageId: number; link: MessageLink | null };
   /** What happened, written to follow the client's name. */
   text: string;
-  /** The client's own words, when the event carries them. */
+  /** What happened for the coach's logs (Home's and the Feed's Activity; 23 Oct, Alex: "the rest is irrelevant on an
+      overall feed"): the thing alone, capitalised, no facts after it. "Completed Session 3", "Did the daily check-in",
+      "Logged food for 15/10" (the day only when it isn't the row's own). */
+  thing: string;
+  /** The client's own words, when the event carries them. A note here also waits to be read on Home (getClientHome). */
   note: string | null;
+  /** The client's own words the logs quote after the thing when they are not `note`: a session's note (its copy in the
+      chat is what waits for a reply), what a call they asked for is about, a video's words. The logs read activityWords. */
+  quote?: string | null;
+  /** An event the client added: its kind (an EventTypeId, or a coach's own category), for its icon on the logs. */
+  eventKind?: string | null;
+  /** A session's row: how it stands (sessionNews), so the Since lines count what the logs show, once a session. */
+  session?: SessionState;
+  /** Words another row already quotes (a session's note, which the app also sends to the chat): the logs leave it out. */
+  echo?: boolean;
   /** Progress picture thumbnails. */
   thumbs: string[];
 };
+
+/** The client's own words a log row quotes after its thing, or none. */
+export const activityWords = (e: Pick<FeedEvent, "quote" | "note">): string | null => (e.quote ?? e.note)?.trim() || null;
+
+/** A session as the coach's logs tell it. */
+export type SessionState = "completed" | "ended" | "part";
+
+/**
+ * A session as the coach's logs tell it (23 Oct, Alex: one entry a session, its cardio inside it, never a row of its
+ * own). Completed: every planned set and every cardio in (as isSessionComplete counts it), at the moment the last of
+ * them came in. Else ended (the client pressed End, or endStaleSessions did) with something logged or a note: at its
+ * end. Else, still open with a cardio ticked or every set in: done in part, at its latest set or tick. Else nothing to
+ * tell: a half-done session is not news. A free session's sets are as many as were logged, so it completes as before.
+ */
+export function sessionNews(
+  day: { session_ended_at?: string; session_note?: string },
+  assignments: { id: number; sets: number }[],
+  logs: { workout_assignment_id: number; logged_at: string }[],
+  cardio: { id: number }[],
+  ticks: { cardio_entry_id: number; done_at: string }[]
+): { state: SessionState; at: number } | null {
+  const ids = new Set(cardio.map((c) => c.id));
+  const moments = [
+    ...logs.map((l) => ({ ms: stampMs(l.logged_at), set: l.workout_assignment_id, cardio: null as number | null })),
+    ...ticks.filter((t) => ids.has(t.cardio_entry_id)).map((t) => ({ ms: stampMs(t.done_at), set: null as number | null, cardio: t.cardio_entry_id })),
+  ]
+    .filter((m) => Number.isFinite(m.ms))
+    .sort((a, b) => a.ms - b.ms);
+  const seen = new Map<number, number>();
+  const ticked = new Set<number>();
+  const setsIn = () => assignments.every((a) => (seen.get(a.id) ?? 0) >= a.sets);
+  if (assignments.length > 0 || cardio.length > 0) {
+    for (const m of moments) {
+      if (m.set != null) seen.set(m.set, (seen.get(m.set) ?? 0) + 1);
+      if (m.cardio != null) ticked.add(m.cardio);
+      if (setsIn() && ticked.size >= ids.size) return { state: "completed", at: m.ms };
+    }
+  }
+  if (day.session_ended_at && (moments.length > 0 || day.session_note?.trim())) {
+    const at = stampMs(day.session_ended_at);
+    if (Number.isFinite(at)) return { state: "ended", at };
+  }
+  if (moments.length > 0 && (ticked.size > 0 || (assignments.length > 0 && setsIn()))) return { state: "part", at: moments[moments.length - 1].ms };
+  return null;
+}
 
 // Stamps come in two shapes: ISO instants, and "YYYY-MM-DD HH:MM:SS" in
 // server-local time (set logs, cardio; see localStamp). Reading the second
@@ -2609,12 +2667,11 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
   // Only this coach's clients: an event for anyone else is dropped in add().
   const clientsById = new Map(data.clients.filter((c) => c.coach_id === coachId).map((c) => [c.id, c] as const));
   const assignmentsById = new Map(data.workout_assignments.map((wa) => [wa.id, wa] as const));
-  const daysById = new Map(data.program_days.map((pd) => [pd.id, pd] as const));
 
   const events: FeedEvent[] = [];
   const add = (
     clientId: number,
-    e: Pick<FeedEvent, "id" | "category" | "at" | "tab" | "text"> & Partial<Pick<FeedEvent, "note" | "thumbs" | "timeKnown" | "dayId" | "target">>
+    e: Pick<FeedEvent, "id" | "category" | "at" | "tab" | "text" | "thing"> & Partial<Pick<FeedEvent, "note" | "quote" | "eventKind" | "session" | "echo" | "thumbs" | "timeKnown" | "dayId" | "target">>
   ) => {
     const client = clientsById.get(clientId);
     if (!client || !Number.isFinite(e.at)) return;
@@ -2630,11 +2687,16 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
     if (day.free) return `Rogue session (${week})`;
     return `Session ${day.day_of_week}${day.label ? ` · ${day.label}` : ""} (${week})`;
   };
+  /** " for 15/10" when the day a row is about isn't the day it is dated (a check-in sent late); nothing on its own day
+      (say a thing once: the row's date already says it). */
+  const forDayOf = (day: string, at: number) =>
+    /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isFinite(at) && day !== localDateStr(new Date(at)) ? ` for ${feedDay(day)}` : "";
 
   // ---- Training ----
-  // A workout shows once, when the whole day is done: every exercise on it
-  // has at least its prescribed sets logged. Stamped with the set that
-  // finished it. A half-done session is not news.
+  // One row a session (23 Oct, Alex: "they are in the same session, should only be 1 notification"): its sets and its
+  // cardio together, as sessionNews tells it. Completed at the moment the last set or cardio came in; ended at its end;
+  // still open with a cardio ticked (or every set in and cardio left), done in part at its latest. A cardio tick is
+  // never a row of its own. The same id whatever it is, so a session finished later is the one row.
   const logsByDay = new Map<number, typeof data.set_logs>();
   data.set_logs.forEach((sl) => {
     const wa = assignmentsById.get(sl.workout_assignment_id);
@@ -2643,60 +2705,50 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
     list.push(sl);
     logsByDay.set(wa.program_day_id, list);
   });
-  logsByDay.forEach((logs, dayId) => {
-    const day = daysById.get(dayId);
-    if (!day) return;
-    const assignments = data.workout_assignments.filter((wa) => wa.program_day_id === dayId);
-    if (assignments.length === 0) return;
-    const sorted = [...logs].sort((a, b) => stampMs(a.logged_at) - stampMs(b.logged_at));
-    const seen = new Map<number, number>();
-    let completedAt: string | null = null;
-    for (const sl of sorted) {
-      seen.set(sl.workout_assignment_id, (seen.get(sl.workout_assignment_id) ?? 0) + 1);
-      if (assignments.every((wa) => (seen.get(wa.id) ?? 0) >= wa.sets)) {
-        completedAt = sl.logged_at;
-        break;
-      }
-    }
-    if (!completedAt) {
-      // Ended on the app before every set was in (21 Oct, the Feed): news too, at the moment it was ended. The same id
-      // as a completed one, so a session finished later is the one row.
-      if (!day.session_ended_at) return;
-      const done = assignments.filter((wa) => (seen.get(wa.id) ?? 0) >= wa.sets).length;
-      add(day.client_id, {
-        id: `workout-${dayId}`,
-        category: "training",
-        at: stampMs(day.session_ended_at),
-        tab: "training",
-        dayId,
-        target: { kind: "session", dayId, week: day.week_number },
-        text: `ended ${dayTitle(day)} · ${done} of ${plural(assignments.length, "exercise")}, ${plural(logs.length, "set")}`,
-      });
-      return;
-    }
+  const assignmentsByDay = new Map<number, typeof data.workout_assignments>();
+  for (const wa of data.workout_assignments) {
+    const list = assignmentsByDay.get(wa.program_day_id);
+    if (list) list.push(wa);
+    else assignmentsByDay.set(wa.program_day_id, [wa]);
+  }
+  const cardioByDay = new Map<number, CardioEntry[]>();
+  for (const c of data.cardio_entries ?? []) {
+    const list = cardioByDay.get(c.program_day_id);
+    if (list) list.push(c);
+    else cardioByDay.set(c.program_day_id, [c]);
+  }
+  const tickOf = new Map((data.cardio_logs ?? []).map((l) => [l.cardio_entry_id, l] as const));
+  // Its note is the client's words on the row; the copy the app sends to the chat is left out of the logs (echo).
+  const sessionNotes = new Map<number, string>();
+  for (const day of data.program_days) {
+    if (!clientsById.has(day.client_id)) continue;
+    const logs = logsByDay.get(day.id) ?? [];
+    const cardio = cardioByDay.get(day.id) ?? [];
+    const ticks = cardio.flatMap((c) => tickOf.get(c.id) ?? []);
+    if (logs.length === 0 && ticks.length === 0 && !day.session_ended_at) continue;
+    const assignments = assignmentsByDay.get(day.id) ?? [];
+    const news = sessionNews(day, assignments, logs, cardio, ticks);
+    if (!news) continue;
+    const verb = news.state === "completed" ? "completed" : news.state === "ended" ? "ended" : "did part of";
+    const note = day.session_note?.trim() || null;
+    if (note) sessionNotes.set(day.id, note);
+    const done = assignments.filter((wa) => logs.filter((l) => l.workout_assignment_id === wa.id).length >= wa.sets).length;
+    const facts = [
+      assignments.length ? (news.state === "completed" ? plural(assignments.length, "exercise") : `${done} of ${plural(assignments.length, "exercise")}`) : null,
+      logs.length ? plural(logs.length, "set") : null,
+      cardio.length ? `${ticks.length} of ${cardio.length} cardio` : null,
+    ].filter(Boolean);
     add(day.client_id, {
-      id: `workout-${dayId}`,
+      id: `workout-${day.id}`,
       category: "training",
-      at: stampMs(completedAt),
+      at: news.at,
       tab: "training",
-      dayId,
-      target: { kind: "session", dayId, week: day.week_number },
-      text: `completed ${dayTitle(day)} · ${plural(assignments.length, "exercise")}, ${plural(logs.length, "set")}`,
-    });
-  });
-
-  for (const log of data.cardio_logs ?? []) {
-    const entry = (data.cardio_entries ?? []).find((c) => c.id === log.cardio_entry_id);
-    const day = entry ? daysById.get(entry.program_day_id) : undefined;
-    const what = entry ? [entry.name, entry.time, entry.distance].filter((s) => s && s.trim()).join(", ") : "";
-    add(log.client_id, {
-      id: `cardio-${log.id}`,
-      category: "training",
-      at: stampMs(log.done_at),
-      tab: "training",
-      dayId: day?.id,
-      target: day ? { kind: "session", dayId: day.id, week: day.week_number } : undefined,
-      text: `ticked off cardio${what ? `: ${what}` : ""}${day ? ` · ${dayTitle(day)}` : ""}`,
+      dayId: day.id,
+      target: { kind: "session", dayId: day.id, week: day.week_number },
+      text: `${verb} ${dayTitle(day)}${facts.length ? ` · ${facts.join(", ")}` : ""}`,
+      thing: `${verb.charAt(0).toUpperCase()}${verb.slice(1)} ${day.free ? "a rogue session" : `Session ${day.day_of_week}`}`,
+      quote: note,
+      session: news.state,
     });
   }
 
@@ -2711,43 +2763,57 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       dayId: day.id,
       target: { kind: "session", dayId: day.id, week: day.week_number },
       text: `couldn't do ${dayTitle(day)}`,
+      thing: `Couldn't do ${day.free ? "a rogue session" : `Session ${day.day_of_week}`}`,
       note: day.skip_reason,
     });
   }
 
   // ---- Nutrition ----
-  for (const c of data.calorie_logs) {
-    add(c.client_id, {
-      id: `calories-${c.id}`,
-      category: "nutrition",
-      // Entries saved before timestamps existed fall back to their day.
-      at: c.logged_at ? stampMs(c.logged_at) : middayMs(c.date),
-      timeKnown: !!c.logged_at,
-      tab: "nutrition",
-      target: { kind: "food", date: c.date },
-      text: `logged ${c.kcal.toLocaleString("en-GB")} kcal for ${feedDay(c.date)}`,
-      note: c.note?.trim() || null,
-    });
-  }
-  // The food diary (21 Oct, the Feed): a row a diary day, at its latest entry, with the day's total so far.
-  const diary = new Map<string, { clientId: number; date: string; kcal: number; items: number; latest: string | null }>();
+  // A row a food day (23 Oct, Alex: one thing, one row): the diary's entries (21 Oct, the Feed) and the day's calorie log
+  // (the diary's total pushed to it, or a figure typed) together, at the latest of them, the client's note on the day as
+  // its words. A typed day with no diary is its own row, as before.
+  const diary = new Map<string, { clientId: number; date: string; kcal: number; items: number; latest: string | null; note: string | null }>();
   for (const f of data.food_entries ?? []) {
     const key = `${f.client_id}:${f.date}`;
-    const d = diary.get(key) ?? { clientId: f.client_id, date: f.date, kcal: 0, items: 0, latest: null };
+    const d = diary.get(key) ?? { clientId: f.client_id, date: f.date, kcal: 0, items: 0, latest: null, note: null };
     d.kcal += Number(f.kcal) || 0;
     d.items++;
     d.latest = latestOf(d.latest, f.logged_at);
     diary.set(key, d);
   }
+  for (const c of data.calorie_logs) {
+    const d = diary.get(`${c.client_id}:${c.date}`);
+    if (d) {
+      d.note = c.note?.trim() || d.note;
+      d.latest = latestOf(d.latest, c.logged_at);
+      continue;
+    }
+    // Entries saved before timestamps existed fall back to their day.
+    const at = c.logged_at ? stampMs(c.logged_at) : middayMs(c.date);
+    add(c.client_id, {
+      id: `calories-${c.id}`,
+      category: "nutrition",
+      at,
+      timeKnown: !!c.logged_at,
+      tab: "nutrition",
+      target: { kind: "food", date: c.date },
+      text: `logged ${c.kcal.toLocaleString("en-GB")} kcal for ${feedDay(c.date)}`,
+      thing: `Logged food${forDayOf(c.date, at)}`,
+      note: c.note?.trim() || null,
+    });
+  }
   diary.forEach((d) => {
+    const at = d.latest ? stampMs(d.latest) : middayMs(d.date);
     add(d.clientId, {
       id: `food-${d.clientId}-${d.date}`,
       category: "nutrition",
-      at: d.latest ? stampMs(d.latest) : middayMs(d.date),
+      at,
       timeKnown: !!d.latest,
       tab: "nutrition",
       target: { kind: "food", date: d.date },
       text: `logged food for ${feedDay(d.date)} · ${Math.round(d.kcal).toLocaleString("en-GB")} kcal, ${plural(d.items, "item")}`,
+      thing: `Logged food${forDayOf(d.date, at)}`,
+      note: d.note,
     });
   });
 
@@ -2807,14 +2873,18 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
     else if (c.kind === "measurements")
       text = `logged measurements for ${when}: ${c.values.sort((a, b) => a.order - b.order).map((v) => v.text).join(", ")}`;
     else text = `did the ${name} for ${when} · ${plural(c.count, "metric")}`;
+    const at = c.latest ? stampMs(c.latest) : middayMs(c.period);
+    // A day's check-in or measurements say the day only when it isn't the row's own; a week's or a month's never.
+    const on = c.kind === "daily" || c.kind === "measurements" ? forDayOf(c.period.slice(0, 10), at) : "";
     add(c.clientId, {
       id: `checkin-${c.clientId}-${c.kind}-${c.period}`,
       // A note with no numbers is a note, first and foremost.
       category: c.count === 0 ? "notes" : "measurements",
-      at: c.latest ? stampMs(c.latest) : middayMs(c.period),
+      at,
       timeKnown: !!c.latest,
       tab: "measurements",
       text,
+      thing: c.count === 0 ? `Left a note on the ${name}${on}` : c.kind === "measurements" ? `Logged measurements${on}` : `Did the ${name}${on}`,
       note: c.note,
     });
   });
@@ -2837,6 +2907,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at: s.latest ? stampMs(s.latest) : middayMs(s.period),
       tab: "photos",
       text: `sent ${plural(s.photos.length, "photo")} for the sheet of ${feedDay(s.period)}`,
+      thing: "Sent a shape update",
       thumbs: s.photos.sort((a, b) => a.order - b.order).map((p) => p.src),
     });
   });
@@ -2856,6 +2927,11 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       dayId: day.id,
       target: { kind: "session", dayId: day.id, week: day.week_number },
       text: v.from_client ? `sent a ${v.media === "photo" ? "photo" : "video"}${v.about === "swap" ? " of what they used instead of" : " of"} ${name}, ${day.label || `Session ${day.day_of_week}`}` : `sent the video you asked for: ${name}, ${day.label || `Session ${day.day_of_week}`}`,
+      // The exercise is what it is of; the session it sat in is a fact the row opens on.
+      thing: v.from_client
+        ? `Sent a ${v.media === "photo" ? "photo" : "video"} of ${v.about === "swap" ? `what they used instead of ${name}` : name}`
+        : `Sent the ${v.media === "photo" ? "photo" : "video"} of ${name} you asked for`,
+      quote: v.client_note?.trim() || null,
     });
   }
 
@@ -2870,6 +2946,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       tab: "training",
       target: n.program_id != null ? { kind: "program", programId: n.program_id } : undefined,
       text: `wrote a note on ${program?.name || "their programme"}`,
+      thing: "Wrote a note on their programme",
       note: n.text,
     });
   }
@@ -2891,7 +2968,10 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       // Opens the chat on this message, over what it is about (2 Oct).
       target: { kind: "chat", messageId: m.id, link: m.link ?? null },
       text: words ? "sent you a message" : `sent you ${mediaWords(m.media_type)}`,
+      thing: words ? "Sent you a message" : `Sent you ${mediaWords(m.media_type)}`,
       note: words || null,
+      // A session's note, which the app sends to the chat as well: its session's row quotes it already.
+      echo: !!words && m.link?.kind === "session" && sessionNotes.get(m.link.dayId) === words,
     });
   }
 
@@ -2904,6 +2984,8 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at: stampMs(r.created_at),
       tab: "meetings",
       text: `asked for a call: “${r.about}”${r.when_suits ? ` · ${r.when_suits}` : ""}`,
+      thing: "Asked for a call",
+      quote: r.about?.trim() || null,
     });
   }
 
@@ -2919,7 +3001,11 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at: stampMs(e.created_at),
       tab: "plan",
       text: `added an event: “${e.title}” · ${when}`,
+      // Its name and days are on the Plan the row opens; the logs quote only a note they left on it.
+      thing: "Added an event",
       note: e.note || null,
+      // Its type's icon and colour on the logs (activityMarkOf).
+      eventKind: e.kind,
     });
   }
 
@@ -2932,6 +3018,8 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       tab: "plan",
       target: { kind: "invoice", invoiceId: inv.id },
       text: `had their invoice “${inv.description}” marked ${inv.status}`,
+      // As the Invoices tab names the states; what it is for is the coach's words, not theirs.
+      thing: `Invoice marked ${inv.status === "unpaid" ? "not sent" : inv.status === "due" ? "overdue" : inv.status}`,
     });
   }
 
@@ -2951,6 +3039,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       tab: "home",
       target: { kind: "gone" },
       text: "deleted their account and all their data",
+      thing: "Deleted their account",
       note: null,
       thumbs: [],
     });
@@ -3026,6 +3115,13 @@ export function clientLockedOut(clientId: number): boolean {
 /** "14:05" in the coach's clock. */
 export function feedClock(at: number): string {
   return new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** A call that is over, as the coach's logs say it (23 Oct, Alex): what happened and the kind of call, never its title
+    (the coach's words). A past call nobody marked held or missed is only said to have been booked. */
+export function callThing(m: { status: string; meeting_type?: string | null }): string {
+  const kind = m.meeting_type === "review" ? "review call" : m.meeting_type === "other" ? "call" : "check-in call";
+  return `${m.status === "completed" ? "Had" : m.status === "no-show" ? "Missed" : "Booked"} a ${kind}`;
 }
 
 /** "3/9 · 14:05", or just "3/9" when the time was never recorded (day/month, 20 Oct, Alex). */

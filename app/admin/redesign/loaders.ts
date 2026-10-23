@@ -6,8 +6,9 @@ import type { DotTab, DotTrail } from "./dots";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { clerkOn } from "../../lib/clerk";
-import { getCoachSettings, getInvoiceView, listInvoices, listInvoiceTemplates, invoiceRepeatViews, runRecurringInvoices, type FeedEvent, type HomeAction, type InvoiceView, listCoachVideos, exerciseClientCounts, listMeetings } from "../../lib/queries";
+import { getCoachSettings, getInvoiceView, listInvoices, listInvoiceTemplates, invoiceRepeatViews, runRecurringInvoices, type FeedEvent, type HomeAction, type InvoiceView, listCoachVideos, exerciseClientCounts, listMeetings, activityWords, callThing } from "../../lib/queries";
 import { getHomeBoard, noteHomeLooked } from "../../lib/homeBoard";
+import { activityMarkOf } from "../../lib/activityMark";
 import { SERVER_TZ, zonedToUtc } from "../../lib/timezones";
 import { hasBankDetails, invoicingFor } from "../../lib/countries";
 import {
@@ -36,7 +37,6 @@ import {
   listClientEvents,
   getFreeSessions,
   listEventCategories,
-  feedTimeLabel,
   getOverviewPanel,
   describeMessageLink,
   getClient,
@@ -83,9 +83,8 @@ import {
   sessionAnswers,
   getWorkoutQuestions,
   bodyWeightKg,
-  bodyWeightOn,
 } from "../../lib/queries";
-import { e1rmOf, isAssisted, liftedKg } from "../../lib/progressRules";
+import { isAssisted } from "../../lib/progressRules";
 import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
 import type { CardioMove, DraftProgram, Library } from "./training/TrainingDraft";
 import type { DraftNutrition } from "./nutrition/NutritionDraft";
@@ -180,9 +179,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const libName = new Map(listExercises(coachId).map((e) => [e.id, e.name] as const));
   // An assisted lift (23 Oct, Alex): its kg is help, so its trend follows the body weight less the help (liftedKg),
   // known by the exercise's name or its variation's.
+  // A session's own day's body weight (23 Oct, Alex) rides with each session from exerciseTrends.
   const bodyKg = bodyWeightKg(clientId);
-  // A session's own day's body weight (23 Oct, Alex): a weigh-in later doesn't change what an earlier session lifted.
-  const bodyOn = bodyWeightOn(clientId);
   const exById = new Map(getData().exercises.map((e) => [e.id, e] as const));
   const assistedRow = (a: { exercise_id: number; exercise_name?: string | null; variation_id?: number | null }) =>
     isAssisted(a.exercise_name) || (a.variation_id != null && isAssisted(exById.get(a.exercise_id)?.variations?.find((v) => v.id === a.variation_id)?.name));
@@ -315,64 +313,38 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     list.push({ id: m.id, mine: m.sender === "coach", text: m.text || (m.media_path ? "" : "A file"), when: dayMonthTime(m.created_at), at: new Date(m.created_at).getTime(), media: m.media_path ? { path: m.media_path, type: m.media_type ?? "file" } : null });
     aboutExercise.set(m.link.assignmentId, list);
   }
-  // Each exercise's 7 and 30 day change, as Home counts it (23 Oct).
+  // Each exercise's 7 and 30 day change, as Home counts it (23 Oct), with every session of it the two count: the progress
+  // pop-up's (23 Oct, Alex: it held only this programme's same session slot, so a week the exercise sat in another session
+  // never showed). W is the week of this programme; another programme's session has none.
   const trends = exerciseTrends(clientId);
+  const progressOf = new Map<string, { date: string | null; planWeek: number; gym: string | null; assisted: boolean; bodyKg: number | null; sets: { weight: number; reps: number; rpe: number | null }[] }[]>();
+  const progressFor = (key: string) => {
+    let list = progressOf.get(key);
+    if (!list) {
+      list = (trends.get(key)?.sessions ?? []).map((x) => ({
+        date: x.date,
+        planWeek: x.weekNumber != null && x.weekNumber >= program.start_week && x.weekNumber < program.start_week + program.total_weeks ? x.weekNumber - program.start_week + 1 : 0,
+        gym: x.gymId != null ? gymName.get(x.gymId) ?? null : null,
+        assisted: x.assisted,
+        bodyKg: x.bodyKg,
+        sets: x.sets,
+      }));
+      progressOf.set(key, list);
+    }
+    return list;
+  };
   const sessions = days.map((d, si) => {
     const assignments = getAssignmentsForDay(d.id);
     const videos = videoRequestsFor(assignments.map((a) => a.id));
     const rows = assignments.map((a) => {
       const logs = getLogsForAssignment(a.id).sort((x, y) => x.set_number - y.set_number);
       const v = videos.get(a.id);
-      // Every week of the programme this exercise appears in, with what was
-      // logged: the progress dialog, and the 7 / 30 day trends.
-      const history = Array.from({ length: program.total_weeks }, (_, i) => {
-        const wn = program.start_week + i;
-        const wd = getWeek(clientId, wn).find((x) => x.day_of_week === d.day_of_week);
-        const wa = wd ? getAssignmentsForDay(wd.id).find((x) => x.exercise_id === a.exercise_id) : undefined;
-        // A week the client swapped it out: those sets were another exercise,
-        // so they stay out of this one's history, trends and progress.
-        if (!wa || wa.swap) return null;
-        const wl = [...getLogsForAssignment(wa.id)].sort((p, q) => p.set_number - q.set_number);
-        // That week's own exercise and variation decide whether it was assisted (a weighted week stays weighted).
-        const weekAssisted = assistedRow(wa);
-        const kgs = wl.map((l) => l.weight_kg ?? 0);
-        const date = (wd?.session_ended_at ?? wd?.session_started_at ?? wl[0]?.logged_at ?? null)?.slice(0, 10) ?? null;
-        const weekBodyKg = weekAssisted ? bodyOn(date) : null;
-        return {
-          week: i + 1,
-          label: programWeekLabel(program, wn),
-          target: wa.target_weight_kg,
-          /** The reps asked that week ("8-10"), for the on-target verdict. */
-          targetReps: wa.reps ?? "",
-          setsPlanned: wa.sets,
-          sets: wl.map((l) => ({ n: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual })),
-          // The best weight: the heaviest, or an assisted lift's least help.
-          best: kgs.length ? (weekAssisted ? Math.min(...kgs) : Math.max(...kgs)) : null,
-          // The best set with its reps counted: estimated one-rep max (Epley,
-          // weight × (1 + reps / 30)). What the % and the trend follow, so
-          // 60 kg × 22 then 60.5 kg × 8 reads as a drop, not +0.4%.
-          // An assisted lift's sets weigh what was lifted (body weight less the help); none known, no e1RM.
-          e1rm: (() => {
-            // A set with no kg or no reps is no reading (a blank kg on an assisted lift is not "no help").
-            const es = wl.flatMap((l) => {
-              if (l.weight_kg == null || !((l.reps ?? 0) > 0)) return [];
-              const kg = liftedKg(l.weight_kg, weekAssisted, weekBodyKg);
-              return kg == null ? [] : [e1rmOf(kg, l.reps!)];
-            });
-            return es.length ? Math.max(...es) : null;
-          })(),
-          gym: wl[0]?.gym_id != null ? gymName.get(wl[0].gym_id) ?? null : null,
-          /** When the session happened (15 Oct, the progress pop-up): ended, else started, else the first set logged. */
-          date,
-          /** That week's exercise and variation assisted, and the body weight that day (23 Oct): the progress pop-up weighs it the same. */
-          assisted: weekAssisted,
-          bodyKg: weekBodyKg,
-          current: i + 1 === weekIdx,
-        };
-      }).filter((h): h is NonNullable<typeof h> => h != null);
       // 7 days and 30 days by the calendar, as Home's Strength (23 Oct, Alex): the exercise's best estimated one-rep max
       // in the last 7 (30) days against the 7 (30) before (exerciseTrends), so a row is its share of its group on Home.
-      const trend = trends.get(`${a.exercise_id}:${a.variation_id ?? ""}`);
+      const trendKey = `${a.exercise_id}:${a.variation_id ?? ""}`;
+      const trend = trends.get(trendKey);
+      // Every session of the exercise the two cells count, any programme, any gym, by the calendar: the progress pop-up.
+      const history = progressFor(trendKey);
       return {
         id: a.id,
         exerciseId: a.exercise_id,
@@ -1072,29 +1044,31 @@ export function loadHome(clientId: number): DraftHome {
   const calls = listMeetings(clientId)
     .filter((m) => m.status === "completed" || m.status === "no-show" || (m.status === "scheduled" && m.date < today))
     .map((m) => {
-      // A call's own title is quoted; without one, the kind in words ("had a check-in call"), never quoted as a title.
-      const own = m.summary_title?.trim() || m.topic?.trim();
-      const kind = m.meeting_type === "review" ? "review call" : m.meeting_type === "other" ? "call" : "check-in call";
-      const what = own ? `a call: “${own}”` : `a ${kind}`;
-      // A past call nobody marked held or missed is not said to have happened.
-      const text = m.status === "completed" ? `had ${what}` : m.status === "no-show" ? `missed ${what}` : `booked ${what} · not marked`;
       const time = m.all_day ? "" : (m.time ?? "").trim();
       const at = callAt(m.date, time, m.tz);
       return {
         id: `meeting-${m.id}`,
         category: "meetings",
-        text,
-        note: null,
-        // As feedTimeLabel writes the other rows' times, so the screen parts them with the same bar.
-        when: time ? `${dayMonth(m.date)} · ${time}` : dayMonth(m.date),
+        // What happened and the kind of call, never its title (the coach's words) nor "not marked" (23 Oct, Alex).
+        text: callThing(m),
+        note: null as string | null,
+        // Its start, as no call keeps when it was booked; a call with no time says All day, as the Calendar draws it.
+        timeKnown: !!time,
+        allDay: !time,
+        mark: activityMarkOf({ category: "meetings", tab: "meetings" }),
         tab: "meetings",
         href: null as string | null,
         at,
         feed: null as FeedEvent | null,
       };
     });
+  // The thing alone and the client's own words (23 Oct, Alex: "only a subheading if the client left a note or sent a
+  // message"): one row a session, its cardio in it; words another row quotes already (a session's note, which the app
+  // sends to the chat too) left out.
   const rows = [
-    ...mine.map((e) => ({ id: e.id, category: e.category as string, text: e.text, note: e.note, when: feedTimeLabel(e.at, e.timeKnown), tab: e.tab, href: null as string | null, at: e.at, feed: e as FeedEvent | null })),
+    ...mine
+      .filter((e) => !e.echo)
+      .map((e) => ({ id: e.id, category: e.category as string, text: e.thing, note: activityWords(e), timeKnown: e.timeKnown, allDay: false, mark: activityMarkOf(e), tab: e.tab, href: null as string | null, at: e.at, feed: e as FeedEvent | null })),
     ...calls,
   ].sort((a, b) => b.at - a.at);
   // Each kind's newest HOME_KIND_ROWS (a row in no kind counts as one of its own); a kept row's link is read after the cut.

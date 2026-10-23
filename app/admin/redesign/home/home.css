@@ -52,16 +52,24 @@
 .rd.rh .rh-nb { white-space: nowrap; }
 
 /* ---- The board's cards: a hairline card each, the title inside at 15/600 with its aside on the right. Muscle balance
-   beside Weight, the two one height (the grid stretches Weight to the hexagon's card); one under the other when the
-   page is narrow. */
+   beside Strength and Weight (23 Oct, Alex: the Strength card back above Weight), Weight filling the rest of the
+   hexagon card's height; one under the other when the page is narrow. */
 .rd.rh .rh-duo { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 12px; }
 @container rh (max-width: 720px) { .rd.rh .rh-duo { grid-template-columns: minmax(0, 1fr); } }
+.rd.rh .rh-stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .rd.rh .rls-card.rh-panel { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 16px 18px 18px; }
 .rd.rh.rls .rh-panel .rls-none { padding: 0; }
 .rd.rh .rh-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-width: 0; }
 .rd.rh .rh-panel-head.tall { min-height: 36px; }
 .rd.rh .rh-panel-title { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 600; letter-spacing: -0.005em; color: #141a24; }
+/* A card's facts on their own line right under its head's title (23 Oct, Strength's Overall | new bests), as Business's charts: 12.5px grey, the figure in ink, green up, red down. */
+.rd.rh .rh-under { display: block; margin-top: -12px; min-width: 0; overflow: hidden; font-size: 12.5px; font-weight: 500; line-height: 18px; color: #8b93a1; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rh .rh-under b { font-weight: 600; color: #141a24; }
+.rd.rh .rh-under b.up { color: #2f7a3f; }
+.rd.rh .rh-under b.down { color: #b42318; }
 .rd.rh .rh-panel-aside { font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* The head's right side when it holds more than its aside: the aside, then the capsule (Strength's window). */
+.rd.rh .rh-panel-tools { display: inline-flex; align-items: center; gap: 12px; margin-left: auto; min-width: 0; }
 
 /* Muscle balance: the window's capsule under the title, the hexagon centred in what room is left, the key under it.
    The hexagon takes the card's width up to 440px, its words scaling with it, never wider than the card. In Strength
@@ -69,6 +77,9 @@
    figure green up, red down; the row is the capsule's height with it or without, cut with an ellipsis if it must. */
 .rd.rh .rh-spans-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
 .rd.rh .rh-spans { flex: none; }
+/* The one exception to the capsule's ink (23 Oct, Alex): a window on is empty, outlined and worded in its colour on the
+   hexagon (7d purple, 30d rose, Phase ink), so the toggle says which line is which. */
+.rd.rh .rh-spans button.on { background: #fff; color: var(--win, #141a24); box-shadow: inset 0 0 0 1.5px var(--win, #141a24); }
 .rd.rh .rh-overall { min-width: 0; overflow: hidden; font-size: 12.5px; font-weight: 500; line-height: 18px; color: #8b93a1; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .rd.rh .rh-overall b { font-weight: 600; color: #141a24; }
 .rd.rh .rh-overall b.up { color: #2f7a3f; }
@@ -86,14 +97,44 @@
 .rd.rh .rh-key i.line { height: 2px; border-radius: 1px; background: var(--rh-c, #141a24); }
 .rd.rh .rh-key i.dash { height: 0; border-top: 1.5px dashed #98a2b3; }
 
-/* Weight: the latest and the change on the title's line, the readings as one ink line across the card (its whole
-   height beside Muscle balance), the latest a dot. */
+/* Strength: a row a group, all six, the name, a thin ink bar at the change's size, the % on the right (green up, red
+   down); a group with nothing to compare an empty bar and a faint "–". */
+.rd.rh .rh-str { display: flex; flex-direction: column; gap: 10px; }
+.rd.rh .rh-str-row { display: grid; grid-template-columns: 80px minmax(0, 1fr) 56px; align-items: center; column-gap: 12px; }
+.rd.rh .rh-str-name { overflow: hidden; font-size: 13px; font-weight: 500; color: #3a4250; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rh .rh-str-track { display: block; height: 4px; border-radius: 999px; background: #eef0f3; overflow: hidden; }
+.rd.rh .rh-str-track i { display: block; height: 100%; border-radius: 999px; background: #141a24; }
+.rd.rh .rh-str-pct { font-size: 13px; font-weight: 600; color: #8b93a1; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rd.rh .rh-str-pct.up { color: #2f7a3f; }
+.rd.rh .rh-str-pct.down { color: #b42318; }
+.rd.rh .rh-str-pct.none { font-weight: 500; color: #98a2b3; }
+
+/* Weight: the latest and the change on the title's line; under it the readings over their time frame and scale (23
+   Oct, Alex: "there is no time frame or anything"), in the voice of the client's Progress chart: three faint grid lines
+   with their kg on the right (11px grey numerals in the gutter, --rh-wgut), the line in ink with a dot a reading while
+   there are few, the latest the bigger dot, the dates under it (first, middle, last, by time). Hovering, or the arrow
+   keys once it has focus, reads the nearest reading: a faint ink guide, an ink ring on the point, a white pill with the
+   hairline over the chart in the room kept for it at the top. The card fills the rest of the stack's height. */
+.rd.rh .rls-card.rh-panel.rh-weight { flex: 1; }
 .rd.rh .rh-wt { display: inline-flex; align-items: baseline; font-size: 13px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd.rh .rh-wt b { font-size: 15px; font-weight: 600; }
 .rd.rh .rh-wt small { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
-.rd.rh .rh-spark { position: relative; flex: 1; min-height: 72px; margin: 4px 4px 0; }
-.rd.rh .rh-spark svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.rd.rh .rh-spark-dot { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 999px; background: #141a24; box-shadow: 0 0 0 2px #fff; }
+.rd.rh .rh-wbox { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.rd.rh .rh-wchart { position: relative; flex: 1; min-height: 120px; outline: none; cursor: crosshair; -webkit-user-select: none; user-select: none; }
+.rd.rh .rh-wchart:focus-visible { outline: 1px solid #141a24; outline-offset: 4px; border-radius: 8px; }
+.rd.rh .rh-wplot { position: absolute; top: 26px; bottom: 6px; left: 0; right: var(--rh-wgut, 32px); }
+.rd.rh .rh-wplot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.rd.rh .rh-wgrid { position: absolute; left: calc(100% + 8px); transform: translateY(-50%); font-size: 11px; font-weight: 500; line-height: 1; color: #98a2b3; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+.rd.rh .rh-wdot { position: absolute; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 999px; background: #141a24; pointer-events: none; }
+.rd.rh .rh-wdot.last { width: 8px; height: 8px; margin: -4px 0 0 -4px; box-shadow: 0 0 0 2px #fff; }
+.rd.rh .rh-wguide { position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: #141a24; opacity: 0.25; pointer-events: none; }
+.rd.rh .rh-wring { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; box-sizing: border-box; border: 1.6px solid #141a24; border-radius: 999px; background: #fff; pointer-events: none; }
+.rd.rh .rh-wtip { position: absolute; top: -32px; height: 24px; padding: 0 9px; box-sizing: border-box; display: inline-flex; align-items: center; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #141a24; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; transform: translateX(-50%); pointer-events: none; }
+.rd.rh .rh-wtip .rh-wtip-day { font-weight: 500; color: #8b93a1; }
+.rd.rh .rh-waxis { position: relative; flex: none; height: 14px; margin: 4px var(--rh-wgut, 32px) 0 0; font-size: 11px; font-weight: 500; line-height: 14px; color: #98a2b3; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rd.rh .rh-waxis span { position: absolute; top: 0; left: 0; }
+.rd.rh .rh-waxis span.mid { left: 50%; transform: translateX(-50%); }
+.rd.rh .rh-waxis span.end { left: auto; right: 0; }
 .rd.rh .rh-pace { margin: 0; font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 
 /* ---- Consistency with Meetings and Invoices beside it, the three one height. When the page is narrow the two cards
@@ -165,6 +206,10 @@
 /* The title keeps its room; the grey after it gives way first, each cut with an ellipsis. */
 .rd.rh .rh-what-title { display: block; flex: 0 1 auto; min-width: 0; overflow: hidden; font-size: 15px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
 .rd.rh .rh-what-note { flex: 1 1 7em; min-width: 0; overflow: hidden; font-size: 13px; font-weight: 500; color: #8b93a1; text-overflow: ellipsis; white-space: nowrap; }
+/* A row's kind as its icon in its colour, 16px, the icon alone (KindMark; 23 Oct, Alex). The Feed's root is rh too, so
+   its Activity wears the same. */
+.rd.rh .rd-kind { display: inline-flex; align-items: center; justify-content: center; width: 16px; color: var(--c, #5b6474); }
+.rd.rh .rd-kind svg { flex: none; width: 16px; height: 16px; }
 
 /* ---- Pop-ups (portaled, so never under .rd): the .dlh card (training/trn.css). */
 .rh-field { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
