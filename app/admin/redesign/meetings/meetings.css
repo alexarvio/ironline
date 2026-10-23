@@ -143,3 +143,9 @@
 /* In Past calls' Type column (21 Oct, Alex): the column's width, the word centred, as tall as the Status pill beside it. */
 .rd.rt .rt-kind.wide { display: flex; justify-content: center; width: 100%; height: 24px; padding: 0 8px; box-sizing: border-box; }
 .rd.rt .rt-untitled { font-weight: 500; color: #8b93a1; }
+
+/* The call's link on its row (23 Oct, Alex): Add a link, or Join with its host and Edit under it, at the row's right. */
+.rd.rt .rt-linkslot { display: flex; justify-content: flex-end; }
+.rd.rt .rt-linkslot .trn-pill { text-decoration: none; }
+.rd.rt .rt-linkcell { display: flex; align-items: center; gap: 12px; }
+.rd.rt .rd-row-hit .rt-facts { margin-left: 2px; }

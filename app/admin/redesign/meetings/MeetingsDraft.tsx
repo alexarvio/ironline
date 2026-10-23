@@ -79,7 +79,6 @@ export type DraftMeetings = {
 };
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
-const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const addDaysIso = (iso: string, n: number) => {
@@ -87,7 +86,6 @@ const addDaysIso = (iso: string, n: number) => {
   d.setDate(d.getDate() + n);
   return isoOf(d);
 };
-const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
 const monthCap = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short" });
 const dayNum = (d: string) => String(parse(d).getDate());
 /** Dates in words are day/month (dayMonth, 20 Oct, Alex); the day picker's head keeps its words, and the past calls lead with logDate (21 Oct). */
@@ -106,10 +104,6 @@ const tidyTime = (raw: string) => {
   return h > 23 || m > 59 ? raw : fromMin(h * 60 + m);
 };
 const endTime = (time: string, dur: number) => (time ? fromMin(toMin(time) + dur) : "");
-const inDaysLabel = (today: string, date: string) => {
-  const n = daysBetween(today, date);
-  return n <= 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`;
-};
 const STATUS: Record<DraftMeeting["status"], { text: string; cls: string }> = { scheduled: { text: "Scheduled", cls: "" }, completed: { text: "Completed", cls: "up" }, "no-show": { text: "No-show", cls: "down" }, cancelled: { text: "Cancelled", cls: "" } };
 /** A call's title (21 Oct, Alex): the recap's title once written, else the topic, else its kind ("Review call"). */
 const titleOf = (m: { summaryTitle: string; topic: string; kind: MeetingTypeId }) => m.summaryTitle.trim() || m.topic.trim() || `${meetingTypeOf(m.kind).label} call`;
@@ -210,7 +204,27 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
   const [tabs, setTabs] = useState<Record<number, "prep" | "meeting" | "summary">>({});
   const [openAlso, setOpenAlso] = useState<number | null>(null);
   const savedTopic = (id: number) => [plan.upcoming, ...plan.alsoScheduled, ...plan.past].find((x) => x?.id === id)?.topic ?? "";
-  const aGrid = { gridTemplateColumns: "44px minmax(200px, 1fr) auto 90px 32px", columnGap: 24 } as const;
+  // The tile, the title (its time after it), the link, ⋯ (23 Oct, Alex: no length or how soon on the right).
+  const aGrid = { gridTemplateColumns: "44px minmax(200px, 1fr) auto 32px", columnGap: 24 } as const;
+  /** The call's link on its row: Add a link, or Join with its host and Edit (once, not again in the body). */
+  const linkControl = (m: DraftMeeting) =>
+    m.link ? (
+      <span className="rt-linkcell">
+        <a className="trn-pill" href={m.link} target="_blank" rel="noopener noreferrer">
+          <PlayIcon /> Join {m.provider}
+        </a>
+        <span className="rt-host">
+          {m.host}
+          <button type="button" onClick={() => setDlg({ kind: "link", meetingId: m.id })}>
+            Edit
+          </button>
+        </span>
+      </span>
+    ) : (
+      <button type="button" className="trn-pill" onClick={() => setDlg({ kind: "link", meetingId: m.id })}>
+        <PlusIcon /> Add a link
+      </button>
+    );
   const callBody = (m: DraftMeeting) => {
     const tab = tabs[m.id] ?? "prep";
     return (
@@ -226,25 +240,6 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
               placeholder="Topic"
               aria-label="Topic"
             />
-          </div>
-          <div className="rt-band-right">
-            {m.link ? (
-              <>
-                <a className="trn-pill" href={m.link} target="_blank" rel="noopener noreferrer">
-                  <PlayIcon /> Join {m.provider}
-                </a>
-                <span className="rt-host">
-                  {m.host}
-                  <button type="button" onClick={() => setDlg({ kind: "link", meetingId: m.id })}>
-                    Edit
-                  </button>
-                </span>
-              </>
-            ) : (
-              <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "link", meetingId: m.id })}>
-                <PlusIcon /> Add a link
-              </button>
-            )}
           </div>
         </div>
         <div className="rt-body">
@@ -295,8 +290,8 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
     );
   };
 
-  // A call still to come as a row (21 Oct, Alex): the date tile, its title with the chevron after it, its facts in grey,
-  // how soon, ⋯; open, the call's body under it. The next call and Also scheduled are both this.
+  // A call still to come as a row (21 Oct, Alex): the date tile, its title with its time and the chevron after it, its
+  // link on the right (23 Oct, Alex: where its length and how soon were), ⋯; open, the call's body under it. The next call and Also scheduled are both this.
   const [nextOpen, setNextOpen] = useState(true);
   const callRow = (m: DraftMeeting, isOpen: boolean, toggle: () => void) => (
     <div key={m.id} className={`rd-row rt-arow${isOpen ? " open" : ""}`}>
@@ -310,14 +305,15 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
           <span className="rd-ex-name rt-call">
             <button type="button" className="rd-row-hit" aria-expanded={isOpen}>
               <CallTitle m={m} />
+              {/* Its small fact, the time, before the chevron (design rules 8). */}
+              {m.time && <span className="rt-facts">{`${m.time} – ${endTime(m.time, m.durationMinutes)} ${zoneOf(m)}`}</span>}
               <Fold open={isOpen} />
             </button>
           </span>
         </span>
-        <span className="rt-facts">
-          <SepJoin parts={[m.time ? `${m.time} – ${endTime(m.time, m.durationMinutes)} ${zoneOf(m)}` : null, `${m.durationMinutes} min`, m.link ? m.provider : null]} />
+        <span className="rt-linkslot" onClick={(e) => e.stopPropagation()}>
+          {linkControl(m)}
         </span>
-        <span className="rd-num quiet">{inDaysLabel(today, m.date)}</span>
         <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${m.topic || "call"}`}>
