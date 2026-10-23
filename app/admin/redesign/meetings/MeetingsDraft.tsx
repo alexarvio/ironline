@@ -246,7 +246,6 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
       const kept = focusGoals.find((g) => sameWords(g.text, text));
       return { id: kept?.id ?? -(i + 1), text, done: kept?.done ?? false };
     });
-  const focusDone = focusGoals.filter((g) => g.done).length;
   /** The live list as typed, through the queue, straight to the client: on the past call that holds it (`holderId`), or in
    *  its own section while no completed call can. */
   const saveFocus = (lines: string[], holderId?: number) => {
@@ -407,16 +406,6 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
           </span>
         </span>
         <span className="rt-linkslot" onClick={(e) => e.stopPropagation()}>
-          {/* The client's ticks on the next call (23 Oct, Alex), while there are goals: the count in ink. */}
-          {m.id === upcoming?.id && focusGoals.length > 0 && (
-            <span className="rt-ticks" title="To focus on">
-              <span className="sr-only">To focus on: </span>
-              <b>
-                {focusDone} of {focusGoals.length}
-              </b>{" "}
-              done
-            </span>
-          )}
           {linkControl(m)}
         </span>
         <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
@@ -841,10 +830,9 @@ function PrepNotes({ value, onSave, auto, name, label = "Prep notes" }: { value:
   );
 }
 
-/** To focus on (23 Oct, Alex), three lines, each with the client's tick as a small ring (ink once ticked, the words grey);
- *  typed in place, saved by itself as the list is left. The live list on the past call that holds it: it is news on the
- *  client's Home and phone, and half a goal shouldn't be; a word taken out and typed back keeps its tick (ticks go by the
- *  words). A call still to come drafts the next list with it, no ticks yet. */
+/** To focus on (23 Oct, Alex), three lines, Phase goals' look: a dot and a clean line each (bullet points, nothing for the
+ *  client to tick); typed in place, saved by itself as the list is left. The live list on the past call that holds it: it
+ *  is news on the client's Home and phone, and half a goal shouldn't be. A call still to come drafts the next list with it. */
 function FocusLines({ goals, onSave, auto: { hold, onWaiting }, name }: { goals: FocusGoalView[]; onSave: (lines: string[]) => void; auto: Autosave; name: string }) {
   const saved = goals.map((g) => g.text);
   const savedKey = saved.join("\n");
@@ -905,14 +893,10 @@ function FocusLines({ goals, onSave, auto: { hold, onWaiting }, name }: { goals:
         }}
       >
         {rows.map((g, i) => {
-          const goal = g.trim() ? goals.find((x) => sameWords(x.text, g)) : undefined;
-          const done = !!goal?.done;
           const typed = g.trim().replace(/\s+/g, " ") !== (saved[i] ?? "");
           return (
-            <li key={i} className={`${g.trim() ? "" : "empty"}${done ? " done" : ""}`}>
-              <span className="rt-focus-ring" aria-hidden="true">
-                {done && <FocusTick />}
-              </span>
+            <li key={i} className={g.trim() ? "" : "empty"}>
+              <i className="rt-focus-dot" aria-hidden="true" />
               <input
                 value={g}
                 maxLength={FOCUS_CHARS}
@@ -926,7 +910,7 @@ function FocusLines({ goals, onSave, auto: { hold, onWaiting }, name }: { goals:
                 }}
                 className={typed ? "typed" : undefined}
                 placeholder={FOCUS_SAMPLES[i]}
-                aria-label={`Goal ${i + 1}${done ? ", done" : ""}`}
+                aria-label={`Goal ${i + 1}`}
               />
             </li>
           );
@@ -977,29 +961,15 @@ function PastBody({ m, firstName, onSend, auto, bare, onAddEvent, focus }: { m: 
   );
 }
 
-/** The client's tick in a goal's ring: a white check on the ring's ink. */
-function FocusTick() {
-  return (
-    <svg viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 12l5 5 9-10" />
-    </svg>
-  );
-}
-
-/** The list an older call set (23 Oct, Alex), read only: each goal's ring as the client left it (ink once ticked, the
- *  words grey), as the call holding the list draws it. */
+/** The list an older call set (23 Oct, Alex), read only: a dot and its words each, as the call holding the list draws it
+ *  (bullet points, nothing ticked; the stored ticks stay unused). */
 function FocusRecord({ goals }: { goals: FocusSet }) {
   return (
     <ul className="rt-focus-list read" aria-label="To focus on">
       {goals.map((g, i) => (
-        <li key={i} className={g.done ? "done" : ""}>
-          <span className="rt-focus-ring" aria-hidden="true">
-            {g.done && <FocusTick />}
-          </span>
-          <span className="rt-focus-words">
-            {g.text}
-            {g.done && <span className="sr-only">, done</span>}
-          </span>
+        <li key={i}>
+          <i className="rt-focus-dot" aria-hidden="true" />
+          <span className="rt-focus-words">{g.text}</span>
         </li>
       ))}
     </ul>

@@ -150,33 +150,27 @@
 .rd.rt .rd-row-hit .rt-facts { margin-left: 2px; }
 
 /* ---- To focus on (23 Oct, Alex): the client's goals until the next call (lib/focus.ts). */
-/* On the next call's row, before its link: the client's ticks, the count in ink. */
 .rd.rt .rt-linkslot { align-items: center; gap: 16px; }
-.rd.rt .rt-ticks { font-size: 12.5px; font-weight: 500; color: #8b93a1; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.rd.rt .rt-ticks b { font-weight: 600; color: #141a24; }
-/* The call's To focus on tab: three lines, each the client's tick as a small ring (ink once ticked, the words grey), typed in
-   place; the tab keeps the notes' height, so switching tabs moves nothing. */
+/* The call's To focus on tab: three lines, Phase goals' look, a dot and a clean line each (bullet points: nothing for the
+   client to tick), typed in place; the tab keeps the notes' height, so switching tabs moves nothing. */
 .rd.rt .rt-focus { display: flex; flex-direction: column; }
 .rd.rt .rt-focus-list { display: flex; flex-direction: column; gap: 2px; min-height: 132px; margin: 0; padding: 0; list-style: none; }
-.rd.rt .rt-focus-list li { display: flex; align-items: center; gap: 12px; }
-.rd.rt .rt-focus-ring { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 999px; box-shadow: inset 0 0 0 1.4px #141a24; }
-.rd.rt .rt-focus-list li.empty .rt-focus-ring { box-shadow: inset 0 0 0 1.4px #c9cfd8; }
-.rd.rt .rt-focus-list li.done .rt-focus-ring { background: #141a24; }
+.rd.rt .rt-focus-list li { display: flex; align-items: center; gap: 10px; }
+.rd.rt .rt-focus-dot { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #141a24; }
+.rd.rt .rt-focus-list li.empty .rt-focus-dot { background: #c9cfd8; }
 .rd.rt .rt-focus-list input { flex: 1; min-width: 0; height: 36px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; box-shadow: none; outline: none; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; }
 .rd.rt .rt-focus-list input.typed, .rd.rt .rt-focus-list input:hover { border-bottom-color: #e1e5eb; }
 .rd.rt .rt-focus-list input:focus { border-bottom-color: #141a24; }
 .rd.rt .rt-focus-list input::placeholder { color: #98a2b3; }
-.rd.rt .rt-focus-list li.done input { color: #8b93a1; }
 /* Goals with no completed call to hold them: the list in a card of its own, as tall as its lines. */
 .rd.rt .rt-focus-card { padding: 8px 18px 12px; }
 .rd.rt .rt-focus-card .rt-focus-list { min-height: 0; }
 /* A past call's To focus on (23 Oct, Alex), under its summary and as tall as its lines: the call holding the live list
-   types it in place; an older call shows the list it set, read only, the rings as the client left them. */
+   types it in place; an older call shows the list it set, read only, a dot and its words each. */
 .rd.rt .rt-past .rt-focus-label { margin-top: 14px; }
 .rd.rt .rt-past .rt-focus-list { min-height: 0; }
 .rd.rt .rt-focus-list.read li { min-height: 36px; }
 .rd.rt .rt-focus-words { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; color: #141a24; }
-.rd.rt .rt-focus-list li.done .rt-focus-words { color: #8b93a1; }
 /* In "How did the call go?" (portaled, .dlh): Phase goals' look, a dot and a clean line each, ink while typing. */
 .dlh .rt-goals { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .dlh .rt-goals li { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #e1e5eb; }
