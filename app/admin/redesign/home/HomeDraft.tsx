@@ -193,14 +193,6 @@ export default function HomeDraft({
   const [photo, setPhoto] = useState(false);
   const panel = useMemo(() => ({ ...home.panel, memberInfo: dated(home.panel.memberInfo), coachingInfo: dated(home.panel.coachingInfo) }), [home.panel]);
   const board = home.board;
-  // Details' fact line: gender, height, and the week of the live plan; empty ones drop out. The week is the Training
-  // tile's (the running phase's week of its own, or a programme's with no phase behind it), never "Current week": that
-  // is the client's overall week number, so a second programme's week 2 read "Week 8".
-  const detailsFact = useMemo(() => {
-    const member = (field: string) => panel.memberInfo.find((r) => r.field === field)?.value || null;
-    const plan = board.tracks.find((t) => t.track === "training")?.phase;
-    return [member("gender"), member("height_cm"), plan ? `Week ${plan.weekNow} of ${plan.name}` : null].filter((p): p is string => !!p);
-  }, [panel, board.tracks]);
 
   const [filter, setFilter] = useState(FILTERS[0].id);
   const [page, setPage] = useState(1);
@@ -375,7 +367,7 @@ export default function HomeDraft({
               if (document.querySelector(".cc-dialog")) e.preventDefault();
             }}
           >
-            {/* The face, the name and one fact line (23 Oct, Alex: mockup A): gender | height | Week 3 of {plan}. */}
+            {/* The face and the name (23 Oct, Alex: no fact line; gender, height and the plan's week didn't belong here). */}
             <div className="dlh-head rh-details-head">
               <span className="rh-details-face" aria-hidden="true">
                 {home.avatarPath ? (
@@ -387,11 +379,6 @@ export default function HomeDraft({
               </span>
               <div className="rh-details-who">
                 <DialogTitle className="dlh-title">{home.name}</DialogTitle>
-                {detailsFact.length > 0 && (
-                  <div className="rh-details-fact">
-                    <SepJoin parts={detailsFact} />
-                  </div>
-                )}
               </div>
               <DialogClose className="dlh-x" aria-label="Close">
                 ✕
@@ -399,21 +386,29 @@ export default function HomeDraft({
             </div>
             <DialogDescription className="sr-only">Contact and coaching for {firstName}</DialogDescription>
             <div className="rh-details-body">
-              {/* No coach note and no weight in Details (23 Oct, Alex); the Plan in Coaching. */}
-              <ClientCardEditor clientId={clientId} panel={panel} chrome="rail" look="hairline" plans={home.plans} planId={home.planId} />
-            </div>
-            {/* Delete of an existing thing sits on the left, red words (design rules 4); the ⋯'s own confirm, the name typed. */}
-            <div className="dlh-foot">
-              <button
-                type="button"
-                className="dlh-delete dlh-start"
-                onClick={() => {
-                  setDetails(false);
-                  setDeleting(true);
-                }}
-              >
-                Delete {firstName}
-              </button>
+              {/* The form itself (23 Oct, Alex): typed in place, Plan and Started under Coaching, no weight, no coach note.
+                  Delete of an existing thing on the left of its foot, red words (design rules 4); the ⋯'s own confirm. */}
+              <ClientCardEditor
+                clientId={clientId}
+                panel={panel}
+                chrome="rail"
+                look="hairline"
+                plans={home.plans}
+                planId={home.planId}
+                onClose={() => setDetails(false)}
+                footStart={
+                  <button
+                    type="button"
+                    className="dlh-delete"
+                    onClick={() => {
+                      setDetails(false);
+                      setDeleting(true);
+                    }}
+                  >
+                    Delete {firstName}
+                  </button>
+                }
+              />
             </div>
           </DialogContent>
         )}

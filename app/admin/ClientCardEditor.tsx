@@ -44,6 +44,9 @@ const CARD_KEYS: CardKey[] = [
   "starting_weight_kg",
 ];
 const MEMBER_KEYS: CardKey[] = ["name", "birthdate", "gender", "height_cm", "email", "phone_code", "phone", "address"];
+/** Details in the redesign (23 Oct, Alex): the member's fields and the start date, typed in place in one form; the rest
+    (goal, goal date, check-in day, starting weight) ride along as they are saved. */
+const DETAILS_KEYS: CardKey[] = [...MEMBER_KEYS, "coaching_start_date"];
 const COACHING_KEYS: CardKey[] = ["coaching_start_date", "goal_date", "goal_phase", "check_in_day", "starting_weight_kg"];
 
 type Which = "member" | "coaching";
@@ -56,6 +59,8 @@ export default function ClientCardEditor({
   look,
   plans = [],
   planId = null,
+  onClose,
+  footStart,
 }: {
   clientId: number;
   panel: OverviewPanel;
@@ -72,6 +77,10 @@ export default function ClientCardEditor({
   /** The plans the client's coach offers, and the one the client is on (23 Oct, Alex): the hairline look's Plan. */
   plans?: { id: string; name: string }[];
   planId?: string | null;
+  /** Details' own close: Cancel, and after a save. */
+  onClose?: () => void;
+  /** On the left of Details' foot (Delete {First}). */
+  footStart?: ReactNode;
 }) {
   const hl = look === "hairline";
   const [editing, setEditing] = useState<Record<Which, boolean>>({ member: onboarding, coaching: onboarding });
@@ -147,10 +156,22 @@ export default function ClientCardEditor({
   return (
     <>
       {hl && inDialog ? (
-        <>
-          <ContactFacts rows={panel.memberInfo} onEdit={(field) => edit("member", field)} />
-          <CoachingFacts rows={panel.coachingInfo} onEdit={(field) => edit("coaching", field)} plan={<PlanPicker clientId={clientId} plans={plans} planId={planId} />} />
-        </>
+        // Details is the form itself (23 Oct, Alex: a second pop-up to fill anything in was friction): the member's
+        // fields typed in place, then Coaching, Plan and Started alone; Cancel and Save at the foot, Delete on its left.
+        <div className="cc-hl cc-inline">
+          <CardForm clientId={clientId} card={card} keys={DETAILS_KEYS} cancelLabel="Cancel" onDone={() => onClose?.()} footStart={footStart}>
+            <MemberFields card={card} focus={null} onRename={(v) => v.trim() && v.trim() !== card.name && startRename(() => renameClientAction(clientId, v))} />
+            <section className="cc-sec">
+              <span className="dlh-label">Coaching</span>
+              <div className="nc-grid">
+                <InfoRow label="Plan" as="div">
+                  <PlanPicker clientId={clientId} plans={plans} planId={planId} />
+                </InfoRow>
+                <Field label="Started" name="coaching_start_date" value={card.coaching_start_date} type="date" focus={null} />
+              </div>
+            </section>
+          </CardForm>
+        </div>
       ) : (
         <>
           <Section chrome={chrome} onboarding={onboarding} title="Member info" hint={`${filled} of ${panel.memberInfo.length} filled`} onEdit={() => edit("member")}>
@@ -301,146 +322,6 @@ function InfoRows({ rows, onAdd }: { rows: OverviewInfoRow[]; onAdd: (field: str
 
 // ---- The hairline look (Home's Details; 23 Oct, Alex: mockup A with B's icons). Styles: `.cc-` in home/home.css.
 
-/** A contact line's icon: stroke 1.6, round caps and joins, no fills (design rules 5). */
-function Glyph({ children }: { children: ReactNode }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {children}
-    </svg>
-  );
-}
-
-/** Contact: a line a fact, its icon naming it (no word label); Email and Address take two of the three columns. */
-const CONTACT: { field: string; name: string; add: string; wide?: boolean; icon: ReactNode }[] = [
-  {
-    field: "email",
-    name: "Email",
-    add: "Add email",
-    wide: true,
-    icon: (
-      <Glyph>
-        <rect x="3" y="5" width="18" height="14" rx="2" />
-        <path d="M3 7l9 6 9-6" />
-      </Glyph>
-    ),
-  },
-  {
-    field: "phone",
-    name: "Phone",
-    add: "Add phone",
-    icon: (
-      <Glyph>
-        <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" />
-      </Glyph>
-    ),
-  },
-  {
-    field: "address",
-    name: "Address",
-    add: "Add address",
-    wide: true,
-    icon: (
-      <Glyph>
-        <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
-        <circle cx="12" cy="10" r="2.5" />
-      </Glyph>
-    ),
-  },
-  {
-    field: "birthdate",
-    name: "Birthday",
-    add: "Add birthday",
-    icon: (
-      <Glyph>
-        <path d="M5 21v-7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7" />
-        <path d="M3 21h18" />
-        <path d="M5 16c2.3 1.3 4.7 1.3 7 0s4.7-1.3 7 0" />
-        <path d="M12 12V8.5" />
-        <path d="M12 6.2c.7 0 1.2-.5 1.2-1.2 0-1-1.2-2.2-1.2-2.2s-1.2 1.2-1.2 2.2c0 .7.5 1.2 1.2 1.2z" />
-      </Glyph>
-    ),
-  },
-];
-
-/** Coaching: a small grey label over each figure, three across. `row` is the server's label (OverviewPanel.coachingInfo). */
-const COACHING: { row: string; name: string; add?: string }[] = [
-  { row: "Start date", name: "Started", add: "Add start date" },
-  { row: "Goal date", name: "Goal date", add: "Add goal date" },
-  { row: "Check-in day", name: "Check-in day", add: "Add check-in day" },
-];
-
-/** A section's head: its small caps label, Edit in words on the right. */
-function FactsHead({ title, onEdit }: { title: string; onEdit: () => void }) {
-  return (
-    <div className="cc-sec-head">
-      <span className="dlh-label">{title}</span>
-      <button type="button" className="rh-textact" onClick={onEdit}>
-        Edit
-      </button>
-    </div>
-  );
-}
-
-// An empty one is its icon and "Add phone", which opens the editor on that field.
-function ContactFacts({ rows, onEdit }: { rows: OverviewInfoRow[]; onEdit: (field?: string) => void }) {
-  return (
-    <section className="cc-sec">
-      <FactsHead title="Contact" onEdit={() => onEdit()} />
-      <div className="cc-grid">
-        {CONTACT.map((c) => {
-          const value = rows.find((r) => r.field === c.field)?.value ?? "";
-          const cls = `cc-line${c.wide ? " wide" : ""}`;
-          return value ? (
-            <div key={c.field} className={cls} title={`${c.name}: ${value}`}>
-              {c.icon}
-              <span className="sr-only">{c.name}: </span>
-              <span className="cc-line-v">{value}</span>
-            </div>
-          ) : (
-            <button key={c.field} type="button" className={`${cls} add`} onClick={() => onEdit(c.field)}>
-              {c.icon}
-              <span className="cc-line-v">{c.add}</span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-// Empty and editable: "Add", which opens the editor on that field. Empty and derived (now, the change): a grey dash.
-// The Plan first (23 Oct, Alex: picked here, for invoices later), then the dates; no weight (23 Oct, Alex).
-function CoachingFacts({ rows, onEdit, plan }: { rows: OverviewInfoRow[]; onEdit: (field?: string) => void; plan: ReactNode }) {
-  return (
-    <section className="cc-sec">
-      <FactsHead title="Coaching" onEdit={() => onEdit()} />
-      <div className="cc-grid">
-        <div className="cc-cell">
-          <span className="cc-cell-k">Plan</span>
-          {plan}
-        </div>
-        {COACHING.map((c) => {
-          const r = rows.find((x) => x.label === c.row);
-          return (
-            <div key={c.row} className="cc-cell">
-              <span className="cc-cell-k">{c.name}</span>
-              {r?.value ? (
-                <span className={`cc-cell-v${r.tone === "good" ? " good" : ""}`}>{r.value}</span>
-              ) : r?.field ? (
-                <button type="button" className="cc-cell-v add" onClick={() => onEdit(r.field)} aria-label={c.add ?? `Add ${c.name.toLowerCase()}`}>
-                  Add
-                </button>
-              ) : (
-                <span className="cc-cell-v none">–</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 // The plan a client is on (23 Oct, Alex): one of the coach's, picked from the floating list (design rules 6), None to
 // take it off; + New plan pinned at its foot opens a name line in the same panel, Cancel in words and an ink Add, and
 // puts the client on the new plan. Shown at once; the page re-reads after the save.
@@ -487,7 +368,7 @@ function PlanPicker({ clientId, plans, planId }: { clientId: number; plans: { id
     <Popover open={open} onOpenChange={(o) => (o ? setOpen(true) : close())}>
       <PopoverTrigger asChild>
         <button type="button" className={`cc-cell-v cc-plan${current ? "" : " add"}`} aria-label={current ? `Plan: ${current.name}. Change` : "Pick a plan"}>
-          <span>{current ? current.name : "Add"}</span>
+          <span>{current ? current.name : "Pick"}</span>
           <ChevronDownIcon />
         </button>
       </PopoverTrigger>
@@ -497,6 +378,7 @@ function PlanPicker({ clientId, plans, planId }: { clientId: number; plans: { id
             className="cc-plan-new"
             onSubmit={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               create();
             }}
           >
@@ -541,7 +423,7 @@ function PlanPicker({ clientId, plans, planId }: { clientId: number; plans: { id
 // section's fields ride along as their saved values rather than blanking.
 // The action runs inside a transition so edit mode closes AFTER the save
 // resolves; flipping state on click unmounted the form mid-submit before.
-function CardForm({ clientId, card, keys, cancelLabel, onDone, children }: { clientId: number; card: Card; keys: CardKey[]; cancelLabel: string; onDone: () => void; children: ReactNode }) {
+function CardForm({ clientId, card, keys, cancelLabel, onDone, footStart, children }: { clientId: number; card: Card; keys: CardKey[]; cancelLabel: string; onDone: () => void; /** On the left of the foot (Details' Delete). */ footStart?: ReactNode; children: ReactNode }) {
   const [saving, startSaving] = useTransition();
   return (
     <form
@@ -559,6 +441,7 @@ function CardForm({ clientId, card, keys, cancelLabel, onDone, children }: { cli
       ))}
       {children}
       <div className="ad-card-form-foot">
+        {footStart && <span className="cc-foot-start">{footStart}</span>}
         <button type="button" className="ad-btn-secondary" onClick={onDone}>
           {cancelLabel}
         </button>

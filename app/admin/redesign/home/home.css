@@ -179,8 +179,8 @@
 /* ---- Pop-ups (portaled, so never under .rd): the .dlh card (training/trn.css). */
 .rh-field { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
 
-/* Details (23 Oct, Alex: mockup A with B's icons): the face, the name and one fact line; Contact and Coaching as grids of
-   facts (ClientCardEditor look="hairline"), the coach's note, Delete at the foot. One .dlh card, sections 20px apart. */
+/* Details (23 Oct, Alex): the face and the name, then the form itself, typed in place (ClientCardEditor look="hairline"):
+   the member's fields, Coaching (Plan, Started), Cancel and Save at the foot with Delete on its left. One .dlh card. */
 .dlh.dlh.rh-details { width: min(560px, 100vw - 32px); }
 .rh-scrim { position: fixed; inset: 0; z-index: 50; background: rgba(20, 26, 36, 0.45); }
 /* Doubled with .dlh-head (trn.css), so the dev server's CSS order can't put the face back at the top. */
@@ -189,63 +189,35 @@
 .rh-details-face { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 999px; overflow: hidden; background: #eef0f3; font-size: 18px; font-weight: 600; color: #5b6474; }
 .rh-details-face img { width: 100%; height: 100%; object-fit: cover; }
 .rh-details-who { flex: 1; min-width: 0; }
-.rh-details-fact { margin-top: 2px; font-size: 13px; font-weight: 500; color: #5b6474; font-variant-numeric: tabular-nums; }
 .rh-details-body { display: flex; flex-direction: column; gap: 20px; max-height: min(70vh, 640px); margin: 0 -20px; padding: 10px 20px 2px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
-.cc-sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-.cc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
-.cc-grid > .wide { grid-column: span 2; }
-/* Contact: the icon, then the value; no word label (the icon says it). Empty: the icon and "Add phone" in grey, a button. */
-.cc-line { display: flex; align-items: center; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 14.5px; font-weight: 600; line-height: 1.35; color: #141a24; text-align: left; }
-.cc-line > svg { flex: none; color: #8b93a1; }
-.cc-line-v { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.cc-line.add { font-weight: 500; color: #98a2b3; cursor: pointer; }
-.cc-line.add:hover, .cc-line.add:hover > svg { color: #141a24; }
-/* Coaching: a small grey label over each figure. Empty and editable "Add" in grey (a button); derived and empty a grey dash. */
-.cc-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
-.cc-cell-k { font-size: 12px; font-weight: 500; color: #8b93a1; }
-.cc-cell-v { display: block; max-width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 14.5px; font-weight: 600; line-height: 1.35; color: #141a24; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.cc-cell-v.good { color: #2f7a3f; }
-.cc-cell-v.add, .cc-cell-v.none { font-weight: 500; color: #98a2b3; }
-.cc-cell-v.add { cursor: pointer; }
-.cc-cell-v.add:hover { color: #141a24; }
-/* Keyboard focus as a quiet underline on the words, never a ring (design rules 9b). */
-.cc-line.add:focus-visible, .cc-cell-v.add:focus-visible { outline: none; }
-.cc-line.add:focus-visible .cc-line-v, .cc-cell-v.add:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 
-/* The coach's note: a note that saves (design rules 4), no line until something is typed. */
-.rh-note { display: flex; flex-direction: column; gap: 4px; }
-.rh-note-text { display: block; width: 100%; min-height: 56px; margin: 0; padding: 6px 0 8px; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; box-shadow: none; outline: none; resize: none; box-sizing: border-box; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.5; color: #3a4250; field-sizing: content; }
-.rh-note-text::placeholder { color: #98a2b3; }
-.rh-note-text.typed { border-bottom-color: #e1e5eb; }
-.rh-note-text.typed:focus { border-bottom-color: #141a24; }
-.rh-note-foot { display: flex; align-items: center; justify-content: flex-end; gap: 2px; padding-top: 6px; }
 
 /* The card's edit pop-up, in the .dlh voice: a white head with the title and a round ✕, ink for the chosen and for Save. */
 .cc-dialog.cc-hl { width: min(520px, 100vw - 32px); max-width: none; padding: 20px 20px 16px; border: 0; border-radius: 20px; background: #fff; box-shadow: 0 30px 60px -24px rgba(16, 24, 40, 0.35), 0 0 0 1px #e1e5eb; }
-.cc-dialog.cc-hl .cc-dialog-head { padding: 0; border: 0; background: none; }
-.cc-dialog.cc-hl .cc-dialog-head .ch-label { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; text-transform: none; color: #141a24; }
-.cc-dialog.cc-hl .cc-dialog-x { width: 28px; height: 28px; margin: -2px -4px 0 0; border: 0; border-radius: 999px; background: none; font-size: 13px; color: #8b93a1; }
-.cc-dialog.cc-hl .cc-dialog-x:hover { background: #f5f6f8; color: #141a24; }
-.cc-dialog.cc-hl .ad-card-form { padding: 6px 0 0; }
-.cc-dialog.cc-hl .ad-card-form-foot { justify-content: flex-end; gap: 2px; margin-top: 18px; padding: 0; border: 0; }
-.cc-dialog.cc-hl .ad-btn-secondary { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; box-shadow: none; font-size: 13.5px; font-weight: 600; color: #5b6474; }
-.cc-dialog.cc-hl .ad-btn-secondary:hover { color: #141a24; }
-.cc-dialog.cc-hl .ad-btn-primary { height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; box-shadow: none; font-size: 13.5px; font-weight: 600; color: #fff; }
-.cc-dialog.cc-hl .ad-btn-primary:disabled { background: #c9cfd8; }
+.cc-hl .cc-dialog-head { padding: 0; border: 0; background: none; }
+.cc-hl .cc-dialog-head .ch-label { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; text-transform: none; color: #141a24; }
+.cc-hl .cc-dialog-x { width: 28px; height: 28px; margin: -2px -4px 0 0; border: 0; border-radius: 999px; background: none; font-size: 13px; color: #8b93a1; }
+.cc-hl .cc-dialog-x:hover { background: #f5f6f8; color: #141a24; }
+.cc-hl .ad-card-form { padding: 6px 0 0; }
+.cc-hl .ad-card-form-foot { justify-content: flex-end; gap: 2px; margin-top: 18px; padding: 0; border: 0; }
+.cc-hl .ad-btn-secondary { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; box-shadow: none; font-size: 13.5px; font-weight: 600; color: #5b6474; }
+.cc-hl .ad-btn-secondary:hover { color: #141a24; }
+.cc-hl .ad-btn-primary { height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; box-shadow: none; font-size: 13.5px; font-weight: 600; color: #fff; }
+.cc-hl .ad-btn-primary:disabled { background: #c9cfd8; }
 /* Its fields: clean lines, ink while typing; the labels small caps grey; the chosen gender ink, never navy; 500, not 700. */
-.cc-dialog.cc-hl .nc-row { border-bottom-color: #e1e5eb; }
-.cc-dialog.cc-hl .nc-row:focus-within { border-bottom-color: #141a24; }
-.cc-dialog.cc-hl .nc-row.bad, .cc-dialog.cc-hl .nc-row.bad:focus-within { border-bottom-color: #b42318; }
-.cc-dialog.cc-hl .nc-label { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
-.cc-dialog.cc-hl .nc-aside { font-weight: 500; letter-spacing: 0; color: #8b93a1; }
-.cc-dialog.cc-hl .nc-input, .cc-dialog.cc-hl .nc-static, .cc-dialog.cc-hl .nc-dial { font-size: 15px; font-weight: 500; color: #141a24; }
-.cc-dialog.cc-hl .nc-input::placeholder { font-weight: 500; color: #98a2b3; }
-.cc-dialog.cc-hl .nc-suffixed em { font-weight: 500; color: #8b93a1; }
+.cc-hl .nc-row { border-bottom-color: #e1e5eb; }
+.cc-hl .nc-row:focus-within { border-bottom-color: #141a24; }
+.cc-hl .nc-row.bad, .cc-hl .nc-row.bad:focus-within { border-bottom-color: #b42318; }
+.cc-hl .nc-label { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.cc-hl .nc-aside { font-weight: 500; letter-spacing: 0; color: #8b93a1; }
+.cc-hl .nc-input, .cc-hl .nc-static, .cc-hl .nc-dial { font-size: 15px; font-weight: 500; color: #141a24; }
+.cc-hl .nc-input::placeholder { font-weight: 500; color: #98a2b3; }
+.cc-hl .nc-suffixed em { font-weight: 500; color: #8b93a1; }
 /* Gender: the capsule (design rules 5), the chosen one ink. */
-.cc-dialog.cc-hl .nc-pills { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 2px; height: 36px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
-.cc-dialog.cc-hl .nc-pills .pl-chip { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; box-shadow: none; font-size: 13px; font-weight: 500; color: #5b6474; }
-.cc-dialog.cc-hl .nc-pills .pl-chip:hover:not(.on) { color: #141a24; }
-.cc-dialog.cc-hl .nc-pills .pl-chip.on { background: #141a24; font-weight: 600; color: #fff; }
+.cc-hl .nc-pills { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 2px; height: 36px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.cc-hl .nc-pills .pl-chip { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; box-shadow: none; font-size: 13px; font-weight: 500; color: #5b6474; }
+.cc-hl .nc-pills .pl-chip:hover:not(.on) { color: #141a24; }
+.cc-hl .nc-pills .pl-chip.on { background: #141a24; font-weight: 600; color: #fff; }
 
 /* App access: the login's facts a row each, then the fields on clean lines. */
 .rh-facts { display: flex; flex-direction: column; margin: 2px 0 0; }
@@ -272,10 +244,6 @@
 /* Details' Plan (23 Oct, Alex): the plan's name with a chevron, opening the floating list (design rules 6): the coach's
    plans and None, + New plan pinned at the foot, which becomes a name line with Cancel and an ink Add in the same panel.
    The list is portalled, so it is styled by its own classes, over the popover's defaults. */
-.cc-cell-v.cc-plan { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
-.cc-cell-v.cc-plan span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.cc-cell-v.cc-plan svg { flex: none; width: 14px; height: 14px; color: #8b93a1; translate: 0 -0.5px; }
-.cc-cell-v.cc-plan:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 3px; }
 [data-slot="popover-content"].cc-plan-pop { width: 240px; padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 16px 40px -12px rgba(16, 24, 40, 0.25), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), Archivo, system-ui, sans-serif; color: #141a24; }
 .cc-plan-list { display: flex; flex-direction: column; max-height: 216px; overflow-y: auto; }
 .cc-plan-row { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
@@ -295,3 +263,15 @@
 .cc-plan-cancel { padding: 0; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
 .cc-plan-add { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13.5px; font-weight: 600; color: #fff; cursor: pointer; }
 .cc-plan-add:disabled { opacity: 0.4; cursor: default; }
+
+/* Details' form, inline in the card (23 Oct): the old pop-up's hairline field styles, no card of its own; Coaching under a
+   small caps label; the foot's Delete on the left. */
+.cc-hl.cc-inline .ad-card-form { padding: 0; }
+.cc-hl.cc-inline .cc-sec { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.cc-hl .ad-card-form-foot { display: flex; align-items: center; }
+.cc-hl .cc-foot-start { margin-right: auto; }
+.cc-hl .cc-plan { height: 40px; }
+/* The Plan as a field among the others: its name (or Pick in grey) on the clean line, the chevron after it. */
+.cc-hl .cc-plan { margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; text-align: left; }
+.cc-hl .cc-plan.add { color: #98a2b3; }
+.cc-hl .cc-plan.add:hover { color: #141a24; }
