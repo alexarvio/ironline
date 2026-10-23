@@ -6,16 +6,15 @@ import Link from "next/link";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { phaseLengthLabel } from "../../../lib/phases";
-import { dayMonth } from "../../../lib/dayMonth";
 import { TrackIcon, weeksBetween } from "../plan/PlanDraft";
 import { rgbOf } from "../plan/EventsCard";
-import { SepJoin } from "../Sep";
+import DateSpan from "./DateSpan";
 import type { OverviewClient } from "./load";
 import { daysLeft, endingSoon, leftLabel, mondayOf, nextOnTrack, prevOnTrack, weekSegments, type OverviewPhase } from "./timeline";
 
 // A phase's detail (14 Oct; the .dlh card since 21 Oct), from a bar on the
-// Phases timeline. Read-only: the name, its track and state tags, one fact
-// line, the weeks as a strip, its goals (no "After this", 21 Oct, Alex), and
+// Phases timeline. Read-only: the name, its track and state tags, its days big
+// (DateSpan, 23 Oct, Alex; no client name, the row says whose it is), the weeks as a strip, its goals (no "After this", 21 Oct, Alex), and
 // one way out: Open, to the track's own tab. ← and → move along the track.
 
 /** Where the phase is edited: the track's own tab, on this phase. */
@@ -67,8 +66,15 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
           {STATE_LABEL[state]}
         </span>
       </div>
-      <DialogDescription className="dlh-what">
-        <SepJoin parts={[client.name, state === "live" ? `week ${weekNow} of ${total}` : phaseLengthLabel(p.start, p.endWeek), `${dayMonth(p.start)} – ${dayMonth(p.end)}`, soon && <span className="phd-soon">{leftLabel(daysLeft(p, today))}</span>]} />
+      <DialogDescription asChild>
+        <div>
+          <DateSpan
+            start={p.start}
+            end={p.end}
+            today={today}
+            facts={[phaseLengthLabel(p.start, p.endWeek), state === "live" ? `Week ${weekNow} of ${total}` : null, soon && <span className="phd-soon">{leftLabel(daysLeft(p, today))}</span>]}
+          />
+        </div>
       </DialogDescription>
 
       {/* The weeks: those behind in the track's colour, this one part filled, those to come grey. A long phase is one line. */}

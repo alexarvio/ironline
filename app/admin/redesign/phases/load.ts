@@ -1,4 +1,4 @@
-import { getPlanData, listClientEvents, listClients, listEventCategories, localDateStr, weekStart, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
+import { getCoachProfile, getPlanData, listClientEvents, listClients, listEventCategories, localDateStr, weekStart, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
 import { phaseLastDay } from "../../../lib/phases";
 import type { OverviewEvent, OverviewPhase } from "./timeline";
 
@@ -24,6 +24,8 @@ export type PhasesOverviewData = {
   /** How far through this week it is, 0 to 1, from the server so both renders agree (the Plan's). */
   intoWeek: number;
   coachId: number;
+  /** The coach's name and face, for an event's "Added by" (23 Oct). */
+  coach: { name: string; avatarPath: string | null };
   clients: OverviewClient[];
   /** The event dialog's categories. */
   categories: { id: string; label: string; color: string; custom: boolean }[];
@@ -54,5 +56,7 @@ export function loadPhasesOverview(coachId: number): PhasesOverviewData {
     const events: OverviewEvent[] = listClientEvents(c.id).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, addedBy: e.added_by === "client" ? "client" : "coach", createdAt: String(e.created_at ?? "").slice(0, 10), repeat: e.repeat ?? null }));
     return { id: c.id, name: c.name ?? "Client", avatarPath: c.avatar_path ?? null, phases, events, plan: { phases: plan.phases, programs: plan.programs } };
   });
-  return { today, thisWeek: weekStart(today), intoWeek: intoWeek(), coachId, clients, categories: listEventCategories(coachId) };
+  const profile = getCoachProfile(coachId);
+  const coach = { name: profile?.display_name?.trim() || "You", avatarPath: profile?.avatar_path ?? null };
+  return { today, thisWeek: weekStart(today), intoWeek: intoWeek(), coachId, coach, clients, categories: listEventCategories(coachId) };
 }

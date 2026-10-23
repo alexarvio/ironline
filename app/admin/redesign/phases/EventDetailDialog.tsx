@@ -9,13 +9,16 @@ import { dayMonth } from "../../../lib/dayMonth";
 import { chromeOf, KindIcon, rgbOf, standingParts } from "../plan/EventsCard";
 import { eventIsPast } from "../plan/timelineParts";
 import { SepJoin } from "../Sep";
+import DateSpan from "./DateSpan";
 import type { OverviewClient } from "./load";
 import { daysBetween, type OverviewEvent } from "./timeline";
 
 // An event's detail (14 Oct; the .dlh card since 21 Oct), from a bar or pin
-// on the Phases timeline: the phase pop-up's sibling. Read-only: the title,
-// its kind (and From {first name}, Past) as tags, one fact line, who added it, the
-// note, and one way out: Open, to the client's Plan.
+// on the Phases timeline: the phase pop-up's sibling. Read-only (23 Oct, Alex:
+// events are changed on the client's own screens): the title, its kind (and
+// From {first name}, Past) as tags, its days big (DateSpan; no client name, the
+// row says whose it is), who added it with their face, the note, and one way
+// out: Open, to the client's Plan.
 
 const first = (name: string) => name.split(" ")[0];
 /** "today", "yesterday", "3 days ago", or the date. */
@@ -25,7 +28,10 @@ const addedWhen = (d: string, today: string) => {
   return ago === 0 ? "today" : ago === 1 ? "yesterday" : ago < 7 ? `${ago} days ago` : dayMonth(d);
 };
 
-export default function EventDetailDialog({ client, event: e, today }: { client: OverviewClient; event: OverviewEvent; today: string }) {
+/** "In 13 days", "Now | 3 days left": the standing, its first word capitalised as it starts a line. */
+const upFirst = (parts: string[]) => parts.map((p, i) => (i === 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p));
+
+export default function EventDetailDialog({ client, event: e, today, coach }: { client: OverviewClient; event: OverviewEvent; today: string; /** The coach's face for "Added by" (23 Oct, Alex: as the client's Events screen shows it). */ coach: { name: string; avatarPath: string | null } }) {
   // The kind's colour and name as the timeline wears them (EventsCard's chromeOf): a kind that isn't one of the app's is grey "Event".
   const k = chromeOf([], e.kind);
   const byClient = e.addedBy === "client";
@@ -34,9 +40,10 @@ export default function EventDetailDialog({ client, event: e, today }: { client:
   const openRef = useRef<HTMLAnchorElement>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const longNote = e.note.length > 280;
-  const facts: React.ReactNode[] = single
-    ? [client.name, dayMonth(e.start), ...standingParts(today, e)]
-    : [client.name, `${dayMonth(e.start)} – ${e.repeat && !e.repeat.until ? "no end" : dayMonth(e.end)}`, e.repeat ? repeatWords(e.repeat, { until: false }) : `${daysBetween(e.start, e.end) + 1} days`, ...standingParts(today, e)];
+  // How long, then where it stands: "4 days" over "In 13 days"; a repeat says its days.
+  const length = single ? null : e.repeat ? repeatWords(e.repeat, { until: false }) : `${daysBetween(e.start, e.end) + 1} days`;
+  const standing = <SepJoin parts={upFirst(standingParts(today, e))} />;
+  const by: { name: string; photo: string | null; initial: string } = byClient ? { name: first(client.name), photo: client.avatarPath, initial: client.name } : { name: "You", photo: coach.avatarPath, initial: coach.name };
 
   return (
     <DialogContent
@@ -61,14 +68,20 @@ export default function EventDetailDialog({ client, event: e, today }: { client:
         {byClient && <span className="evd-tag">From {first(client.name)}</span>}
         {past && <span className="evd-tag">Past</span>}
       </div>
-      <DialogDescription className="dlh-what">
-        <SepJoin parts={facts} />
+      <DialogDescription asChild>
+        <div>
+          <DateSpan start={e.start} end={single ? e.start : e.repeat && !e.repeat.until ? null : e.end} today={today} facts={[length, standing]} />
+        </div>
       </DialogDescription>
 
+      {/* Who added it, their face first (23 Oct, Alex), as the client's own Events screen shows it. */}
       <div className="phd-field">
         <span className="dlh-label">Added by</span>
-        <p className="evd-text">
-          <SepJoin parts={[byClient ? first(client.name) : "You", addedWhen(e.createdAt, today)]} />
+        <p className="evd-text evd-by">
+          <span className="evd-face" aria-hidden="true">
+            {by.photo ? <img src={by.photo} alt="" /> : (by.initial.trim().charAt(0) || "?").toUpperCase()}
+          </span>
+          <SepJoin parts={[by.name, addedWhen(e.createdAt, today)]} />
         </p>
       </div>
 
