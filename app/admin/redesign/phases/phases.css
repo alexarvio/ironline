@@ -95,7 +95,7 @@
 .dlh .phd-none { margin: 0; font-size: 14px; font-weight: 500; color: #8b93a1; }
 /* When it runs, big (23 Oct, Alex: "dates a bit clearer"; DateSpan.tsx): each day the Meetings tile's month over the day,
    its weekday under, a faint arrow to the end; how long and where it stands on the right. */
-.dlh .dsp { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 8px 0 4px; }
+.dlh .dsp { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin: 8px 0 4px; }
 .dlh .dsp-days { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .dlh .dsp-day { display: flex; flex-direction: column; align-items: center; min-width: 46px; color: #141a24; }
 .dlh .dsp-day small { font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; }
@@ -103,7 +103,13 @@
 .dlh .dsp-day em { font-style: normal; font-size: 12px; font-weight: 500; color: #8b93a1; }
 .dlh .dsp-day.open b { font-size: 15px; white-space: nowrap; }
 .dlh .dsp-arrow { font-size: 16px; color: #c5ccd8; }
-.dlh .dsp-facts { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 0; font-size: 13.5px; font-weight: 500; color: #5b6474; text-align: right; font-variant-numeric: tabular-nums; }
+.dlh .dsp-facts { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 0; margin-left: auto; font-size: 13.5px; font-weight: 500; color: #5b6474; text-align: right; font-variant-numeric: tabular-nums; }
+/* With something on the right of the row (an event's Added by, 23 Oct, Alex): the days, the facts and it spread across
+   the whole row, the space shared between them, so the card isn't white on one side (23 Oct, Alex). */
+.dlh .dsp.has-aside { justify-content: space-between; }
+.dlh .dsp.has-aside .dsp-facts { align-items: flex-start; margin-left: 0; text-align: left; }
+.dlh .dsp-aside { min-width: 0; }
+.evd .evd-added { margin-top: 0; }
 .dlh .dsp-facts > span:first-child { font-size: 15px; font-weight: 600; color: #141a24; }
 /* Who added an event: their face, then the name and when (23 Oct, Alex), as the client's Events screen. */
 .evd .evd-by { display: flex; align-items: center; gap: 8px; }

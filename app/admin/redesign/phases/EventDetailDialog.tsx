@@ -5,7 +5,6 @@ import type React from "react";
 import Link from "next/link";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { repeatWords } from "../../../lib/eventRepeat";
-import { dayMonth } from "../../../lib/dayMonth";
 import { chromeOf, KindIcon, rgbOf, standingParts } from "../plan/EventsCard";
 import { eventIsPast } from "../plan/timelineParts";
 import { SepJoin } from "../Sep";
@@ -21,12 +20,6 @@ import { daysBetween, type OverviewEvent } from "./timeline";
 // out: Open, to the client's Plan.
 
 const first = (name: string) => name.split(" ")[0];
-/** "today", "yesterday", "3 days ago", or the date. */
-const addedWhen = (d: string, today: string) => {
-  if (!d) return "";
-  const ago = daysBetween(d, today);
-  return ago === 0 ? "today" : ago === 1 ? "yesterday" : ago < 7 ? `${ago} days ago` : dayMonth(d);
-};
 
 /** "In 13 days", "Now | 3 days left": the standing, its first word capitalised as it starts a line. */
 const upFirst = (parts: string[]) => parts.map((p, i) => (i === 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p));
@@ -70,20 +63,28 @@ export default function EventDetailDialog({ client, event: e, today, coach }: { 
       </div>
       <DialogDescription asChild>
         <div>
-          <DateSpan start={e.start} end={single ? e.start : e.repeat && !e.repeat.until ? null : e.end} today={today} facts={[length, standing]} />
+          {/* The days and who added it on one row (23 Oct, Alex); who added it with their face first, as the client's own
+              Events screen shows it. */}
+          <DateSpan
+            start={e.start}
+            end={single ? e.start : e.repeat && !e.repeat.until ? null : e.end}
+            today={today}
+            facts={[length, standing]}
+            aside={
+              <div className="phd-field evd-added">
+                <span className="dlh-label">Added by</span>
+                <span className="evd-text evd-by">
+                  <span className="evd-face" aria-hidden="true">
+                    {by.photo ? <img src={by.photo} alt="" /> : (by.initial.trim().charAt(0) || "?").toUpperCase()}
+                  </span>
+                  {/* Who, not when (23 Oct, Alex). */}
+                  {by.name}
+                </span>
+              </div>
+            }
+          />
         </div>
       </DialogDescription>
-
-      {/* Who added it, their face first (23 Oct, Alex), as the client's own Events screen shows it. */}
-      <div className="phd-field">
-        <span className="dlh-label">Added by</span>
-        <p className="evd-text evd-by">
-          <span className="evd-face" aria-hidden="true">
-            {by.photo ? <img src={by.photo} alt="" /> : (by.initial.trim().charAt(0) || "?").toUpperCase()}
-          </span>
-          <SepJoin parts={[by.name, addedWhen(e.createdAt, today)]} />
-        </p>
-      </div>
 
       {/* The note, in quotes when the client wrote it. */}
       {e.note && (
