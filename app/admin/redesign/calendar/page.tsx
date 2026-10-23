@@ -92,8 +92,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       chips: list.slice(0, 4).map((m) => {
         const clash = conflictIds.has(m.id);
         const c = clash ? CLASH : entryChrome(categories, m.category, m.client_id != null);
-        const label = whoOf(m);
-        return { id: m.id, label, time: m.time, allDay: !!m.all_day, done: m.status === "completed", clash, tint: c.tint, ink: c.ink, line: c.line, clientId: m.client_id, title: `${m.all_day ? "All day" : m.time} · ${label}${m.topic && m.client_id != null ? ` · ${m.topic}` : ""}` };
+        // The entry's title on the chip, its client in the tooltip after it (23 Oct, Alex: the title is always the title).
+        const label = m.topic || whoOf(m);
+        return { id: m.id, label, time: m.time, allDay: !!m.all_day, done: m.status === "completed", clash, tint: c.tint, ink: c.ink, line: c.line, clientId: m.client_id, title: `${m.all_day ? "All day" : m.time} · ${label}${m.topic && m.client_id != null ? ` · ${m.clientName}` : ""}` };
       }),
     };
   });

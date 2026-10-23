@@ -169,8 +169,10 @@ function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[
   }, [e.note]);
   const c = entryChrome(cats, e.category, e.clientId != null);
   const who = e.clientId != null ? e.clientName : null;
-  const title = who ?? (e.topic || "Busy");
-  const sub = who ? e.topic : "";
+  // The title is always the title (23 Oct, Alex); the client goes on the line under it, in the category's colour. With
+  // no title of its own, the client's name stands in.
+  const title = e.topic || who || "Busy";
+  const sub = e.topic && who ? who : "";
   const when = e.allDay ? "" : e.time ? `${e.time}` : "–";
   const tall = slots >= 3;
   const said = [when, title, sub, e.allDay ? "All day" : lengthLabel(e.durationMinutes)].filter(Boolean).join(" · ");

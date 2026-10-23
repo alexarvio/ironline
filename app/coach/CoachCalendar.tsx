@@ -272,7 +272,8 @@ function Row({ e, cats, now, onOpen }: { e: PhoneEntry; cats: PhoneCalendar["cat
   const clash = e.clashes.length > 0;
   const c = entryChrome(cats, e.category, e.clientId != null);
   const who = e.clientId != null ? e.clientName : null;
-  const title = who ?? (e.topic || "Busy");
+  // The title is always the title, the client under it (23 Oct, Alex), as the laptop's day.
+  const title = e.topic || who || "Busy";
   return (
     <>
       {now && <li className="cph-cal-now" aria-hidden="true" />}
@@ -292,7 +293,7 @@ function Row({ e, cats, now, onOpen }: { e: PhoneEntry; cats: PhoneCalendar["cat
             <b>{title}</b>
             {(who && e.topic) || !e.allDay ? (
               <span className="cph-cal-sub">
-                <Facts parts={[who ? e.topic : null, e.allDay ? null : lengthLabel(e.durationMinutes)]} />
+                <Facts parts={[who && e.topic ? who : null, e.allDay ? null : lengthLabel(e.durationMinutes)]} />
               </span>
             ) : null}
             {clash && <span className="cph-cal-clash">Overlaps {e.clashes.join(", ")}</span>}
