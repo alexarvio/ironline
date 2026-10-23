@@ -14,6 +14,7 @@ import {
   getProgramCurrentWeekIndex,
   getWeek,
   getWeightSeriesAll,
+  bodyWeightKg,
   invoiceRepeatViews,
   isSessionComplete,
   listMeetings,
@@ -25,6 +26,7 @@ import {
 import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 import { invoicingFor } from "./countries";
 import { clientStartDay } from "./businessBoardData";
+import { isAssisted, liftedKg } from "./progressRules";
 
 type ProgramDayRow = Data["program_days"][number];
 type AssignmentRow = Data["workout_assignments"][number];
@@ -120,11 +122,14 @@ type LoggedSet = {
   group: MuscleGroup | null;
   /** The exercise as done (a swap's library exercise; null for one typed in by name), and its variation, for strength. */
   exerciseKey: string | null;
+  /** An assisted lift (23 Oct): its weight is help, so less is stronger (progressRules.isAssisted). */
+  assisted: boolean;
+  /** The kg lifted: as logged, or an assisted lift's body weight less the help (null when that can't be known). */
   weight: number | null;
   reps: number | null;
   /** A set with reps or weight. */
   counts: boolean;
-  /** weight × reps, when both are there. */
+  /** weight × reps, when both are there (an assisted lift: what it really lifted, liftedKg). */
   volume: number;
 };
 
@@ -178,6 +183,12 @@ function context(clientId: number, today: string): Ctx {
   const prescribedGroup = (a: AssignmentRow) => groupOfExercise(a.exercise_id);
   // What was done: a swap to a library exercise is that exercise; one typed in by name keeps the prescription's group.
   const doneGroup = (a: AssignmentRow) => (a.swap?.library_exercise_id != null ? groupOfExercise(a.swap.library_exercise_id) : prescribedGroup(a));
+  // An assisted lift is known by the name of what was done: the exercise, its variation, a swap's (23 Oct).
+  const doneAssisted = (a: AssignmentRow): boolean => {
+    if (a.swap) return a.swap.library_exercise_id != null ? isAssisted(exercises.get(a.swap.library_exercise_id)?.name) : isAssisted(a.swap.custom_name);
+    const e = a.exercise_id ? exercises.get(a.exercise_id) : undefined;
+    return isAssisted(e?.name) || (a.variation_id != null && isAssisted(e?.variations?.find((v) => v.id === a.variation_id)?.name));
+  };
   const doneKey = (a: AssignmentRow): string | null => {
     if (a.swap) return a.swap.library_exercise_id != null ? `${a.swap.library_exercise_id}:` : null;
     return a.exercise_id && exercises.has(a.exercise_id) ? `${a.exercise_id}:${a.variation_id ?? ""}` : null;
@@ -197,6 +208,7 @@ function context(clientId: number, today: string): Ctx {
   const logsByAssignment = new Map<number, SetLogRow[]>();
   const sets: LoggedSet[] = [];
   const perDay = new Map<string, { sets: PerGroup; volume: PerGroup }>();
+  const bodyKg = bodyWeightKg(clientId);
   for (const l of data.set_logs) {
     const a = assignments.get(l.workout_assignment_id);
     if (!a) continue;
@@ -206,10 +218,12 @@ function context(clientId: number, today: string): Ctx {
     const weight = typeof l.weight_kg === "number" && Number.isFinite(l.weight_kg) ? l.weight_kg : null;
     const reps = typeof l.reps === "number" && Number.isFinite(l.reps) ? l.reps : null;
     const counts = (reps ?? 0) > 0 || (weight ?? 0) > 0;
-    const volume = weight != null && reps != null && weight > 0 && reps > 0 ? weight * reps : 0;
+    const assisted = doneAssisted(a);
+    const lifted = weight == null ? null : liftedKg(weight, assisted, bodyKg);
+    const volume = lifted != null && reps != null && lifted > 0 && reps > 0 ? lifted * reps : 0;
     const day = stampDay(l.logged_at ?? "");
     const group = doneGroup(a);
-    sets.push({ assignmentId: a.id, day, ms: stampMs(l.logged_at), group, exerciseKey: doneKey(a), weight, reps, counts, volume });
+    sets.push({ assignmentId: a.id, day, ms: stampMs(l.logged_at), group, exerciseKey: doneKey(a), assisted, weight: lifted, reps, counts, volume });
     if (group && counts) {
       let d = perDay.get(day);
       if (!d) perDay.set(day, (d = { sets: zero(), volume: zero() }));
@@ -574,8 +588,14 @@ function musclesOf(ctx: Ctx): HomeBoard["muscles"] {
 
 // ---- Strength --------------------------------------------------------------------------------------
 
-/** Each exercise's % change to one window: per group, their mean (one decimal), best group first. Null with none. */
-function strengthWindow(since: string, changes: { group: MuscleGroup; pct: number }[]): StrengthWindow | null {
+/** One exercise's change to a window: its %, the sets it had in the window (its weight in Overall), and whether the
+    window holds a best it never reached before. */
+type StrengthChange = { group: MuscleGroup; pct: number; sets: number; best: boolean };
+
+/** Each exercise's % change to one window: per group, their mean (one decimal), best group first. Overall (23 Oct, Alex):
+    every exercise's % weighed by its sets, so a main lift counts more than one set of curls; and how many of them set a
+    new best. Null with none. */
+function strengthWindow(since: string, changes: StrengthChange[]): StrengthWindow | null {
   const byGroup = new Map<MuscleGroup, number[]>();
   for (const c of changes) {
     const list = byGroup.get(c.group);
@@ -589,53 +609,70 @@ function strengthWindow(since: string, changes: { group: MuscleGroup; pct: numbe
       return { group: g, pct: r1(pcts.reduce((t, p) => t + p, 0) / pcts.length), exercises: pcts.length };
     })
     .sort((a, b) => b.pct - a.pct);
-  return groups.length ? { since, groups } : null;
+  if (!groups.length) return null;
+  const sets = changes.reduce((t, c) => t + c.sets, 0);
+  const overall = sets > 0 ? changes.reduce((t, c) => t + c.pct * c.sets, 0) / sets : changes.reduce((t, c) => t + c.pct, 0) / changes.length;
+  return { since, groups, overall: r1(overall), bests: changes.filter((c) => c.best).length, of: changes.length };
 }
 
 function strengthOf(ctx: Ctx): HomeBoard["strength"] {
   const { today } = ctx;
   const phaseSince = ctx.phases.training?.start_week ?? addDays(today, -55);
-  // The 30 days before the last 30 is the furthest back a rolling window reads.
-  const rollBack = addDays(today, -59);
-  const earliest = phaseSince < rollBack ? phaseSince : rollBack;
-  // One pass over the sets: each exercise's best estimated one-rep max a day (Epley).
-  const best = new Map<string, { group: MuscleGroup; byDay: Map<string, number> }>();
+  // One pass over every set ever (a new best is against all of them): each exercise's best estimated one-rep max a day
+  // (Epley) and its sets a day. An assisted lift's weight is already what it really lifted (liftedKg), so less help reads
+  // stronger; with no body weight known it has none, and stays out.
+  const best = new Map<string, { group: MuscleGroup; byDay: Map<string, number>; setsByDay: Map<string, number> }>();
   for (const s of ctx.sets) {
-    if (!s.group || !s.exerciseKey || s.day < earliest || s.day > today) continue;
+    if (!s.group || !s.exerciseKey || s.day > today) continue;
     if (s.weight == null || s.reps == null || !(s.weight > 0) || !(s.reps > 0)) continue;
     const e1rm = s.weight * (1 + s.reps / 30);
     let ex = best.get(s.exerciseKey);
-    if (!ex) best.set(s.exerciseKey, (ex = { group: s.group, byDay: new Map() }));
+    if (!ex) best.set(s.exerciseKey, (ex = { group: s.group, byDay: new Map(), setsByDay: new Map() }));
     if (e1rm > (ex.byDay.get(s.day) ?? 0)) ex.byDay.set(s.day, e1rm);
+    ex.setsByDay.set(s.day, (ex.setsByDay.get(s.day) ?? 0) + 1);
   }
   const exercises = [...best.values()];
+  const setsIn = (ex: (typeof exercises)[number], from: string) => {
+    let n = 0;
+    for (const [day, k] of ex.setsByDay) if (day >= from) n += k;
+    return n;
+  };
 
-  // 7d and 30d: this window's best against the window just before's (the same length), for exercises done in both.
+  // 7d and 30d: this window's best against the window just before's (the same length), for exercises done in both; a new
+  // best when this window's beats every day before it.
   const rolling = (n: number): StrengthWindow | null => {
     const from = addDays(today, -(n - 1));
     const prevFrom = addDays(from, -n);
-    const changes: { group: MuscleGroup; pct: number }[] = [];
+    const changes: StrengthChange[] = [];
     for (const ex of exercises) {
       let cur = 0;
       let prev = 0;
+      let ever = 0;
       for (const [day, v] of ex.byDay) {
         if (day >= from) cur = Math.max(cur, v);
-        else if (day >= prevFrom) prev = Math.max(prev, v);
+        else {
+          ever = Math.max(ever, v);
+          if (day >= prevFrom) prev = Math.max(prev, v);
+        }
       }
-      if (cur > 0 && prev > 0) changes.push({ group: ex.group, pct: ((cur - prev) / prev) * 100 });
+      if (cur > 0 && prev > 0) changes.push({ group: ex.group, pct: ((cur - prev) / prev) * 100, sets: setsIn(ex, from), best: cur > ever });
     }
     return strengthWindow(from, changes);
   };
 
-  // Phase: since the training phase began (else the last 8 weeks), each exercise's first day against its latest.
-  const phaseChanges: { group: MuscleGroup; pct: number }[] = [];
+  // Phase: since the training phase began (else the last 8 weeks), each exercise's first day against its latest; a new
+  // best when a later day in the phase beats its first and every day before the phase.
+  const phaseChanges: StrengthChange[] = [];
   for (const ex of exercises) {
     const days = [...ex.byDay.keys()].filter((d) => d >= phaseSince).sort();
     if (days.length < 2) continue;
     const first = ex.byDay.get(days[0])!;
     const last = ex.byDay.get(days[days.length - 1])!;
     if (!(first > 0)) continue;
-    phaseChanges.push({ group: ex.group, pct: ((last - first) / first) * 100 });
+    let before = first;
+    for (const [day, v] of ex.byDay) if (day < phaseSince) before = Math.max(before, v);
+    const later = Math.max(...days.slice(1).map((d) => ex.byDay.get(d)!));
+    phaseChanges.push({ group: ex.group, pct: ((last - first) / first) * 100, sets: setsIn(ex, phaseSince), best: later > before });
   }
 
   // No training phase, no Phase window (22 Oct: it was quietly the last 8 weeks under the word Phase), as Muscle balance.

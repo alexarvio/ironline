@@ -21,11 +21,29 @@ export type Verdict = "progressing" | "stalling" | "dropping" | "none";
 /** Epley: the weight times one plus the reps over thirty. */
 export const e1rmOf = (w: number, r: number) => w * (1 + r / 30);
 
+/** An assisted exercise (23 Oct, Alex): its kg is help, so less is stronger. Known by its name ("Assisted Pull-Up",
+    "Band-assisted dip"). */
+export const isAssisted = (name: string | null | undefined) => /assist/i.test(name ?? "");
+
+/** What was lifted: the kg; for an assisted lift, the body weight less the help. Null when that can't be known (no body
+    weight, or help as much as the body), so the set stays out of any comparison. */
+export function liftedKg(kg: number, assisted: boolean, bodyKg: number | null): number | null {
+  if (!assisted) return kg;
+  if (bodyKg == null || !(bodyKg > kg)) return null;
+  return bodyKg - kg;
+}
+
+/** The kg a set is weighed by: as logged, or what an assisted lift really lifted (liftedKg). */
+export type LoadOf = (kg: number) => number | null;
+const asLogged: LoadOf = (kg) => kg;
+
 /** The set with the highest e1RM, and that e1RM. */
-export function bestSet(sets: SetLog[]): { set: SetLog; e1rm: number } | null {
+export function bestSet(sets: SetLog[], load: LoadOf = asLogged): { set: SetLog; e1rm: number } | null {
   let best: { set: SetLog; e1rm: number } | null = null;
   for (const s of sets) {
-    const e = e1rmOf(s.weight, s.reps);
+    const kg = load(s.weight);
+    if (kg == null) continue;
+    const e = e1rmOf(kg, s.reps);
     if (!best || e > best.e1rm) best = { set: s, e1rm: e };
   }
   return best;
@@ -42,9 +60,9 @@ export type Judged = {
 };
 
 /** The verdict for the sessions given (already filtered to the range and gym). */
-export function judge(all: Session[]): Judged {
+export function judge(all: Session[], load: LoadOf = asLogged): Judged {
   const sessions = all
-    .map((s) => ({ ...s, best: bestSet(s.sets)! }))
+    .map((s) => ({ ...s, best: bestSet(s.sets, load)! }))
     .filter((s) => s.best)
     .sort((a, b) => (a.date ?? "") < (b.date ?? "") ? -1 : (a.date ?? "") > (b.date ?? "") ? 1 : a.planWeek - b.planWeek);
   if (sessions.length === 0) return { verdict: "none", sessions, bestAt: -1, change: null };
@@ -80,33 +98,36 @@ export function setStatus(reps: number, range: { min: number; max: number } | nu
 }
 
 export type RowStatus = "top" | "on" | "below";
-/** A session against the range and the target weight: every set at the top; every set in range at or above the target; else below. */
-export function rowStatus(sets: SetLog[], range: { min: number; max: number } | null, targetKg: number | null): RowStatus {
+/** A session against the range and the target weight: every set at the top; every set in range at or above the target
+    (an assisted lift: at or under its help); else below. */
+export function rowStatus(sets: SetLog[], range: { min: number; max: number } | null, targetKg: number | null, assisted = false): RowStatus {
   if (sets.length === 0) return "below";
   if (range && sets.every((s) => s.reps >= range.max)) return "top";
   const inRange = range ? sets.every((s) => s.reps >= range.min) : true;
-  const atTarget = targetKg == null || sets.every((s) => s.weight >= targetKg);
+  const atTarget = targetKg == null || sets.every((s) => (assisted ? s.weight <= targetKg : s.weight >= targetKg));
   return inRange && atTarget ? "on" : "below";
 }
 
 const fmtKg = (kg: number) => (Math.round(kg * 2) / 2).toString();
+/** The next load a stalling lift is asked for: a step heavier, or for an assisted lift a step less help. */
+const nextLoad = (kg: number, stepKg: number, assisted: boolean) => (assisted ? `${fmtKg(Math.max(0, kg - stepKg))} kg of help` : `${fmtKg(kg + stepKg)} kg`);
 
 /** The tip under a stalling or dropping verdict; null otherwise. */
-export function tipFor(j: Judged, range: { min: number; max: number } | null, stepKg = RULES.stepKg): string | null {
+export function tipFor(j: Judged, range: { min: number; max: number } | null, stepKg = RULES.stepKg, assisted = false): string | null {
   if (j.verdict === "dropping") return "Check sleep, recovery or form";
   if (j.verdict !== "stalling") return null;
   const b = j.sessions[j.bestAt].best.set;
-  if (range && b.reps >= range.max) return `Try ${fmtKg(b.weight + stepKg)} kg for ${range.min}–${Math.max(range.min, range.max - 2)} reps next week`;
-  return `Aim for ${b.reps + 1} reps at ${fmtKg(b.weight)} kg`;
+  if (range && b.reps >= range.max && !(assisted && b.weight <= 0)) return `Try ${nextLoad(b.weight, stepKg, assisted)} for ${range.min}–${Math.max(range.min, range.max - 2)} reps next week`;
+  return `Aim for ${b.reps + 1} reps at ${fmtKg(b.weight)} kg${assisted ? " of help" : ""}`;
 }
 
 /** The chat nudge the Message button starts with. */
-export function nudgeFor(j: Judged, exercise: string, firstName: string, range: { min: number; max: number } | null, stepKg = RULES.stepKg): string {
+export function nudgeFor(j: Judged, exercise: string, firstName: string, range: { min: number; max: number } | null, stepKg = RULES.stepKg, assisted = false): string {
   const name = exercise.charAt(0).toLowerCase() + exercise.slice(1);
   if (j.verdict === "progressing") return `${exercise} is moving nicely, up ${Math.round((j.change ?? 0) * 100)}% this month. Keep it going.`;
   if (j.verdict === "stalling") {
     const b = j.sessions[j.bestAt].best.set;
-    const next = range && b.reps >= range.max ? `${fmtKg(b.weight + stepKg)} kg for ${range.min}–${Math.max(range.min, range.max - 2)}` : `${b.reps + 1} reps at ${fmtKg(b.weight)} kg`;
+    const next = range && b.reps >= range.max && !(assisted && b.weight <= 0) ? `${nextLoad(b.weight, stepKg, assisted)} for ${range.min}–${Math.max(range.min, range.max - 2)}` : `${b.reps + 1} reps at ${fmtKg(b.weight)} kg${assisted ? " of help" : ""}`;
     return `Hey ${firstName}, ${name} has been at ${fmtKg(b.weight)} × ${b.reps} for a few sessions. Let’s try ${next} next session 💪`;
   }
   if (j.verdict === "dropping") return `Hey ${firstName}, ${name} has dipped a bit lately. How are sleep and recovery? Let’s look at it together.`;

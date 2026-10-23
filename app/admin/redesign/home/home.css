@@ -61,6 +61,11 @@
 .rd.rh .rh-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-width: 0; }
 .rd.rh .rh-panel-head.tall { min-height: 36px; }
 .rd.rh .rh-panel-title { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 600; letter-spacing: -0.005em; color: #141a24; }
+/* A card's facts on their own line right under its head's title (23 Oct, Strength's Overall | new bests), as Business's charts: 12.5px grey, the figure in ink, green up, red down. */
+.rd.rh .rh-under { display: block; margin-top: -12px; min-width: 0; overflow: hidden; font-size: 12.5px; font-weight: 500; line-height: 18px; color: #8b93a1; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rh .rh-under b { font-weight: 600; color: #141a24; }
+.rd.rh .rh-under b.up { color: #2f7a3f; }
+.rd.rh .rh-under b.down { color: #b42318; }
 .rd.rh .rh-panel-aside { font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* The head's right side when it holds more than its aside: the aside, then the capsule (Strength's window). */
 .rd.rh .rh-panel-tools { display: inline-flex; align-items: center; gap: 12px; margin-left: auto; min-width: 0; }

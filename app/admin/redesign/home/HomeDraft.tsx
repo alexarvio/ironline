@@ -687,6 +687,10 @@ function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"];
     return { group: g, r: x ? pctOf(x.pct) : null, exercises: x?.exercises ?? 0 };
   });
   const most = Math.max(0, ...rows.map((x) => Math.abs(x.r ?? 0)));
+  // Overall and new bests under the title (23 Oct, Alex), as Business's charts carry their facts; the line keeps its room
+  // across the windows once any of them has something, so switching never moves the rows.
+  const overall = w ? pctOf(w.overall) : null;
+  const anyWindow = !!(strength?.["7d"] || strength?.["30d"] || strength?.phase);
   return (
     <section className="rls-card rh-panel" aria-label="Strength">
       <div className="rh-panel-head tall">
@@ -701,6 +705,24 @@ function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"];
           </span>
         </span>
       </div>
+      {/* Its own line under the head (the review, 23 Oct): beside the title it pushed the capsule onto a second line at
+          middling widths, and the title out of line with Muscle balance's. */}
+      {anyWindow && (
+        <span className="rh-under">
+          {w && overall != null ? (
+            <SepJoin
+              parts={[
+                <span key="o">
+                  Overall <b className={overall > 0 ? "up" : overall < 0 ? "down" : ""}>{pctText(overall)}</b>
+                </span>,
+                `${w.bests} of ${w.of} at a new best`,
+              ]}
+            />
+          ) : (
+            <span aria-hidden="true">&nbsp;</span>
+          )}
+        </span>
+      )}
       <div className="rh-str">
         {rows.map((x) => (
           <div key={x.group} className="rh-str-row" title={x.r == null ? undefined : `${x.exercises} exercise${x.exercises === 1 ? "" : "s"}`}>

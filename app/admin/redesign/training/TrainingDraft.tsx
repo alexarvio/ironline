@@ -144,6 +144,8 @@ export type DraftProgram = {
   sessions: DraftSession[];
   /** The client's rogue sessions (19 Oct), by week index: their own workouts off the plan, read only. */
   rogue: Record<number, DraftRogue[]>;
+  /** The client's body weight now (latest reading, else their starting weight; 23 Oct): what an assisted lift really lifts is this less the help. */
+  bodyKg: number | null;
   gyms: Gym[];
   /** The client's note to the coach on this programme. */
   /** The client's note on it; seen: the coach has opened this version. */
@@ -1789,6 +1791,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                   .map((h) => ({ date: h.date, planWeek: h.week, gym: h.gym, sets: h.sets.filter((x) => x.kg != null && x.reps != null).map((x) => ({ weight: x.kg!, reps: x.reps!, rpe: x.rpe })) }))}
                 today={today}
                 lbs={lbs}
+                bodyKg={program.bodyKg}
                 onMessage={(draft) => {
                   close();
                   replyTo(`${row.name} · ${session?.name ?? "Session"}, ${week.label}`, { kind: "exercise", dayId: session?.id ?? 0, assignmentId: row.id }, null, draft);

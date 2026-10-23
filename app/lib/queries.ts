@@ -20,6 +20,7 @@ import { DEFAULT_WORKOUT_QUESTIONS, MAX_QUESTION_LENGTH, MAX_WORKOUT_QUESTIONS }
 import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 import { cleanRepeat, openEnd, type EventRepeat } from "./eventRepeat";
+import { isAssisted } from "./progressRules";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -1700,6 +1701,11 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   const logs = data.set_logs.filter((sl) => sl.workout_assignment_id === wa.id);
   if (logs.length === 0) return;
   const home = homeGymId(day.client_id);
+  // An assisted lift (23 Oct, Alex): its kg is help, so its best is the least and the target moves down to it.
+  const ex = data.exercises.find((e) => e.id === wa.exercise_id);
+  const assisted = isAssisted(ex?.name) || (wa.variation_id != null && isAssisted(ex?.variations?.find((v) => v.id === wa.variation_id)?.name));
+  const reached = (best: number, target: number) => (assisted ? best <= target : best >= target);
+  const better = (a: number, b: number) => (assisted ? Math.min(a, b) : Math.max(a, b));
 
   // null is the home gym's lane.
   const byGym = new Map<number | null, SetLog[]>();
@@ -1727,17 +1733,17 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   for (const [gym, gymLogs] of byGym) {
     const weights = gymLogs.map((sl) => sl.weight_kg).filter((w): w is number => w != null);
     if (weights.length === 0) continue;
-    const bestWeight = Math.max(...weights);
+    const bestWeight = assisted ? Math.min(...weights) : Math.max(...weights);
     const lastLoggedMs = Math.max(...gymLogs.map((sl) => stampMs(sl.logged_at)));
 
     if (gym == null) {
-      if (wa.target_weight_kg == null || bestWeight < wa.target_weight_kg) continue;
+      if (wa.target_weight_kg == null || !reached(bestWeight, wa.target_weight_kg)) continue;
       for (const other of later) {
         // The coach changed this one while the plan was running (pinned), or
         // set it by hand after these sets were logged: theirs.
         if (other.target_pinned) continue;
         if (other.target_set_at && stampMs(other.target_set_at) >= lastLoggedMs) continue;
-        const target = Math.max(other.target_weight_kg ?? 0, bestWeight);
+        const target = other.target_weight_kg == null ? bestWeight : better(other.target_weight_kg, bestWeight);
         if (target === other.target_weight_kg) continue;
         other.target_weight_kg = target;
         changed = true;
@@ -1746,12 +1752,12 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
     }
 
     const own = wa.gym_targets?.[gym]?.kg ?? null;
-    if (own != null && bestWeight < own) continue;
+    if (own != null && !reached(bestWeight, own)) continue;
     for (const other of later) {
       const entry = other.gym_targets?.[gym];
       if (other.target_pinned && entry?.kg != null) continue;
       if (entry?.set_at && stampMs(entry.set_at) >= lastLoggedMs) continue;
-      const target = entry?.kg == null ? bestWeight : Math.max(entry.kg, bestWeight);
+      const target = entry?.kg == null ? bestWeight : better(entry.kg, bestWeight);
       if (target === entry?.kg) continue;
       other.gym_targets = { ...(other.gym_targets ?? {}), [gym]: { kg: target, set_at: entry?.set_at ?? null } };
       changed = true;
@@ -3217,6 +3223,20 @@ export function getWeightSeriesAll(clientId: number): { date: string; value: num
     .metric_definitions.filter((m) => m.client_id === clientId && m.name.toLowerCase().includes("weight"))
     .sort((a, b) => (rank[a.frequency] ?? 9) - (rank[b.frequency] ?? 9))[0];
   return def ? getMetricSeries(def.id) : [];
+}
+
+/** The client's body weight now (23 Oct): their latest weight reading, else the starting weight on their card; null
+    with neither. What an assisted lift really lifts is this less the help (progressRules.liftedKg). */
+export function bodyWeightKg(clientId: number): number | null {
+  let latest: { date: string; value: number } | null = null;
+  for (const p of getWeightSeriesAll(clientId)) {
+    const value = Number(p.value);
+    if (!(Number.isFinite(value) && value > 0)) continue;
+    if (!latest || String(p.date) > latest.date) latest = { date: String(p.date), value };
+  }
+  if (latest) return latest.value;
+  const start = getData().client_profiles.find((p) => p.client_id === clientId)?.starting_weight_kg;
+  return typeof start === "number" && start > 0 ? start : null;
 }
 
 export function addMeasurementField(clientId: number, name: string, unit: string) {

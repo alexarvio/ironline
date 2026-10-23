@@ -82,7 +82,9 @@ import {
   videoRequestsFor,
   sessionAnswers,
   getWorkoutQuestions,
+  bodyWeightKg,
 } from "../../lib/queries";
+import { e1rmOf, isAssisted, liftedKg } from "../../lib/progressRules";
 import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
 import type { CardioMove, DraftProgram, Library } from "./training/TrainingDraft";
 import type { DraftNutrition } from "./nutrition/NutritionDraft";
@@ -170,6 +172,12 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   // Names of every exercise, those taken out of the library too: an
   // alternative or a swap may still point at one.
   const libName = new Map(listExercises(coachId).map((e) => [e.id, e.name] as const));
+  // An assisted lift (23 Oct, Alex): its kg is help, so its trend follows the body weight less the help (liftedKg),
+  // known by the exercise's name or its variation's.
+  const bodyKg = bodyWeightKg(clientId);
+  const exById = new Map(getData().exercises.map((e) => [e.id, e] as const));
+  const assistedRow = (a: { exercise_id: number; exercise_name?: string | null; variation_id?: number | null }) =>
+    isAssisted(a.exercise_name) || (a.variation_id != null && isAssisted(exById.get(a.exercise_id)?.variations?.find((v) => v.id === a.variation_id)?.name));
   // Each with its default cue (the Library page, 5 Oct): the note an exercise
   // starts with when it is added to a session.
   const library: Library = coachGroups(coachId).filter((g) => g.slug !== "cardio" && (byGroup[g.slug]?.length ?? 0) > 0).map((g) => ({
@@ -315,6 +323,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         // so they stay out of this one's history, trends and progress.
         if (!wa || wa.swap) return null;
         const wl = [...getLogsForAssignment(wa.id)].sort((p, q) => p.set_number - q.set_number);
+        // That week's own exercise and variation decide whether it was assisted (a weighted week stays weighted).
+        const weekAssisted = assistedRow(wa);
         const kgs = wl.map((l) => l.weight_kg ?? 0);
         return {
           week: i + 1,
@@ -324,11 +334,21 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
           targetReps: wa.reps ?? "",
           setsPlanned: wa.sets,
           sets: wl.map((l) => ({ n: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual })),
-          best: kgs.length ? Math.max(...kgs) : null,
+          // The best weight: the heaviest, or an assisted lift's least help.
+          best: kgs.length ? (weekAssisted ? Math.min(...kgs) : Math.max(...kgs)) : null,
           // The best set with its reps counted: estimated one-rep max (Epley,
           // weight × (1 + reps / 30)). What the % and the trend follow, so
           // 60 kg × 22 then 60.5 kg × 8 reads as a drop, not +0.4%.
-          e1rm: wl.length ? Math.max(...wl.map((l) => (l.weight_kg ?? 0) * (1 + (l.reps ?? 0) / 30))) : null,
+          // An assisted lift's sets weigh what was lifted (body weight less the help); none known, no e1RM.
+          e1rm: (() => {
+            // A set with no kg or no reps is no reading (a blank kg on an assisted lift is not "no help").
+            const es = wl.flatMap((l) => {
+              if (l.weight_kg == null || !((l.reps ?? 0) > 0)) return [];
+              const kg = liftedKg(l.weight_kg, weekAssisted, bodyKg);
+              return kg == null ? [] : [e1rmOf(kg, l.reps!)];
+            });
+            return es.length ? Math.max(...es) : null;
+          })(),
           gym: wl[0]?.gym_id != null ? gymName.get(wl[0].gym_id) ?? null : null,
           /** When the session happened (15 Oct, the progress pop-up): ended, else started, else the first set logged. */
           date: (wd?.session_ended_at ?? wd?.session_started_at ?? wl[0]?.logged_at ?? null)?.slice(0, 10) ?? null,
@@ -444,6 +464,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     weeks,
     sessions,
     rogue,
+    bodyKg,
     gyms,
     note: noteMeta ? { seen: noteMeta.seen, text: noteMeta.text, when: dayMonth(noteMeta.updatedAt) } : null,
   };

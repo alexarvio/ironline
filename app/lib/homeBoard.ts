@@ -24,7 +24,15 @@ export type ConsistencyDay = { date: string; trained: boolean; food: boolean; ch
 export type ConsistencyWeek = { start: string; /** Its week of the phase, from 1. */ week: number; days: number; trained: number; food: number; checkIn: number; future?: boolean };
 
 /** One window of the strength card. */
-export type StrengthWindow = { since: string; groups: { group: MuscleGroup; pct: number; exercises: number }[] };
+export type StrengthWindow = {
+  since: string;
+  groups: { group: MuscleGroup; pct: number; exercises: number }[];
+  /** Every compared exercise's % change weighed by its sets in the window, one decimal (23 Oct, Alex). */
+  overall: number;
+  /** How many of the compared exercises set a new best in the window, of how many (23 Oct, Alex). */
+  bests: number;
+  of: number;
+};
 
 /** One window of the muscle balance: this period, and the one just before it of the same length. */
 export type MuscleWindow = {
