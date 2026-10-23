@@ -25,7 +25,6 @@ import {
 } from "./queries";
 import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 import { invoicingFor } from "./countries";
-import { clientStartDay } from "./businessBoardData";
 import { isAssisted, liftedKg } from "./progressRules";
 
 type ProgramDayRow = Data["program_days"][number];
@@ -732,17 +731,20 @@ function daysOf(ctx: Ctx, dates: string[] = lastDays(ctx.today)): HomeBoard["day
   });
 }
 
-/** The 30 days (21 Oct, Alex: the last 30). A client newer than that starts at the left (23 Oct, Alex: their first
-    day sat at the far right): from their first day (as Business counts it, or an earlier day with something on it), the
-    days still to come quieter, filling in as they pass, as a young phase does. */
+/** The 30 days (21 Oct, Alex: the last 30). A client whose first logged day is within them starts at the left (23 Oct, Alex:
+    "it should start counting data on the left"): from the first day anything was logged (a session, a set, food, a
+    check-in), the days still to come quieter, filling in as they pass, as a young phase does; nothing logged yet, from
+    today. Once they have logged for more than 30 days, it is the last 30. */
 function thirtyDaysOf(ctx: Ctx): HomeBoard["days"] {
   const last = daysOf(ctx);
   const floor = last[0].date;
-  const start = clientStartDay(ctx.clientId);
-  if (!start || start <= floor) return last;
-  const firstActive = last.find((d) => d.trained || d.food || d.checkIn)?.date;
-  let since = firstActive && firstActive < start ? firstActive : start;
-  if (since > ctx.today) since = ctx.today;
+  let first: string | null = null;
+  const take = (d: string) => {
+    if (d && d <= ctx.today && (!first || d < first)) first = d;
+  };
+  for (const [date, d] of ctx.calendar) if (d.sessions.length || d.food || d.checkIns.some((n) => !ctx.fedNames.has(n))) take(date);
+  for (const s of ctx.sets) if (s.counts) take(s.day);
+  const since: string = first ?? ctx.today;
   if (since <= floor) return last;
   const dates: string[] = [];
   for (let d = since; d <= ctx.today; d = addDays(d, 1)) dates.push(d);
