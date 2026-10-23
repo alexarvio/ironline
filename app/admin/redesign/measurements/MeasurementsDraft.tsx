@@ -26,7 +26,7 @@ import { groupColour } from "../../../lib/categoryColors";
 import { defaultSummary, type MetricSummary } from "../../../lib/metricSummary";
 import { Sep, SepJoin } from "../Sep";
 import { Fold } from "../Fold";
-import { useSaidSaved } from "../useSaveQueue";
+import { useHoldWhile, useSaidSaved } from "../useSaveQueue";
 
 // The Lifestyle tab, built as Training is (21 Oct, Alex): the phase's name
 // to click and type, its state tag as the menu of what can be done with it,
@@ -195,16 +195,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
     void run();
   };
   const saveMetrics = (changes: Partial<Omit<MetricChanges, "clientId" | "phaseId">>) => save(() => applyMetricChangesAction({ clientId, phaseId, adds: [], removes: [], cadence: [], order: null, ...changes }));
-  // Leaving while a change is still on its way: the browser asks first.
-  useEffect(() => {
-    if (!saving && !failed) return;
-    const hold = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", hold);
-    return () => window.removeEventListener("beforeunload", hold);
-  }, [saving, failed]);
+  // Leaving while a change is still on its way: the browser asks first (and the page doesn't read itself again meanwhile).
+  useHoldWhile(saving || failed);
   // What is saved comes back with the page's re-read and replaces the screen's
   // copy, by content (a re-read with the same values changes nothing), never
   // while a change is on its way. After a failed save the screen shows what is

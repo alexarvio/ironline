@@ -6202,6 +6202,20 @@ function metricsAsked(clientId: number, cadence: MetricCadence): MetricDefinitio
   return cadence === "monthly" ? listMonthlyMetricsAsked(clientId) : listMetricDefinitions(clientId, cadence).filter(deployedToClient);
 }
 
+/** The Measure form's fields the client is asked for (23 Oct, Alex): while a Weight metric is asked on any rhythm, the
+    old Weight box is not. Its readings stay and are read everywhere (bodyWeightReadings); the coach's screens keep it.
+    Every client-facing path reads the Measure form, and what is due on it, through here. */
+export function measureFieldsAskedOf(clientId: number): MeasurementFieldDef[] {
+  const fields = listMeasurementFields(clientId).filter(deployedToClient);
+  const weightAsked = (["daily", "weekly", "monthly"] as const).some((c) => metricsAsked(clientId, c).some((m) => WEIGHT_NAME.test(m.name.trim())));
+  return weightAsked ? fields.filter((f) => !WEIGHT_NAME.test(f.name.trim())) : fields;
+}
+
+/** Something on the Measure form is in for the day: a reading of a field the client is asked for. */
+function measuredOn(fields: MeasurementFieldDef[], date: string): boolean {
+  return getMeasurementValues(fields.map((f) => f.id)).some((v) => v.date === date);
+}
+
 export function getDueItems(clientId: number): DueItem[] {
   const today = localDateStr();
   const currentWeekStart = weekStart(today);
@@ -6213,8 +6227,8 @@ export function getDueItems(clientId: number): DueItem[] {
   const weeklyLoggedThisWeek = listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] === currentWeekStart;
   const monthlyLoggedThisMonth = listMetricPeriods(monthlyDefs.map((d) => d.id), 1)[0] === monthStart(today);
 
-  const measurementFields = listMeasurementFields(clientId).filter(deployedToClient);
-  const measurementLoggedToday = listMeasurementDates(clientId).includes(today);
+  const measurementFields = measureFieldsAskedOf(clientId);
+  const measurementLoggedToday = measuredOn(measurementFields, today);
 
   const photoSlots = listActivePhotoSlots(clientId);
   const cadence = getPhotoCadence(clientId);
@@ -7024,7 +7038,7 @@ export function getCheckInStatus(clientId: number): CheckInStatus {
 
   const dailyDefs = listMetricDefinitions(clientId, "daily").filter(deployedToClient);
   const weeklyDefs = listMetricDefinitions(clientId, "weekly").filter(deployedToClient);
-  const fields = listMeasurementFields(clientId).filter(deployedToClient);
+  const fields = measureFieldsAskedOf(clientId);
 
   const dailyDue =
     dailyDefs.length > 0 && listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] !== today;
@@ -7034,7 +7048,7 @@ export function getCheckInStatus(clientId: number): CheckInStatus {
     weeklyCheckInOpen(clientId);
   const monthlyDefs = listMonthlyMetricsAsked(clientId);
   const monthlyDue = monthlyDefs.length > 0 && listMetricPeriods(monthlyDefs.map((d) => d.id), 1)[0] !== monthStart(today) && monthlyCheckInOpen(clientId);
-  const measurementsDue = fields.length > 0 && !listMeasurementDates(clientId).includes(today);
+  const measurementsDue = fields.length > 0 && !measuredOn(fields, today);
 
   const dueTypes: ("daily" | "weekly" | "monthly" | "measurements")[] = [];
   if (dailyDue) dueTypes.push("daily");
@@ -7376,9 +7390,10 @@ function checkInTrackerSection(
 
 // The coach's measurements for one date, the last date before it as the
 // hint. Null without fields, or (onlyIfLogged, a past day's) with nothing
-// measured that date.
+// measured that date. The old Weight box only while no Weight metric is asked
+// (measureFieldsAskedOf); a past day's weigh-in in it still shows in the feed.
 function checkInMeasureSection(clientId: number, date: string, onlyIfLogged = false): CheckInSection | null {
-  const fields = listMeasurementFields(clientId).filter(deployedToClient);
+  const fields = measureFieldsAskedOf(clientId);
   if (fields.length === 0) return null;
   const values = getMeasurementValues(fields.map((f) => f.id));
   const valueAt = (fieldId: number, d: string) => values.find((v) => v.field_id === fieldId && v.date === d)?.value ?? null;

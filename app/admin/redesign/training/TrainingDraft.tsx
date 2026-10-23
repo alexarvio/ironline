@@ -39,6 +39,7 @@ import DatePick from "../DatePick";
 import { dayMonth } from "../../../lib/dayMonth";
 import { Sep, SepJoin } from "../Sep";
 import { useSaidSaved } from "../useSaveQueue";
+import { useHoldRefresh } from "../holdRefresh";
 import { weekDue, type DotTrail } from "../dots";
 
 // The calmer builder, as a draft on real data. Nothing here saves: every
@@ -586,6 +587,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const weekFailed = Object.values(failed).some(Boolean);
   const weekSaving = anyPending || Object.values(saving).some(Boolean);
   const saidSaved = useSaidSaved(weekSaving);
+  // Changes waiting, saving or failed: the page doesn't read itself again meanwhile (RefreshOnReturn).
+  useHoldRefresh(weekSaving || weekFailed);
   const retry = () => {
     setFailed({});
     for (const [key, p] of Object.entries(pending)) if (pendingCount(p) > 0) flush(Number(key));

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, useTransition, 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import SaveBar from "./SaveBar";
+import { useHoldRefresh } from "../holdRefresh";
 
 // One save bar for the Settings page (23 Oct, Alex: one page of folding sections). Each form that saves on Save puts
 // its changes here while it has any (useSaveSlot), under its section's key ("profile", "business") or a part of one
@@ -34,6 +35,8 @@ export function SaveHost({ className, children }: { className: string; children:
   }));
   const keys = Object.keys(slots);
   const open = Object.values(slots);
+  // Changes on the bar, or saving: the page doesn't read itself again meanwhile (RefreshOnReturn).
+  useHoldRefresh(open.length > 0 || busy);
   const save = () =>
     start(async () => {
       // Invoicing goes first: a new country in Business details draws Invoicing again (its own defaults come with

@@ -377,13 +377,18 @@ export default function NutritionDraft({
   // the day unfolded and in view. After the first paint, so the server's
   // closed rows match.
   // And on a later link that changes only the #part (21 Oct: a second day from the chat did nothing).
+  // Never on a re-read (an autosave, the coach coming back): the log stays where they left it.
+  const daysNow = useRef(view.days);
+  useEffect(() => {
+    daysNow.current = view.days;
+  });
   useEffect(() => {
     let frame = 0;
     const arrive = () => {
       const m = /^#day-(\d{4}-\d{2}-\d{2})$/.exec(window.location.hash);
       if (!m) return;
       const date = m[1];
-      const idx = view.days.findIndex((d) => d.date === date);
+      const idx = daysNow.current.findIndex((d) => d.date === date);
       if (idx < 0) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -398,7 +403,7 @@ export default function NutritionDraft({
       window.removeEventListener("hashchange", arrive);
       cancelAnimationFrame(frame);
     };
-  }, [view.days]);
+  }, []);
   // Comments left here, under the meal they were left on.
   const [said, setSaid] = useState<Record<string, MealComment[]>>({});
   const commentsOn = (d: string, m: LoggedMeal) => [...m.comments, ...(said[`${d}|${m.id}`] ?? [])];

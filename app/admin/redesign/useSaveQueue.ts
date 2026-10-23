@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useHoldRefresh } from "./holdRefresh";
 
 // Autosave for a tab's section (21 Oct, Alex: Nutrition as Lifestyle): changes
 // show on screen at once and their saves run behind them, one at a time, in
@@ -43,6 +44,8 @@ export function useSaveQueue(afterwards: () => void) {
     jobs.current.push(job);
     void run();
   };
+  // A save on its way, or failed and waiting for Retry: the page doesn't read itself again meanwhile (RefreshOnReturn).
+  useHoldRefresh(saving || failed);
   return { save, saving, failed, retry: () => void run() };
 }
 
@@ -54,8 +57,10 @@ export function useSaidSaved(busy: boolean): boolean {
   return seen;
 }
 
-/** Leaving while something is still on its way: the browser asks first. */
+/** Leaving while something is still on its way: the browser asks first. Nor does the page read itself again
+ *  meanwhile (RefreshOnReturn, holdRefresh.ts). */
 export function useHoldWhile(busy: boolean) {
+  useHoldRefresh(busy);
   useEffect(() => {
     if (!busy) return;
     const hold = (e: BeforeUnloadEvent) => {

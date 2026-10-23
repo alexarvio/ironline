@@ -156,13 +156,18 @@ function Pictures({ clientId, firstName, plan }: Props) {
   const [openRow, setOpenRow] = useState<string | null>(null);
   // Arriving from a link in a message (#sheet-YYYY-MM-DD, 21 Oct: it opened the tab at its top): that sheet's row
   // opens in All sheets and comes into view (the open sheet is the top already). A later #part only, too.
+  // Never on a re-read (a sheet closing while the coach was away): the page stays where they left it.
   const closedKey = closed.map((s) => s.period).join(",");
+  const closedNow = useRef(closedKey);
+  useEffect(() => {
+    closedNow.current = closedKey;
+  });
   useEffect(() => {
     let frame = 0;
     const arrive = () => {
       const m = /^#sheet-(\d{4}-\d{2}-\d{2})$/.exec(window.location.hash);
       if (!m) return;
-      const i = closedKey.split(",").indexOf(m[1]);
+      const i = closedNow.current.split(",").indexOf(m[1]);
       if (i < 0) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -177,7 +182,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
       window.removeEventListener("hashchange", arrive);
       cancelAnimationFrame(frame);
     };
-  }, [closedKey]);
+  }, []);
   // Compare: the first sheet beside the newest.
   const openCompare = (period?: string) => {
     if (!latest) return;

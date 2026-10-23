@@ -12,6 +12,7 @@ import NewClientDialog from "../NewClientDialog";
 import type { RailClient, RailData } from "./loaders";
 import { Sep } from "./Sep";
 import NativeCoachRedirect from "../../coach/NativeCoachRedirect";
+import RefreshOnReturn from "./RefreshOnReturn";
 
 // The left rail, in the redesign's sheet: the brand, the coach's cross-client
 // views as icon rows, every client in one scrolling list, and the coach at
@@ -77,6 +78,8 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
     <aside className="rr" aria-label="Coach rail">
       {/* In the native app a coach is sent to their phone screens (21 Oct, /coach): the rail is on every admin screen. */}
       <NativeCoachRedirect />
+      {/* Back at the window, the page reads itself again (23 Oct, Alex): what the client logged meanwhile shows. */}
+      <RefreshOnReturn />
       <div className="rr-brand">
         <span className="rr-mark">
           {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark at its natural ratio */}
