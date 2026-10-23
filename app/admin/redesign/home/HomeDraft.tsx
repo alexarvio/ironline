@@ -637,10 +637,6 @@ function MuscleCard({ muscles, strength }: { muscles: HomeBoard["muscles"]; stre
       .join(". ")}`;
   }
   if (!windows.length) said = "Muscle balance: no window picked";
-  // Strength with one window on: its Overall and how many set a new best, on the capsule's row (23 Oct, Alex: the old
-  // Strength card's line); several or none, nothing there. The row is the capsule's height either way.
-  const over = measure === "strength" && one ? strength[windows[0]] : null;
-  const overall = over ? pctOf(over.overall) : 0;
 
   const spanButtons: { id: Window; label: string }[] = [
     { id: "7d", label: "7d" },
@@ -680,18 +676,6 @@ function MuscleCard({ muscles, strength }: { muscles: HomeBoard["muscles"]; stre
             );
           })}
         </div>
-        {over && (
-          <span className="rh-overall">
-            <SepJoin
-              parts={[
-                <span key="o">
-                  Overall <b className={overall > 0 ? "up" : overall < 0 ? "down" : ""}>{pctText(overall)}</b>
-                </span>,
-                `${over.bests} of ${over.of} at a new best`,
-              ]}
-            />
-          </span>
-        )}
       </div>
       <div className="rh-radar-wrap">
         <Radar shapes={empty ? [] : shapes} figures={empty ? [] : figures} rings={measure === "sets" ? SET_RINGS : STRENGTH_RINGS} label={empty ? "Muscle balance: none yet" : said} />
@@ -803,10 +787,6 @@ function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"];
     return { group: g, r: x ? pctOf(x.pct) : null, exercises: x?.exercises ?? 0 };
   });
   const most = Math.max(0, ...rows.map((x) => Math.abs(x.r ?? 0)));
-  // Overall and new bests under the title (23 Oct, Alex), as Business's charts carry their facts; the line keeps its room
-  // across the windows once any of them has something, so switching never moves the rows.
-  const overall = w ? pctOf(w.overall) : null;
-  const anyWindow = !!(strength?.["7d"] || strength?.["30d"] || strength?.phase);
   return (
     <section className="rls-card rh-panel" aria-label="Strength">
       <div className="rh-panel-head tall">
@@ -830,24 +810,7 @@ function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"];
           </span>
         </span>
       </div>
-      {/* Its own line under the head (the review, 23 Oct): beside the title it pushed the capsule onto a second line at
-          middling widths, and the title out of line with Muscle balance's. */}
-      {anyWindow && (
-        <span className="rh-under">
-          {w && overall != null ? (
-            <SepJoin
-              parts={[
-                <span key="o">
-                  Overall <b className={overall > 0 ? "up" : overall < 0 ? "down" : ""}>{pctText(overall)}</b>
-                </span>,
-                `${w.bests} of ${w.of} at a new best`,
-              ]}
-            />
-          ) : (
-            <span aria-hidden="true">&nbsp;</span>
-          )}
-        </span>
-      )}
+      {/* No Overall or new bests (23 Oct, Alex: "out of here"): the groups alone. */}
       <div className="rh-str">
         {rows.map((x) => (
           <div key={x.group} className="rh-str-row" title={x.r == null ? undefined : `${x.exercises} exercise${x.exercises === 1 ? "" : "s"}`}>
@@ -996,41 +959,24 @@ function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: 
   const ys = points.map((p) => ((hi - p.value) / (hi - lo)) * 100);
   // The line in runs, each reading joined to the one before: solid where it came on time, dashed where weigh-ins were
   // missed between the two. A run goes on while the style does, so its corners stay joined.
-  // Smooth (23 Oct, Alex: "a bit smoother, its very still now"): a curve through every reading that never bends past one,
-  // so a dip or a peak is where the reading is (monotone cubic, Fritsch-Carlson tangents).
+  // Straight between readings, the corners rounded off (23 Oct, Alex: "a bit smoother", then: a curve through every
+  // reading "looks drawn with a pen"). Each corner is cut a third of the way along both of its sides and joined with a
+  // soft bend through the reading's own point, so a peak or a dip stays where the reading is.
+  const ROUND = 0.3;
   const pt = (i: number) => `${xs[i].toFixed(2)} ${ys[i].toFixed(2)}`;
-  const slope = xs.slice(0, last).map((x, k) => (xs[k + 1] - x > 0 ? (ys[k + 1] - ys[k]) / (xs[k + 1] - x) : 0));
-  const tan = xs.map((_, k) => (k === 0 ? (slope[0] ?? 0) : k === last ? slope[last - 1] : slope[k - 1] * slope[k] <= 0 ? 0 : (slope[k - 1] + slope[k]) / 2));
-  for (let k = 0; k < last; k++) {
-    if (slope[k] === 0) {
-      tan[k] = 0;
-      tan[k + 1] = 0;
-      continue;
-    }
-    const a = tan[k] / slope[k];
-    const b = tan[k + 1] / slope[k];
-    const h = a * a + b * b;
-    if (h > 9) {
-      const t = 3 / Math.sqrt(h);
-      tan[k] = t * a * slope[k];
-      tan[k + 1] = t * b * slope[k];
-    }
-  }
-  const curve = (i: number) => {
-    const dx = (xs[i] - xs[i - 1]) / 3;
-    const c1 = `${(xs[i - 1] + dx).toFixed(2)} ${(ys[i - 1] + tan[i - 1] * dx).toFixed(2)}`;
-    const c2 = `${(xs[i] - dx).toFixed(2)} ${(ys[i] - tan[i] * dx).toFixed(2)}`;
-    return `C${c1} ${c2} ${pt(i)} `;
-  };
+  const toward = (i: number, j: number) => `${(xs[i] + (xs[j] - xs[i]) * ROUND).toFixed(2)} ${(ys[i] + (ys[j] - ys[i]) * ROUND).toFixed(2)}`;
+  // Where the line leaves reading i (past its corner) and reaches it (before its corner); the ends are the readings.
+  const leaves = (i: number) => (i === 0 ? pt(0) : toward(i, i + 1));
+  const reaches = (i: number) => (i === last ? pt(last) : toward(i, i - 1));
   const line = { solid: "", dashed: "" };
   for (let i = 1; i <= last; i++) {
+    // Each stretch draws its run up to the next corner and that corner, in its own style (solid, or dashed where
+    // weigh-ins were missed); a run goes on while the style does.
     const style = points[i].missed ? "dashed" : "solid";
     const goesOn = i > 1 && points[i - 1].missed === points[i].missed;
-    line[style] += `${goesOn ? "" : `M${pt(i - 1)} `}${curve(i)}`;
+    line[style] += `${goesOn ? "" : `M${leaves(i - 1)} `}L${reaches(i)} ${i < last ? `Q${pt(i)} ${leaves(i)} ` : ""}`;
   }
   const anyMissed = line.dashed !== "";
-  // A dot a reading while they can be told apart (up to 20); the latest always, bigger.
-  const dots = points.length <= 20;
   // The dates under it: the chart's first day, the day halfway (rounded down), the last reading's (none twice).
   const midT = t0 + Math.floor(days / 2) * DAY_MS;
   const showMid = days >= 2;
@@ -1089,8 +1035,7 @@ function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: 
               {gridText[i]}
             </span>
           ))}
-          {dots && xs.slice(0, last).map((x, i) => <span key={i} className="rh-wdot" style={{ left: `${x}%`, top: `${ys[i]}%` }} aria-hidden="true" />)}
-          <span className="rh-wdot last" style={{ left: `${xs[last]}%`, top: `${ys[last]}%` }} aria-hidden="true" />
+          {/* No dots (23 Oct, Alex: cleaner without); the ring marks the reading being read. */}
           {sel != null && read && (
             <>
               <span className="rh-wguide" style={{ left: `${xs[sel]}%` }} aria-hidden="true" />
