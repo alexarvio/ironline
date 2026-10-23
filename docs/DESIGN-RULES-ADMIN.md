@@ -65,6 +65,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 
 ## 8. Lists, rows and tables
 - Training sessions: separate white cards (radius 18, hairline, 8px apart), no numbers, the whole row opens it, ⋯ shows on hover only.
+- Rogue sessions (the client's own workouts off the plan) are a section of their own under the week's (23 Oct, Alex): one white card as the After-workout check, `Rogue sessions` and the count in its head, a session a row. A week with none has no section at all, no `None this week`.
 - A cardio row is a row like an exercise's (21 Oct, Alex): + Cardio is the search alone; the pick lands in the cardio table with its time ready to type. Time, Pace, Incline and Distance sit under the exercise figure columns (Sets, kg, Reps, the fourth), the note under Note, each a clean line typed in place with no sample figures; a bare number gets its unit on save ("20" → "20 min"), anything else stays as typed. The name opens Rename only.
 - An icon beside words in a button or pill is lifted half a pixel (`translate: 0 -0.5px`) to meet Archivo's capitals (21 Oct, Alex); measured, it sat 0.6px low.
 - Row actions in general show on hover only.

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type React from "react";
-import { ChevronRightIcon, CompassIcon } from "../../../components/icons";
+import { ChevronRightIcon } from "../../../components/icons";
 import type { DraftRogue } from "./TrainingDraft";
 import { dayMonth } from "../../../lib/dayMonth";
 import { SepJoin } from "../Sep";
@@ -28,14 +28,15 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
   const [open, setOpen] = useState<number | null>(null);
   const shown = FIGURES.filter((k) => cols[k]);
   const label: Record<keyof Cols, string> = { sets: "Sets", weight: unit, reps: "Reps", rpe: "RPE", tempo: "Tempo", rest: "Rest" };
+  // Nothing off the plan this week: no section at all (23 Oct, Alex).
+  if (items.length === 0) return null;
   return (
-    <div className="rg trn-rogue">
-      {/* The compass by the heading; slim rows of their own under the week's card (19 Oct restructure).
-          Always there (20 Oct, Alex), with "None this week" on its line when the client did none. */}
-      <div className="trn-rogue-label">
-        <CompassIcon size={14} />
-        <span>Rogue sessions</span>
-        {items.length === 0 && <em>None this week</em>}
+    // A section of its own, as the After-workout check (23 Oct, Alex: the small-caps line read as that card's
+    // title): one white card, its title and count in its head, a rogue session a row.
+    <section className="rg trn-rogue" aria-labelledby="trn-rogue-h">
+      <div className="trn-check-head">
+        <h2 id="trn-rogue-h">Rogue sessions</h2>
+        <span className="trn-rogue-count">{items.length}</span>
       </div>
       {items.map((r) => {
         const isOpen = open === r.id;
@@ -109,6 +110,6 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
           </section>
         );
       })}
-    </div>
+    </section>
   );
 }
