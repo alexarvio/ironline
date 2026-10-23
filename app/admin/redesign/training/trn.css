@@ -33,6 +33,9 @@
 .rd.trn .trn-btn:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
 .rd.trn .trn-btn.ghost { background: transparent; box-shadow: none; color: var(--trn-sec); }
 .rd.trn .trn-btn.ghost:hover { color: var(--trn-ink); }
+/* An icon alone (Remove week, 23 Oct, Alex): a round 36px target, the icon centred, red on hover as a destructive act. */
+.rd.trn .trn-btn.trn-iconbtn { justify-content: center; width: 36px; padding: 0; border-radius: 999px; }
+.rd.trn .trn-btn.ghost.trn-iconbtn:hover { background: #fdf1ef; color: #b42318; }
 .rd.trn .trn-btn.primary { background: var(--trn-navy); box-shadow: none; color: #fff; }
 .rd.trn .trn-btn.primary:disabled { opacity: 0.4; cursor: default; }
 .rd.trn .trn-chev { display: inline-flex; color: var(--trn-faint); transition: transform 0.15s; }

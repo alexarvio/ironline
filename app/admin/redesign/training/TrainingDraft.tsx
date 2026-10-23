@@ -921,8 +921,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         <div className="trn-weekhead-actions">
           {/* Any week with nothing logged can go (20 Oct, Alex: it was only the last); a live programme's only from the weeks still to come. The ones after move up. */}
           {weeks.length > 1 && (program.status !== "live" || week.state === "ahead") && !week.trained.some(Boolean) && !week.missed.some(Boolean) && sessions.every((x) => x.setsLogged === 0) && (
-            <button type="button" className="trn-btn ghost" onClick={() => setDlg({ kind: "removeWeek" })}>
-              <TrashIcon /> Remove week
+            // The bin alone (23 Oct, Alex); its words in the tooltip and for a screen reader. It asks first.
+            <button type="button" className="trn-btn ghost trn-iconbtn" onClick={() => setDlg({ kind: "removeWeek" })} aria-label="Remove week" title="Remove week">
+              <TrashIcon />
             </button>
           )}
           {week.state !== "past" && weeks.length > 1 && viewIdx > 1 && copyable(viewIdx - 1) && (
