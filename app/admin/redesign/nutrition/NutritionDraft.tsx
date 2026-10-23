@@ -416,7 +416,7 @@ export default function NutritionDraft({
       label: "Days logged",
       value: String(view.days.length),
       unit: "",
-      warn: view.windowDays > 0 && view.days.length < view.windowDays * 0.6,
+      // A count, in ink however few (23 Oct, Alex: a red 0 read as an error).
     },
     {
       label: "Average intake",

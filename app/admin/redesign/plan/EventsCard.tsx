@@ -689,7 +689,11 @@ export function MoveEventDialog({ event: e, start, end, cats, onCancel, onSave }
           <div key={r.label} className={`mvd-row${r.was === r.now ? " same" : ""}`}>
             <span className="mvd-label">{r.label}</span>
             {r.was === r.now ? (
-              <span className="mvd-now">{r.now}</span>
+              // Unchanged (23 Oct, Alex): in the New column too, in ink, so it is never an empty space.
+              <>
+                <span className="mvd-kept">{r.was}</span>
+                <span className="mvd-now">{r.now}</span>
+              </>
             ) : (
               <>
                 <s className="mvd-was" aria-label={`was ${r.was}`}>
