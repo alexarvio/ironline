@@ -237,7 +237,17 @@ function NotificationItem({ n, read, todayKey, coachFirst, coachPhoto, onOpen }:
         <span className="ntf-title-row">
           <span ref={textRef} className={`ntf-text${expanded ? " open" : ""}`}>
             <span className="ntf-title">{n.title}</span>
-            {n.body && <span className="ntf-body">{n.body}</span>}
+            {/* Facts parted by the drawn upright bar, never a middle dot (the rules; 23 Oct: To focus on's goals). */}
+            {n.body && (
+              <span className="ntf-body">
+                {n.body.split(" · ").map((part, i) => (
+                  <span key={i}>
+                    {i > 0 && <i className="ntf-sep" aria-hidden="true" />}
+                    {part}
+                  </span>
+                ))}
+              </span>
+            )}
           </span>
           {(clipped || expanded) && (
             <button type="button" className={`ntf-more${expanded ? " open" : ""}`} onClick={toggle} aria-expanded={expanded} aria-label={expanded ? "Show less" : "Show all"}>

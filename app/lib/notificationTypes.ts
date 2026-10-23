@@ -11,6 +11,7 @@ export type NotificationCategory =
   | "meeting_booked"
   | "meeting_changed"
   | "meeting_notes"
+  | "focus"
   | "video_reply"
   | "video_request"
   | "training_block"
@@ -41,6 +42,8 @@ const ICON = {
   apple: "M15.5 8.5c2.8 0 4.5 2.4 4.5 5.5 0 4-2.7 7.5-5.5 7.5-1 0-1.5-.5-2.5-.5s-1.5.5-2.5.5c-2.8 0-5.5-3.5-5.5-7.5 0-3.1 1.9-5.5 4.7-5.5 1.3 0 2.1.6 3.3.6s1.9-.6 3.5-.6ZM12 8.5V6a2.2 2.2 0 0 1 2-2.2",
   bell: "M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
   receipt: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6",
+  // To focus on's goals as bullet points (23 Oct).
+  list: "M10 6h10M10 12h10M10 18h10M5 6h.01M5 12h.01M5 18h.01",
 };
 
 const BLUE = { color: "#2f6fd6", rgb: "47,111,214" };
@@ -57,6 +60,8 @@ export const NOTIFICATION_TYPES: Record<NotificationCategory, NotificationType> 
   meeting_booked: { label: "Meeting", ...BLUE, icon: ICON.video, action: "View call" },
   meeting_changed: { label: "Meeting", ...BLUE, icon: ICON.video, action: "View call" },
   meeting_notes: { label: "Call notes", ...BLUE, icon: ICON.notes, action: "Read notes" },
+  // Set at a call (23 Oct, Alex: it showed a bell, not the coach's face), so the call's blue.
+  focus: { label: "To focus on", ...BLUE, icon: ICON.list, action: "See it" },
   video_reply: { label: "Video reply", ...INDIGO, icon: ICON.play, action: "Watch reply" },
   video_request: { label: "Video request", ...INDIGO, icon: ICON.upload, action: "Upload video" },
   training_block: { label: "Training", ...INDIGO, icon: ICON.dumbbell, action: "Preview block" },
@@ -100,6 +105,7 @@ export function categorize(n: StoredNotification): NotificationCategory {
   if (n.action_tab === "video") return "video_reply";
   if (starts(m, "Asked you for a video")) return "video_request";
   if (starts(m, "Your coach wrote up what you agreed")) return "meeting_notes";
+  if (starts(m, "Set what to focus on")) return "focus";
   if (starts(m, "Scheduled a meeting", "Scheduled ")) return "meeting_booked";
   if (starts(m, "Your call moved", "Moved your call", "Cancelled your call")) return "meeting_changed";
   if (starts(m, "Added to your calendar")) return "event_added";
