@@ -17827,6 +17827,10 @@ button.ci-hint { cursor: pointer; }
 .pg-view .pg-hist-date { font-size: 13.5px; font-weight: 500; color: #3a4250; white-space: nowrap; }
 .pg-view .pg-hist-value { font-size: 15px; font-weight: 500; color: #141a24; white-space: nowrap; }
 .pg-view .pg-hist-value small { margin-left: 8px; font-size: 12px; font-weight: 500; color: #8b93a1; }
+/* Two columns at the right (23 Oct, Alex): the values ending at one edge, the changes (as wide as the widest) at another. */
+.pg-view .pg-hist-value { display: inline-flex; align-items: baseline; }
+.pg-view .pg-hist-num { text-align: right; }
+.pg-view .pg-hist-value small { display: inline-block; width: calc(var(--pg-chg, 4ch) + 0.5ch); text-align: right; }
 
 .pg-view .pg-pager { margin-top: 10px; }
 .pg-view .pg-pager-row { display: flex; justify-content: center; align-items: center; gap: 4px; }

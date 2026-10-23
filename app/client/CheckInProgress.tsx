@@ -553,16 +553,23 @@ function MetricHistory({ series, today, page, onPage }: { series: CheckInSeries;
           {n} {n === 1 ? "entry" : "entries"}
         </span>
       </div>
-      <ul className="pg-hist-list">
+      {/* The values and their changes in columns down the page (23 Oct, Alex): the change column as wide as the page's
+          widest change, so every value ends at one edge and every change at another. */}
+      <ul
+        className="pg-hist-list"
+        style={{ "--pg-chg": `${Math.max(0, ...shown.map((r, k) => (rows[from + k + 1] ? signed(r.value - rows[from + k + 1].value, p).length : 0)))}ch` } as React.CSSProperties}
+      >
         {shown.map((r, k) => {
           const before = rows[from + k + 1];
           return (
             <li key={r.date} className="pg-hist-row">
               <span className="pg-hist-date">{dateText(r.date)}</span>
               <span className="pg-hist-value">
-                {fmt(r.value, p)}
-                {unit && ` ${unit}`}
-                {before && <small>{signed(r.value - before.value, p)}</small>}
+                <span className="pg-hist-num">
+                  {fmt(r.value, p)}
+                  {unit && ` ${unit}`}
+                </span>
+                <small>{before ? signed(r.value - before.value, p) : ""}</small>
               </span>
             </li>
           );
