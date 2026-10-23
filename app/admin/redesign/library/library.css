@@ -85,7 +85,8 @@
 /* ---- Under the stage: the name (two lines at most), then its words: Replace / Remove on hover or focus, Put back
    when taken out. Their line is kept, so a hover moves nothing. */
 /* Two name lines and the words' line always kept (16 + 2 × 18.2 + 4 + 24), so Rename's one-line field moves nothing. */
-.rd.lbx .lbx-tile-foot { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; min-height: 81px; padding: 10px 12px 6px; }
+/* The name's two lines and no action words under it (23 Oct, Alex: Edit and Delete video are in the ⋯); Put back on a taken-out card. */
+.rd.lbx .lbx-tile-foot { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; min-height: 58px; padding: 10px 12px 10px; }
 .rd.lbx .lbx-name { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 14px; font-weight: 600; line-height: 1.3; color: #141a24; overflow-wrap: anywhere; }
 /* The name typed in place: a clean line, ink while typing. */
 .rd.lbx .lbx-rename { width: 100%; min-width: 0; height: 20px; padding: 0 0 1px; border: 0; border-bottom: 1px solid #141a24; border-radius: 0; background: none; box-sizing: border-box; outline: none; box-shadow: none; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; }
@@ -93,8 +94,6 @@
 .rd.lbx .lbx-act { height: 24px; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; transition: color 0.12s, opacity 0.12s; }
 .rd.lbx .lbx-act:hover { color: #141a24; }
 .rd.lbx .lbx-act:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
-.rd.lbx .lbx-act.hover { opacity: 0; }
-.rd.lbx .lbx-tile:hover .lbx-act.hover, .rd.lbx .lbx-tile:focus-within .lbx-act.hover { opacity: 1; }
 
 /* ---- + Exercise, the grid's last tile: dashed, the stage's height, its panel floating beside it. */
 /* As tall as the cards beside it (23 Oct, Alex): stretched to its row; alone in a row, the poster's 3:4. */

@@ -7,7 +7,7 @@ import { Toaster } from "../../../components/ui/toast";
 import { Dialog } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { ArrowRightIcon, EyeIcon, MoreIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
+import { ArrowRightIcon, EyeIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
 import { setExerciseDemoLinkAction } from "../../../lib/actions";
 import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem } from "./load";
@@ -153,7 +153,8 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   const toggle = (slug: string) => {
     const open = isOpen(slug);
     if (slug === landingGroup) setLanding(null);
-    setOpens(open ? opened.filter((s) => s !== slug) : [...opened.filter((s) => s !== slug), slug]);
+    // One group open at a time (23 Oct, Alex): opening one folds the one that was open.
+    setOpens(open ? [] : [slug]);
   };
 
   const patch = (id: number, p: Patch) => setPatches((all) => ({ ...all, [id]: { ...all[id], ...p } }));
@@ -228,7 +229,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
     const key = `new-${Date.now()}`;
     setPanel(null);
     setAdding((a) => [...a, { key, name, group, id: null }]);
-    if (!opened.includes(group)) setOpens([...opened, group]);
+    if (!opened.includes(group)) setOpens([group]);
     void (async () => {
       const id = await createLibraryExerciseAction(name, group, "").catch(() => null);
       if (id == null) {
@@ -286,6 +287,18 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
                   e.preventDefault();
                 }}
               >
+                {/* The video's own actions here (23 Oct, Alex: no words under the name): Edit opens the demo pop-up, Delete asks first. */}
+                {r.video && (
+                  <>
+                    <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", id: r.id })}>
+                      <PencilIcon /> Edit video
+                    </DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "remove", id: r.id })}>
+                      <TrashIcon /> Delete video
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <ArrowRightIcon /> Move to
@@ -326,15 +339,6 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
               <button type="button" className="lbx-act" onClick={() => takeOut(r, false)}>
                 Put back
               </button>
-            ) : r.video ? (
-              <>
-                <button type="button" className="lbx-act hover" aria-label={`Replace the demo of ${r.name}`} onClick={() => setDlg({ kind: "demo", id: r.id })}>
-                  Replace
-                </button>
-                <button type="button" className="lbx-act hover" aria-label={`Remove the demo of ${r.name}`} onClick={() => setDlg({ kind: "remove", id: r.id })}>
-                  Remove
-                </button>
-              </>
             ) : null}
           </span>
         </div>
