@@ -175,7 +175,8 @@ export default function CheckInScreen({
         </div>
         {/* The photo banner, the Training and Nutrition banners' size: the
             date, and the pills that switch between Entries, Progress and Calendar. */}
-        <header className={`tr-banner ci-banner${view === "progress" ? " progress" : ""}`}>
+        {/* One height on all three views (23 Oct, Alex: the photo jumped as Progress made it taller). */}
+        <header className="tr-banner ci-banner">
           {pictures && pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
           <div className="tr-kicker">{["Daily", weeklyOpen ? "weekly" : null, monthlyOpen && sections.some((s) => s.id === "monthly") ? "monthly" : null].filter(Boolean).join(" · ")}</div>
           <FitTitle className="tr-name">{dateLabel}</FitTitle>

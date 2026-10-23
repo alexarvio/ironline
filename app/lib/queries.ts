@@ -7148,6 +7148,8 @@ export type CheckInSeries = {
   colourRgb: string;
   /** The coach's target, if any: the dashed line. */
   target: number | null;
+  /** Which way is good (the metric's own), for the change's colour on Progress; none, toward the target. */
+  goodDirection?: "up" | "down" | "none";
   /** Decimals to show: 0, 1 or 2 (the most any reading has). */
   precision: number;
   /** Oldest first: the day it is for (a weekly one's Monday), and when it was saved. */
@@ -7227,6 +7229,7 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
         colour: gc.hex,
         colourRgb: gc.rgb,
         target: def.target ?? null,
+        goodDirection: def.good_direction ?? "none",
         precision: scaleMax ? 0 : readingPrecision(points.map((p) => p.value)),
         points,
       });
@@ -7278,6 +7281,7 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
       colour: gc.hex,
       colourRgb: gc.rgb,
       target: def?.target ?? null,
+      goodDirection: def?.good_direction ?? "none",
       precision: readingPrecision(points.map((p) => p.value)),
       points,
     });

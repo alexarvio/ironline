@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransi
 import { useRouter } from "next/navigation";
 import { markCoachNotesReadAction } from "../lib/actions";
 import { logoutAction } from "../lib/auth-actions";
-import { BellIcon, CalendarIcon, ChevronLeftIcon, GearIcon, MenuIcon, ChatIcon, ReceiptIcon } from "../components/icons";
+import { BellIcon, CalendarIcon, CameraIcon, ChevronLeftIcon, GearIcon, MenuIcon, ChatIcon, ReceiptIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
 import PreviewBar from "./PreviewBar";
 import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPicturesScreen";
@@ -661,6 +661,22 @@ export default function AppShell({
                         </svg>
                       </span>
                       Events
+                    </button>
+                  )}
+                  {/* Shape update (23 Oct, Alex): the photo sheets, once the coach asks for an angle or there are earlier ones. */}
+                  {(photos.hasAngles || photos.earlier.length > 0) && (
+                    <button
+                      type="button"
+                      className="app-menu-item"
+                      onClick={() =>
+                        go(() => {
+                          setPhotosPeriod(null);
+                          setPushView("photos");
+                        })
+                      }
+                    >
+                      <span className="app-menu-ico"><CameraIcon /></span>
+                      Shape update
                     </button>
                   )}
                   {invoices && (

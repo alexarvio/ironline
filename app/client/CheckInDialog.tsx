@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { CheckIcon } from "../components/icons";
 import { logMetricPeriodAction, saveMeasurementCheckInAction } from "../lib/actions";
 import { useCoachIdentity } from "./CheckInContext";
 import { cleanNumeric, isWholeMetric } from "./CheckInLine";
@@ -350,8 +351,20 @@ export default function CheckInDialog({
               <h2 id="cki-title" className="cki-title">
                 {isToday ? "Today's check-in" : dayLabel(form.date, true)}
               </h2>
-              <p className={`cki-sub${allIn ? " done" : ""}`} aria-live="polite">
-                {total === 0 ? "Nothing to fill in." : allIn ? "All filled · ready to save" : `${total - filled.length} of ${total} still to fill`}
+              {/* All in and nothing changed since: a check and Saved alone (23 Oct, Alex). */}
+              <p className={`cki-sub${allIn ? " done" : ""}${allIn && !dirty ? " saved" : ""}`} aria-live="polite">
+                {total === 0 ? (
+                  "Nothing to fill in."
+                ) : allIn && !dirty ? (
+                  <>
+                    <CheckIcon />
+                    Saved
+                  </>
+                ) : allIn ? (
+                  "All filled"
+                ) : (
+                  `${total - filled.length} of ${total} still to fill`
+                )}
               </p>
             </div>
             <button type="button" className="gpk-round" onClick={close} aria-label="Close">

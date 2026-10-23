@@ -3,13 +3,15 @@
 import { useRef, useState } from "react";
 import { ChevronLeftIcon } from "../components/icons";
 
-// The hub's Calendar (28 Sep): everything the client did, a month at a time,
-// Monday first. Each day's number sits in a ring of up to three equal parts,
-// one a thing done: training (navy), food logged (green), a check-in (beige).
-// One thing fills the ring in its colour, two halve it, three third it. A
-// record of what was done, not a score. Tap a day and the month opens under
-// its week, with a snapshot of the day: the session (exercises, gym, time),
-// the day's calories and macros, and what was checked in.
+// The check-in's Calendar (28 Sep; hairline 23 Oct, Alex): everything the
+// client did, a month at a time, Monday first, flat on the page. Each day's
+// numeral sits in a thin ring of up to three equal parts, one a thing done:
+// training (indigo), food logged (teal), a check-in (beige). One thing rings
+// it in its colour, two halve it, three third it. A record of what was done,
+// not a score. Today's numeral is on an ink disc. Tap a day and the month
+// opens under its week, flat: the session (exercises | gym | time), the
+// day's calories and macros, and what was checked in, each on a 2px line in
+// its colour.
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx): the
 // same shape as getActivityCalendar's, passed in as plain props.
 
@@ -21,8 +23,8 @@ export type ActivityDay = {
 };
 
 const PARTS = [
-  { id: "training", label: "Training", colour: "#1E3A5F" },
-  { id: "nutrition", label: "Nutrition", colour: "#2E7D32" },
+  { id: "training", label: "Training", colour: "#3a3390" },
+  { id: "nutrition", label: "Nutrition", colour: "#1d7a70" },
   { id: "lifestyle", label: "Check-ins", colour: "#a08a5c" },
 ] as const;
 
@@ -30,9 +32,9 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 const doneOf = (d: ActivityDay | undefined) => (d ? PARTS.filter((p) => (p.id === "training" ? d.sessions.length > 0 : p.id === "nutrition" ? !!d.food : d.checkIns.length > 0)) : []);
 const kcal = (n: number) => Math.round(n).toLocaleString("en-US");
 
-// The ring: its circumference split equally between the parts done, flat
-// ends and an equal gap centred on each join, so halves split top to bottom
-// and thirds sit level.
+// The ring: thin (2), its circumference split equally between the parts
+// done, flat ends and an equal gap centred on each join, so halves split top
+// to bottom and thirds sit level.
 const R = 16;
 const C = 2 * Math.PI * R;
 function Ring({ parts }: { parts: readonly { colour: string }[] }) {
@@ -42,7 +44,7 @@ function Ring({ parts }: { parts: readonly { colour: string }[] }) {
   return (
     <svg className="ac-ring" viewBox="0 0 40 40" aria-hidden="true">
       {parts.map((p, i) => (
-        <circle key={i} cx="20" cy="20" r={R} fill="none" stroke={p.colour} strokeWidth="3.5" strokeLinecap="butt" strokeDasharray={`${Math.max(0, len - gap)} ${C}`} strokeDashoffset={-(i * len + gap / 2)} transform="rotate(-90 20 20)" />
+        <circle key={i} cx="20" cy="20" r={R} fill="none" stroke={p.colour} strokeWidth="2" strokeLinecap="butt" strokeDasharray={`${Math.max(0, len - gap)} ${C}`} strokeDashoffset={-(i * len + gap / 2)} transform="rotate(-90 20 20)" />
       ))}
     </svg>
   );
@@ -124,7 +126,7 @@ export default function ActivityCalendar({ days, today }: { days: ActivityDay[];
                 <button
                   key={d}
                   type="button"
-                  className={`ac-day${parts.length ? " did" : ""}${d === today ? " today" : ""}${d === picked && !closing ? " on" : ""}`}
+                  className={`ac-day${parts.length ? " did" : ""}${d === today ? " today" : ""}${d > today ? " soon" : ""}${d === picked && !closing ? " on" : ""}`}
                   onClick={() => pick(d)}
                   disabled={!parts.length}
                   aria-expanded={parts.length ? d === picked : undefined}
@@ -140,7 +142,7 @@ export default function ActivityCalendar({ days, today }: { days: ActivityDay[];
           {day && week.includes(day.date) && <DayPanel key={day.date} day={day} closing={closing} />}
         </div>
       ))}
-      {days.length === 0 && <p className="wc-empty">Your training, food and check-ins show here, day by day.</p>}
+      {days.length === 0 && <p className="wc-empty">Nothing logged</p>}
     </section>
   );
 }
@@ -154,12 +156,16 @@ function DayPanel({ day, closing }: { day: ActivityDay; closing: boolean }) {
           {day.sessions.map((s, i) => (
             <div key={i} className="ac-item" style={{ ["--ac" as string]: PARTS[0].colour }}>
               <span className="ac-item-label">Training</span>
-              {/* One row: the session on the left, its exercises, gym and time on the right (wrapping under when the name is long). */}
+              {/* One row: the session on the left, its exercises, gym and time on the right (wrapping under when the name is long), parted by the drawn bar; Unfinished is one more fact. */}
               <span className="ac-item-row">
                 <b>{s.title}</b>
-                <small>
-                  {[s.exercises ? `${s.exercises} ${s.exercises === 1 ? "exercise" : "exercises"}` : null, s.gym, s.minutes != null ? `${s.minutes} min` : null].filter(Boolean).join(" · ")}
-                  {!s.finished && <em> · Unfinished</em>}
+                <small className="ac-facts">
+                  {[s.exercises ? `${s.exercises} ${s.exercises === 1 ? "exercise" : "exercises"}` : null, s.gym, s.minutes != null ? `${s.minutes} min` : null]
+                    .filter((f): f is string => !!f)
+                    .map((f, j) => (
+                      <span key={j}>{f}</span>
+                    ))}
+                  {!s.finished && <em>Unfinished</em>}
                 </small>
               </span>
             </div>

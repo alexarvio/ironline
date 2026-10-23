@@ -8,12 +8,13 @@ import { discardCardPicturesAction, resetCardCoverAction, saveCardPicturesAction
 import { coverJpeg } from "../lib/coverJpeg";
 
 // The client's own picture on a Home card (12 Oct). Press and hold a card
-// on Home, or the row in Settings, and this sheet comes up: the picture as
-// it is, "Choose from your photos" (the camera roll, cut to the card's
-// shape in the browser and uploaded), and "Use {coach}'s picture" to go
-// back to what the coach set ("Use the default" when the coach chose none,
-// 22 Oct). Up to six a track (14 Oct), taking turns on
-// the card and behind the track's banner; kept across phases.
+// on Home and this sheet comes up: the picture as it is, "Choose from your
+// photos" (the camera roll, cut to the card's shape in the browser and
+// uploaded), and "Use {coach}'s picture" to go back to what the coach set
+// ("Use the default" when the coach chose none, 22 Oct). Up to six a track
+// (14 Oct), taking turns on the card and behind the track's banner; kept
+// across phases. Settings (23 Oct, Alex) lists the tracks by name instead,
+// each folding open in place on its photos, every change saved at once.
 
 export type CardCovers = Partial<Record<PhaseTrack, string[]>>;
 const MAX_PICTURES = 6;
@@ -67,12 +68,64 @@ export function useLongPress(onHold: () => void) {
   };
 }
 
+/** A photo picked: shown at once from the phone while it goes up; the job
+    comes back with its staged path, or null when it failed. */
+type Upload = { key: string; preview: string; job: Promise<string | null> };
+
+/** The uploads the sheet and Settings share: several at once from the camera
+    roll, each cut to the card's shape in the browser and staged; what was put
+    up and never kept is thrown away. */
+function useCardUploads(clientId: number, track: PhaseTrack) {
+  /** Put up in this sitting and not on the card (yet). */
+  const staged = useRef<string[]>([]);
+  const previews = useRef<string[]>([]);
+  useEffect(() => {
+    const urls = previews.current;
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, []);
+  // All cut and sent together (they went one after another and felt slow).
+  const send = useCallback(
+    (files: File[]): Upload[] =>
+      files.map((file, i) => {
+        const preview = URL.createObjectURL(file);
+        previews.current.push(preview);
+        const job = (async () => {
+          const blob = await coverJpeg(file);
+          if (!blob) return null;
+          const fd = new FormData();
+          fd.set("clientId", String(clientId));
+          fd.set("track", track);
+          fd.set("file", new File([blob], "cover.jpg", { type: "image/jpeg" }));
+          return stageCardPictureAction(fd).catch(() => null);
+        })();
+        void job.then((saved) => {
+          if (saved) staged.current.push(saved);
+        });
+        return { key: `new-${files.length}-${i}-${preview}`, preview, job };
+      }),
+    [clientId, track]
+  );
+  /** These made it onto the card: nothing to throw away. */
+  const kept = useCallback((paths: string[]) => {
+    staged.current = staged.current.filter((p) => !paths.includes(p));
+  }, []);
+  /** These (else everything staged) are not kept: their files go. */
+  const discard = useCallback(
+    (paths?: string[]) => {
+      const gone = paths ?? staged.current;
+      staged.current = staged.current.filter((p) => !gone.includes(p));
+      if (gone.length) void discardCardPicturesAction(clientId, track, gone);
+    },
+    [clientId, track]
+  );
+  return { send, kept, discard };
+}
+
 export default function CardPictureSheet({
   clientId,
   track,
   coachName,
   own,
-  coach,
   coachChose,
   onSaved,
   onClose,
@@ -100,16 +153,11 @@ export default function CardPictureSheet({
     itemsRef.current = items;
   });
   const uploads = useRef(new Map<string, Promise<string | null>>());
-  /** Put up in this sitting: thrown away if they don't end up on the card. */
-  const staged = useRef<string[]>([]);
-  const previews = useRef<string[]>([]);
+  /** Where each new one landed, as it lands (the grid's state may not have caught up when Done reads it). */
+  const landed = useRef(new Map<string, string | null>());
+  const { send, kept, discard } = useCardUploads(clientId, track);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  useEffect(() => () => previews.current.forEach((u) => URL.revokeObjectURL(u)), []);
-  const discard = () => {
-    if (staged.current.length) void discardCardPicturesAction(clientId, track, staged.current);
-    staged.current = [];
-  };
   const close = () => {
     if (saving) return;
     discard();
@@ -124,33 +172,17 @@ export default function CardPictureSheet({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
-  // Several at once from the camera roll, all cut and sent together (they went one after another and felt slow).
   const pick = (files: FileList | null) => {
     if (!files?.length) return;
     const room = Math.max(0, MAX_PICTURES - itemsRef.current.length);
-    const fresh = Array.from(files)
-      .slice(0, room)
-      .map((file, i) => {
-        const preview = URL.createObjectURL(file);
-        previews.current.push(preview);
-        return { file, item: { key: `new-${files.length}-${i}-${preview}`, preview, path: null } as Item };
-      });
+    const fresh = send(Array.from(files).slice(0, room));
     if (fileRef.current) fileRef.current.value = "";
-    setItems((prev) => [...prev, ...fresh.map((f) => f.item)]);
-    for (const { file, item } of fresh) {
-      const job = (async () => {
-        const blob = await coverJpeg(file);
-        if (!blob) return null;
-        const fd = new FormData();
-        fd.set("clientId", String(clientId));
-        fd.set("track", track);
-        fd.set("file", new File([blob], "cover.jpg", { type: "image/jpeg" }));
-        return stageCardPictureAction(fd).catch(() => null);
-      })();
-      uploads.current.set(item.key, job);
-      void job.then((saved) => {
-        if (saved) staged.current.push(saved);
-        setItems((prev) => prev.map((x) => (x.key === item.key ? { ...x, path: saved, failed: !saved } : x)));
+    setItems((prev) => [...prev, ...fresh.map((u): Item => ({ key: u.key, preview: u.preview, path: null }))]);
+    for (const u of fresh) {
+      uploads.current.set(u.key, u.job);
+      void u.job.then((saved) => {
+        landed.current.set(u.key, saved);
+        setItems((prev) => prev.map((x) => (x.key === u.key ? { ...x, path: saved, failed: !saved } : x)));
       });
     }
   };
@@ -163,11 +195,10 @@ export default function CardPictureSheet({
     setSaving(true);
     await Promise.all(uploads.current.values());
     // What the grid holds once everything is up, in its order.
-    const paths = itemsRef.current.map((x) => x.path).filter((p): p is string => !!p);
+    const paths = itemsRef.current.map((x) => x.path ?? landed.current.get(x.key) ?? null).filter((p): p is string => !!p);
     await saveCardPicturesAction(clientId, track, paths);
-    const unused = staged.current.filter((p) => !paths.includes(p));
-    staged.current = [];
-    if (unused.length) void discardCardPicturesAction(clientId, track, unused);
+    kept(paths);
+    discard();
     onSaved(track, paths);
     router.refresh();
     onClose();
@@ -229,36 +260,223 @@ export default function CardPictureSheet({
   );
 }
 
-/** Settings · Card pictures: a row a track with the picture as it is and
-    Change, which opens the same sheet as a press-and-hold on Home. */
-export function CardPicturesRows({ clientId, coachName, rows }: { clientId: number; coachName: string; rows: { track: PhaseTrack; /** The client's own, in order; none, the coach's shows. */ own: string[]; /** The coach's, behind the card when there is no own. */ coach: string | null; /** The coach chose it (22 Oct); else it is the default picture. */ coachChose: boolean }[] }) {
+type Row = {
+  track: PhaseTrack;
+  /** The client's own, in order; none, the coach's shows. */
+  own: string[];
+  /** The coach's, behind the card when there is no own. */
+  coach: string | null;
+  /** The coach chose it (22 Oct); else it is the default picture. */
+  coachChose: boolean;
+};
+
+/** Settings · Card pictures (23 Oct, Alex): a row a track, its name alone
+    with a chevron; a tap folds it open in place on its photos, one track at
+    a time. Add, remove and going back to the coach's picture all save at once. */
+export function CardPicturesRows({ clientId, coachName, rows }: { clientId: number; coachName: string; rows: Row[] }) {
   const [open, setOpen] = useState<PhaseTrack | null>(null);
-  // What was just chosen (or cleared), until the page comes back with it.
+  // What was just saved (or cleared), until the page comes back with it.
   const [fresh, setFresh] = useState<Partial<Record<PhaseTrack, string[]>>>({});
-  const close = useCallback(() => setOpen(null), []);
-  const row = rows.find((r) => r.track === open) ?? null;
-  const ownOf = (r: { track: PhaseTrack; own: string[] }) => fresh[r.track] ?? r.own;
-  const shownOf = (r: { track: PhaseTrack; own: string[]; coach: string | null }) => ownOf(r)[0] ?? r.coach;
+  const onSaved = useCallback((t: PhaseTrack, pictures: string[]) => setFresh((f) => ({ ...f, [t]: pictures })), []);
   return (
     <>
-      {rows.map((r) => {
-        const shown = shownOf(r);
-        const own = ownOf(r);
-        return (
-          <button key={r.track} type="button" className="settings-data-row cv-row" onClick={() => setOpen(r.track)}>
-            <span className="cv-row-thumb" data-track={r.track}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- an upload or a public file */}
-              {shown && <img src={shown} alt="" />}
-            </span>
-            <div className="home-dark-row-body">
-              <div className="home-dark-row-title">{TRACK_LABEL[r.track]}</div>
-              <div className="home-dark-row-detail">{own.length > 1 ? `${own.length} of your photos, taking turns` : own.length === 1 ? "Your photo" : r.coachChose ? `${coachName}'s picture` : "Default picture"}</div>
-            </div>
-            <span className="st-link-go" aria-hidden="true">›</span>
-          </button>
-        );
-      })}
-      {row && <CardPictureSheet clientId={clientId} track={row.track} coachName={coachName} own={ownOf(row)} coach={row.coach} coachChose={row.coachChose} onSaved={(t, pictures) => setFresh((f) => ({ ...f, [t]: pictures }))} onClose={close} />}
+      {rows.map((r) => (
+        <CardPictureFold
+          key={r.track}
+          clientId={clientId}
+          coachName={coachName}
+          row={r}
+          own={fresh[r.track] ?? r.own}
+          open={open === r.track}
+          onToggle={() => setOpen((o) => (o === r.track ? null : r.track))}
+          onSaved={onSaved}
+        />
+      ))}
     </>
+  );
+}
+
+/** A photo on its way up, after the ones already on the card. */
+type Pending = { key: string; preview: string; path?: string | null; failed?: boolean };
+
+function CardPictureFold({
+  clientId,
+  coachName,
+  row,
+  own,
+  open,
+  onToggle,
+  onSaved,
+}: {
+  clientId: number;
+  coachName: string;
+  row: Row;
+  own: string[];
+  open: boolean;
+  onToggle: () => void;
+  onSaved: (track: PhaseTrack, pictures: string[]) => void;
+}) {
+  const { track, coach, coachChose } = row;
+  const router = useRouter();
+  const { send, kept, discard } = useCardUploads(clientId, track);
+  const [pending, setPending] = useState<Pending[]>([]);
+  /** A photo just put up keeps showing from the phone, not fetched again. */
+  const [shownAs, setShownAs] = useState<Record<string, string>>({});
+  /** The photo whose × was tapped: Remove over it until it is tapped, or a tap elsewhere keeps it. */
+  const [asking, setAsking] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  // The card's list as last saved, for what lands later; set the moment a change is saved.
+  const ownRef = useRef(own);
+  useEffect(() => {
+    ownRef.current = own;
+  }, [own]);
+  /** Going back to the coach's picture leaves the photos still going up out. */
+  const gen = useRef(0);
+  /** Saves go one after another, so they land in the order they were made. */
+  const chain = useRef<Promise<unknown>>(Promise.resolve());
+  /** Each go of picked photos lands after the go before it, so the card keeps the order they were picked in. */
+  const lastBatch = useRef<Promise<unknown>>(Promise.resolve());
+  const commit =(next: string[], save: () => Promise<unknown>) => {
+    ownRef.current = next;
+    onSaved(track, next);
+    chain.current = chain.current
+      .then(save)
+      .catch(() => {})
+      .then(() => router.refresh());
+  };
+  useEffect(() => {
+    if (!asking) return;
+    const off = (e: PointerEvent) => {
+      if ((e.target as Element | null)?.closest(".cv-fold-x, .cv-fold-remove")) return;
+      setAsking(null);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setAsking(null);
+    document.addEventListener("pointerdown", off);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", off);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [asking]);
+
+  const going = pending.filter((x) => !x.failed).length;
+  const pick = (files: FileList | null) => {
+    const room = Math.max(0, MAX_PICTURES - own.length - going);
+    const list = files ? Array.from(files).slice(0, room) : [];
+    if (fileRef.current) fileRef.current.value = "";
+    if (!list.length) return;
+    const ups = send(list);
+    const at = gen.current;
+    setPending((prev) => [...prev, ...ups.map((u): Pending => ({ key: u.key, preview: u.preview }))]);
+    for (const u of ups) void u.job.then((path) => setPending((prev) => prev.map((x) => (x.key === u.key ? { ...x, path, failed: !path } : x))));
+    // Once every photo picked in this go is up, the card's list is saved with them after it, in order.
+    const turn = lastBatch.current.then(() => Promise.all(ups.map((u) => u.job)));
+    lastBatch.current = turn.catch(() => {});
+    void turn.then((paths) => {
+      const up = paths.filter((p): p is string => !!p);
+      if (at !== gen.current) return discard(up);
+      const keys = new Set(ups.map((u) => u.key));
+      const failed = new Set(ups.filter((_, i) => !paths[i]).map((u) => u.key));
+      if (up.length) {
+        const next = [...ownRef.current, ...up].slice(0, MAX_PICTURES);
+        const over = up.filter((p) => !next.includes(p));
+        kept(up);
+        if (over.length) discard(over);
+        setShownAs((s) => {
+          const m = { ...s };
+          ups.forEach((u, i) => {
+            const p = paths[i];
+            if (p) m[p] = u.preview;
+          });
+          return m;
+        });
+        commit(next, () => saveCardPicturesAction(clientId, track, next));
+      }
+      // The ones up are on the card now; one that failed shows so a moment, then goes.
+      setPending((prev) => prev.filter((x) => !keys.has(x.key) || failed.has(x.key)));
+      if (failed.size) setTimeout(() => setPending((prev) => prev.filter((x) => !failed.has(x.key))), 2000);
+    });
+  };
+  const remove = (p: string) => {
+    setAsking(null);
+    const next = ownRef.current.filter((x) => x !== p);
+    commit(next, () => saveCardPicturesAction(clientId, track, next));
+  };
+  const reset = () => {
+    gen.current += 1;
+    setAsking(null);
+    setPending([]);
+    commit([], () => resetCardCoverAction(clientId, track));
+  };
+
+  const full = own.length + going >= MAX_PICTURES;
+  // None of their own: the picture the card shows instead, as the one photo.
+  const standIn = !own.length && !pending.length;
+  const bodyId = `cv-fold-${track}`;
+  return (
+    <div className="cv-fold">
+      <button type="button" className="settings-data-row cv-fold-head" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
+        <span className="home-dark-row-title">{TRACK_LABEL[track]}</span>
+        <span className={`cv-fold-chev${open ? " open" : ""}`} aria-hidden="true">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M4.5 2.5 8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </button>
+      <div id={bodyId} className={`cv-fold-wrap${open ? " open" : ""}`} inert={!open}>
+        <div className="cv-fold-clip">
+          <div className="cv-fold-body">
+            <div className="cv-fold-grid">
+              {standIn && coach && (
+                <span className="cv-fold-pic stand">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- an upload or a public file */}
+                  <img src={coach} alt="" />
+                </span>
+              )}
+              {own.map((p) => (
+                <span key={p} className={`cv-fold-pic${asking === p ? " asking" : ""}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- an upload, or the photo itself just put up */}
+                  <img src={shownAs[p] ?? p} alt="" />
+                  {asking === p && (
+                    <button type="button" className="cv-fold-remove" onClick={() => remove(p)}>
+                      Remove
+                    </button>
+                  )}
+                  <button type="button" className="cv-fold-x" onClick={() => setAsking((a) => (a === p ? null : p))} aria-label={asking === p ? "Keep this picture" : "Remove this picture"}>
+                    <span aria-hidden="true">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                  </button>
+                </span>
+              ))}
+              {pending.map((x) => (
+                <span key={x.key} className={`cv-fold-pic${!x.path && !x.failed ? " up" : ""}${x.failed ? " failed" : ""}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- the photo itself while it goes up */}
+                  <img src={x.preview} alt="" />
+                </span>
+              ))}
+              {!full && (
+                <button type="button" className="cv-fold-add" onClick={() => fileRef.current?.click()} aria-label="Add pictures from your photos">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                    <path d="M9 3.5v11M3.5 9h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                  <span>Add</span>
+                </button>
+              )}
+            </div>
+            {standIn ? (
+              <p className="cv-fold-words">{coachChose ? `${coachName}'s picture` : "Default picture"}</p>
+            ) : own.length > 0 ? (
+              <button type="button" className="cv-fold-reset" onClick={reset}>
+                {coachChose ? <>Use {coachName}&rsquo;s picture</> : "Use the default"}
+              </button>
+            ) : null}
+            <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => pick(e.target.files)} />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
