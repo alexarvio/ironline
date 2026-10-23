@@ -18,7 +18,7 @@ import type { ActivityKind, ActivityRow, FeedBoard, NeedRow } from "../../../lib
 // The coach's Feed (21 Oct, Alex: built from the Feed mockup, root "rd trn rls rh rfd"): every client at once, clear at a
 // glance. Training's header, Home's Since line, then
 // - Needs you: one task a row (not a client a row), its wait, its action as a white pill; ⋯ Done clears it;
-// - Activity: a log, one line a row, New over Earlier, one kind at a time, 20 a page.
+// - Activity: a log, one line a row, one list (no New / Earlier), one kind at a time, 20 a page.
 // Facts, not explanations; dates d/m (dayMonth), a log's rows by logDate; ink, never navy; weights 500 and 600.
 
 const PAGE = 20;
@@ -234,7 +234,7 @@ function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
 
 // ---- Activity: a log (design rules 8), one line a row. The date, the time in its own column, the client semi-bold, the
 // kind's icon in its colour (KindMark, as Home's), the thing, and only their own words grey after it, in quotes (23 Oct,
-// Alex). What came since the last look under New, the rest under Earlier. One kind at a time, 20 a page, always a full
+// Alex). One list, newest first (23 Oct, Alex: no New / Earlier split). One kind at a time, 20 a page, always a full
 // page tall; a row opens its place.
 type Filter = "all" | ActivityKind;
 const FILTERS: { id: Filter; label: string }[] = [
@@ -247,9 +247,6 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 /** ?cat= as the old Feed wrote it too ("measurements" was Lifestyle). */
 const filterOf = (cat: string | null | undefined): Filter => (cat === "measurements" ? "lifestyle" : (FILTERS.find((f) => f.id === cat)?.id ?? "all"));
-
-/** A New / Earlier label's height in the card (34px, 35 with its hairline), for the log's steady height. */
-const GROUP_H = 35;
 
 function Activity({ rows, kind }: { rows: ActivityRow[]; kind?: string | null }) {
   const open = useRowOpen();
@@ -266,22 +263,8 @@ function Activity({ rows, kind }: { rows: ActivityRow[]; kind?: string | null })
   };
   // The date column as wide as the whole feed's widest date, so it never moves between kinds or pages.
   const dateW = useMemo(() => logDateWidth(rows.map((r) => r.at)), [rows]);
-  // New and Earlier only while something under this kind is new; the steady height keeps room for both labels.
-  const labelled = matching.some((r) => r.isNew);
-  const anyNew = rows.some((r) => r.isNew);
-
   const items: ReactNode[] = [];
-  let group: "new" | "earlier" | null = null;
-  shown.forEach((r, i) => {
-    const g = r.isNew ? "new" : "earlier";
-    if (labelled && g !== group) {
-      items.push(
-        <p key={`group-${g}-${i}`} className="rfd-group">
-          {g === "new" ? "New" : "Earlier"}
-        </p>
-      );
-      group = g;
-    }
+  shown.forEach((r) => {
     const date = <span className="rd-logdate">{logDate(new Date(r.at))}</span>;
     items.push(
       <div key={r.id} className={`rls-row rfd-row${r.href ? "" : " still"}`}>
@@ -321,10 +304,10 @@ function Activity({ rows, kind }: { rows: ActivityRow[]; kind?: string | null })
         </div>
       </div>
       {/* Always a full page tall (design rules 8): another kind or the last page never moves the pager. A full page is as
-          many rows as All can show (up to 20), 53px a row with its hairline, and room for New and Earlier while anything is new. */}
+          many rows as All can show (up to 20), 53px a row with its hairline. */}
       <div
         className="rls-card rfd-card rd-steady"
-        style={{ "--rfd-date": `${dateW}px`, "--log-rows": Math.max(1, Math.min(PAGE, rows.length)), "--log-row": "53px", "--log-head": `${1 + (anyNew ? 2 * GROUP_H : 0)}px` } as CSSProperties}
+        style={{ "--rfd-date": `${dateW}px`, "--log-rows": Math.max(1, Math.min(PAGE, rows.length)), "--log-row": "53px", "--log-head": "1px" } as CSSProperties}
       >
         {shown.length === 0 ? <p className="rls-none">None yet</p> : <div className="rfd-rows">{items}</div>}
       </div>
