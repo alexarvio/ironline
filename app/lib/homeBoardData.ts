@@ -24,6 +24,7 @@ import {
 } from "./queries";
 import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 import { invoicingFor } from "./countries";
+import { clientStartDay } from "./businessBoardData";
 
 type ProgramDayRow = Data["program_days"][number];
 type AssignmentRow = Data["workout_assignments"][number];
@@ -303,7 +304,7 @@ export function getHomeBoard(clientId: number): HomeBoard {
     muscles: safe("muscles", () => musclesOf(ctx), empty.muscles),
     strength: safe("strength", () => strengthOf(ctx), empty.strength),
     weight: safe("weight", () => weightOf(ctx), null),
-    days: safe("days", () => daysOf(ctx), empty.days),
+    days: safe("days", () => thirtyDaysOf(ctx), empty.days),
     phaseDays: safe("phaseDays", () => phaseDaysOf(ctx), null),
   };
 }
@@ -692,6 +693,25 @@ function daysOf(ctx: Ctx, dates: string[] = lastDays(ctx.today)): HomeBoard["day
     const d = ctx.calendar.get(date);
     return { date, trained: !!d?.sessions.length || setDays.has(date), food: !!d?.food, checkIn: !!d?.checkIns.some((n) => !ctx.fedNames.has(n)) };
   });
+}
+
+/** The 30 days (21 Oct, Alex: the last 30). A client newer than that starts at the left (23 Oct, Alex: their first
+    day sat at the far right): from their first day (as Business counts it, or an earlier day with something on it), the
+    days still to come quieter, filling in as they pass, as a young phase does. */
+function thirtyDaysOf(ctx: Ctx): HomeBoard["days"] {
+  const last = daysOf(ctx);
+  const floor = last[0].date;
+  const start = clientStartDay(ctx.clientId);
+  if (!start || start <= floor) return last;
+  const firstActive = last.find((d) => d.trained || d.food || d.checkIn)?.date;
+  let since = firstActive && firstActive < start ? firstActive : start;
+  if (since > ctx.today) since = ctx.today;
+  if (since <= floor) return last;
+  const dates: string[] = [];
+  for (let d = since; d <= ctx.today; d = addDays(d, 1)) dates.push(d);
+  const ahead: ConsistencyDay[] = [];
+  for (let d = addDays(ctx.today, 1); dates.length + ahead.length < CONSISTENCY_DAYS; d = addDays(d, 1)) ahead.push({ date: d, trained: false, food: false, checkIn: false, future: true });
+  return [...daysOf(ctx, dates), ...ahead];
 }
 
 /** The phase for the consistency strip: the live ones together, from the earliest first day to the latest last day.
