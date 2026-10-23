@@ -55,11 +55,14 @@ Read this before touching any client screen. One hero language, one everyday lan
 - Section eyebrow at 28px in from the screen edge, content 16px in, rows may bleed edge to edge.
 - Sections vs. items (16 Oct): a section label (Events, Latest from, Meetings) is ink `#141a24` at 11.5px and sits under a hairline 16px in from the screen edge, with room above. Labels inside a section stay grey, and lines inside a section are inset (40px), so they read as a level below.
 - Dates in a left column as light numerals, one date per day, the live one dated today.
+- To focus on (23 Oct, Alex): the coach's goals until the next call, the first thing on Home, right under the greeting and above Today and the phase cards; only while there are goals. A section as the others (its ink label under a hairline), `from {Coach}` with their face (20px) on the right. Each goal a ring (24px, 1.6 stroke, ink) and its words at 16px/500; a tap ticks it (the ring fills ink with a white check, the words go faint grey), a tap again takes it back, saved and shown at once. Under them `Until your call, Thu 29 Oct` in grey; no line when no call is booked. Classes `hm-focus` (app/client/home/FocusList.tsx).
+- Phase goals are off (23 Oct, Alex: To focus on replaces them; `FEATURES.phaseGoals` in app/lib/features.ts): no Objectives from {Coach} on the phase cards, Training, Nutrition or the check-in, and a phase's starts row on Events has nothing more, so it doesn't open. The stored goals are kept.
 - No position dots (except under the Home phase cards, brought back 16 Oct by Alex), no "See all" when a tap on the item already leads there, no explanation sentences.
 
 ## 9. Before editing
 - Check this file. If a spec you were given conflicts with it, follow this file and say so.
 - Reuse an existing pattern (events row, Events screen, progress pill, workout header) before inventing one.
+- Every body weight shown is the client's own latest reading, from every place they log it (23 Oct, Alex): one Weight chart on Progress with every weigh-in, the check-in's last reading the last weigh-in from anywhere, in the unit they are asked in (`bodyWeightReadings`).
 - A list over time is the Events-screen itinerary (`evp-` classes): white pill on top to add or ask, one spine, light date numerals, a snap spot that grows its row, the past greyed under a PAST label. A row opens only when it has more; then it gets a chevron.
   - Events: a Today row always, even when nothing (shown) is on: an empty ink ring with no icon, "Nothing on today" (or "No trips today" under a filter).
   - Notifications: flat rows with a hairline between them (inset to the text), the ink dot and a 600 title for unread, 500 once read. Text cut at two lines gets a chevron by the title that eases it open in place; the row itself still opens the thing.

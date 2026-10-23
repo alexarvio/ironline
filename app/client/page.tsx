@@ -95,6 +95,7 @@ import TrainingDayList from "./TrainingDayList";
 
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
+import { FOCUS_NOTE, homeFocus } from "../lib/focus";
 import type { HomeEvents } from "./EventsCard";
 import type { ClientMeetingView } from "./meetings/MeetingsScreen";
 import { isMeetingTypeId } from "../lib/meetingTypes";
@@ -104,6 +105,7 @@ import CoachCard from "./CoachCard";
 import FitTitle from "./FitTitle";
 import PictureCycle from "./PictureCycle";
 import PhaseObjectives from "./PhaseObjectives";
+import { FEATURES } from "../lib/features";
 import PushToggle from "./PushToggle";
 import { ConnectedApps } from "./HealthSync";
 import { pushPublicKey } from "../lib/push";
@@ -310,9 +312,10 @@ function homeEvents(clientId: number): HomeEvents {
   // The plan's phases on the same timeline as their start (9 Oct): one day,
   // "Strength block 2 starts", in the track's colour, the objectives behind
   // the chevron. Not a stretch: the phase itself is Home's to keep track of.
+  // Phase goals off (23 Oct, Alex): no note, so the row has nothing more and doesn't open.
   const phases = listClientPhases(clientId)
     .filter((p) => !p.draft)
-    .map((p) => ({ id: -p.id, kind: null, title: `${p.name} starts`, start: p.start_week, end: p.start_week, note: (p.objectives ?? []).join(String.fromCharCode(10)), mine: false, phase: p.track }));
+    .map((p) => ({ id: -p.id, kind: null, title: `${p.name} starts`, start: p.start_week, end: p.start_week, note: FEATURES.phaseGoals ? (p.objectives ?? []).join(String.fromCharCode(10)) : "", mine: false, phase: p.track }));
   return {
     list: [...listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, mine: e.added_by === "client", repeat: e.repeat ?? null })), ...phases],
     categories: listEventCategories(getClient(clientId)?.coach_id ?? 0).map(({ id, label, color }) => ({ id, label, color })),
@@ -391,7 +394,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
         end: phaseLastDay(ph.end_week),
         coverUrl: ph.cover_path ?? defaultPhaseCover(track, ph.id),
         coachCover: !!ph.cover_path,
-        objectives: ph.objectives ?? [],
+        objectives: FEATURES.phaseGoals ? ph.objectives ?? [] : [],
         note: ph.nutrition?.coach_notes?.trim() || null,
         // The scheduled phase after this one on the track (9 Oct): the card names it, and charges up in its last week.
         next: (() => {
@@ -431,6 +434,8 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
       })()}
       events={homeEvents(CLIENT_ID)}
       checkInForm={{ date: today, sections: sections.sections, weeklyOpen, monthlyOpen }}
+      // To focus on (23 Oct, Alex; lib/focus.ts): the coach's goals until the next call, at the top of Home.
+      focus={homeFocus(CLIENT_ID, today, phoneTz)}
     />
   );
 }
@@ -518,6 +523,8 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     if (latestNote.kind === "report") return { kind: "report", title: "Sent you a progress report", body: null, cta: "View report", ...base, actionTab: latestNote.action_tab ?? "settings" };
     if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title, body: detail, cta: "View nutrition", ...base };
     if (latestNote.action_tab === "invoices") return { kind: "invoice", title, body: null, cta: "View invoices", ...base };
+    // The coach set what to focus on (23 Oct): View opens Home at its top, where the list is (the goals' words could read as a call or a goal below).
+    if (latestNote.kind === "general" && latestNote.message.startsWith(FOCUS_NOTE)) return { kind: "focus", title, body: detail, cta: "View", ...base, actionTab: latestNote.action_tab ?? "home" };
     // A change the coach made: read what it was from its tab and its words.
     if (latestNote.kind === "general") {
       const lower = latestNote.message.toLowerCase();
@@ -658,7 +665,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
 
       {/* The coach's objectives for the training phase, as on its Home card,
           and their note on it. */}
-      <PhaseObjectives coachName={getCoachFirstName(CLIENT_ID)} objectives={getCurrentPhase(CLIENT_ID, "training")?.objectives ?? []} />
+      <PhaseObjectives coachName={getCoachFirstName(CLIENT_ID)} objectives={FEATURES.phaseGoals ? getCurrentPhase(CLIENT_ID, "training")?.objectives ?? [] : []} />
       {(() => {
         const ph = getCurrentPhase(CLIENT_ID, "training");
         return (
@@ -1004,7 +1011,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 
       <div className="nd-body">
         {/* The coach's objectives for the nutrition phase, as on its Home card. */}
-        <PhaseObjectives coachName={coachName} objectives={nutritionPhase?.objectives ?? []} />
+        <PhaseObjectives coachName={coachName} objectives={FEATURES.phaseGoals ? nutritionPhase?.objectives ?? [] : []} />
         <CoachCard
           coachName={coachName}
           photoPath={getCoachAvatarPath(CLIENT_ID)}
@@ -1099,7 +1106,12 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       <div className="st-body">
       {/* The coach's profile row is out of Settings for now (nice to have,
           not yet); the profile screen and its data stay in place. */}
-      <MyDetailsCard clientId={CLIENT_ID} email={profile.email ?? null} phone={profile.phone ?? null} address={profile.address ?? null} />
+      <MyDetailsCard
+        clientId={CLIENT_ID}
+        email={profile.email ?? null}
+        phone={profile.phone ?? null}
+        address={{ address: profile.address ?? "", postcode: profile.postcode ?? "", city: profile.city ?? "", region: profile.region ?? "", country_code: profile.country_code ?? "", country: profile.country ?? "" }}
+      />
 
       <section className="home-dark-section">
         <div className="home-dark-rows">
@@ -1378,7 +1390,7 @@ export default async function ClientPage({
     dueSections: checkInStatusForScreen.dueTypes as string[],
     weeklyOpen: weeklyCheckInAskedToday(CLIENT_ID, checkInData.sections),
     monthlyOpen: monthlyCheckInAskedToday(CLIENT_ID, checkInData.sections),
-    objectives: getCurrentPhase(CLIENT_ID, "lifestyle")?.objectives ?? [],
+    objectives: FEATURES.phaseGoals ? getCurrentPhase(CLIENT_ID, "lifestyle")?.objectives ?? [] : [],
     // The coach's note on the lifestyle phase (21 Oct), dated as Training's is.
     coachNote: (() => {
       const ph = getCurrentPhase(CLIENT_ID, "lifestyle");

@@ -10,6 +10,7 @@ import { CheckIcon, ChevronDownIcon } from "../components/icons";
 import type { OverviewInfoRow, OverviewPanel } from "../lib/queries";
 import PanelSection from "./PanelSection";
 import { ageFrom, DEFAULT_DIAL, GenderPills, InfoRow, PhoneInput, Suffixed } from "./InfoRow";
+import AddressFields, { addressDraft } from "./AddressFields";
 import DatePick from "./redesign/DatePick";
 
 // Member info and Coaching info — the client card, as two collapsible
@@ -37,6 +38,11 @@ const CARD_KEYS: CardKey[] = [
   "phone_code",
   "phone",
   "address",
+  "postcode",
+  "city",
+  "region",
+  "country_code",
+  "country",
   "coaching_start_date",
   "goal_phase",
   "goal_date",
@@ -44,9 +50,14 @@ const CARD_KEYS: CardKey[] = [
   "starting_weight_kg",
 ];
 const MEMBER_KEYS: CardKey[] = ["name", "birthdate", "gender", "height_cm", "email", "phone_code", "phone", "address"];
+/** The rest of the address after the street (23 Oct, Alex: for invoicing): typed in the hairline look; the old looks
+    keep their one Address field and carry these along as they are saved. */
+const ADDRESS_PARTS: CardKey[] = ["postcode", "city", "region", "country_code", "country"];
+/** The hairline look's member fields: the address in its parts. */
+const MEMBER_HL_KEYS: CardKey[] = [...MEMBER_KEYS, ...ADDRESS_PARTS];
 /** Details in the redesign (23 Oct, Alex): the member's fields and the start date, typed in place in one form; the rest
     (goal, goal date, check-in day, starting weight) ride along as they are saved. */
-const DETAILS_KEYS: CardKey[] = [...MEMBER_KEYS, "coaching_start_date"];
+const DETAILS_KEYS: CardKey[] = [...MEMBER_HL_KEYS, "coaching_start_date"];
 const COACHING_KEYS: CardKey[] = ["coaching_start_date", "goal_date", "goal_phase", "check_in_day", "starting_weight_kg"];
 
 type Which = "member" | "coaching";
@@ -93,6 +104,7 @@ export default function ClientCardEditor({
     setEditing((e) => ({ ...e, [which]: true }));
   };
   const done = (which: Which) => setEditing((e) => ({ ...e, [which]: false }));
+  const memberKeys = hl ? MEMBER_HL_KEYS : MEMBER_KEYS;
 
   const filled = panel.memberInfo.filter((r) => r.value).length;
   const set = panel.coachingInfo.filter((r) => r.value).length;
@@ -113,6 +125,7 @@ export default function ClientCardEditor({
       <MemberFields
         card={card}
         focus={focus}
+        hl={hl}
         // The name saves on its own when the coach leaves the field. It is
         // the one thing on this card that shows elsewhere immediately (the
         // rail, the panel header).
@@ -160,7 +173,7 @@ export default function ClientCardEditor({
         // fields typed in place, then Coaching, Plan and Started alone; Cancel and Save at the foot, Delete on its left.
         <div className="cc-hl cc-inline">
           <CardForm clientId={clientId} card={card} keys={DETAILS_KEYS} cancelLabel="Cancel" onDone={() => onClose?.()} footStart={footStart}>
-            <MemberFields card={card} focus={null} onRename={(v) => v.trim() && v.trim() !== card.name && startRename(() => renameClientAction(clientId, v))} />
+            <MemberFields card={card} focus={null} hl onRename={(v) => v.trim() && v.trim() !== card.name && startRename(() => renameClientAction(clientId, v))} />
             <section className="cc-sec">
               <span className="dlh-label">Coaching</span>
               <div className="nc-grid">
@@ -176,7 +189,7 @@ export default function ClientCardEditor({
         <>
           <Section chrome={chrome} onboarding={onboarding} title="Member info" hint={`${filled} of ${panel.memberInfo.length} filled`} onEdit={() => edit("member")}>
             {editing.member && !inDialog ? (
-              <CardForm clientId={clientId} card={card} keys={MEMBER_KEYS} cancelLabel={onboarding ? "Skip for now" : "Cancel"} onDone={() => done("member")}>
+              <CardForm clientId={clientId} card={card} keys={memberKeys} cancelLabel={onboarding ? "Skip for now" : "Cancel"} onDone={() => done("member")}>
                 {memberFields}
               </CardForm>
             ) : (
@@ -211,7 +224,7 @@ export default function ClientCardEditor({
       )}
 
       {inDialog && editing.member && (
-        <CardDialog hl={hl} title="Member info" clientId={clientId} card={card} keys={MEMBER_KEYS} onDone={() => done("member")}>
+        <CardDialog hl={hl} title="Member info" clientId={clientId} card={card} keys={memberKeys} onDone={() => done("member")}>
           {memberFields}
         </CardDialog>
       )}
@@ -457,7 +470,8 @@ function CardForm({ clientId, card, keys, cancelLabel, onDone, footStart, childr
 // text: the age beside Birthdate follows the date as it is typed, Gender is
 // three pills, and Phone is a dial code and a number kept apart. Mounted
 // afresh each time the card is edited, so Cancel leaves nothing behind.
-function MemberFields({ card, focus, onRename }: { card: Card; focus: string | null; onRename: (v: string) => void }) {
+function MemberFields({ card, focus, hl = false, onRename }: { card: Card; focus: string | null; /** The hairline look: the address in its parts. */ hl?: boolean; onRename: (v: string) => void }) {
+  const [address, setAddress] = useState(() => addressDraft(card));
   const [birthdate, setBirthdate] = useState(card.birthdate);
   const [gender, setGender] = useState(card.gender);
   // A phone typed before the split keeps its text and no code, rather than
@@ -479,14 +493,20 @@ function MemberFields({ card, focus, onRename }: { card: Card; focus: string | n
       <InfoRow label="Gender" as="div">
         <GenderPills name="gender" value={gender} onChange={setGender} />
       </InfoRow>
+      {/* Height and Phone share a row, Email across the next (23 Oct): the address in its parts takes three rows. */}
       <Field label="Height" name="height_cm" value={card.height_cm} type="number" suffix="cm" focus={focus} />
-      <Field label="Email" name="email" value={card.email} type="email" focus={focus} full />
       <InfoRow label="Phone" as="div">
         <FocusIn on={focus === "phone"}>
           <PhoneInput code={code} number={phone} onCode={setCode} onNumber={setPhone} codeName="phone_code" numberName="phone" legacy={legacy} />
         </FocusIn>
       </InfoRow>
-      <Field label="Address" name="address" value={card.address} focus={focus} />
+      <Field label="Email" name="email" value={card.email} type="email" focus={focus} full />
+      {/* The hairline look (23 Oct, Alex: for invoicing): the street across the row, the postcode and city side by side,
+          the country from the floating list. The old looks keep one Address line; the parts ride along hidden. */}
+      {hl ? <AddressFields value={address} onChange={setAddress} named /> : (
+        // Once the parts are set (Details, New client), this line is the street alone: typing the rest here would print it twice.
+        <Field label={card.postcode || card.city || card.country_code || card.country ? "Street" : "Address"} name="address" value={card.address} focus={focus} />
+      )}
     </div>
   );
 }

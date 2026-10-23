@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { InvoiceView } from "../lib/queries";
 import { countryCodeFromName, countryOf, formatLongDate, formatMoney } from "../lib/countries";
+import { addressLines } from "../lib/address";
 import "./invoice-sheet.css";
 
 // One invoice as an A4 sheet: who it is from (the coach's Business details),
@@ -18,8 +19,10 @@ export default function InvoiceSheet({ v }: { v: InvoiceView }) {
   const money = (n: number) => formatMoney(n, v.currency, cc);
   const date = (d: string) => formatLongDate(d, cc);
   const seller = f.business_name || f.legal_name || "Your business name";
-  // "Amsterdam" under "1011 AB"; in the US and Canada, "Austin, TX 78701".
-  const place = country.region ? [[f.city, f.region].filter(Boolean).join(", "), f.postcode].filter(Boolean).join(" ") : [f.postcode, f.city].filter(Boolean).join(" ");
+  // Both addresses as an envelope reads them (lib/address.ts): the street; "1011 AB Amsterdam" (in the US and Canada,
+  // "Austin, TX 78701"); the country. The client's in its parts since 23 Oct; an older one is its one line.
+  const fromLines = addressLines(f);
+  const toLines = addressLines(v.to);
   const holder = f.account_holder || f.legal_name || seller;
 
   const bankLines: ReactNode[] = [];
@@ -35,9 +38,9 @@ export default function InvoiceSheet({ v }: { v: InvoiceView }) {
         <div className="ivp-from">
           <b className="ivp-seller">{seller}</b>
           {f.legal_name && f.legal_name !== f.business_name && <span>{f.legal_name}</span>}
-          {f.address && <span>{f.address}</span>}
-          {place && <span>{place}</span>}
-          {(f.country || (cc && country.name)) && <span>{cc ? country.name : f.country}</span>}
+          {fromLines.map((l, i) => (
+            <span key={i}>{l}</span>
+          ))}
           {f.billing_email && <span>{f.billing_email}</span>}
           {f.phone && <span>{f.phone}</span>}
           {f.website && <span>{f.website}</span>}
@@ -62,7 +65,9 @@ export default function InvoiceSheet({ v }: { v: InvoiceView }) {
       <section className="ivp-to">
         <small>Billed to</small>
         <b>{v.to.name}</b>
-        {v.to.address && <span>{v.to.address}</span>}
+        {toLines.map((l, i) => (
+          <span key={i}>{l}</span>
+        ))}
         {v.to.email && <span>{v.to.email}</span>}
       </section>
 

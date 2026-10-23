@@ -29,6 +29,7 @@ import {
   requireCoach,
 } from "./auth";
 import { eraseClient } from "./erase";
+import { ADDRESS_KEYS, cleanAddress } from "./address";
 import { phaseDays, phaseLastDay } from "./phases";
 import { sendInviteEmail } from "./mail";
 import { clerkOn, sendClerkInvite } from "./clerk";
@@ -380,6 +381,7 @@ import { COACH_PROFILE_LIMITS } from "./coachProfileView";
 import { deleteUpload, keyOf, prepareChatMedia, putUpload } from "./storage";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
+import { FEATURES } from "./features";
 import { clearPhotoOpenSheet, getPhotoCadence, getPhotoOpenPeriod, getPhotoInstructions, getPhotoStartDate, listActivePhotoSlots, listPhotoSlots, listPhotoUploads, photoSheetFor, photoSheetForClient, resetPhotoOpenSheet } from "./queries";
 import { dayMonth } from "./dayMonth";
 import { isTimezone, SERVER_TZ, tzShort, zonedToUtc } from "./timezones";
@@ -775,7 +777,13 @@ export type NewClientPayload = {
   email: string;
   phoneCode: string;
   phone: string;
+  /** The street and number; the rest of the address in parts (23 Oct), absent from the old admin's dialog. */
   address: string;
+  postcode?: string;
+  city?: string;
+  region?: string;
+  countryCode?: string;
+  country?: string;
   password: string;
   invite: boolean;
 };
@@ -831,7 +839,8 @@ export async function createClientWithLoginAction(
     // for show, so a country is never guessed back out of a typed string.
     phone_code: /^\+[0-9]{1,4}$/.test(phoneCode) ? phoneCode : null,
     phone: s(p.phone) || null,
-    address: s(p.address) || null,
+    // The address in its parts (23 Oct, for invoicing), clipped as Business details are.
+    ...cleanAddress({ address: p.address, postcode: p.postcode, city: p.city, region: p.region, country_code: p.countryCode, country: p.country }),
   });
   revalidatePath("/admin");
 
@@ -894,7 +903,12 @@ export async function saveMeasurementCheckInAction(formData: FormData) {
   const loggedAt = new Date().toISOString();
   fields.forEach((field) => {
     const raw = formData.get(`field_${field.id}`);
-    if (raw === null || raw === "") return;
+    if (raw === null) return;
+    // One sent empty is a reading the client cleared (23 Oct): it goes, as a tracker's does, or a cleared Weight came back.
+    if (raw === "") {
+      if (getData().measurement_values.some((v) => v.field_id === field.id && v.date === date && v.value != null)) setMeasurementValue(field.id, date, null, loggedAt);
+      return;
+    }
     // Phones on European locales type the decimal comma.
     const value = Number(String(raw).replace(",", "."));
     setMeasurementValue(field.id, date, Number.isFinite(value) ? value : null, loggedAt);
@@ -1967,7 +1981,11 @@ export async function saveClientCardAction(formData: FormData) {
     email: strOrNull("email"),
     phone_code: /^\+[0-9]{1,4}$/.test(str("phone_code")) ? str("phone_code") : null,
     phone: strOrNull("phone"),
-    address: strOrNull("address"),
+    // The address in its parts (23 Oct, for invoicing), clipped as Business details are. A page from before the split
+    // posts the street alone: the other parts stay as they are.
+    ...(ADDRESS_KEYS.every((k) => formData.has(k))
+      ? cleanAddress({ address: str("address"), postcode: str("postcode"), city: str("city"), region: str("region"), country_code: str("country_code"), country: str("country") })
+      : { address: strOrNull("address") }),
     coaching_start_date: strOrNull("coaching_start_date"),
     goal_phase: str("goal_phase"),
     goal_date: strOrNull("goal_date"),
@@ -3170,8 +3188,9 @@ function readPhaseForm(formData: FormData) {
 
 // The phase dialog posts its objectives as repeated "objectives" fields, and
 // "objectivesSent" so a form without the list leaves them as they are.
+// Phase goals off (23 Oct, Alex: To focus on replaces them): the stored ones stay as they are.
 function saveObjectivesFrom(phaseId: number, formData: FormData) {
-  if (formData.get("objectivesSent") !== "1") return;
+  if (!FEATURES.phaseGoals || formData.get("objectivesSent") !== "1") return;
   setPhaseObjectives(phaseId, formData.getAll("objectives").map(String));
 }
 
@@ -3336,6 +3355,7 @@ export async function uploadPhaseCoverAction(formData: FormData) {
 // The coach's goals for a phase, from its tab (Training, Nutrition,
 // Measurements): up to three, in order, shown on the client's Home.
 export async function setPhaseGoalsAction(phaseId: number, goals: string[]) {
+  if (!FEATURES.phaseGoals) return;
   if (!Number.isInteger(phaseId) || !Array.isArray(goals) || !(await coachForClient(getClientIdForPhase(phaseId)))) return;
   setPhaseObjectives(phaseId, goals.map(String));
   revalidatePath("/admin");
@@ -4125,7 +4145,15 @@ export async function saveMyDetailsAction(formData: FormData) {
     const v = String(formData.get(name) ?? "").trim();
     return v ? v.slice(0, 200) : null;
   };
-  patchClientProfile(clientId, { email: field("email"), phone: field("phone"), address: field("address") });
+  const str = (name: string) => String(formData.get(name) ?? "");
+  patchClientProfile(clientId, {
+    email: field("email"),
+    phone: field("phone"),
+    // The address in its parts (23 Oct), as the coach's card saves it; a page from before the split posts the street alone.
+    ...(ADDRESS_KEYS.every((k) => formData.has(k))
+      ? cleanAddress({ address: str("address"), postcode: str("postcode"), city: str("city"), region: str("region"), country_code: str("country_code"), country: str("country") })
+      : { address: field("address") }),
+  });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -4470,8 +4498,8 @@ export async function connectStripeAction(): Promise<{ url?: string; error?: str
       account = await createCoachAccount(b.billing_email || coach.email, b.country_code || null);
       setCoachPayments(coach.id, { stripe_account_id: account, stripe_status: "pending" });
     }
-    const back = `${base}/admin/redesign/settings/invoicing?stripe=back`;
-    return { url: await onboardingLink(account, back, `${base}/admin/redesign/settings/invoicing?stripe=retry`) };
+    const back = `${base}/admin/redesign/settings?stripe=back#invoicing`;
+    return { url: await onboardingLink(account, back, `${base}/admin/redesign/settings?stripe=retry#invoicing`) };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Stripe did not answer. Try again." };
   }

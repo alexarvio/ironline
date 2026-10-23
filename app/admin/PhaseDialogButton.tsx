@@ -8,6 +8,7 @@ import Link from "next/link";
 import { addClientPhaseAction, removeClientPhaseAction, saveAndDeployPhaseNowFormAction, saveAndSchedulePhaseAction, schedulePhaseAction, setPhaseCoverAction, updateClientPhaseAction, uploadPhaseCoverAction } from "../lib/actions";
 import { defaultPhaseCover, PHASE_COVERS, PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../lib/phaseCovers";
 import type { ClientPhase, PhaseTrack } from "../lib/db";
+import { FEATURES } from "../lib/features";
 import PhaseCalendar, { isoWeek, mondayOf, monthOf, type CalMonth, type PlannedRange } from "./PhaseCalendar";
 import { phaseChrome, phaseStateOf, STATE_LABEL, TRACK_LABEL, TRACK_PALETTE, type PhaseState } from "./phaseChrome";
 
@@ -325,8 +326,9 @@ export function PhaseDialog({
             <input type="hidden" name="start" value={startWeek} />
             <input type="hidden" name="end" value={endWeek} />
             {program && weekDelta !== 0 && adjust && <input type="hidden" name="adjustProgram" value="1" />}
-            <input type="hidden" name="objectivesSent" value="1" />
-            {objectives.map((o, i) => o.trim() && <input key={i} type="hidden" name="objectives" value={o} />)}
+            {/* Phase goals off (23 Oct, Alex: To focus on replaces them): not sent, so the stored ones stay. */}
+            {FEATURES.phaseGoals && <input type="hidden" name="objectivesSent" value="1" />}
+            {FEATURES.phaseGoals && objectives.map((o, i) => o.trim() && <input key={i} type="hidden" name="objectives" value={o} />)}
             {!phase && track === "training" && <input type="hidden" name="programId" value={programChoice} />}
 
             {/* Only where the track is genuinely an open question: the Plan
@@ -463,7 +465,7 @@ export function PhaseDialog({
               </div>
             </div>
 
-            <PhaseObjectivesField value={objectives} onChange={setObjectives} />
+            {FEATURES.phaseGoals && <PhaseObjectivesField value={objectives} onChange={setObjectives} />}
             {phase && <PhaseCoverField phase={phase} track={track} />}
 
             {endLocked && <p className="ph-note">Its length follows the programme: add or remove weeks in Training.</p>}

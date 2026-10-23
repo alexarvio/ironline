@@ -27,7 +27,8 @@ const CH = { h: 220, l: 34, r: 10, t: 16, b: 26 };
 const dayMs = (d: string | null) => (d ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T00:00:00` : d).getTime() : NaN);
 const reps = (lo: number, hi: number) => (lo === hi ? `${lo}` : `${lo}–${hi}`);
 
-export type ProgressSession = Session & { gym: string | null };
+/** assisted and bodyKg: that session's, as the loader read them (23 Oct): its exercise and variation, the weight that day. */
+export type ProgressSession = Session & { gym: string | null; assisted?: boolean; bodyKg?: number | null };
 
 export default function ExerciseProgressDialog({
   exerciseName,
@@ -37,6 +38,7 @@ export default function ExerciseProgressDialog({
   sessions: all,
   today,
   lbs,
+  assisted: assistedRow,
   bodyKg,
   stepKg,
   onMessage,
@@ -52,7 +54,9 @@ export default function ExerciseProgressDialog({
   today: string;
   /** The coach reads weights in pounds. */
   lbs: boolean;
-  /** The client's body weight now: an assisted lift is judged by it less the help (23 Oct, Alex). */
+  /** An assisted lift, as the loader knows it (the exercise's name or its variation's); else by the name here. */
+  assisted?: boolean;
+  /** The client's body weight now: an assisted lift is judged by it less the help (23 Oct, Alex); a session's own day's first. */
   bodyKg: number | null;
   stepKg?: number;
   onMessage: (draft: string) => void;
@@ -60,7 +64,7 @@ export default function ExerciseProgressDialog({
 }) {
   const range = repRange(targets.reps);
   // An assisted lift's kg is help: less is stronger, so it is weighed by what was lifted (body weight less the help).
-  const assisted = isAssisted(exerciseName);
+  const assisted = assistedRow ?? isAssisted(exerciseName);
   // The gym: the home one, unless the latest session was elsewhere; the coach can switch.
   const latest = [...all].sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? 1 : -1))[0];
   const gymOptions = useMemo(() => {
@@ -74,8 +78,9 @@ export default function ExerciseProgressDialog({
   const since30 = new Date(Date.UTC(ty, tm - 1, td) - 30 * DAY).toISOString().slice(0, 10);
   const last30 = useMemo(() => atGym.filter((s) => (s.date ?? "") >= since30), [atGym, since30]);
   const [rangeKey, setRangeKey] = useState<"30" | "all">(last30.filter((s) => s.sets.length).length >= 3 ? "30" : "all");
-  const j30 = useMemo(() => judge(last30, (w) => liftedKg(w, assisted, bodyKg)), [last30, assisted, bodyKg]);
-  const jAll = useMemo(() => judge(atGym, (w) => liftedKg(w, assisted, bodyKg)), [atGym, assisted, bodyKg]);
+  // Each session weighed as the loader weighed it: that week's exercise assisted or not, the body weight that day.
+  const j30 = useMemo(() => judge(last30, (w, s) => liftedKg(w, s.assisted ?? assisted, s.bodyKg ?? bodyKg)), [last30, assisted, bodyKg]);
+  const jAll = useMemo(() => judge(atGym, (w, s) => liftedKg(w, s.assisted ?? assisted, s.bodyKg ?? bodyKg)), [atGym, assisted, bodyKg]);
   // 30 days | All time only while the two hold different sessions (no choice that changes nothing); else all time.
   const both = j30.sessions.length > 0 && j30.sessions.length < jAll.sessions.length;
   const judged = both && rangeKey === "30" ? j30 : jAll;

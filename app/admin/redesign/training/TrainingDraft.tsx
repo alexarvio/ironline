@@ -24,6 +24,10 @@ import Picker from "../Picker";
 import AskVideoDialog from "./AskVideoDialog";
 import SessionSubstitutesDialog from "./SessionSubstitutesDialog";
 import VariationDialog from "./VariationDialog";
+import { FEATURES } from "../../../lib/features";
+
+/** Variations on a session's exercise (15 Oct): off for now (23 Oct, Alex: a feature deactivated); its data and pop-up kept. */
+const VARIATIONS = FEATURES.variations;
 import DemoVideoDialog, { type CoachClip } from "./DemoVideoDialog";
 import ClientGymsDialog from "./ClientGymsDialog";
 import DeleteSessionDialog from "./DeleteSessionDialog";
@@ -79,7 +83,9 @@ export type DraftRow = {
   demoClients?: number;
   /** The coach keeping that demo off this prescription for this client. */
   demoHidden: boolean;
-  history: { week: number; label: string; target: number | null; targetReps: string; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; e1rm: number | null; gym: string | null; /** yyyy-mm-dd of the session (15 Oct). */ date: string | null; current: boolean }[];
+  history: { week: number; label: string; target: number | null; targetReps: string; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; e1rm: number | null; gym: string | null; /** yyyy-mm-dd of the session (15 Oct). */ date: string | null; /** That week assisted, and the body weight that day (23 Oct). */ assisted?: boolean; bodyKg?: number | null; current: boolean }[];
+  /** An assisted lift, by the exercise's name or its variation's (23 Oct). */
+  assisted?: boolean;
   /** What the client did instead, when they swapped the exercise. */
   swap: string | null;
   /** The swap in full: what, when, and the sets logged on it (kept out of this row's numbers). */
@@ -1437,8 +1443,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     <EyeIcon /> {r.demoHidden ? "Show the demo again" : `Hide the demo from ${firstName}`}
                                   </DropdownMenuItem>
                                 )}
-                                {/* Which of the exercise's variations (close grip…) this row asks for, from the Library; a new one can be made here too. */}
-                                {r.id > 0 &&
+                                {/* Which of the exercise's variations (close grip…) this row asks for, from the Library; a new one can be made here too.
+                                    Off for now (23 Oct, Alex: the feature is deactivated); VARIATIONS turns it back on. */}
+                                {VARIATIONS && r.id > 0 &&
                                   (() => {
                                     const variations = library.flatMap((g) => g.exercises).find((e) => e.id === r.exerciseId)?.variations ?? [];
                                     const current = variations.find((v) => v.id === r.variationId) ?? null;
@@ -1456,7 +1463,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   })()}
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "alternatives", rowId: r.id })}>
                                   <DumbbellIcon /> {(() => {
-                                    const n = r.alternatives.length || r.librarySubstitutes.filter((s) => !r.libraryHidden.includes(s.exerciseId)).length;
+                                    // The Library's substitutes only while that feature is on (23 Oct, Alex: none are preset yet).
+                                    const n = r.alternatives.length || (FEATURES.librarySubstitutes ? r.librarySubstitutes.filter((s) => !r.libraryHidden.includes(s.exerciseId)).length : 0);
                                     return n ? (
                                       <span>
                                         <SepJoin parts={["Substitutes", n, r.alternatives.length > 0 && "this session"]} />
@@ -1788,9 +1796,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 gyms={[...gyms].sort((a, b) => Number(b.home) - Number(a.home)).map((g) => g.name)}
                 sessions={row.history
                   .filter((h) => h.sets.some((x) => x.kg != null && x.reps != null))
-                  .map((h) => ({ date: h.date, planWeek: h.week, gym: h.gym, sets: h.sets.filter((x) => x.kg != null && x.reps != null).map((x) => ({ weight: x.kg!, reps: x.reps!, rpe: x.rpe })) }))}
+                  .map((h) => ({ date: h.date, planWeek: h.week, gym: h.gym, assisted: h.assisted, bodyKg: h.bodyKg, sets: h.sets.filter((x) => x.kg != null && x.reps != null).map((x) => ({ weight: x.kg!, reps: x.reps!, rpe: x.rpe })) }))}
                 today={today}
                 lbs={lbs}
+                assisted={row.assisted}
                 bodyKg={program.bodyKg}
                 onMessage={(draft) => {
                   close();

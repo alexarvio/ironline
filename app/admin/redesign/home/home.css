@@ -189,7 +189,8 @@
 .rh-details-face { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 999px; overflow: hidden; background: #eef0f3; font-size: 18px; font-weight: 600; color: #5b6474; }
 .rh-details-face img { width: 100%; height: 100%; object-fit: cover; }
 .rh-details-who { flex: 1; min-width: 0; }
-.rh-details-body { display: flex; flex-direction: column; gap: 20px; max-height: min(70vh, 640px); margin: 0 -20px; padding: 10px 20px 2px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+/* As tall as the screen allows round the card (its head and padding), so Save is in sight on a laptop as it opens. */
+.rh-details-body { display: flex; flex-direction: column; gap: 20px; max-height: min(100vh - 160px, 640px); margin: 0 -20px; padding: 10px 20px 2px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
 
 
 /* The card's edit pop-up, in the .dlh voice: a white head with the title and a round ✕, ink for the chosen and for Save. */
@@ -275,3 +276,12 @@
 .cc-hl .cc-plan { margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; text-align: left; }
 .cc-hl .cc-plan.add { color: #98a2b3; }
 .cc-hl .cc-plan.add:hover { color: #141a24; }
+
+/* Details on one screen, no scrolling (23 Oct, Alex): a wider card, the fields three across. Name | Birthdate | Gender,
+   Height | Phone | Email, the Address over two | Postcode, City | Country; Coaching's Plan | Started under them. */
+.dlh.dlh.rh-details { width: min(840px, 100vw - 32px); }
+.cc-hl.cc-inline .nc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 20px; }
+.cc-hl.cc-inline .nc-grid > .nc-row.full { grid-column: span 1; }
+.cc-hl.cc-inline .nc-grid > .nc-row.full:has(input[name="address"]) { grid-column: span 2; }
+@container (max-width: 600px) { .cc-hl.cc-inline .nc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 680px) { .cc-hl.cc-inline .nc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

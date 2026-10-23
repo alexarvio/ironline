@@ -11,16 +11,18 @@ import type { CoachBusiness, CoachInvoicing } from "../../../lib/db";
 import { ArrowRightIcon } from "../../../components/icons";
 import { COUNTRIES, CURRENCIES, countryCodeFromName, countryOf, currencyName, invoicingFor } from "../../../lib/countries";
 import Picker from "../Picker";
-import { SepJoin } from "../Sep";
-import SaveBar from "./SaveBar";
+import { Sep, SepJoin } from "../Sep";
+import { useSaveSlot, useUnsaved } from "./SaveHost";
+import { goToSetting } from "./settingsScroll";
 import { Dialog } from "../../../components/ui/dialog";
 import { ConfirmDialog } from "../training/TrainingDraft";
 
-// Settings' sections on the admin rules (22 Oct; docs/DESIGN-RULES-ADMIN.md): each section's title on the page over
-// one white hairline card, fields as small caps labels over clean lines (.dlh-label, .dlh-line), a choice of two as
-// the capsule, lists as the floating Picker. A form that saves on Save shows the bar at its foot once something is
-// changed (SaveBar). Each form is keyed on what was saved (the page does it), so a save that comes back unchanged
-// never throws away what is being typed.
+// Settings' sections on the admin rules (22 Oct; docs/DESIGN-RULES-ADMIN.md), each a folding section of the one
+// Settings page (23 Oct, Alex; SettingsBoard.tsx): its parts as small caps labels over one white hairline card each,
+// fields as small caps labels over clean lines (.dlh-label, .dlh-line), a choice of two as the capsule, lists as the
+// floating Picker. A form that saves on Save puts its changes on the page's one bar (useSaveSlot, SaveHost.tsx), and
+// keeps them while its section is folded. Each form is keyed on what was saved (the page does it), so a save that
+// comes back unchanged never throws away what is being typed.
 
 /** A label over its field. `group` for a field that is not one input (a capsule, a list), so a click on the label
  *  never presses the first of its buttons. */
@@ -36,14 +38,19 @@ function Field({ label, fact, wide = false, group = false, error, children }: { 
   return group ? <div className={cls}>{inner}</div> : <label className={cls}>{inner}</label>;
 }
 
-/** A section: its title (and one quiet fact) on the page, its controls on the right, the content in one card. */
+/** A part of a section: its small caps label (and one quiet fact) over its card, its controls on the right. */
 function Section({ title, fact, actions, children }: { title: ReactNode; fact?: ReactNode; actions?: ReactNode; children?: ReactNode }) {
   return (
-    <section className="rls-section">
+    <section className="rls-section rst-sub">
       <div className="trn-weekhead">
         <div>
-          <h2>{title}</h2>
-          {fact && <span>{fact}</span>}
+          <h3>{title}</h3>
+          {fact && (
+            <>
+              <Sep />
+              <span>{fact}</span>
+            </>
+          )}
         </div>
         {actions && <div className="trn-weekhead-actions">{actions}</div>}
       </div>
@@ -52,26 +59,15 @@ function Section({ title, fact, actions, children }: { title: ReactNode; fact?: 
   );
 }
 
-/** A form's working copy, what it started from, and Save / Cancel. */
-function useDraft<T extends Record<string, unknown>>(initial: T, save: (v: T) => Promise<unknown>, said: string) {
-  const router = useRouter();
+/** A form's working copy, what it started from, and Save / Cancel for the page's bar (which says saved or not, and
+ *  draws the page again once everything changed is in). */
+function useDraft<T extends Record<string, unknown>>(initial: T, save: (v: T) => Promise<unknown>) {
   const [v, setV] = useState<T>(initial);
-  const [busy, start] = useTransition();
   const dirty = JSON.stringify(v) !== JSON.stringify(initial);
   const set = <K extends keyof T>(k: K, val: T[K]) => setV((o) => ({ ...o, [k]: val }));
-  const commit = () =>
-    start(async () => {
-      try {
-        await save(v);
-        router.refresh();
-        toast.success(said);
-      } catch {
-        toast.error("Couldn't save", { description: "Check your connection and try again." });
-      }
-    });
   // How many fields differ from what is saved, for the bar's count.
   const count = Object.keys(v).filter((k) => JSON.stringify(v[k]) !== JSON.stringify(initial[k])).length;
-  return { v, set, dirty, count, busy, commit, discard: () => setV(initial) };
+  return { v, set, dirty, count, commit: async () => void (await save(v)), discard: () => setV(initial) };
 }
 
 // ---- Account & security
@@ -148,7 +144,8 @@ export function AccountSettings({ email }: { email: string }) {
 const OTHER = "other";
 
 export function BusinessSettings({ initial }: { initial: CoachBusiness }) {
-  const d = useDraft<CoachBusiness>({ ...initial, country_code: initial.country_code ?? countryCodeFromName(initial.country) }, saveCoachBusinessAction, "Business details saved");
+  const d = useDraft<CoachBusiness>({ ...initial, country_code: initial.country_code ?? countryCodeFromName(initial.country) }, saveCoachBusinessAction);
+  useSaveSlot("business", { dirty: d.dirty, count: d.count, save: d.commit, cancel: d.discard });
   const country = countryOf(d.v.country_code);
   const text = (k: keyof CoachBusiness, label: string, opts: { wide?: boolean; placeholder?: string; type?: string } = {}) => (
     <Field label={label} wide={opts.wide}>
@@ -205,8 +202,6 @@ export function BusinessSettings({ initial }: { initial: CoachBusiness }) {
           </div>
         </div>
       </Section>
-
-      {d.dirty && <SaveBar count={d.count} busy={d.busy} onSave={d.commit} onCancel={d.discard} />}
     </>
   );
 }
@@ -221,12 +216,20 @@ function OnlinePayments({ state }: { state: PaymentsState }) {
   const [busy, start] = useTransition();
   const [error, setError] = useState("");
   const [disconnecting, setDisconnecting] = useState(false);
-  const go = () =>
+  // Stripe takes the page away, and makes the account from what is saved (the country): unsaved changes go first,
+  // said until they are saved or put back.
+  const unsaved = useUnsaved().length > 0;
+  const [saveFirst, setSaveFirst] = useState(false);
+  if (saveFirst && !unsaved) setSaveFirst(false);
+  const go = () => {
+    if (unsaved) return setSaveFirst(true);
     start(async () => {
       const r = await connectStripeAction();
       if (r.url) window.location.href = r.url;
       else setError(r.error ?? "Stripe did not answer. Try again.");
     });
+  };
+  const said = saveFirst ? "Save your changes first." : error;
   const pill =
     state.status === "active" ? (
       <span className="trn-state good rst-state">Connected</span>
@@ -256,7 +259,7 @@ function OnlinePayments({ state }: { state: PaymentsState }) {
             </button>
           )}
         </div>
-        {error && <p className="rst-err rst-err-row">{error}</p>}
+        {said && <p className="rst-err rst-err-row">{said}</p>}
       </div>
       {/* Nothing destructive on one click (rule 4): Disconnect asks first. */}
       <Dialog open={disconnecting} onOpenChange={setDisconnecting}>
@@ -284,7 +287,7 @@ function OnlinePayments({ state }: { state: PaymentsState }) {
 export function InvoicingSettings({ initial, business, payments }: { initial: CoachInvoicing; business: CoachBusiness; payments: PaymentsState }) {
   const eff = invoicingFor(business, initial);
   const country = eff.country;
-  const d = useDraft<CoachInvoicing>({ currency: eff.currency, vat_rate: eff.rate, prices_include_vat: eff.pricesIncludeVat, payment_terms_days: eff.termsDays, number_prefix: "", next_number: 1, ...initial }, saveCoachInvoicingAction, "Invoicing saved");
+  const d = useDraft<CoachInvoicing>({ currency: eff.currency, vat_rate: eff.rate, prices_include_vat: eff.pricesIncludeVat, payment_terms_days: eff.termsDays, number_prefix: "", next_number: 1, ...initial }, saveCoachInvoicingAction);
   const num = (k: "vat_rate" | "payment_terms_days" | "next_number", s: string) => d.set(k, s === "" ? undefined : Number(s));
   const text = (k: keyof CoachInvoicing, label: string, opts: { wide?: boolean; placeholder?: string; upper?: boolean; error?: string } = {}) => (
     <Field label={label} wide={opts.wide} error={opts.error}>
@@ -299,6 +302,8 @@ export function InvoicingSettings({ initial, business, payments }: { initial: Co
   const currencies = CURRENCIES.includes(d.v.currency ?? "") ? CURRENCIES : [d.v.currency ?? "EUR", ...CURRENCIES];
   // The country's standard rate, as a quiet fact by the field (not in the US, where coaching is usually untaxed).
   const standard = country.code && country.code !== "US" ? `standard ${country.rate}%` : undefined;
+  // A bad IBAN holds Save back, and the bar says why (its field may be folded away).
+  useSaveSlot("invoicing", { dirty: d.dirty, count: d.count, blocked: ibanBad, problem: ibanBad ? "IBAN in Invoicing & payments isn't valid" : null, save: d.commit, cancel: d.discard });
   return (
     <>
       <Section title={`Prices and ${tax}`} fact={country.code ? country.name : undefined}>
@@ -351,9 +356,16 @@ export function InvoicingSettings({ initial, business, payments }: { initial: Co
         fact={country.code ? undefined : "No country set"}
         actions={
           !country.code && (
-            <Link href="/admin/redesign/settings/business" className="trn-pill rst-pill">
+            // Business details is a section of the same page: the pill opens it (this one folds, what is typed kept).
+            <a
+              href="#business"
+              className="trn-pill rst-pill"
+              onClick={(e) => {
+                if (goToSetting("business")) e.preventDefault();
+              }}
+            >
               Set your country
-            </Link>
+            </a>
           )
         }
       >
@@ -406,9 +418,6 @@ export function InvoicingSettings({ initial, business, payments }: { initial: Co
           </div>
         </div>
       </Section>
-
-      {/* A bad IBAN is said once, by its field; the bar only holds Save back. */}
-      {d.dirty && <SaveBar count={d.count} busy={d.busy} onSave={d.commit} onCancel={d.discard} problem={null} blocked={ibanBad} />}
     </>
   );
 }

@@ -329,8 +329,8 @@ function CheckInFeed({ days, onEdit, focus = null }: { days: CheckInFeedDay[]; o
               <div className={`ci-day-body${isOpen ? " open" : ""}`}>
                 <div className="ci-day-clip">
                   <div className="ci-day-list">
-                    {d.items.map((it) => (
-                      <div key={it.name} className="ci-day-row">
+                    {d.items.map((it, i) => (
+                      <div key={`${it.name}-${i}`} className="ci-day-row">
                         <span>{it.name}</span>
                         <b>{it.value}</b>
                       </div>

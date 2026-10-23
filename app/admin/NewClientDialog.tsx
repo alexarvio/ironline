@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { checkLoginEmailAction, createClientWithLoginAction } from "../lib/actions";
 import { ageFrom, DEFAULT_DIAL, DIAL_CODES, GenderPills, InfoRow, PhoneInput, Suffixed } from "./InfoRow";
+import AddressFields from "./AddressFields";
 import DatePick from "./redesign/DatePick";
 import Picker from "./redesign/Picker";
 
@@ -37,10 +38,16 @@ export type Draft = {
   email: string;
   phoneCode: string;
   phone: string;
+  /** The street and number; the rest of the address in parts (23 Oct, Alex: for invoicing), typed in the hairline look. */
   address: string;
+  postcode: string;
+  city: string;
+  region: string;
+  countryCode: string;
+  country: string;
 };
 
-const EMPTY: Draft = { firstName: "", lastName: "", birthdate: "", gender: "", heightCm: "", startingWeightKg: "", email: "", phoneCode: DEFAULT_DIAL, phone: "", address: "" };
+const EMPTY: Draft = { firstName: "", lastName: "", birthdate: "", gender: "", heightCm: "", startingWeightKg: "", email: "", phoneCode: DEFAULT_DIAL, phone: "", address: "", postcode: "", city: "", region: "", countryCode: "", country: "" };
 
 /** The draft, what is still missing, the age and the email check, in one place. */
 function useNewClientForm(start: Partial<Draft> | undefined, requireEmail: boolean) {
@@ -49,6 +56,8 @@ function useNewClientForm(start: Partial<Draft> | undefined, requireEmail: boole
   const [checked, setChecked] = useState<{ email: string; taken: boolean } | null>(null);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
+  /** Several at once: the address's parts, as AddressFields gives them. */
+  const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
   const email = draft.email.trim().toLowerCase();
   const emailTaken = !!checked && checked.email === email && checked.taken;
   const checkEmail = async () => {
@@ -66,7 +75,7 @@ function useNewClientForm(start: Partial<Draft> | undefined, requireEmail: boole
   const emailBad = !!email && !EMAIL_RE.test(email);
   const step1Ok = missing.length === 0 && !emailBad && !emailTaken;
   const name = `${draft.firstName.trim()} ${draft.lastName.trim()}`.trim();
-  return { draft, set, missing, emailBad, emailTaken, checkEmail, step1Ok, name, age: ageFrom(draft.birthdate) };
+  return { draft, set, patch, missing, emailBad, emailTaken, checkEmail, step1Ok, name, age: ageFrom(draft.birthdate) };
 }
 
 /** The onboarding board's copy: opens on a step with a draft filled in, and never creates anyone. */
@@ -99,7 +108,8 @@ export default function NewClientDialog({
   const [saving, start] = useTransition();
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    // An open list (the dial code, the country) takes its Escape first and marks it handled: only the list closes.
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !e.defaultPrevented && onClose();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
@@ -239,9 +249,18 @@ export default function NewClientDialog({
                   <PhoneInput code={draft.phoneCode} number={draft.phone} onCode={(v) => set("phoneCode", v)} onNumber={(v) => set("phone", v)} />
                 )}
               </InfoRow>
-              <InfoRow label="Address">
-                <input className="nc-input" value={draft.address} onChange={(e) => set("address", e.target.value)} placeholder="Street, city" autoComplete="off" />
-              </InfoRow>
+              {hl ? (
+                // The address in its parts (23 Oct, Alex: for invoicing), as Details has it.
+                <AddressFields
+                  value={{ address: draft.address, postcode: draft.postcode, city: draft.city, region: draft.region, country_code: draft.countryCode, country: draft.country }}
+                  onChange={(a) => form.patch({ address: a.address, postcode: a.postcode, city: a.city, region: a.region, countryCode: a.country_code, country: a.country })}
+                  samples
+                />
+              ) : (
+                <InfoRow label="Address">
+                  <input className="nc-input" value={draft.address} onChange={(e) => set("address", e.target.value)} placeholder="Street, city" autoComplete="off" />
+                </InfoRow>
+              )}
             </div>
           ) : hl ? (
             // The fact alone, on a clean line as the rows of step 1; no explanation (design rules 1).

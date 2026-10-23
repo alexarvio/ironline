@@ -59,10 +59,11 @@ export type Judged = {
   change: number | null;
 };
 
-/** The verdict for the sessions given (already filtered to the range and gym). */
-export function judge(all: Session[], load: LoadOf = asLogged): Judged {
+/** The verdict for the sessions given (already filtered to the range and gym). The load is told its session, so an
+    assisted lift can weigh that day's body weight (23 Oct). */
+export function judge<S extends Session>(all: S[], load: (kg: number, session: S) => number | null = asLogged): Judged {
   const sessions = all
-    .map((s) => ({ ...s, best: bestSet(s.sets, load)! }))
+    .map((s) => ({ ...s, best: bestSet(s.sets, (kg) => load(kg, s))! }))
     .filter((s) => s.best)
     .sort((a, b) => (a.date ?? "") < (b.date ?? "") ? -1 : (a.date ?? "") > (b.date ?? "") ? 1 : a.planWeek - b.planWeek);
   if (sessions.length === 0) return { verdict: "none", sessions, bestAt: -1, change: null };

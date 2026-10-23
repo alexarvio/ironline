@@ -10,9 +10,12 @@ import { SepJoin } from "../Sep";
 import { dayMonth } from "../../../lib/dayMonth";
 import { ConfirmDialog } from "../training/TrainingDraft";
 import { addCoach, approveSignUp, declineSignUp, removeCoach, resetCoachPassword, type CoachOutcome } from "./actions";
+import type { SupportInboxRow } from "../../../lib/support";
+import SupportInbox from "./SupportInbox";
 
 // The owner's Coaches (22 Oct, Alex: the old /admin?view=coaches in the new style, root "rd trn rls rco"): Training's
-// bare header with Add coach as a white pill; the sign-ups waiting to be let in, then every coach account, each a row
+// bare header with Add coach as a white pill; the sign-ups waiting to be let in, the coaches' Support threads
+// (SupportInbox, 23 Oct), then every coach account, each a row
 // in one hairline card: the name semi-bold, the email grey, the clients, when one of them last logged something, the
 // password as a state pill, and the owner's actions in words on hover (Remove and Decline ask first). Add coach and
 // Reset password are .dlh pop-ups on clean lines. Never any client's name or data. Ink, never navy; 500 and 600.
@@ -44,7 +47,7 @@ async function settle(p: Promise<CoachOutcome>): Promise<CoachOutcome> {
 const accountGrid = { gridTemplateColumns: "minmax(0, 1fr) 64px 132px 104px 196px", columnGap: 16 } as const;
 const waitGrid = { gridTemplateColumns: "minmax(0, 1fr) 196px", columnGap: 16 } as const;
 
-export default function CoachesDraft({ accounts, waiting }: { accounts: CoachRow[]; waiting: SignUpRow[] }) {
+export default function CoachesDraft({ accounts, waiting, support }: { accounts: CoachRow[]; waiting: SignUpRow[]; /** The coaches' Support threads, newest first (SupportInbox). */ support: SupportInboxRow[] }) {
   const router = useRouter();
   const [, start] = useTransition();
   const [busy, setBusy] = useState<number | null>(null);
@@ -114,6 +117,9 @@ export default function CoachesDraft({ accounts, waiting }: { accounts: CoachRow
           </div>
         </section>
       )}
+
+      {/* ---- What the coaches wrote from Settings' Support: a coach a row, a thread opening under it. */}
+      <SupportInbox initial={support} />
 
       {/* ---- Every coach account, oldest first. */}
       <section className="rls-section">

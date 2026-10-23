@@ -16,13 +16,15 @@ import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
 import type { LinkView } from "../lib/messageLinks";
 import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
+import FocusList from "./home/FocusList";
+import type { HomeFocus } from "../lib/focus";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
 // breaks the dev server at runtime). All data comes in as plain props,
 // computed server-side in page.tsx. The types below mirror the ones there.
 //
-// Home, top to bottom: the greeting, the coach's plan as phase cards (each
+// Home, top to bottom: the greeting, To focus on while the coach has set goals, the coach's plan as phase cards (each
 // with its one thing to do), the check-in fold, the latest thing the coach
 // did, and the next call when one is booked. Every block is either
 // due today or the client's own; coach content shows only when it exists,
@@ -69,7 +71,8 @@ export type MeetingRecap = { dateLabel: string; title: string; text: string } | 
 
 
 export type LatestActivity = {
-  kind: "message" | "comment" | "video" | "deploy" | "goal" | "meeting" | "report" | "welcome" | "invoice";
+  /** "focus": the coach set what to focus on (23 Oct); it opens Home at its top, where the list is. */
+  kind: "message" | "comment" | "video" | "deploy" | "goal" | "meeting" | "report" | "welcome" | "invoice" | "focus";
   track?: "training" | "nutrition" | "lifestyle";
   /** For a comment: what it was on. */
   context?: "training" | "nutrition" | "checkin" | "photos";
@@ -115,7 +118,10 @@ export default function HomeHub({
   planGap = null,
   clientId = 0,
   cardCovers = {},
+  focus = null,
 }: {
+  /** To focus on (23 Oct, Alex): the coach's goals until the next call, first under the greeting; null, none. */
+  focus?: HomeFocus | null;
   /** Whose Home this is; the redesign mock-ups pass none. */
   clientId?: number;
   /** The client's own card pictures (12 Oct), a track at a time. */
@@ -179,6 +185,8 @@ export default function HomeHub({
     <div className="hm">
       <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
       <div className="hm-body">
+        {/* To focus on (23 Oct, Alex): the first thing they see, above Today and the cards, while the coach has set goals. */}
+        {focus && focus.goals.length > 0 && <FocusList focus={focus} coach={coach} today={today} />}
         {/* The spine (8 Oct): Today, Your plan, then the coach, so Home is never
             empty. The cards below say what is due; Today speaks only when
             nothing is, so the top of the page still says something true. */}

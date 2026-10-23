@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import RailTour from "./RailTour";
 import { AccountIcon, BusinessIcon, CalendarIcon, ChevronDownIcon, DumbbellIcon, FeedIcon, PhasesIcon, PlusIcon, SearchIcon } from "../../components/icons";
-import { SETTINGS, type SettingsKey } from "./settingsNav";
+import { settingsFor } from "./settingsNav";
+import { goToSetting, useOpenSetting } from "./settings/settingsScroll";
 import { logoutAction } from "../../lib/auth-actions";
 import NewClientDialog from "../NewClientDialog";
 import type { RailClient, RailData } from "./loaders";
@@ -31,7 +32,7 @@ const REDRAWN: Partial<Record<string, string>> = { feed: "/admin/redesign/feed",
 const COACHES = "/admin/redesign/coaches";
 
 
-export default function RedesignRail({ rail, clientId, settings }: { rail: RailData; clientId: number; /** The settings page open, if any: the rail opens on Settings. */ settings?: SettingsKey }) {
+export default function RedesignRail({ rail, clientId, settings = false }: { rail: RailData; clientId: number; /** On the Settings page: the rail opens on Settings and marks the section open. */ settings?: boolean }) {
   // This browser's timezone, for the server: meetings read in it (lib/viewZone.ts).
   // New or changed (a trip): the page is drawn again in it.
   const router = useRouter();
@@ -45,7 +46,9 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
       router.refresh();
     } catch {}
   }, [router]);
-  const [settingsOpen, setSettingsOpen] = useState(!!settings);
+  const [settingsOpen, setSettingsOpen] = useState(settings);
+  // Settings is one page of folding sections (23 Oct, Alex): its rows open theirs, the open one marked.
+  const openSetting = useOpenSetting();
   // The view you are on (Feed, Calendar…) is marked, as the client you are on is.
   const path = usePathname();
   // "Take a tour" from the welcome steps.
@@ -105,6 +108,8 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
           <Link href={COACHES} className={`rr-navrow${path?.startsWith(COACHES) ? " active" : ""}`} aria-current={path?.startsWith(COACHES) ? "page" : undefined}>
             <AccountIcon />
             <span>Coaches</span>
+            {/* A coach's support line the owner hasn't read: a rust dot (the inbox is on Coaches). */}
+            {rail.supportUnread > 0 && <i className="rd-due" role="img" aria-label="Unread support" title="Unread support" />}
           </Link>
         )}
       </nav>
@@ -189,10 +194,22 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
       <div className={`rr-settings${settingsOpen ? " open" : ""}`} aria-hidden={!settingsOpen} inert={!settingsOpen}>
         <span className="rr-label">Settings</span>
         <nav className="rr-settings-list" aria-label="Settings">
-          {SETTINGS.map(({ key, label, href, Icon }) => (
-            <Link key={key} href={href} className={`rr-navrow${settings === key ? " active" : ""}`} aria-current={settings === key ? "page" : undefined}>
+          {settingsFor(rail.isOwner).map(({ key, label, href, Icon }) => (
+            <Link
+              key={key}
+              href={href}
+              className={`rr-navrow${openSetting === key ? " active" : ""}`}
+              aria-current={openSetting === key ? "location" : undefined}
+              onClick={(e) => {
+                // On the page already: the section opens there (the open one folds); a new tab or window goes the usual way.
+                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                if (goToSetting(key)) e.preventDefault();
+              }}
+            >
               <Icon />
               <span>{label}</span>
+              {/* The company's line the coach hasn't read: a rust dot. */}
+              {key === "support" && rail.supportUnread > 0 && <i className="rd-due" role="img" aria-label="Unread" title="Unread" />}
             </Link>
           ))}
         </nav>

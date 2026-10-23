@@ -7,6 +7,10 @@ import FitTitle from "./FitTitle";
 import CardPictureSheet, { useLongPress, type CardCovers } from "./CardPictureSheet";
 import PictureCycle from "./PictureCycle";
 import CheckInDialog, { type CheckInForm } from "./CheckInDialog";
+import { FEATURES } from "../lib/features";
+
+/** The coach's goals for a phase, none while phase goals are off (23 Oct, Alex: To focus on replaces them). */
+const goalsOf = (ph: HomePhase) => (FEATURES.phaseGoals ? ph.objectives : []);
 
 // Home's "Your plan": the live phase on each track, training → nutrition →
 // lifestyle. A carousel of picture cards (tap one to open its tab), one card
@@ -458,7 +462,7 @@ export function PhaseCard({ ph, pictures, eager, coachName, today, nextSession, 
         )}
         {/* The coach's objectives, folded to one row so every card
             opens the same size, whatever the coach has set. */}
-        {ph.objectives.length > 0 && (
+        {goalsOf(ph).length > 0 && (
           <div className="pc-obj">
             <button
               type="button"
@@ -479,7 +483,7 @@ export function PhaseCard({ ph, pictures, eager, coachName, today, nextSession, 
             <div className={`pc-obj-body${objOpen ? " open" : ""}`} aria-hidden={!objOpen}>
               <div className="pc-obj-clip">
                 <ol className="pc-obj-list">
-                  {ph.objectives.slice(0, 3).map((o, j) => (
+                  {goalsOf(ph).slice(0, 3).map((o, j) => (
                     <li key={j}>
                       <span className="pc-obj-n">{j + 1}</span>
                       <span className="pc-obj-text">{o}</span>
@@ -581,11 +585,11 @@ function PhaseCardStack({ ph, coachName, today, defaultOpen }: { ph: HomePhase; 
       <div id={bodyId} className={`pc-sbody-wrap${open ? " open" : ""}`}>
         <div className="pc-sbody-clip">
           <div className="pc-sbody">
-            {ph.objectives.length > 0 && (
+            {goalsOf(ph).length > 0 && (
               <>
                 <span className="pc-obj-label">Objectives from {coachName}</span>
                 <ol className="pc-obj-list">
-                  {ph.objectives.map((o, j) => (
+                  {goalsOf(ph).map((o, j) => (
                     <li key={j}>
                       <span className="pc-obj-n">{j + 1}</span>
                       <span className="pc-obj-text">{o}</span>

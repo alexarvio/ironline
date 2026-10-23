@@ -43,9 +43,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
       </div>
       {missing.length > 0 && !v.frozen && (
         <p className="ivp-missing">
-          Missing from Settings: {missing.join(", ")}. <Link href="/admin/redesign/settings/business">Business details</Link>
+          Missing from Settings: {missing.join(", ")}. <Link href="/admin/redesign/settings#business">Business details</Link>
           <Sep />
-          <Link href="/admin/redesign/settings/invoicing">Invoicing</Link>
+          <Link href="/admin/redesign/settings#invoicing">Invoicing</Link>
         </p>
       )}
       <InvoiceSheet v={v} />

@@ -14,7 +14,8 @@ import {
   getProgramCurrentWeekIndex,
   getWeek,
   getWeightSeriesAll,
-  bodyWeightKg,
+  bodyWeightOn,
+  bodyWeightReadings,
   invoiceRepeatViews,
   isSessionComplete,
   listMeetings,
@@ -207,7 +208,8 @@ function context(clientId: number, today: string): Ctx {
   const logsByAssignment = new Map<number, SetLogRow[]>();
   const sets: LoggedSet[] = [];
   const perDay = new Map<string, { sets: PerGroup; volume: PerGroup }>();
-  const bodyKg = bodyWeightKg(clientId);
+  // An assisted set weighs the body weight of its own day less the help (23 Oct, Alex).
+  const bodyOn = bodyWeightOn(clientId);
   for (const l of data.set_logs) {
     const a = assignments.get(l.workout_assignment_id);
     if (!a) continue;
@@ -218,9 +220,9 @@ function context(clientId: number, today: string): Ctx {
     const reps = typeof l.reps === "number" && Number.isFinite(l.reps) ? l.reps : null;
     const counts = (reps ?? 0) > 0 || (weight ?? 0) > 0;
     const assisted = doneAssisted(a);
-    const lifted = weight == null ? null : liftedKg(weight, assisted, bodyKg);
-    const volume = lifted != null && reps != null && lifted > 0 && reps > 0 ? lifted * reps : 0;
     const day = stampDay(l.logged_at ?? "");
+    const lifted = weight == null ? null : liftedKg(weight, assisted, assisted ? bodyOn(day) : null);
+    const volume = lifted != null && reps != null && lifted > 0 && reps > 0 ? lifted * reps : 0;
     const group = doneGroup(a);
     sets.push({ assignmentId: a.id, day, ms: stampMs(l.logged_at), group, exerciseKey: doneKey(a), assisted, weight: lifted, reps, counts, volume });
     if (group && counts) {
@@ -253,35 +255,15 @@ function context(clientId: number, today: string): Ctx {
     sets,
     perDay,
     weights,
-    weightStamps: weightStampsOf(data, clientId),
+    weightStamps: weightStampsOf(clientId),
     fedIds: new Set(fed.map((m) => m.id)),
     fedNames: new Set(fed.map((m) => m.name)),
   };
 }
 
-/** When each weight reading was saved, from the same place getWeightSeriesAll reads the weight: the Weight measurement
-    field if there is one, else the Weight metric (daily first, then weekly, then monthly). */
-function weightStampsOf(data: Data, clientId: number): Map<string, number> {
-  const out = new Map<string, number>();
-  const field = data.measurement_fields
-    .filter((f) => f.client_id === clientId)
-    .sort((a, b) => a.order_index - b.order_index)
-    .find((f) => f.name.toLowerCase().includes("weight"));
-  if (field) {
-    for (const v of data.measurement_values) if (v.field_id === field.id && v.value != null) out.set(v.date.slice(0, 10), stampMs(v.logged_at));
-    return out;
-  }
-  const rank: Record<string, number> = { daily: 0, weekly: 1, monthly: 2 };
-  const def = data.metric_definitions
-    .filter((m) => m.client_id === clientId && m.name.toLowerCase().includes("weight"))
-    .sort((a, b) => (rank[a.frequency] ?? 9) - (rank[b.frequency] ?? 9))[0];
-  if (!def) return out;
-  for (const e of data.metric_entries) {
-    if (e.metric_definition_id !== def.id || e.value == null) continue;
-    const day = readingDay(String(e.period ?? ""));
-    if (day) out.set(day, stampMs(e.logged_at));
-  }
-  return out;
+/** When each weight reading was saved, by its day: the same readings getWeightSeriesAll reads (bodyWeightReadings, 23 Oct). */
+function weightStampsOf(clientId: number): Map<string, number> {
+  return new Map(bodyWeightReadings(clientId).map((r) => [r.date, stampMs(r.at)] as const));
 }
 
 /** A part that fails reads as empty, never the whole board. */

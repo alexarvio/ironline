@@ -1,6 +1,110 @@
-import { redirect } from "next/navigation";
+import { isOwner, requireCoach } from "../../../lib/auth";
+import { getCoachProfileView, getCoachSettings, listCoachAccounts } from "../../../lib/queries";
+import { getData } from "../../../lib/db";
+import { COUNTRIES } from "../../../lib/countries";
+import { LEGAL } from "../../../lib/legal";
+import { paymentsState, refreshCoachStripe, type PaymentsState } from "../../../lib/payments";
+import { dayMonth } from "../../../lib/dayMonth";
+import { loadSupportSection } from "../../../lib/support";
+import { loadRail } from "../loaders";
+import RedesignRail from "../RedesignRail";
+import { AccountSettings, BusinessSettings, InvoicingSettings, PrivacySettings } from "./SettingsForms";
+import SupportSection from "./SupportSection";
+import ProfileEditor from "../profile/ProfileEditor";
+import SettingsBoard, { type SettingsSection } from "./SettingsBoard";
+import "../../../components/ui/ui.css";
+import "../training/draft.css";
+import "../training/trn.css";
+import "../measurements/measurements.css";
+import "../rail.css";
+import "./settings.css";
+import "../profile/profile.css";
 
-// Settings opens on the first of its own pages.
-export default function SettingsIndex() {
-  redirect("/admin/redesign/settings/account");
+// Settings in the redesign, opened from the coach at the foot of the rail: one page of folding sections, one open at
+// a time (23 Oct, Alex), all folded at first (SettingsBoard). Profile (the form and the client's view beside it; the
+// owner opens any coach's with ?coachId=), Account & security, Business details, Invoicing & payments, Privacy &
+// legal, and for a coach (not the owner) Support. One bar at the foot saves every section changed (SaveHost). #<key>
+// opens a section, and the rail's Settings rows open theirs. The old addresses redirect here (settings/[section],
+// /admin/redesign/profile).
+//   /admin/redesign/settings#profile | account | business | invoicing | privacy | support
+export const dynamic = "force-dynamic";
+
+/** When Stripe was last asked about a coach's unfinished account (the page's own memory, per server). */
+const stripeAsked = new Map<number, number>();
+const STRIPE_ASK_MS = 60_000;
+
+/** Where a coach's Stripe account stands: asked of Stripe when just back from it, and while unfinished once a minute
+    at most (every save draws this page again); else what is known. */
+async function stripeState(coachId: number, back: boolean): Promise<PaymentsState> {
+  const known = paymentsState(coachId);
+  const now = Date.now();
+  if (!back && (known.status !== "pending" || now - (stripeAsked.get(coachId) ?? 0) < STRIPE_ASK_MS)) return known;
+  stripeAsked.set(coachId, now);
+  return refreshCoachStripe(coachId);
+}
+
+const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+/** "25 September 2026" (lib/legal.ts) as the admin writes a date, 25/9 (dayMonth); as it is when it won't read. */
+function legalDate(words: string): string {
+  const m = /^(\d{1,2}) ([A-Za-z]+) (\d{4})$/.exec(words.trim());
+  const month = m ? MONTHS.indexOf(m[2].toLowerCase()) : -1;
+  return m && month >= 0 ? dayMonth(new Date(Number(m[3]), month, Number(m[1]))) : words;
+}
+
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ coachId?: string; stripe?: string }> }) {
+  const coach = await requireCoach();
+  const params = await searchParams;
+
+  // Profile: the coach's own, or for the owner any coach's (?coachId=).
+  const owner = isOwner(coach);
+  const asked = Number(params.coachId);
+  const coachId = owner && Number.isInteger(asked) && asked > 0 && getCoachProfileView(asked) ? asked : coach.id;
+  const profile = getCoachProfileView(coachId);
+  const coaches = owner ? listCoachAccounts().map((c) => ({ id: c.id, email: c.email })) : [];
+  // Your details: the account basics, beside the public profile.
+  const contact = getCoachSettings(coachId).contact ?? {};
+  const details = {
+    email: getData().users.find((u) => u.id === coachId)?.email ?? "",
+    phoneCode: contact.phone_code ?? "",
+    phone: contact.phone ?? "",
+    address: contact.address ?? "",
+    postcode: contact.postcode ?? "",
+    city: contact.city ?? "",
+    countryCode: contact.country_code ?? "",
+  };
+  const countries = COUNTRIES.map((c) => ({ code: c.code, name: c.name }));
+
+  // Back from Stripe (?stripe=back, which the page then drops from its address), or still unfinished.
+  const payments = await stripeState(coach.id, !!params.stripe);
+  const settings = getCoachSettings(coach.id);
+  const business = settings.business ?? {};
+  const invoicing = settings.invoicing ?? {};
+  const support = loadSupportSection(coach);
+
+  // In the rail's order, a section a line (its label from settingsNav's SETTINGS unless given; no body, left out).
+  const sections: SettingsSection[] = [
+    {
+      key: "profile",
+      // The owner on another coach's: whose it is.
+      label: profile && coachId !== coach.id ? `${profile.displayName}'s profile` : undefined,
+      tag: profile && <span className={`trn-state${profile.published ? " good" : ""}`}>{profile.published ? "Published" : "Not published"}</span>,
+      body: profile ? <ProfileEditor key={coachId} profile={profile} coaches={coaches} details={details} countries={countries} /> : <p className="rpf-empty">No coach profile</p>,
+    },
+    { key: "account", body: <AccountSettings email={coach.email} /> },
+    { key: "business", body: <BusinessSettings key={JSON.stringify(business)} initial={business} /> },
+    // Keyed on the business's country too: a new one there brings its own defaults here.
+    { key: "invoicing", body: <InvoicingSettings key={JSON.stringify([invoicing, business.country_code ?? null, business.country ?? null])} initial={invoicing} business={business} payments={payments} /> },
+    { key: "privacy", body: <PrivacySettings company={LEGAL.company} country={LEGAL.country} contactEmail={LEGAL.contactEmail} updated={legalDate(LEGAL.updated)} /> },
+    // A coach's thread with the company; the owner answers from Coaches and has none (null leaves it out).
+    { key: "support", label: "Support", body: support && <SupportSection {...support} /> },
+  ];
+
+  return (
+    <div className="rd-frame">
+      <RedesignRail rail={loadRail(coach)} clientId={0} settings />
+      <div className="rd-page">
+        <SettingsBoard className="rd trn rls rst rpf" sections={sections} />
+      </div>
+    </div>
+  );
 }

@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { DEFAULT_DIAL, DIAL_CODES } from "../../InfoRow";
 import { saveCoachContactAction } from "../../../lib/actions";
 import Picker from "../Picker";
-import SaveBar from "../settings/SaveBar";
+import { useSaveSlot } from "../settings/SaveHost";
 
 // Your profile → Your details (26 Sep; on the admin rules 22 Oct): the account basics any profile has, the sign-in
-// email, a phone and an address, each section's title over one hairline card, fields on clean lines. Only the coach
-// (and the owner) sees these; the public profile is the other tab.
+// email, a phone and an address, each part's small caps label over one hairline card, fields on clean lines. Only the
+// coach (and the owner) sees these; the public profile is the other tab. Changes go on Settings' one bar (23 Oct),
+// and wait there while Profile is folded.
 
 export type ProfileDetailsData = {
   email: string;
@@ -25,33 +26,34 @@ const NONE = "";
 export default function ProfileDetails({ coachId, data, countries }: { coachId: number; data: ProfileDetailsData; countries: { code: string; name: string }[] }) {
   const [d, setD] = useState({ ...data, phoneCode: data.phoneCode || DEFAULT_DIAL });
   const [saved, setSaved] = useState(JSON.stringify({ ...data, phoneCode: data.phoneCode || DEFAULT_DIAL }));
-  const [pending, start] = useTransition();
   const dirty = JSON.stringify(d) !== saved;
   const was = JSON.parse(saved) as typeof d;
   const changed = (Object.keys(d) as (keyof typeof d)[]).filter((k) => d[k] !== was[k]).length;
   const set = <K extends keyof ProfileDetailsData>(k: K) => (v: ProfileDetailsData[K]) => setD((x) => ({ ...x, [k]: v }));
-  const save = () =>
-    start(async () => {
-      const fd = new FormData();
-      fd.set("coachId", String(coachId));
-      fd.set("phone_code", d.phoneCode);
-      fd.set("phone", d.phone);
-      fd.set("address", d.address);
-      fd.set("postcode", d.postcode);
-      fd.set("city", d.city);
-      fd.set("country_code", d.countryCode);
-      const res = await saveCoachContactAction(fd);
-      if (res.ok) setSaved(JSON.stringify(d));
-    });
+  const save = async () => {
+    const fd = new FormData();
+    fd.set("coachId", String(coachId));
+    fd.set("phone_code", d.phoneCode);
+    fd.set("phone", d.phone);
+    fd.set("address", d.address);
+    fd.set("postcode", d.postcode);
+    fd.set("city", d.city);
+    fd.set("country_code", d.countryCode);
+    const res = await saveCoachContactAction(fd);
+    if (res.ok) setSaved(JSON.stringify(d));
+    return res.ok;
+  };
+  // A part of the Profile section: its changes on the page's bar, its dot on Profile's title.
+  useSaveSlot("profile:details", { dirty, count: changed, save, cancel: () => setD(JSON.parse(saved)) });
   // The dial codes as the floating list (design rules 6); a code saved before that isn't on it stays, first.
   const dials = [...(DIAL_CODES.some(([, c]) => c === d.phoneCode) ? [] : [{ value: d.phoneCode, label: d.phoneCode }]), ...DIAL_CODES.map(([iso, c]) => ({ value: c, label: `${iso} ${c}` }))];
 
   return (
     <div className="rpf-details">
-      <section className="rls-section">
+      <section className="rls-section rst-sub">
         <div className="trn-weekhead">
           <div>
-            <h2>Account</h2>
+            <h3>Account</h3>
           </div>
         </div>
         <div className="rls-card rst-card">
@@ -71,10 +73,10 @@ export default function ProfileDetails({ coachId, data, countries }: { coachId: 
         </div>
       </section>
 
-      <section className="rls-section">
+      <section className="rls-section rst-sub">
         <div className="trn-weekhead">
           <div>
-            <h2>Address</h2>
+            <h3>Address</h3>
           </div>
         </div>
         <div className="rls-card rst-card">
@@ -104,9 +106,6 @@ export default function ProfileDetails({ coachId, data, countries }: { coachId: 
           </div>
         </div>
       </section>
-
-      {/* Changed: Cancel and Save at the foot; nothing when all is saved. */}
-      {dirty && <SaveBar count={changed} busy={pending} onSave={save} onCancel={() => setD(JSON.parse(saved))} />}
     </div>
   );
 }

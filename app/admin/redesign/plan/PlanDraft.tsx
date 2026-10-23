@@ -6,6 +6,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../../../lib/phaseCovers";
+import { FEATURES } from "../../../lib/features";
 import Link from "next/link";
 import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, cancelProgramScheduleAction, unschedulePhaseAction, duplicateClientPhaseAction, removeClientGoalAction, deletePhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseOrSayWhyAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
@@ -81,7 +82,8 @@ export const phaseForm = (v: { id?: number; clientId?: number; name: string; tra
     fd.set("adjustProgram", "1");
   }
   if (v.programId != null) fd.set("programId", String(v.programId));
-  if (v.goals) {
+  // Phase goals off (23 Oct, Alex): never sent, so the stored ones stay as they are.
+  if (v.goals && FEATURES.phaseGoals) {
     fd.set("objectivesSent", "1");
     for (const g of v.goals) fd.append("objectives", g);
   }
@@ -907,38 +909,41 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
         <span className="npd-label">Name</span>
         <input className="npd-line" value={name} onChange={(e) => setName(e.target.value)} placeholder={track === "nutrition" ? "Cut A" : track === "training" ? "Strength block" : "Sleep focus"} maxLength={60} autoFocus={!editing} />
       </label>
-      <div className="npd-field">
-        <button type="button" className="npd-goals-head" aria-expanded={goalsOpen} onClick={() => setGoalsOpen((o) => !o)}>
-          <span className="npd-label">Phase goals</span>
-          <span className="npd-goals-n">{goalLines.length}</span>
-          <span className={`npd-goals-chev${goalsOpen ? " open" : ""}`} aria-hidden="true">
-            <ChevronDownIcon />
-          </span>
-        </button>
-        {goalsOpen && (
-          <ul className="npd-goals-list">
-            {goalRows.map((g, i) => (
-              <li key={i}>
-                <i aria-hidden="true" />
-                <input
-                  className="npd-line"
-                  value={g}
-                  maxLength={PHASE_OBJECTIVE_CHARS}
-                  autoFocus={i === 0}
-                  onChange={(e) => setGoalRows((r) => r.map((x, j) => (j === i ? e.target.value : x)))}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    e.preventDefault();
-                    (e.currentTarget.closest("li")?.nextElementSibling?.querySelector("input") as HTMLInputElement | null)?.focus();
-                  }}
-                  placeholder={i === 0 ? "What this phase is for" : "Another goal"}
-                  aria-label={`Goal ${i + 1}`}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {/* Phase goals off (23 Oct, Alex: To focus on replaces them): Name, then the dates. */}
+      {FEATURES.phaseGoals && (
+        <div className="npd-field">
+          <button type="button" className="npd-goals-head" aria-expanded={goalsOpen} onClick={() => setGoalsOpen((o) => !o)}>
+            <span className="npd-label">Phase goals</span>
+            <span className="npd-goals-n">{goalLines.length}</span>
+            <span className={`npd-goals-chev${goalsOpen ? " open" : ""}`} aria-hidden="true">
+              <ChevronDownIcon />
+            </span>
+          </button>
+          {goalsOpen && (
+            <ul className="npd-goals-list">
+              {goalRows.map((g, i) => (
+                <li key={i}>
+                  <i aria-hidden="true" />
+                  <input
+                    className="npd-line"
+                    value={g}
+                    maxLength={PHASE_OBJECTIVE_CHARS}
+                    autoFocus={i === 0}
+                    onChange={(e) => setGoalRows((r) => r.map((x, j) => (j === i ? e.target.value : x)))}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      e.preventDefault();
+                      (e.currentTarget.closest("li")?.nextElementSibling?.querySelector("input") as HTMLInputElement | null)?.focus();
+                    }}
+                    placeholder={i === 0 ? "What this phase is for" : "Another goal"}
+                    aria-label={`Goal ${i + 1}`}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       <div className="npd-cols">
         <MonthRange from={from} to={to} onPick={pick} chrome={chrome} planned={planned} cursor={cursor} setCursor={setCursor} today={today} plain />
         <div className="npd-side">

@@ -12,17 +12,19 @@ import { COACH_PROFILE_LIMITS as LIMIT, type CoachProfileView, type CoachRole, t
 import { dayMonth } from "../../../lib/dayMonth";
 import Picker from "../Picker";
 import { Sep } from "../Sep";
-import SaveBar from "../settings/SaveBar";
+import { useSaveSlot } from "../settings/SaveHost";
+import { settingsHref } from "../settingsNav";
 import { Dialog } from "../../../components/ui/dialog";
 import { ConfirmDialog } from "../training/TrainingDraft";
 
-// The coach's profile editor in the redesign, on the admin rules (22 Oct; root "rd trn rls rst rpf", Settings' parts):
-// Training's bare header with the state pill after the title, Your details | Public profile as the capsule, then the
-// form's sections on the left (a title over one hairline card each, fields on clean lines) and the client's own
-// profile screen in a phone on the right, fed from what is typed, so the coach sees exactly what their clients will.
-// Text saves with Save (the bar at the foot follows the page); photos upload the moment they are dropped. Published
-// decides whether clients get the full profile or only the minimal card. Same actions as the old editor
-// (CoachProfileEditor).
+// The coach's profile editor, the Profile section of the one Settings page (23 Oct, Alex; root "rd trn rls rst rpf",
+// Settings' parts; the section's title, its Published tag and its fold are the page's, SettingsBoard): Your details |
+// Public profile as the capsule with whose profile (the owner) on its right, then the form's parts on the left (a small
+// caps label over one hairline card each, fields on clean lines) and the client's own profile screen in a phone on the
+// right, fed from what is typed, so the coach sees exactly what their clients will. Text saves with the page's one
+// Save (SaveHost), and waits there while the section is folded; photos upload the moment they are dropped.
+// Published, at the form's foot, decides whether clients get the full profile or only the minimal card. Same actions
+// as the old editor (CoachProfileEditor).
 
 type Fields = {
   displayName: string;
@@ -58,14 +60,19 @@ function ago(iso: string, now: number): string {
   return dayMonth(iso);
 }
 
-/** A section: its title (and one quiet fact) on the page, the content in one hairline card. */
+/** A part of the profile: its small caps label (and one quiet fact) over its content in one hairline card. */
 function Section({ title, fact, children }: { title: string; fact?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rls-section">
+    <section className="rls-section rst-sub">
       <div className="trn-weekhead">
         <div>
-          <h2>{title}</h2>
-          {fact != null && <span>{fact}</span>}
+          <h3>{title}</h3>
+          {fact != null && (
+            <>
+              <Sep />
+              <span>{fact}</span>
+            </>
+          )}
         </div>
       </div>
       <div className="rls-card rst-card">{children}</div>
@@ -73,7 +80,7 @@ function Section({ title, fact, children }: { title: string; fact?: React.ReactN
   );
 }
 
-export default function ProfileEditor({ profile, coaches, currentCoachId, details, countries }: { profile: CoachProfileView; coaches: { id: number; email: string }[]; currentCoachId: number; /** Your details: email, phone, address (the other tab). */ details: ProfileDetailsData; countries: { code: string; name: string }[] }) {
+export default function ProfileEditor({ profile, coaches, details, countries }: { profile: CoachProfileView; /** The owner's Whose profile picker: every coach; else none. */ coaches: { id: number; email: string }[]; /** Your details: email, phone, address (the other tab). */ details: ProfileDetailsData; countries: { code: string; name: string }[] }) {
   const router = useRouter();
   const initialFields: Fields = {
     displayName: profile.published || profile.updatedAt ? profile.displayName : "",
@@ -109,18 +116,18 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
   const snapshot = snapshotOf(fields, specialties, studies, experience);
   const dirty = snapshot !== savedSnapshot;
   // What was last saved, for Cancel and the bar's count.
-  const savedState = useRef({ fields: initialFields, specialties: profile.specialties, studies, experience });
+  const [savedState, setSavedState] = useState(() => ({ fields: initialFields, specialties: profile.specialties, studies, experience }));
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   const changeCount =
-    (Object.keys(fields) as (keyof Fields)[]).filter((k) => fields[k] !== savedState.current.fields[k]).length +
-    (same(specialties, savedState.current.specialties) ? 0 : 1) +
-    (same(studies, savedState.current.studies) ? 0 : 1) +
-    (same(experience, savedState.current.experience) ? 0 : 1);
+    (Object.keys(fields) as (keyof Fields)[]).filter((k) => fields[k] !== savedState.fields[k]).length +
+    (same(specialties, savedState.specialties) ? 0 : 1) +
+    (same(studies, savedState.studies) ? 0 : 1) +
+    (same(experience, savedState.experience) ? 0 : 1);
   const discard = () => {
-    setFields(savedState.current.fields);
-    setSpecialties(savedState.current.specialties);
-    setStudies(savedState.current.studies);
-    setExperience(savedState.current.experience);
+    setFields(savedState.fields);
+    setSpecialties(savedState.specialties);
+    setStudies(savedState.studies);
+    setExperience(savedState.experience);
     setError(null);
   };
   const set = (key: keyof Fields) => (value: string) => setFields((f) => ({ ...f, [key]: value }));
@@ -138,16 +145,17 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
     fd.set("experience", JSON.stringify(experience.map(({ years, role, place }) => ({ years, role, place }))));
     await saveCoachProfileAction(fd);
     setSavedSnapshot(snapshot);
-    savedState.current = { fields, specialties, studies, experience };
+    setSavedState({ fields, specialties, studies, experience });
     setSavedAt(new Date().toISOString());
     // A cleared name takes the profile back to unpublished on the server.
     if (!fields.displayName.trim()) setPublished(false);
   };
-  const save = () =>
-    startSave(async () => {
-      setError(null);
-      await writeProfile();
-    });
+  const save = async () => {
+    setError(null);
+    await writeProfile();
+  };
+  // Changed: on the page's one bar, the count (or what stands in the way), Cancel and Save.
+  useSaveSlot("profile", { dirty, count: changeCount, problem: error, save, cancel: discard });
   const togglePublished = () =>
     startSave(async () => {
       setError(null);
@@ -191,39 +199,29 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
     studies: studies.filter((s) => s.title || s.place).map(({ title, place, year }) => ({ title, place, year })),
     experience: experience.filter((r) => r.role || r.place).map(({ years, role, place }) => ({ years, role, place })),
   };
-  const ownProfile = profile.coachId === currentCoachId;
-
   return (
-    <div className="rd trn rls rst rpf">
-      {/* ---- Training's header, bare: the title and its state pill; whose profile (the owner) on the right. */}
-      <header className="trn-head bare">
-        <div className="trn-head-main">
-          <span className="trn-eyebrow">Settings</span>
-          <div className="trn-name-row">
-            <h1 className="trn-name">{ownProfile ? "Your profile" : `${profile.displayName}'s profile`}</h1>
-            <span className={`trn-state${published ? " good" : ""}`}>{published ? "Published" : "Not published"}</span>
-          </div>
+    <>
+      {/* Two parts (26 Sep): the account basics, and the public profile, the write-up clients read (and, one day,
+          people looking for a coach). Two short options: the capsule (design rules 5). Both stay drawn, the other one
+          hidden, so what is typed in one waits on the page's bar while the other is open. Whose profile (the owner)
+          on the right of the same row. */}
+      <div className="rpf-top">
+        <div className="rd-btn-group rpf-tabs" role="tablist" aria-label="Profile">
+          {(["details", "public"] as const).map((t) => (
+            <button key={t} type="button" role="tab" id={`rpf-tab-${t}`} aria-controls={`rpf-panel-${t}`} aria-selected={tab === t} data-state={tab === t ? "active" : "inactive"} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
+              {t === "details" ? "Your details" : "Public profile"}
+            </button>
+          ))}
         </div>
         {coaches.length > 1 && (
-          <div className="trn-head-actions">
-            <Picker value={String(profile.coachId)} onChange={(v) => router.push(`/admin/redesign/profile?coachId=${v}`)} label="Whose profile" className="rpf-who" options={coaches.map((c) => ({ value: String(c.id), label: c.email }))} />
-          </div>
+          <Picker value={String(profile.coachId)} onChange={(v) => router.push(settingsHref("profile", { coachId: v }))} label="Whose profile" className="rpf-who" options={coaches.map((c) => ({ value: String(c.id), label: c.email }))} />
         )}
-      </header>
-
-      {/* Two parts (26 Sep): the account basics, and the public profile, the write-up clients read (and, one day,
-          people looking for a coach). Two short options: the capsule (design rules 5). */}
-      <div className="rd-btn-group rpf-tabs" role="tablist" aria-label="Profile">
-        {(["details", "public"] as const).map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={tab === t} data-state={tab === t ? "active" : "inactive"} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-            {t === "details" ? "Your details" : "Public profile"}
-          </button>
-        ))}
       </div>
 
-      {tab === "details" ? (
+      <div role="tabpanel" id="rpf-panel-details" aria-labelledby="rpf-tab-details" hidden={tab !== "details"}>
         <ProfileDetails coachId={profile.coachId} data={details} countries={countries} />
-      ) : (
+      </div>
+      <div role="tabpanel" id="rpf-panel-public" aria-labelledby="rpf-tab-public" hidden={tab !== "public"}>
         <div className="rpf-cols">
           <div className="rpf-form">
             <Section title="Photos">
@@ -341,31 +339,28 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
               </div>
             </Section>
 
-            {/* Changed: Cancel and Save at the foot, following the page as it scrolls. Saved: when, and the Published switch. */}
-            {dirty ? (
-              <SaveBar count={changeCount} busy={saving} onSave={save} onCancel={discard} problem={error} />
-            ) : (
-              <div className="rst-bar">
-                <span className="rst-bar-text rpf-saved">
-                  {savedAt ? (
-                    <>
-                      Saved<Sep />
-                      {ago(savedAt, now)}
-                    </>
-                  ) : (
-                    "Not saved yet"
-                  )}
+            {/* The form's foot, in place (the page's bar has Cancel and Save): when it was saved while nothing waits
+                on the bar, and the Published switch. */}
+            <div className="rst-bar rpf-foot">
+              <span className="rst-bar-text rpf-saved">
+                {dirty ? null : savedAt ? (
+                  <>
+                    Saved<Sep />
+                    {ago(savedAt, now)}
+                  </>
+                ) : (
+                  "Not saved yet"
+                )}
+              </span>
+              {!dirty && error && <span className="rpf-error">{error}</span>}
+              {/* On or off: the switch, ink while on. */}
+              <button type="button" role="switch" aria-checked={published} className="rpf-pub" onClick={togglePublished} disabled={saving}>
+                Published
+                <span className="rpf-pub-sw" aria-hidden="true">
+                  <i />
                 </span>
-                {error && <span className="rpf-error">{error}</span>}
-                {/* On or off: the switch, ink while on. */}
-                <button type="button" role="switch" aria-checked={published} className="rpf-pub" onClick={togglePublished} disabled={saving}>
-                  Published
-                  <span className="rpf-pub-sw" aria-hidden="true">
-                    <i />
-                  </span>
-                </button>
-              </div>
-            )}
+              </button>
+            </div>
           </div>
 
           <aside className="rpf-preview" aria-label="What your clients see">
@@ -375,8 +370,8 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
             {!published && <span className="rpf-preview-note">Clients see a minimal card</span>}
           </aside>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addEventFromMeetingNoteAction, addMeetingAction, completeMeetingAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
 import { MEETING_TYPES, meetingTypeOf, type MeetingTypeId } from "../../../lib/meetingTypes";
@@ -18,8 +18,11 @@ import TimezonePicker from "./TimezonePicker";
 import Picker from "../Picker";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
-import { SepJoin } from "../Sep";
+import { Sep, SepJoin } from "../Sep";
 import { Fold } from "../Fold";
+import { saveFocusAction } from "../../../lib/focusActions";
+import type { CoachFocus, FocusGoalView } from "../../../lib/focus";
+import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
 // sheet. The next call with everything to prepare it, the calls after it,
@@ -33,7 +36,8 @@ import { Fold } from "../Fold";
 //   what was agreed, written for the client.
 // - Schedule: the month with this client's calls and everyone else's, the
 //   picked day's bookings under it, and the same date typed beside.
-// Nothing here saves: every action ends in a toast.
+// The words typed on a call (the topic, the notes, the summary, To focus on) save themselves (23 Oct, Alex: as the track
+// tabs), with the tab's one status after its title; the pop-ups (schedule, link, complete, delete) end in a toast.
 
 export type DraftGoal = { id: number; text: string; tone: "green" | "orange" | "muted"; status: string; def: string; done: boolean; meetingId: number | null };
 export type DraftNote = { id: number; text: string; createdAt: string };
@@ -76,7 +80,20 @@ export type DraftMeetings = {
   lastLink: string | null;
   /** The coach's own time zone (Settings, set at onboarding): a new meeting starts in it. */
   coachTz?: string | null;
+  /** To focus on (23 Oct, Alex; lib/focus.ts): the client's goals until the next call, with their ticks; null, none. */
+  focus?: CoachFocus | null;
 };
+
+/** As lib/focus.ts keeps them (a client file can't read it): three goals, 80 characters each. */
+const FOCUS_MAX = 3;
+const FOCUS_CHARS = 80;
+const sameWords = (a: string, b: string) => a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
+/** The lines as the server keeps them: trimmed, the empty ones and repeats dropped. */
+const focusLines = (rows: string[]) => rows.map((r) => r.trim().replace(/\s+/g, " ").slice(0, FOCUS_CHARS)).filter((t, i, all) => t && all.findIndex((x) => sameWords(x, t)) === i).slice(0, FOCUS_MAX);
+const fillFocus = (texts: string[]) => [...texts, "", "", ""].slice(0, FOCUS_MAX);
+const FOCUS_SAMPLES = ["10,000 steps on 5 days", "Log every meal, weekend too", "In bed by 23:00"];
+/** Typed words go this long after the typing stops (as Nutrition's). */
+const QUIET_MS = 800;
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
@@ -150,7 +167,15 @@ const providerOf = (link: string) => {
 
 type Dlg = { kind: "message"; label: string } | { kind: "schedule"; date: string; reschedule: DraftMeeting | null; topic?: string } | { kind: "link"; meetingId: number } | { kind: "complete"; meetingId: number } | { kind: "delete"; meetingId: number } | null;
 
-export default function MeetingsDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftMeetings }) {
+type MeetingsProps = { clientId: number; firstName: string; plan: DraftMeetings };
+
+/** Keyed per client (as Home): another client in the rail starts the tab afresh, so one client's calls, words waiting
+ *  and save status never show, or save, under the next. */
+export default function MeetingsDraft(props: MeetingsProps) {
+  return <MeetingsBoard key={props.clientId} {...props} />;
+}
+
+function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
   const today = plan.today;
   // Everything on screen lives in state so the draft can show what an action would do.
   const [meetings, setMeetings] = useState<DraftMeeting[]>([...(plan.upcoming ? [plan.upcoming] : []), ...plan.alsoScheduled, ...plan.past]);
@@ -168,14 +193,58 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
     for (const [k, v] of Object.entries(o)) if (v != null) f.set(k, String(v));
     return f;
   };
+  // ---- Autosave (23 Oct, Alex: as Training, Lifestyle and Nutrition): the words typed on a call go through one queue,
+  // a moment after the typing stops or on leaving the field; the tab's status after its title says how it stands.
+  const [refreshing, startRefresh] = useTransition();
+  const reRead = () => startRefresh(() => router.refresh());
+  const q = useSaveQueue(reRead);
+  // The fields with words typed that haven't gone yet (their quiet moment still running).
+  const [waiting, setWaiting] = useState<string[]>([]);
+  // Words still waiting are not saved yet (as Nutrition's): Saving… until they have gone.
+  const busy = q.saving || waiting.length > 0;
+  const saidSaved = useSaidSaved(busy);
+  const onWaiting = (key: string, on: boolean) => setWaiting((w) => (on ? (w.includes(key) ? w : [...w, key]) : w.includes(key) ? w.filter((k) => k !== key) : w));
+  // While a save is on its way, failed, or its re-read is coming, what the server says is older than the screen.
+  const hold = q.saving || q.failed || refreshing;
+  const auto: Autosave = { hold, onWaiting };
+  useHoldWhile(q.saving || q.failed || waiting.length > 0);
+  const saveMeeting = (id: number, f: Record<string, string>) =>
+    q.save(async () => {
+      await updateMeetingAction(fd({ id, ...f }));
+      return true;
+    });
   // Compared by content: every refresh hands in new objects with the same
   // values, and resetting on those collapsed panels and threw work away.
+  // Never while words wait or save: the screen is newer than the server then.
   const planKey = JSON.stringify([plan.upcoming, plan.alsoScheduled, plan.past]);
   const [seenPlan, setSeenPlan] = useState(planKey);
-  if (seenPlan !== planKey) {
+  if (seenPlan !== planKey && !hold && waiting.length === 0) {
     setSeenPlan(planKey);
     setMeetings([...(plan.upcoming ? [plan.upcoming] : []), ...plan.alsoScheduled, ...plan.past]);
   }
+  // To focus on: the client's list as saved, shown at once on a save (by content too: a refresh is new objects).
+  const focusKey = JSON.stringify(plan.focus?.goals ?? []);
+  const [seenFocus, setSeenFocus] = useState(focusKey);
+  const [focusGoals, setFocusGoals] = useState<FocusGoalView[]>(plan.focus?.goals ?? []);
+  if (seenFocus !== focusKey && !hold && waiting.length === 0) {
+    setSeenFocus(focusKey);
+    setFocusGoals(plan.focus?.goals ?? []);
+  }
+  /** The lines as the list will be after an edit between calls: a goal kept with the same words keeps its tick (as setFocus does). */
+  const keepTicks = (lines: string[]): FocusGoalView[] =>
+    lines.map((text, i) => {
+      const kept = focusGoals.find((g) => sameWords(g.text, text));
+      return { id: kept?.id ?? -(i + 1), text, done: kept?.done ?? false };
+    });
+  const focusDone = focusGoals.filter((g) => g.done).length;
+  /** The To focus on list as typed (a call's tab, or the list's own section while no call is booked), through the queue. */
+  const saveFocus = (lines: string[]) => {
+    setFocusGoals(keepTicks(lines));
+    q.save(async () => {
+      await saveFocusAction(fd({ clientId, goals: JSON.stringify(lines) }));
+      return true;
+    });
+  };
   const [dlg, setDlg] = useState<Dlg>(null);
   // Messaging slides the chat in from the right (ChatPanel, 2 Oct).
   const openChat = useOpenChat();
@@ -201,9 +270,8 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
 
   // ---- A call still to come, as the next call shows it (21 Oct, Alex: an Also scheduled row opens on the same): its title
   // typed in place, when, its link, and the notes one at a time. In a row the tile, the eyebrow and when are the row's own.
-  const [tabs, setTabs] = useState<Record<number, "prep" | "meeting" | "summary">>({});
+  const [tabs, setTabs] = useState<Record<number, "prep" | "meeting" | "summary" | "focus">>({});
   const [openAlso, setOpenAlso] = useState<number | null>(null);
-  const savedTopic = (id: number) => [plan.upcoming, ...plan.alsoScheduled, ...plan.past].find((x) => x?.id === id)?.topic ?? "";
   // The tile, the title (its time after it), the link, ⋯ (23 Oct, Alex: no length or how soon on the right).
   const aGrid = { gridTemplateColumns: "44px minmax(200px, 1fr) auto 32px", columnGap: 24 } as const;
   /** The call's link on its row: Add a link, or Join with its host and Edit (once, not again in the body). */
@@ -231,35 +299,33 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
       <>
         <div className="rt-band">
           <div className="rt-band-main">
-            <input
-              className="rt-topic"
-              value={m.topic}
-              onChange={(e) => patchMeeting(m.id, { topic: e.target.value })}
-              onBlur={() => m.topic.trim() !== savedTopic(m.id) && act(() => updateMeetingAction(fd({ id: m.id, topic: m.topic.trim() })), `Topic: ${m.topic.trim() || "Check-in call"}`)}
-              onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
-              placeholder="Topic"
-              aria-label="Topic"
-            />
+            {/* The row's title follows each key; the words go a moment after the typing stops. */}
+            <TopicField key={`t${m.id}`} value={m.topic} auto={auto} name={`topic${m.id}`} onType={(v) => patchMeeting(m.id, { topic: v })} onSend={(v) => saveMeeting(m.id, { topic: v.trim() })} />
           </div>
         </div>
         <div className="rt-body">
-          {/* Prep notes and meeting notes are the coach's own; the summary is what the client gets on Home once the call is completed. */}
+          {/* Prep notes and meeting notes are the coach's own; the summary is what the client gets on Home once the call is
+              completed; To focus on (23 Oct, Alex) is the client's list until the next call, on the top of their Home. */}
           <div className="rt-notes-tabs">
             <div className="rd-btn-group" role="radiogroup" aria-label="Notes">
-              {(["prep", "meeting", "summary"] as const).map((t) => (
+              {(["prep", "meeting", "summary", "focus"] as const).map((t) => (
                 <button key={t} type="button" role="radio" className={tab === t ? "on" : ""} aria-checked={tab === t} onClick={() => setTabs((x) => ({ ...x, [m.id]: t }))}>
-                  {t === "prep" ? "Prep notes" : t === "meeting" ? "Meeting notes" : `Summary for ${firstName}`}
+                  {t === "prep" ? "Prep notes" : t === "meeting" ? "Meeting notes" : t === "summary" ? `Summary for ${firstName}` : "To focus on"}
                 </button>
               ))}
             </div>
           </div>
-          {tab === "prep" ? (
+          {tab === "focus" ? (
+            <FocusLines key={`f${m.id}`} goals={focusGoals} onSave={saveFocus} auto={auto} name={`focus${m.id}`} />
+          ) : tab === "prep" ? (
             <PrepNotes
               key={`p${m.id}`}
               value={m.prepNotes}
+              auto={auto}
+              name={`prep${m.id}`}
               onSave={(v) => {
                 patchMeeting(m.id, { prepNotes: v });
-                act(() => updateMeetingAction(fd({ id: m.id, prepNotes: v })), "Prep notes");
+                saveMeeting(m.id, { prepNotes: v });
               }}
             />
           ) : tab === "meeting" ? (
@@ -267,9 +333,11 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
               key={`m${m.id}`}
               label="Meeting notes"
               value={m.meetingNotes}
+              auto={auto}
+              name={`notes${m.id}`}
               onSave={(v) => {
                 patchMeeting(m.id, { meetingNotes: v });
-                act(() => updateMeetingAction(fd({ id: m.id, meetingNotes: v })), "Meeting notes");
+                saveMeeting(m.id, { meetingNotes: v });
               }}
             />
           ) : (
@@ -278,9 +346,10 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
               bare
               m={m}
               firstName={firstName}
-              onPatch={(f) => {
+              auto={auto}
+              onSend={(f) => {
                 patchMeeting(m.id, f);
-                if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: m.id, summary: f.summary ?? m.summary, summaryTitle: f.summaryTitle ?? m.summaryTitle })));
+                saveMeeting(m.id, f);
               }}
               onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: m.id, text: line, date: m.date })), `Added to ${firstName}'s events: ${line}`)}
             />
@@ -312,6 +381,16 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
           </span>
         </span>
         <span className="rt-linkslot" onClick={(e) => e.stopPropagation()}>
+          {/* The client's ticks on the next call (23 Oct, Alex), while there are goals: the count in ink. */}
+          {m.id === upcoming?.id && focusGoals.length > 0 && (
+            <span className="rt-ticks" title="To focus on">
+              <span className="sr-only">To focus on: </span>
+              <b>
+                {focusDone} of {focusGoals.length}
+              </b>{" "}
+              done
+            </span>
+          )}
           {linkControl(m)}
         </span>
         <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
@@ -346,6 +425,22 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
           <span className="trn-eyebrow">Meetings</span>
           <div className="trn-name-row">
             <h1 className="trn-name">{firstName}&rsquo;s calls</h1>
+            {/* The tab's one save status after its title, as Training's (23 Oct, Alex). */}
+            {q.failed ? (
+              <span className="trn-allsaved failed" role="alert">
+                Not saved<Sep />
+                <button type="button" onClick={q.retry}>
+                  Retry
+                </button>
+              </span>
+            ) : (
+              // Nothing until something is saved (22 Oct, Alex).
+              saidSaved && (
+                <span className={`trn-allsaved${busy ? " saving" : ""}`} role="status">
+                  {busy ? "Saving…" : "All changes saved"}
+                </span>
+              )
+            )}
           </div>
         </div>
         <div className="trn-head-actions">
@@ -397,6 +492,21 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
           {/* The same row as Also scheduled (21 Oct, Alex: the two exactly alike), open at first. */}
           <div className="rls-card rt-card rt-calls">
             <div className="rd-rows">{callRow(upcoming, nextOpen, () => setNextOpen((o) => !o))}</div>
+          </div>
+        </section>
+      )}
+
+      {/* ---- No call booked and goals still set (the last call completed with them): the list on its own, to see the
+          client's ticks, edit or clear it. No goals, nothing. */}
+      {!upcoming && focusGoals.length > 0 && (
+        <section className="rls-section">
+          <div className="trn-weekhead">
+            <div>
+              <h2>To focus on</h2>
+            </div>
+          </div>
+          <div className="rls-card rt-card rt-focus-card">
+            <FocusLines key={`focus-${clientId}`} goals={focusGoals} onSave={saveFocus} auto={auto} name="focus" />
           </div>
         </section>
       )}
@@ -483,9 +593,10 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                       <PastBody
                         m={m}
                         firstName={firstName}
-                        onPatch={(f) => {
+                        auto={auto}
+                        onSend={(f) => {
                           patchMeeting(m.id, f);
-                          if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: m.id, summary: f.summary ?? m.summary, summaryTitle: f.summaryTitle ?? m.summaryTitle })));
+                          saveMeeting(m.id, f);
                         }}
                         onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: m.id, text: line, date: m.date })), `Added to ${firstName}'s events: ${line}`)}
                       />
@@ -554,12 +665,23 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
             firstName={firstName}
             value={byId(dlg.meetingId)!.summary}
             title={byId(dlg.meetingId)!.summaryTitle}
-            onComplete={(summary, summaryTitle) => {
+            goals={focusGoals.map((g) => g.text)}
+            onComplete={(summary, summaryTitle, lines) => {
               patchMeeting(dlg.meetingId, { status: "completed", summary, summaryTitle });
               setOpenPast(dlg.meetingId);
               const id = dlg.meetingId;
+              // To focus on goes with the call (23 Oct, Alex: "every time this is set on a new call the old ones get
+              // overridden"): the lines replace the whole list, every tick reset, the same words too.
+              const withFocus = lines.length > 0 || focusGoals.length > 0;
+              if (withFocus) setFocusGoals(lines.map((text, i) => ({ id: -(i + 1), text, done: false })));
               close();
-              act(() => completeMeetingAction(fd({ id, summary, summaryTitle })), summary || summaryTitle ? `Completed, recap sent to ${firstName}'s Home` : "Completed");
+              act(
+                async () => {
+                  await completeMeetingAction(fd({ id, summary, summaryTitle }));
+                  if (withFocus) await saveFocusAction(fd({ clientId, meetingId: id, fromCall: 1, goals: JSON.stringify(lines) }));
+                },
+                summary || summaryTitle ? `Completed, recap${lines.length ? " and To focus on" : ""} sent to ${firstName}'s Home` : lines.length ? `Completed, To focus on sent to ${firstName}'s Home` : "Completed"
+              );
             }}
           />
         )}
@@ -584,55 +706,221 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
   );
 }
 
-/** Cancel in words and a small ink Save, under a note once it differs from what is saved (design rules 4). */
-function NoteFoot({ onCancel, onSave }: { onCancel: () => void; onSave: () => void }) {
+/** How a field saves itself: the queue's state (`hold`: a save on its way, failed, or its re-read still coming, so the
+ *  server's words are older than the screen's) and the fields with words still waiting for their quiet moment. */
+type Autosave = { hold: boolean; onWaiting: (name: string, on: boolean) => void };
+
+/** Words that save themselves (23 Oct, Alex: Meetings as the track tabs). What is typed stays in the field and goes a
+ *  moment after the typing stops, on leaving the field, or as the row closes or the tab switches. The saved words come in
+ *  only while the field is left and nothing is on its way, so a save coming back never moves or trims what is being
+ *  typed. `typed`: typed since the field was entered (the note's line shows). */
+function useAutoText(saved: string, onSend: (v: string) => void, { hold, onWaiting }: Autosave, name: string) {
+  const [text, setText] = useState(saved);
+  const [focused, setFocused] = useState(false);
+  const [typed, setTyped] = useState(false);
+  const [seen, setSeen] = useState(saved);
+  if (seen !== saved && !focused && !hold) {
+    setSeen(saved);
+    setText(saved);
+  }
+  const now = useRef(text);
+  const send = useRef(onSend);
+  const wait = useRef(onWaiting);
+  useEffect(() => {
+    now.current = text;
+    send.current = onSend;
+    wait.current = onWaiting;
+  });
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirty = useRef(false);
+  const flush = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    if (!dirty.current) return;
+    dirty.current = false;
+    wait.current(name, false);
+    send.current(now.current);
+  };
+  // The row closing or the tab switching with words still waiting: they go now.
+  useEffect(
+    () => () => flush(),
+    // Unmount only; the refs hold what is current.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  return {
+    text,
+    typed,
+    focused,
+    bind: {
+      value: text,
+      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const v = e.target.value;
+        setText(v);
+        setTyped(true);
+        now.current = v;
+        dirty.current = true;
+        wait.current(name, true);
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(flush, QUIET_MS);
+      },
+      onFocus: () => setFocused(true),
+      onBlur: () => {
+        setFocused(false);
+        setTyped(false);
+        flush();
+      },
+    },
+  };
+}
+
+/** The call's topic, typed in place on its band; the row's title follows each key (`onType`), Enter leaves it. */
+function TopicField({ value, auto, name, onType, onSend }: { value: string; auto: Autosave; name: string; onType: (v: string) => void; onSend: (v: string) => void }) {
+  const f = useAutoText(value, onSend, auto, name);
   return (
-    <div className="rt-note-foot">
-      <button type="button" className="rt-note-cancel" onClick={onCancel}>
-        Cancel
-      </button>
-      <button type="button" className="rt-note-save" onClick={onSave}>
-        Save
-      </button>
-    </div>
+    <input
+      className="rt-topic"
+      {...f.bind}
+      onChange={(e) => {
+        f.bind.onChange(e);
+        onType(e.target.value);
+      }}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      placeholder="Topic"
+      aria-label="Topic"
+    />
   );
 }
 
-/** The coach's prep notes (or meeting notes) on the next call: words on the page, no box; a line, Cancel and Save
- *  come up once something is typed (21 Oct, as every note that saves). */
-function PrepNotes({ value, onSave, label = "Prep notes" }: { value: string; onSave: (v: string) => void; /** "Prep notes" or "Meeting notes": both the coach's own. */ label?: string }) {
-  const [text, setText] = useState(value);
-  const changed = text.trim() !== value.trim();
+/** The coach's prep notes (or meeting notes) on a call: words on the page, no box; the line comes up once something is
+ *  typed (as every note), and the words save themselves (23 Oct, Alex: no Cancel or Save). */
+function PrepNotes({ value, onSave, auto, name, label = "Prep notes" }: { value: string; onSave: (v: string) => void; auto: Autosave; name: string; /** "Prep notes" or "Meeting notes": both the coach's own. */ label?: string }) {
+  const f = useAutoText(value, (v) => onSave(v.trim()), auto, name);
   return (
     <div className="rt-note">
-      <textarea className={`rt-note-text${changed ? " typed" : ""}`} value={text} onChange={(e) => setText(e.target.value)} placeholder="What to cover, what to ask, what changed since last time…" aria-label={label} onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changed && onSave(text.trim())} />
-      {changed && <NoteFoot onCancel={() => setText(value)} onSave={() => onSave(text.trim())} />}
+      <textarea className={`rt-note-text${f.typed ? " typed" : ""}`} {...f.bind} placeholder="What to cover, what to ask, what changed since last time…" aria-label={label} />
     </div>
   );
 }
 
-/** A call's summary for the client: under the next call the words alone; on a past call its one-line title over them. */
-function PastBody({ m, firstName, onPatch, bare, onAddEvent }: { m: DraftMeeting; firstName: string; onPatch: (f: Partial<DraftMeeting>) => void; /** Under the next call: no label or title of its own. */ bare?: boolean; /** A saved line of the recap as an event on the client's plan (9 Oct). */ onAddEvent?: (line: string) => void }) {
-  const [recap, setRecap] = useState(m.summary);
-  // The title starts as the call's name (the Meetings screen's subheading), unless the coach wrote one.
-  const [title, setTitle] = useState(m.summaryTitle || m.topic || "Check-in call");
-  // Bare (a call still to come) has no title field: the recap title keeps following the topic, so it is never compared or sent.
-  const changed = recap.trim() !== m.summary.trim() || (!bare && title.trim() !== (m.summaryTitle || m.topic || "Check-in call").trim());
-  const save = () => {
-    onPatch(bare ? { summary: recap.trim() } : { summary: recap.trim(), summaryTitle: title.trim() });
-    savedToast(`Summary · ${dayMonth(m.date)}`);
+/** A call's To focus on tab (23 Oct, Alex): the client's list, three lines, each with the client's tick as a small ring
+ *  (ink once ticked, the words grey); typed in place, saved by itself as the list is left: it is news on the client's Home
+ *  and phone, and half a goal shouldn't be; a word taken out and typed back keeps its tick (ticks go by the words). */
+function FocusLines({ goals, onSave, auto: { hold, onWaiting }, name }: { goals: FocusGoalView[]; onSave: (lines: string[]) => void; auto: Autosave; name: string }) {
+  const saved = goals.map((g) => g.text);
+  const savedKey = saved.join("\n");
+  const [rows, setRows] = useState(() => fillFocus(saved));
+  const [focused, setFocused] = useState(false);
+  // The saved list comes in by content (never on a refresh's new objects), and only while the list is left and nothing is
+  // on its way, so a line being typed never jumps.
+  const [seen, setSeen] = useState(savedKey);
+  if (seen !== savedKey && !focused && !hold) {
+    setSeen(savedKey);
+    if (rows.join("\n") !== fillFocus(saved).join("\n")) setRows(fillFocus(saved));
+  }
+  const now = useRef(rows);
+  const savedNow = useRef(savedKey);
+  const send = useRef(onSave);
+  const wait = useRef(onWaiting);
+  useEffect(() => {
+    now.current = rows;
+    savedNow.current = savedKey;
+    send.current = onSave;
+    wait.current = onWaiting;
+  });
+  const dirty = useRef(false);
+  /** The list is left, closed, or Enter on its last line: the lines go then, never on a pause. */
+  const flush = () => {
+    if (!dirty.current) return;
+    const lines = focusLines(now.current);
+    dirty.current = false;
+    wait.current(name, false);
+    if (lines.join("\n") !== savedNow.current) send.current(lines);
   };
-  const cancel = () => {
-    setRecap(m.summary);
-    setTitle(m.summaryTitle || m.topic || "Check-in call");
+  useEffect(
+    () => () => flush(),
+    // Unmount only; the refs hold what is current.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const change = (i: number, v: string) => {
+    const next = now.current.map((x, j) => (j === i ? v : x));
+    setRows(next);
+    now.current = next;
+    dirty.current = true;
+    wait.current(name, true);
   };
+  return (
+    <div className="rt-focus">
+      <ul
+        className="rt-focus-list"
+        aria-label="To focus on"
+        onFocus={() => setFocused(true)}
+        onBlur={(e) => {
+          // The window losing focus (another app or browser tab) keeps the line focused: half a goal doesn't go.
+          if (document.activeElement === e.target) return;
+          // Moving between its lines is still in the list.
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          setFocused(false);
+          flush();
+        }}
+      >
+        {rows.map((g, i) => {
+          const goal = g.trim() ? goals.find((x) => sameWords(x.text, g)) : undefined;
+          const done = !!goal?.done;
+          const typed = g.trim().replace(/\s+/g, " ") !== (saved[i] ?? "");
+          return (
+            <li key={i} className={`${g.trim() ? "" : "empty"}${done ? " done" : ""}`}>
+              <span className="rt-focus-ring" aria-hidden="true">
+                {done && (
+                  <svg viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12l5 5 9-10" />
+                  </svg>
+                )}
+              </span>
+              <input
+                value={g}
+                maxLength={FOCUS_CHARS}
+                onChange={(e) => change(i, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  const next = e.currentTarget.closest("li")?.nextElementSibling?.querySelector("input") as HTMLInputElement | null;
+                  if (next) next.focus();
+                  else flush();
+                }}
+                className={typed ? "typed" : undefined}
+                placeholder={FOCUS_SAMPLES[i]}
+                aria-label={`Goal ${i + 1}${done ? ", done" : ""}`}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/** A call's summary for the client: under the next call the words alone; on a past call its one-line title over them.
+ *  Both save themselves (23 Oct, Alex). */
+function PastBody({ m, firstName, onSend, auto, bare, onAddEvent }: { m: DraftMeeting; firstName: string; onSend: (f: { summary: string } | { summaryTitle: string }) => void; auto: Autosave; /** Under the next call: no label or title of its own. */ bare?: boolean; /** A saved line of the recap as an event on the client's plan (9 Oct). */ onAddEvent?: (line: string) => void }) {
+  const recap = useAutoText(m.summary, (v) => onSend({ summary: v.trim() }), auto, `summary${m.id}`);
+  // The title starts as the call's name (the Meetings screen's subheading), unless the coach wrote one. Bare (a call still
+  // to come) has no title field: it is never typed, so never sent.
+  // Typed and put back as it was, nothing goes (the call's name would become a title of its own).
+  const shownTitle = m.summaryTitle || m.topic || "Check-in call";
+  const title = useAutoText(shownTitle, (v) => {
+      if (v.trim() !== shownTitle.trim()) onSend({ summaryTitle: v.trim() });
+    }, auto, `title${m.id}`);
+  // The saved lines as events once the summary is left and saved, so typing never brings them in and out under it.
+  const settled = !recap.focused && recap.text.trim() === m.summary.trim();
   return (
     <div className={`rt-past${bare ? " bare" : ""}`}>
       {!bare && <span className="rt-past-label">Summary for {firstName}</span>}
-      {!bare && <input className="rt-recap-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="A one-line title" aria-label="Recap title" />}
-      <textarea className={`rt-note-text${changed ? " typed" : ""}${bare ? "" : " short"}`} value={recap} onChange={(e) => setRecap(e.target.value)} placeholder={`What you covered and what ${firstName} agreed to…`} aria-label={`Summary for ${firstName}`} onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changed && save()} />
+      {!bare && <input className="rt-recap-title" {...title.bind} maxLength={80} placeholder="A one-line title" aria-label="Recap title" />}
+      <textarea className={`rt-note-text${recap.typed ? " typed" : ""}${bare ? "" : " short"}`} {...recap.bind} placeholder={`What you covered and what ${firstName} agreed to…`} aria-label={`Summary for ${firstName}`} />
       {/* The saved lines, each one an event on the client's plan in a click (9 Oct): a trip they mentioned, a supplement to start. */}
-      {onAddEvent && !changed && !agreedPoints(m.summary).prose && agreedPoints(m.summary).points.length > 0 && (
+      {onAddEvent && settled && !agreedPoints(m.summary).prose && agreedPoints(m.summary).points.length > 0 && (
         <ul className="rt-lines" aria-label="Agreed points">
           {agreedPoints(m.summary).points.map((line, i) => (
             <li key={i} className="dlh-line">
@@ -644,11 +932,9 @@ function PastBody({ m, firstName, onPatch, bare, onAddEvent }: { m: DraftMeeting
           ))}
         </ul>
       )}
-      {changed && <NoteFoot onCancel={cancel} onSave={save} />}
     </div>
   );
 }
-
 
 /** The month at a glance: this client's calls, everyone else's, and the picked day's bookings under it. The phase pop-up's
  *  calendar (MonthRange, 21 Oct, Alex: one calendar, a week per wheel step), the picked day in ink, the calls as dots. */
@@ -883,10 +1169,12 @@ function LinkDialog({ value, onSave }: { value: string; onSave: (link: string) =
   );
 }
 
-/** Marking a call completed: the last chance to tell the client what came out of it. */
-function CompleteDialog({ firstName, value, title: initialTitle, onComplete }: { firstName: string; value: string; title: string; onComplete: (summary: string, title: string) => void }) {
+/** Marking a call completed: the last chance to tell the client what came out of it, and what to focus on until the next. */
+function CompleteDialog({ firstName, value, title: initialTitle, goals, onComplete }: { firstName: string; value: string; title: string; /** The client's current To focus on, the lines' first words. */ goals: string[]; onComplete: (summary: string, title: string, focus: string[]) => void }) {
   const [recap, setRecap] = useState(value);
   const [title, setTitle] = useState(initialTitle);
+  const [rows, setRows] = useState(() => fillFocus(goals));
+  const lines = focusLines(rows);
   return (
     <DialogContent className="dlh rt-complete">
       <div className="dlh-head">
@@ -903,13 +1191,39 @@ function CompleteDialog({ firstName, value, title: initialTitle, onComplete }: {
       </label>
       <label className="rt-field">
         <span className="dlh-label">Summary for {firstName}</span>
-        <textarea className="dlh-line" rows={4} value={recap} onChange={(e) => setRecap(e.target.value)} placeholder="What you covered and what you agreed…" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && recap.trim() && onComplete(recap.trim(), title.trim())} />
+        <textarea className="dlh-line" rows={4} value={recap} onChange={(e) => setRecap(e.target.value)} placeholder="What you covered and what you agreed…" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && recap.trim() && onComplete(recap.trim(), title.trim(), lines)} />
       </label>
+      {/* To focus on (23 Oct, Alex): up to three goals until the next call, Phase goals' look (a dot and a clean line each). */}
+      <div className="rt-field">
+        <span className="dlh-label" id="rt-focus-label">
+          To focus on
+        </span>
+        <ul className="rt-goals" aria-labelledby="rt-focus-label">
+          {rows.map((g, i) => (
+            <li key={i} className={g.trim() ? "" : "empty"}>
+              <i aria-hidden="true" />
+              <input
+                value={g}
+                maxLength={FOCUS_CHARS}
+                onChange={(e) => setRows((r) => r.map((x, j) => (j === i ? e.target.value : x)))}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  (e.currentTarget.closest("li")?.nextElementSibling?.querySelector("input") as HTMLInputElement | null)?.focus();
+                }}
+                placeholder={FOCUS_SAMPLES[i]}
+                aria-label={`Goal ${i + 1}`}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
       <div className="dlh-foot">
-        <button type="button" className="dlh-cancel" onClick={() => onComplete("", "")}>
+        {/* Without a summary: the goals typed still go with it. */}
+        <button type="button" className="dlh-cancel" onClick={() => onComplete("", "", lines)}>
           Complete without one
         </button>
-        <button type="button" className="dlh-go" disabled={!recap.trim()} onClick={() => onComplete(recap.trim(), title.trim())}>
+        <button type="button" className="dlh-go" disabled={!recap.trim()} onClick={() => onComplete(recap.trim(), title.trim(), lines)}>
           Complete
         </button>
       </div>

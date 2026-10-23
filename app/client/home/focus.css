@@ -1,0 +1,29 @@
+/* Home · To focus on (23 Oct, Alex; FocusList.tsx): the coach's goals until the next call, first under the greeting.
+   A section as Home's others: an ink label under a hairline 16px in from the screen edge; each goal a ring (24px, 1.6
+   stroke, ink) and its words at 16px/500; ticked, the ring fills ink with a white check and the words go faint. */
+
+.hm > .hm-body > .hm-focus { position: relative; margin-top: 8px; margin-bottom: 4px; padding-top: 14px; }
+.hm-body > .hm-focus::before { content: ""; position: absolute; top: 0; left: -12px; right: -12px; height: 1px; background: #E1E5EB; }
+.hm-focus > .hm-tasks-head .hm-eyebrow { font-size: 11.5px; font-weight: 600; color: #141a24; }
+
+.hm-focus-from { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; font-weight: 500; color: #8b93a1; white-space: nowrap; }
+.hm-focus-face { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; overflow: hidden; background: #EEF0F3; font-size: 10px; font-weight: 600; color: #5b6474; }
+.hm-focus-face img { width: 100%; height: 100%; object-fit: cover; }
+
+.hm-focus-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.hm-focus-goal { display: flex; align-items: flex-start; gap: 14px; width: 100%; padding: 11px 0; border: 0; border-radius: 10px; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.hm-focus-goal:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
+/* The ring sits on the words' first line (21.6px high), so a goal that wraps keeps it at its top. */
+.hm-focus-ring { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: -1px; border-radius: 999px; box-shadow: inset 0 0 0 1.6px #141a24; transition: background-color 0.2s ease; }
+.hm-focus-ring svg { opacity: 0; transition: opacity 0.2s ease; }
+.hm-focus-goal.done .hm-focus-ring { background: #141a24; }
+.hm-focus-goal.done .hm-focus-ring svg { opacity: 1; }
+.hm-focus-text { flex: 1; min-width: 0; font-size: 16px; font-weight: 500; line-height: 1.35; letter-spacing: -0.01em; color: #141a24; overflow-wrap: anywhere; transition: color 0.2s ease; }
+.hm-focus-goal.done .hm-focus-text { color: #8b93a1; }
+
+/* The call it runs until, under the words (past the ring's column). */
+.hm-focus-until { margin: 2px 0 0; padding-left: 38px; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-focus-ring, .hm-focus-ring svg, .hm-focus-text { transition: none; }
+}

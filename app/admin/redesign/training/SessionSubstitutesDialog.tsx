@@ -6,6 +6,7 @@ import { DialogContent, DialogDescription, DialogTitle } from "../../../componen
 import { createLibraryExerciseAction } from "../library/actions";
 import type { Library } from "./TrainingDraft";
 import { Sep } from "../Sep";
+import { FEATURES } from "../../../lib/features";
 
 // A session's substitutes for one exercise (15 Oct), in the admin hairline
 // style since 20 Oct (Alex: no explanations, facts only). The library's
@@ -134,7 +135,8 @@ export default function SessionSubstitutesDialog({
         {session}
       </DialogDescription>
 
-      {/* From the library: read-only. */}
+      {/* From the library: read-only. Off for now (23 Oct, Alex: none are preset on the Library yet). */}
+      {FEATURES.librarySubstitutes && (
       <section className="sbh-sec">
         <h2 className="sbh-label-row">
           <span className="sbh-label">From the library</span>
@@ -166,6 +168,7 @@ export default function SessionSubstitutesDialog({
           </ul>
         )}
       </section>
+      )}
 
       {/* Just for this session. */}
       <section className="sbh-sec">
@@ -282,7 +285,7 @@ export default function SessionSubstitutesDialog({
                 )}
               </div>
             )}
-            {row.librarySubstitutes.length > 0 && list.length === 0 && (
+            {FEATURES.librarySubstitutes && row.librarySubstitutes.length > 0 && list.length === 0 && (
               <button type="button" className="sbh-copy" onClick={() => setList(row.librarySubstitutes.slice(0, MAX).map((s) => ({ ...s })))}>
                 Copy from library
               </button>

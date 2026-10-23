@@ -83,6 +83,7 @@ import {
   sessionAnswers,
   getWorkoutQuestions,
   bodyWeightKg,
+  bodyWeightOn,
 } from "../../lib/queries";
 import { e1rmOf, isAssisted, liftedKg } from "../../lib/progressRules";
 import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
@@ -99,6 +100,8 @@ import { dayMonth, dayMonthTime } from "../../lib/dayMonth";
 import { metricSummary } from "../../lib/metricSummary";
 import { clientPlanId, listCoachPlans } from "../../lib/coachPlans";
 import { coachIdOfClient } from "../../lib/tenancy";
+import { getCoachFocus } from "../../lib/focus";
+import { supportUnreadForCoach, supportUnreadForOwner } from "../../lib/support";
 
 // What the redesign drafts read, gathered on the server for the shell that
 // shows them side by side. Read-only: the drafts save nothing.
@@ -177,6 +180,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   // An assisted lift (23 Oct, Alex): its kg is help, so its trend follows the body weight less the help (liftedKg),
   // known by the exercise's name or its variation's.
   const bodyKg = bodyWeightKg(clientId);
+  // A session's own day's body weight (23 Oct, Alex): a weigh-in later doesn't change what an earlier session lifted.
+  const bodyOn = bodyWeightOn(clientId);
   const exById = new Map(getData().exercises.map((e) => [e.id, e] as const));
   const assistedRow = (a: { exercise_id: number; exercise_name?: string | null; variation_id?: number | null }) =>
     isAssisted(a.exercise_name) || (a.variation_id != null && isAssisted(exById.get(a.exercise_id)?.variations?.find((v) => v.id === a.variation_id)?.name));
@@ -328,6 +333,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         // That week's own exercise and variation decide whether it was assisted (a weighted week stays weighted).
         const weekAssisted = assistedRow(wa);
         const kgs = wl.map((l) => l.weight_kg ?? 0);
+        const date = (wd?.session_ended_at ?? wd?.session_started_at ?? wl[0]?.logged_at ?? null)?.slice(0, 10) ?? null;
+        const weekBodyKg = weekAssisted ? bodyOn(date) : null;
         return {
           week: i + 1,
           label: programWeekLabel(program, wn),
@@ -346,14 +353,17 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
             // A set with no kg or no reps is no reading (a blank kg on an assisted lift is not "no help").
             const es = wl.flatMap((l) => {
               if (l.weight_kg == null || !((l.reps ?? 0) > 0)) return [];
-              const kg = liftedKg(l.weight_kg, weekAssisted, bodyKg);
+              const kg = liftedKg(l.weight_kg, weekAssisted, weekBodyKg);
               return kg == null ? [] : [e1rmOf(kg, l.reps!)];
             });
             return es.length ? Math.max(...es) : null;
           })(),
           gym: wl[0]?.gym_id != null ? gymName.get(wl[0].gym_id) ?? null : null,
           /** When the session happened (15 Oct, the progress pop-up): ended, else started, else the first set logged. */
-          date: (wd?.session_ended_at ?? wd?.session_started_at ?? wl[0]?.logged_at ?? null)?.slice(0, 10) ?? null,
+          date,
+          /** That week's exercise and variation assisted, and the body weight that day (23 Oct): the progress pop-up weighs it the same. */
+          assisted: weekAssisted,
+          bodyKg: weekBodyKg,
           current: i + 1 === weekIdx,
         };
       }).filter((h): h is NonNullable<typeof h> => h != null);
@@ -372,6 +382,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         exerciseId: a.exercise_id,
         variationId: a.variation_id ?? null,
         name: a.exercise_name ?? "Exercise",
+        // Assisted by the exercise's name or its variation's (23 Oct), for the progress pop-up.
+        assisted: assistedRow(a),
         sets: a.sets,
         reps: a.reps ?? "",
         kg: a.target_weight_kg,
@@ -580,7 +592,7 @@ function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEv
   }
   return { spots, total: ranked.length, owed: ranked.filter((r) => r.rank !== -1).length };
 }
-export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean };
+export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean; /** Support lines not read: the company's to a coach (the Support row), every coach's to the owner (Coaches). */ supportUnread: number };
 
 /** The dot trail on one client's screens (dots.ts): what the rail counts for them, each placed where it is. */
 export function loadDots(clientId: number): DotTrail {
@@ -662,7 +674,8 @@ export function loadRail(coach: { id: number; email: string; role: "coach" | "cl
     return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, ...railSpots(c.id, feed, byId, today, isNew), notSignedIn: !user || (!user.clerk_user_id && (user.must_change_password || !user.password_hash)) };
   });
   const profile = getCoachProfile(coach.id);
-  return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: isOwner(coach), inviteReady: mailConfigured(), clerk: clerkOn() };
+  const owner = isOwner(coach);
+  return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: owner, inviteReady: mailConfigured(), clerk: clerkOn(), supportUnread: owner ? supportUnreadForOwner() : supportUnreadForCoach(coach.id) };
 }
 
 // A coach account has an email but no name; "finlay.smith@…" reads as "Finlay Smith".
@@ -928,6 +941,8 @@ export function loadMeetings(clientId: number): DraftMeetings {
     others: data.others,
     lastLink: data.lastLink,
     coachTz: getCoachSettings(getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0).timezone ?? null,
+    // To focus on (23 Oct, lib/focus.ts): the client's current list, with their ticks.
+    focus: getCoachFocus(clientId),
   };
 }
 

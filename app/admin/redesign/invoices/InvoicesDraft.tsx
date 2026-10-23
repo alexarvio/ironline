@@ -146,7 +146,7 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
       {plan.missing.length > 0 && (
         <section className="riv-fix" aria-label="Missing from Settings">
           <span>Missing from Settings: {plan.missing.join(", ").replace(/, ([^,]*)$/, " and $1")}</span>
-          <Link className="trn-pill" href={plan.missing.includes("bank details") && plan.missing.length === 1 ? "/admin/redesign/settings/invoicing" : "/admin/redesign/settings/business"}>
+          <Link className="trn-pill" href={plan.missing.includes("bank details") && plan.missing.length === 1 ? "/admin/redesign/settings#invoicing" : "/admin/redesign/settings#business"}>
             Add them
           </Link>
         </section>

@@ -1,11 +1,42 @@
-/* Settings (and Profile, which wears the same parts) on the admin rules (22 Oct; docs/DESIGN-RULES-ADMIN.md): root
-   "rd trn rls rst". Training's bare header; each section's title (20px/600) on the page over one white hairline card
-   (rls-card); fields as small caps labels over clean lines (.dlh-label, .dlh-line in trn.css), ink while typing; a
-   choice of two as the capsule (.rd-btn-group); lists as the floating Picker; a bar at the foot with Cancel in words and
-   the ink Save once something is changed (SaveBar). Ink, never navy; weights 500 and 600. Prefix rst-. Overrides of a
-   shared class carry an extra class (.rd.rst), whichever file the dev server loads last. */
+/* Settings on the admin rules (22 Oct; docs/DESIGN-RULES-ADMIN.md), one page of folding sections since 23 Oct (Alex:
+   "we need structure… only one is open every time"): root "rd trn rls rst rpf", Profile (profile.css) one of its
+   sections. Training's bare header; each section its title (20px/600) with the Fold after it, the row its button, and
+   open its parts under it, each part a small caps label over one white hairline card (rls-card) across the page's
+   width; fields as small caps labels over clean lines (.dlh-label, .dlh-line in trn.css), ink while typing; a choice
+   of two as the capsule (.rd-btn-group); lists as the floating Picker; one bar at the page's foot with Cancel in words
+   and the ink Save once something is changed (SaveBar, SaveHost). Ink, never navy; weights 500 and 600. Prefix rst-.
+   Overrides of a shared class carry an extra class (.rd.rst), whichever file the dev server loads last. */
 
-.rd.rst { max-width: 760px; }
+/* ---- The sections (SettingsBoard.tsx): one under another, space between, one open at a time. The page is held in
+   place by the board while heights ease (the browser's own anchoring kept out of it, so the two never pull apart). */
+.rd.rst .rst-secs { display: flex; flex-direction: column; gap: 2px; overflow-anchor: none; }
+.rd.rst .rst-sec { scroll-margin-top: 24px; }
+.rd.rst .rst-sechead { margin: 0; font: inherit; }
+/* The title row, all of it the button: the title, the chevron right after it (rule 8's Fold), a tag after that. */
+.rd.rst .rst-sectoggle { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
+.rd.rst .rst-sectitle { position: relative; min-width: 0; font-size: 20px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
+.rd.rst .rst-sectoggle:hover .rd-fold { color: #5b6474; }
+.rd.rst .rst-sectoggle:focus-visible { outline: none; }
+.rd.rst .rst-sectoggle:focus-visible .rst-sectitle { text-decoration: underline; text-decoration-color: #c5ccd8; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+/* Unsaved changes held in a section, open or folded: an ink dot at the title's top right, moving nothing. */
+.rd.rst .rd-due.rst-unsaved { position: absolute; top: 3px; right: -9px; background: #141a24; }
+/* Its content: the height eases from nothing to all of it (as the rail's Needs you list), clipped while it moves,
+   unclipped once open (so the profile's phone can follow the page), hidden from find and focus while folded. */
+.rd.rst .rst-body { display: grid; grid-template-rows: 0fr; overflow: hidden; overflow: clip; visibility: hidden; transition: grid-template-rows 0.22s ease, visibility 0s linear 0.22s; }
+.rd.rst .rst-sec.open > .rst-body { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows 0.22s ease, visibility 0s; }
+.rd.rst .rst-sec.open.settled > .rst-body { overflow: visible; }
+.rd.rst .rst-inner { min-width: 0; min-height: 0; }
+.rd.rst .rst-content { display: flex; flex-direction: column; gap: 22px; padding: 6px 0 30px; }
+/* Opened on arrival (#invoicing): at once. */
+.rd.rst .rst-secs.still .rst-body, .rd.rst .rst-secs.still .rd-fold { transition: none; }
+@media (prefers-reduced-motion: reduce) { .rd.rst .rst-body, .rd.rst .rst-sec.open > .rst-body { transition: none; } }
+
+/* A section's part: its small caps label (and a fact, grey after the bar) over its card, its control on the right. */
+.rd.rls.rst .rls-section.rst-sub { gap: 10px; }
+.rd.trn.rst .rst-sub > .trn-weekhead { align-items: center; min-height: 16px; margin-bottom: 0; }
+.rd.trn.rst .rst-sub > .trn-weekhead > div:first-child { flex-direction: row; align-items: center; gap: 0; min-width: 0; }
+.rd.trn.rst .rst-sub > .trn-weekhead h3 { margin: 0; font-size: 10.5px; font-weight: 600; line-height: 16px; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.rd.trn.rst .rst-sub > .trn-weekhead > div:first-child > span { font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 
 /* ---- A card of fields: two columns, a wide field across both; one under the other on a narrow page. */
 .rd.rls.rst .rls-card.rst-card { padding: 0; }

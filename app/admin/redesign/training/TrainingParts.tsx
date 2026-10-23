@@ -14,6 +14,7 @@ import { Dialog } from "../../../components/ui/dialog";
 import { ConfirmDialog, type DraftAnswered, type DraftProgram } from "./TrainingDraft";
 import { SepJoin } from "../Sep";
 import { logDate } from "../../../lib/dayMonth";
+import { FEATURES } from "../../../lib/features";
 
 // The Training tab's restructure (19 Oct, Alex's spec): the header's goals
 // and note as two pills with one pop-over, the weeks as a rail of cards, and
@@ -130,9 +131,12 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
       </button>
     );
   };
+  // Nothing to show (an ended programme with no note, the goals off): no empty box in the header row.
+  if (locked && !savedNote && !(phaseId != null && FEATURES.phaseGoals && savedGoals.length > 0)) return null;
   return (
     <div ref={wrap} className="trn-pills">
-      {phaseId != null && pill("goals")}
+      {/* Phase goals off (23 Oct, Alex: To focus on replaces them): the note alone. */}
+      {phaseId != null && FEATURES.phaseGoals && pill("goals")}
       {pill("note")}
       {open && (
         <div className="trn-pop" role="dialog" aria-label={open === "goals" ? "Phase goals" : `Note to ${firstName}`}>

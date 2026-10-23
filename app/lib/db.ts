@@ -614,7 +614,7 @@ type Invoice = {
   /** Who it is from, frozen once it leaves "Not sent" (until then the coach's settings are read live). */
   from?: InvoiceParty;
   /** Who it is for, frozen with `from`. */
-  to?: { name: string; email?: string; address?: string };
+  to?: InvoiceRecipient;
   /** When it was paid, and how: the coach marking it, or Stripe telling us. */
   paid_at?: string;
   paid_via?: "manual" | "stripe";
@@ -622,6 +622,8 @@ type Invoice = {
   stripe_session_id?: string;
 };
 export type InvoiceLine = { description: string; quantity: number; unit_price: number };
+/** Who an invoice is billed to: the client's name, email and address in parts (23 Oct; older ones have `address` alone). */
+export type InvoiceRecipient = { name: string; email?: string; address?: string; postcode?: string; city?: string; region?: string; country_code?: string; country?: string };
 /** A saved invoice to start from (21 Oct, Alex): its lines and note, the coach's for any client. "{month}" in them is the issue date's month. */
 export type InvoiceTemplate = { id: string; name: string; lines: InvoiceLine[]; note?: string };
 /** How often a recurring invoice comes back. */
@@ -853,7 +855,17 @@ type ClientProfile = {
   // alone. Absent on phones typed before the two were split: those are shown
   // exactly as typed, never parsed for a country.
   phone_code?: string | null;
+  // The street and number (on rows before the split, the whole address as typed). The rest of it in parts, as the
+  // coach's business address (23 Oct, Alex: for invoicing): lib/address.ts writes and cleans them.
   address?: string | null;
+  postcode?: string | null;
+  city?: string | null;
+  /** State or province, where the country has them. */
+  region?: string | null;
+  /** ISO code ("NL"); absent is none, or Other with `country` typed. */
+  country_code?: string | null;
+  /** The country's name: from the list, or typed for one not on it. */
+  country?: string | null;
   height_cm: number | null;
   starting_weight_kg: number | null;
   coaching_start_date: string | null;
@@ -949,6 +961,17 @@ type MeetingNote = {
   text: string;
   created_at: string;
 };
+/** What the client is to focus on until their next call (23 Oct, Alex; lib/focus.ts): one list a client, up to three
+    goals the coach sets (completing a call, or Meetings' To focus on) and the client ticks on Home. */
+export type ClientFocus = {
+  id: number;
+  client_id: number;
+  goals: { id: number; text: string; done: boolean; done_at: string | null }[];
+  /** When the coach last set or changed the list (ISO). */
+  set_at: string;
+  /** The call it came from; null when set outside one. */
+  meeting_id: number | null;
+};
 
 // Per-client customization of the Training exercise table: which columns
 // show, in what order, and whether they're a built-in (backed by a real
@@ -1009,6 +1032,27 @@ type ChatMessage = {
   edited_at?: string | null;
   /** The message this one answers (a WhatsApp-style reply, 2 Oct): its id. */
   reply_to?: number | null;
+};
+
+/** A line between a coach and the company (23 Oct, Alex: Settings' Support, the owner's inbox on Coaches;
+    lib/support.ts). One thread a coach; a problem is a line with where it happened and a screenshot. */
+export type SupportMessage = {
+  id: number;
+  /** The coach the thread is with (never the owner's own account). */
+  coach_id: number;
+  from: "coach" | "owner";
+  kind: "message" | "problem";
+  text: string;
+  /** A problem's screen, as the coach typed it. */
+  where?: string | null;
+  /** "/uploads/support/<coachId>/<file>", served by /api/support/<id>. */
+  image_path?: string | null;
+  created_at: string;
+  seen_by_owner: boolean;
+  seen_by_coach: boolean;
+  /** A problem the owner closed. */
+  done?: boolean;
+  done_at?: string | null;
 };
 
 // A log of coach-side changes worth surfacing to the client — "your coach
@@ -1229,6 +1273,8 @@ export type Data = {
   client_phases: ClientPhase[];
   client_events: ClientEvent[];
   meeting_requests?: MeetingRequest[];
+  // To focus on (23 Oct, lib/focus.ts): a client's goals until their next call. Not a Postgres table of its own: kept in `kv`.
+  client_focus?: ClientFocus[];
   event_categories: EventCategory[];
   calorie_logs: CalorieLog[];
   food_entries: FoodEntry[];
@@ -1266,6 +1312,8 @@ export type Data = {
   // Business board reads a start: the card's coaching start, else their login, else their first programme) and when
   // they went. For the Business board's clients by month and how long clients stay. Kept when their rows go.
   client_departures?: { id: number; coach_id: number | null; client_id: number; name: string; start: string | null; at: string; by: "coach" | "client" }[];
+  // The coaches' threads with the company (23 Oct, lib/support.ts). Not a Postgres table of its own: kept in `kv`.
+  support_messages?: SupportMessage[];
   _seq: Record<string, number>;
 };
 
@@ -1320,6 +1368,7 @@ function emptyData(): Data {
     training_columns: [],
     assignment_custom_values: [],
     chat_messages: [],
+    support_messages: [],
     coach_activity: [],
     report_templates: [],
     report_template_sections: [],

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { phaseLengthLabel } from "../../../lib/phases";
+import { FEATURES } from "../../../lib/features";
 import { TrackIcon, weeksBetween } from "../plan/PlanDraft";
 import { rgbOf } from "../plan/EventsCard";
 import DateSpan from "./DateSpan";
@@ -90,21 +91,24 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
         </span>
       )}
 
-      <div className="phd-field">
-        <span className="dlh-label">Phase goals</span>
-        {goals.length === 0 ? (
-          <p className="phd-none">None yet</p>
-        ) : (
-          <ul className="phd-goals">
-            {goals.map((g, i) => (
-              <li key={i}>
-                <i aria-hidden="true" />
-                {g}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {/* Phase goals off (23 Oct, Alex: To focus on replaces them): the weeks, then Open. */}
+      {FEATURES.phaseGoals && (
+        <div className="phd-field">
+          <span className="dlh-label">Phase goals</span>
+          {goals.length === 0 ? (
+            <p className="phd-none">None yet</p>
+          ) : (
+            <ul className="phd-goals">
+              {goals.map((g, i) => (
+                <li key={i}>
+                  <i aria-hidden="true" />
+                  {g}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="dlh-foot">
         <Link ref={openRef} href={planHref(client.id, p)} className="dlh-go">

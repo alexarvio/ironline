@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { isOwner, requireCoach } from "../../../lib/auth";
 import { getData } from "../../../lib/db";
 import { getCoachProfileView, listCoachAccounts } from "../../../lib/queries";
+import { listSupportThreads } from "../../../lib/support";
 import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import ChatDock from "../ChatDock";
@@ -15,8 +16,9 @@ import "../rail.css";
 import "./coaches.css";
 
 // The owner's Coaches in the redesign (22 Oct, Alex: the old /admin?view=coaches in the new style): every coach
-// account, how many clients each has and when one last logged something, the sign-ups waiting to be let in, and the
-// owner's account actions (CoachesPanel's own, see ./actions.ts). Never any client's name or data. Owner only.
+// account, how many clients each has and when one last logged something, the sign-ups waiting to be let in, the
+// coaches' Support threads (23 Oct, SupportInbox, lib/support.ts), and the owner's account actions (CoachesPanel's
+// own, see ./actions.ts). Never any client's name or data. Owner only.
 //   /admin/redesign/coaches
 export const dynamic = "force-dynamic";
 
@@ -36,7 +38,7 @@ export default async function CoachesPage() {
       <RedesignRail rail={loadRail(coach)} clientId={0} />
       <ChatDock chats={loadChatDock(coach)} />
       <div className="rd-page">
-        <CoachesDraft accounts={accounts} waiting={waiting} />
+        <CoachesDraft accounts={accounts} waiting={waiting} support={listSupportThreads()} />
       </div>
     </div>
   );

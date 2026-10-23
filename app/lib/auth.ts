@@ -9,6 +9,7 @@ import { coachOwnsClient, seedCoachLibrary } from "./tenancy";
 import { clerkOn, clerkUserIdFromRequest, clerkUserRow, deleteClerkUser } from "./clerk";
 import { isTimezone } from "./timezones";
 import { setViewZone } from "./viewZone";
+import { deleteUploadFolder } from "./storage";
 
 // Authentication and authorization for NorCoach.
 //
@@ -262,8 +263,11 @@ export function deleteCoachAccount(coachId: number): boolean {
   data.exercises = data.exercises.filter((e) => e.coach_id !== coachId);
   data.meeting_notes = data.meeting_notes.filter((n) => !blockIds.has(n.meeting_id));
   data.meetings = data.meetings.filter((m) => !blockIds.has(m.id));
+  // Their Support thread and its screenshots (lib/support.ts), which nothing could read or remove after this.
+  if (data.support_messages) data.support_messages = data.support_messages.filter((m) => m.coach_id !== coachId);
   data.users = data.users.filter((u) => u.id !== coachId);
   persist();
+  void deleteUploadFolder(`support/${coachId}/`).catch((error) => console.error(`[support] screenshots of coach ${coachId} not removed:`, error));
   void deleteClerkUser(coach.clerk_user_id);
   return true;
 }

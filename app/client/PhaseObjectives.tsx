@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import { ChevronDownIcon } from "../components/icons";
+import { FEATURES } from "../lib/features";
 
 // The coach's objectives for the phase a tab is about (the ones on its Home
 // card), folded to one row: "Objectives from Finlay" and a chevron that
 // opens the numbered list. A white card on Training and Nutrition; a plain
-// line on the check-in, among its other lines.
+// line on the check-in, among its other lines. Off with phase goals (23 Oct,
+// Alex: To focus on replaces them): nothing, as when there are none.
 export default function PhaseObjectives({ coachName, objectives, variant = "card" }: { coachName: string; objectives: string[]; variant?: "card" | "line" }) {
   const [open, setOpen] = useState(false);
-  if (objectives.length === 0) return null;
+  if (!FEATURES.phaseGoals || objectives.length === 0) return null;
   return (
     <section className={`po po-${variant}${open ? " open" : ""}`}>
       <button type="button" className="po-head" aria-expanded={open} onClick={() => setOpen((o) => !o)}>

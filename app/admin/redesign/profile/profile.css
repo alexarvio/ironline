@@ -1,18 +1,18 @@
-/* The coach profile editor in the redesign, on the admin rules (22 Oct; root "rd trn rls rst rpf"): it wears
-   Settings' parts (settings.css: the cards of fields, clean lines, rows, the Picker, the bar at the foot) and adds
+/* The coach profile editor, the Profile section of the one Settings page (23 Oct; root "rd trn rls rst rpf"): it wears
+   Settings' parts (settings.css: the folding sections, the cards of fields, clean lines, rows, the Picker) and adds
    what only a profile has. Ink, never navy; weights 500 and 600. Prefix rpf-. */
 
-/* The page uses the full width: the form and the phone beside it. */
-.rd.rst.rpf { max-width: none; }
 .rd.rpf .rpf-empty { margin: 0; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
+/* The section's first row: Your details | Public profile on the left, whose profile (the owner) on the right. */
+.rd.rpf .rpf-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 /* Whose profile (the owner): the floating list on a white pill, as the header's pills. */
 .rd.rst.rpf .rd-picker.rpf-who { display: inline-flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; width: auto; min-width: 220px; max-width: 320px; height: 36px; margin: 0; padding: 0 12px 0 16px; border: 0; border-radius: 999px; outline: none; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }
 .rd.rst.rpf .rd-picker.rpf-who:hover, .rd.rst.rpf .rd-picker.rpf-who[data-state="open"], .rd.rst.rpf .rd-picker.rpf-who:focus-visible { box-shadow: inset 0 0 0 1px #141a24; }
 .rd.rst.rpf .rd-picker.rpf-who:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
 .rd.rst.rpf .rd-picker.rpf-who > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rd.rst.rpf .rd-picker.rpf-who svg { flex: none; width: 15px; height: 15px; color: #8b93a1; }
-/* Your details | Public profile: the capsule, under the header. */
-.rd.rpf .rpf-tabs { align-self: flex-start; margin-top: -4px; }
+/* Your details | Public profile: the capsule. */
+.rd.rpf .rpf-tabs { align-self: flex-start; }
 
 /* ---- Public profile: the form, and the phone beside it (gone on a narrower page). */
 .rd.rpf .rpf-cols { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; align-items: start; }
@@ -63,7 +63,9 @@
 /* + Study, + Role: words with the plus, no pill (as + Metric). */
 .rd.rls.rpf .rls-add.rpf-add { align-self: flex-start; margin: 6px 0 0 14px; }
 
-/* The foot when all is saved: when it was, and the Published switch on the right, ink while on. */
+/* The form's foot, in place (the page's one bar has Cancel and Save): a white row with the hairline, when it was saved
+   while nothing waits on the bar, and the Published switch on the right, ink while on. */
+.rd.rst.rpf .rst-bar.rpf-foot { position: static; box-shadow: 0 0 0 1px #e1e5eb; }
 .rd.rpf .rpf-saved { color: #8b93a1; }
 .rd.rpf .rpf-error { font-size: 13px; font-weight: 500; color: #b42318; }
 .rd.rpf .rpf-pub { display: inline-flex; flex: none; align-items: center; gap: 10px; height: 36px; margin-left: auto; padding: 0 8px 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; cursor: pointer; }
@@ -74,8 +76,8 @@
 .rd.rpf .rpf-pub[aria-checked="true"] .rpf-pub-sw { background: #141a24; }
 .rd.rpf .rpf-pub[aria-checked="true"] .rpf-pub-sw i { left: 17px; }
 
-/* ---- Your details: the sections one under another, at Settings' width. */
-.rd.rpf .rpf-details { display: flex; flex-direction: column; gap: 22px; max-width: 760px; }
+/* ---- Your details: Account over Address, as every section's parts, across the page's width. */
+.rd.rpf .rpf-details { display: flex; flex-direction: column; gap: 22px; }
 .rd.rpf .rpf-grid3 { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.4fr); }
 @media (max-width: 700px) { .rd.rpf .rpf-grid3 { grid-template-columns: minmax(0, 1fr); } }
 /* The phone: the dial code's list and the number on one clean line each, side by side. */

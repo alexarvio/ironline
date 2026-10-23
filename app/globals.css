@@ -15523,6 +15523,17 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .nc-hl .rd-picker.nc-dialpick { display: inline-flex; flex: none; align-items: center; gap: 6px; height: 28px; margin: 0; padding: 0 4px 0 0; border: 0; border-radius: 0; outline: none; background: none; box-shadow: none; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; cursor: pointer; }
 .nc-hl .rd-picker.nc-dialpick svg { width: 14px; height: 14px; color: #8b93a1; }
 .nc-hl .rd-picker.nc-dialpick:focus-visible { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
+/* The client's country, here and on Home's Details (23 Oct, Alex: the address in its parts, for invoicing): the floating
+   list on the row's clean line, as the dial code, Choose in grey until one is picked; the list six rows, then it scrolls
+   (design rules 6), the chosen one ink on a soft grey. The list is portalled, so it goes by its own class. */
+.nc-hl .rd-picker.nc-countrypick, .cc-hl .rd-picker.nc-countrypick { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-width: 0; height: 28px; margin: 0; padding: 0; border: 0; border-radius: 0; outline: none; background: none; box-shadow: none; font: inherit; font-size: 15px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #141a24; text-align: left; cursor: pointer; }
+.nc-hl .rd-picker.nc-countrypick > span, .cc-hl .rd-picker.nc-countrypick > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nc-hl .rd-picker.nc-countrypick.empty > span, .cc-hl .rd-picker.nc-countrypick.empty > span { color: #98a2b3; }
+.nc-hl .rd-picker.nc-countrypick svg, .cc-hl .rd-picker.nc-countrypick svg { flex: none; width: 14px; height: 14px; color: #8b93a1; }
+.rd-picker-menu.nc-countrymenu { max-height: min(252px, var(--radix-dropdown-menu-content-available-height, 252px)); padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; font-family: var(--font-archivo), system-ui, sans-serif; }
+.rd-picker-menu.nc-countrymenu [data-slot="dropdown-menu-item"] { min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #141a24; }
+.rd-picker-menu.nc-countrymenu [data-slot="dropdown-menu-item"][data-highlighted] { background: #fafbfc; color: #141a24; }
+.rd-picker-menu.nc-countrymenu [data-slot="dropdown-menu-item"].on { background: #f5f6f8; font-weight: 600; color: #141a24; }
 /* Its list floats over the pop-up's scrim (z 100), not under it. */
 body:has(.nc-scrim) [data-radix-popper-content-wrapper] { z-index: 110 !important; }
 .nc-hl .nc-static.none { color: #98a2b3; }
@@ -20344,6 +20355,11 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evs-note.evs-note textarea, .st-details-input.st-details-input, .wo-sheet .wo-sheet-input.wo-sheet-input, .wo-sheet-input.wo-sheet-input { box-sizing: border-box; min-height: 0; padding: 6px 0 8px; border: 0; border-bottom: 1px solid #C9CFD8; border-radius: 0; background: none; box-shadow: none; font-size: 16px; font-weight: 500; line-height: 1.45; color: #141a24; outline: none; }
 .evs-note.evs-note textarea:focus, .st-details-input.st-details-input:focus, .wo-sheet .wo-sheet-input.wo-sheet-input:focus, .wo-sheet-input.wo-sheet-input:focus { border: 0; border-bottom: 1px solid #141a24; background: none; box-shadow: none; }
 .evs-note.evs-note textarea::placeholder, .st-details-input.st-details-input::placeholder, .wo-sheet-input.wo-sheet-input::placeholder { color: #98A2B3; }
+/* Your details' address in its parts (23 Oct): the postcode and city side by side, the country (and its state) the same;
+   the country the phone's own list on the same underline, a quiet chevron at its end (tripled: over the focus rule above), Choose in the label grey. */
+.st-details-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 12px; }
+select.st-details-input.st-details-input.st-details-input { appearance: none; padding-right: 22px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b93a1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 2px center / 14px; font-family: inherit; }
+select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3; }
 .evs-note.evs-note small { right: 0; bottom: 10px; }
 .wo-sheet-input.wo-sheet-input { height: auto; min-height: 44px; }
 /* The check-in's note keeps the coach's face beside it; the box goes, the underline runs under both. */

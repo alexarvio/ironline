@@ -2,7 +2,7 @@ import fs from "fs";
 import { sortReasons, type AttentionReason } from "./attentionReasons";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, mergeDuplicateMetricDefinitions, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceEvery, InvoiceLine, InvoiceParty, InvoiceRepeat, InvoiceTemplate, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion, MeetingRequest } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceEvery, InvoiceLine, InvoiceParty, InvoiceRecipient, InvoiceRepeat, InvoiceTemplate, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion, MeetingRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -13,6 +13,7 @@ import { isTimezone } from "./timezones";
 import { isClientCall, takesClient } from "./calendarKinds";
 import { dayMonth } from "./dayMonth";
 import { countryOf, invoicingFor } from "./countries";
+import { addressLine } from "./address";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 import { metricAskAt, metricFromWorkout } from "./metricAskAt";
@@ -22,6 +23,7 @@ import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 import { cleanRepeat, openEnd, type EventRepeat } from "./eventRepeat";
 import { isAssisted } from "./progressRules";
+import { FEATURES } from "./features";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -2319,7 +2321,13 @@ export type OverviewPanel = {
     email: string;
     phone_code: string;
     phone: string;
+    /** The street and number; the rest of the address in parts (23 Oct, lib/address.ts). */
     address: string;
+    postcode: string;
+    city: string;
+    region: string;
+    country_code: string;
+    country: string;
     coaching_start_date: string;
     goal_phase: string;
     goal_phase_from_plan: string | null;
@@ -2425,8 +2433,8 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
     meta: {
       age: profile.birthdate ? `${Math.floor((Date.now() - new Date(`${profile.birthdate}T00:00:00`).getTime()) / 31557600000)}` : null,
       since: profile.coaching_start_date ? fmtDate(profile.coaching_start_date) : null,
-      // The last part of the address is the town, which is all the header needs.
-      city: (profile.address ?? "").split(",").map((p) => p.trim()).filter(Boolean).pop() ?? null,
+      // The town, which is all the header needs: its own part, or on an address typed as one line, its last part.
+      city: profile.city || (profile.postcode || profile.country_code || profile.country ? null : ((profile.address ?? "").split(",").map((p) => p.trim()).filter(Boolean).pop() ?? null)),
       email: profile.email || null,
     },
     coachNote: {
@@ -2470,7 +2478,8 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       { label: "Email", value: text(profile.email), field: "email" },
       // Code and number joined for show: "+31 6 45787628".
       { label: "Phone", value: profile.phone ? [profile.phone_code, profile.phone].filter(Boolean).join(" ") : "", field: "phone" },
-      { label: "Address", value: text(profile.address), field: "address" },
+      // The parts on one line: the street, the postcode and city, the country (23 Oct).
+      { label: "Address", value: addressLine(profile), field: "address" },
     ],
     // The goal / phase is the pill under the name, so it isn't repeated here.
     coachingInfo: [
@@ -2502,6 +2511,11 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       phone_code: profile.phone_code ?? "",
       phone: profile.phone ?? "",
       address: profile.address ?? "",
+      postcode: profile.postcode ?? "",
+      city: profile.city ?? "",
+      region: profile.region ?? "",
+      country_code: profile.country_code ?? "",
+      country: profile.country ?? "",
       coaching_start_date: profile.coaching_start_date ?? "",
       goal_phase: profile.goal_phase ?? "",
       // When the Plan tab has a phase running this week, that is the goal /
@@ -3214,19 +3228,79 @@ export function listMeasurementFields(clientId: number): MeasurementFieldDef[] {
     .sort((a, b) => a.order_index - b.order_index);
 }
 
-// Where this client's weight lives: the legacy Weight measurement field if
-// they have one, otherwise a metric-library "Weight" column (daily first,
-// then weekly, then monthly). Everything that needs "the client's weight" —
-// the Home chart, the snapshot's current weight, the graph fallback — reads
-// through here so the two storage shapes never disagree.
+/** A body weight's name (23 Oct, Alex): "Weight", "Body weight", "Bodyweight (AM)"; a lift's weight never. */
+export const WEIGHT_NAME = /^(body\s?)?weight\b/i;
+const LB_UNIT = /^lbs?\.?$/i;
+const KG_PER_LB = 0.45359237;
+const DAY_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/** One weigh-in: the day it is for, the value and unit as typed, that in kg, and when it was saved. */
+export type BodyWeightReading = { date: string; value: number; unit: string; kg: number; at: string | null };
+
+/** A weight in another unit: as typed when both are kg or both lbs, else converted. */
+export function weightInUnit(value: number, from: string, to: string): number {
+  const toLb = LB_UNIT.test(to.trim());
+  if (toLb === LB_UNIT.test(from.trim())) return value;
+  return Math.round((toLb ? value / KG_PER_LB : value * KG_PER_LB) * 100) / 100;
+}
+/** A reading in a unit (the one the client is asked in): as typed when it is the same. */
+export const weightIn = (r: BodyWeightReading, unit: string): number => weightInUnit(r.value, r.unit, unit);
+
+// Every body weight the client has logged, wherever they logged it (23 Oct, Alex: every weight shown is linked to
+// their latest log): each Weight metric's readings, any phase and any rhythm, and the legacy Weight measurement field's.
+// A daily reading is for its day; a weekly or monthly one for the day it was sent (its period with no stamp). Two on
+// one day: the one saved last. lbs are kg here once. Nothing is stored: every reader follows the next log.
+export function bodyWeightReadings(clientId: number): BodyWeightReading[] {
+  const data = getData();
+  const byDay = new Map<string, BodyWeightReading>();
+  const savedMs = (at: string | null) => {
+    const t = at ? Date.parse(at) : NaN;
+    return Number.isFinite(t) ? t : -Infinity;
+  };
+  const add = (date: string, value: number | null, unit: string, at: string | null | undefined) => {
+    if (!DAY_ISO.test(date) || value == null || !Number.isFinite(value)) return;
+    const r: BodyWeightReading = { date, value, unit, kg: weightInUnit(value, unit, "kg"), at: at ?? null };
+    const was = byDay.get(date);
+    if (!was || savedMs(r.at) >= savedMs(was.at)) byDay.set(date, r);
+  };
+  for (const f of data.measurement_fields) {
+    if (f.client_id !== clientId || !WEIGHT_NAME.test(f.name.trim())) continue;
+    for (const v of data.measurement_values) if (v.field_id === f.id) add(String(v.date).slice(0, 10), v.value, f.unit, v.logged_at);
+  }
+  const defs = new Map(data.metric_definitions.filter((m) => m.client_id === clientId && WEIGHT_NAME.test(m.name.trim())).map((m) => [m.id, m] as const));
+  for (const e of data.metric_entries) {
+    const def = defs.get(e.metric_definition_id);
+    if (!def) continue;
+    const period = String(e.period ?? "");
+    const day = def.frequency === "daily" || !e.logged_at ? (/^\d{4}-\d{2}$/.test(period) ? `${period}-01` : period.slice(0, 10)) : localDateStr(new Date(e.logged_at));
+    add(day, e.value, def.unit, e.logged_at);
+  }
+  return [...byDay.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
+// The client's weight, in kg, a day each, oldest first: their readings from every place they log it
+// (bodyWeightReadings). Everything that shows "the client's weight" reads through here.
 export function getWeightSeriesAll(clientId: number): { date: string; value: number }[] {
-  const field = listMeasurementFields(clientId).find((f) => f.name.toLowerCase().includes("weight"));
-  if (field) return getMeasurementSeries(field.id);
-  const rank: Record<string, number> = { daily: 0, weekly: 1, monthly: 2 };
-  const def = getData()
-    .metric_definitions.filter((m) => m.client_id === clientId && m.name.toLowerCase().includes("weight"))
-    .sort((a, b) => (rank[a.frequency] ?? 9) - (rank[b.frequency] ?? 9))[0];
-  return def ? getMetricSeries(def.id) : [];
+  return bodyWeightReadings(clientId).map((r) => ({ date: r.date, value: r.kg }));
+}
+
+/** The client's body weight on a day (23 Oct): the reading nearest on or before it, else the first after, else the
+    starting weight on their card; a set with no day weighs the latest. For an assisted lift's sets, each by its day. */
+export function bodyWeightOn(clientId: number): (day: string | null | undefined) => number | null {
+  const readings = bodyWeightReadings(clientId).filter((r) => r.kg > 0);
+  const start = getData().client_profiles.find((p) => p.client_id === clientId)?.starting_weight_kg;
+  const fallback = typeof start === "number" && start > 0 ? start : null;
+  return (day) => {
+    if (!readings.length) return fallback;
+    if (!day || !DAY_ISO.test(day.slice(0, 10))) return readings[readings.length - 1].kg;
+    const d = day.slice(0, 10);
+    let on: BodyWeightReading | null = null;
+    for (const r of readings) {
+      if (r.date > d) break;
+      on = r;
+    }
+    return (on ?? readings[0]).kg;
+  };
 }
 
 /** The client's body weight now (23 Oct): their latest weight reading, else the starting weight on their card; null
@@ -4901,7 +4975,13 @@ export type ClientProfile = {
   phone?: string | null;
   /** The dial code for `phone` ("+31"); absent on phones typed before the split. */
   phone_code?: string | null;
+  /** The street and number (older rows: the whole address as typed); the rest in parts (23 Oct, lib/address.ts). */
   address?: string | null;
+  postcode?: string | null;
+  city?: string | null;
+  region?: string | null;
+  country_code?: string | null;
+  country?: string | null;
   height_cm: number | null;
   starting_weight_kg: number | null;
   coaching_start_date: string | null;
@@ -5016,8 +5096,8 @@ export function getTimeToGoal(profile: ClientProfile): string | null {
 // The client's most recent logged weight from Measurements, so "current
 // weight" on the Start Page always matches what they've actually checked in.
 export function getLatestWeight(clientId: number): number | null {
-  const values = getWeightSeriesAll(clientId);
-  const latest = values.length > 0 ? values[values.length - 1].value : null;
+  // A 0 is no weigh-in (23 Oct), as bodyWeightKg reads it.
+  const latest = getWeightSeriesAll(clientId).filter((p) => p.value > 0).at(-1)?.value ?? null;
   // Round away float noise (e.g. 71.2 - 0.4 === 70.79999999999999) so the UI
   // never shows a raw binary-floating-point artifact.
   return latest != null ? Math.round(latest * 10) / 10 : null;
@@ -7116,13 +7196,25 @@ export function checkInEditable(date: string, today: string = localDateStr()): b
 export function getCheckInHistory(clientId: number): CheckInHistory {
   const today = localDateStr();
   const series: CheckInSeries[] = [];
+  // One Weight chart, of every weigh-in wherever it was logged (23 Oct, Alex: bodyWeightReadings), each on its day, in
+  // the unit the client is asked in; kept with no phase running. The legacy field's own Weight chart goes.
+  const weighIns = bodyWeightReadings(clientId).filter((r) => r.date <= today);
+  let weightKey: string | null = null;
+  let weightOwnDays = new Set<string>();
+  const weightPoints = (unit: string) => weighIns.map((r) => ({ date: r.date, value: weightIn(r, unit), at: r.at }));
   for (const cadence of ["daily", "weekly", "monthly"] as const) {
     const defs = metricsAsked(clientId, cadence);
     const entries = getMetricEntries(defs.map((d) => d.id));
     for (const def of defs) {
+      const isWeight = WEIGHT_NAME.test(def.name.trim());
+      if (isWeight && weightKey) continue;
       const scaleMax = ratingScaleMax(def.unit);
       const mine = entries.filter((e) => e.metric_definition_id === def.id && e.value != null && e.period <= today);
-      const points = mine.map((e) => ({ date: e.period, value: e.value!, at: e.logged_at ?? null })).sort((a, b) => (a.date < b.date ? -1 : 1));
+      const points = isWeight ? weightPoints(def.unit) : mine.map((e) => ({ date: e.period, value: e.value!, at: e.logged_at ?? null })).sort((a, b) => (a.date < b.date ? -1 : 1));
+      if (isWeight) {
+        weightKey = `${cadence}${def.id}`;
+        weightOwnDays = new Set(mine.map((e) => e.period));
+      }
       const group = metricGroup(def.category);
       const gc = groupColour(group.key);
       series.push({
@@ -7143,10 +7235,15 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
   const fields = listMeasurementFields(clientId).filter(deployedToClient);
   const values = getMeasurementValues(fields.map((f) => f.id));
   for (const f of fields) {
-    const points = values
-      .filter((v) => v.field_id === f.id && v.value != null && v.date <= today)
-      .map((v) => ({ date: v.date, value: v.value!, at: v.logged_at ?? null }))
-      .sort((a, b) => (a.date < b.date ? -1 : 1));
+    const isWeight = WEIGHT_NAME.test(f.name.trim());
+    if (isWeight && weightKey) continue;
+    if (isWeight) weightKey = `measurement${f.id}`;
+    const points = isWeight
+      ? weightPoints(f.unit)
+      : values
+          .filter((v) => v.field_id === f.id && v.value != null && v.date <= today)
+          .map((v) => ({ date: v.date, value: v.value!, at: v.logged_at ?? null }))
+          .sort((a, b) => (a.date < b.date ? -1 : 1));
     series.push({
       key: `measurement${f.id}`,
       name: f.name,
@@ -7157,6 +7254,30 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
       colour: groupColour("measurements").hex,
       colourRgb: groupColour("measurements").rgb,
       target: null,
+      precision: readingPrecision(points.map((p) => p.value)),
+      points,
+    });
+  }
+  // Nothing asks for Weight now (no phase running): the chart stays, as the newest Weight metric had it.
+  if (!weightKey && weighIns.length > 0) {
+    const def = listAllMetrics(clientId)
+      .filter((m) => WEIGHT_NAME.test(m.name.trim()))
+      .sort((a, b) => b.id - a.id)[0];
+    const group = metricGroup(def?.category ?? "body");
+    const gc = groupColour(group.key);
+    const unit = def?.unit ?? "kg";
+    const points = weightPoints(unit);
+    weightKey = `weight${def?.id ?? 0}`;
+    series.push({
+      key: weightKey,
+      name: def?.name ?? "Weight",
+      unit,
+      scaleMax: null,
+      cadence: "measurement",
+      category: group.label,
+      colour: gc.hex,
+      colourRgb: gc.rgb,
+      target: def?.target ?? null,
       precision: readingPrecision(points.map((p) => p.value)),
       points,
     });
@@ -7173,7 +7294,8 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
     const date = localDateStr(d);
     const items: { name: string; value: string }[] = [];
     for (const s of series) {
-      const p = s.cadence === "weekly" || s.cadence === "monthly" ? s.points.find((x) => x.at && localDateStr(new Date(x.at)) === date) : s.points.find((x) => x.date === date);
+      // The Weight chart's points are already on the day they were for (or sent).
+      const p = s.key !== weightKey && (s.cadence === "weekly" || s.cadence === "monthly") ? s.points.find((x) => x.at && localDateStr(new Date(x.at)) === date) : s.points.find((x) => x.date === date);
       if (p) items.push({ name: s.name, value: shown(s, p.value) });
     }
     const note = [getCheckInNote(clientId, "daily", date), getCheckInNote(clientId, "measurements", date)].filter((n): n is string => !!n?.trim()).join("\n") || null;
@@ -7184,7 +7306,8 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
       checkInTrackerSection(clientId, "monthly", monthStart(date), "Monthly", "", (e) => e?.value != null && !!e.logged_at && localDateStr(new Date(e.logged_at)) === date),
       checkInMeasureSection(clientId, date, true),
     ].filter((s): s is CheckInSection => s !== null);
-    days.push({ date, items, note, dailyTotal: daily.length, dailyDone: daily.filter((s) => s.points.some((x) => x.date === date)).length, edit });
+    // A daily line is done by its own reading: a weigh-in sent elsewhere that day still leaves the daily Weight to fill in.
+    days.push({ date, items, note, dailyTotal: daily.length, dailyDone: daily.filter((s) => (s.key === weightKey ? weightOwnDays.has(date) : s.points.some((x) => x.date === date))).length, edit });
   }
   return { series, days };
 }
@@ -7208,6 +7331,9 @@ function checkInTrackerSection(
   const currentOf = (id: number) => entries.find((e) => e.metric_definition_id === id && e.period === period);
   const defs = only ? all.filter((d) => only(currentOf(d.id))) : all;
   if (defs.length === 0) return null;
+  // A Weight row's last reading is the client's last weigh-in from anywhere (23 Oct, Alex): a new phase's Weight said
+  // "First time" over a reading logged the day before under the old one.
+  const weights = defs.some((d) => WEIGHT_NAME.test(d.name.trim())) ? bodyWeightReadings(clientId) : [];
   return {
     id: frequency,
     label,
@@ -7215,16 +7341,22 @@ function checkInTrackerSection(
     note: getCheckInNote(clientId, frequency, period),
     metrics: defs.map((def) => {
       const current = currentOf(def.id);
-      const previous = entries
-        .filter((e) => e.metric_definition_id === def.id && e.period < period && e.value != null)
-        .sort((a, b) => (a.period < b.period ? 1 : -1))[0];
+      const isWeight = WEIGHT_NAME.test(def.name.trim());
+      const weighIn = isWeight ? weights.filter((r) => r.date < period).at(-1) : undefined;
+      // A day weighed under an earlier phase's Weight opens with that reading, as the feed shows it (23 Oct, the review).
+      const sameDay = isWeight && current?.value == null ? weights.find((r) => r.date === period) : undefined;
+      const previous = weighIn
+        ? { value: weightIn(weighIn, def.unit), period: weighIn.date }
+        : entries
+            .filter((e) => e.metric_definition_id === def.id && e.period < period && e.value != null)
+            .sort((a, b) => (a.period < b.period ? 1 : -1))[0];
       const scaleMax = ratingScaleMax(def.unit);
       return {
         id: String(def.id),
         name: def.name,
         unit: def.unit,
         step: scaleMax ? "1" : "0.1",
-        value: current?.value != null ? String(current.value) : "",
+        value: current?.value != null ? String(current.value) : sameDay ? String(weightIn(sameDay, def.unit)) : "",
         hint: previous
           ? `${previous.value}${def.unit && !scaleMax ? ` ${def.unit}` : scaleMax ? `/${scaleMax}` : ""} on ${checkInFmtDate(previous.period)}`
           : null,
@@ -7247,7 +7379,9 @@ function checkInMeasureSection(clientId: number, date: string, onlyIfLogged = fa
   const values = getMeasurementValues(fields.map((f) => f.id));
   const valueAt = (fieldId: number, d: string) => values.find((v) => v.field_id === fieldId && v.date === d)?.value ?? null;
   if (onlyIfLogged && !fields.some((f) => valueAt(f.id, date) != null)) return null;
-  const previousDate = listMeasurementDates(clientId).filter((d) => d < date).sort((a, b) => (a < b ? 1 : -1))[0] ?? null;
+  // Each field's own last reading before the date (23 Oct): a day with only the waist taken left Weight with none.
+  const previousOf = (fieldId: number) =>
+    values.filter((v) => v.field_id === fieldId && v.value != null && v.date < date).sort((a, b) => (a.date < b.date ? 1 : -1))[0] ?? null;
   return {
     id: "measurements",
     note: getCheckInNote(clientId, "measurements", date),
@@ -7255,7 +7389,9 @@ function checkInMeasureSection(clientId: number, date: string, onlyIfLogged = fa
     intro: "Same spots, same time of day: first thing, before food.",
     metrics: fields.map((f) => {
       const current = valueAt(f.id, date);
-      const previous = previousDate ? valueAt(f.id, previousDate) : null;
+      const prev = previousOf(f.id);
+      const previous = prev?.value ?? null;
+      const previousDate = prev?.date ?? null;
       return {
         id: String(f.id),
         name: f.name,
@@ -9352,6 +9488,8 @@ export function effectiveAlternatives(wa: { exercise_id: number; alternatives?: 
   const own = wa.alternatives ?? [];
   // A session's own picks replace the library's (15 Oct); with none, the library's are offered.
   if (own.length) return own;
+  // Off for now (23 Oct, Alex: no substitutes are preset on the Library yet): a session offers only its own.
+  if (!FEATURES.librarySubstitutes) return [];
   const hidden = new Set(wa.library_substitutes_hidden ?? []);
   const lib = wa.library_substitutes_off ? [] : librarySubstitutesFor(wa.exercise_id).filter((l) => !hidden.has(l.exercise_id));
   return lib;
@@ -10342,6 +10480,8 @@ function seriesForKey(clientId: number, key: string): { name: string; unit: stri
   if (macro) return macroSeries(clientId, macro);
   const choice = listGraphChoices(clientId).find((c) => c.key === key);
   if (!choice) return null;
+  // A Weight goal watches every weigh-in (23 Oct, Alex: bodyWeightReadings), in the unit its target was set in.
+  if (WEIGHT_NAME.test(choice.name.trim())) return { name: choice.name, unit: choice.unit, series: bodyWeightReadings(clientId).map((r) => ({ date: r.date, value: weightIn(r, choice.unit) })) };
   return { name: choice.name, unit: choice.unit, series: choice.kind === "field" ? getMeasurementSeries(choice.id) : getMetricSeries(choice.id) };
 }
 
@@ -12312,6 +12452,24 @@ export function getLoggedValues(
     if (e.metric_definition_id !== to && key in values) continue;
     values[key] = e.value;
   }
+  // The legacy Weight field's weigh-ins show in the Weight column too (23 Oct, Alex), in its unit, the latest of a
+  // week or month; a metric's own reading wins.
+  const weightCol = defs.find((m) => WEIGHT_NAME.test(m.name.trim()));
+  const weightFields = new Map(data.measurement_fields.filter((f) => f.client_id === clientId && WEIGHT_NAME.test(f.name.trim())).map((f) => [f.id, f] as const));
+  if (weightCol && weightFields.size > 0) {
+    const periodOf = (day: string) => (cadence === "weekly" ? weekStart(day) : cadence === "monthly" ? monthStart(day) : day);
+    const own = new Set(Object.keys(values));
+    const dayOf = new Map<string, string>();
+    for (const v of data.measurement_values) {
+      const f = weightFields.get(v.field_id);
+      if (!f || v.value == null) continue;
+      const day = String(v.date).slice(0, 10);
+      const key = `${weightCol.id}:${periodOf(day)}`;
+      if (!keys.has(periodOf(day)) || own.has(key) || (dayOf.get(key) ?? "") > day) continue;
+      dayOf.set(key, day);
+      values[key] = weightInUnit(v.value, f.unit, weightCol.unit);
+    }
+  }
 
   const notes: Record<string, string> = {};
   for (const n of data.check_in_notes ?? []) {
@@ -12531,10 +12689,21 @@ function coachParty(coachId: number): InvoiceParty {
   return { ...(s.business ?? {}), iban: i.iban, bic: i.bic, sort_code: i.sort_code, routing_number: i.routing_number, bsb: i.bsb, account_number: i.account_number, bank_details: i.bank_details, account_holder: i.account_holder, tax_note: i.tax_note, footer: i.footer };
 }
 
-function clientParty(clientId: number): { name: string; email?: string; address?: string } {
+/** Who it is billed to: the name, the email and the address in its parts (23 Oct), empty parts left off. */
+function clientParty(clientId: number): InvoiceRecipient {
   const client = getData().clients.find((c) => c.id === clientId);
   const p = getClientProfile(clientId);
-  return { name: client?.name ?? "Client", email: p.email ?? undefined, address: p.address ?? undefined };
+  const part = (v: string | null | undefined) => v || undefined;
+  return {
+    name: client?.name ?? "Client",
+    email: part(p.email),
+    address: part(p.address),
+    postcode: part(p.postcode),
+    city: part(p.city),
+    region: part(p.region),
+    country_code: part(p.country_code),
+    country: part(p.country),
+  };
 }
 
 const addDaysIso = (iso: string, n: number) => {
