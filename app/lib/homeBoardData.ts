@@ -28,6 +28,7 @@ import {
 import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 import { invoicingFor } from "./countries";
 import { isAssisted, liftedKg } from "./progressRules";
+import { sub } from "./timing";
 
 type ProgramDayRow = Data["program_days"][number];
 type AssignmentRow = Data["workout_assignments"][number];
@@ -157,10 +158,11 @@ type Ctx = {
   fedNames: Set<string>;
 };
 
-function context(clientId: number, today: string): Ctx {
+/** withCalendar false: the activity calendar left empty, for a read that never looks at it (exerciseTrends; 23 Oct, speed). */
+function context(clientId: number, today: string, withCalendar = true): Ctx {
   const data = getData();
   const client = data.clients.find((c) => c.id === clientId);
-  const phases = Object.fromEntries(TRACK_ORDER.map((t) => [t, getCurrentPhase(clientId, t)])) as Record<PhaseTrack, PhaseRow | null>;
+  const phases = sub("phases", () => Object.fromEntries(TRACK_ORDER.map((t) => [t, getCurrentPhase(clientId, t)])) as Record<PhaseTrack, PhaseRow | null>);
 
   const exercises = new Map(data.exercises.map((e) => [e.id, e] as const));
   // Asked once per exercise (it runs for every set): a coach's own group ("g-shoulders") counts by its name.
@@ -212,7 +214,7 @@ function context(clientId: number, today: string): Ctx {
   const sets: LoggedSet[] = [];
   const perDay = new Map<string, { sets: PerGroup; volume: PerGroup }>();
   // An assisted set weighs the body weight of its own day less the help (23 Oct, Alex).
-  const bodyOn = bodyWeightOn(clientId);
+  const bodyOn = sub("bodyWeight", () => bodyWeightOn(clientId));
   for (const l of data.set_logs) {
     const a = assignments.get(l.workout_assignment_id);
     if (!a) continue;
@@ -237,28 +239,28 @@ function context(clientId: number, today: string): Ctx {
   }
 
   const byDate = new Map<string, number>();
-  for (const p of getWeightSeriesAll(clientId)) {
+  for (const p of sub("weights", () => getWeightSeriesAll(clientId))) {
     const date = readingDay(String(p.date ?? ""));
     const value = Number(p.value);
     if (date && Number.isFinite(value)) byDate.set(date, value);
   }
   const weights = [...byDate.entries()].map(([date, value]) => ({ date, value })).sort((a, b) => (a.date < b.date ? -1 : 1));
 
-  const fed = data.metric_definitions.filter((m) => m.client_id === clientId && workoutFed(clientId, m.name));
+  const fed = sub("fed", () => data.metric_definitions.filter((m) => m.client_id === clientId && workoutFed(clientId, m.name)));
 
   return {
     clientId,
     today,
     client,
     phases,
-    calendar: new Map(getActivityCalendar(clientId).map((d) => [d.date, d] as const)),
+    calendar: withCalendar ? new Map(sub("calendar", () => getActivityCalendar(clientId)).map((d) => [d.date, d] as const)) : new Map(),
     days,
     byDay,
     logsByAssignment,
     sets,
     perDay,
     weights,
-    weightStamps: weightStampsOf(clientId),
+    weightStamps: sub("weights", () => weightStampsOf(clientId)),
     fedIds: new Set(fed.map((m) => m.id)),
     fedNames: new Set(fed.map((m) => m.name)),
   };
@@ -286,24 +288,26 @@ export function getHomeBoard(clientId: number): HomeBoard {
   const empty = emptyBoard(today);
   let ctx: Ctx;
   try {
-    ctx = context(clientId, today);
+    ctx = sub("read", () => context(clientId, today));
   } catch (e) {
     console.error("[homeBoard] read:", e);
     return empty;
   }
+  // Each part timed under the screen's timer (timing.ts sub: "home.board.strength"), measuring only.
+  const part = <T,>(label: string, fn: () => T, fallback: T): T => sub(label, () => safe(label, fn, fallback));
   return {
-    tracks: safe("tracks", () => tracksOf(ctx), empty.tracks),
-    nextCall: safe("nextCall", () => nextCallOf(ctx), null),
-    lastCall: safe("lastCall", () => lastCallOf(ctx), null),
-    lastPaid: safe("lastPaid", () => lastPaidOf(ctx), null),
-    outstanding: safe("outstanding", () => outstandingOf(ctx), null),
-    nextInvoice: safe("nextInvoice", () => nextInvoiceOf(ctx), null),
-    since: safe("since", () => sinceOf(ctx), null),
-    muscles: safe("muscles", () => musclesOf(ctx), empty.muscles),
-    strength: safe("strength", () => strengthOf(ctx), empty.strength),
-    weight: safe("weight", () => weightOf(ctx), null),
-    days: safe("days", () => thirtyDaysOf(ctx), empty.days),
-    phaseDays: safe("phaseDays", () => phaseDaysOf(ctx), null),
+    tracks: part("tracks", () => tracksOf(ctx), empty.tracks),
+    nextCall: part("nextCall", () => nextCallOf(ctx), null),
+    lastCall: part("lastCall", () => lastCallOf(ctx), null),
+    lastPaid: part("lastPaid", () => lastPaidOf(ctx), null),
+    outstanding: part("outstanding", () => outstandingOf(ctx), null),
+    nextInvoice: part("nextInvoice", () => nextInvoiceOf(ctx), null),
+    since: part("since", () => sinceOf(ctx), null),
+    muscles: part("muscles", () => musclesOf(ctx), empty.muscles),
+    strength: part("strength", () => strengthOf(ctx), empty.strength),
+    weight: part("weight", () => weightOf(ctx), null),
+    days: part("days", () => thirtyDaysOf(ctx), empty.days),
+    phaseDays: part("phaseDays", () => phaseDaysOf(ctx), null),
   };
 }
 
@@ -890,7 +894,8 @@ export type ExerciseSession = {
   sets: { weight: number; reps: number; rpe: number | null }[];
 };
 export function exerciseTrends(clientId: number, today: string = localDateStr()): Map<string, { d7: number | null; d30: number | null; sessions: ExerciseSession[] }> {
-  const ctx = context(clientId, today);
+  // The sets alone: the calendar is the board's, and the costliest part of the read.
+  const ctx = context(clientId, today, false);
   const byKey = new Map<string, Map<string, number>>();
   const weekOfDay = new Map(ctx.days.map((d) => [d.id, d.week_number] as const));
   const dayOf = new Map<number, number>();

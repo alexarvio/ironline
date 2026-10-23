@@ -1,5 +1,5 @@
 import { getData } from "../../../lib/db";
-import { MAX_SESSIONS_PER_WEEK, getAssignmentsForDay, getWeek, homeGymId, listCardioForDay, listClientGyms } from "../../../lib/queries";
+import { MAX_SESSIONS_PER_WEEK, assignmentsForDayIn, cardioForDayIn, getAssignmentsForDay, getWeek, homeGymId, listCardioForDay, listClientGyms, trainingIndex, weekIn } from "../../../lib/queries";
 import { assistedRow, beforeStop, copiedWeights, laneKg, laneOfGym, laterSlot, liftOf, raisedTo, setsSinceReset, stopAfter, writeLane, type Lane } from "../../../lib/targetRule";
 import { changedWeeks, type ApplyFig, type ApplyItem, type ApplyPreview, type ApplySession, type ApplyWeek } from "./applyShape";
 
@@ -66,6 +66,8 @@ function compare(clientId: number, gone: Set<number>) {
   const askOf = new Map<number, (typeof data.video_requests)[number]>();
   for (const r of data.video_requests) if (!askOf.has(r.assignment_id)) askOf.set(r.assignment_id, r);
   const recurring = data.video_requests.filter((r) => r.recurring && r.client_id === clientId && !r.from_client);
+  // The client's sessions, rows and cardio read once for every preview (23 Oct, speed), exactly as the plain reads give them.
+  const ix = trainingIndex(clientId);
 
   // This client's rows of each exercise on planned days, where they sit: a copy reads the coach's resets off them.
   const rowsOfExercise = new Map<number, { slot: (typeof data.program_days)[number]; row: (typeof data.workout_assignments)[number] }[]>();
@@ -185,12 +187,12 @@ function compare(clientId: number, gone: Set<number>) {
 
   /** What `dest` (null: made by the copy) becomes when `src` is copied onto it, at slot `position`. */
   const session = (src: Day, dest: Day | null, position: number, logs: { sets: number; cardio: number } | null): ApplySession | null => {
-    const srcRows = getAssignmentsForDay(src.id);
-    const srcCardio = listCardioForDay(src.id);
+    const srcRows = assignmentsForDayIn(ix, src.id);
+    const srcCardio = cardioForDayIn(ix, src.id);
     const name = nameOf(src, position);
     if (!dest) return { name, was: null, added: { exercises: srcRows.length, cardio: srcCardio.length }, reorder: false, goes: null, items: [] };
-    const destRows = getAssignmentsForDay(dest.id);
-    const destCardio = listCardioForDay(dest.id);
+    const destRows = assignmentsForDayIn(ix, dest.id);
+    const destCardio = cardioForDayIn(ix, dest.id);
     const items: ApplyItem[] = [];
     const rows = pair(srcRows, destRows, (r) => `${r.exercise_id}:${r.variation_id ?? ""}:${txt(r.custom_name) ?? ""}`);
     for (const p of rows.pairs) {
@@ -234,7 +236,7 @@ function compare(clientId: number, gone: Set<number>) {
    * week growing to reach it, unless the week is full or has a later slot already. Returns null when nothing lands.
    */
   const weekSlots = (week: number) => {
-    const days = getWeek(clientId, week);
+    const days = weekIn(ix, clientId, week);
     const positions = new Set(days.map((d) => d.day_of_week));
     let count = days.length;
     let top = days.reduce((m, d) => Math.max(m, d.day_of_week), 0);

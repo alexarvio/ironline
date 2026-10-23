@@ -6,7 +6,7 @@ import type { DotTab, DotTrail } from "./dots";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { clerkOn } from "../../lib/clerk";
-import { getCoachSettings, getInvoiceView, listInvoices, listInvoiceTemplates, invoiceRepeatViews, runRecurringInvoices, type FeedEvent, type HomeAction, type InvoiceView, listCoachVideos, exerciseClientCounts, listMeetings, activityWords, callThing } from "../../lib/queries";
+import { getCoachSettings, getInvoiceView, listInvoices, listInvoiceTemplates, invoiceRepeatViews, runRecurringInvoices, type FeedEvent, type HomeAction, type InvoiceView, type TrainingIndex, listCoachVideos, exerciseClientCounts, listMeetings, activityWords, callThing } from "../../lib/queries";
 import { getHomeBoard, noteHomeLooked } from "../../lib/homeBoard";
 import { activityMarkOf } from "../../lib/activityMark";
 import { SERVER_TZ, zonedToUtc } from "../../lib/timezones";
@@ -14,8 +14,6 @@ import { hasBankDetails, invoicingFor } from "../../lib/countries";
 import {
   getClientHome,
   getActivityFeed,
-  getAssignmentsForDay,
-  laterSameSlotSessions,
   getClientProfile,
   phaseCheckInDays,
   chatQuote,
@@ -30,12 +28,10 @@ import {
   getLoggedValues,
   getGoalSummaries,
   getMeetingsWorkspaceData,
-  getLogsForAssignment,
   getNutritionGoalsSummary,
   getNutritionPlan,
   getPlanData,
   listClientEvents,
-  getFreeSessions,
   listEventCategories,
   getOverviewPanel,
   describeMessageLink,
@@ -48,10 +44,7 @@ import {
   getProgramCurrentWeekIndex,
   programWeekNow,
   getStoredNutritionPlan,
-  getWeek,
   getWeightSeriesAll,
-  isCardioDone,
-  listCardioForDay,
   listClientGyms,
   listCheckInNotes,
   listClientPhases,
@@ -83,6 +76,15 @@ import {
   sessionAnswers,
   getWorkoutQuestions,
   bodyWeightKg,
+  trainingIndex,
+  weekIn,
+  assignmentsForDayIn,
+  logsForAssignmentIn,
+  cardioForDayIn,
+  cardioDoneIn,
+  freeSessionsIn,
+  laterSameSlotSessionsIn,
+  getPlanPhases,
 } from "../../lib/queries";
 import { isAssisted } from "../../lib/progressRules";
 import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
@@ -103,6 +105,7 @@ import { getCoachFocus } from "../../lib/focus";
 import { supportUnreadForCoach, supportUnreadForOwner } from "../../lib/support";
 import { exerciseTrends } from "../../lib/homeBoardData";
 import { applyReads } from "./training/applyPreviewData";
+import { sub } from "../../lib/timing";
 
 // What the redesign drafts read, gathered on the server for the shell that
 // shows them side by side. Read-only: the drafts save nothing.
@@ -136,13 +139,29 @@ export function pickClient(coachId: number, asked: string | undefined) {
 export function loadTraining(coachId: number, clientId: number, params: { week?: string; program?: string }): { draft: DraftProgram | null; library: Library; cardioMoves: CardioMove[]; videos: { id: number; path: string; name: string; at: string; bytes: number | null }[] } {
   // Every programme the client has had, is on, or has waiting: the switch in
   // the header. The one shown is the one asked for, else the live one.
-  const live = getDeployedProgram(clientId);
-  const all = listPrograms(clientId);
+  const live = sub("programme", () => getDeployedProgram(clientId));
+  const all = sub("programme", () => listPrograms(clientId));
   const askedProgram = Number(params.program);
   const program = all.find((p) => p.id === askedProgram) ?? live ?? all[0] ?? null;
   const stateOf = (p: (typeof all)[number]) =>
     (p.id === live?.id ? "live" : p.status === "deployed" && live && p.start_week < live.start_week ? "past" : p.status === "deployed" || p.scheduled_at ? "scheduled" : "draft") as "live" | "past" | "scheduled" | "draft";
   const programs = all.map((p) => ({ id: p.id, name: p.name ?? "Programme", weeks: p.total_weeks, state: stateOf(p) }));
+
+  // The client's training rows, read once (23 Oct, speed: every row, session and week scanned the whole store), and
+  // read back exactly as the plain reads give them (queries.ts trainingIndex).
+  const ix = sub("index", () => trainingIndex(clientId));
+  const weekOf = (week: number) => weekIn(ix, clientId, week);
+  const rowsOf = (dayId: number) => assignmentsForDayIn(ix, dayId);
+  const logsOf = (rowId: number) => logsForAssignmentIn(ix, rowId);
+  const cardioOf = (dayId: number) => cardioForDayIn(ix, dayId);
+  const ticked = (entryId: number) => cardioDoneIn(ix, entryId);
+  const freeOf = (week: number) => freeSessionsIn(ix, clientId, week);
+  // Where a session was trained, once a session rather than once a row.
+  const dayGyms = new Map<number, number | null>();
+  const dayGymOf = (dayId: number) => {
+    if (!dayGyms.has(dayId)) dayGyms.set(dayId, dayGymId(dayId));
+    return dayGyms.get(dayId)!;
+  };
 
   // The client's last top set on each variation of an exercise (15 Oct, the Variation pop-up): newest session first, its heaviest set.
   const clientDayIds = new Set(getData().program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
@@ -152,7 +171,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     const byVariation = new Map<number | null, { weight: number; reps: number; date: string }>();
     for (const wa of clientAssignments) {
       if (wa.exercise_id !== exerciseId || wa.swap) continue;
-      const logs = getLogsForAssignment(wa.id).filter((l) => l.weight_kg != null && l.reps != null && (gymId == null || l.gym_id == null || l.gym_id === gymId));
+      const logs = logsOf(wa.id).filter((l) => l.weight_kg != null && l.reps != null && (gymId == null || l.gym_id == null || l.gym_id === gymId));
       if (!logs.length) continue;
       const date = logs.map((l) => l.logged_at).sort().pop()!;
       const top = logs.reduce((best, l) => (!best || (l.weight_kg ?? 0) > (best.weight_kg ?? 0) || ((l.weight_kg ?? 0) === (best.weight_kg ?? 0) && (l.reps ?? 0) > (best.reps ?? 0)) ? l : best), logs[0]);
@@ -167,14 +186,14 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const gymName = new Map(gymRows.map((g) => [g.id, g.name] as const));
   // Home is the gym marked home (15 Oct: it used to be whichever came first), with each gym's colour and its sessions for the coach's gyms pop-up.
   const homeId = homeGymId(clientId);
-  const gymStats = gymSessionStats(clientId);
+  const gymStats = sub("gyms", () => gymSessionStats(clientId));
   const gyms = gymRows.map((g) => {
     const c = GYM_COLORS[isGymColor(g.color) ? g.color : "navy"];
     return { id: g.id, name: g.name, home: g.id === homeId, color: c.hex, rgb: c.rgb, sessions8w: gymStats.get(g.id)?.sessions8w ?? 0, lastSessionAt: gymStats.get(g.id)?.lastUsedAt ?? null, logo: g.logo_path ?? null, kind: g.kind ?? "gym" };
   });
 
   // The coach's library, for the add-exercise row; cardio has its own form.
-  const byGroup = listExercisesByGroup(coachId);
+  const byGroup = sub("library", () => listExercisesByGroup(coachId));
   // Names of every exercise, those taken out of the library too: an
   // alternative or a swap may still point at one.
   const libName = new Map(listExercises(coachId).map((e) => [e.id, e.name] as const));
@@ -196,8 +215,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   // The coach's cardio movements, offered when a cardio is added, each with its cue.
   const cardioMoves = (byGroup.cardio ?? []).map((e) => ({ name: e.name, cue: e.cue ?? "" }));
 
-  const videos = listCoachVideos(coachId).map((v) => ({ id: v.id, path: v.path, name: v.name, at: v.at, bytes: v.bytes ?? null }));
-  const demoClients = exerciseClientCounts(coachId);
+  const videos = sub("videos", () => listCoachVideos(coachId)).map((v) => ({ id: v.id, path: v.path, name: v.name, at: v.at, bytes: v.bytes ?? null }));
+  const demoClients = sub("videos", () => exerciseClientCounts(coachId));
   if (!program) return { draft: null, library, cardioMoves, videos };
 
   // NOW only on the week this calendar week really is (21 Oct, Alex: an ended programme kept NOW on its last week). Ended
@@ -209,9 +228,9 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const weekIdx = Number.isInteger(askedWeek) && askedWeek >= 1 && askedWeek <= program.total_weeks ? askedWeek : program.status === "deployed" ? getProgramCurrentWeekIndex(program) : 1;
   const weekNumber = program.start_week + weekIdx - 1;
 
-  const weeks = Array.from({ length: program.total_weeks }, (_, i) => {
+  const weeks = sub("weeks", () => Array.from({ length: program.total_weeks }, (_, i) => {
     const n = program.start_week + i;
-    const days = getWeek(clientId, n);
+    const days = weekOf(n);
     // Sessions have no set weekday (any order, any day), so a session counts
     // as not done once its week is over, or sooner once the client skipped it,
     // ended it early or logged part of it.
@@ -222,12 +241,12 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     // couldn't do it; amber when it was begun and left; grey untouched,
     // whether or not its week is over.
     const dots = days.map((d) => {
-      const as = getAssignmentsForDay(d.id);
-      const cs = listCardioForDay(d.id);
+      const as = rowsOf(d.id);
+      const cs = cardioOf(d.id);
       if (as.length === 0 && cs.length === 0) return { done: false, missed: false, skipped: false };
-      const done = as.every((a) => getLogsForAssignment(a.id).length >= a.sets) && cs.every((c) => isCardioDone(c.id));
+      const done = as.every((a) => logsOf(a.id).length >= a.sets) && cs.every((c) => ticked(c.id));
       const skipped = !done && !!d.skip_reason;
-      const begun = !!d.session_ended_at || as.some((a) => getLogsForAssignment(a.id).length > 0) || cs.some((c) => isCardioDone(c.id));
+      const begun = !!d.session_ended_at || as.some((a) => logsOf(a.id).length > 0) || cs.some((c) => ticked(c.id));
       return { done, missed: !done && !skipped && begun, skipped };
     });
     void over;
@@ -239,7 +258,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     const print = weekPrint(
       days.map((d) => [
         shownText(d.label),
-        [...getAssignmentsForDay(d.id)]
+        [...rowsOf(d.id)]
           .sort((a, b) => a.order_index - b.order_index)
           .map((a) => [
             a.exercise_id,
@@ -261,7 +280,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
             [...(a.library_substitutes_hidden ?? [])].sort((x, y) => x - y),
           ]),
         // Its cardio too, now that a week's copy carries it (20 Oct, Alex).
-        [...listCardioForDay(d.id)]
+        [...cardioOf(d.id)]
           .sort((a, b) => a.order_index - b.order_index)
           .map((c) => [shownText(c.name), shownText(c.time), shownText(c.distance), shownText(c.pace), shownText(c.incline), shownText(c.notes), (c.alternatives ?? []).map((x) => [shownText(x.name), shownText(x.note)])]),
       ]),
@@ -275,18 +294,18 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       skipped: dots.map((x) => x.skipped),
       state: (allOver || i + 1 < liveIdx ? "past" : i + 1 === liveIdx ? "live" : "ahead") as "past" | "live" | "ahead",
     };
-  });
+  }));
 
   // Every workout the client has ended in this programme, any week, with
   // what they answered on ending it (the workout questionnaire), newest
   // first: the Training tab's answers feed under the questionnaire (6 Oct).
-  const answersFeed = Array.from({ length: program.total_weeks }, (_, i) => {
+  const answersFeed = sub("answers", () => Array.from({ length: program.total_weeks }, (_, i) => {
     const n = program.start_week + i;
-    return getWeek(clientId, n)
+    return weekOf(n)
       .map((d, si) => ({ d, si }))
       .filter(({ d }) => d.session_ended_at)
       .map(({ d, si }) => {
-        const logs = getAssignmentsForDay(d.id).flatMap((a) => getLogsForAssignment(a.id));
+        const logs = rowsOf(d.id).flatMap((a) => logsOf(a.id));
         const gymId = logs.find((l) => l.gym_id != null)?.gym_id ?? null;
         return {
           dayId: d.id,
@@ -302,22 +321,24 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       });
   })
     .flat()
-    .sort((a, b) => (a.ended < b.ended ? 1 : -1));
+    .sort((a, b) => (a.ended < b.ended ? 1 : -1)));
 
-  const days = getWeek(clientId, weekNumber);
+  const days = weekOf(weekNumber);
   // The chat about an exercise, both sides (the workout's chat button and the
   // coach's replies link a message to it), by assignment, oldest first.
   const aboutExercise = new Map<number, { id: number; mine: boolean; text: string; when: string; at: number; media: { path: string; type: string } | null }[]>();
-  for (const m of [...listChatMessages(clientId)].sort((x, y) => x.created_at.localeCompare(y.created_at))) {
-    if (m.link?.kind !== "exercise") continue;
-    const list = aboutExercise.get(m.link.assignmentId) ?? [];
-    list.push({ id: m.id, mine: m.sender === "coach", text: m.text || (m.media_path ? "" : "A file"), when: dayMonthTime(m.created_at), at: new Date(m.created_at).getTime(), media: m.media_path ? { path: m.media_path, type: m.media_type ?? "file" } : null });
-    aboutExercise.set(m.link.assignmentId, list);
-  }
+  sub("chat", () => {
+    for (const m of [...listChatMessages(clientId)].sort((x, y) => x.created_at.localeCompare(y.created_at))) {
+      if (m.link?.kind !== "exercise") continue;
+      const list = aboutExercise.get(m.link.assignmentId) ?? [];
+      list.push({ id: m.id, mine: m.sender === "coach", text: m.text || (m.media_path ? "" : "A file"), when: dayMonthTime(m.created_at), at: new Date(m.created_at).getTime(), media: m.media_path ? { path: m.media_path, type: m.media_type ?? "file" } : null });
+      aboutExercise.set(m.link.assignmentId, list);
+    }
+  });
   // Each exercise's 7 and 30 day change, as Home counts it (23 Oct), with every session of it the two count: the progress
   // pop-up's (23 Oct, Alex: it held only this programme's same session slot, so a week the exercise sat in another session
   // never showed). W is the week of this programme; another programme's session has none.
-  const trends = exerciseTrends(clientId);
+  const trends = sub("trends", () => exerciseTrends(clientId));
   const progressOf = new Map<string, { date: string | null; planWeek: number; gym: string | null; assisted: boolean; bodyKg: number | null; sets: { weight: number; reps: number; rpe: number | null }[] }[]>();
   const progressFor = (key: string) => {
     let list = progressOf.get(key);
@@ -334,11 +355,11 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     }
     return list;
   };
-  const sessions = days.map((d, si) => {
-    const assignments = getAssignmentsForDay(d.id);
+  const sessions = sub("sessions", () => days.map((d, si) => {
+    const assignments = rowsOf(d.id);
     const videos = videoRequestsFor(assignments.map((a) => a.id));
     const rows = assignments.map((a) => {
-      const logs = getLogsForAssignment(a.id).sort((x, y) => x.set_number - y.set_number);
+      const logs = logsOf(a.id).sort((x, y) => x.set_number - y.set_number);
       const v = videos.get(a.id);
       // 7 days and 30 days by the calendar, as Home's Strength (23 Oct, Alex): the exercise's best estimated one-rep max
       // in the last 7 (30) days against the 7 (30) before (exerciseTrends), so a row is its share of its group on Home.
@@ -382,58 +403,60 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         librarySubstitutes: librarySubstitutesFor(a.exercise_id).filter((x) => libName.has(x.exercise_id)).map((x) => ({ exerciseId: x.exercise_id, name: libName.get(x.exercise_id)!, note: x.note ?? "" })),
         libraryOff: !!a.library_substitutes_off,
         libraryHidden: a.library_substitutes_hidden ?? [],
-        variationLast: variationLastFor(a.exercise_id, dayGymId(d.id)),
+        variationLast: sub("history", () => variationLastFor(a.exercise_id, dayGymOf(d.id))),
         d7: trend?.d7 ?? null,
         d30: trend?.d30 ?? null,
       };
     });
-    const cardio = listCardioForDay(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: isCardioDone(c.id), swap: c.swap?.name ?? null, alternatives: (c.alternatives ?? []).map((a) => ({ name: a.name, note: a.note ?? "" })) }));
+    const cardio = cardioOf(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: ticked(c.id), swap: c.swap?.name ?? null, alternatives: (c.alternatives ?? []).map((a) => ({ name: a.name, note: a.note ?? "" })) }));
     const setsPlanned = rows.reduce((t, r) => t + r.sets, 0);
     // A swapped exercise's sets still count as done for the session.
     const setsLogged = rows.reduce((t, r) => t + r.logged.length + (r.swapInfo?.sets.length ?? 0), 0);
     const gym = rows.flatMap((r) => [...r.logged, ...(r.swapInfo?.sets ?? [])]).find((l) => l.gym)?.gym ?? null;
     const duration = d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null;
     // The later weeks "Also delete it from" would reach (20 Oct, Alex: it offered weeks that never had this session): the same slot, nothing logged.
-    const laterWeeks = laterSameSlotSessions(d.id)
-      .map((id) => getData().program_days.find((x) => x.id === id)?.week_number)
+    const laterWeeks = laterSameSlotSessionsIn(ix, d.id)
+      .map((id) => (ix.dayById.get(id) ?? getData().program_days.find((x) => x.id === id))?.week_number)
       .filter((n): n is number => n != null)
       .map((n) => n - program.start_week + 1);
     return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })), laterWeeks };
-  });
+  }));
 
   // The client's rogue sessions (19 Oct, Alex): workouts of their own, off
   // the plan, by week of the programme. Not sessions of the week (they count
   // in nothing); shown under it, read only, with what was done.
   const rogue: DraftProgram["rogue"] = {};
-  for (let i = 0; i < program.total_weeks; i++) {
-    const list = getFreeSessions(clientId, program.start_week + i)
-      .filter((d) => d.session_started_at)
-      .map((d) => ({
-        id: d.id,
-        started: d.session_started_at ?? null,
-        ended: d.session_ended_at ?? null,
-        duration: d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null,
-        note: d.session_note ?? null,
-        exercises: getAssignmentsForDay(d.id).map((a) => ({
-          id: a.id,
-          name: a.exercise_name ?? "Exercise",
-          sets: [...getLogsForAssignment(a.id)].sort((x, y) => x.set_number - y.set_number).map((l) => ({ n: l.set_number, kg: l.weight_kg, reps: l.reps })),
-        })),
-        cardio: listCardioForDay(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, distance: c.distance ?? "", pace: c.pace, incline: c.incline, done: isCardioDone(c.id) })),
-      }));
-    if (list.length) rogue[i + 1] = list;
-  }
+  sub("rogue", () => {
+    for (let i = 0; i < program.total_weeks; i++) {
+      const list = freeOf(program.start_week + i)
+        .filter((d) => d.session_started_at)
+        .map((d) => ({
+          id: d.id,
+          started: d.session_started_at ?? null,
+          ended: d.session_ended_at ?? null,
+          duration: d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null,
+          note: d.session_note ?? null,
+          exercises: rowsOf(d.id).map((a) => ({
+            id: a.id,
+            name: a.exercise_name ?? "Exercise",
+            sets: [...logsOf(a.id)].sort((x, y) => x.set_number - y.set_number).map((l) => ({ n: l.set_number, kg: l.weight_kg, reps: l.reps })),
+          })),
+          cardio: cardioOf(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, distance: c.distance ?? "", pace: c.pace, incline: c.incline, done: ticked(c.id) })),
+        }));
+      if (list.length) rogue[i + 1] = list;
+    }
+  });
 
   // What Apply to the rest and each session's Apply to remaining weeks would change, as their confirms read it, so
   // neither is offered when it would change nothing (23 Oct, Alex: "once I apply and there are no other changes, the
   // button disappears"). The week on screen only, and not a done one (nothing is applied from it).
-  const applyFrom = stateOf(program) !== "past" && weeks[weekIdx - 1]?.state !== "past" ? applyReads(clientId, program, weekNumber) : null;
+  const applyFrom = stateOf(program) !== "past" && weeks[weekIdx - 1]?.state !== "past" ? sub("applyPreview", () => applyReads(clientId, program, weekNumber)) : null;
 
   const phase = getData().client_phases.find((p) => p.program_id === program.id) ?? null;
   const noteMeta = getClientProgramNoteMeta(clientId, program.id);
   const draft: DraftProgram = {
     id: program.id,
-    planCtx: planCtxOf(clientId),
+    planCtx: sub("planCtx", () => planCtxOf(clientId)),
     programs,
     answersFeed,
     name: program.name ?? "Programme",
@@ -443,7 +466,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     phaseId: phase?.id ?? null,
     goals: phase?.objectives ?? [],
     // What the client is asked as they end a workout in this programme.
-    workoutQuestions: getWorkoutQuestions(clientId, program.id),
+    workoutQuestions: sub("questions", () => getWorkoutQuestions(clientId, program.id)),
     coachNote: phase?.client_note ?? "",
     startDate: phase?.start_week ?? null,
     endDate: phase?.end_week ?? null,
@@ -551,10 +574,10 @@ const SCREEN_OF: Record<string, string> = { home: "Home", plan: "Plan", measurem
 const screenOf = (href: string) => (/[?&]chat=/.test(href) ? "Chat" : SCREEN_OF[/^\/admin\/redesign\/([a-z]+)/.exec(href)?.[1] ?? ""] ?? "Home");
 /** In the Feed's order (needsOf in feedBoardData.ts): a new client's set-up, the blockers (an empty live week, then a
  *  sign-in lock), today's calls by time, then the rest oldest first; a screen sits where its first thing does. */
-function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEvent>, today: string, isNew: boolean): { spots: RailSpot[]; total: number; owed: number } {
+function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEvent>, today: string, isNew: boolean, ix?: TrainingIndex): { spots: RailSpot[]; total: number; owed: number } {
   const ranked: { href: string; rank: number; ms: number }[] = [];
   if (isNew) ranked.push({ href: `/admin/redesign/plan?client=${clientId}`, rank: -1, ms: 0 });
-  for (const a of getClientHome(clientId, feed).actions) {
+  for (const a of getClientHome(clientId, feed, ix).actions) {
     if (!OWED.some((re) => re.test(a.id))) continue;
     ranked.push({ href: needView(clientId, a, byId).open, rank: a.id === "week" ? 0 : a.id === "locked" ? 1 : 3, ms: a.at ?? Infinity });
   }
@@ -645,18 +668,28 @@ export function loadDots(clientId: number): DotTrail {
 export function loadRail(coach: { id: number; email: string; role: "coach" | "client" }): RailData {
   // A new coach sees the welcome steps first; every redesign page reads the rail, so this is the one gate.
   if (getData().users.find((u) => u.id === coach.id)?.onboarding) redirect("/welcome");
-  const feed = getActivityFeed(coach.id);
+  const feed = sub("feed", () => getActivityFeed(coach.id));
   const byId = new Map(feed.map((e) => [e.id, e]));
   const data = getData();
   const today = localDateStr();
-  const clients = listClients(coach.id).map((c) => {
-    const user = getUserForClient(c.id);
-    const isNew = listClientPhases(c.id).length === 0 && !data.training_programs.some((p) => p.client_id === c.id);
-    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, ...railSpots(c.id, feed, byId, today, isNew), notSignedIn: !user || (!user.clerk_user_id && (user.must_change_password || !user.password_hash)) };
+  const clients = sub("needsYou", () => {
+    const list = listClients(coach.id);
+    // Each client's own events and every client's training rows, read once for the whole rail (23 Oct, speed: every
+    // client's Needs you walked the whole feed and scanned the store per session); getClientHome reads the same rows.
+    const feedOf = new Map<number, FeedEvent[]>(list.map((c) => [c.id, []]));
+    for (const e of feed) feedOf.get(e.clientId)?.push(e);
+    const ix = trainingIndex(list.map((c) => c.id));
+    return list.map((c) => {
+      const user = getUserForClient(c.id);
+      const isNew = listClientPhases(c.id).length === 0 && !data.training_programs.some((p) => p.client_id === c.id);
+      return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, ...railSpots(c.id, feedOf.get(c.id) ?? [], byId, today, isNew, ix), notSignedIn: !user || (!user.clerk_user_id && (user.must_change_password || !user.password_hash)) };
+    });
   });
-  const profile = getCoachProfile(coach.id);
-  const owner = isOwner(coach);
-  return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: owner, inviteReady: mailConfigured(), clerk: clerkOn(), supportUnread: owner ? supportUnreadForOwner() : supportUnreadForCoach(coach.id) };
+  return sub("coach", () => {
+    const profile = getCoachProfile(coach.id);
+    const owner = isOwner(coach);
+    return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: owner, inviteReady: mailConfigured(), clerk: clerkOn(), supportUnread: owner ? supportUnreadForOwner() : supportUnreadForCoach(coach.id) };
+  });
 }
 
 // A coach account has an email but no name; "finlay.smith@…" reads as "Finlay Smith".
@@ -947,7 +980,8 @@ const intoWeek = () => {
 
 /** What the New phase dialog needs on the other tabs (10 Oct): the plan's dates, phases and programmes. */
 function planCtxOf(clientId: number): Pick<DraftPlan, "today" | "thisWeek" | "phases" | "programs"> {
-  const d = getPlanData(clientId);
+  // The phases and programmes alone (23 Oct, speed): the goals table getPlanData adds is the Plan tab's, never read here.
+  const d = getPlanPhases(clientId);
   return { today: d.today, thisWeek: d.thisWeek, phases: d.phases, programs: d.programs };
 }
 
@@ -1049,13 +1083,17 @@ const HOME_KINDS: ((e: { category: string; tab: string }) => boolean)[] = [
 export function loadHome(clientId: number): DraftHome {
   // The look is noted first: a new visit moves the last look into prev, so "Since" counts from the coach's previous visit
   // on this first render too, and stays put on every re-read within the visit.
-  noteHomeLooked(clientId);
-  const board = getHomeBoard(clientId);
-  const panel = getOverviewPanel(clientId);
+  sub("look", () => noteHomeLooked(clientId));
+  const board = sub("board", () => getHomeBoard(clientId));
+  // The coach's feed, built once for the panel and Activity (23 Oct, speed: it was built twice), when the panel asks
+  // for it, as it did.
+  const coachId = getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0;
+  let coachFeed: FeedEvent[] | null = null;
+  const feedOnce = () => (coachFeed ??= sub("feed", () => getActivityFeed(coachId)));
+  const panel = sub("panel", () => getOverviewPanel(clientId, feedOnce));
   // Activity is the client's whole feed (not the newest 60 rows), so Invoices or Meetings still has its history for a
   // client who chats every day.
-  const coachId = getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0;
-  const mine = getActivityFeed(coachId).filter((e) => e.clientId === clientId);
+  const mine = feedOnce().filter((e) => e.clientId === clientId);
   // The calls that are over (21 Oct, the Home mockup), in Activity with the rest, by when they were: a timed call at its
   // moment in its own timezone, a call with no time at its day's noon (as the feed files a day with no time).
   const today = localDateStr();
@@ -1064,7 +1102,7 @@ export function loadHome(clientId: number): DraftHome {
     const t = zonedToUtc(date, time, tz || SERVER_TZ).getTime();
     return Number.isFinite(t) ? t : new Date(`${date}T12:00:00`).getTime();
   };
-  const calls = listMeetings(clientId)
+  const calls = sub("calls", () => listMeetings(clientId))
     .filter((m) => m.status === "completed" || m.status === "no-show" || (m.status === "scheduled" && m.date < today))
     .map((m) => {
       const time = m.all_day ? "" : (m.time ?? "").trim();
@@ -1088,42 +1126,46 @@ export function loadHome(clientId: number): DraftHome {
   // The thing alone and the client's own words (23 Oct, Alex: "only a subheading if the client left a note or sent a
   // message"): one row a session, its cardio in it; words another row quotes already (a session's note, which the app
   // sends to the chat too) left out.
-  const rows = [
-    ...mine
-      .filter((e) => !e.echo)
-      .map((e) => ({ id: e.id, category: e.category as string, text: e.thing, note: activityWords(e), timeKnown: e.timeKnown, allDay: false, mark: activityMarkOf(e), tab: e.tab, href: null as string | null, at: e.at, feed: e as FeedEvent | null })),
-    ...calls,
-  ].sort((a, b) => b.at - a.at);
-  // Each kind's newest HOME_KIND_ROWS (a row in no kind counts as one of its own); a kept row's link is read after the cut.
-  const room = new Array(HOME_KINDS.length + 1).fill(0) as number[];
-  const events = rows
-    .filter((e) => {
-      const kinds = HOME_KINDS.flatMap((has, i) => (has(e) ? [i] : []));
-      if (!kinds.length) kinds.push(HOME_KINDS.length);
-      if (!kinds.some((i) => room[i] < HOME_KIND_ROWS)) return false;
-      for (const i of kinds) room[i]++;
-      return true;
-    })
-    .map(({ feed, ...e }) => ({ ...e, href: feed ? feedHref(feed) : e.href }));
+  const events = sub("activity", () => {
+    const rows = [
+      ...mine
+        .filter((e) => !e.echo)
+        .map((e) => ({ id: e.id, category: e.category as string, text: e.thing, note: activityWords(e), timeKnown: e.timeKnown, allDay: false, mark: activityMarkOf(e), tab: e.tab, href: null as string | null, at: e.at, feed: e as FeedEvent | null })),
+      ...calls,
+    ].sort((a, b) => b.at - a.at);
+    // Each kind's newest HOME_KIND_ROWS (a row in no kind counts as one of its own); a kept row's link is read after the cut.
+    const room = new Array(HOME_KINDS.length + 1).fill(0) as number[];
+    return rows
+      .filter((e) => {
+        const kinds = HOME_KINDS.flatMap((has, i) => (has(e) ? [i] : []));
+        if (!kinds.length) kinds.push(HOME_KINDS.length);
+        if (!kinds.some((i) => room[i] < HOME_KIND_ROWS)) return false;
+        for (const i of kinds) room[i]++;
+        return true;
+      })
+      .map(({ feed, ...e }) => ({ ...e, href: feed ? feedHref(feed) : e.href }));
+  });
   // The client's login, the same shape clientAccessAction gives, read here
   // so the App access button has it with the page (it used to fetch it
   // after every client switch: one more round trip).
-  syncClientLoginEmail(clientId);
-  const user = getUserForClient(clientId);
-  const access = {
-    email: user?.email ?? null,
-    signedUp: !!user && !user.must_change_password,
-    mailReady: mailConfigured(),
-    codes: process.env.AUTH_PROVIDER === "clerk",
-    cardEmail: getClientProfile(clientId)?.email ?? null,
-  };
+  const access = sub("access", () => {
+    syncClientLoginEmail(clientId);
+    const user = getUserForClient(clientId);
+    return {
+      email: user?.email ?? null,
+      signedUp: !!user && !user.must_change_password,
+      mailReady: mailConfigured(),
+      codes: process.env.AUTH_PROVIDER === "clerk",
+      cardEmail: getClientProfile(clientId)?.email ?? null,
+    };
+  });
   return {
     access,
     name: panel.name,
     initial: panel.initial,
     avatarPath: panel.avatarPath,
     panel,
-    ...planOf(clientId),
+    ...sub("plans", () => planOf(clientId)),
     events,
     board,
   };

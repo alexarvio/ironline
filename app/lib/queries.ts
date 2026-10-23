@@ -1314,23 +1314,164 @@ export function getAssignmentsForDay(programDayId: number): WorkoutAssignment[] 
   return data.workout_assignments
     .filter((wa) => wa.program_day_id === programDayId)
     .sort((a, b) => a.order_index - b.order_index)
-    .map((wa) => {
-      const exercise = data.exercises.find((e) => e.id === wa.exercise_id);
-      // A variation asked for: its name after the exercise's, its demo first.
-      const variation = wa.variation_id != null ? exercise?.variations?.find((v) => v.id === wa.variation_id) ?? null : null;
-      return {
-        ...wa,
-        // Rows written before the note fields existed have them undefined —
-        // getData()'s schema patch back-fills missing tables, not missing
-        // columns — so they're defaulted on the way out.
-        demo_url: wa.demo_url ?? null,
-        note_kind: wa.note_kind ?? null,
-        note_at: wa.note_at ?? null,
-        note_read: wa.note_read ?? false,
-        exercise_name: wa.custom_name?.trim() || (exercise ? (variation ? `${exercise.name} · ${variation.name}` : exercise.name) : "Unknown exercise"),
-        exercise_video_url: variation ? variation.video_url ?? null : exercise?.video_url ?? null,
-      };
-    });
+    .map((wa) => assignmentView(wa, data.exercises.find((e) => e.id === wa.exercise_id)));
+}
+
+/** A prescription as getAssignmentsForDay hands it out: its exercise's (or variation's) name and demo with it. */
+function assignmentView(wa: WorkoutAssignment, exercise: Exercise | undefined): WorkoutAssignment {
+  // A variation asked for: its name after the exercise's, its demo first.
+  const variation = wa.variation_id != null ? exercise?.variations?.find((v) => v.id === wa.variation_id) ?? null : null;
+  return {
+    ...wa,
+    // Rows written before the note fields existed have them undefined —
+    // getData()'s schema patch back-fills missing tables, not missing
+    // columns — so they're defaulted on the way out.
+    demo_url: wa.demo_url ?? null,
+    note_kind: wa.note_kind ?? null,
+    note_at: wa.note_at ?? null,
+    note_read: wa.note_read ?? false,
+    exercise_name: wa.custom_name?.trim() || (exercise ? (variation ? `${exercise.name} · ${variation.name}` : exercise.name) : "Unknown exercise"),
+    exercise_video_url: variation ? variation.video_url ?? null : exercise?.video_url ?? null,
+  };
+}
+
+// ---- One client's training, read once (23 Oct, speed) ------------------------------------------------------------
+// The Training tab, Home and the calendar walk every session of a client, and getAssignmentsForDay,
+// getLogsForAssignment, listCardioForDay, isCardioDone and getWeek each scan the whole store on every call: per row,
+// per session, per week, which made a client's page 0.2–1 s live. trainingIndex groups a client's rows (or every
+// client's on a list, for the rail) once, in the store's order, and the *In reads below give exactly what those scans
+// give (the same rows, the same order, fresh arrays and objects). Built for one read and never kept, so it can't go
+// stale: nothing writes training rows while a page reads. A session or row that isn't in it falls back to the scan.
+export type TrainingIndex = {
+  /** Each client's sessions, as stored. */
+  daysOf: Map<number, ProgramDay[]>;
+  dayById: Map<number, ProgramDay>;
+  rowsByDay: Map<number, WorkoutAssignment[]>;
+  rowIds: Set<number>;
+  logsByRow: Map<number, SetLog[]>;
+  /** The sets logged on each session, as stored. */
+  logsByDay: Map<number, SetLog[]>;
+  cardioByDay: Map<number, CardioEntry[]>;
+  /** Every cardio entry with a tick (any client's: isCardioDone reads them all). */
+  ticked: Set<number>;
+  /** The library by id, the first of an id as find reads it. */
+  exercises: Map<number, Exercise>;
+};
+
+export function trainingIndex(clients: number | Iterable<number>): TrainingIndex {
+  const data = getData();
+  const daysOf = new Map<number, ProgramDay[]>();
+  for (const id of typeof clients === "number" ? [clients] : clients) daysOf.set(id, []);
+  const dayById = new Map<number, ProgramDay>();
+  for (const pd of data.program_days) {
+    const days = daysOf.get(pd.client_id);
+    if (!days) continue;
+    days.push(pd);
+    if (!dayById.has(pd.id)) dayById.set(pd.id, pd);
+  }
+  const rowsByDay = new Map<number, WorkoutAssignment[]>();
+  const rowIds = new Set<number>();
+  const dayOfRow = new Map<number, number>();
+  for (const wa of data.workout_assignments) {
+    if (!dayById.has(wa.program_day_id)) continue;
+    rowIds.add(wa.id);
+    if (!dayOfRow.has(wa.id)) dayOfRow.set(wa.id, wa.program_day_id);
+    const list = rowsByDay.get(wa.program_day_id);
+    if (list) list.push(wa);
+    else rowsByDay.set(wa.program_day_id, [wa]);
+  }
+  const logsByRow = new Map<number, SetLog[]>();
+  const logsByDay = new Map<number, SetLog[]>();
+  for (const sl of data.set_logs) {
+    if (!rowIds.has(sl.workout_assignment_id)) continue;
+    const list = logsByRow.get(sl.workout_assignment_id);
+    if (list) list.push(sl);
+    else logsByRow.set(sl.workout_assignment_id, [sl]);
+    const day = dayOfRow.get(sl.workout_assignment_id)!;
+    const ofDay = logsByDay.get(day);
+    if (ofDay) ofDay.push(sl);
+    else logsByDay.set(day, [sl]);
+  }
+  const cardioByDay = new Map<number, CardioEntry[]>();
+  for (const c of data.cardio_entries ?? []) {
+    if (!dayById.has(c.program_day_id)) continue;
+    const list = cardioByDay.get(c.program_day_id);
+    if (list) list.push(c);
+    else cardioByDay.set(c.program_day_id, [c]);
+  }
+  const ticked = new Set((data.cardio_logs ?? []).map((l) => l.cardio_entry_id));
+  const exercises = new Map<number, Exercise>();
+  for (const e of data.exercises) if (!exercises.has(e.id)) exercises.set(e.id, e);
+  return { daysOf, dayById, rowsByDay, rowIds, logsByRow, logsByDay, cardioByDay, ticked, exercises };
+}
+
+/** getAssignmentsForDay, read from the index. */
+export function assignmentsForDayIn(ix: TrainingIndex, programDayId: number): WorkoutAssignment[] {
+  if (!ix.dayById.has(programDayId)) return getAssignmentsForDay(programDayId);
+  return [...(ix.rowsByDay.get(programDayId) ?? [])].sort((a, b) => a.order_index - b.order_index).map((wa) => assignmentView(wa, ix.exercises.get(wa.exercise_id)));
+}
+
+/** getLogsForAssignment, read from the index. */
+export function logsForAssignmentIn(ix: TrainingIndex, workoutAssignmentId: number): SetLog[] {
+  if (!ix.rowIds.has(workoutAssignmentId)) return getLogsForAssignment(workoutAssignmentId);
+  return [...(ix.logsByRow.get(workoutAssignmentId) ?? [])].sort((a, b) => a.set_number - b.set_number);
+}
+
+/** listCardioForDay, read from the index. */
+export function cardioForDayIn(ix: TrainingIndex, programDayId: number): CardioEntry[] {
+  if (!ix.dayById.has(programDayId)) return listCardioForDay(programDayId);
+  return [...(ix.cardioByDay.get(programDayId) ?? [])].sort((a, b) => a.order_index - b.order_index);
+}
+
+/** isCardioDone, read from the index. */
+export function cardioDoneIn(ix: TrainingIndex, entryId: number): boolean {
+  return ix.ticked.has(entryId);
+}
+
+/** getWeek, read from the index. */
+export function weekIn(ix: TrainingIndex, clientId: number, week: number): ProgramDay[] {
+  const days = ix.daysOf.get(clientId);
+  if (!days) return getWeek(clientId, week);
+  return days.filter((pd) => pd.week_number === week && !pd.free).sort((a, b) => a.day_of_week - b.day_of_week);
+}
+
+/** isSessionComplete, read from the index. */
+export function sessionCompleteIn(ix: TrainingIndex, programDayId: number): boolean {
+  if (!ix.dayById.has(programDayId)) return isSessionComplete(programDayId);
+  // In the order the scans hand them out, so the checks run as they did.
+  const assignments = [...(ix.rowsByDay.get(programDayId) ?? [])].sort((a, b) => a.order_index - b.order_index);
+  const cardio = cardioForDayIn(ix, programDayId);
+  if (assignments.length === 0 && cardio.length === 0) return false;
+  return (
+    assignments.every((a) => {
+      const logged = new Set((ix.logsByRow.get(a.id) ?? []).map((l) => l.set_number));
+      return Array.from({ length: a.sets }, (_, i) => i + 1).every((n) => logged.has(n));
+    }) && cardio.every((c) => ix.ticked.has(c.id))
+  );
+}
+
+/** getFreeSessions, read from the index. */
+export function freeSessionsIn(ix: TrainingIndex, clientId: number, week: number): ProgramDay[] {
+  const days = ix.daysOf.get(clientId);
+  if (!days) return getFreeSessions(clientId, week);
+  return days.filter((pd) => pd.week_number === week && pd.free).sort((a, b) => a.id - b.id);
+}
+
+/** laterSameSlotSessions, read from the index. */
+export function laterSameSlotSessionsIn(ix: TrainingIndex, programDayId: number): number[] {
+  const day = ix.dayById.get(programDayId);
+  if (!day) return laterSameSlotSessions(programDayId);
+  const program = listPrograms(day.client_id).find((p) => day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks);
+  if (!program) return [];
+  const out: number[] = [];
+  for (let week = day.week_number + 1; week < program.start_week + program.total_weeks; week++) {
+    // sessionAt without create: the week's session in that place.
+    const target = weekIn(ix, day.client_id, week).find((d) => d.day_of_week === day.day_of_week);
+    if (!target) continue;
+    const logged = (ix.logsByDay.get(target.id)?.length ?? 0) > 0 || (ix.cardioByDay.get(target.id) ?? []).some((c) => ix.ticked.has(c.id));
+    if (!logged) out.push(target.id);
+  }
+  return out;
 }
 
 export function setDayLabel(programDayId: number, label: string) {
@@ -2438,10 +2579,10 @@ export type OverviewPanel = {
   };
 };
 
-export function getOverviewPanel(clientId: number): OverviewPanel {
+/** feedOf: the coach's feed, when the caller reads it too (loadHome): asked for here at the same moment, built once. */
+export function getOverviewPanel(clientId: number, feedOf: () => FeedEvent[] = () => getActivityFeed(coachIdOfClient(clientId) ?? 0)): OverviewPanel {
   const client = getClient(clientId);
   const profile = getClientProfile(clientId);
-  const summary = getClientSummary(clientId);
   const nutrition = getNutritionGoalsSummary(clientId);
   const weight = getLatestWeight(clientId);
   const invoices = listInvoices(clientId);
@@ -2506,11 +2647,13 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
   let trained = 0;
   let planned = 0;
   if (liveWeek != null) {
-    getWeek(clientId, liveWeek).forEach((d) => {
-      const assignments = getAssignmentsForDay(d.id);
+    // Their rows read once, not the whole store per row (23 Oct, speed).
+    const ix = trainingIndex(clientId);
+    weekIn(ix, clientId, liveWeek).forEach((d) => {
+      const assignments = assignmentsForDayIn(ix, d.id);
       if (assignments.length === 0) return;
       planned++;
-      if (assignments.some((a) => getLogsForAssignment(a.id).length > 0)) trained++;
+      if (assignments.some((a) => logsForAssignmentIn(ix, a.id).length > 0)) trained++;
     });
   }
 
@@ -2594,7 +2737,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       { label: "Current weight", value: weight != null ? `${weight} kg` : "" },
       { label: "Change", value: weightChange, tone: "good" },
     ],
-    activity: getActivityFeed(coachIdOfClient(clientId) ?? 0)
+    activity: feedOf()
       .filter((e) => e.clientId === clientId)
       .slice(0, 8)
       .map((e) => ({
@@ -2642,9 +2785,10 @@ export function getClientSummary(clientId: number) {
     (pd) => pd.client_id === clientId && pd.status === "published"
   );
   const planned = new Set(data.program_days.filter((pd) => pd.client_id === clientId && !pd.free).map((pd) => pd.id));
-  const trainingDaysBuilt = [...dayIds].filter(
-    (id) => planned.has(id) && data.workout_assignments.some((wa) => wa.program_day_id === id)
-  ).length;
+  // The sessions with a row in them, read once (23 Oct, speed: it scanned every row per session).
+  const built = new Set<number>();
+  for (const wa of data.workout_assignments) if (dayIds.has(wa.program_day_id)) built.add(wa.program_day_id);
+  const trainingDaysBuilt = [...dayIds].filter((id) => planned.has(id) && built.has(id)).length;
   const totalSets = data.set_logs.filter((sl) => assignmentIds.has(sl.workout_assignment_id)).length;
 
   return {
@@ -3213,9 +3357,12 @@ export function clientLockedOut(clientId: number): boolean {
   return (data.login_lock_events ?? []).some((e) => e.email === user.email && !e.cleared && new Date(e.at).getTime() + LOCK_MS > now);
 }
 
-/** "14:05" in the coach's clock. */
+/** "14:05" in the coach's clock. One formatter for every call (23 Oct, speed: making one per call, 60 µs, was most of
+    the rail's Needs you): the same text toLocaleTimeString gives, which an invalid date still goes to. */
+const FEED_CLOCK = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
 export function feedClock(at: number): string {
-  return new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const d = new Date(at);
+  return Number.isNaN(d.getTime()) ? d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : FEED_CLOCK.format(d);
 }
 
 /** A call that is over, as the coach's logs say it (23 Oct, Alex): what happened and the kind of call, never its title
@@ -6648,10 +6795,14 @@ const isUnseen = (seen: Record<string, number> | undefined, e: FeedEvent, since:
 
 /**
  * One client's Home. `feed` lets a caller that needs several clients walk the
- * store once (the rail) rather than once per client.
+ * store once (the rail) rather than once per client; `ix` the same for their
+ * training rows (trainingIndex over every client).
  */
-export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome {
+export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: TrainingIndex): ClientHome {
   const data = getData();
+  // Their training rows, read once when a check below needs them (23 Oct, speed: it scanned the store per row).
+  let tix = ix;
+  const rows = () => (tix ??= trainingIndex(clientId));
   const client = data.clients.find((c) => c.id === clientId);
   const all = (feed ?? getActivityFeed(client?.coach_id ?? 0)).filter((e) => e.clientId === clientId);
   const since = Date.now() - HOME_NEW_DAYS * 86400000;
@@ -6736,7 +6887,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
   if (program) {
     const index = getProgramCurrentWeekIndex(program);
     const liveWeek = program.start_week + index - 1;
-    if (!getWeek(clientId, liveWeek).some((d) => getAssignmentsForDay(d.id).length > 0)) {
+    if (!weekIn(rows(), clientId, liveWeek).some((d) => assignmentsForDayIn(rows(), d.id).length > 0)) {
       actions.push({ id: "week", tone: "urgent", group: "setup", title: `${programWeekLabel(program, liveWeek)} has no sessions`, detail: "This is the week they are in, so they have nothing to train.", tab: "training" });
     }
     // The programme running out with nothing queued behind it.
@@ -6778,10 +6929,10 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
     const program = recent;
     const lastWeek = program.start_week + Math.max(1, programWeekNow(program)) - 2;
     if (lastWeek >= program.start_week) {
-      const sessions = getWeek(clientId, lastWeek).filter((d) => getAssignmentsForDay(d.id).length > 0 || listCardioForDay(d.id).length > 0);
+      const sessions = weekIn(rows(), clientId, lastWeek).filter((d) => assignmentsForDayIn(rows(), d.id).length > 0 || cardioForDayIn(rows(), d.id).length > 0);
       const missed = sessions.filter((d) => {
-        const as = getAssignmentsForDay(d.id);
-        const done = as.every((a) => getLogsForAssignment(a.id).length >= a.sets) && listCardioForDay(d.id).every((c) => isCardioDone(c.id));
+        const as = assignmentsForDayIn(rows(), d.id);
+        const done = as.every((a) => logsForAssignmentIn(rows(), a.id).length >= a.sets) && cardioForDayIn(rows(), d.id).every((c) => cardioDoneIn(rows(), c.id));
         return !done && !d.skip_reason;
       });
       // Two or more (12 Oct): one missed session in a week is life, not a signal.
@@ -8552,15 +8703,23 @@ export function programLoggedWeekIndexes(programId: number): number[] {
   const data = getData();
   const program = data.training_programs.find((p) => p.id === programId);
   if (!program) return [];
-  const out: number[] = [];
-  for (let i = 1; i <= program.total_weeks; i++) {
-    const weekNumber = program.start_week + i - 1;
-    const dayIds = new Set(
-      data.program_days.filter((pd) => pd.client_id === program.client_id && pd.week_number === weekNumber).map((pd) => pd.id)
-    );
-    const assignmentIds = new Set(data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id));
-    if (data.set_logs.some((sl) => assignmentIds.has(sl.workout_assignment_id))) out.push(i);
+  // One pass over the sessions, rows and sets for every week (23 Oct, speed: it was three whole-store scans a week).
+  const weeks = new Set<number>();
+  for (let i = 1; i <= program.total_weeks; i++) weeks.add(program.start_week + i - 1);
+  const weekOfDay = new Map<number, number>();
+  for (const pd of data.program_days) if (pd.client_id === program.client_id && weeks.has(pd.week_number) && !weekOfDay.has(pd.id)) weekOfDay.set(pd.id, pd.week_number);
+  const weekOfRow = new Map<number, number>();
+  for (const wa of data.workout_assignments) {
+    const week = weekOfDay.get(wa.program_day_id);
+    if (week != null && !weekOfRow.has(wa.id)) weekOfRow.set(wa.id, week);
   }
+  const logged = new Set<number>();
+  for (const sl of data.set_logs) {
+    const week = weekOfRow.get(sl.workout_assignment_id);
+    if (week != null) logged.add(week);
+  }
+  const out: number[] = [];
+  for (let i = 1; i <= program.total_weeks; i++) if (logged.has(program.start_week + i - 1)) out.push(i);
   return out;
 }
 
@@ -11179,7 +11338,9 @@ function programStatus(p: TrainingProgram): PlanProgramStatus {
   return p.status === "deployed" ? "live" : p.scheduled_at ? "scheduled" : "draft";
 }
 
-export function getPlanData(clientId: number) {
+/** The Plan's dates, phases and programmes alone, as getPlanData has them: what the New phase dialog on the other tabs
+    needs (planCtxOf), without the goals table, which they never show (23 Oct, speed). */
+export function getPlanPhases(clientId: number) {
   const today = localDateStr();
   const thisWeek = weekStart(today);
   const programs = listPrograms(clientId);
@@ -11208,6 +11369,11 @@ export function getPlanData(clientId: number) {
     weeks: p.total_weeks,
     linked: linked.has(p.id),
   }));
+  return { today, thisWeek, phases, programs: programOptions };
+}
+
+export function getPlanData(clientId: number) {
+  const { today, thisWeek, phases, programs: programOptions } = getPlanPhases(clientId);
 
   // The goals table.
   const fmtShort = dayMonth;
@@ -13310,20 +13476,18 @@ export function getWorkoutCalendar(clientId: number): WorkoutDay[] {
 }
 
 /** getWorkoutCalendar's sessions one by one, with the session they are. */
-function trainedSessions(clientId: number): { date: string; dayId: number; title: string; minutes: number | null; finished: boolean }[] {
-  const data = getData();
+function trainedSessions(clientId: number, ix: TrainingIndex = trainingIndex(clientId)): { date: string; dayId: number; title: string; minutes: number | null; finished: boolean }[] {
   const out: { date: string; dayId: number; title: string; minutes: number | null; finished: boolean }[] = [];
   const title = (d: { label: string | null; day_of_week: number; free?: boolean }) => (d.free ? "Rogue session" : d.label?.trim() || `Session ${d.day_of_week}`);
-  for (const d of data.program_days) {
-    if (d.client_id !== clientId) continue;
+  // Their sessions read once (trainingIndex), not the whole store per session (23 Oct, speed).
+  for (const d of ix.daysOf.get(clientId) ?? []) {
     if (d.session_ended_at) {
       const start = d.session_started_at ? new Date(d.session_started_at).getTime() : NaN;
       const end = new Date(d.session_ended_at).getTime();
       const minutes = Number.isFinite(start) && end > start ? Math.max(1, Math.round((end - start) / 60000)) : null;
-      out.push({ date: localDateStr(new Date(d.session_ended_at)), dayId: d.id, title: title(d), minutes, finished: isSessionComplete(d.id) });
-    } else if (isSessionComplete(d.id)) {
-      const last = data.set_logs
-        .filter((l) => data.workout_assignments.some((wa) => wa.id === l.workout_assignment_id && wa.program_day_id === d.id))
+      out.push({ date: localDateStr(new Date(d.session_ended_at)), dayId: d.id, title: title(d), minutes, finished: sessionCompleteIn(ix, d.id) });
+    } else if (sessionCompleteIn(ix, d.id)) {
+      const last = (ix.logsByDay.get(d.id) ?? [])
         .map((l) => l.logged_at)
         .sort()
         .at(-1);
@@ -13411,14 +13575,15 @@ type SessionRecord = Extract<KeptActivity, { kind: "training" }>;
 
 /** Each trained session (trainedSessions) as the calendar shows it: its exercises, and its gym when there are several. */
 function sessionRecords(clientId: number, only?: Set<number>): SessionRecord[] {
-  const data = getData();
   const gyms = listClientGyms(clientId, true);
   const gymName = gyms.filter((g) => !g.archived).length > 1 ? (id: number | null | undefined) => (id != null ? gyms.find((g) => g.id === id) : gyms.find((g) => g.is_home) ?? gyms[0])?.name ?? null : () => null;
-  return trainedSessions(clientId)
+  const ix = trainingIndex(clientId);
+  return trainedSessions(clientId, ix)
     .filter((s) => !only || only.has(s.dayId))
     .map(({ date, dayId, title, minutes, finished }) => {
-      const was = data.workout_assignments.filter((a) => a.program_day_id === dayId);
-      const log = was.length ? data.set_logs.find((l) => was.some((a) => a.id === l.workout_assignment_id)) : undefined;
+      // Its rows and its first logged set, as stored.
+      const was = ix.rowsByDay.get(dayId) ?? [];
+      const log = was.length ? ix.logsByDay.get(dayId)?.[0] : undefined;
       return { kind: "training", date, day_id: dayId, title, minutes, finished, exercises: was.length, gym: log ? gymName(log.gym_id) : null };
     });
 }

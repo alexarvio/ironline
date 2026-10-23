@@ -8,6 +8,12 @@ import "server-only";
 // Measuring only: a wrapped call returns exactly what it would have (its value, its promise, its throw), and the
 // timer itself never throws. The buffer lives on globalThis so the pages and the route share one, whatever bundles
 // they are built into. Per server process: a restart or a deploy empties it.
+//
+// A loader's own parts (23 Oct): sub(label, fn) anywhere inside a t.time call records under the label it runs in,
+// "home.board.strength", "training.trends", "rail.needsYou", without the timer passed down. While t.time runs its fn,
+// that timer is the current one (the synchronous part: every loader is synchronous); outside one (a server action, a
+// script) sub just runs fn. One thread: a synchronous call can't interleave with another request's, and an async
+// continuation finds no current timer, so a part is never filed under another render.
 
 export type TimingRender = {
   /** When the render ended, ISO. */
@@ -30,7 +36,9 @@ export type Timer = {
 };
 
 const MAX = 200;
-const g = globalThis as unknown as { _ironlineTiming?: { renders: TimingRender[] } };
+/** The timed call running now: where a sub part is added, and the label path it sits under. */
+type Scope = { add: (label: string, t0: number) => void; path: string };
+const g = globalThis as unknown as { _ironlineTiming?: { renders: TimingRender[] }; _ironlineTimingScope?: Scope | null };
 const store = () => (g._ironlineTiming ??= { renders: [] });
 
 const clock = () => performance.now();
@@ -54,11 +62,15 @@ export function startTiming(screen: string): Timer {
     time<T>(label: string, fn: () => T): T {
       const t0 = clock();
       let out: T;
+      const outer = g._ironlineTimingScope ?? null;
+      g._ironlineTimingScope = { add, path: label };
       try {
         out = fn();
       } catch (e) {
         add(label, t0);
         throw e;
+      } finally {
+        g._ironlineTimingScope = outer;
       }
       if (isThenable(out)) {
         // A side chain, so the caller's promise is the same one; it handles a rejection, so nothing goes unhandled here.
@@ -92,6 +104,22 @@ export function startTiming(screen: string): Timer {
       return value;
     },
   };
+}
+
+/** Runs fn and, inside a t.time call, records its ms as "<outer label>.<label>"; outside one, just runs fn. Returns
+    (or throws) exactly what fn does. Times the synchronous part: a promise's wait is not counted. */
+export function sub<T>(label: string, fn: () => T): T {
+  const scope = g._ironlineTimingScope;
+  if (!scope) return fn();
+  const path = `${scope.path}.${label}`;
+  const t0 = clock();
+  g._ironlineTimingScope = { add: scope.add, path };
+  try {
+    return fn();
+  } finally {
+    g._ironlineTimingScope = scope;
+    scope.add(path, t0);
+  }
 }
 
 // ---- The report (/api/timing) ---------------------------------------------------------------------------------
