@@ -654,9 +654,9 @@ function MuscleCard({ muscles, strength }: { muscles: HomeBoard["muscles"]; stre
         <span className="rh-titled">
           <h2 className="rh-panel-title">Muscle balance</h2>
           <HelpTip title="Muscle balance">
-            <p><b>Sets:</b> how many sets were logged for each muscle group in the window, each exercise counted under its main muscle. The dashed grey shape is the same length of time just before.</p>
-            <p><b>Strength:</b> each group’s change in strength as a score, 100 being no change: the Strength card’s figures drawn as a shape (−10% is 90, +23% is 123).</p>
-            <p>7d and 30d are the last 7 or 30 days; Phase is since the training phase began.</p>
+            <p><b>Sets:</b> how many sets your client did for each muscle. The dashed line is the period before, to compare.</p>
+            <p><b>Strength:</b> how much stronger each muscle got. 100 means no change, 110 means 10% stronger, 90 means 10% weaker.</p>
+            <p><b>7d, 30d, Phase:</b> the last 7 days, the last 30 days, or since this training phase started.</p>
           </HelpTip>
         </span>
         <div className="rd-btn-group" role="group" aria-label="Measure">
@@ -813,10 +813,11 @@ function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"];
         <span className="rh-titled">
           <h2 className="rh-panel-title">Strength</h2>
           <HelpTip title="Strength">
-            <p>Every set is turned into an estimated one-rep max: weight × (1 + reps ÷ 30), the best of each day counting. An assisted lift counts as body weight less the help.</p>
-            <p><b>7d / 30d:</b> each exercise’s best in the last 7 (30) days against its best in the 7 (30) days before, for exercises done in both.</p>
-            <p><b>Phase:</b> each exercise’s latest session against its first since the training phase began.</p>
-            <p>A group is the average of its exercises. <b>Overall</b> weighs each exercise by its sets. A <b>new best</b> beats every day before it.</p>
+            <p><b>How it’s measured:</b> each set is turned into the most your client could lift once: weight × (1 + reps ÷ 30). The best set of each day counts.</p>
+            <p><b>7d, 30d:</b> the last 7 or 30 days against the 7 or 30 days before.</p>
+            <p><b>Phase:</b> the latest workout against the first one of this phase.</p>
+            <p><b>Each muscle:</b> the average of its exercises.</p>
+            <p><b>Assisted exercises:</b> less help means stronger.</p>
           </HelpTip>
         </span>
         <span className="rh-panel-tools">
