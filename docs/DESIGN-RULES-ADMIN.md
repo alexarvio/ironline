@@ -3,7 +3,7 @@
 Read this before touching any coach (admin) screen or pop-up. It is the admin half of the design rules; the client app's are in `docs/DESIGN-RULES.md`. If a request or spec conflicts with this file, follow the file and say so. When Alex settles something new, add it here in the same change.
 
 ## 1. Voice: facts, no explanations
-- No sentences explaining what a feature is or how it works. No hint lines under fields, no footer hints ("Only you see a draft until it is sent."), no "optional" tags, no info banners.
+- No sentences explaining what a feature is or how it works. No hint lines under fields, no footer hints ("Only you see a draft until it is sent."), no "optional" tags, no info banners. The one way to explain, only where Alex asks: a small ? beside a card's title (`HelpTip`), the words in its pop-over (23 Oct, Alex: Home's Muscle balance and Strength, how they are worked out).
 - At most one quiet fact line under a title: `3 weeks | 9/11 – 29/11`, `Bar Tricep Pushdown | Upper — push`. A tab without one keeps no empty room for it (21 Oct, Alex): `trn-head bare` on Home, Shape update, Meetings and Invoices, `rd-head bare` on Plan.
 - Two facts on one line are parted by a short drawn upright bar, never a middle dot (21 Oct, Alex): `Sep` / `SepJoin` (`app/admin/redesign/Sep.tsx`, `.rd-sep` in training/draft.css), which drops empty parts so no bar is left over. A typed "|" is too faint. Tooltips, aria labels, placeholders, toasts and saved text keep plain words.
 - The photo sheets are called **Shape update** wherever people read it, admin and client (21 Oct, Alex; was Progress pictures): the tab, the client's screen, notifications and pushes; in a sentence "your shape update", "shape updates". The code keeps its pictures / photos names.

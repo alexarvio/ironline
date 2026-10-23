@@ -24,6 +24,7 @@ import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { TrackIcon } from "../plan/PlanDraft";
 import type { PhaseTrack } from "../../../lib/db";
 import KindMark from "../KindMark";
+import HelpTip from "../HelpTip";
 import type { ActivityMark } from "../../../lib/activityMark";
 
 // The client's Home (21 Oct, Alex: built from the Home mockup, root "rd trn rls rh"): Training's header, then the board.
@@ -649,7 +650,15 @@ function MuscleCard({ muscles, strength }: { muscles: HomeBoard["muscles"]; stre
   return (
     <section className="rls-card rh-panel rh-muscles" aria-label="Muscle balance" style={{ "--rh-c": TRACK_ACCENT.training } as CSSProperties}>
       <div className="rh-panel-head tall">
-        <h2 className="rh-panel-title">Muscle balance</h2>
+        {/* How it is worked out behind a ? (23 Oct, Alex asked for these two). */}
+        <span className="rh-titled">
+          <h2 className="rh-panel-title">Muscle balance</h2>
+          <HelpTip title="Muscle balance">
+            <p><b>Sets:</b> how many sets were logged for each muscle group in the window, each exercise counted under its main muscle. The dashed grey shape is the same length of time just before.</p>
+            <p><b>Strength:</b> each group’s change in strength as a score, 100 being no change: the Strength card’s figures drawn as a shape (−10% is 90, +23% is 123).</p>
+            <p>7d and 30d are the last 7 or 30 days; Phase is since the training phase began.</p>
+          </HelpTip>
+        </span>
         <div className="rd-btn-group" role="group" aria-label="Measure">
           {(["sets", "strength"] as const).map((m) => (
             <button key={m} type="button" className={measure === m ? "on" : ""} aria-pressed={measure === m} onClick={() => setMeasure(m)}>
@@ -801,7 +810,15 @@ function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"];
   return (
     <section className="rls-card rh-panel" aria-label="Strength">
       <div className="rh-panel-head tall">
-        <h2 className="rh-panel-title">Strength</h2>
+        <span className="rh-titled">
+          <h2 className="rh-panel-title">Strength</h2>
+          <HelpTip title="Strength">
+            <p>Every set is turned into an estimated one-rep max: weight × (1 + reps ÷ 30), the best of each day counting. An assisted lift counts as body weight less the help.</p>
+            <p><b>7d / 30d:</b> each exercise’s best in the last 7 (30) days against its best in the 7 (30) days before, for exercises done in both.</p>
+            <p><b>Phase:</b> each exercise’s latest session against its first since the training phase began.</p>
+            <p>A group is the average of its exercises. <b>Overall</b> weighs each exercise by its sets. A <b>new best</b> beats every day before it.</p>
+          </HelpTip>
+        </span>
         <span className="rh-panel-tools">
           <span className="rd-btn-group" role="group" aria-label="Window">
             {STRENGTH_SPANS.filter((s) => s.id !== "phase" || hasPhase).map((s) => (
