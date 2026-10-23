@@ -651,7 +651,7 @@ function MuscleCard({ muscles, strength }: { muscles: HomeBoard["muscles"]; stre
           <h2 className="rh-panel-title">Muscle balance</h2>
           <HelpTip title="Muscle balance">
             <p><b>Sets:</b> how many sets your client did for each muscle. The dashed line is the period before, to compare.</p>
-            <p><b>Strength:</b> how much stronger each muscle got. 100 means no change, 110 means 10% stronger, 90 means 10% weaker.</p>
+            <p><b>Strength:</b> how much stronger each muscle got, with the Epley formula (see Strength). 100 means no change, 110 means 10% stronger, 90 means 10% weaker.</p>
             <p><b>7d, 30d, Phase:</b> the last 7 days, the last 30 days, or since this training phase started.</p>
           </HelpTip>
         </span>
@@ -793,7 +793,7 @@ function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"];
         <span className="rh-titled">
           <h2 className="rh-panel-title">Strength</h2>
           <HelpTip title="Strength">
-            <p><b>How it’s measured:</b> each set is turned into the most your client could lift once: weight × (1 + reps ÷ 30). The best set of each day counts.</p>
+            <p><b>How it’s measured:</b> each set is turned into the most your client could lift once, with the Epley formula: weight × (1 + reps ÷ 30). The best set of each day counts.</p>
             <p><b>7d, 30d:</b> the last 7 or 30 days against the 7 or 30 days before.</p>
             <p><b>Phase:</b> the latest workout against the first one of this phase.</p>
             <p><b>Each muscle:</b> the average of its exercises.</p>
