@@ -179,23 +179,38 @@
 /* ---- Pop-ups (portaled, so never under .rd): the .dlh card (training/trn.css). */
 .rh-field { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
 
-/* Details: the card's two sections and the coach's note, in one .dlh card. */
+/* Details (23 Oct, Alex: mockup A with B's icons): the face, the name and one fact line; Contact and Coaching as grids of
+   facts (ClientCardEditor look="hairline"), the coach's note, Delete at the foot. One .dlh card, sections 20px apart. */
 .dlh.dlh.rh-details { width: min(560px, 100vw - 32px); }
 .rh-scrim { position: fixed; inset: 0; z-index: 50; background: rgba(20, 26, 36, 0.45); }
-.rh-details-body { display: flex; flex-direction: column; gap: 22px; max-height: min(70vh, 640px); margin: 0 -20px; padding: 4px 20px 2px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
-.ch-hl.ch-rail-card { overflow: visible; border: 0; border-radius: 0; background: none; box-shadow: none; }
-.ch-hl .ch-rail-head { padding: 0 0 4px; background: none; }
-.ch-hl .ch-rail-head .ch-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
-.ch-hl .ch-edit { padding: 0; font-size: 13px; font-weight: 600; color: #5b6474; }
-.ch-hl .ch-edit:hover { color: #141a24; text-decoration: none; }
-.ch-hl .ad-row { padding: 9px 0; border-top: 1px solid #eef0f3; }
-.ch-hl .ad-row:first-child { border-top: 0; }
-.ch-hl .ad-row-label { font-size: 13.5px; font-weight: 500; color: #5b6474; }
-.ch-hl .ad-row-value { font-size: 13.5px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
-.ch-hl .ad-row-value.good { color: #2f7a3f; }
-.ch-hl .ad-row-add { font-size: 13px; font-weight: 600; color: #5b6474; }
-.ch-hl .ad-row-add:hover { color: #141a24; text-decoration: none; }
-.ch-hl .ad-row-none { font-size: 13px; font-weight: 500; color: #98a2b3; }
+/* Doubled with .dlh-head (trn.css), so the dev server's CSS order can't put the face back at the top. */
+.dlh-head.rh-details-head { align-items: center; justify-content: flex-start; }
+.rh-details-head > .dlh-x { align-self: flex-start; }
+.rh-details-face { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 999px; overflow: hidden; background: #eef0f3; font-size: 18px; font-weight: 600; color: #5b6474; }
+.rh-details-face img { width: 100%; height: 100%; object-fit: cover; }
+.rh-details-who { flex: 1; min-width: 0; }
+.rh-details-fact { margin-top: 2px; font-size: 13px; font-weight: 500; color: #5b6474; font-variant-numeric: tabular-nums; }
+.rh-details-body { display: flex; flex-direction: column; gap: 20px; max-height: min(70vh, 640px); margin: 0 -20px; padding: 10px 20px 2px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+.cc-sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.cc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
+.cc-grid > .wide { grid-column: span 2; }
+/* Contact: the icon, then the value; no word label (the icon says it). Empty: the icon and "Add phone" in grey, a button. */
+.cc-line { display: flex; align-items: center; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 14.5px; font-weight: 600; line-height: 1.35; color: #141a24; text-align: left; }
+.cc-line > svg { flex: none; color: #8b93a1; }
+.cc-line-v { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cc-line.add { font-weight: 500; color: #98a2b3; cursor: pointer; }
+.cc-line.add:hover, .cc-line.add:hover > svg { color: #141a24; }
+/* Coaching: a small grey label over each figure. Empty and editable "Add" in grey (a button); derived and empty a grey dash. */
+.cc-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.cc-cell-k { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.cc-cell-v { display: block; max-width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 14.5px; font-weight: 600; line-height: 1.35; color: #141a24; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cc-cell-v.good { color: #2f7a3f; }
+.cc-cell-v.add, .cc-cell-v.none { font-weight: 500; color: #98a2b3; }
+.cc-cell-v.add { cursor: pointer; }
+.cc-cell-v.add:hover { color: #141a24; }
+/* Keyboard focus as a quiet underline on the words, never a ring (design rules 9b). */
+.cc-line.add:focus-visible, .cc-cell-v.add:focus-visible { outline: none; }
+.cc-line.add:focus-visible .cc-line-v, .cc-cell-v.add:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 
 /* The coach's note: a note that saves (design rules 4), no line until something is typed. */
 .rh-note { display: flex; flex-direction: column; gap: 4px; }
@@ -253,3 +268,30 @@
 /* The photo, large. */
 .dlh.dlh.rh-photodlg { width: min(560px, 100vw - 32px); }
 .rh-photo { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: 12px; }
+
+/* Details' Plan (23 Oct, Alex): the plan's name with a chevron, opening the floating list (design rules 6): the coach's
+   plans and None, + New plan pinned at the foot, which becomes a name line with Cancel and an ink Add in the same panel.
+   The list is portalled, so it is styled by its own classes, over the popover's defaults. */
+.cc-cell-v.cc-plan { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.cc-cell-v.cc-plan span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cc-cell-v.cc-plan svg { flex: none; width: 14px; height: 14px; color: #8b93a1; translate: 0 -0.5px; }
+.cc-cell-v.cc-plan:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 3px; }
+[data-slot="popover-content"].cc-plan-pop { width: 240px; padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 16px 40px -12px rgba(16, 24, 40, 0.25), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), Archivo, system-ui, sans-serif; color: #141a24; }
+.cc-plan-list { display: flex; flex-direction: column; max-height: 216px; overflow-y: auto; }
+.cc-plan-row { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
+.cc-plan-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-plan-row:hover, .cc-plan-row:focus-visible { outline: none; background: #f5f6f8; }
+.cc-plan-row.on { font-weight: 600; }
+.cc-plan-row.none { color: #5b6474; }
+.cc-plan-row svg { flex: none; width: 14px; height: 14px; }
+.cc-plan-empty { margin: 0; padding: 8px 10px; font-size: 13.5px; font-weight: 500; color: #98a2b3; }
+.cc-plan-make { display: block; width: 100%; height: 36px; margin-top: 4px; padding: 0 10px; border: 0; border-top: 1px solid #eef0f3; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
+.cc-plan-make:hover, .cc-plan-make:focus-visible { outline: none; background: #f5f6f8; }
+.cc-plan-new { display: flex; flex-direction: column; gap: 8px; padding: 6px 6px 4px; }
+.cc-plan-new input { height: 32px; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; }
+.cc-plan-new input:focus { border-bottom-color: #141a24; }
+.cc-plan-new input::placeholder { color: #98a2b3; }
+.cc-plan-new-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.cc-plan-cancel { padding: 0; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.cc-plan-add { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13.5px; font-weight: 600; color: #fff; cursor: pointer; }
+.cc-plan-add:disabled { opacity: 0.4; cursor: default; }

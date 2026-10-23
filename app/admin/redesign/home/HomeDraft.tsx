@@ -4,7 +4,7 @@ import Pager from "../Pager";
 import { useMemo, useRef, useState, useTransition, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { deleteClientConfirmedAction, saveCoachNoteAction, sendChatMessageAction } from "../../../lib/actions";
+import { deleteClientConfirmedAction, sendChatMessageAction } from "../../../lib/actions";
 import { useOpenChat } from "../ChatPanel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import ClientCardEditor from "../../ClientCardEditor";
@@ -35,7 +35,7 @@ import type { PhaseTrack } from "../../../lib/db";
 // - Consistency (the last 30 days, a square a day, per behaviour) with Meetings (the next call big, the last at the foot)
 //   and Invoices (what is owed big; the last paid and the next to be made at the foot) beside it; each opens its tab.
 // - Activity: what they did, one kind at a time, a page at a time; every row leads with its date.
-// Details is a pop-up: member info, coaching info and the coach's own note.
+// Details is a pop-up: the face and one fact line, Contact, Coaching, the coach's own note, Delete at the foot.
 
 /** at: when it happened (ms), for the row's date. href: the thing itself (a session, a food day, an invoice), from feedHref. */
 export type DraftEvent = { id: string; category: string; text: string; note: string | null; at: number; when: string; tab: string; href: string | null };
@@ -45,7 +45,9 @@ export type DraftHome = {
   avatarPath: string | null;
   /** The whole client card, for the live editor in the Details dialog. */
   panel: OverviewPanel;
-  coachNote: { text: string; savedLabel: string | null };
+  /** The plans the client's coach offers, and the one the client is on (23 Oct, Alex: Details' Plan, for invoices later). */
+  plans: { id: string; name: string }[];
+  planId: string | null;
   events: DraftEvent[];
   /** The client's login, for the App access button (read with the page: no second call). */
   access: ClientAccess;
@@ -191,6 +193,14 @@ export default function HomeDraft({
   const [photo, setPhoto] = useState(false);
   const panel = useMemo(() => ({ ...home.panel, memberInfo: dated(home.panel.memberInfo), coachingInfo: dated(home.panel.coachingInfo) }), [home.panel]);
   const board = home.board;
+  // Details' fact line: gender, height, and the week of the live plan; empty ones drop out. The week is the Training
+  // tile's (the running phase's week of its own, or a programme's with no phase behind it), never "Current week": that
+  // is the client's overall week number, so a second programme's week 2 read "Week 8".
+  const detailsFact = useMemo(() => {
+    const member = (field: string) => panel.memberInfo.find((r) => r.field === field)?.value || null;
+    const plan = board.tracks.find((t) => t.track === "training")?.phase;
+    return [member("gender"), member("height_cm"), plan ? `Week ${plan.weekNow} of ${plan.name}` : null].filter((p): p is string => !!p);
+  }, [panel, board.tracks]);
 
   const [filter, setFilter] = useState(FILTERS[0].id);
   const [page, setPage] = useState(1);
@@ -365,16 +375,45 @@ export default function HomeDraft({
               if (document.querySelector(".cc-dialog")) e.preventDefault();
             }}
           >
-            <div className="dlh-head">
-              <DialogTitle className="dlh-title">{home.name}</DialogTitle>
+            {/* The face, the name and one fact line (23 Oct, Alex: mockup A): gender | height | Week 3 of {plan}. */}
+            <div className="dlh-head rh-details-head">
+              <span className="rh-details-face" aria-hidden="true">
+                {home.avatarPath ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+                  <img src={home.avatarPath} alt="" />
+                ) : (
+                  home.initial
+                )}
+              </span>
+              <div className="rh-details-who">
+                <DialogTitle className="dlh-title">{home.name}</DialogTitle>
+                {detailsFact.length > 0 && (
+                  <div className="rh-details-fact">
+                    <SepJoin parts={detailsFact} />
+                  </div>
+                )}
+              </div>
               <DialogClose className="dlh-x" aria-label="Close">
                 ✕
               </DialogClose>
             </div>
-            <DialogDescription className="sr-only">Member info, coaching info and your note about {firstName}</DialogDescription>
+            <DialogDescription className="sr-only">Contact and coaching for {firstName}</DialogDescription>
             <div className="rh-details-body">
-              <ClientCardEditor clientId={clientId} panel={panel} chrome="rail" look="hairline" />
-              <CoachNote text={home.coachNote.text} savedLabel={home.coachNote.savedLabel} onSave={(v) => act(() => saveCoachNoteAction(clientId, v), "Coach note")} />
+              {/* No coach note and no weight in Details (23 Oct, Alex); the Plan in Coaching. */}
+              <ClientCardEditor clientId={clientId} panel={panel} chrome="rail" look="hairline" plans={home.plans} planId={home.planId} />
+            </div>
+            {/* Delete of an existing thing sits on the left, red words (design rules 4); the ⋯'s own confirm, the name typed. */}
+            <div className="dlh-foot">
+              <button
+                type="button"
+                className="dlh-delete dlh-start"
+                onClick={() => {
+                  setDetails(false);
+                  setDeleting(true);
+                }}
+              >
+                Delete {firstName}
+              </button>
             </div>
           </DialogContent>
         )}
@@ -987,40 +1026,6 @@ function InvoicesCard({ owed, paid, next, onOpen }: { owed: HomeBoard["outstandi
         </span>
       )}
     </button>
-  );
-}
-
-// The coach's own note, theirs alone: a note that saves (design rules 4). No line until something is typed; then the
-// line, Cancel and Save.
-function CoachNote({ text, savedLabel, onSave }: { text: string; savedLabel: string | null; onSave: (text: string) => void }) {
-  const [saved, setSaved] = useState(text);
-  const [draft, setDraft] = useState(text);
-  const typed = draft.trim() !== saved.trim();
-  return (
-    <section className="rh-note">
-      <span className="dlh-label">
-        <SepJoin parts={["Coach note", savedLabel && saved ? savedLabel : null]} />
-      </span>
-      <textarea className={`rh-note-text${typed ? " typed" : ""}`} value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} placeholder="Add a note" aria-label="Coach note" />
-      {typed && (
-        <div className="rh-note-foot">
-          <button type="button" className="dlh-cancel" onClick={() => setDraft(saved)}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="dlh-go"
-            onClick={() => {
-              setSaved(draft.trim());
-              setDraft(draft.trim());
-              onSave(draft.trim());
-            }}
-          >
-            Save
-          </button>
-        </div>
-      )}
-    </section>
   );
 }
 

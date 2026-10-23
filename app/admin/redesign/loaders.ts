@@ -97,6 +97,8 @@ import type { DraftMessages } from "./messages/MessagesDraft";
 import type { MessageLink } from "../../lib/messageLinks";
 import { dayMonth, dayMonthTime } from "../../lib/dayMonth";
 import { metricSummary } from "../../lib/metricSummary";
+import { clientPlanId, listCoachPlans } from "../../lib/coachPlans";
+import { coachIdOfClient } from "../../lib/tenancy";
 
 // What the redesign drafts read, gathered on the server for the shell that
 // shows them side by side. Read-only: the drafts save nothing.
@@ -1113,10 +1115,18 @@ export function loadHome(clientId: number): DraftHome {
     initial: panel.initial,
     avatarPath: panel.avatarPath,
     panel,
-    coachNote: panel.coachNote,
+    ...planOf(clientId),
     events,
     board,
   };
+}
+
+/** The plans the client's coach offers (an archived one only while this client is on it), and the client's (23 Oct). */
+function planOf(clientId: number): { plans: { id: string; name: string }[]; planId: string | null } {
+  const coachId = coachIdOfClient(clientId);
+  const planId = clientPlanId(clientId);
+  const plans = coachId == null ? [] : listCoachPlans(coachId, true).filter((p) => !p.archived || p.id === planId);
+  return { plans: plans.map((p) => ({ id: p.id, name: p.name })), planId };
 }
 
 // ---- Messages --------------------------------------------------------------------

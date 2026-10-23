@@ -837,6 +837,8 @@ type PhotoPeriodNote = {
 // Start Page: the coach's "Startpagina" tab — member info, coaching info, and goals.
 type ClientProfile = {
   client_id: number;
+  /** The plan they are on, one of the coach's (CoachSettings.plans, coachPlans.ts; 23 Oct). Absent: none picked. */
+  coaching_plan_id?: string | null;
   birthdate: string | null;
   // Contact details for the right-hand Member info block. Nullable because a
   // coach may never fill them in, and the panel shows an em dash rather than
@@ -1182,7 +1184,10 @@ export type CoachInvoicing = {
 };
 /** The coach's own Stripe account (lib/stripe.ts), once they start connecting it. */
 export type CoachPayments = { stripe_account_id?: string; stripe_status?: "pending" | "active"; stripe_checked_at?: string };
-export type CoachSettings = { business?: CoachBusiness; invoicing?: CoachInvoicing; payments?: CoachPayments; /** The coach's own time zone (IANA): new meetings start in it. Set at onboarding. */ timezone?: string; /** The coach's own contact details (Your profile, Your details): not the business on invoices. */ contact?: CoachContact };
+/** A plan the coach offers (23 Oct, Alex: picked on a client's Details, for invoices later). A skeleton: the name now;
+    a price and how often are kept when given, for the invoices to use. Never deleted while a client is on it: archived. */
+export type CoachPlan = { id: string; name: string; price?: number | null; every?: InvoiceEvery | null; archived?: boolean; created_at: string };
+export type CoachSettings = { /** The plans the coach offers (coachPlans.ts). */ plans?: CoachPlan[]; business?: CoachBusiness; invoicing?: CoachInvoicing; payments?: CoachPayments; /** The coach's own time zone (IANA): new meetings start in it. Set at onboarding. */ timezone?: string; /** The coach's own contact details (Your profile, Your details): not the business on invoices. */ contact?: CoachContact };
 /** A coach's phone and address, as on any account profile. Every field optional. */
 export type CoachContact = { phone_code?: string; phone?: string; address?: string; postcode?: string; city?: string; country_code?: string };
 
