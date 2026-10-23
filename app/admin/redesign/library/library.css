@@ -17,16 +17,19 @@
 /* ---- A group: its title (20px/600) with the count grey and the fold after it; the whole title folds it. */
 .rd.lbx .lbx-gtitle { display: flex; align-items: center; gap: 14px; margin: 0; font-size: inherit; font-weight: inherit; }
 /* Rename beside the title, in words, on hover or keyboard focus (as row actions); the name then typed in place. */
-.rd.lbx .lbx-grename-btn { margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
-.rd.lbx .lbx-gtitle:hover .lbx-grename-btn, .rd.lbx .lbx-grename-btn:focus-visible { opacity: 1; }
-.rd.lbx .lbx-grename-btn:hover { color: #141a24; }
 .rd.lbx .lbx-grename { width: min(320px, 100%); margin: 0; padding: 0 0 2px; border: 0; border-bottom: 1px solid #141a24; border-radius: 0; background: none; font: inherit; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; outline: none; }
 .rd.lbx .lbx-gbtn { display: inline-flex; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: #141a24; text-align: left; }
 .rd.lbx button.lbx-gbtn { cursor: pointer; }
 .rd.lbx .lbx-glabel { min-width: 0; overflow: hidden; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .rd.lbx .lbx-gbtn small { flex: none; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .rd.lbx button.lbx-gbtn:focus-visible { outline: none; }
-.rd.lbx button.lbx-gbtn:focus-visible .lbx-glabel { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
+.rd.lbx button.lbx-gbtn:focus-visible small { color: #141a24; }
+/* A name typed in place on a click (23 Oct, Alex): the group's and the exercise's, a hairline under it on hover, as a
+   phase's name on Training; its width the name's. */
+.rd.lbx .lbx-glabel-btn { max-width: 100%; margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; background: none; font-family: inherit; color: #141a24; text-align: left; cursor: text; }
+.rd.lbx .lbx-glabel-btn:hover, .rd.lbx .lbx-glabel-btn:focus-visible { outline: none; border-bottom-color: #c5ccd8; }
+.rd.lbx .lbx-name-btn { margin: 0; padding: 0; border: 0; background: none; font-family: inherit; text-align: left; cursor: text; }
+.rd.lbx .lbx-name-btn:hover, .rd.lbx .lbx-name-btn:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 3px; }
 
 /* ---- The grid (23 Oct, Alex: the rows' thumbs were way too small): a card an exercise, A–Z, in the page's flow with
    no card round them; + Exercise the last tile. */
@@ -68,10 +71,8 @@
 .rd.lbx .lbx-stage-add { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; transition: color 0.15s; }
 .rd.lbx .lbx-stage-add::after { content: ""; position: absolute; inset: 0; }
 .rd.lbx .lbx-stage-add:hover, .rd.lbx .lbx-stage-add:hover .lbx-stage-plus { color: #141a24; }
-.rd.lbx .lbx-stage-link { position: relative; z-index: 1; height: 26px; margin: 0; padding: 0 8px; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; transition: color 0.15s; }
-.rd.lbx .lbx-stage-link:hover { color: #141a24; }
-.rd.lbx .lbx-stage-add:focus-visible, .rd.lbx .lbx-stage-link:focus-visible { outline: none; }
-.rd.lbx .lbx-stage-add:focus-visible .lbx-stage-word, .rd.lbx .lbx-stage-link:focus-visible { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
+.rd.lbx .lbx-stage-add:focus-visible { outline: none; }
+.rd.lbx .lbx-stage-add:focus-visible .lbx-stage-word { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
 
 /* ⋯ over the stage's top right corner, a white round button, on hover or focus in the card. */
 .rd.lbx .lbx-tile-more { position: absolute; top: 10px; right: 10px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0; padding: 0; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #3a4250; cursor: pointer; opacity: 0; transition: opacity 0.15s, box-shadow 0.15s, color 0.15s; }
@@ -96,7 +97,8 @@
 .rd.lbx .lbx-tile:hover .lbx-act.hover, .rd.lbx .lbx-tile:focus-within .lbx-act.hover { opacity: 1; }
 
 /* ---- + Exercise, the grid's last tile: dashed, the stage's height, its panel floating beside it. */
-.rd.lbx .lbx-addtile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; align-self: start; width: 100%; aspect-ratio: 3 / 4; margin: 0; padding: 0; border: 1px dashed #dce1e8; border-radius: 14px; background: none; box-sizing: border-box; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; cursor: pointer; transition: border-color 0.15s, background-color 0.15s; }
+/* As tall as the cards beside it (23 Oct, Alex): stretched to its row; alone in a row, the poster's 3:4. */
+.rd.lbx .lbx-addtile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; align-self: stretch; width: 100%; aspect-ratio: 3 / 4; margin: 0; padding: 0; border: 1px dashed #dce1e8; border-radius: 14px; background: none; box-sizing: border-box; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; cursor: pointer; transition: border-color 0.15s, background-color 0.15s; }
 .rd.lbx .lbx-addtile svg { width: 22px; height: 22px; color: #5b6474; }
 .rd.lbx .lbx-addtile:hover { border-color: #c5ccd8; background: #fff; }
 .rd.lbx .lbx-addtile[data-state="open"] { border-color: #141a24; background: #fff; }
@@ -114,6 +116,6 @@
 .lbx-player video { display: block; width: 100%; max-height: min(520px, 70vh); background: #000; }
 
 @media (prefers-reduced-motion: reduce) {
-  .rd.lbx .lbx-grename-btn, .rd.lbx .lbx-stage-hit, .rd.lbx .lbx-play, .rd.lbx .lbx-stage.none::before, .rd.lbx .lbx-stage-plus, .rd.lbx .lbx-stage-add, .rd.lbx .lbx-stage-link, .rd.lbx .lbx-tile-more, .rd.lbx .lbx-act, .rd.lbx .lbx-addtile { transition: none; }
+  .rd.lbx .lbx-stage-hit, .rd.lbx .lbx-play, .rd.lbx .lbx-stage.none::before, .rd.lbx .lbx-stage-plus, .rd.lbx .lbx-stage-add, .rd.lbx .lbx-tile-more, .rd.lbx .lbx-act, .rd.lbx .lbx-addtile { transition: none; }
   .rd.lbx .lbx-stage-hit:hover .lbx-play, .rd.lbx .lbx-stage-hit[data-state="open"] .lbx-play { transform: none; }
 }

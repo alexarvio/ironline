@@ -7,7 +7,7 @@ import { Toaster } from "../../../components/ui/toast";
 import { Dialog } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { ArrowRightIcon, EyeIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
+import { ArrowRightIcon, EyeIcon, MoreIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
 import { setExerciseDemoLinkAction } from "../../../lib/actions";
 import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem } from "./load";
@@ -20,8 +20,8 @@ import { ConfirmDialog } from "../training/TrainingDraft";
 // Training's header (Library, + Exercise, ⋯), one search bar, then each muscle group in the coach's order (Cardio
 // among them, Other last): its title with the count and the fold, then a grid of cards, an exercise a card A–Z
 // (23 Oct, Alex: the rows' thumbs were way too small). A card: the demo big on top at 3:4 (a click plays it in a
-// player floating by the card, or opens the link; Add video / Add link on a dashed stage when there is none), the
-// name under it, Replace / Remove on hover, and ⋯ over the poster's corner (Rename, Move to, Take out); + Exercise
+// player floating by the card, or opens the link; Add video on a dashed stage when there is none), the
+// name under it, Replace / Remove on hover, and ⋯ over the poster's corner (Move to, Take out; the name renames on a click); + Exercise
 // the grid's last tile. Variations, substitutes and default cues are not on this screen; their data stays (Training
 // and the client app use them). A change shows at once and saves behind it.
 
@@ -30,7 +30,8 @@ type Patch = Partial<Pick<LibraryItem, "name" | "group" | "video" | "archived">>
 type Row = { key: string; id: number; name: string; group: string; video: string | null; archived: boolean; pending: boolean };
 type Dlg = { kind: "demo"; id: number; tab?: "link" | "file" } | { kind: "remove"; id: number } | { kind: "takeout"; id: number } | null;
 
-const FOLD_KEY = "norcoach:library-folded";
+/** The groups the coach opened in this browser; every other one is folded (23 Oct, Alex: folded by default). */
+const OPEN_KEY = "norcoach:library-open";
 // What uploadLibraryVideoAction takes (serverActions.bodySizeLimit).
 const MAX_UPLOAD = 128 * 1024 * 1024;
 const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
@@ -39,17 +40,17 @@ const isUpload = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v
 const demoKind = (url: string): "upload" | "youtube" | "link" => (isUpload(url) ? "upload" : ytId(url) ? "youtube" : "link");
 const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
-const readFolded = (): string[] => {
+const readOpened = (): string[] => {
   try {
-    const v: unknown = JSON.parse(window.localStorage.getItem(FOLD_KEY) ?? "[]");
+    const v: unknown = JSON.parse(window.localStorage.getItem(OPEN_KEY) ?? "[]");
     return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
   } catch {
     return [];
   }
 };
-const writeFolded = (v: string[]) => {
+const writeOpened = (v: string[]) => {
   try {
-    window.localStorage.setItem(FOLD_KEY, JSON.stringify(v));
+    window.localStorage.setItem(OPEN_KEY, JSON.stringify(v));
   } catch {}
 };
 
@@ -70,13 +71,13 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [showOut, setShowOut] = useState(false);
-  const [folded, setFolded] = useState<string[]>([]);
+  const [opened, setOpened] = useState<string[]>([]);
   // ?edit=<id> (the old drawer's link): its group open, the card scrolled to.
   const [landing, setLanding] = useState<number | null>(null);
   const [patches, setPatches] = useState<Record<number, Patch>>({});
   const [adding, setAdding] = useState<{ key: string; name: string; group: string; id: number | null }[]>([]);
   const [renaming, setRenaming] = useState<number | null>(null);
-  // A group's name typed in place (Rename beside its title on hover); shown at once, saved behind.
+  // A group's name typed in place: a click on it (23 Oct, Alex: no Rename word); shown at once, saved behind.
   const [renamingGroup, setRenamingGroup] = useState<string | null>(null);
   const [groupNames, setGroupNames] = useState<Record<string, string>>({});
   const renameGroup = (slug: string, was: string, typed: string) => {
@@ -112,7 +113,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   // The folds as the coach left them in this browser, and ?edit=<id>, once the page is on screen.
   useEffect(() => {
     const t = setTimeout(() => {
-      setFolded(readFolded());
+      setOpened(readOpened());
       const edit = Number(new URLSearchParams(window.location.search).get("edit"));
       if (edit > 0) {
         setLanding(edit);
@@ -143,16 +144,16 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   const shown = rows.filter((r) => (showOut || !r.archived || (!r.pending && r.id === landing)) && (!needle || r.name.toLowerCase().includes(needle)));
   const sections = data.groups.map((g) => ({ ...g, rows: shown.filter((r) => r.group === g.slug).sort(byName) })).filter((s) => !needle || s.rows.length > 0);
   const landingGroup = landing != null ? (rows.find((r) => !r.pending && r.id === landing)?.group ?? null) : null;
-  const isOpen = (slug: string) => !!needle || slug === landingGroup || !folded.includes(slug);
+  const isOpen = (slug: string) => !!needle || slug === landingGroup || opened.includes(slug);
 
-  const setFolds = (next: string[]) => {
-    setFolded(next);
-    writeFolded(next);
+  const setOpens = (next: string[]) => {
+    setOpened(next);
+    writeOpened(next);
   };
   const toggle = (slug: string) => {
     const open = isOpen(slug);
     if (slug === landingGroup) setLanding(null);
-    setFolds(open ? [...folded.filter((s) => s !== slug), slug] : folded.filter((s) => s !== slug));
+    setOpens(open ? opened.filter((s) => s !== slug) : [...opened.filter((s) => s !== slug), slug]);
   };
 
   const patch = (id: number, p: Patch) => setPatches((all) => ({ ...all, [id]: { ...all[id], ...p } }));
@@ -227,7 +228,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
     const key = `new-${Date.now()}`;
     setPanel(null);
     setAdding((a) => [...a, { key, name, group, id: null }]);
-    if (folded.includes(group)) setFolds(folded.filter((s) => s !== group));
+    if (!opened.includes(group)) setOpens([...opened, group]);
     void (async () => {
       const id = await createLibraryExerciseAction(name, group, "").catch(() => null);
       if (id == null) {
@@ -285,14 +286,6 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
                   e.preventDefault();
                 }}
               >
-                <DropdownMenuItem
-                  onSelect={() => {
-                    keepFocus.current = true;
-                    setRenaming(r.id);
-                  }}
-                >
-                  <PencilIcon /> Rename
-                </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <ArrowRightIcon /> Move to
@@ -316,7 +309,18 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
           )}
         </div>
         <div className="lbx-tile-foot">
-          {renaming === r.id ? <RenameField name={r.name} onDone={(v) => rename(r, v)} onCancel={() => setRenaming(null)} /> : <span className="lbx-name" title={r.name}>{r.name}</span>}
+          {renaming === r.id ? (
+            <RenameField name={r.name} onDone={(v) => rename(r, v)} onCancel={() => setRenaming(null)} />
+          ) : r.pending || r.archived ? (
+            <span className="lbx-name" title={r.name}>
+              {r.name}
+            </span>
+          ) : (
+            // A click on the name types a new one (23 Oct, Alex), as a phase's name on Training.
+            <button type="button" className="lbx-name lbx-name-btn" title={r.name} aria-label={`${r.name}: rename`} onClick={() => setRenaming(r.id)}>
+              {r.name}
+            </button>
+          )}
           <span className="lbx-acts">
             {r.pending ? null : r.archived ? (
               <button type="button" className="lbx-act" onClick={() => takeOut(r, false)}>
@@ -416,9 +420,8 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         const open = isOpen(s.slug);
         const count = s.rows.filter((r) => !r.archived).length;
         const label = groupNames[s.slug] ?? s.label;
-        const head = (
+        const fold = (
           <>
-            <span className="lbx-glabel">{label}</span>
             <small>{count}</small>
             <Fold open={open} />
           </>
@@ -440,17 +443,18 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
                   }}
                   onBlur={(e) => renameGroup(s.slug, label, e.currentTarget.value)}
                 />
-              ) : needle ? (
-                <span className="lbx-gbtn">{head}</span>
               ) : (
-                <>
-                  <button type="button" className="lbx-gbtn" aria-expanded={open} onClick={() => toggle(s.slug)}>
-                    {head}
-                  </button>
-                  <button type="button" className="lbx-grename-btn" onClick={() => setRenamingGroup(s.slug)}>
-                    Rename
-                  </button>
-                </>
+                // A click on the name types a new one (23 Oct, Alex: no Rename word beside it).
+                <button type="button" className="lbx-glabel lbx-glabel-btn" title="Rename" aria-label={`${label}: rename`} onClick={() => setRenamingGroup(s.slug)}>
+                  {label}
+                </button>
+              )}
+              {needle ? (
+                <span className="lbx-gbtn">{fold}</span>
+              ) : (
+                <button type="button" className="lbx-gbtn" aria-expanded={open} aria-label={open ? `Fold ${label}` : `Open ${label}`} onClick={() => toggle(s.slug)}>
+                  {fold}
+                </button>
               )}
             </h2>
             {open && (
@@ -546,7 +550,8 @@ function LazyClip({ src }: { src: string }) {
 /**
  * The card's stage, its demo big at 3:4: a poster for a clip or a YouTube link (a click plays it in a player floating
  * by the card; Esc or a click away closes it), the link mark for another link (opens it in a new tab), and with none
- * a + with Add video and Add link under it (a + alone while it is new or taken out).
+ * a + and Add video (23 Oct, Alex: no Add link on the card; the pop-up has the link tab), a + alone while it is new or
+ * taken out.
  */
 function Demo({ row, playing, onPlay, onAdd }: { row: Row; playing: boolean; onPlay: (on: boolean) => void; onAdd: (tab: "file" | "link") => void }) {
   const url = row.video;
@@ -556,17 +561,12 @@ function Demo({ row, playing, onPlay, onAdd }: { row: Row; playing: boolean; onP
         <PlusIcon />
       </span>
     ) : (
-      <>
-        <button type="button" className="lbx-stage-add" aria-label={`Add video to ${row.name}`} onClick={() => onAdd("file")}>
-          <span className="lbx-stage-plus" aria-hidden="true">
-            <PlusIcon />
-          </span>
-          <span className="lbx-stage-word">Add video</span>
-        </button>
-        <button type="button" className="lbx-stage-link" aria-label={`Add link to ${row.name}`} onClick={() => onAdd("link")}>
-          Add link
-        </button>
-      </>
+      <button type="button" className="lbx-stage-add" aria-label={`Add video to ${row.name}`} onClick={() => onAdd("file")}>
+        <span className="lbx-stage-plus" aria-hidden="true">
+          <PlusIcon />
+        </span>
+        <span className="lbx-stage-word">Add video</span>
+      </button>
     );
   const kind = demoKind(url);
   if (kind === "link")
