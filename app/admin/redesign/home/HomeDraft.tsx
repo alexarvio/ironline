@@ -833,8 +833,10 @@ function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"];
         {rows.map((x) => (
           <div key={x.group} className="rh-str-row" title={x.r == null ? undefined : `${x.exercises} exercise${x.exercises === 1 ? "" : "s"}`}>
             <span className="rh-str-name">{x.group}</span>
+            {/* From the centre (23 Oct, Alex: a drop read as progress): a gain grows right in green, a drop left in red,
+                the biggest change reaching the end. */}
             <span className="rh-str-track" aria-hidden="true">
-              <i style={{ width: !x.r || most === 0 ? 0 : `max(2px, ${(Math.abs(x.r) / most) * 100}%)` }} />
+              <i className={x.r != null && x.r < 0 ? "down" : "up"} style={{ width: !x.r || most === 0 ? 0 : `max(2px, ${(Math.abs(x.r) / most) * 50}%)` }} />
             </span>
             {x.r == null ? (
               <span className="rh-str-pct none">
@@ -851,9 +853,9 @@ function StrengthCard({ strength, hasPhase }: { strength: HomeBoard["strength"];
   );
 }
 
-// ---- Weight: the latest and the change on the title's line; the phase's readings over their time frame and scale (23
-// Oct, Alex: "there is no time frame or anything"), the latest a dot (from two readings); where they are heading, when
-// there is a phase. "None yet" only with no weight at all.
+// ---- Weight: 7d | 30d | Phase as Strength, the latest and the change under the title; the window's readings over their
+// time frame and scale (23 Oct, Alex: "there is no time frame or anything"), the latest a dot (from two readings), dashed
+// where weigh-ins were missed; where they are heading, in Phase. "None yet" only with no weight at all.
 /** A grid axis's day keeps its month's name (design rules 7): "5 Oct", "5 Oct 2025" in another year. */
 const AXIS_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const axisDay = (ms: number) => {
@@ -889,9 +891,17 @@ function weightGrid(vs: number[]): { lines: [number, number, number]; decimals: 
   return { lines: [base / 10, (base + s) / 10, (base + 2 * s) / 10], decimals: s < 10 ? 1 : 0 };
 }
 
+type WeightPoint = NonNullable<HomeBoard["weight"]>["points"][number];
+
+// 7d | 30d | Phase (23 Oct, Alex: "the coaches want to see 7 days, 30 days and phase"), laid out as Strength above it: the
+// capsule on the head's right, the latest and the change over the window on the line under the title. Phase at first,
+// and only with a phase (else 30d). The chart, its dates, scale and dots follow the window; where they land by the
+// phase's end only in Phase. A window with under two readings draws no chart, but keeps its room (and the pace line's)
+// while another window has one, so switching never moves the card.
 function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
-  const points = weight ? [...weight.points].sort((a, b) => timeOf(a.date) - timeOf(b.date)) : [];
-  const latest = weight ? (weight.now ?? points.at(-1)?.value ?? null) : null;
+  const [picked, setSpan] = useState<StrengthSpan>("phase");
+  const all = weight ? [...weight.points].sort((a, b) => timeOf(a.date) - timeOf(b.date)) : [];
+  const latest = weight ? (weight.now ?? all.at(-1)?.value ?? null) : null;
   if (!weight || latest == null)
     return (
       <section className="rls-card rh-panel rh-weight" aria-label="Weight">
@@ -901,41 +911,55 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
         <p className="rls-none">None yet</p>
       </section>
     );
-  const head = (
-    <div className="rh-panel-head">
-      <h2 className="rh-panel-title">Weight</h2>
-      <span className="rh-wt">
+  const hasPhase = weight.windows.phase != null;
+  const span: StrengthSpan = picked === "phase" && !hasPhase ? "30d" : picked;
+  const w = (span === "phase" ? weight.windows.phase : weight.windows[span]) ?? weight.windows["30d"];
+  const inWindow = (from: string) => all.filter((p) => p.date >= from);
+  const points = inWindow(w.from);
+  const charted = [weight.windows["7d"], weight.windows["30d"], weight.windows.phase].some((x) => x != null && inWindow(x.from).length >= 2);
+  const paced = hasPhase && weight.projection != null;
+  const projection = span === "phase" ? weight.projection : null;
+  const grid = points.length >= 2 ? weightGrid(points.map((p) => p.value)) : null;
+  const gridText = grid ? grid.lines.map((v) => v.toFixed(grid.decimals)) : [];
+  // The gutter on the right holds the longest of the grid's kg (11px numerals, about 6.3px a character, 8px from the lines).
+  const gutter = grid ? Math.max(28, Math.ceil(8 + Math.max(...gridText.map((t) => t.length)) * 6.3)) : null;
+  return (
+    <section className="rls-card rh-panel rh-weight" aria-label="Weight" style={gutter ? ({ "--rh-wgut": `${gutter}px` } as CSSProperties) : undefined}>
+      <div className="rh-panel-head tall">
+        <h2 className="rh-panel-title">Weight</h2>
+        <span className="rh-panel-tools">
+          <span className="rd-btn-group" role="group" aria-label="Window">
+            {STRENGTH_SPANS.filter((s) => s.id !== "phase" || hasPhase).map((s) => (
+              <button key={s.id} type="button" className={span === s.id ? "on" : ""} aria-pressed={span === s.id} onClick={() => setSpan(s.id)}>
+                {s.label}
+              </button>
+            ))}
+          </span>
+        </span>
+      </div>
+      <span className="rh-under">
         <SepJoin
           parts={[
             <b key="now">{kg1(latest)}</b>,
-            weight.change != null ? (
+            w.change != null && w.since ? (
               <span key="change">
-                {signed1(weight.change)} kg <small>since {dayMonth(weight.since)}</small>
+                <b>{signed1(w.change)} kg</b> since {dayMonth(w.since)}
               </span>
             ) : null,
           ]}
         />
       </span>
-    </div>
-  );
-  if (points.length < 2)
-    return (
-      <section className="rls-card rh-panel rh-weight" aria-label="Weight">
-        {head}
-      </section>
-    );
-  const grid = weightGrid(points.map((p) => p.value));
-  const gridText = grid.lines.map((v) => v.toFixed(grid.decimals));
-  // The gutter on the right holds the longest of the grid's kg (11px numerals, about 6.3px a character, 8px from the lines).
-  const gutter = Math.max(28, Math.ceil(8 + Math.max(...gridText.map((t) => t.length)) * 6.3));
-  return (
-    <section className="rls-card rh-panel rh-weight" aria-label="Weight" style={{ "--rh-wgut": `${gutter}px` } as CSSProperties}>
-      {head}
-      <WeightChart points={points} grid={grid} gridText={gridText} />
-      {weight.projection && (
+      {grid ? <WeightChart key={span} points={points} from={w.from} grid={grid} gridText={gridText} /> : charted ? <div className="rh-wempty" aria-hidden="true" /> : null}
+      {projection ? (
         <p className="rh-pace">
-          On pace for {kg1(weight.projection.value)} by {dayMonth(weight.projection.date)}
+          On pace for {kg1(projection.value)} by {dayMonth(projection.date)}
         </p>
+      ) : (
+        paced && (
+          <p className="rh-pace" aria-hidden="true">
+            &nbsp;
+          </p>
+        )
       )}
     </section>
   );
@@ -943,25 +967,39 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
 
 /** Weight's chart, from two readings: the grid's three lines (top, middle, bottom of the plot) with their kg on the right,
     the readings placed by their dates, the dates under it. It stretches to the card (the stroke and the dots keep their
-    size). Hovering reads the nearest reading by its date; with focus, ← → step the readings, Home and End the ends. */
-function WeightChart({ points, grid, gridText }: { points: { date: string; value: number }[]; grid: { lines: [number, number, number] }; gridText: string[] }) {
+    size). The line joins every reading, solid, and dashed (4 3) over a stretch where weigh-ins were missed (23 Oct, Alex:
+    "connect the dots anyway but have a dashed line"; `missed`, by the client's rhythm). Hovering reads the nearest
+    reading by its date, never a point on the line between; with focus, ← → step the readings, Home and End the ends.
+    Weigh-ins missed before the window's first reading start it at the window's first day (`from`), the missed days
+    empty space before the first dot. */
+function WeightChart({ points, from, grid, gridText }: { points: WeightPoint[]; from: string; grid: { lines: [number, number, number] }; gridText: string[] }) {
   const plot = useRef<HTMLDivElement>(null);
   // The reading being read; none while the chart is only looked at.
   const [sel, setSel] = useState<number | null>(null);
   const last = points.length - 1;
   const ts = points.map((p) => timeOf(p.date));
-  // Whole days from the first reading: a clock change between two readings must not move anything, since the server and
+  const t0 = points[0].missed && from < points[0].date ? timeOf(from) : ts[0];
+  // Whole days from the chart's first day: a clock change between two readings must not move anything, since the server and
   // the coach's browser can sit in different time zones (one with the change, one without) and both draw the chart.
-  const dayAt = ts.map((t) => Math.round((t - ts[0]) / DAY_MS));
+  const dayAt = ts.map((t) => Math.round((t - t0) / DAY_MS));
   const days = dayAt[last];
   const [lo, , hi] = grid.lines;
   const xs = dayAt.map((n) => (days > 0 ? (n / days) * 100 : 0));
   const ys = points.map((p) => ((hi - p.value) / (hi - lo)) * 100);
-  const d = xs.map((x, i) => `${i ? "L" : "M"}${x.toFixed(2)} ${ys[i].toFixed(2)}`).join(" ");
+  // The line in runs, each reading joined to the one before: solid where it came on time, dashed where weigh-ins were
+  // missed between the two. A run goes on while the style does, so its corners stay joined.
+  const pt = (i: number) => `${xs[i].toFixed(2)} ${ys[i].toFixed(2)}`;
+  const line = { solid: "", dashed: "" };
+  for (let i = 1; i <= last; i++) {
+    const style = points[i].missed ? "dashed" : "solid";
+    const goesOn = i > 1 && points[i - 1].missed === points[i].missed;
+    line[style] += `${goesOn ? "" : `M${pt(i - 1)} `}L${pt(i)} `;
+  }
+  const anyMissed = line.dashed !== "";
   // A dot a reading while they can be told apart (up to 20); the latest always, bigger.
   const dots = points.length <= 20;
-  // The dates under it: the first reading's day, the day halfway (rounded down), the last's (none twice).
-  const midT = ts[0] + Math.floor(days / 2) * DAY_MS;
+  // The dates under it: the chart's first day, the day halfway (rounded down), the last reading's (none twice).
+  const midT = t0 + Math.floor(days / 2) * DAY_MS;
   const showMid = days >= 2;
   const showEnd = days > 0;
 
@@ -979,7 +1017,7 @@ function WeightChart({ points, grid, gridText }: { points: { date: string; value
   };
   const read = sel == null ? null : points[sel];
   const readText = read ? `${kg1(read.value)}, ${dayMonth(read.date)}` : "";
-  const label = `Weight, ${axisDay(ts[0])} to ${axisDay(ts[last])}: ${kg1(points[0].value)} to ${kg1(points[last].value)}, ${points.length} readings`;
+  const label = `Weight, ${axisDay(t0)} to ${axisDay(ts[last])}: ${kg1(points[0].value)} to ${kg1(points[last].value)}, ${points.length} readings${anyMissed ? ", dashed where weigh-ins were missed" : ""}`;
 
   return (
     <div className="rh-wbox">
@@ -1009,7 +1047,9 @@ function WeightChart({ points, grid, gridText }: { points: { date: string; value
               const y = ((hi - v) / (hi - lo)) * 100;
               return <line key={v} x1={0} x2={100} y1={y} y2={y} stroke="#e1e5eb" strokeWidth={1} vectorEffect="non-scaling-stroke" shapeRendering="crispEdges" />;
             })}
-            <path d={d} fill="none" stroke="#141a24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {line.solid && <path d={line.solid.trim()} fill="none" stroke="#141a24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            {/* Square ends, so the 4 3 dash stays open (round caps close a 3px gap at this width). */}
+            {anyMissed && <path d={line.dashed.trim()} fill="none" stroke="#141a24" strokeWidth={2} strokeDasharray="4 3" strokeLinecap="butt" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
           </svg>
           {grid.lines.map((v, i) => (
             <span key={v} className="rh-wgrid" style={{ top: `${((hi - v) / (hi - lo)) * 100}%` }} aria-hidden="true">
@@ -1032,7 +1072,7 @@ function WeightChart({ points, grid, gridText }: { points: { date: string; value
         </div>
       </div>
       <div className="rh-waxis" aria-hidden="true">
-        <span>{axisDay(ts[0])}</span>
+        <span>{axisDay(t0)}</span>
         {showMid && <span className="mid">{axisDay(midT)}</span>}
         {showEnd && <span className="end">{axisDay(ts[last])}</span>}
       </div>

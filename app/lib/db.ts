@@ -954,6 +954,12 @@ type Meeting = {
   all_day?: boolean;
   /** A repeating call: every meeting scheduled together shares the first one's id. */
   series_id?: number | null;
+  /** To focus on (23 Oct, Alex; lib/focus.ts), on a call still to come: the next list as drafted on its To focus on tab.
+      Never sent; completing the call sends it. Kept in the row's extra jsonb. */
+  focus_draft?: string[] | null;
+  /** On a completed call: the list it set, with the client's ticks as they stood when the next call replaced it. Kept in
+      the row's extra jsonb. */
+  focus_goals?: { text: string; done: boolean }[] | null;
 };
 type MeetingNote = {
   id: number;

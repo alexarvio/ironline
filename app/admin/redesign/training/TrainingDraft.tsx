@@ -16,6 +16,7 @@ import RogueSessions from "./RogueSessions";
 import ClientNote from "./ClientNote";
 import ApplyChangesDialog from "./ApplyChanges";
 import { previewApplySessionAction, previewApplyWeekAction } from "./applyPreview";
+import { changedWeeks } from "./applyShape";
 import MediaReviewModal, { reviewable, type MediaReview, type ThreadItem } from "../media-review/MediaReviewModal";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
@@ -153,6 +154,12 @@ export type DraftProgram = {
   /** print: what a copy of the week would carry, so a week the same as another offers no copy of it. */
   weeks: { index: number; label: string; print: string; trained: boolean[]; missed: boolean[]; skipped: boolean[]; state: "past" | "live" | "ahead" }[];
   sessions: DraftSession[];
+  /**
+   * What the applies would change, read for the week loaded (`week`, its index) as their confirms read it
+   * (applyPreviewData.ts), in kg and in lbs: `rest`, the later weeks Apply to the rest would change; `sessions`, by
+   * session id, whether its Apply to remaining weeks would change one. Null for a done week or the last.
+   */
+  apply?: { week: number; rest: { kg: number[]; lbs: number[] }; sessions: Record<number, { kg: boolean; lbs: boolean }> } | null;
   /** The client's rogue sessions (19 Oct), by week index: their own workouts off the plan, read only. */
   rogue: Record<number, DraftRogue[]>;
   /** The client's body weight now (latest reading, else their starting weight; 23 Oct): what an assisted lift really lifts is this less the help. */
@@ -761,10 +768,22 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // An empty week copies nothing (copyProgramWeek), so it is never offered as a source.
   const copyable = (i: number) => (weeks.find((w) => w.index === i)?.trained.length ?? 0) > 0 && !sameWeeks(i, viewIdx);
   const copyFromChoices = weeks.filter((w) => w.index !== viewIdx && copyable(w.index));
-  // Copy forward reaches only the later weeks that differ (20 Oct, Alex: "Copy to weeks 4–6" when week 4 was already the same).
-  const forwardTo = later.filter((w) => !sameWeeks(w.index, viewIdx));
+  // Apply to the rest reaches only the later weeks it would really change (20 Oct, Alex: "Copy to weeks 4–6" when week 4
+  // was already the same; 23 Oct: "once I apply and there are no other changes, the button disappears"). Read by the
+  // page as its confirm reads them (program.apply): sessions with logged sets kept, a copied weight where the rule that
+  // moves it on will leave it, a weight in the coach's unit; so after an apply it goes. A week switched to here and not
+  // read yet goes by its print meanwhile. While the week's changes wait or save, the read is behind them: it offers
+  // every later week then, as a session's does (its confirm reads afresh and reaches only the weeks that change).
+  const applyRead = program.apply && program.apply.week === viewIdx ? program.apply : null;
+  const forwardTo = weekSaving ? later : applyRead ? later.filter((w) => (lbs ? applyRead.rest.lbs : applyRead.rest.kg).includes(w.index)) : later.filter((w) => !sameWeeks(w.index, viewIdx));
   const forwardChanges = forwardTo.length > 0;
   const forwardLabel = weeksWords(forwardTo.map((w) => w.index));
+  // A session's Apply to remaining weeks, only while it would change a later week (the same read); a session with
+  // changes still waiting, or not read yet, offers it.
+  const appliesLater = (id: number) => {
+    const r = applyRead?.sessions[id];
+    return !r || (lbs ? r.lbs : r.kg) || pendingCount(pend(id)) > 0 || !!saving[id];
+  };
   // + Week's menu (20 Oct, Alex: the add-week pop-up was too black): Blank, or a copy of the week before the new one, or of the one on screen; added at once.
   const addWeek = (from: number | null) => {
     const n = weeks.length + 1;
@@ -1201,8 +1220,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               <CopyIcon /> Duplicate session
                             </DropdownMenuItem>
                           )}
-                          {/* This session into the same slot of every later week (12 Oct). */}
-                          {(rows.length > 0 || s.cardio.length > 0) && laterLabel && (
+                          {/* This session into the same slot of every later week (12 Oct); not when it would change none (23 Oct). */}
+                          {(rows.length > 0 || s.cardio.length > 0) && laterLabel && appliesLater(s.id) && (
                             <DropdownMenuItem onSelect={() => setDlg({ kind: "applyLater", sessionId: s.id })}>
                               <CopyIcon /> Apply to remaining weeks
                             </DropdownMenuItem>
@@ -2011,35 +2030,44 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               await settle([id]);
               return previewApplySessionAction(id);
             }}
-            onConfirm={() => {
+            onConfirm={(read) => {
               const src = sessionById(dlg.sessionId)!;
+              const reach = read ? changedWeeks(read, lbs) : null;
               close();
-              act(async () => (await settle([src.id]), applyDayToLaterWeeksAction(src.id)), `${src.name} applied to ${laterLabel}`);
+              // Its list said No changes: nothing to apply. Else the toast names the weeks it listed.
+              if (reach && !reach.length) return;
+              act(async () => (await settle([src.id]), applyDayToLaterWeeksAction(src.id)), `${src.name} applied to ${reach ? weeksWords(reach) : laterLabel}`);
             }}
           />
         )}
 
-        {dlg?.kind === "copyForward" && forwardTo.length > 0 && (
+        {/* Open on later weeks, not on forwardTo: opened while saving, the read behind the save can be empty a moment before the page reads again. */}
+        {dlg?.kind === "copyForward" && later.length > 0 && (
           <ApplyChangesDialog
             key={`copyForward-${viewIdx}`}
             title={`Apply ${week.label} to the rest?`}
             // Said plainly (20 Oct, Alex: "what does this mean?"), the weeks it reaches named.
-            description={`${forwardLabel.charAt(0).toUpperCase()}${forwardLabel.slice(1)} ${forwardTo.length === 1 ? "becomes" : "become"} ${week.label}, cardio included. Sessions with logged sets stay as they are.`}
+            description={`${forwardTo.length ? `${forwardLabel.charAt(0).toUpperCase()}${forwardLabel.slice(1)} ${forwardTo.length === 1 ? "becomes" : "become"}` : "The later weeks become"} ${week.label}, cardio included. Sessions with logged sets stay as they are.`}
             confirm="Apply"
             startDate={program.startDate}
             lbs={lbs}
             load={async () => {
+              // Every later week, read after what is waiting is saved: the list then names the weeks that change, a
+              // change saved just now included, and the apply reaches those (onConfirm).
               const from = weekNo(viewIdx);
-              const targets = forwardTo.map((w) => weekNo(w.index));
+              const targets = later.map((w) => weekNo(w.index));
               await settle(Object.keys(pendingRef.current).map(Number));
               return previewApplyWeekAction(clientId, from, targets);
             }}
-            onConfirm={() => {
+            onConfirm={(read) => {
               const from = weekNo(viewIdx);
-              const targets = forwardTo.map((w) => weekNo(w.index));
+              const reach = read ? changedWeeks(read, lbs) : forwardTo.map((w) => w.index);
+              const targets = reach.map(weekNo);
               const label = week.label;
-              const toWords = forwardLabel;
+              const toWords = weeksWords(reach);
               close();
+              // Its list said No changes: nothing to apply.
+              if (!targets.length) return;
               act(async () => {
                 await settle(Object.keys(pendingRef.current).map(Number));
                 for (const to of targets) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to }));

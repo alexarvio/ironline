@@ -3,39 +3,55 @@
 import { revalidatePath } from "next/cache";
 import { coachForClient, getSessionUser } from "./auth";
 import { getData } from "./db";
-import { FOCUS_NOTE, setFocus, tickFocusGoal } from "./focus";
-import { localDateStr, logCoachActivity } from "./queries";
+import { focusHolder, noteFocus, setFocus, setFocusDraft, setFocusFromCall, setFocusOnHolder, tickFocusGoal } from "./focus";
 
 // To focus on (23 Oct, Alex; lib/focus.ts): the coach sets the list from Meetings, the client ticks it on Home.
 
+/** The lines sent as JSON; null when they can't be read. */
+function linesOf(formData: FormData): string[] | null {
+  try {
+    const lines: unknown = JSON.parse(String(formData.get("goals") ?? "[]"));
+    return Array.isArray(lines) ? lines.map(String) : [];
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The coach sets the client's list: `goals` the lines as JSON. With `meetingId` and `fromCall` it is the "How did the
- * call go?" pop-up's, on a call just completed. The client hears of it (Home's Latest and Notifications, a push) only
- * when the list comes in from none, or with a call completed with goals: never for a word changed.
+ * call go?" pop-up's, on a call just completed: the list goes to the client and the call keeps it. With `holderId` it is
+ * an edit on the past call that holds the list (Past calls, between calls). The client hears of it (Home's Latest and
+ * Notifications, a push) only when the list comes in from none, or with a call completed with goals: never for a word
+ * changed.
  */
 export async function saveFocusAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   if (!clientId || !(await coachForClient(clientId))) return;
-  let lines: unknown = [];
-  try {
-    lines = JSON.parse(String(formData.get("goals") ?? "[]"));
-  } catch {
-    return;
-  }
+  const lines = linesOf(formData);
+  if (!lines) return;
   const meetingId = Number(formData.get("meetingId")) || null;
   const meeting = meetingId ? getData().meetings.find((m) => m.id === meetingId && m.client_id === clientId) : null;
   if (meetingId && !meeting) return;
   const fromCall = formData.get("fromCall") === "1" && meeting?.status === "completed";
-  const r = setFocus(clientId, Array.isArray(lines) ? lines.map(String) : [], fromCall ? meetingId : undefined);
-  if (r.after > 0 && (r.before === 0 || fromCall)) {
-    const goals = getData().client_focus?.find((x) => x.id === r.id)?.goals.map((g) => g.text) ?? [];
-    // actionRef is the list (every notification carries its subject); it opens Home, where the list is at the top. A call's
-    // list has a key of its own: a replaced row never pushes, and the call's goals are news even after a set that same day.
-    const dedupeKey = fromCall ? `focus:call${meetingId}` : `focus:${localDateStr()}`;
-    logCoachActivity(clientId, `${FOCUS_NOTE}: ${goals.join(" · ")}`, { kind: "general", actionTab: "home", actionLabel: "See it", actionRef: r.id, dedupeKey, replace: true, push: true });
-  }
+  const holderId = Number(formData.get("holderId")) || null;
+  // An edit from a page that hasn't seen the list move on (a call completed in another window since) changes nothing:
+  // the call it was typed on no longer holds the list.
+  if (!fromCall && holderId !== (focusHolder(clientId)?.id ?? null)) return;
+  const r = fromCall && meetingId ? setFocusFromCall(clientId, meetingId, lines) : holderId ? setFocusOnHolder(clientId, holderId, lines) : setFocus(clientId, lines);
+  noteFocus(clientId, r, fromCall ? meetingId : null);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+/** The next list, drafted on a call still to come (its To focus on tab): kept with the call, never sent to the client;
+ *  completing the call sends it. */
+export async function saveFocusDraftAction(formData: FormData) {
+  const meetingId = Number(formData.get("meetingId"));
+  const clientId = getData().meetings.find((m) => m.id === meetingId)?.client_id ?? null;
+  if (!meetingId || clientId == null || !(await coachForClient(clientId))) return;
+  const lines = linesOf(formData);
+  if (!lines) return;
+  if (setFocusDraft(clientId, meetingId, lines)) revalidatePath("/admin");
 }
 
 /** The client ticks a goal on Home, or takes the tick back. Theirs alone: a coach looking (the phone preview) changes nothing. */

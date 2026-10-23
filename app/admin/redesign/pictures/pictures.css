@@ -77,6 +77,12 @@
 .rd.rp .rp-save { height: 32px; padding: 0 16px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; cursor: pointer; }
 .rd.rp .rp-save:hover { background: #262e3b; }
 .rd.rp .rp-save:disabled { background: #c9cfd8; cursor: default; }
+/* What was said on the sheet before (23 Oct, Alex), over the line, read only, as the Nutrition photo's: when, then the words. */
+.rd.rp .rp-said { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.rd.rp .rp-said li { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: baseline; font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rd.rp .rp-said-when { font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* A finished sheet's comment, under its photos in the opened row. */
+.rd.rp .rp-tbody .rp-comment { margin-top: 14px; }
 
 /* A track's tag: its tint behind, its icon and words in its ink (style, inline). */
 .rd.rp .rp-phases { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }

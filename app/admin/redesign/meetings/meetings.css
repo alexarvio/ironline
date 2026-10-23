@@ -167,9 +167,16 @@
 .rd.rt .rt-focus-list input:focus { border-bottom-color: #141a24; }
 .rd.rt .rt-focus-list input::placeholder { color: #98a2b3; }
 .rd.rt .rt-focus-list li.done input { color: #8b93a1; }
-/* No call booked: the list in a card of its own, as tall as its lines. */
+/* Goals with no completed call to hold them: the list in a card of its own, as tall as its lines. */
 .rd.rt .rt-focus-card { padding: 8px 18px 12px; }
 .rd.rt .rt-focus-card .rt-focus-list { min-height: 0; }
+/* A past call's To focus on (23 Oct, Alex), under its summary and as tall as its lines: the call holding the live list
+   types it in place; an older call shows the list it set, read only, the rings as the client left them. */
+.rd.rt .rt-past .rt-focus-label { margin-top: 14px; }
+.rd.rt .rt-past .rt-focus-list { min-height: 0; }
+.rd.rt .rt-focus-list.read li { min-height: 36px; }
+.rd.rt .rt-focus-words { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; color: #141a24; }
+.rd.rt .rt-focus-list li.done .rt-focus-words { color: #8b93a1; }
 /* In "How did the call go?" (portaled, .dlh): Phase goals' look, a dot and a clean line each, ink while typing. */
 .dlh .rt-goals { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .dlh .rt-goals li { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #e1e5eb; }

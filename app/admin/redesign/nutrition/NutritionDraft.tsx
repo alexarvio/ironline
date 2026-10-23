@@ -75,7 +75,13 @@ export type DraftNutrition = {
   waterL: number | null;
   supplements: DraftSupplement[];
   logged: LoggedDaysView;
+  /** The days logged in the last 30 by the calendar, today counting, newest first: the figures' 7d and 30d. */
+  recent: FigureDay[];
 };
+/** What the figures over the log read of a logged day. */
+export type FigureDay = Pick<LoggedDay, "date" | "kcal" | "protein" | "carbs" | "fat" | "proteinTarget">;
+/** The figures' window (23 Oct, Alex): the last 7 or 30 days by the calendar, or the phase's days so far. */
+type Span = "7d" | "30d" | "phase";
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
 /** A phase's fields as the actions read them: start and end are the first and last day. */
@@ -415,34 +421,44 @@ export default function NutritionDraft({
   const close = () => setDlg(null);
   const photoOf = dlg?.kind === "photo" ? (view.days.find((d) => d.date === dlg.date)?.meals.find((m) => m.id === dlg.meal) ?? null) : null;
 
-  const proteinTarget = view.days.find((d) => d.proteinTarget != null)?.proteinTarget ?? null;
+  // The figures' window, 7d | 30d | Phase on the section's line (23 Oct, Alex); the rows under them stay the phase's.
+  // Phase only once a nutrition phase has days to count, and then it opens on it; else 30d.
+  const phaseSpan = phaseId != null && startHasCome;
+  const [span, setSpan] = useState<Span | null>(null);
+  const spanOn: Span = span === "phase" && !phaseSpan ? "30d" : (span ?? (phaseSpan ? "phase" : "30d"));
+  const spans: Span[] = phaseSpan ? ["7d", "30d", "phase"] : ["7d", "30d"];
+  // The days logged in it, each average over them as the server works it out (a day's rounded figures, today counting).
+  const inSpan: FigureDay[] = spanOn === "phase" ? view.days : spanOn === "7d" ? plan.recent.filter((d) => d.date >= addDays(today, -6)) : plan.recent;
+  const avgOf = (k: "kcal" | "protein" | "carbs" | "fat") => (inSpan.length ? Math.round(inSpan.reduce((s, d) => s + d[k], 0) / inSpan.length) : null);
+  const avg = { kcal: avgOf("kcal"), protein: avgOf("protein"), carbs: avgOf("carbs"), fat: avgOf("fat") };
+  const proteinTarget = inSpan.find((d) => d.proteinTarget != null)?.proteinTarget ?? null;
   const stats = [
     {
       label: "Days logged",
-      value: String(view.days.length),
+      value: String(inSpan.length),
       unit: "",
       // A count, in ink however few (23 Oct, Alex: a red 0 read as an error).
     },
     {
       label: "Average intake",
-      value: view.avgKcal != null ? n(view.avgKcal) : "–",
+      value: avg.kcal != null ? n(avg.kcal) : "–",
       unit: "kcal",
     },
     // The three macros' averages, not On target (21 Oct, Alex).
     {
       label: "Average protein",
-      value: view.avgProtein != null ? String(view.avgProtein) : "–",
+      value: avg.protein != null ? String(avg.protein) : "–",
       unit: "g a day",
-      warn: proteinTarget != null && view.avgProtein != null && view.avgProtein < proteinTarget - 20,
+      warn: proteinTarget != null && avg.protein != null && avg.protein < proteinTarget - 20,
     },
     {
       label: "Average carbs",
-      value: view.avgCarbs != null ? String(view.avgCarbs) : "–",
+      value: avg.carbs != null ? String(avg.carbs) : "–",
       unit: "g a day",
     },
     {
       label: "Average fat",
-      value: view.avgFat != null ? String(view.avgFat) : "–",
+      value: avg.fat != null ? String(avg.fat) : "–",
       unit: "g a day",
     },
   ];
@@ -785,6 +801,16 @@ export default function NutritionDraft({
         <div className="trn-weekhead">
           <div>
             <h2>{firstName}&rsquo;s logs</h2>
+          </div>
+          {/* The figures' window on the title's line (23 Oct, Alex); the rows and the pager stay as they are. */}
+          <div className="trn-weekhead-actions">
+            <div className="rd-btn-group" role="group" aria-label="Figures over">
+              {spans.map((s) => (
+                <button key={s} type="button" className={spanOn === s ? "on" : ""} aria-pressed={spanOn === s} onClick={() => setSpan(s)}>
+                  {s === "phase" ? "Phase" : s}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <div className="rls-card rls-log">

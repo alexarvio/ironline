@@ -102,6 +102,7 @@ import { coachIdOfClient } from "../../lib/tenancy";
 import { getCoachFocus } from "../../lib/focus";
 import { supportUnreadForCoach, supportUnreadForOwner } from "../../lib/support";
 import { exerciseTrends } from "../../lib/homeBoardData";
+import { applyReads } from "./training/applyPreviewData";
 
 // What the redesign drafts read, gathered on the server for the shell that
 // shows them side by side. Read-only: the drafts save nothing.
@@ -423,6 +424,11 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     if (list.length) rogue[i + 1] = list;
   }
 
+  // What Apply to the rest and each session's Apply to remaining weeks would change, as their confirms read it, so
+  // neither is offered when it would change nothing (23 Oct, Alex: "once I apply and there are no other changes, the
+  // button disappears"). The week on screen only, and not a done one (nothing is applied from it).
+  const applyFrom = stateOf(program) !== "past" && weeks[weekIdx - 1]?.state !== "past" ? applyReads(clientId, program, weekNumber) : null;
+
   const phase = getData().client_phases.find((p) => p.program_id === program.id) ?? null;
   const noteMeta = getClientProgramNoteMeta(clientId, program.id);
   const draft: DraftProgram = {
@@ -445,6 +451,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     liveIdx,
     weeks,
     sessions,
+    apply: applyFrom ? { week: weekIdx, ...applyFrom } : null,
     rogue,
     bodyKg,
     gyms,
@@ -500,6 +507,11 @@ export function loadNutrition(clientId: number, params: { phase?: string }): Dra
   const from = phase.start ?? localDateStr(fourWeeksBack);
   const to = phase.end ? endOfWeek(phase.end) : today;
   const logged = getLoggedDays(clientId, from, to > today ? today : to);
+  // The figures over the log follow 7d | 30d | Phase (23 Oct, Alex): the last 30 days by the calendar, today counting
+  // as it does in the phase's, whatever phase is on screen; only what the figures read.
+  const thirtyBack = new Date(`${today}T00:00:00`);
+  thirtyBack.setDate(thirtyBack.getDate() - 29);
+  const recent = getLoggedDays(clientId, localDateStr(thirtyBack), today).days.map((d) => ({ date: d.date, kcal: d.kcal, protein: d.protein, carbs: d.carbs, fat: d.fat, proteinTarget: d.proteinTarget }));
 
   return {
     id: phase.id,
@@ -518,6 +530,7 @@ export function loadNutrition(clientId: number, params: { phase?: string }): Dra
     waterL: stored.water_l ?? null,
     supplements: (stored.supplement_rows ?? []).map((r) => ({ id: r.id, name: r.name, quantity: r.quantity, timing: r.timing, notes: r.notes })),
     logged,
+    recent,
   };
 }
 
@@ -808,6 +821,14 @@ export function loadPictures(clientId: number): DraftPictures {
     const to = newer && dayBefore(newer) < end ? dayBefore(newer) : end;
     return trackOrder.flatMap((track) => phases.filter((p) => p.track === track && p.start_week <= to && phaseLastDay(p.end_week) >= from).map((p) => ({ id: p.id, track, name: p.name })));
   };
+  // The coach's comments on each sheet (23 Oct, Alex): their chat messages linked to it, oldest first, read only here.
+  const commentsOn = new Map<string, { id: number; text: string; when: string }[]>();
+  for (const m of listChatMessages(clientId)) {
+    if (m.sender !== "coach" || m.link?.kind !== "photos" || !m.link.period || !m.text.trim()) continue;
+    const list = commentsOn.get(m.link.period) ?? [];
+    list.push({ id: m.id, text: m.text.trim(), when: dayMonthTime(m.created_at) });
+    commentsOn.set(m.link.period, list);
+  }
 
   const sheets = periods.map((period, i) => {
     const cells = slots
@@ -829,6 +850,7 @@ export function loadPictures(clientId: number): DraftPictures {
       cells,
       weight: weightFor(period, periods[i - 1]),
       phases: phasesIn(period, periods[i - 1]),
+      comments: commentsOn.get(period) ?? [],
     };
   });
 
@@ -847,6 +869,7 @@ export function loadPictures(clientId: number): DraftPictures {
         cells: active.map((s) => ({ slotId: s.id, label: s.label, src: null, shot: null, shotDay: null })),
         weight: null,
         phases: phasesIn(nextSheet, undefined),
+        comments: [],
       }
     : null;
 

@@ -5405,6 +5405,10 @@ export type Meeting = {
   series_id?: number | null;
   /** What kind of call, for the client's Meetings screen (9 Oct); absent: a check-in. */
   meeting_type?: "checkin" | "review" | "other" | null;
+  /** To focus on (23 Oct, Alex; lib/focus.ts): a call still to come, the next list as drafted (never sent). */
+  focus_draft?: string[] | null;
+  /** A completed call: the list it set, with the client's ticks as they stood when the next call replaced it. */
+  focus_goals?: { text: string; done: boolean }[] | null;
 };
 export type MeetingNote = {
   id: number;
@@ -10965,6 +10969,10 @@ export type WorkspaceMeeting = {
   seriesId: number | null;
   /** What kind of call (9 Oct): a call with none is a Check-in. */
   kind: "checkin" | "review" | "other";
+  /** To focus on (23 Oct, Alex; lib/focus.ts): a call still to come, the next list as drafted on its tab (never sent). */
+  focusDraft: string[];
+  /** A completed call: the list it set, with the client's ticks as they ended; null, none. */
+  focusSet: { text: string; done: boolean }[] | null;
 };
 
 export function getMeetingsWorkspaceData(clientId: number) {
@@ -10988,6 +10996,8 @@ export function getMeetingsWorkspaceData(clientId: number) {
     notes: listMeetingNotes(m.id).map((n) => ({ id: n.id, text: n.text, createdAt: n.created_at })),
     seriesId: m.series_id ?? null,
     kind: m.meeting_type ?? "checkin",
+    focusDraft: m.focus_draft ?? [],
+    focusSet: m.focus_goals?.length ? m.focus_goals.map((g) => ({ text: g.text, done: g.done })) : null,
   });
   const mine = listMeetings(clientId);
   const scheduled = mine.filter((m) => m.status === "scheduled" && m.date >= today).sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));

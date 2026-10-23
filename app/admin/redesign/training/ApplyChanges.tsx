@@ -7,7 +7,7 @@ import { TRACK_ACCENT } from "../../phaseChrome";
 import { dayMonth } from "../../../lib/dayMonth";
 import { addDays } from "../phases/timeline";
 import { Sep, SepJoin } from "../Sep";
-import type { ApplyFig, ApplyPreview, ApplySession } from "./applyPreview";
+import { inUnit, type ApplyFig, type ApplyPreview, type ApplySession } from "./applyShape";
 
 // The confirm of Apply to the rest and of a session's Apply to remaining weeks (23 Oct, Alex: "naming nicely and
 // structured the changes that we are applying"): the title and the weeks' fact as before, then exactly what changes
@@ -15,9 +15,7 @@ import type { ApplyFig, ApplyPreview, ApplySession } from "./applyPreview";
 // that changes: each figure that changes, the old struck through in grey, the new in training purple, a bar between
 // figures, no arrows; Added in green, Removed struck; New order on the session. Weeks that would change differently
 // are grouped under the weeks they reach, dated d/m (19/10 → 1/11). The list scrolls inside; the foot stays.
-
-const LB = 2.20462;
-const half = (x: number) => Math.round(x * 2) / 2;
+// A weight is read in the coach's unit (inUnit, applyShape.ts), as the page's read counts it to offer the apply at all.
 
 /** The faint arrow between two dates (design rules 8), as the Events log's. */
 function RangeArrow() {
@@ -26,18 +24,6 @@ function RangeArrow() {
       <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   );
-}
-
-/**
- * The weights in the coach's unit, as the Training tab rounds them (kgOf: the stored kg turned, then to the half), and
- * a weight that reads the same either side dropped, with a row or session it leaves with nothing to say.
- */
-function inUnit(s: ApplySession, lbs: boolean): ApplySession | null {
-  const shown = (v: string | null) => (v == null ? null : String(half(lbs ? Number(v) * LB : Number(v))));
-  const items = s.items
-    .map((it) => (it.change !== "changed" ? it : { ...it, figs: it.figs.flatMap((f) => (!f.kg ? [f] : shown(f.from) === shown(f.to) ? [] : [{ ...f, from: shown(f.from), to: shown(f.to) }])) }))
-    .filter((it) => it.change !== "changed" || it.figs.length > 0);
-  return items.length || s.was || s.reorder || s.goes || s.added ? { ...s, items } : null;
 }
 
 /** "Week 8", "Weeks 8–9", "Weeks 8 and 10", "Weeks 2, 4 and 6". */
@@ -56,7 +42,8 @@ export default function ApplyChangesDialog({ title, description, confirm, load, 
   /** The programme's first Monday, for the weeks' dates. */
   startDate: string | null;
   lbs: boolean;
-  onConfirm: () => void;
+  /** Given what the pop-up read (undefined while it reads, null if it couldn't), so the apply reaches the weeks it lists. */
+  onConfirm: (read: ApplyPreview | null | undefined) => void;
 }) {
   const [preview, setPreview] = useState<ApplyPreview | null | undefined>(undefined);
   useEffect(() => {
@@ -108,7 +95,8 @@ export default function ApplyChangesDialog({ title, description, confirm, load, 
           ✕
         </DialogClose>
       </div>
-      <DialogDescription className="dlh-what">{description}</DialogDescription>
+      {/* The changes alone on screen (23 Oct, Alex: "I do not need this explanation here"); the words stay for a screen reader. */}
+      <DialogDescription className="sr-only">{description}</DialogDescription>
       {preview !== undefined && (
         <div className="apx-list" aria-label="What changes">
           {groups.length === 0 ? (
@@ -137,7 +125,7 @@ export default function ApplyChangesDialog({ title, description, confirm, load, 
       )}
       <div className="dlh-foot">
         <DialogClose className="dlh-cancel">Cancel</DialogClose>
-        <button type="button" className="dlh-go" onClick={onConfirm} autoFocus>
+        <button type="button" className="dlh-go" onClick={() => onConfirm(preview)} autoFocus>
           {confirm}
         </button>
       </div>

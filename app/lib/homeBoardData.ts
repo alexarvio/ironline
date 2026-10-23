@@ -21,6 +21,7 @@ import {
   localDateStr,
   sessionNews,
   weekStart,
+  WEIGHT_NAME,
   workoutFed,
   type ActivityDay,
 } from "./queries";
@@ -673,30 +674,72 @@ function strengthOf(ctx: Ctx): HomeBoard["strength"] {
 
 // ---- Weight ----------------------------------------------------------------------------------------
 
+type WeighInRhythm = NonNullable<HomeBoard["weight"]>["rhythm"];
+
+/** How often the client is asked to weigh in (23 Oct, Alex): the most often of the Weight metrics asked now (the running
+    lifestyle phase's and the standing set, as listMetricDefinitions reads them, without its write), daily when one is
+    asked daily. With none asked, the old Weight field's is weekly (the check-in asks the measurements under This week);
+    with neither, daily. */
+function weighInRhythm(ctx: Ctx): WeighInRhythm {
+  const running = ctx.phases.lifestyle?.id ?? null;
+  const data = getData();
+  const asked = data.metric_definitions.filter(
+    (m) => m.client_id === ctx.clientId && WEIGHT_NAME.test(m.name.trim()) && (m.phase_id == null || m.phase_id === running)
+  );
+  if (!asked.length) return data.measurement_fields.some((f) => f.client_id === ctx.clientId && WEIGHT_NAME.test(f.name.trim())) ? "weekly" : "daily";
+  if (asked.some((m) => m.frequency === "daily")) return "daily";
+  return asked.some((m) => m.frequency === "weekly") ? "weekly" : "monthly";
+}
+
+/** Weigh-ins were missed between two readings (a before b): a whole day, week (Monday to Sunday) or month of the rhythm
+    between them with none. A weekly reading sent Monday and the next on the Sunday after is on time. */
+function missedBetween(a: string, b: string, rhythm: WeighInRhythm): boolean {
+  if (rhythm === "daily") return daysBetween(a, b) > 1;
+  if (rhythm === "weekly") return daysBetween(weekStart(a), weekStart(b)) > 7;
+  const month = (d: string) => Number(d.slice(0, 4)) * 12 + Number(d.slice(5, 7));
+  return month(b) - month(a) > 1;
+}
+
 function weightOf(ctx: Ctx): HomeBoard["weight"] {
   const upToToday = ctx.weights.filter((w) => w.date <= ctx.today);
   if (!upToToday.length) return null;
   const phase = ctx.phases.nutrition ?? ctx.phases.training ?? ctx.phases.lifestyle;
-  const since = phase?.start_week ?? addDays(ctx.today, -55);
-  const points = upToToday.filter((w) => w.date >= since).map((w) => ({ date: w.date, value: r1(w.value) }));
+  const rhythm = weighInRhythm(ctx);
+  // The windows (23 Oct, Alex: 7d | 30d | Phase): the last 7 and 30 days by the calendar, and the phase from its first day.
+  const from7 = addDays(ctx.today, -6);
+  const from30 = addDays(ctx.today, -29);
+  const since = phase?.start_week ?? null;
+  const first = since && since < from30 ? since : from30;
+  // Each reading knows whether weigh-ins were missed since the one before it, that one in the window or not.
+  const points = upToToday
+    .map((w, i) => ({ date: w.date, value: r1(w.value), missed: i > 0 && missedBetween(upToToday[i - 1].date, w.date, rhythm) }))
+    .filter((w) => w.date >= first);
   const latest = upToToday[upToToday.length - 1];
   const now = r1(latest.value);
 
-  // What they weighed going in: the reading nearest the span's first day, either side, within a month (as the overview reads it).
+  /** 7d and 30d: the latest reading in the window against its first, from the first's day. */
+  const rolling = (from: string) => {
+    const inIt = points.filter((p) => p.date >= from);
+    return inIt.length >= 2 ? { from, change: r1(inIt[inIt.length - 1].value - inIt[0].value), since: inIt[0].date } : { from, change: null, since: null };
+  };
+  if (!since || !phase) return { points, now, rhythm, windows: { "7d": rolling(from7), "30d": rolling(from30), phase: null }, projection: null };
+
+  // What they weighed going in: the reading nearest the phase's first day, either side, within a month (as the overview reads it).
   const startMs = parseDay(since).getTime();
   const nearest = upToToday.reduce((b, w) => (Math.abs(parseDay(w.date).getTime() - startMs) < Math.abs(parseDay(b.date).getTime() - startMs) ? w : b));
   const change = Math.abs(parseDay(nearest.date).getTime() - startMs) <= 31 * DAY_MS && nearest.date !== latest.date ? r1(latest.value - nearest.value) : null;
+  const phasePoints = points.filter((p) => p.date >= since);
 
   // Where the rate so far lands on the phase's last day: a least-squares line through the phase's points. Only with a
   // real trend (4+ readings across two weeks or more), and never further ahead than twice the span read: a few days of
   // water stretched across a 12-week phase says nothing.
   let projection: { date: string; value: number } | null = null;
-  const lastDay = phase ? phaseLastDay(phase.end_week) : null;
-  const span = points.length ? daysBetween(points[0].date, points[points.length - 1].date) : 0;
-  if (lastDay && lastDay > ctx.today && points.length >= 4 && span >= 14 && daysBetween(ctx.today, lastDay) <= span * 2) {
-    const xs = points.map((p) => daysBetween(since, p.date));
-    const ys = points.map((p) => p.value);
-    const n = points.length;
+  const lastDay = phaseLastDay(phase.end_week);
+  const span = phasePoints.length ? daysBetween(phasePoints[0].date, phasePoints[phasePoints.length - 1].date) : 0;
+  if (lastDay && lastDay > ctx.today && phasePoints.length >= 4 && span >= 14 && daysBetween(ctx.today, lastDay) <= span * 2) {
+    const xs = phasePoints.map((p) => daysBetween(since, p.date));
+    const ys = phasePoints.map((p) => p.value);
+    const n = phasePoints.length;
     const sx = xs.reduce((t, x) => t + x, 0);
     const sy = ys.reduce((t, y) => t + y, 0);
     const sxy = xs.reduce((t, x, i) => t + x * ys[i], 0);
@@ -709,7 +752,7 @@ function weightOf(ctx: Ctx): HomeBoard["weight"] {
       if (Number.isFinite(value)) projection = { date: lastDay, value: r1(value) };
     }
   }
-  return { points, now, change, since, projection };
+  return { points, now, rhythm, windows: { "7d": rolling(from7), "30d": rolling(from30), phase: { from: since, change, since } }, projection };
 }
 
 // ---- Consistency ------------------------------------------------------------------------------------

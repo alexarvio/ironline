@@ -34,6 +34,9 @@ export type StrengthWindow = {
   of: number;
 };
 
+/** One window of the Weight card (23 Oct, Alex): its first day, and the change over it from `since`. */
+export type WeightWindow = { from: string; change: number | null; since: string | null };
+
 /** One window of the muscle balance: this period, and the one just before it of the same length. */
 export type MuscleWindow = {
   /** Logged sets per group (a set with reps or weight), and the window before. */
@@ -85,15 +88,24 @@ export type HomeBoard = {
       the last 8 weeks), its first session against its latest. Only groups with data; null when none; the screen draws
       all six. `since` is the date the window is measured from. */
   strength: { "7d": StrengthWindow | null; "30d": StrengthWindow | null; phase: StrengthWindow | null };
-  /** Weight readings across the current phase (nutrition's, else training's, else lifestyle's; else the last 8 weeks). */
+  /** The client's weight (23 Oct, Alex: a 7d | 30d | Phase toggle, as Strength). Null with no reading at all. */
   weight: {
-    points: { date: string; value: number }[];
+    /** Every reading the windows need, oldest first: the last 30 days' and the phase's (the current one: nutrition's, else
+        training's, else lifestyle's). `missed`: weigh-ins were missed between the reading before and this one (23 Oct,
+        Alex: the line still joins them, dashed): a whole day, week or month of the client's rhythm (`rhythm`) between the
+        two with none. */
+    points: { date: string; value: number; missed: boolean }[];
+    /** The latest reading, whatever the window. */
     now: number | null;
-    /** Change from the reading nearest the span's start. */
-    change: number | null;
-    since: string;
-    /** At the rate so far (a least-squares line through the points), where they land on the phase's last day. Null without
-        a phase, under 4 readings across 2 weeks, or when the phase's end is further ahead than twice the span read. */
+    /** How often the client is asked to weigh in: the most often of the Weight metrics asked now, daily when none is known. */
+    rhythm: "daily" | "weekly" | "monthly";
+    /** Each window: its first day (`from`; the points from it on are the window's), and the change over it with the day it
+        runs from (`since`). 7d and 30d: the last 7 / 30 days by the calendar, the latest reading in them against the first.
+        Phase: since the phase's first day, against the reading nearest it either side within a month. A change is null
+        under two readings. Phase is null with no phase. */
+    windows: Record<"7d" | "30d", WeightWindow> & { phase: WeightWindow | null };
+    /** Phase only: at the rate so far (a least-squares line through the phase's points), where they land on its last day.
+        Null without a phase, under 4 readings across 2 weeks, or when the phase's end is further ahead than twice the span read. */
     projection: { date: string; value: number } | null;
   } | null;
   /** The last 30 days, oldest first (21 Oct, Alex: 30, not four weeks): trained (a set logged that day, or a session ended or done in full on it), food

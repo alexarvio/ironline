@@ -2,6 +2,7 @@
 
 import { isMeetingTypeId } from "./meetingTypes";
 import { isClientCall, takesClient } from "./calendarKinds";
+import { noteFocus, setFocusOnComplete } from "./focus";
 
 import { redirect } from "next/navigation";
 import { getData, persist, type CoachBusiness, type CoachInvoicing, type InvoiceEvery, type InvoiceLine, type MetricAskAt, type PhaseTrack } from "./db";
@@ -2253,7 +2254,15 @@ export async function completeMeetingAction(formData: FormData) {
     updateMeeting(id, { summary: summary || null });
   }
   if (formData.has("summaryTitle")) updateMeeting(id, { summary_title: String(formData.get("summaryTitle") ?? "").trim().slice(0, 80) || null });
+  const wasDone = getData().meetings.find((m) => m.id === id)?.status === "completed";
   completeMeeting(id);
+  // To focus on goes with the call (lib/focus.ts). The Meetings tab sends its list itself right after (`withFocus`);
+  // anywhere else (the old admin's Complete) the call's draft goes, else the live list, so no draft is left on it.
+  if (!wasDone && !formData.has("withFocus")) {
+    const focusClient = getClientIdForMeeting(id);
+    const r = focusClient != null ? setFocusOnComplete(focusClient, id) : null;
+    if (r && focusClient != null) noteFocus(focusClient, r, id);
+  }
   // The recap is what the client takes away: tell them it is there.
   if (summary) {
     const clientId = getClientIdForMeeting(id);

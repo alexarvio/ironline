@@ -20,7 +20,7 @@ import { useOpenChat } from "../ChatPanel";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { Sep, SepJoin } from "../Sep";
 import { Fold } from "../Fold";
-import { saveFocusAction } from "../../../lib/focusActions";
+import { saveFocusAction, saveFocusDraftAction } from "../../../lib/focusActions";
 import type { CoachFocus, FocusGoalView } from "../../../lib/focus";
 import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
 
@@ -65,7 +65,13 @@ export type DraftMeeting = {
   seriesId: number | null;
   /** What kind of call (9 Oct): Check-in, Review or Other. */
   kind: MeetingTypeId;
+  /** To focus on (23 Oct, Alex; lib/focus.ts), a call still to come: the next list as drafted on its tab, never sent;
+      completing the call sends it. */
+  focusDraft: string[];
+  /** A completed call: the list it set, with the client's ticks as they ended; null, none. */
+  focusSet: FocusSet | null;
 };
+type FocusSet = { text: string; done: boolean }[];
 export type DraftDot = { date: string; time: string; durationMinutes: number; name: string; topic: string; mine: boolean; completed: boolean };
 export type DraftMeetings = {
   today: string;
@@ -80,7 +86,8 @@ export type DraftMeetings = {
   lastLink: string | null;
   /** The coach's own time zone (Settings, set at onboarding): a new meeting starts in it. */
   coachTz?: string | null;
-  /** To focus on (23 Oct, Alex; lib/focus.ts): the client's goals until the next call, with their ticks; null, none. */
+  /** To focus on (23 Oct, Alex; lib/focus.ts): the client's live list until the next call, with their ticks, and the call
+      it came from; null, never set. */
   focus?: CoachFocus | null;
 };
 
@@ -222,13 +229,16 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
     setSeenPlan(planKey);
     setMeetings([...(plan.upcoming ? [plan.upcoming] : []), ...plan.alsoScheduled, ...plan.past]);
   }
-  // To focus on: the client's list as saved, shown at once on a save (by content too: a refresh is new objects).
-  const focusKey = JSON.stringify(plan.focus?.goals ?? []);
+  // To focus on: the client's list as saved, and the call it came from, shown at once on a save (by content too: a
+  // refresh is new objects).
+  const focusKey = JSON.stringify([plan.focus?.goals ?? [], plan.focus?.meetingId ?? null]);
   const [seenFocus, setSeenFocus] = useState(focusKey);
   const [focusGoals, setFocusGoals] = useState<FocusGoalView[]>(plan.focus?.goals ?? []);
+  const [focusFrom, setFocusFrom] = useState<number | null>(plan.focus?.meetingId ?? null);
   if (seenFocus !== focusKey && !hold && waiting.length === 0) {
     setSeenFocus(focusKey);
     setFocusGoals(plan.focus?.goals ?? []);
+    setFocusFrom(plan.focus?.meetingId ?? null);
   }
   /** The lines as the list will be after an edit between calls: a goal kept with the same words keeps its tick (as setFocus does). */
   const keepTicks = (lines: string[]): FocusGoalView[] =>
@@ -237,11 +247,13 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
       return { id: kept?.id ?? -(i + 1), text, done: kept?.done ?? false };
     });
   const focusDone = focusGoals.filter((g) => g.done).length;
-  /** The To focus on list as typed (a call's tab, or the list's own section while no call is booked), through the queue. */
-  const saveFocus = (lines: string[]) => {
+  /** The live list as typed, through the queue, straight to the client: on the past call that holds it (`holderId`), or in
+   *  its own section while no completed call can. */
+  const saveFocus = (lines: string[], holderId?: number) => {
     setFocusGoals(keepTicks(lines));
+    if (holderId != null) setFocusFrom(holderId);
     q.save(async () => {
-      await saveFocusAction(fd({ clientId, goals: JSON.stringify(lines) }));
+      await saveFocusAction(fd({ clientId, goals: JSON.stringify(lines), holderId }));
       return true;
     });
   };
@@ -262,6 +274,19 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
   const upcoming = scheduled[0] ?? null;
   const also = scheduled.slice(1);
   const past = meetings.filter((m) => !(m.status === "scheduled" && m.date >= today)).sort((a, b) => (a.date < b.date ? 1 : -1));
+  // To focus on (23 Oct, Alex: "deployed the moment I mark as completed this meeting, and then I can still edit it once it
+  // goes down to past calls until I set a new sheet of to focus on on the next call"): the completed call the live list
+  // came from, else the latest completed call, holds it (focusHolder, lib/focus.ts); its open row is where it is edited.
+  const completedCalls = meetings.filter((m) => m.status === "completed").sort((a, b) => (a.date !== b.date ? (a.date < b.date ? 1 : -1) : a.time !== b.time ? (a.time < b.time ? 1 : -1) : b.id - a.id));
+  const holder = completedCalls.find((m) => m.id === focusFrom) ?? completedCalls[0] ?? null;
+  /** A call still to come: the next list as drafted on its To focus on tab, kept with the call and never sent. */
+  const saveDraft = (id: number, lines: string[]) => {
+    patchMeeting(id, { focusDraft: lines });
+    q.save(async () => {
+      await saveFocusDraftAction(fd({ meetingId: id, goals: JSON.stringify(lines) }));
+      return true;
+    });
+  };
   // None open at first (21 Oct, Alex): a row opens when it is clicked.
   const [openPast, setOpenPast] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState(upcoming?.date ?? today);
@@ -305,7 +330,8 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
         </div>
         <div className="rt-body">
           {/* Prep notes and meeting notes are the coach's own; the summary is what the client gets on Home once the call is
-              completed; To focus on (23 Oct, Alex) is the client's list until the next call, on the top of their Home. */}
+              completed; To focus on (23 Oct, Alex) is the next list for the top of their Home, a draft kept with the call
+              until it is completed (the live one is on the past call that holds it). */}
           <div className="rt-notes-tabs">
             <div className="rd-btn-group" role="radiogroup" aria-label="Notes">
               {(["prep", "meeting", "summary", "focus"] as const).map((t) => (
@@ -316,7 +342,7 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
             </div>
           </div>
           {tab === "focus" ? (
-            <FocusLines key={`f${m.id}`} goals={focusGoals} onSave={saveFocus} auto={auto} name={`focus${m.id}`} />
+            <FocusLines key={`f${m.id}`} goals={m.focusDraft.map((text, i) => ({ id: -(i + 1), text, done: false }))} onSave={(lines) => saveDraft(m.id, lines)} auto={auto} name={`draft${m.id}`} />
           ) : tab === "prep" ? (
             <PrepNotes
               key={`p${m.id}`}
@@ -496,9 +522,9 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
         </section>
       )}
 
-      {/* ---- No call booked and goals still set (the last call completed with them): the list on its own, to see the
-          client's ticks, edit or clear it. No goals, nothing. */}
-      {!upcoming && focusGoals.length > 0 && (
+      {/* ---- Goals set with no completed call to hold them (set before a call was ever completed): the list on its own, to
+          see the client's ticks, edit or clear it. Once a call is completed, its row in Past calls holds the list. */}
+      {!holder && focusGoals.length > 0 && (
         <section className="rls-section">
           <div className="trn-weekhead">
             <div>
@@ -599,6 +625,15 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
                           saveMeeting(m.id, f);
                         }}
                         onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: m.id, text: line, date: m.date })), `Added to ${firstName}'s events: ${line}`)}
+                        focus={
+                          // The call holding the live list: typed in place, straight to the client, until the next call
+                          // is completed. An older call: the list it set, as it ended, read only. None set: nothing.
+                          m.id === holder?.id ? (
+                            <FocusLines key={`hf${m.id}`} goals={focusGoals} onSave={(lines) => saveFocus(lines, m.id)} auto={auto} name={`focus${m.id}`} />
+                          ) : m.focusSet?.length ? (
+                            <FocusRecord goals={m.focusSet} />
+                          ) : null
+                        }
                       />
                     )}
                   </div>
@@ -665,20 +700,23 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
             firstName={firstName}
             value={byId(dlg.meetingId)!.summary}
             title={byId(dlg.meetingId)!.summaryTitle}
-            goals={focusGoals.map((g) => g.text)}
+            // The call's own draft (its To focus on tab), else the live list as it is.
+            goals={byId(dlg.meetingId)!.focusDraft.length ? byId(dlg.meetingId)!.focusDraft : focusGoals.map((g) => g.text)}
             onComplete={(summary, summaryTitle, lines) => {
-              patchMeeting(dlg.meetingId, { status: "completed", summary, summaryTitle });
-              setOpenPast(dlg.meetingId);
               const id = dlg.meetingId;
-              // To focus on goes with the call (23 Oct, Alex: "every time this is set on a new call the old ones get
-              // overridden"): the lines replace the whole list, every tick reset, the same words too.
-              const withFocus = lines.length > 0 || focusGoals.length > 0;
-              if (withFocus) setFocusGoals(lines.map((text, i) => ({ id: -(i + 1), text, done: false })));
+              // To focus on goes with the call, at once (23 Oct, Alex: "every time this is set on a new call the old ones
+              // get overridden"): the lines replace the whole list, every tick reset, the same words too. The call holds
+              // it from now; the call that held it keeps it as it ended, ticks and all.
+              if (holder && holder.id !== id && (plan.focus || focusGoals.length)) patchMeeting(holder.id, { focusSet: focusGoals.length ? focusGoals.map(({ text, done }) => ({ text, done })) : null });
+              patchMeeting(id, { status: "completed", summary, summaryTitle, focusDraft: [], focusSet: lines.length ? lines.map((text) => ({ text, done: false })) : null });
+              setFocusGoals(lines.map((text, i) => ({ id: -(i + 1), text, done: false })));
+              setFocusFrom(id);
+              setOpenPast(id);
               close();
               act(
                 async () => {
-                  await completeMeetingAction(fd({ id, summary, summaryTitle }));
-                  if (withFocus) await saveFocusAction(fd({ clientId, meetingId: id, fromCall: 1, goals: JSON.stringify(lines) }));
+                  await completeMeetingAction(fd({ id, summary, summaryTitle, withFocus: 1 }));
+                  await saveFocusAction(fd({ clientId, meetingId: id, fromCall: 1, goals: JSON.stringify(lines) }));
                 },
                 summary || summaryTitle ? `Completed, recap${lines.length ? " and To focus on" : ""} sent to ${firstName}'s Home` : lines.length ? `Completed, To focus on sent to ${firstName}'s Home` : "Completed"
               );
@@ -803,9 +841,10 @@ function PrepNotes({ value, onSave, auto, name, label = "Prep notes" }: { value:
   );
 }
 
-/** A call's To focus on tab (23 Oct, Alex): the client's list, three lines, each with the client's tick as a small ring
- *  (ink once ticked, the words grey); typed in place, saved by itself as the list is left: it is news on the client's Home
- *  and phone, and half a goal shouldn't be; a word taken out and typed back keeps its tick (ticks go by the words). */
+/** To focus on (23 Oct, Alex), three lines, each with the client's tick as a small ring (ink once ticked, the words grey);
+ *  typed in place, saved by itself as the list is left. The live list on the past call that holds it: it is news on the
+ *  client's Home and phone, and half a goal shouldn't be; a word taken out and typed back keeps its tick (ticks go by the
+ *  words). A call still to come drafts the next list with it, no ticks yet. */
 function FocusLines({ goals, onSave, auto: { hold, onWaiting }, name }: { goals: FocusGoalView[]; onSave: (lines: string[]) => void; auto: Autosave; name: string }) {
   const saved = goals.map((g) => g.text);
   const savedKey = saved.join("\n");
@@ -872,11 +911,7 @@ function FocusLines({ goals, onSave, auto: { hold, onWaiting }, name }: { goals:
           return (
             <li key={i} className={`${g.trim() ? "" : "empty"}${done ? " done" : ""}`}>
               <span className="rt-focus-ring" aria-hidden="true">
-                {done && (
-                  <svg viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12l5 5 9-10" />
-                  </svg>
-                )}
+                {done && <FocusTick />}
               </span>
               <input
                 value={g}
@@ -903,7 +938,7 @@ function FocusLines({ goals, onSave, auto: { hold, onWaiting }, name }: { goals:
 
 /** A call's summary for the client: under the next call the words alone; on a past call its one-line title over them.
  *  Both save themselves (23 Oct, Alex). */
-function PastBody({ m, firstName, onSend, auto, bare, onAddEvent }: { m: DraftMeeting; firstName: string; onSend: (f: { summary: string } | { summaryTitle: string }) => void; auto: Autosave; /** Under the next call: no label or title of its own. */ bare?: boolean; /** A saved line of the recap as an event on the client's plan (9 Oct). */ onAddEvent?: (line: string) => void }) {
+function PastBody({ m, firstName, onSend, auto, bare, onAddEvent, focus }: { m: DraftMeeting; firstName: string; onSend: (f: { summary: string } | { summaryTitle: string }) => void; auto: Autosave; /** Under the next call: no label or title of its own. */ bare?: boolean; /** A saved line of the recap as an event on the client's plan (9 Oct). */ onAddEvent?: (line: string) => void; /** A past call's To focus on (23 Oct, Alex), under its summary: the live list on the call that holds it, else the list it set. */ focus?: React.ReactNode }) {
   const recap = useAutoText(m.summary, (v) => onSend({ summary: v.trim() }), auto, `summary${m.id}`);
   // The title starts as the call's name (the Meetings screen's subheading), unless the coach wrote one. Bare (a call still
   // to come) has no title field: it is never typed, so never sent.
@@ -932,7 +967,42 @@ function PastBody({ m, firstName, onSend, auto, bare, onAddEvent }: { m: DraftMe
           ))}
         </ul>
       )}
+      {focus && (
+        <>
+          <span className="rt-past-label rt-focus-label">To focus on</span>
+          {focus}
+        </>
+      )}
     </div>
+  );
+}
+
+/** The client's tick in a goal's ring: a white check on the ring's ink. */
+function FocusTick() {
+  return (
+    <svg viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12l5 5 9-10" />
+    </svg>
+  );
+}
+
+/** The list an older call set (23 Oct, Alex), read only: each goal's ring as the client left it (ink once ticked, the
+ *  words grey), as the call holding the list draws it. */
+function FocusRecord({ goals }: { goals: FocusSet }) {
+  return (
+    <ul className="rt-focus-list read" aria-label="To focus on">
+      {goals.map((g, i) => (
+        <li key={i} className={g.done ? "done" : ""}>
+          <span className="rt-focus-ring" aria-hidden="true">
+            {g.done && <FocusTick />}
+          </span>
+          <span className="rt-focus-words">
+            {g.text}
+            {g.done && <span className="sr-only">, done</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -1170,7 +1240,7 @@ function LinkDialog({ value, onSave }: { value: string; onSave: (link: string) =
 }
 
 /** Marking a call completed: the last chance to tell the client what came out of it, and what to focus on until the next. */
-function CompleteDialog({ firstName, value, title: initialTitle, goals, onComplete }: { firstName: string; value: string; title: string; /** The client's current To focus on, the lines' first words. */ goals: string[]; onComplete: (summary: string, title: string, focus: string[]) => void }) {
+function CompleteDialog({ firstName, value, title: initialTitle, goals, onComplete }: { firstName: string; value: string; title: string; /** The lines' first words: the call's draft, else the client's live list. */ goals: string[]; onComplete: (summary: string, title: string, focus: string[]) => void }) {
   const [recap, setRecap] = useState(value);
   const [title, setTitle] = useState(initialTitle);
   const [rows, setRows] = useState(() => fillFocus(goals));

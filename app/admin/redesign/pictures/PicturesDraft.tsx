@@ -21,7 +21,7 @@ import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
 import { SortableItem, SortableList } from "../Sortable";
 import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
-import { dayMonth, logDate } from "../../../lib/dayMonth";
+import { dayMonth, dayMonthTime, logDate } from "../../../lib/dayMonth";
 import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
 
 // The Progress pictures tab (21 Oct, Alex), built as Training's header:
@@ -34,7 +34,8 @@ import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
 //   weigh-in, the plan's phases, Remind, and a comment for the client that
 //   goes to the chat, linked to the sheet (no notes of its own).
 //   Compare opens the same angle from the sheets picked, side by side.
-// - All sheets: a log, a row a sheet, newest first; a row opens Compare on it.
+// - All sheets: a log, a row a sheet, newest first; a row opens in place on its photos and, with photos, the same
+//   comment (23 Oct, Alex: the finished sheets took none). What was said on a sheet shows over its line.
 
 export type Cadence = "weekly" | "biweekly" | "monthly" | "sixweekly";
 export type Cell = { slotId: number; label: string; src: string | null; shot: string | null; shotDay: string | null };
@@ -51,7 +52,10 @@ export type Sheet = {
   weight: number | null;
   /** Every non-draft phase that ran while the sheet was open: Lifestyle, Training, Nutrition. */
   phases: SheetPhase[];
+  /** The coach's comments on it (23 Oct, Alex): their chat messages linked to the sheet, oldest first. */
+  comments: SheetSaid[];
 };
+export type SheetSaid = { id: number; text: string; when: string };
 export type DraftPictures = {
   cadence: Cadence;
   startDate: string | null;
@@ -108,9 +112,18 @@ function Pictures({ clientId, firstName, plan }: Props) {
   // A photo opened from Compare goes back to Compare when it closes.
   const close = () => setDlg((d) => (d?.kind === "photo" && d.back ? { kind: "compare", periods: d.back } : null));
 
-  // ---- A comment typed on the sheet, not sent yet: leaving the page asks first.
-  const [commentTyped, setCommentTyped] = useState(false);
-  useHoldWhile(q.saving || q.failed || commentTyped);
+  // ---- A comment typed on a sheet, not sent yet, by the sheet: kept while its row is folded, and leaving the page asks first.
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  useHoldWhile(q.saving || q.failed || Object.values(drafts).some((v) => !!v.trim()));
+  const setDraft = (period: string) => (v: string) => setDrafts((d) => (d[period] === v ? d : { ...d, [period]: v }));
+  // Sent, it goes to the chat linked to that sheet (the client's link opens it), as the open sheet's always has.
+  const sendComment = (sh: Sheet) => async (text: string) => {
+    const f = fd({ clientId, text });
+    f.set("link", JSON.stringify({ kind: "photos", period: sh.period }));
+    await sendChatMessageAction(f);
+    reRead();
+    toast.success("Sent", { description: `In the chat, linked to ${sh.title}.` });
+  };
 
   // ---- Sheets, newest first. The top of the tab is the newest alone (21 Oct, Alex): the one open now, or the last one.
   const sheets = plan.sheets;
@@ -344,20 +357,9 @@ function Pictures({ clientId, firstName, plan }: Props) {
                 </span>
               )}
             </div>
-            {/* A comment on the open sheet goes to the chat, linked to it (21 Oct, Alex): no notes of its own. */}
-            {top.live && (
-              <SheetComment
-                firstName={firstName}
-                onTyped={setCommentTyped}
-                onSend={async (text) => {
-                  const f = fd({ clientId, text });
-                  f.set("link", JSON.stringify({ kind: "photos", period: top.period }));
-                  await sendChatMessageAction(f);
-                  reRead();
-                  toast.success("Sent", { description: `In the chat, linked to ${top.title}.` });
-                }}
-              />
-            )}
+            {/* A comment on the open sheet goes to the chat, linked to it (21 Oct, Alex): no notes of its own. The next
+                sheet, waiting with no photos, takes none. */}
+            {top.live && <SheetComment key={top.period} firstName={firstName} said={top.comments} draft={drafts[top.period] ?? ""} onDraft={setDraft(top.period)} onSend={sendComment(top)} />}
           </div>
         </section>
       )}
@@ -422,6 +424,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
                           </div>
                         ))}
                       </div>
+                      {/* A finished sheet takes the coach's comment too, as the open one (23 Oct, Alex); none without photos. */}
+                      {sh.inCount > 0 && <SheetComment firstName={firstName} said={sh.comments} draft={drafts[sh.period] ?? ""} onDraft={setDraft(sh.period)} onSend={sendComment(sh)} />}
                     </div>
                   )}
                 </div>
@@ -905,18 +909,22 @@ function AddAngle({ have, onAdd, onClose, tile = false }: { have: string[]; onAd
 }
 
 /** A comment on the sheet (21 Oct, Alex): the words on the page, no box; a line, Cancel and Send once something is typed.
- *  Send puts it in the chat with the client, linked to the sheet. */
-function SheetComment({ firstName, onTyped, onSend }: { firstName: string; onTyped: (typed: boolean) => void; onSend: (text: string) => Promise<void> }) {
-  const [text, setText] = useState("");
+ *  Send puts it in the chat with the client, linked to the sheet. What was said on it before shows over the line (23 Oct,
+ *  Alex), read only, as the Nutrition photo's: when, then the words; a new one can follow. */
+function SheetComment({ firstName, said, draft, onDraft, onSend }: { firstName: string; said: SheetSaid[]; /** Words typed before the row was folded. */ draft: string; onDraft: (v: string) => void; onSend: (text: string) => Promise<void> }) {
+  const [text, setText] = useState(draft);
   const [sending, setSending] = useState(false);
+  // Sent from here: shown at once, until the re-read brings it (a comment of that text the sheet didn't have before).
+  const [sentNow, setSentNow] = useState<{ key: number; text: string; when: string; before: number[] }[]>([]);
+  const shown = [...said, ...sentNow.filter((p) => !said.some((c) => c.text === p.text && !p.before.includes(c.id))).map((p) => ({ id: -p.key, text: p.text, when: p.when }))];
   // The words as they are now, read after a send comes back.
-  const now = useRef("");
+  const now = useRef(draft);
   const box = useRef<HTMLTextAreaElement>(null);
   const typed = !!text.trim();
   const set = (v: string) => {
     now.current = v;
     setText(v);
-    onTyped(!!v.trim());
+    onDraft(v);
   };
   // Cancel and Send take their buttons away: the focus goes back to the comment, not the top of the page.
   const refocus = () => requestAnimationFrame(() => box.current?.focus());
@@ -924,8 +932,10 @@ function SheetComment({ firstName, onTyped, onSend }: { firstName: string; onTyp
     if (!typed || sending) return;
     setSending(true);
     const sent = text.trim();
+    const before = said.map((c) => c.id);
     try {
       await onSend(sent);
+      setSentNow((xs) => [...xs, { key: Date.now(), text: sent, when: dayMonthTime(new Date()), before }]);
       // Words added while it was sending stay, unsent.
       set(now.current.trim() === sent ? "" : now.current);
       refocus();
@@ -937,6 +947,16 @@ function SheetComment({ firstName, onTyped, onSend }: { firstName: string; onTyp
   };
   return (
     <div className="rp-comment">
+      {shown.length > 0 && (
+        <ul className="rp-said" aria-label="Your comments">
+          {shown.map((c) => (
+            <li key={c.id}>
+              <span className="rp-said-when">{c.when}</span>
+              <span>{c.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <GrowText textRef={box} className={`rp-line rp-comment-line${typed ? " typed" : ""}`} value={text} maxLength={2000} onChange={set} placeholder={`Add a comment for ${firstName}`} label={`Comment for ${firstName}`} />
       {typed && (
         <div className="rp-comment-foot">

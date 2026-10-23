@@ -102,23 +102,28 @@
 .rd.rh .rh-str { display: flex; flex-direction: column; gap: 10px; }
 .rd.rh .rh-str-row { display: grid; grid-template-columns: 80px minmax(0, 1fr) 56px; align-items: center; column-gap: 12px; }
 .rd.rh .rh-str-name { overflow: hidden; font-size: 13px; font-weight: 500; color: #3a4250; text-overflow: ellipsis; white-space: nowrap; }
-.rd.rh .rh-str-track { display: block; height: 4px; border-radius: 999px; background: #eef0f3; overflow: hidden; }
-.rd.rh .rh-str-track i { display: block; height: 100%; border-radius: 999px; background: #141a24; }
+.rd.rh .rh-str-track { position: relative; display: block; height: 4px; border-radius: 999px; background: #eef0f3; overflow: hidden; }
+/* No change at the centre, a thin tick; a gain from it to the right in green, a drop to the left in red (23 Oct, Alex). */
+.rd.rh .rh-str-track::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: #c9cfd8; }
+.rd.rh .rh-str-track i { position: absolute; top: 0; height: 100%; border-radius: 999px; }
+.rd.rh .rh-str-track i.up { left: 50%; background: #2f7a3f; }
+.rd.rh .rh-str-track i.down { right: 50%; background: #b42318; }
 .rd.rh .rh-str-pct { font-size: 13px; font-weight: 600; color: #8b93a1; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd.rh .rh-str-pct.up { color: #2f7a3f; }
 .rd.rh .rh-str-pct.down { color: #b42318; }
 .rd.rh .rh-str-pct.none { font-weight: 500; color: #98a2b3; }
 
-/* Weight: the latest and the change on the title's line; under it the readings over their time frame and scale (23
-   Oct, Alex: "there is no time frame or anything"), in the voice of the client's Progress chart: three faint grid lines
-   with their kg on the right (11px grey numerals in the gutter, --rh-wgut), the line in ink with a dot a reading while
-   there are few, the latest the bigger dot, the dates under it (first, middle, last, by time). Hovering, or the arrow
-   keys once it has focus, reads the nearest reading: a faint ink guide, an ink ring on the point, a white pill with the
-   hairline over the chart in the room kept for it at the top. The card fills the rest of the stack's height. */
+/* Weight, laid out as Strength (23 Oct, Alex): 7d | 30d | Phase on the head's right, the latest and the change over the
+   window on the line under the title (.rh-under); under it the window's readings over their time frame and scale, in the
+   voice of the client's Progress chart: three faint grid lines with their kg on the right (11px grey numerals in the
+   gutter, --rh-wgut), the line in ink, dashed (4 3) over a stretch of missed weigh-ins, a dot a reading while there are
+   few, the latest the bigger dot, the dates under it (first, middle, last, by time). Hovering, or the arrow keys once it
+   has focus, reads the nearest reading: a faint ink guide, an ink ring on the point, a white pill with the hairline over
+   the chart in the room kept for it at the top. A window with under two readings keeps the chart's room empty
+   (.rh-wempty: the chart's 120px, the dates' 4 + 14px), so switching never moves the card. The card fills the rest of
+   the stack's height. */
 .rd.rh .rls-card.rh-panel.rh-weight { flex: 1; }
-.rd.rh .rh-wt { display: inline-flex; align-items: baseline; font-size: 13px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rd.rh .rh-wt b { font-size: 15px; font-weight: 600; }
-.rd.rh .rh-wt small { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
+.rd.rh .rh-wempty { flex: 1; min-height: 138px; }
 .rd.rh .rh-wbox { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .rd.rh .rh-wchart { position: relative; flex: 1; min-height: 120px; outline: none; cursor: crosshair; -webkit-user-select: none; user-select: none; }
 .rd.rh .rh-wchart:focus-visible { outline: 1px solid #141a24; outline-offset: 4px; border-radius: 8px; }
