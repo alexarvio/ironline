@@ -14,7 +14,6 @@ import {
   getClientProfile,
   questionsForDay,
   sessionAnswers,
-  getClientProgramNoteMeta,
   listCardioForDay,
   chatThreadViews,
   isCardioDone,
@@ -118,7 +117,6 @@ import DeleteAccountRow from "./DeleteAccountRow";
 import { clerkOn } from "../lib/clerk";
 import MyDetailsCard from "./MyDetailsCard";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
-import ProgramNote from "./ProgramNote";
 import AppShell, { AppTab, type PhoneScreen } from "./AppShell";
 import NativeCoachRedirect from "../coach/NativeCoachRedirect";
 import AvatarUpload from "./AvatarUpload";
@@ -650,16 +648,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
               </div>
             </div>
           )}
-          {program && (
-            <ProgramNote
-              programId={program.id}
-              note={(() => {
-                const m = getClientProgramNoteMeta(CLIENT_ID, program.id);
-                return m ? { text: m.text, dateLabel: new Date(m.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) } : null;
-              })()}
-              coachName={getCoachFirstName(CLIENT_ID)}
-            />
-          )}
+          {/* No "Tell {coach} how the programme feels" (23 Oct, Alex): the client writes to the coach in the chat. */}
         </section>
       )}
 
@@ -670,6 +659,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
         const ph = getCurrentPhase(CLIENT_ID, "training");
         return (
           <CoachCard
+            flat
             coachName={getCoachFirstName(CLIENT_ID)}
             photoPath={getCoachAvatarPath(CLIENT_ID)}
             note={ph?.client_note?.trim() || null}

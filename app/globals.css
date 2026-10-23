@@ -4243,6 +4243,8 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nd-card.flat .nd-coach-name { font-weight: 600; color: #141a24; }
 .nd-card.flat .nd-coach-date { font-size: 12px; font-weight: 500; color: #8b93a1; }
 .nd-card.flat .nd-coach-note { margin-top: 10px; font-weight: 500; color: #3a4250; }
+/* On Training (23 Oct): in line with the week's figures above it. */
+.tr-body > .nd-card.flat .nd-coach { padding-left: 12px; padding-right: 12px; }
 
 /* 5 · Last 7 days */
 .nd-day { display: grid; grid-template-columns: 54px 1fr 66px 62px; align-items: center; gap: 0 8px; min-height: 44px; padding: 12px 16px; box-sizing: border-box; }
