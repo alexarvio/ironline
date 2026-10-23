@@ -7,6 +7,7 @@ import { getInvoiceView } from "../../../../lib/queries";
 import InvoiceSheet from "../../../../components/InvoiceSheet";
 import InvoicePrintButton from "../../../../components/InvoicePrintButton";
 import { countryCodeFromName, countryOf, hasBankDetails } from "../../../../lib/countries";
+import { startTiming } from "../../../../lib/timing";
 import { Sep } from "../../Sep";
 // For the bar between the two Settings links (.rd-sep); every rule in it is scoped to its own classes.
 import "../../training/draft.css";
@@ -19,20 +20,23 @@ import "../../training/draft.css";
 export const dynamic = "force-dynamic";
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
+  // Each loader timed (app/lib/timing.ts, /api/timing): measuring only, the page is what it was.
+  const t = startTiming("invoice");
   const { id } = await params;
   const invoiceId = Number(id);
   // The coach's own client's invoice, or one they kept after the client was deleted (its client_id points at no
   // client then, and coach_id says whose it is; Business lists those as owed, 21 Oct).
   if (!Number.isInteger(invoiceId)) notFound();
-  const ownsClient = !!(await coachForClient(clientIdForInvoice(invoiceId)));
-  const keptForCoach = !ownsClient && getData().invoices.find((i) => i.id === invoiceId)?.coach_id === (await requireCoach()).id;
+  const ownsClient = !!(await t.time("auth", () => coachForClient(clientIdForInvoice(invoiceId))));
+  const keptForCoach = !ownsClient && getData().invoices.find((i) => i.id === invoiceId)?.coach_id === (await t.time("auth", () => requireCoach())).id;
   if (!ownsClient && !keptForCoach) notFound();
-  const v = getInvoiceView(invoiceId);
+  const v = t.time("invoiceView", () => getInvoiceView(invoiceId));
   if (!v) notFound();
+  t.client(v.clientId);
   const f = v.from;
   const missing = [!f.business_name && "business name", !(f.address && f.city) && "address", !hasBankDetails(f, countryOf(f.country_code || countryCodeFromName(f.country))) && "bank details"].filter(Boolean) as string[];
 
-  return (
+  return t.end(
     <main className="ivp">
       <div className="ivp-bar">
         <Link href={`/admin/redesign/invoices?client=${v.clientId}`} className="ivp-btn">

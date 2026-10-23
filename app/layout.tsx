@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { applyDueClientReminders, applyDueProgramDeployments } from "./lib/queries";
+import { startTiming } from "./lib/timing";
 import { ClerkProvider } from "@clerk/nextjs";
 import { clerkOn } from "./lib/clerk";
 
@@ -69,8 +70,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // No background job runner in this app — a plan the coach scheduled for
   // e.g. Monday 6am goes live the moment anyone next loads any page after
   // that time, checked here since every route passes through this layout.
-  applyDueProgramDeployments();
-  applyDueClientReminders();
+  // Timed as "layout" (23 Oct, Alex: the admin felt slow): every request pays for these two, before any screen.
+  const timer = startTiming("layout");
+  timer.time("applyDueProgramDeployments", () => applyDueProgramDeployments());
+  timer.time("applyDueClientReminders", () => applyDueClientReminders());
+  timer.end(null);
 
   // Colours are fixed to the design's palette (see the tokens at the top of
   // globals.css) rather than injected per coach. Coach-configurable branding

@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import type React from "react";
 import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { dayMonth } from "../../../lib/dayMonth";
+import { pic } from "../../../lib/pic";
 import { SepJoin } from "../Sep";
 
 // The client's gyms (15 Oct), in the admin hairline style since 20 Oct (Alex:
@@ -136,7 +137,7 @@ export default function ClientGymsDialog({
                   {/* The picture the client gave it in their app (20 Oct, Alex); else its initial on its own colour, as the client's picker shows it. */}
                   {g.logo ? (
                     // eslint-disable-next-line @next/next/no-img-element -- an upload under /uploads, sized by CSS
-                    <img className="cgh-initial cgh-logo" src={g.logo} alt="" aria-hidden="true" />
+                    <img className="cgh-initial cgh-logo" src={pic(g.logo, 96)} alt="" aria-hidden="true" />
                   ) : (
                     <span className="cgh-initial" aria-hidden="true" style={g.rgb ? ({ background: `rgba(${g.rgb}, 0.14)`, color: g.color } as React.CSSProperties) : undefined}>
                       {g.name.slice(0, 1).toUpperCase()}

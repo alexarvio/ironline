@@ -7,20 +7,17 @@ import { PlayIcon, PlusIcon } from "../../../components/icons";
 import Pager from "../Pager";
 import { SepJoin } from "../Sep";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
-import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
-import { TrackIcon } from "../plan/PlanDraft";
 // Types only: businessBoard.ts re-exports the server's reader, which must never reach the browser.
-import type { BillingRow, BusinessBoard, EndingRow, MoneyMonth, OwedRow, RosterMonth, SeriesEvery } from "../../../lib/businessBoard";
+import type { BillingRow, BusinessBoard, MoneyMonth, OwedRow, RosterMonth, SeriesEvery } from "../../../lib/businessBoard";
 
 // The coach's Business (21 Oct, Alex: built from the Business mockup, root "rd trn rls rh rbz"): the business in numbers,
 // nothing about the clients' bodies. Training's header, Home's Since line, then
 // - three figures in one hairline card: Clients (scrolls to Clients by month), A month (opens the series), Owed (scrolls to Owed);
 // - Money by month beside Clients by month, inline SVG, a month a column that opens what is in it;
-// - Owed, Plans ending and Not billed automatically as logs, each with its way to act.
+// - Owed and Not billed automatically as logs, each with its way to act (no Plans ending: 23 Oct, Alex).
 // Facts, not explanations; dates d/m (dayMonth), a log's rows by logDate; ink, never navy; weights 500 and 600.
 
 const HOME = (id: number) => `/admin/redesign/home?client=${id}`;
-const PLAN = (id: number) => `/admin/redesign/plan?client=${id}`;
 const INVOICES = (id: number) => `/admin/redesign/invoices?client=${id}`;
 /** An invoice as it prints (the Invoices tab's own link). */
 const SHEET = (id: number) => `/admin/redesign/invoices/${id}`;
@@ -64,11 +61,6 @@ const count = (n: number, one: string, many: string) => (n > 0 ? `${n} ${n === 1
 const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
 const dayNum = (d: string) => Math.round(Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10))) / 86400000);
 const months1 = (d: number) => Math.round((d / 30.44) * 10) / 10;
-/** A track's colour at a strength (a hex from phaseChrome), for its tinted tag. */
-const tintOf = (hex: string, alpha: number) => {
-  const n = parseInt(hex.slice(1, 7), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-};
 const sum = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
 
 /** Scrolled to, gently unless motion is turned down. */
@@ -166,7 +158,6 @@ export default function BusinessDraft({ board }: { board: BusinessBoard }) {
       </div>
 
       <OwedLog owed={owed} today={board.today} money={money} />
-      <EndingLog rows={board.ending} money={money} />
       <BillingLog rows={board.billing} money={money} />
     </div>
   );
@@ -704,42 +695,6 @@ const Who = ({ id, name }: { id: number; name: string }) => (
     </Link>
   </span>
 );
-
-// ---- Plans ending: a phase ending within 14 days with nothing after it on its track, soonest first. Plan next opens their Plan.
-function EndingLog({ rows, money }: { rows: EndingRow[]; money: Money }) {
-  const grid = { gridTemplateColumns: "minmax(0, 1fr) 104px minmax(0, 1.1fr) 88px 116px" } as const;
-  return (
-    <Log
-      title="Plans ending"
-      empty="None"
-      rows={rows}
-      label="Plans ending pages"
-      row={(r) => {
-        const c = TRACK_ACCENT[r.track];
-        return (
-          <div key={r.phaseId} className="rls-row rbz-row">
-            <div className="rls-row-main" style={grid}>
-              <Who id={r.clientId} name={r.client} />
-              <span className="rbz-tag" style={{ "--c": c, "--t": tintOf(c, 0.12) } as CSSProperties}>
-                <TrackIcon track={r.track} size={12} />
-                {TRACK_LABEL[r.track]}
-              </span>
-              <span className="rbz-facts">
-                <SepJoin parts={[`ends ${dayMonth(r.ends)}`, "nothing after"]} />
-              </span>
-              <PerMonth n={r.perMonth} money={money} />
-              <span className="rbz-act">
-                <Link href={PLAN(r.clientId)} className="trn-pill">
-                  <PlusIcon /> Plan next
-                </Link>
-              </span>
-            </div>
-          </div>
-        );
-      }}
-    />
-  );
-}
 
 // ---- Not billed automatically: a paused repeat (Resume) or none at all (Set up); both open their Invoices tab.
 function BillingLog({ rows, money }: { rows: BillingRow[]; money: Money }) {

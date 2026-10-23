@@ -12,6 +12,7 @@ import Pager from "../Pager";
 import { SepJoin } from "../Sep";
 import KindMark from "../KindMark";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
+import { pic } from "../../../lib/pic";
 // Types only: feedBoard.ts re-exports the server's reader, which must never reach the browser.
 import type { ActivityKind, ActivityRow, FeedBoard, NeedRow } from "../../../lib/feedBoard";
 
@@ -49,7 +50,7 @@ function Face({ name, src }: { name: string; src: string | null }) {
     <span className="rfd-face" aria-hidden="true">
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
-        <img src={src} alt="" />
+        <img src={pic(src, 96)} alt="" loading="lazy" decoding="async" />
       ) : (
         name.trim().charAt(0).toUpperCase()
       )}

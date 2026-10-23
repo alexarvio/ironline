@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { clientAddGymAction, uploadGymLogoAction } from "../lib/actions";
 import { coverJpeg } from "../lib/coverJpeg";
+import { pic } from "../lib/pic";
 import { GYM_COLORS, GYM_COLOR_KEYS, GYM_KINDS, gymColor, initials, nextFreeColor, type GymColorKey, type GymKind } from "../lib/gymColors";
 
 // Which gym the session is at (13 Oct, "Gym rows"): a centred pop-up over
@@ -42,7 +43,7 @@ async function sendLogo(gymId: number, blob: Blob): Promise<string | null> {
 
 /** The badge's face: the picture when there is one, else the initials. */
 function BadgeFace({ name, logo }: { name: string; logo?: string | null }) {
-  return logo ? <img className="gpk-badge-img" src={logo} alt="" draggable={false} /> : <>{initials(name)}</>;
+  return logo ? <img className="gpk-badge-img" src={pic(logo, 480)} alt="" draggable={false} /> : <>{initials(name)}</>;
 }
 
 /** The little camera in the badge's corner that says it can take a picture. */

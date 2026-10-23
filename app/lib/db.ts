@@ -535,12 +535,16 @@ type WorkoutAssignment = {
   target_set_at?: string | null;
   // The coach typed this target while the client was already logging the
   // exercise (15 Oct): it holds. Sets from earlier weeks never move it; the
-  // weight goal counts on from it for the weeks after.
+  // weight goal counts on from it for the weeks after. A reset point (23 Oct):
+  // its number goes on to the later rows, and lifts from before it never move
+  // them (lib/targetRule.ts). A copy of the row never carries it.
   target_pinned?: boolean;
   // Weight targets for the client's other gyms, by gym id. The home gym's
   // target is target_weight_kg; a gym with no entry here starts from it.
-  // `set_at` marks one the coach typed, as target_set_at does.
-  gym_targets?: Record<string, { kg: number | null; set_at?: string | null }>;
+  // `set_at` marks one the coach typed, as target_set_at does; `pinned`, one
+  // typed while the client was logging the exercise, as target_pinned does
+  // (23 Oct: a reset point for that gym, see lib/targetRule.ts).
+  gym_targets?: Record<string, { kg: number | null; set_at?: string | null; pinned?: boolean }>;
   // Warm-up sets the client did before the working sets. Optional, theirs to
   // fill in, and kept off set_logs so progression, goals and the set counts
   // never see them. Not carried along when a day or week is copied.

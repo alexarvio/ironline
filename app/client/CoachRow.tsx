@@ -2,6 +2,7 @@
 
 import { ArrowRightIcon } from "../components/icons";
 import { useOpenCoach } from "./CheckInContext";
+import { pic } from "../lib/pic";
 
 // The client's coach at the top of the Account tab: photo (or initial), name
 // and title. Tapping it opens the coach's profile as a pushed layer.
@@ -12,7 +13,7 @@ export default function CoachRow({ name, title, photoPath }: { name: string; tit
       <span className="cpf-row-avatar" aria-hidden="true">
         {photoPath ? (
           // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-          <img src={photoPath} alt="" />
+          <img src={pic(photoPath, 96)} alt="" />
         ) : (
           name.charAt(0).toUpperCase()
         )}

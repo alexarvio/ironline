@@ -101,10 +101,12 @@ export async function GET(
   const search = new URL(request.url).searchParams;
   const stream = search.get("stream") === "1";
   const range = request.headers.get("range");
-  // "?w=1080" (19 Oct): a picture at that width, a fraction of the phone's original.
+  // "?w=1080" (19 Oct): a picture at that width, a fraction of the phone's original;
+  // "?w=96" (23 Oct) a face. Its bytes, kept by the browser (storage.ts smallCopy);
+  // the path's "?v=" stamp names the copy, so a replaced photo never shows the old one's.
   const w = Number(search.get("w"));
   if (!stream && w) {
-    const small = await smallCopy(segments.join("/"), w);
+    const small = await smallCopy(segments.join("/"), w, search.get("v"));
     if (small) return small;
   }
   // "?poster=1" (21 Oct): a video's first frame, a small picture. None to be

@@ -1,4 +1,5 @@
 import { requireCoach } from "../../../lib/auth";
+import { startTiming } from "../../../lib/timing";
 import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import ChatDock from "../ChatDock";
@@ -18,13 +19,15 @@ import "./library.css";
 export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
-  const coach = await requireCoach();
-  return (
+  // Each loader timed (app/lib/timing.ts, /api/timing): measuring only, the props are what they were.
+  const t = startTiming("library");
+  const coach = await t.time("auth", () => requireCoach());
+  return t.end(
     <div className="rd-frame">
-      <RedesignRail rail={loadRail(coach)} clientId={0} />
-      <ChatDock chats={loadChatDock(coach)} />
+      <RedesignRail rail={t.time("rail", () => loadRail(coach))} clientId={0} />
+      <ChatDock chats={t.time("chatDock", () => loadChatDock(coach))} />
       <div className="rd-page">
-        <LibraryDraft data={loadLibrary(coach.id)} />
+        <LibraryDraft data={t.time("library", () => loadLibrary(coach.id))} />
       </div>
     </div>
   );

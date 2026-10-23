@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { pic } from "../lib/pic";
 
 // A sheet's progress pictures as a swipe of big cards (17 Oct, Alex), like the
 // phase cards on Home: one card per angle the coach asked for, in order, the
@@ -41,7 +42,7 @@ export default function PhotoDeck({ items, onTap, disabled = false }: { items: D
               <button type="button" className="ppd-tap" onClick={() => can && onTap?.(i)} disabled={!can} aria-label={`${i + 1}, ${it.label}${it.state ? `, ${it.state}` : ""}${it.action ? `. ${it.action}` : ""}`}>
                 {it.src ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img className="ppd-img" src={it.src} alt="" draggable={false} decoding="async" />
+                  <img className="ppd-img" src={pic(it.src, 1080)} alt="" draggable={false} decoding="async" />
                 ) : (
                   <span className="ppd-empty" aria-hidden="true">
                     <svg viewBox="0 0 24 24" width={28} height={28} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">

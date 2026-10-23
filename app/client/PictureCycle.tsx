@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState } from "react";
+import { pic } from "../lib/pic";
 
 // Pictures taking turns (14 Oct; 17 Oct, Alex: seven seconds was far too
 // fast). Each picture stays twenty minutes. Which one shows is read off the
@@ -53,7 +54,7 @@ export default function PictureCycle({ pictures, className }: { pictures: string
     <span className={className} aria-hidden="true">
       {pictures.map((p, k) => (
         // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route, or a public file
-        <img key={p} src={p} alt="" className={k === on % n ? "on" : ""} draggable={false} />
+        <img key={p} src={pic(p, 1080)} alt="" className={k === on % n ? "on" : ""} draggable={false} />
       ))}
     </span>
   );

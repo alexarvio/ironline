@@ -3,6 +3,7 @@ import { requireCoach } from "../../../lib/auth";
 import { clientReasons, getActivityFeed, getCalendarDay, getCalendarMonth, getMeetingConflicts, listCalendarCategories, listClients, localDateStr, type MeetingWithClient } from "../../../lib/queries";
 import { ATTENTION } from "../../../lib/attentionReasons";
 import AutosaveNote from "../../AutosaveNote";
+import { startTiming } from "../../../lib/timing";
 import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import ChatDock from "../ChatDock";
@@ -42,15 +43,17 @@ const whoOf = (m: MeetingWithClient) => (m.client_id != null ? m.clientName : m.
 const spokenDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ month?: string; day?: string }> }) {
-  const coach = await requireCoach();
+  // Each loader timed (app/lib/timing.ts, /api/timing): measuring only, the props are what they were.
+  const t = startTiming("calendar");
+  const coach = await t.time("auth", () => requireCoach());
   const params = await searchParams;
-  const calendar = getCalendarMonth(coach.id, params.month);
+  const calendar = t.time("calendarMonth", () => getCalendarMonth(coach.id, params.month));
   const today = localDateStr();
   const selectedDay = params.day && /^\d{4}-\d{2}-\d{2}$/.test(params.day) ? params.day : today;
   const monthKey = calendar.weeks[1][0].date.slice(0, 7);
-  const conflicts = getMeetingConflicts(coach.id);
+  const conflicts = t.time("conflicts", () => getMeetingConflicts(coach.id));
   const conflictIds = new Set<number>(conflicts.flatMap((c) => [c.a.id, c.b.id]));
-  const categories = listCalendarCategories(coach.id);
+  const categories = t.time("categories", () => listCalendarCategories(coach.id));
   const href = (month: string, day?: string) => `/admin/redesign/calendar?month=${month}${day ? `&day=${day}` : ""}`;
 
   // Every day of the six weeks with its entries, so a day opens in the browser at once (CalendarBoard); the day asked
@@ -70,41 +73,45 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   });
   const entries: Record<string, CalEntry[]> = {};
   for (const cell of calendar.weeks.flat()) entries[cell.date] = cell.meetings.map(entryOf);
-  if (!(selectedDay in entries)) entries[selectedDay] = getCalendarDay(coach.id, selectedDay).map(entryOf);
+  if (!(selectedDay in entries)) entries[selectedDay] = t.time("calendarDay", () => getCalendarDay(coach.id, selectedDay)).map(entryOf);
   // Each with why they need the coach, as the rail says it (14 Oct), for the With picker.
-  const feed = getActivityFeed(coach.id);
-  const clients = listClients(coach.id).map((c) => {
-    const r = clientReasons(c.id, feed)[0];
-    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, reason: r ? { text: r.text, color: ATTENTION[r.type].color, rgb: ATTENTION[r.type].rgb } : null };
-  });
+  const feed = t.time("activityFeed", () => getActivityFeed(coach.id));
+  const clients = t.time("clientReasons", () =>
+    listClients(coach.id).map((c) => {
+      const r = clientReasons(c.id, feed)[0];
+      return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, reason: r ? { text: r.text, color: ATTENTION[r.type].color, rgb: ATTENTION[r.type].rgb } : null };
+    }),
+  );
   // eslint-disable-next-line react-hooks/purity -- a server render reads the clock once, on purpose
   const renderedAt = Date.now();
 
   // All-day entries first in a cell, then by time; four shown, the rest as +N more.
   const cellOrder = (list: MeetingWithClient[]) => [...list].sort((a, b) => Number(!!b.all_day) - Number(!!a.all_day) || (a.time < b.time ? -1 : 1));
   const span = (m: MeetingWithClient) => `${m.time}–${hhmm(toMin(m.time) + m.duration_minutes)}`;
-  const cells: BoardCell[] = calendar.weeks.flat().map((cell) => {
-    const list = cellOrder(cell.meetings);
-    return {
-      date: cell.date,
-      inMonth: cell.inMonth,
-      isToday: cell.isToday,
-      more: Math.max(0, list.length - 4),
-      chips: list.slice(0, 4).map((m) => {
-        const clash = conflictIds.has(m.id);
-        const c = clash ? CLASH : entryChrome(categories, m.category, m.client_id != null);
-        // The entry's title on the chip, its client in the tooltip after it (23 Oct, Alex: the title is always the title).
-        const label = m.topic || whoOf(m);
-        // Only a client call opens their Meetings (it is there); a training session with them opens its day.
-        return { id: m.id, label, time: m.time, allDay: !!m.all_day, done: m.status === "completed", clash, tint: c.tint, ink: c.ink, line: c.line, clientId: isClientCall(m.category) ? m.client_id : null, title: `${m.all_day ? "All day" : m.time} · ${label}${m.topic && m.client_id != null ? ` · ${m.clientName}` : ""}` };
-      }),
-    };
-  });
+  const cells: BoardCell[] = t.time("cells", () =>
+    calendar.weeks.flat().map((cell) => {
+      const list = cellOrder(cell.meetings);
+      return {
+        date: cell.date,
+        inMonth: cell.inMonth,
+        isToday: cell.isToday,
+        more: Math.max(0, list.length - 4),
+        chips: list.slice(0, 4).map((m) => {
+          const clash = conflictIds.has(m.id);
+          const c = clash ? CLASH : entryChrome(categories, m.category, m.client_id != null);
+          // The entry's title on the chip, its client in the tooltip after it (23 Oct, Alex: the title is always the title).
+          const label = m.topic || whoOf(m);
+          // Only a client call opens their Meetings (it is there); a training session with them opens its day.
+          return { id: m.id, label, time: m.time, allDay: !!m.all_day, done: m.status === "completed", clash, tint: c.tint, ink: c.ink, line: c.line, clientId: isClientCall(m.category) ? m.client_id : null, title: `${m.all_day ? "All day" : m.time} · ${label}${m.topic && m.client_id != null ? ` · ${m.clientName}` : ""}` };
+        }),
+      };
+    }),
+  );
 
-  return (
+  return t.end(
     <div className="rd-frame">
-      <RedesignRail rail={loadRail(coach)} clientId={0} />
-      <ChatDock chats={loadChatDock(coach)} />
+      <RedesignRail rail={t.time("rail", () => loadRail(coach))} clientId={0} />
+      <ChatDock chats={t.time("chatDock", () => loadChatDock(coach))} />
       <div className="rd-page rcl-page">
         <div className="rd trn rcl">
           {/* ---- Header: Training's, bare (no fact line, so no room kept for one); the one status after the title. */}

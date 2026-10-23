@@ -11,6 +11,7 @@ import { Dialog } from "../../../components/ui/dialog";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../../components/icons";
 import { EVENT_TYPES, isEventTypeId } from "../../../lib/eventTypes";
 import { dayMonth } from "../../../lib/dayMonth";
+import { pic } from "../../../lib/pic";
 import type { PhaseTrack } from "../../../lib/db";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { gridFor, MoveDialog, PhaseDialog, phaseForm, TrackIcon, WINDOWS, type Win } from "../plan/PlanDraft";
@@ -622,7 +623,7 @@ function ClientBlock({
           <span className="pov-avatar">
             {c.avatarPath ? (
               // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-              <img src={c.avatarPath} alt="" />
+              <img src={pic(c.avatarPath, 96)} alt="" loading="lazy" decoding="async" />
             ) : (
               c.name.slice(0, 1).toUpperCase()
             )}

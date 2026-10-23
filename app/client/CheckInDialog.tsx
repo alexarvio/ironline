@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { CheckIcon } from "../components/icons";
 import { logMetricPeriodAction, saveMeasurementCheckInAction } from "../lib/actions";
+import { pic } from "../lib/pic";
 import { useCoachIdentity } from "./CheckInContext";
 import { cleanNumeric, isWholeMetric } from "./CheckInLine";
 import type { CheckInMetric, CheckInSection } from "./CheckInScreen";
@@ -400,7 +401,7 @@ export default function CheckInDialog({
               <label className={`cki-note-box${note.trim() ? " has" : ""}`}>
                 <span className="cki-avatar" aria-hidden="true">
                   {/* eslint-disable-next-line @next/next/no-img-element -- an upload */}
-                  {coach?.photoPath ? <img src={coach.photoPath} alt="" /> : initial}
+                  {coach?.photoPath ? <img src={pic(coach.photoPath, 96)} alt="" /> : initial}
                 </span>
                 <textarea ref={noteBox} value={note} onChange={(e) => setNote(e.target.value)} placeholder={isToday ? "Anything worth knowing today? (optional)" : "Anything worth knowing about that day? (optional)"} maxLength={500} aria-label={`Note for ${coachName}`} />
               </label>

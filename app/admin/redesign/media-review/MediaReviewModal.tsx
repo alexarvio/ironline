@@ -5,6 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { markVideoSeenAction, replyToMediaAction, sendFormReviewAction } from "../../../lib/actions";
+import { pic } from "../../../lib/pic";
 import { pathOf, simplify, SIZES, STROKE, UNDERLAY, UNDERLAY_COLOR, unitFor, worthKeeping, type Pt, type Shape, type Tool } from "./shapes";
 import { MAX_SECONDS, recordingSupported, useReviewRecorder, type Corner } from "./useReviewRecorder";
 import { Sep, SepJoin } from "../Sep";
@@ -660,7 +661,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
           <span className="mrv-avatar" aria-hidden="true">
             {review.client.avatarPath ? (
               // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
-              <img src={review.client.avatarPath} alt="" />
+              <img src={pic(review.client.avatarPath, 96)} alt="" />
             ) : (
               review.client.name.charAt(0).toUpperCase()
             )}
@@ -717,7 +718,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                   <span className="mrv-msg-avatar" aria-hidden="true">
                     {review.client.avatarPath ? (
                       // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
-                      <img src={review.client.avatarPath} alt="" />
+                      <img src={pic(review.client.avatarPath, 96)} alt="" />
                     ) : (
                       first.charAt(0).toUpperCase()
                     )}
@@ -846,7 +847,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                   <span className="mrv-msg-avatar" aria-hidden="true">
                     {review.client.avatarPath ? (
                       // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
-                      <img src={review.client.avatarPath} alt="" />
+                      <img src={pic(review.client.avatarPath, 96)} alt="" />
                     ) : (
                       first.charAt(0).toUpperCase()
                     )}

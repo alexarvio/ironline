@@ -7,6 +7,7 @@ import { ChevronLeftIcon } from "../../components/icons";
 import { notificationTypeOf, type NotificationCategory } from "../../lib/notificationTypes";
 import type { EventTypeId } from "../../lib/eventTypes";
 import { dayLabel, localDayKey, timeLabel } from "../../lib/notificationDates";
+import { pic } from "../../lib/pic";
 import { useBack, useCoachIdentity, useNavigateTab, useOpenCheckIn, useOpenEvents, useOpenMeetings, useOpenMessages } from "../CheckInContext";
 import { TypeIcon } from "../events/AddEventSheet";
 import VideoReplySheet, { type VideoReplyView } from "../VideoReplySheet";
@@ -218,7 +219,7 @@ function NotificationItem({ n, read, todayKey, coachFirst, coachPhoto, onOpen }:
             <TypeIcon path={t.icon} size={18} stroke={2} />
           </span>
         ) : coachPhoto ? (
-          <img src={coachPhoto} alt="" />
+          <img src={pic(coachPhoto, 96)} alt="" loading="lazy" decoding="async" />
         ) : (
           <span className="ntf-avatar-initial">{(coachFirst || "C").charAt(0).toUpperCase()}</span>
         )}

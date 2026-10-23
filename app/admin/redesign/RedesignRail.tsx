@@ -13,6 +13,7 @@ import type { RailClient, RailData } from "./loaders";
 import { Sep } from "./Sep";
 import NativeCoachRedirect from "../../coach/NativeCoachRedirect";
 import RefreshOnReturn from "./RefreshOnReturn";
+import { pic } from "../../lib/pic";
 
 // The left rail, in the redesign's sheet: the brand, the coach's cross-client
 // views as icon rows, every client in one scrolling list, and the coach at
@@ -149,7 +150,7 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
                       <span className={`rr-avatar${c.notSignedIn ? " pending" : ""}`} title={c.notSignedIn ? "Hasn't signed in to the app yet" : undefined}>
                         {c.avatarPath ? (
                           // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                          <img src={c.avatarPath} alt="" />
+                          <img src={pic(c.avatarPath, 96)} alt="" loading="lazy" decoding="async" />
                         ) : (
                           c.name.slice(0, 1).toUpperCase()
                         )}
@@ -225,7 +226,7 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
         <span className="rr-coach-avatar" aria-hidden="true">
           {rail.coach.photoPath ? (
             // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-            <img src={rail.coach.photoPath} alt="" />
+            <img src={pic(rail.coach.photoPath, 96)} alt="" />
           ) : (
             rail.coach.name.charAt(0).toUpperCase()
           )}

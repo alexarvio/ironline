@@ -1,4 +1,5 @@
 import type { HomeFocus } from "../../lib/focus";
+import { pic } from "../../lib/pic";
 import "./focus.css";
 
 // To focus on (23 Oct, Alex): the coach's goals until the next call, the first thing on Home under the greeting. A goal
@@ -23,7 +24,7 @@ export default function FocusList({ focus, coach, today }: { focus: HomeFocus; c
           <span className="hm-focus-face" aria-hidden="true">
             {coach.photoPath ? (
               // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-              <img src={coach.photoPath} alt="" />
+              <img src={pic(coach.photoPath, 96)} alt="" />
             ) : (
               initial
             )}

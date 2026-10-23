@@ -18,6 +18,7 @@ import { MessageDialog } from "../training/TrainingDraft";
 import AppAccessButton from "./AppAccessButton";
 import type { ClientAccess } from "../../../lib/access-actions";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
+import { pic } from "../../../lib/pic";
 import { SepJoin } from "../Sep";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { TrackIcon } from "../plan/PlanDraft";
@@ -240,7 +241,7 @@ export default function HomeDraft({
             >
               {home.avatarPath ? (
                 // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                <img src={home.avatarPath} alt="" />
+                <img src={pic(home.avatarPath, 96)} alt="" />
               ) : (
                 home.initial
               )}
@@ -374,7 +375,7 @@ export default function HomeDraft({
               <span className="rh-details-face" aria-hidden="true">
                 {home.avatarPath ? (
                   // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                  <img src={home.avatarPath} alt="" />
+                  <img src={pic(home.avatarPath, 96)} alt="" />
                 ) : (
                   home.initial
                 )}

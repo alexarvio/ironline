@@ -1,6 +1,6 @@
 import { getData } from "../../../lib/db";
 import { MAX_SESSIONS_PER_WEEK, getAssignmentsForDay, getWeek, homeGymId, listCardioForDay, listClientGyms } from "../../../lib/queries";
-import { isAssisted } from "../../../lib/progressRules";
+import { assistedRow, beforeStop, copiedWeights, laneKg, laneOfGym, laterSlot, liftOf, raisedTo, setsSinceReset, stopAfter, writeLane, type Lane } from "../../../lib/targetRule";
 import { changedWeeks, type ApplyFig, type ApplyItem, type ApplyPreview, type ApplySession, type ApplyWeek } from "./applyShape";
 
 // What Apply to the rest (copyProgramWeek, one target week at a time) and a session's Apply to remaining weeks
@@ -24,11 +24,6 @@ type Span = { start_week: number; total_weeks: number };
 const txt = (v: unknown) => (v == null ? null : String(v).trim() || null);
 const num = (v: unknown) => (v == null || String(v).trim() === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 const kgv = num;
-// As queries' stampMs: "YYYY-MM-DD HH:MM:SS" is server-local time, anything else an ISO instant.
-const stampMs = (at: string) => {
-  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(at);
-  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : new Date(at).getTime();
-};
 const restOf = (s: number | null) => (s == null ? null : s >= 60 && s % 60 === 0 ? `${s / 60} min` : s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${s}s`);
 const nameOf = (d: { label: string | null }, position: number) => txt(d.label) ?? `Session ${position}`;
 
@@ -72,49 +67,46 @@ function compare(clientId: number, gone: Set<number>) {
   for (const r of data.video_requests) if (!askOf.has(r.assignment_id)) askOf.set(r.assignment_id, r);
   const recurring = data.video_requests.filter((r) => r.recurring && r.client_id === clientId && !r.from_client);
 
+  // This client's rows of each exercise on planned days, where they sit: a copy reads the coach's resets off them.
+  const rowsOfExercise = new Map<number, { slot: (typeof data.program_days)[number]; row: (typeof data.workout_assignments)[number] }[]>();
+  for (const wa of data.workout_assignments) {
+    const d = dayOf.get(wa.program_day_id);
+    if (!d || d.client_id !== clientId || d.free) continue;
+    const list = rowsOfExercise.get(wa.exercise_id);
+    if (list) list.push({ slot: d, row: wa });
+    else rowsOfExercise.set(wa.exercise_id, [{ slot: d, row: wa }]);
+  }
+
   /**
    * A copied row's weights once the rule that writes them forward (progressTargetFromLogs, on every request) has
-   * passed over it. The copy carries the source's target, pin and typed-at, so an earlier logged row of the same
-   * exercise that met its target raises it again, as it raised the row it replaces. The same rule, on the copy alone.
+   * passed over it: the same rule (lib/targetRule.ts), on the copy alone. The copy carries the source's weights and when
+   * they were typed, never a reset (copiedWeights), so an earlier logged row of the same exercise that met its weight
+   * raises it again, unless a reset of the coach's that stays on the plan sits between them.
    */
   const landed = (row: Row, dest: Day): Row => {
-    const raw = waOf.get(row.id);
-    if (!raw || dest.free) return row;
-    let kg = row.target_weight_kg;
-    const gymKg: NonNullable<Row["gym_targets"]> = { ...(row.gym_targets ?? {}) };
+    if (!waOf.get(row.id) || dest.free) return row;
+    const copy = copiedWeights(row);
+    // What stays on the plan once the copy is made: a session it replaces goes, its resets with it.
+    const stays = (rowsOfExercise.get(row.exercise_id) ?? []).filter((o) => !gone.has(o.slot.id));
     for (const [id, logs] of logsOf) {
       const wa = waOf.get(id);
       const day = wa ? dayOf.get(wa.program_day_id) : undefined;
       if (!wa || !day || wa.swap || day.free || wa.exercise_id === 0 || wa.exercise_id !== row.exercise_id || day.client_id !== clientId || gone.has(day.id)) continue;
-      if (!(dest.week_number > day.week_number || (dest.week_number === day.week_number && dest.day_of_week > day.day_of_week))) continue;
-      const ex = exById.get(wa.exercise_id);
-      const assisted = isAssisted(ex?.name) || (wa.variation_id != null && isAssisted(ex?.variations?.find((v) => v.id === wa.variation_id)?.name));
-      const reached = (best: number, target: number) => (assisted ? best <= target : best >= target);
-      const better = (a: number, b: number) => (assisted ? Math.min(a, b) : Math.max(a, b));
-      const lanes = new Map<number | null, typeof logs>();
+      if (!laterSlot(dest, day)) continue;
+      const assisted = assistedRow(exById.get(wa.exercise_id), wa.variation_id);
+      const lanes = new Map<Lane, typeof logs>();
       for (const sl of logs) {
-        const gym = sl.gym_id == null || sl.gym_id === home ? null : sl.gym_id;
-        lanes.set(gym, [...(lanes.get(gym) ?? []), sl]);
+        const lane = laneOfGym(sl.gym_id, home);
+        lanes.set(lane, [...(lanes.get(lane) ?? []), sl]);
       }
-      for (const [gym, ls] of lanes) {
-        const weights = ls.map((sl) => sl.weight_kg).filter((w): w is number => w != null);
-        if (!weights.length) continue;
-        const best = assisted ? Math.min(...weights) : Math.max(...weights);
-        const last = Math.max(...ls.map((sl) => stampMs(sl.logged_at)));
-        if (gym == null) {
-          if (wa.target_weight_kg == null || !reached(best, wa.target_weight_kg)) continue;
-          if (raw.target_pinned || (raw.target_set_at && stampMs(raw.target_set_at) >= last)) continue;
-          kg = kg == null ? best : better(kg, best);
-          continue;
-        }
-        const own = wa.gym_targets?.[gym]?.kg ?? null;
-        if (own != null && !reached(best, own)) continue;
-        const entry = gymKg[gym];
-        if ((raw.target_pinned && entry?.kg != null) || (entry?.set_at && stampMs(entry.set_at) >= last)) continue;
-        gymKg[gym] = { kg: entry?.kg == null ? best : better(entry.kg, best), set_at: entry?.set_at ?? null };
+      for (const [lane, ls] of lanes) {
+        const lift = liftOf(setsSinceReset(ls, wa, lane), laneKg(wa, lane), lane, assisted);
+        if (!lift || !beforeStop(dest, stopAfter(day, stays, lane))) continue;
+        const kg = raisedTo(copy, lane, lift, assisted);
+        if (kg != null) writeLane(copy, lane, kg);
       }
     }
-    return { ...row, target_weight_kg: kg, gym_targets: gymKg };
+    return copy;
   };
 
   /** A recurring ask on an earlier session of the same name makes the copied row one of its own (resolveRecurringVideoAsks). */

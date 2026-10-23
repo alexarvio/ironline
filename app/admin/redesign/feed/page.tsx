@@ -1,5 +1,6 @@
 import { requireCoach } from "../../../lib/auth";
 import { getFeedBoard, noteFeedLooked } from "../../../lib/feedBoard";
+import { startTiming } from "../../../lib/timing";
 import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import ChatDock from "../ChatDock";
@@ -21,17 +22,19 @@ import "./feed.css";
 export const dynamic = "force-dynamic";
 
 export default async function FeedPage({ searchParams }: { searchParams: Promise<{ cat?: string }> }) {
-  const coach = await requireCoach();
+  // Each loader timed (app/lib/timing.ts, /api/timing): measuring only, the props are what they were.
+  const t = startTiming("feed");
+  const coach = await t.time("auth", () => requireCoach());
   const params = await searchParams;
   // The visit is noted first, so Since and New read from the visit before this one.
-  await noteFeedLooked(coach.id);
-  const board = await getFeedBoard(coach.id);
+  await t.time("noteFeedLooked", () => noteFeedLooked(coach.id));
+  const board = await t.time("feedBoard", () => getFeedBoard(coach.id));
   // eslint-disable-next-line react-hooks/purity -- a server render reads the clock once, on purpose: the waits in Needs you count from it, the same on the server and in the browser
   const now = Date.now();
-  return (
+  return t.end(
     <div className="rd-frame">
-      <RedesignRail rail={loadRail(coach)} clientId={0} />
-      <ChatDock chats={loadChatDock(coach)} />
+      <RedesignRail rail={t.time("rail", () => loadRail(coach))} clientId={0} />
+      <ChatDock chats={t.time("chatDock", () => loadChatDock(coach))} />
       <div className="rd-page">
         <FeedDraft board={board} now={now} kind={params.cat ?? null} />
       </div>

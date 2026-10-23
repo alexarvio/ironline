@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon } from "../../components/icons";
 import ChatLastLine from "../../components/ChatLastLine";
 import { dayMonth } from "../../lib/dayMonth";
+import { pic } from "../../lib/pic";
 import type { DockChat } from "./loaders";
 
 // Every chat this coach has, newest word first: the dock's list on the
@@ -56,7 +57,7 @@ export default function ChatList({ chats, title, here = null, isUnread, onPick, 
                 <span className="rd-dock-avatar" aria-hidden="true">
                   {c.avatarPath ? (
                     // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
-                    <img src={c.avatarPath} alt="" />
+                    <img src={pic(c.avatarPath, 96)} alt="" loading="lazy" decoding="async" />
                   ) : (
                     c.name.charAt(0).toUpperCase()
                   )}

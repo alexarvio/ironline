@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { PhaseTrack } from "../lib/db";
 import { discardCardPicturesAction, resetCardCoverAction, saveCardPicturesAction, stageCardPictureAction } from "../lib/actions";
 import { coverJpeg } from "../lib/coverJpeg";
+import { pic } from "../lib/pic";
 
 // The client's own picture on a Home card (12 Oct). Press and hold a card
 // on Home and this sheet comes up: the picture as it is, "Choose from your
@@ -229,7 +230,7 @@ export default function CardPictureSheet({
           {items.map((x) => (
             <span key={x.key} className={`cv-cell${!x.path && !x.failed ? " up" : ""}${x.failed ? " failed" : ""}`}>
               {/* eslint-disable-next-line @next/next/no-img-element -- an upload, or the photo itself while it goes up */}
-              <img src={x.preview} alt="" />
+              <img src={pic(x.preview, 480)} alt="" />
               <button type="button" disabled={saving} onClick={() => remove(x.key)} aria-label="Remove this picture">
                 ×
               </button>
@@ -430,13 +431,13 @@ function CardPictureFold({
               {standIn && coach && (
                 <span className="cv-fold-pic stand">
                   {/* eslint-disable-next-line @next/next/no-img-element -- an upload or a public file */}
-                  <img src={coach} alt="" />
+                  <img src={pic(coach, 480)} alt="" />
                 </span>
               )}
               {own.map((p) => (
                 <span key={p} className={`cv-fold-pic${asking === p ? " asking" : ""}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- an upload, or the photo itself just put up */}
-                  <img src={shownAs[p] ?? p} alt="" />
+                  <img src={shownAs[p] ?? pic(p, 480)} alt="" />
                   {asking === p && (
                     <button type="button" className="cv-fold-remove" onClick={() => remove(p)}>
                       Remove

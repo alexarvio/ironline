@@ -22,7 +22,7 @@ import { DEFAULT_WORKOUT_QUESTIONS, MAX_QUESTION_LENGTH, MAX_WORKOUT_QUESTIONS }
 import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 import { cleanRepeat, openEnd, type EventRepeat } from "./eventRepeat";
-import { isAssisted } from "./progressRules";
+import { assistedRow, beforeStop, copiedWeights, isReset, laneKg, laneOfGym, laneTypedAt, laterSlot, liftOf, raisedTo, setsSinceReset, stopAfter, writeLane, type Lane } from "./targetRule";
 import { FEATURES } from "./features";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
@@ -1180,6 +1180,12 @@ export function applyDueProgramDeployments() {
   }
   if (realigned) persist();
 
+  // A reset's copies made before copies dropped the pin are copies, not
+  // resets of their own (see unpinCopiedResets), before the pass reads them.
+  if (unpinCopiedResets()) persist();
+  // A reset pinned before its number went on carries it now (once; see
+  // carryEarlierResets), before the lifts from it on move the rows again.
+  if (carryEarlierResets()) persist();
   // Goals progress from what was logged before the rule existed too: every
   // assignment with logs gets one pass. Cheap, idempotent, and a no-op for
   // a next week that already has logs of its own.
@@ -1368,8 +1374,10 @@ export function copyProgramWeek(clientId: number, fromWeek: number, toWeek: numb
       .sort((a, b) => a.order_index - b.order_index);
     for (const wa of srcAssignments) {
       const id = allocId("workout_assignments");
-      // The prescription only: what the client did (warm-ups, a swap) stays on the week they did it.
-      data.workout_assignments.push({ ...wa, warmup_sets: undefined, swap: undefined, id, program_day_id: dest.id });
+      // The prescription only: what the client did (warm-ups, a swap) stays on the week they did it. The coach's weights
+      // come with when they were typed, never a reset (copiedWeights, 23 Oct): what the client lifts from the reset on
+      // moves the copies.
+      data.workout_assignments.push({ ...copiedWeights(wa), warmup_sets: undefined, swap: undefined, id, program_day_id: dest.id });
       // Custom columns are part of the plan too, so they come along.
       for (const v of data.assignment_custom_values.filter((v) => v.workout_assignment_id === wa.id)) {
         data.assignment_custom_values.push({
@@ -1497,13 +1505,11 @@ export function updateAssignmentFields(
     assignment.note_read = false;
     if (!text) assignment.note_kind = null;
   }
-  // A weight the coach types is theirs: see progressTargetFromLogs.
-  if ("target_weight_kg" in fields && fields.target_weight_kg !== assignment.target_weight_kg) {
-    assignment.target_set_at = new Date().toISOString();
-    assignment.target_pinned = exerciseBeingLogged(assignment);
-  }
+  const weighed = "target_weight_kg" in fields && fields.target_weight_kg !== assignment.target_weight_kg;
 
   Object.assign(assignment, fields);
+  // A weight the coach types is theirs, and on a running plan a reset: see typeWeight.
+  if (weighed) typeWeight(assignment, null, assignment.target_weight_kg);
   persist();
 }
 
@@ -1677,6 +1683,14 @@ export function logSet(
 // no entry yet has no target of its own to meet (the coach's weight was
 // only a starting point on a different machine), so what the client lifted
 // there becomes that gym's weight going forward.
+//
+// A weight the coach types while the client is logging the exercise is a
+// reset point for its gym (23 Oct, Alex: "I want that weight to override any
+// count the system was taking into account from previous weights"): lifts
+// from before it never move a row after it, its number goes on to the rows
+// after it (typeWeight → carryReset), and from it on the client's own lifts
+// move them again. The rule itself is lib/targetRule.ts, which the Apply
+// confirm reads too.
 /** The client has logged this exercise on an earlier day of their programme:
     a target the coach types now is a change to a running plan, not the plan
     being written. */
@@ -1691,6 +1705,123 @@ function exerciseBeingLogged(wa: WorkoutAssignment): boolean {
   );
   const rows = new Set(data.workout_assignments.filter((x) => x.exercise_id === wa.exercise_id && earlier.has(x.program_day_id)).map((x) => x.id));
   return data.set_logs.some((sl) => rows.has(sl.workout_assignment_id));
+}
+
+type StoredAssignment = Data["workout_assignments"][number];
+type StoredDay = Data["program_days"][number];
+
+/** Every row of the exercise on the client's planned days (free sessions are not the plan), where it sits, logged or not. */
+function exerciseOccurrences(clientId: number, exerciseId: number): { slot: StoredDay; row: StoredAssignment }[] {
+  const data = getData();
+  const days = new Map(data.program_days.filter((pd) => pd.client_id === clientId && !pd.free).map((pd) => [pd.id, pd] as const));
+  const out: { slot: StoredDay; row: StoredAssignment }[] = [];
+  for (const row of data.workout_assignments) {
+    if (row.exercise_id !== exerciseId) continue;
+    const slot = days.get(row.program_day_id);
+    if (slot) out.push({ slot, row });
+  }
+  return out;
+}
+
+/**
+ * A weight the coach types on a row (`kg`, in the lane: null the home gym's
+ * Weight, else that gym's): theirs, stamped, so lifts logged before it never
+ * move it. Typed while the client is logging the exercise it is pinned, a
+ * reset point for its lane, and its number goes on to the rows after it
+ * (carryReset). The same edit applied to the weeks after (`carried`, the old
+ * builder's Apply to remaining weeks) lands as a reset's carry does, never as
+ * a reset of its own. A gym's weight cleared follows the home gym's again.
+ */
+function typeWeight(row: StoredAssignment, lane: Lane, kg: number | null, carried = false) {
+  const at = new Date().toISOString();
+  const reset = !carried && exerciseBeingLogged(row);
+  if (lane == null) {
+    row.target_weight_kg = kg;
+    row.target_set_at = at;
+    row.target_pinned = reset;
+  } else {
+    const next = { ...(row.gym_targets ?? {}) };
+    if (kg == null) delete next[lane];
+    else next[lane] = { kg, set_at: at, ...(reset ? { pinned: true } : {}) };
+    row.gym_targets = next;
+  }
+  if (reset && kg != null) carryReset(row, lane, kg, at);
+}
+
+/**
+ * A reset's number goes on (23 Oct, Alex): every later occurrence of the
+ * exercise the client hasn't logged takes it in that lane, up to the next
+ * reset (that one's number goes on from there), unless the coach typed one
+ * there after this. Stored as a coach's weight is, stamped with the reset's
+ * time, but never pinned: lifts from before the reset leave it, and what the
+ * client lifts from the reset on moves it, as the weeks after always moved.
+ * A row that already carries this reset's stamp is left as it is, so carrying
+ * it again changes nothing. A cleared weight of the coach's (a reset with no
+ * number) stays cleared. True when a row took it.
+ */
+function carryReset(reset: StoredAssignment, lane: Lane, kg: number, at: string): boolean {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === reset.program_day_id);
+  if (!day || day.free || reset.exercise_id === 0) return false;
+  const rows = exerciseOccurrences(day.client_id, reset.exercise_id);
+  const stop = stopAfter(day, rows, lane);
+  const logged = new Set(data.set_logs.map((sl) => sl.workout_assignment_id));
+  const atMs = stampMs(at);
+  let changed = false;
+  for (const { slot, row } of rows) {
+    if (row.id === reset.id || !laterSlot(slot, day) || !beforeStop(slot, stop) || logged.has(row.id) || isReset(row, lane)) continue;
+    const typed = laneTypedAt(row, lane);
+    if (typed && stampMs(typed) >= atMs) continue;
+    if (lane == null) {
+      row.target_weight_kg = kg;
+      row.target_set_at = at;
+    } else row.gym_targets = { ...(row.gym_targets ?? {}), [lane]: { kg, set_at: at } };
+    changed = true;
+  }
+  return changed;
+}
+
+/**
+ * Resets the coach typed before their number went on (15 Oct's pins): carry
+ * each one's weight to the rows after it once, as a reset typed now would.
+ * Idempotent: a row already carrying the reset's stamp is left alone.
+ */
+function carryEarlierResets(): boolean {
+  let changed = false;
+  for (const row of getData().workout_assignments) {
+    if (row.target_pinned && row.target_weight_kg != null && row.target_set_at && carryReset(row, null, row.target_weight_kg, row.target_set_at)) changed = true;
+  }
+  return changed;
+}
+
+/**
+ * Copies of a reset made before a copy dropped the pin (23 Oct) still carry
+ * it, with the reset's own typed-at: the first of them in the plan is the
+ * reset, the later ones its copies, and a copy is no reset (copiedWeights).
+ * The same typed-at on the same day is two rows typed at once, not a copy.
+ * Idempotent; nothing to do once mended.
+ */
+function unpinCopiedResets(): boolean {
+  const data = getData();
+  const pinned = data.workout_assignments.filter((wa) => wa.target_pinned && wa.target_set_at);
+  if (pinned.length < 2) return false;
+  const dayOf = new Map(data.program_days.map((pd) => [pd.id, pd] as const));
+  const first = new Map<string, StoredDay>();
+  const sited = pinned
+    .map((row) => ({ row, slot: dayOf.get(row.program_day_id) }))
+    .filter((o): o is { row: StoredAssignment; slot: StoredDay } => !!o.slot && !o.slot.free)
+    .sort((a, b) => a.slot.week_number - b.slot.week_number || a.slot.day_of_week - b.slot.day_of_week);
+  let changed = false;
+  for (const { row, slot } of sited) {
+    const key = `${slot.client_id}|${row.exercise_id}|${row.target_set_at}`;
+    const seen = first.get(key);
+    if (!seen) first.set(key, slot);
+    else if (laterSlot(slot, seen)) {
+      row.target_pinned = false;
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 export function progressTargetFromLogs(workoutAssignmentId: number) {
@@ -1708,64 +1839,34 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   if (logs.length === 0) return;
   const home = homeGymId(day.client_id);
   // An assisted lift (23 Oct, Alex): its kg is help, so its best is the least and the target moves down to it.
-  const ex = data.exercises.find((e) => e.id === wa.exercise_id);
-  const assisted = isAssisted(ex?.name) || (wa.variation_id != null && isAssisted(ex?.variations?.find((v) => v.id === wa.variation_id)?.name));
-  const reached = (best: number, target: number) => (assisted ? best <= target : best >= target);
-  const better = (a: number, b: number) => (assisted ? Math.min(a, b) : Math.max(a, b));
+  const assisted = assistedRow(data.exercises.find((e) => e.id === wa.exercise_id), wa.variation_id);
 
-  // null is the home gym's lane.
-  const byGym = new Map<number | null, SetLog[]>();
+  const byGym = new Map<Lane, SetLog[]>();
   for (const sl of logs) {
-    const gym = sl.gym_id == null || sl.gym_id === home ? null : sl.gym_id;
-    byGym.set(gym, [...(byGym.get(gym) ?? []), sl]);
+    const lane = laneOfGym(sl.gym_id, home);
+    byGym.set(lane, [...(byGym.get(lane) ?? []), sl]);
   }
 
   // Every later occurrence of the same exercise for this client moves up:
   // the same weekday next week, but also a second session later this week
-  // that repeats it, and every week after. "Later" is by day: a later week,
-  // or a later weekday of the same week. Occurrences the client has already
-  // logged against are left alone, and a target the coach planned higher
-  // than the logged weight stays.
-  const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd] as const));
-  const isLater = (pd: ProgramDay) =>
-    pd.week_number > day.week_number || (pd.week_number === day.week_number && pd.day_of_week > day.day_of_week);
-  const later = data.workout_assignments.filter((other) => {
-    if (other.id === wa.id || other.exercise_id !== wa.exercise_id) return false;
-    const otherDay = days.get(other.program_day_id);
-    return !!otherDay && !otherDay.free && isLater(otherDay) && !data.set_logs.some((sl) => sl.workout_assignment_id === other.id);
-  });
+  // that repeats it, and every week after, up to the coach's next reset in
+  // that lane. "Later" is by day: a later week, or a later weekday of the
+  // same week. Occurrences the client has already logged against are left
+  // alone, and a target the coach planned higher than the logged weight stays.
+  const rows = exerciseOccurrences(day.client_id, wa.exercise_id);
+  const logged = new Set(data.set_logs.map((sl) => sl.workout_assignment_id));
+  const later = rows.filter((o) => o.row.id !== wa.id && laterSlot(o.slot, day) && !logged.has(o.row.id));
 
   let changed = false;
-  for (const [gym, gymLogs] of byGym) {
-    const weights = gymLogs.map((sl) => sl.weight_kg).filter((w): w is number => w != null);
-    if (weights.length === 0) continue;
-    const bestWeight = assisted ? Math.min(...weights) : Math.max(...weights);
-    const lastLoggedMs = Math.max(...gymLogs.map((sl) => stampMs(sl.logged_at)));
-
-    if (gym == null) {
-      if (wa.target_weight_kg == null || !reached(bestWeight, wa.target_weight_kg)) continue;
-      for (const other of later) {
-        // The coach changed this one while the plan was running (pinned), or
-        // set it by hand after these sets were logged: theirs.
-        if (other.target_pinned) continue;
-        if (other.target_set_at && stampMs(other.target_set_at) >= lastLoggedMs) continue;
-        const target = other.target_weight_kg == null ? bestWeight : better(other.target_weight_kg, bestWeight);
-        if (target === other.target_weight_kg) continue;
-        other.target_weight_kg = target;
-        changed = true;
-      }
-      continue;
-    }
-
-    const own = wa.gym_targets?.[gym]?.kg ?? null;
-    if (own != null && !reached(bestWeight, own)) continue;
-    for (const other of later) {
-      const entry = other.gym_targets?.[gym];
-      if (other.target_pinned && entry?.kg != null) continue;
-      if (entry?.set_at && stampMs(entry.set_at) >= lastLoggedMs) continue;
-      const target = entry?.kg == null ? bestWeight : better(entry.kg, bestWeight);
-      if (target === entry?.kg) continue;
-      other.gym_targets = { ...(other.gym_targets ?? {}), [gym]: { kg: target, set_at: entry?.set_at ?? null } };
+  for (const [lane, laneLogs] of byGym) {
+    const lift = liftOf(setsSinceReset(laneLogs, wa, lane), laneKg(wa, lane), lane, assisted);
+    if (!lift) continue;
+    const stop = stopAfter(day, rows, lane);
+    for (const o of later) {
+      if (!beforeStop(o.slot, stop)) continue;
+      const kg = raisedTo(o.row, lane, lift, assisted);
+      if (kg == null) continue;
+      writeLane(o.row, lane, kg);
       changed = true;
     }
   }
@@ -9011,7 +9112,9 @@ export function setHomeGym(gymId: number) {
   for (const wa of assignments) {
     const targets = { ...(wa.gym_targets ?? {}) };
     const incoming = targets[gymId];
-    targets[oldHome] = { kg: wa.target_weight_kg, set_at: wa.target_set_at ?? null };
+    // A reset goes with its gym's weight (lib/targetRule.ts).
+    targets[oldHome] = { kg: wa.target_weight_kg, set_at: wa.target_set_at ?? null, ...(wa.target_pinned ? { pinned: true } : {}) };
+    if (wa.target_pinned || incoming?.pinned) wa.target_pinned = !!incoming?.pinned && incoming.kg != null;
     // A week trained at the new home before it had a weight of its own was
     // its first visit there: what was lifted is that week's weight, or the
     // week would read as short of the old home's figure.
@@ -10021,8 +10124,9 @@ export function copyProgramDay(fromDayId: number, toDayId: number) {
     .sort((a, b) => a.order_index - b.order_index);
   for (const wa of srcAssignments) {
     const id = allocId("workout_assignments");
-    // The prescription only: what the client did (warm-ups, a swap) stays on the week they did it.
-    data.workout_assignments.push({ ...wa, warmup_sets: undefined, swap: undefined, id, program_day_id: dest.id });
+    // The prescription only: what the client did (warm-ups, a swap) stays on the week they did it, and a reset stays on
+    // the row the coach typed it on (copiedWeights, 23 Oct).
+    data.workout_assignments.push({ ...copiedWeights(wa), warmup_sets: undefined, swap: undefined, id, program_day_id: dest.id });
     for (const v of data.assignment_custom_values.filter((v) => v.workout_assignment_id === wa.id)) {
       data.assignment_custom_values.push({ ...v, id: allocId("assignment_custom_values"), workout_assignment_id: id });
     }
@@ -10330,12 +10434,11 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
         target.note_read = false;
         if (!typed.notes) target.note_kind = null;
       }
-      // A weight the coach types is theirs: see progressTargetFromLogs.
-      if ("target_weight_kg" in typed && typed.target_weight_kg !== target.target_weight_kg) {
-        target.target_set_at = new Date().toISOString();
-        target.target_pinned = exerciseBeingLogged(target);
-      }
+      const weighed = "target_weight_kg" in typed && typed.target_weight_kg !== target.target_weight_kg;
       Object.assign(target, typed);
+      // A weight the coach types is theirs, and on a running plan a reset (a later week's copy of the edit its carry):
+      // see typeWeight.
+      if (weighed) typeWeight(target, null, target.target_weight_kg, mirror);
     }
 
     for (const [idStr, cols] of Object.entries(changes.custom)) {
@@ -10358,22 +10461,24 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
       }
     }
 
-    // A gym's weight the coach types is theirs too; cleared, the gym starts
-    // from the Weight column again.
+    // A gym's weight the coach types is theirs too, and on a running plan a
+    // reset for that gym (typeWeight); cleared, the gym starts from the Weight
+    // column again.
     for (const [idStr, gyms] of Object.entries(changes.gyms ?? {})) {
       const srcRow = data.workout_assignments.find((wa) => wa.id === Number(idStr));
       const target = mirror ? (srcRow ? byExercise(srcRow.exercise_id) : undefined) : srcRow;
       if (!target || target.program_day_id !== day.id) continue;
       const own = new Set(listClientGyms(day.client_id, true).map((g) => String(g.id)));
-      const next = { ...(target.gym_targets ?? {}) };
       for (const [gymStr, raw] of Object.entries(gyms)) {
         if (!own.has(gymStr)) continue;
         const t = raw.trim().replace(",", ".");
         const kg = t && Number.isFinite(Number(t)) ? Number(t) : null;
-        if (kg == null) delete next[gymStr];
-        else next[gymStr] = { kg, set_at: new Date().toISOString() };
+        const entry = target.gym_targets?.[gymStr];
+        // The same figure sent again changes nothing (as the Weight column's own).
+        if (kg != null && entry?.kg === kg) continue;
+        if (kg == null && !entry) continue;
+        typeWeight(target, Number(gymStr), kg, mirror);
       }
-      target.gym_targets = next;
     }
 
     for (const add of changes.added) {

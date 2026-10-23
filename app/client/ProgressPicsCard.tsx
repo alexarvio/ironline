@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useOpenPhotos } from "./CheckInContext";
+import { pic } from "../lib/pic";
 
 // Home's progress-pictures card, at the top of Today's tasks: a small sibling
 // of the phase cards (a photo, a dark scrim, glass chips and a frosted panel)
@@ -33,7 +34,7 @@ export default function ProgressPicsCard({ pics }: { pics: NonNullable<ProgressP
     return () => clearTimeout(t);
   }, []);
   const done = pics.status === "completed";
-  const cover = pics.coverUrl ?? PROGRESS_PICS_COVER;
+  const cover = pic(pics.coverUrl, 1080) ?? PROGRESS_PICS_COVER;
   return (
     <button
       type="button"

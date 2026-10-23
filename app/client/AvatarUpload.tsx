@@ -1,6 +1,7 @@
 "use client";
 
 import { removeClientAvatarAction, uploadClientAvatarAction } from "../lib/actions";
+import { pic } from "../lib/pic";
 
 // The client's profile picture. Tap the circle to choose a photo; it uploads
 // on the spot and shows up for the coach straight away. Falls back to the
@@ -22,7 +23,7 @@ export default function AvatarUpload({
         <label className="av-tile" title={avatarPath ? "Change photo" : "Add a photo"}>
           {avatarPath ? (
             // eslint-disable-next-line @next/next/no-img-element -- uploaded file
-            <img src={avatarPath} alt="" className="av-img" />
+            <img src={pic(avatarPath, 480)} alt="" className="av-img" />
           ) : (
             <span className="av-initial" aria-hidden="true">
               {initial}

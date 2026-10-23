@@ -14,6 +14,7 @@ import EventsTimelineCard from "./home/EventsTimelineCard";
 import type { CardCovers } from "./CardPictureSheet";
 import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
+import { pic } from "../lib/pic";
 import type { LinkView } from "../lib/messageLinks";
 import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 import FocusList from "./home/FocusList";
@@ -383,7 +384,7 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
           <span className="hm-lt-avatar" aria-hidden="true">
             {coach.photoPath ? (
               // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-              <img src={coach.photoPath} alt="" />
+              <img src={pic(coach.photoPath, 96)} alt="" />
             ) : (
               <span className="hm-lt-initial">{initial}</span>
             )}

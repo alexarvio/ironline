@@ -6,6 +6,7 @@ import { LEGAL } from "../../../lib/legal";
 import { paymentsState, refreshCoachStripe, type PaymentsState } from "../../../lib/payments";
 import { dayMonth } from "../../../lib/dayMonth";
 import { loadSupportSection } from "../../../lib/support";
+import { startTiming } from "../../../lib/timing";
 import { loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import { AccountSettings, BusinessSettings, InvoicingSettings, PrivacySettings } from "./SettingsForms";
@@ -52,17 +53,19 @@ function legalDate(words: string): string {
 }
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ coachId?: string; stripe?: string }> }) {
-  const coach = await requireCoach();
+  // Each loader timed (app/lib/timing.ts, /api/timing): measuring only, the props are what they were.
+  const t = startTiming("settings");
+  const coach = await t.time("auth", () => requireCoach());
   const params = await searchParams;
 
   // Profile: the coach's own, or for the owner any coach's (?coachId=).
   const owner = isOwner(coach);
   const asked = Number(params.coachId);
-  const coachId = owner && Number.isInteger(asked) && asked > 0 && getCoachProfileView(asked) ? asked : coach.id;
-  const profile = getCoachProfileView(coachId);
-  const coaches = owner ? listCoachAccounts().map((c) => ({ id: c.id, email: c.email })) : [];
+  const coachId = owner && Number.isInteger(asked) && asked > 0 && t.time("profileView", () => getCoachProfileView(asked)) ? asked : coach.id;
+  const profile = t.time("profileView", () => getCoachProfileView(coachId));
+  const coaches = owner ? t.time("coachAccounts", () => listCoachAccounts().map((c) => ({ id: c.id, email: c.email }))) : [];
   // Your details: the account basics, beside the public profile.
-  const contact = getCoachSettings(coachId).contact ?? {};
+  const contact = t.time("coachSettings", () => getCoachSettings(coachId)).contact ?? {};
   const details = {
     email: getData().users.find((u) => u.id === coachId)?.email ?? "",
     phoneCode: contact.phone_code ?? "",
@@ -75,11 +78,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const countries = COUNTRIES.map((c) => ({ code: c.code, name: c.name }));
 
   // Back from Stripe (?stripe=back, which the page then drops from its address), or still unfinished.
-  const payments = await stripeState(coach.id, !!params.stripe);
-  const settings = getCoachSettings(coach.id);
+  const payments = await t.time("stripe", () => stripeState(coach.id, !!params.stripe));
+  const settings = t.time("coachSettings", () => getCoachSettings(coach.id));
   const business = settings.business ?? {};
   const invoicing = settings.invoicing ?? {};
-  const support = loadSupportSection(coach);
+  const support = t.time("support", () => loadSupportSection(coach));
 
   // In the rail's order, a section a line (its label from settingsNav's SETTINGS unless given; no body, left out).
   const sections: SettingsSection[] = [
@@ -99,9 +102,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     { key: "support", label: "Support", body: support && <SupportSection {...support} /> },
   ];
 
-  return (
+  return t.end(
     <div className="rd-frame">
-      <RedesignRail rail={loadRail(coach)} clientId={0} settings />
+      <RedesignRail rail={t.time("rail", () => loadRail(coach))} clientId={0} settings />
       <div className="rd-page">
         <SettingsBoard className="rd trn rls rst rpf" sections={sections} />
       </div>

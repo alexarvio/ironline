@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { MEDIA_PATHS } from "../components/ChatLastLine";
+import { pic } from "../lib/pic";
 
 // The small pieces every screen of the coach's phone shares: the icons
 // (stroke 1.6, round, no fills; design rules 5), a face, facts parted by a
@@ -52,7 +53,7 @@ export function Avatar({ name, src, size }: { name: string; src: string | null; 
     <span className="cph-av" style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }} aria-hidden="true">
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element -- their own upload, served by the app
-        <img src={src} alt="" />
+        <img src={pic(src, 96)} alt="" loading="lazy" decoding="async" />
       ) : (
         (name.trim().charAt(0) || "?").toUpperCase()
       )}

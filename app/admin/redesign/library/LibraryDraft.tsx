@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Toaster } from "../../../components/ui/toast";
 import { Dialog } from "../../../components/ui/dialog";
-import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { ArrowRightIcon, EyeIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
+import { ArrowRightIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
 import { setExerciseDemoLinkAction } from "../../../lib/actions";
 import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem } from "./load";
@@ -70,7 +70,6 @@ function prune(patches: Record<number, Patch>, items: LibraryItem[]): Record<num
 export default function LibraryDraft({ data }: { data: LibraryData }) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [showOut, setShowOut] = useState(false);
   const [opened, setOpened] = useState<string[]>([]);
   // ?edit=<id> (the old drawer's link): its group open, the card scrolled to.
   const [landing, setLanding] = useState<number | null>(null);
@@ -138,10 +137,9 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
     ...items.map((i) => ({ key: `e${i.id}`, id: i.id, name: i.name, group: slugs.has(i.group) ? i.group : "other", video: i.video, archived: i.archived, pending: false })),
     ...adding.filter((a) => a.id == null || !known.has(a.id)).map((a) => ({ key: a.key, id: a.id ?? 0, name: a.name, group: a.group, video: null, archived: false, pending: true })),
   ];
-  const outCount = items.filter((i) => i.archived).length;
   const needle = q.trim().toLowerCase();
   // A link to one that is taken out still lands on it (that card alone shows, greyed).
-  const shown = rows.filter((r) => (showOut || !r.archived || (!r.pending && r.id === landing)) && (!needle || r.name.toLowerCase().includes(needle)));
+  const shown = rows.filter((r) => (!r.archived || (!r.pending && r.id === landing)) && (!needle || r.name.toLowerCase().includes(needle)));
   const sections = data.groups.map((g) => ({ ...g, rows: shown.filter((r) => r.group === g.slug).sort(byName) })).filter((s) => !needle || s.rows.length > 0);
   const landingGroup = landing != null ? (rows.find((r) => !r.pending && r.id === landing)?.group ?? null) : null;
   const isOpen = (slug: string) => !!needle || slug === landingGroup || opened.includes(slug);
@@ -287,17 +285,11 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
                   e.preventDefault();
                 }}
               >
-                {/* The video's own actions here (23 Oct, Alex: no words under the name): Edit opens the demo pop-up, Delete asks first. */}
+                {/* Edit, Move to, Delete (23 Oct, Alex: "we have delete twice"): the video is removed in its own pop-up, which asks first. */}
                 {r.video && (
-                  <>
-                    <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", id: r.id })}>
-                      <PencilIcon /> Edit video
-                    </DropdownMenuItem>
-                    <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "remove", id: r.id })}>
-                      <TrashIcon /> Delete video
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
+                  <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", id: r.id })}>
+                    <PencilIcon /> Edit video
+                  </DropdownMenuItem>
                 )}
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
@@ -315,7 +307,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "takeout", id: r.id })}>
-                  <TrashIcon /> Take out
+                  <TrashIcon /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -364,39 +356,13 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
             </PopoverTrigger>
             {panel === "head" && <CreatePanel label="New exercise" align="end" groups={groupOptions} group={data.groups[0]?.slug ?? "other"} taken={exerciseTaken} onAdd={addExercise} onCancel={() => setPanel(null)} />}
           </Popover>
-          <Popover open={panel === "group"} onOpenChange={(o) => !o && setPanel(null)}>
-            <PopoverAnchor asChild>
-              <span className="lbx-more">
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="trn-more" aria-label="More for the library">
-                    <MoreIcon />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="pb-menu"
-                    onCloseAutoFocus={(e) => {
-                      if (!keepFocus.current) return;
-                      keepFocus.current = false;
-                      e.preventDefault();
-                    }}
-                  >
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        keepFocus.current = true;
-                        setPanel("group");
-                      }}
-                    >
-                      <PlusIcon /> New group
-                    </DropdownMenuItem>
-                    {(outCount > 0 || showOut) && (
-                      <DropdownMenuItem onSelect={() => setShowOut((v) => !v)}>
-                        <EyeIcon /> {showOut ? "Hide taken out" : "Show taken out"}
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </span>
-            </PopoverAnchor>
+          {/* + Group beside + Exercise (23 Oct, Alex: no "Show taken out", so the ⋯ held New group alone). */}
+          <Popover open={panel === "group"} onOpenChange={(o) => setPanel(o ? "group" : null)}>
+            <PopoverTrigger asChild>
+              <button type="button" className={`trn-pill${panel === "group" ? " on" : ""}`}>
+                <PlusIcon /> Group
+              </button>
+            </PopoverTrigger>
             {panel === "group" && <CreatePanel label="New group" align="end" taken={groupTaken} onAdd={(label) => addGroup(label)} onCancel={() => setPanel(null)} />}
           </Popover>
         </div>
@@ -511,9 +477,9 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         )}
         {dlg?.kind === "takeout" && dlgItem && (
           <ConfirmDialog
-            title={`Take out ${dlgItem.name}?`}
+            title={`Delete ${dlgItem.name}?`}
             description="Programmes that have it keep it."
-            confirm="Take out"
+            confirm="Delete"
             danger
             onConfirm={() => {
               setDlg(null);

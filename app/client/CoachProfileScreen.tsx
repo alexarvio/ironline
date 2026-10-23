@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { degreeOf, firstNameOf, type CoachProfileView } from "../lib/coachProfileView";
 import { CalendarIcon, ChevronLeftIcon } from "../components/icons";
+import { pic } from "../lib/pic";
 
 // The coach's profile as the client reads it, pushed over the Account tab,
 // and the same component the coach sees in the admin's live preview. It
@@ -161,7 +162,7 @@ function FullProfile({ profile, onBack, onBook }: { profile: CoachProfileView; o
             <div
               className="cpf-hero-img"
               style={{
-                backgroundImage: `url("${profile.heroPath}")`,
+                backgroundImage: `url("${pic(profile.heroPath, 1080)}")`,
                 transform: `translateY(${y * 0.22}px) scale(${1 + clamp(y, 0, 412) * 0.00012})`,
               }}
             />
@@ -282,7 +283,7 @@ function FullProfile({ profile, onBack, onBook }: { profile: CoachProfileView; o
               <div className="cpf-outside-row">
                 {profile.candidPath && (
                   // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-                  <img className="cpf-candid" src={profile.candidPath} alt="" />
+                  <img className="cpf-candid" src={pic(profile.candidPath, 480)} alt="" />
                 )}
                 <p className="cpf-outside-text">{profile.outside}</p>
               </div>

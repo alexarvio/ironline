@@ -167,15 +167,12 @@ export default function DemoVideoDialog({
           ✕
         </button>
       </div>
-      <DialogDescription className="dmvh-what">
-        Demo video
-        {clientsUsing > 1 ? (
-          <>
-            <Sep />
-            {clientsUsing} clients
-          </>
-        ) : null}
-      </DialogDescription>
+      {/* No "Demo video" under the title (23 Oct, Alex): only the fact worth saying, how many clients have it; else words for a screen reader. */}
+      {clientsUsing > 1 ? (
+        <DialogDescription className="dmvh-what">{clientsUsing} clients</DialogDescription>
+      ) : (
+        <DialogDescription className="sr-only">Demo video</DialogDescription>
+      )}
 
       <div className="dmvh-body">
         {preview && previewProvider && (

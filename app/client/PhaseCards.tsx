@@ -8,6 +8,7 @@ import CardPictureSheet, { useLongPress, type CardCovers } from "./CardPictureSh
 import PictureCycle from "./PictureCycle";
 import CheckInDialog, { type CheckInForm } from "./CheckInDialog";
 import { FEATURES } from "../lib/features";
+import { pic } from "../lib/pic";
 
 /** The coach's goals for a phase, none while phase goals are off (23 Oct, Alex: To focus on replaces them). */
 const goalsOf = (ph: HomePhase) => (FEATURES.phaseGoals ? ph.objectives : []);
@@ -218,7 +219,8 @@ function Cover({ ph, eager }: { ph: HomePhase; eager?: boolean }) {
     return () => document.removeEventListener("visibilitychange", on);
   }, [failed]);
   if (!ph.coverUrl || failed) return null;
-  const src = attempt > 0 ? `${ph.coverUrl}${ph.coverUrl.includes("?") ? "&" : "?"}r=${attempt}` : ph.coverUrl;
+  const cover = pic(ph.coverUrl, 1080);
+  const src = attempt > 0 ? `${cover}${cover.includes("?") ? "&" : "?"}r=${attempt}` : cover;
   // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route, or a public file
   return <img key={src} ref={ref} className="pc-cover" src={src} alt="" draggable={false} loading={eager ? "eager" : "lazy"} onError={retry} />;
 }

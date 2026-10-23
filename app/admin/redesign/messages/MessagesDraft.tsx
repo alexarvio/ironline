@@ -12,6 +12,7 @@ import { ChatVideo, sized } from "../../../components/ChatMedia";
 import { chatDraftThreadAction } from "./actions";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
+import { pic } from "../../../lib/pic";
 import type { LinkTargets } from "../../../lib/queries";
 import { ConfirmDialog } from "../training/TrainingDraft";
 import { Sep, SepJoin } from "../Sep";
@@ -442,7 +443,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
             <span className="rm-avatar" aria-hidden="true">
               {plan.avatarPath ? (
                 // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
-                <img src={plan.avatarPath} alt="" />
+                <img src={pic(plan.avatarPath, 96)} alt="" />
               ) : (
                 firstName.charAt(0).toUpperCase()
               )}

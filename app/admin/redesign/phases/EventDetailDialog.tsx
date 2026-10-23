@@ -5,6 +5,7 @@ import type React from "react";
 import Link from "next/link";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { repeatWords } from "../../../lib/eventRepeat";
+import { pic } from "../../../lib/pic";
 import { chromeOf, KindIcon, rgbOf, standingParts } from "../plan/EventsCard";
 import { eventIsPast } from "../plan/timelineParts";
 import { SepJoin } from "../Sep";
@@ -75,7 +76,7 @@ export default function EventDetailDialog({ client, event: e, today, coach }: { 
                 <span className="dlh-label">Added by</span>
                 <span className="evd-text evd-by">
                   <span className="evd-face" aria-hidden="true">
-                    {by.photo ? <img src={by.photo} alt="" /> : (by.initial.trim().charAt(0) || "?").toUpperCase()}
+                    {by.photo ? <img src={pic(by.photo, 96)} alt="" /> : (by.initial.trim().charAt(0) || "?").toUpperCase()}
                   </span>
                   {/* Who, not when (23 Oct, Alex). */}
                   {by.name}

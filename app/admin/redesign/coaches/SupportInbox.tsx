@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Fold } from "../Fold";
+import { pic } from "../../../lib/pic";
 import type { SupportInboxRow, SupportLine } from "../../../lib/support";
 import { loadSupportInboxAction, loadSupportThreadForOwnerAction, markSupportProblemDoneAction, markSupportThreadSeenAction, replySupportAction } from "../../../lib/supportActions";
 import { SupportLineBox, SupportThread, type SupportPending } from "../settings/SupportSection";
@@ -137,7 +138,7 @@ export default function SupportInbox({ initial }: { initial: SupportInboxRow[] }
                   <span className="sup-face" aria-hidden="true">
                     {r.avatarPath ? (
                       // eslint-disable-next-line @next/next/no-img-element -- the coach's own upload, served by the app
-                      <img src={r.avatarPath} alt="" />
+                      <img src={pic(r.avatarPath, 96)} alt="" loading="lazy" decoding="async" />
                     ) : (
                       r.name.charAt(0).toUpperCase()
                     )}

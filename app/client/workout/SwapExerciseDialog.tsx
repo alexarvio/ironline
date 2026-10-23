@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { createPortal } from "react-dom";
 import { groupColour } from "../../lib/muscleGroups";
+import { pic } from "../../lib/pic";
 import { useKeyboardInset } from "../useKeyboardInset";
 
 // "Swap exercise" (14 Oct, after the New event and gym pop-ups): a centred
@@ -117,7 +118,7 @@ export default function SwapExerciseDialog({
                 <span className="sw-avatar" aria-hidden="true">
                   {coach.photo ? (
                     // eslint-disable-next-line @next/next/no-img-element -- the coach's upload
-                    <img src={coach.photo} alt="" />
+                    <img src={pic(coach.photo, 96)} alt="" />
                   ) : (
                     coach.firstName.slice(0, 1).toUpperCase()
                   )}

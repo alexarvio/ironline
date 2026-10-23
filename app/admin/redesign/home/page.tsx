@@ -1,5 +1,6 @@
 import { requireCoach } from "../../../lib/auth";
 import { touchPresence } from "../../../lib/presence";
+import { startTiming } from "../../../lib/timing";
 import { loadHome, loadMeasurements, loadMeetings, loadMessages, loadNutrition, loadPictures, loadPlan, loadRail, loadTraining, pickClient, loadInvoices, loadDots } from "../loaders";
 import RedesignShell from "../RedesignShell";
 import { tabFromParams } from "../tabs";
@@ -26,12 +27,15 @@ import LookFlag from "../LookFlag";
 export const dynamic = "force-dynamic";
 
 export default async function HomeRedesignPage({ searchParams }: { searchParams: Promise<{ client?: string; week?: string; program?: string; phase?: string; tab?: string }> }) {
-  const coach = await requireCoach();
+  // Each loader timed (app/lib/timing.ts, /api/timing): measuring only, the props are what they were.
+  const t = startTiming("home");
+  const coach = await t.time("auth", () => requireCoach());
   const params = await searchParams;
-  const { client, firstName } = pickClient(coach.id, params.client);
-  touchPresence(coach, client ? `${firstName} · Home` : "Clients");
-  if (!client) return <NoClients rail={loadRail(coach)} />;
-  return (
+  const { client, firstName } = t.time("pickClient", () => pickClient(coach.id, params.client));
+  t.client(client?.id);
+  t.time("presence", () => touchPresence(coach, client ? `${firstName} · Home` : "Clients"));
+  if (!client) return t.end(<NoClients rail={t.time("rail", () => loadRail(coach))} />);
+  return t.end(
     <>
     {/* ?look=hairline: the admin in the client app's language, as a preview (17 Oct). */}
     <LookFlag />
@@ -39,18 +43,18 @@ export default async function HomeRedesignPage({ searchParams }: { searchParams:
       clientId={client.id}
       clientName={client.name ?? "Client"}
       firstName={firstName}
-      rail={loadRail(coach)}
-      dots={loadDots(client.id)}
+      rail={t.time("rail", () => loadRail(coach))}
+      dots={t.time("dots", () => loadDots(client.id))}
       initialTab={tabFromParams(params.tab, "home")}
-      home={loadHome(client.id)}
-      training={loadTraining(coach.id, client.id, params)}
-      nutrition={loadNutrition(client.id, params)}
-      measurements={loadMeasurements(client.id, params)}
-      pictures={loadPictures(client.id)}
-      meetings={loadMeetings(client.id)}
-      plan={loadPlan(client.id)}
-      messages={loadMessages(client.id)}
-      invoices={loadInvoices(coach.id, client.id)}
+      home={t.time("home", () => loadHome(client.id))}
+      training={t.time("training", () => loadTraining(coach.id, client.id, params))}
+      nutrition={t.time("nutrition", () => loadNutrition(client.id, params))}
+      measurements={t.time("measurements", () => loadMeasurements(client.id, params))}
+      pictures={t.time("pictures", () => loadPictures(client.id))}
+      meetings={t.time("meetings", () => loadMeetings(client.id))}
+      plan={t.time("plan", () => loadPlan(client.id))}
+      messages={t.time("messages", () => loadMessages(client.id))}
+      invoices={t.time("invoices", () => loadInvoices(coach.id, client.id))}
     />
     </>
   );

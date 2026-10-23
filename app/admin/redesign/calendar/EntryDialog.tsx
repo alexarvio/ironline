@@ -15,6 +15,7 @@ import { paletteOf, type Category } from "../palette";
 import type { CalEntry } from "./CalendarDay";
 import { TRAINING_ICON } from "../../../lib/eventTypes";
 import { isClientCall, takesClient } from "../../../lib/calendarKinds";
+import { pic } from "../../../lib/pic";
 
 // The Calendar's entry pop-up, built as the meeting scheduler (22 Oct, the
 // .npd pattern): the title and the category as its tinted tag; the
@@ -99,7 +100,7 @@ function Face({ name, src }: { name: string; src: string | null }) {
     <span className="cal-face" aria-hidden="true">
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-        <img src={src} alt="" />
+        <img src={pic(src, 96)} alt="" loading="lazy" decoding="async" />
       ) : (
         name.trim().charAt(0).toUpperCase()
       )}

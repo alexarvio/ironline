@@ -7,6 +7,7 @@ import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction 
 import { eventTypeOf, EVENT_TYPES, type EventTypeId } from "../../lib/eventTypes";
 import { dayOf, daysBetween, shortDay } from "../../lib/eventDates";
 import { isoWeekday, nextOccurrence, repeatWords } from "../../lib/eventRepeat";
+import { pic } from "../../lib/pic";
 import { ChevronLeftIcon } from "../../components/icons";
 import { useCoachIdentity } from "../CheckInContext";
 import type { HomeEvent, HomeEvents } from "../EventsCard";
@@ -478,7 +479,7 @@ function EventRow(p: RowProps) {
               </svg>
             )}
             <span className="evp-by" role="img" aria-label={`Added by ${who}`}>
-              {photo ? <img src={photo} alt="" /> : (who || "?").trim().charAt(0).toUpperCase()}
+              {photo ? <img src={pic(photo, 96)} alt="" /> : (who || "?").trim().charAt(0).toUpperCase()}
             </span>
           </span>
           <span className="evp-when">{when}</span>

@@ -22,6 +22,7 @@ import { MonthRange } from "../MonthRange";
 import { SortableItem, SortableList } from "../Sortable";
 import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
 import { dayMonth, dayMonthTime, logDate } from "../../../lib/dayMonth";
+import { pic } from "../../../lib/pic";
 import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
 
 // The Progress pictures tab (21 Oct, Alex), built as Training's header:
@@ -706,7 +707,7 @@ function Tile({ cell, sheet, label, tag, emptyText, onOpen }: { cell: Cell | nul
       {cell?.src ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- client-uploaded file */}
-          <img src={cell.src} alt="" />
+          <img src={pic(cell.src, 480)} alt="" decoding="async" />
           {tag && <span className="rp-datetag">{tag}</span>}
         </>
       ) : (
@@ -1037,7 +1038,7 @@ function PhotoDialog({ sheet, sheets, slotId, onMove }: { sheet: Sheet; sheets: 
         {cells.map((c) => (
           <button key={c.slotId} type="button" className={`rp-mini${c.slotId === cell.slotId ? " on" : ""}`} onClick={() => onMove(sheet.period, c.slotId)} aria-label={c.label} aria-current={c.slotId === cell.slotId}>
             {/* eslint-disable-next-line @next/next/no-img-element -- client-uploaded file */}
-            <img src={c.src ?? ""} alt="" />
+            <img src={pic(c.src ?? "", 480)} alt="" decoding="async" />
             <small>{c.label}</small>
           </button>
         ))}
@@ -1049,7 +1050,7 @@ function PhotoDialog({ sheet, sheets, slotId, onMove }: { sheet: Sheet; sheets: 
             {earlier.map(({ sheet: x, cell: c }) => (
               <button key={x.period} type="button" className="rp-mini" onClick={() => onMove(x.period, c.slotId)} aria-label={`${c.label}, ${x.title}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- client-uploaded file */}
-                <img src={c.src ?? ""} alt="" />
+                <img src={pic(c.src ?? "", 480)} alt="" decoding="async" />
                 <small>{x.title}</small>
               </button>
             ))}

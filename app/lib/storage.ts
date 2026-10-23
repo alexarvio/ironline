@@ -130,8 +130,12 @@ export async function deleteUpload(publicPath: string | null | undefined) {
   const b = bucket();
   const key = publicPath ? keyOf(publicPath) : null;
   if (!key) return;
-  // Its small copies go with it (19 Oct), wherever they were made, and a video's poster (21 Oct).
-  const smalls = [...SMALL_WIDTHS.map((w) => smallKey(key, w)), posterKey(key)].filter((k): k is string => !!k);
+  // Its small copies go with it (19 Oct), wherever they were made, and a video's poster (21 Oct);
+  // the ones of this version too (23 Oct: a stamped path's copies carry its stamp).
+  const v = versionOf(publicPath);
+  const smalls = [...SMALL_WIDTHS.flatMap((w) => [smallKey(key, w), v ? smallKey(key, w, v) : null]), posterKey(key)].filter(
+    (k): k is string => !!k
+  );
   for (const k of smalls) dropDiskCopy(k);
   if (!b) return;
   for (const k of [key, ...smalls]) {
@@ -150,14 +154,30 @@ export async function deleteUpload(publicPath: string | null | undefined) {
 // wide. "/uploads/<key>?w=1080" answers with a WebP that wide, made once with
 // sharp and kept beside the original in the same client folder (so erasing a
 // client takes them too): "chat/9/abc.jpg" -> "chat/9/_w1080/abc.webp".
-export const SMALL_WIDTHS = [480, 1080];
+// 96 (23 Oct, Alex: "the profile pics load by chunks"): the faces, drawn at
+// 48 px at most, were each the whole phone photo. A path stamped with its
+// version ("avatars/9/avatar.jpg?v=1729…", a replaced photo keeps its name)
+// keeps that stamp in its copy's name, "avatars/9/_w96/avatar-v1729….webp",
+// so a new photo never shows the old one's copy.
+export const SMALL_WIDTHS = [96, 480, 1080];
+/** What the chat draws (prepareChatMedia makes these at the send); faces are not chat pictures. */
+const CHAT_WIDTHS = SMALL_WIDTHS.filter((w) => w >= 480);
 
-export function smallKey(key: string, w: number): string | null {
+/** The "?v=" stamp of a stored path or a request's query, when it is one we wrote (Date.now()). */
+export function versionOf(pathOrStamp: string | null | undefined): string | null {
+  if (!pathOrStamp) return null;
+  const at = pathOrStamp.indexOf("?");
+  const v = pathOrStamp.startsWith("/") ? (at < 0 ? null : new URLSearchParams(pathOrStamp.slice(at + 1)).get("v")) : pathOrStamp;
+  return v && /^\d{1,16}$/.test(v) ? v : null;
+}
+
+export function smallKey(key: string, w: number, v?: string | null): string | null {
   if (!/\.(jpe?g|png|webp)$/i.test(key)) return null;
   const parts = key.split("/");
   if (parts.length < 3) return null;
   const [kind, owner, ...rest] = parts;
-  return `${kind}/${owner}/_w${w}/${rest.join("/").replace(/\.[^.]+$/, "")}.webp`;
+  const stamp = versionOf(v);
+  return `${kind}/${owner}/_w${w}/${rest.join("/").replace(/\.[^.]+$/, "")}${stamp ? `-v${stamp}` : ""}.webp`;
 }
 
 /** The original's bytes, from the bucket or the disk; null when it is nowhere. */
@@ -180,7 +200,13 @@ async function readUpload(key: string): Promise<Buffer | null> {
 // every restart, and each new one was downloaded again, every picture of the
 // thread on every open.
 const keptForGood = (key: string) => /^(chat|videos)\//.test(key);
-const smallCache = (key: string) => (keptForGood(key) ? "private, max-age=31536000, immutable" : "private, max-age=86400");
+const FOR_GOOD = "private, max-age=31536000, immutable";
+const A_DAY = "private, max-age=86400";
+const smallCache = (key: string) => (keptForGood(key) ? FOR_GOOD : A_DAY);
+// A small copy is for good too when its name is never used again (23 Oct): a
+// card picture's and a support screenshot's are a stamp each, and a stamped
+// path ("?v=") names one version of a photo that keeps its file name.
+const namedOnce = (key: string) => keptForGood(key) || /^(covers|support)\//.test(key);
 const webp = (bytes: Buffer, cache: string) =>
   new Response(new Uint8Array(bytes), { headers: { "Content-Type": "image/webp", "Content-Length": String(bytes.length), "Cache-Control": cache } });
 
@@ -217,21 +243,21 @@ async function makeSmall(key: string, small: string, w: number, original?: Buffe
 }
 
 /**
- * The small copy as a response: the bytes for a file kept for good, else a
- * link into the bucket once it is there, or the bytes. Made at the send for
- * the chat (prepareChatMedia), else on the first ask. Null (serve the
- * original) when the file is not a picture, cannot be read, or sharp is missing.
+ * The small copy as a response, always its bytes through the app (23 Oct: a
+ * link into the bucket is signed afresh every few minutes and on every
+ * restart, and the browser fetched each face again with every new one). For
+ * good when the copy's name is never used again (a stamped "?v=" or a name
+ * made once), else for a day. Made at the send for the chat
+ * (prepareChatMedia), else on the first ask. Null (serve the original) when
+ * the file is not a picture, cannot be read, or sharp is missing.
  */
-export async function smallCopy(key: string, w: number): Promise<Response | null> {
-  const small = smallKey(key, w);
+export async function smallCopy(key: string, w: number, v?: string | null): Promise<Response | null> {
+  const stamp = versionOf(v);
+  const small = smallKey(key, w, stamp);
   if (!small || !SMALL_WIDTHS.includes(w)) return null;
-  if (!keptForGood(key)) {
-    const link = await bucketLink(small);
-    if (link) return new Response(null, { status: 302, headers: { Location: link, "Cache-Control": `private, max-age=${LINK_CACHE_SECONDS}` } });
-  }
   try {
     const bytes = (await readUpload(small)) ?? (await once(small, () => makeSmall(key, small, w)));
-    return bytes ? webp(bytes, smallCache(key)) : null;
+    return bytes ? webp(bytes, stamp || namedOnce(key) ? FOR_GOOD : A_DAY) : null;
   } catch (error) {
     console.error(`[uploads] no small copy of ${key}:`, error instanceof Error ? error.message : error);
     return null;
@@ -301,10 +327,10 @@ export async function prepareChatMedia(publicPath: string, type: "image" | "vide
       if (poster) await once(poster, () => makePoster(key, poster));
       return;
     }
-    if (!smallKey(key, SMALL_WIDTHS[0])) return;
+    if (!smallKey(key, CHAT_WIDTHS[0])) return;
     const original = await readUpload(key);
     if (!original) return;
-    for (const w of SMALL_WIDTHS) {
+    for (const w of CHAT_WIDTHS) {
       const small = smallKey(key, w)!;
       await once(small, () => makeSmall(key, small, w, original));
     }

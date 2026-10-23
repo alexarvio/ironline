@@ -1,6 +1,7 @@
 "use client";
 
 import { useCoachIdentity } from "./CheckInContext";
+import { pic } from "../lib/pic";
 
 // The coach's small round picture, put in front of anything they wrote:
 // the message card on Home, each bubble in their feed, a note on an
@@ -14,7 +15,7 @@ export default function CoachMark({ size = "sm" }: { size?: "sm" | "lg" }) {
     <span className={`coach-mark ${size}`} aria-hidden="true">
       {coach?.photoPath ? (
         // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-        <img src={coach.photoPath} alt="" />
+        <img src={pic(coach.photoPath, 96)} alt="" />
       ) : (
         initial
       )}

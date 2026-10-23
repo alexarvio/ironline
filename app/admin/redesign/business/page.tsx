@@ -1,5 +1,6 @@
 import { requireCoach } from "../../../lib/auth";
 import { getBusinessBoard, noteBusinessLooked } from "../../../lib/businessBoard";
+import { startTiming } from "../../../lib/timing";
 import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import ChatDock from "../ChatDock";
@@ -20,14 +21,16 @@ import "./business.css";
 export const dynamic = "force-dynamic";
 
 export default async function BusinessPage() {
-  const coach = await requireCoach();
+  // Each loader timed (app/lib/timing.ts, /api/timing): measuring only, the props are what they were.
+  const t = startTiming("business");
+  const coach = await t.time("auth", () => requireCoach());
   // The visit is noted first, so Since reads from the visit before this one.
-  noteBusinessLooked(coach.id);
-  const board = getBusinessBoard(coach.id);
-  return (
+  t.time("noteBusinessLooked", () => noteBusinessLooked(coach.id));
+  const board = t.time("businessBoard", () => getBusinessBoard(coach.id));
+  return t.end(
     <div className="rd-frame">
-      <RedesignRail rail={loadRail(coach)} clientId={0} />
-      <ChatDock chats={loadChatDock(coach)} />
+      <RedesignRail rail={t.time("rail", () => loadRail(coach))} clientId={0} />
+      <ChatDock chats={t.time("chatDock", () => loadChatDock(coach))} />
       <div className="rd-page">
         <BusinessDraft board={board} />
       </div>

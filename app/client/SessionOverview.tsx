@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useDismiss } from "./useDismiss";
 import { useKeyboardInset } from "./useKeyboardInset";
 import { saveSkipReasonAction } from "../lib/actions";
+import { pic } from "../lib/pic";
 import { ChevronLeftIcon } from "../components/icons";
 import GymPickerDialog from "./GymPickerDialog";
 import { Bars } from "./Bars";
@@ -115,7 +116,7 @@ export default function SessionOverview({
 
   return (
     <div className={`app-layer app-layer-push so-screen${still ? " still" : ""}`} role="dialog" aria-label={day.title}>
-      <header className="so-head" style={picture ? { backgroundImage: `url("${picture}")`, backgroundPosition: "center" } : undefined}>
+      <header className="so-head" style={picture ? { backgroundImage: `url("${pic(picture, 1080)}")`, backgroundPosition: "center" } : undefined}>
         <div className="so-head-row">
         <button type="button" className="so-back" onClick={onBack} aria-label="Back to training">
           <ChevronLeftIcon />
