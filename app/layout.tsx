@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { applyDueClientReminders, applyDueProgramDeployments } from "./lib/queries";
+import { applyDueClientReminders } from "./lib/queries";
+import { applyDueProgramDeploymentsSometimes } from "./lib/dueJobs";
 import { startTiming } from "./lib/timing";
 import { ClerkProvider } from "@clerk/nextjs";
 import { clerkOn } from "./lib/clerk";
@@ -72,7 +73,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // that time, checked here since every route passes through this layout.
   // Timed as "layout" (23 Oct, Alex: the admin felt slow): every request pays for these two, before any screen.
   const timer = startTiming("layout");
-  timer.time("applyDueProgramDeployments", () => applyDueProgramDeployments());
+  // At most once a minute (dueJobs.ts): it took ~220 ms on every page (23 Oct).
+  timer.time("applyDueProgramDeployments", () => applyDueProgramDeploymentsSometimes());
   timer.time("applyDueClientReminders", () => applyDueClientReminders());
   timer.end(null);
 
