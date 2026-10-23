@@ -233,10 +233,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // The product's six columns, six at a time; what the client did and the
   // two trends are always there. Cardio has its own four.
   const [picked, setCols] = useState({ sets: true, reps: true, weight: true, rpe: true, tempo: false, rest: false });
+  // The columns the coach has turned on or off themselves: their choice wins over "in use".
+  const [touched, setTouched] = useState<Partial<Record<keyof typeof picked, boolean>>>({});
   const [ccols, setCcols] = useState({ time: true, pace: true, incline: true, distance: true });
   const [colTab, setColTab] = useState<"exercises" | "cardio">("exercises");
-  // A column is on when the coach ticked it, or when any exercise in the
-  // week has something in it: a tempo the coach set is never hidden.
   const [sessions, setSessions] = useState<DraftSession[]>(program.sessions);
   const [, startTransition] = useTransition();
   // Every save goes to the server, then the page re-reads; what is on screen
@@ -265,7 +265,14 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
     tempo: sessions.some((x) => x.rows.some((r) => !!r.tempo)),
     rest: sessions.some((x) => x.rows.some((r) => r.rest != null)),
   };
-  const cols = { ...picked, rpe: picked.rpe || inUse.rpe, tempo: picked.tempo || inUse.tempo, rest: picked.rest || inUse.rest };
+  // RPE, Tempo and Rest show by themselves while in use, until the coach turns one off: then it stays off, as Sets,
+  // Weight and Reps do (23 Oct, Alex: "I can toggle the others, I can't for RPE"). The values stay; only the table hides.
+  const cols = {
+    ...picked,
+    rpe: touched.rpe ? picked.rpe : picked.rpe || inUse.rpe,
+    tempo: touched.tempo ? picked.tempo : picked.tempo || inUse.tempo,
+    rest: touched.rest ? picked.rest : picked.rest || inUse.rest,
+  };
   const onCount = Object.values(cols).filter(Boolean).length;
   const [gyms, setGyms] = useState<Gym[]>(program.gyms);
   const gymsKey = JSON.stringify(program.gyms);
@@ -982,12 +989,14 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                         <DropdownMenuCheckboxItem
                           key={k}
                           checked={cols[k]}
-                          disabled={(!cols[k] && onCount >= MAX_COLS) || (k in inUse && inUse[k as keyof typeof inUse])}
-                          onCheckedChange={(v) => setCols((c) => ({ ...c, [k]: !!v }))}
+                          disabled={!cols[k] && onCount >= MAX_COLS}
+                          onCheckedChange={(v) => {
+                            setCols((c) => ({ ...c, [k]: !!v }));
+                            setTouched((t) => ({ ...t, [k]: true }));
+                          }}
                           onSelect={(e) => e.preventDefault()}
                         >
                           {label}
-                          {k in inUse && inUse[k as keyof typeof inUse] && <small className="rd-menu-inuse">in use</small>}
                         </DropdownMenuCheckboxItem>
                       ))}
                       <DropdownMenuSeparator />
