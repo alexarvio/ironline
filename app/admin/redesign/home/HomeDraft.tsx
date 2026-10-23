@@ -960,7 +960,7 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
             <b key="now">{kg1(latest)}</b>,
             w.change != null && w.since ? (
               <span key="change">
-                <b>{signed1(w.change)} kg</b> since {dayMonth(w.since)}
+                <b>{signed1(w.change)} kg</b>
               </span>
             ) : null,
           ]}
@@ -996,12 +996,37 @@ function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: 
   const ys = points.map((p) => ((hi - p.value) / (hi - lo)) * 100);
   // The line in runs, each reading joined to the one before: solid where it came on time, dashed where weigh-ins were
   // missed between the two. A run goes on while the style does, so its corners stay joined.
+  // Smooth (23 Oct, Alex: "a bit smoother, its very still now"): a curve through every reading that never bends past one,
+  // so a dip or a peak is where the reading is (monotone cubic, Fritsch-Carlson tangents).
   const pt = (i: number) => `${xs[i].toFixed(2)} ${ys[i].toFixed(2)}`;
+  const slope = xs.slice(0, last).map((x, k) => (xs[k + 1] - x > 0 ? (ys[k + 1] - ys[k]) / (xs[k + 1] - x) : 0));
+  const tan = xs.map((_, k) => (k === 0 ? (slope[0] ?? 0) : k === last ? slope[last - 1] : slope[k - 1] * slope[k] <= 0 ? 0 : (slope[k - 1] + slope[k]) / 2));
+  for (let k = 0; k < last; k++) {
+    if (slope[k] === 0) {
+      tan[k] = 0;
+      tan[k + 1] = 0;
+      continue;
+    }
+    const a = tan[k] / slope[k];
+    const b = tan[k + 1] / slope[k];
+    const h = a * a + b * b;
+    if (h > 9) {
+      const t = 3 / Math.sqrt(h);
+      tan[k] = t * a * slope[k];
+      tan[k + 1] = t * b * slope[k];
+    }
+  }
+  const curve = (i: number) => {
+    const dx = (xs[i] - xs[i - 1]) / 3;
+    const c1 = `${(xs[i - 1] + dx).toFixed(2)} ${(ys[i - 1] + tan[i - 1] * dx).toFixed(2)}`;
+    const c2 = `${(xs[i] - dx).toFixed(2)} ${(ys[i] - tan[i] * dx).toFixed(2)}`;
+    return `C${c1} ${c2} ${pt(i)} `;
+  };
   const line = { solid: "", dashed: "" };
   for (let i = 1; i <= last; i++) {
     const style = points[i].missed ? "dashed" : "solid";
     const goesOn = i > 1 && points[i - 1].missed === points[i].missed;
-    line[style] += `${goesOn ? "" : `M${pt(i - 1)} `}L${pt(i)} `;
+    line[style] += `${goesOn ? "" : `M${pt(i - 1)} `}${curve(i)}`;
   }
   const anyMissed = line.dashed !== "";
   // A dot a reading while they can be told apart (up to 20); the latest always, bigger.
