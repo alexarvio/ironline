@@ -47,7 +47,7 @@ const previewGoals = (goals: string[]) => {
 
 const fill = (g: string[]) => Array.from({ length: PHASE_OBJECTIVES_MAX }, (_, i) => g[i] ?? "");
 
-export function GoalsNotePills({ firstName, phaseId, goals, note, area = "training", saveNote }: { firstName: string; /** None on a sheet without a phase (Nutrition's client-level one): the note alone. */ phaseId: number | null; goals: string[]; note: string; /** The tab it sits on (Training, Lifestyle, Nutrition), for the toast. */ area?: string; /** Where the note goes when it isn't the phase's own (Nutrition's is its targets' note, 21 Oct). */ saveNote?: (text: string) => Promise<unknown> }) {
+export function GoalsNotePills({ firstName, phaseId, goals, note, area = "training", saveNote, locked = false }: { /** An ended programme (23 Oct, Alex): the goals and the note to read, not to change; a pill with nothing in it goes. */ locked?: boolean; firstName: string; /** None on a sheet without a phase (Nutrition's client-level one): the note alone. */ phaseId: number | null; goals: string[]; note: string; /** The tab it sits on (Training, Lifestyle, Nutrition), for the toast. */ area?: string; /** Where the note goes when it isn't the phase's own (Nutrition's is its targets' note, 21 Oct). */ saveNote?: (text: string) => Promise<unknown> }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [open, setOpen] = useState<"goals" | "note" | null>(null);
@@ -115,6 +115,7 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
   const pill = (k: "goals" | "note") => {
     const set = k === "goals" ? savedGoals.length > 0 : !!savedNote;
     const name = k === "goals" ? "Phase goals" : `Note to ${firstName}`;
+    if (locked && !set) return null;
     return (
       <button type="button" className={`trn-pill${set ? " set" : ""}${open === k ? " on" : ""}`} aria-haspopup="dialog" aria-expanded={open === k} aria-label={`${name}, ${set ? "set" : "not set"}`} onClick={() => openIt(k)}>
         {k === "goals" ? <TargetIcon /> : <ChatIcon />}
@@ -143,12 +144,13 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
           </div>
           {open === "goals" ? (
             <ul className="trn-goals">
-              {rows.map((g, i) => (
+              {(locked ? savedGoals : rows).map((g, i) => (
                 <li key={i}>
                   <i aria-hidden="true" />
                   <input
                     value={g}
-                    autoFocus={i === 0}
+                    readOnly={locked}
+                    autoFocus={i === 0 && !locked}
                     maxLength={PHASE_OBJECTIVE_CHARS}
                     onChange={(e) => setRows((r) => r.map((x, j) => (j === i ? e.target.value : x)))}
                     onKeyDown={(e) => {
@@ -158,7 +160,7 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
                       if (next) next.focus();
                       else if (changed) save();
                     }}
-                    placeholder={i === 0 ? "What this phase is for" : "Another goal (optional)"}
+                    placeholder={locked ? undefined : i === 0 ? "What this phase is for" : "Another goal (optional)"}
                     aria-label={`Goal ${i + 1}`}
                   />
                 </li>
@@ -170,7 +172,8 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
               // The line under it only once something is typed: it separates the text from Cancel and Save (20 Oct, Alex).
               className={`trn-pop-line${changed ? " typed" : ""}`}
               value={text}
-              autoFocus
+              readOnly={locked}
+              autoFocus={!locked}
               rows={1}
               maxLength={1000}
               onChange={(e) => setText(e.target.value)}
@@ -217,10 +220,10 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
 
 type Week = DraftProgram["weeks"][number];
 
-export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onAdd, addFrom, due }: { weeks: Week[]; viewIdx: number; dateOf: (index: number) => string | null; hrefFor: (index: number) => string; isLocal: (index: number) => boolean; onShow: (index: number) => void; /** null: a blank week; else the week it copies. */ onAdd: (from: number | null) => void; /** The weeks offered to copy, first the one before the new week. */ addFrom: { index: number; sessions: number }[]; /** The dot trail (dots.ts): a week with something the coach owes in it. */ due?: (index: number) => boolean }) {
+export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onAdd, canAdd = true, addFrom, due }: { weeks: Week[]; viewIdx: number; dateOf: (index: number) => string | null; hrefFor: (index: number) => string; isLocal: (index: number) => boolean; onShow: (index: number) => void; /** null: a blank week; else the week it copies. */ onAdd: (from: number | null) => void; /** False on an ended programme (23 Oct): every week is done, so no + Week. */ canAdd?: boolean; /** The weeks offered to copy, first the one before the new week. */ addFrom: { index: number; sessions: number }[]; /** The dot trail (dots.ts): a week with something the coach owes in it. */ due?: (index: number) => boolean }) {
   return (
     // One row: up to 8 weeks share it evenly with + Week; more, and the rail scrolls sideways.
-    <div className={`trn-rail${weeks.length > 8 ? " scroll" : ""}`} role="tablist" aria-label="Weeks" style={{ "--trn-cards": weeks.length + 1 } as React.CSSProperties}>
+    <div className={`trn-rail${weeks.length > 8 ? " scroll" : ""}`} role="tablist" aria-label="Weeks" style={{ "--trn-cards": weeks.length + (canAdd ? 1 : 0) } as React.CSSProperties}>
       {weeks.map((w) => {
         const done = w.trained.filter(Boolean).length;
         const total = w.trained.length;
@@ -275,28 +278,30 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
         );
       })}
       {/* + Week opens a white menu whose choice is the action (20 Oct, Alex: the pop-up was too black): Blank, or a copy of the week before it, or of the one on screen. */}
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger className="trn-week add">
-          <span className="trn-week-top">
-            <span className="trn-week-name">+ Week</span>
-          </span>
-          <span className="trn-bars" aria-hidden="true" />
-          <span className="trn-week-foot">
-            <span>{dateOf(weeks.length + 1) ?? "Add one"}</span>
-          </span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="pb-menu trn-addweek-menu">
-          <DropdownMenuItem onSelect={() => onAdd(null)}>Blank</DropdownMenuItem>
-          {addFrom.map((w) => (
-            <DropdownMenuItem key={w.index} onSelect={() => onAdd(w.index)}>
-              Copy Week {w.index}
-              <small className="rd-menu-inuse">
-                {w.sessions} {w.sessions === 1 ? "session" : "sessions"}
-              </small>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {canAdd && (
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger className="trn-week add">
+            <span className="trn-week-top">
+              <span className="trn-week-name">+ Week</span>
+            </span>
+            <span className="trn-bars" aria-hidden="true" />
+            <span className="trn-week-foot">
+              <span>{dateOf(weeks.length + 1) ?? "Add one"}</span>
+            </span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="pb-menu trn-addweek-menu">
+            <DropdownMenuItem onSelect={() => onAdd(null)}>Blank</DropdownMenuItem>
+            {addFrom.map((w) => (
+              <DropdownMenuItem key={w.index} onSelect={() => onAdd(w.index)}>
+                Copy Week {w.index}
+                <small className="rd-menu-inuse">
+                  {w.sessions} {w.sessions === 1 ? "session" : "sessions"}
+                </small>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 }
@@ -305,7 +310,7 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
 
 type Q = DraftProgram["workoutQuestions"][number];
 
-export function AfterWorkoutCheck({ programId, firstName, questions, answers, href }: { programId: number; firstName: string; questions: Q[]; answers: DraftAnswered[]; href: (it: DraftAnswered) => string }) {
+export function AfterWorkoutCheck({ programId, firstName, questions, answers, href, locked = false }: { programId: number; firstName: string; questions: Q[]; answers: DraftAnswered[]; href: (it: DraftAnswered) => string; /** An ended programme (23 Oct): the questions and answers read, no + Add, no ✕. */ locked?: boolean }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [list, setList] = useState(questions);
@@ -363,7 +368,7 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
     <section className="trn-check" aria-labelledby="trn-check-h">
       <div className="trn-check-head">
         <h2 id="trn-check-h">After-workout check</h2>
-        {!full && sugs.length > 0 && (
+        {!locked && !full && sugs.length > 0 && (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="trn-q-plus">+ Add</DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu trn-q-menu">
@@ -395,7 +400,7 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
                     <span className="trn-ans-qname">{l}</span>
                     {q && q.kind && q.kind !== "scale" && <small>{q.kind === "number" ? q.unit || "Value" : "Text"}</small>}
                     {a != null && <em className="trn-ans-avgval">Avg {a}</em>}
-                    {q && (
+                    {q && !locked && (
                       <button type="button" className="trn-ans-x" aria-label={`Stop asking ${l}`} title={`Stop asking ${l}`} onClick={() => (answered(l) ? setRemoving(q) : remove(q))}>
                         ✕
                       </button>

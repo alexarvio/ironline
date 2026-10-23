@@ -321,6 +321,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // shows, and the loaded week joins them the moment the coach leaves it.
   const [viewIdx, setViewIdx] = useState(program.weekIdx);
   const week = weeks[viewIdx - 1] ?? weeks[0];
+  // A done week is locked (23 Oct, Alex): its dates are over, or the whole programme has ended. Everything in it can be
+  // looked at (sessions open, what the client did, their videos and notes, replies to them); nothing that changes the
+  // plan is offered: no adding, removing, reordering, renaming or copying, and its figures and notes read, not typed.
+  const weekLocked = program.status === "past" || week.state === "past";
   const [stash, setStash] = useState<Record<number, DraftSession[]>>({});
   const isLocal = (index: number) => index === viewIdx || index in stash;
   const [pending, setPending] = useState<Record<number, Pending>>({});
@@ -761,12 +765,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
     .map((w) => ({ index: w.index, sessions: w.trained.length }));
 
   return (
-    <div className={`rd trn${program.status === "past" ? " rd-past" : ""}`}>
-      {program.status === "past" && (
-        <div className="rd-past-note" role="note">
-          <b>Ended.</b> This programme is here to look back on; nothing in it can be changed.
-        </div>
-      )}
+    // An ended programme is every week done (weekLocked), not a page where every control sleeps (23 Oct, Alex): its
+    // sessions open and its videos play. The header's Ended tag says it; no note under it.
+    <div className="rd trn">
       {/* ---- Header (19 Oct restructure): the programme's name, its switcher (▾) and state, its weeks and dates; on the right the goals and note pills, the unit and the menu. */}
       <header className="trn-head">
         <div className="trn-head-main">
@@ -791,9 +792,14 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               ) : (
                 <>
                   {/* Click the name to type it (20 Oct, Alex); the ▾ beside it switches programme. */}
-                  <button type="button" className="trn-name-btn" onClick={() => setRenaming(shownName)} title="Rename">
-                    {shownName}
-                  </button>
+                  {/* An ended programme is read, not changed (23 Oct, Alex): its name is words. */}
+                  {program.status === "past" ? (
+                    <span className="trn-name-btn ro">{shownName}</span>
+                  ) : (
+                    <button type="button" className="trn-name-btn" onClick={() => setRenaming(shownName)} title="Rename">
+                      {shownName}
+                    </button>
+                  )}
                   <PhaseSwitcher name="" currentId={program.id} items={program.programs} hrefFor={(id) => `/admin/redesign/training?client=${clientId}&program=${id}`} dueIds={Object.keys(dots?.training.weeks ?? {}).map(Number)} label="Switch programme" newLabel="New programme" onNew={() => setDlg({ kind: "newProgram" })} />
                 </>
               )}
@@ -876,7 +882,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             </button>
           )}
           {/* The goals and note as pills (they were two full-width bars), one pop-over under them. */}
-          {program.phaseId != null && <GoalsNotePills firstName={firstName} phaseId={program.phaseId} goals={program.goals} note={program.coachNote} />}
+          {program.phaseId != null && <GoalsNotePills firstName={firstName} phaseId={program.phaseId} goals={program.goals} note={program.coachNote} locked={program.status === "past"} />}
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="trn-more" aria-label="More for the programme">
               <MoreIcon />
@@ -885,9 +891,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               <DropdownMenuItem onSelect={() => setDlg({ kind: "gyms" })}>
                 <DumbbellIcon /> Client gyms
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>
-                <CalendarIcon /> Edit dates
-              </DropdownMenuItem>
+              {program.status !== "past" && (
+                <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>
+                  <CalendarIcon /> Edit dates
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => setDlg({ kind: "newProgram" })}>
                 <PlusIcon /> New programme
@@ -912,6 +920,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         isLocal={isLocal}
         onShow={showWeek}
         onAdd={addWeek}
+        // No new week once every week is done: an ended programme, or a live one whose weeks have run out (a week added
+        // there would come back done, and locked empty).
+        canAdd={program.status !== "past" && weeks.some((w) => w.state !== "past")}
         addFrom={addFrom}
         due={(index) => weekDue(dots, program.id, index)}
       />
@@ -927,18 +938,19 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         </div>
         <div className="trn-weekhead-actions">
           {/* Any week with nothing logged can go (20 Oct, Alex: it was only the last); a live programme's only from the weeks still to come. The ones after move up. */}
-          {weeks.length > 1 && (program.status !== "live" || week.state === "ahead") && !week.trained.some(Boolean) && !week.missed.some(Boolean) && sessions.every((x) => x.setsLogged === 0) && (
+          {/* A done week (weekLocked) offers none of the week's own actions: no remove, no copy here, no Apply to the rest. */}
+          {!weekLocked && weeks.length > 1 && (program.status !== "live" || week.state === "ahead") && !week.trained.some(Boolean) && !week.missed.some(Boolean) && sessions.every((x) => x.setsLogged === 0) && (
             // The bin alone (23 Oct, Alex); its words in the tooltip and for a screen reader. It asks first.
             <button type="button" className="trn-btn ghost trn-iconbtn" onClick={() => setDlg({ kind: "removeWeek" })} aria-label="Remove week" title="Remove week">
               <TrashIcon />
             </button>
           )}
-          {week.state !== "past" && weeks.length > 1 && viewIdx > 1 && copyable(viewIdx - 1) && (
+          {!weekLocked && weeks.length > 1 && viewIdx > 1 && copyable(viewIdx - 1) && (
             <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyWeek", from: viewIdx - 1 })}>
               <CopyIcon /> Copy week {viewIdx - 1} here
             </button>
           )}
-          {week.state !== "past" && weeks.length > 1 && viewIdx === 1 && copyFromChoices.length > 0 && (
+          {!weekLocked && weeks.length > 1 && viewIdx === 1 && copyFromChoices.length > 0 && (
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger className="trn-btn">
                 <CopyIcon /> Copy from…
@@ -954,7 +966,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             </DropdownMenu>
           )}
           {/* Build one week, fill the rest in one go (20 Oct, Alex). */}
-          {later.length > 0 && sessions.length > 0 && forwardChanges && (
+          {!weekLocked && later.length > 0 && sessions.length > 0 && forwardChanges && (
             // What it does, not where (23 Oct, Alex: "Copy to weeks 4–6" → "Apply to the rest"); the weeks it reaches in its title.
             <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyForward" })} title={`Apply ${week.label}'s changes to ${forwardLabel}`} aria-label={`Apply ${week.label}'s changes to ${forwardLabel}`}>
               <CopyIcon /> Apply to the rest
@@ -1083,11 +1095,16 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                   openSession(isOpen ? null : s.id);
                 }}
               >
-                <span className="rd-grip trn-grip" {...sessionGrip}>
-                  <GripIcon />
-                </span>
+                {/* A done week's sessions keep their order: no grip, its room kept so the names sit where they do on every week. */}
+                {weekLocked ? (
+                  <span className="trn-grip-slot" aria-hidden="true" />
+                ) : (
+                  <span className="rd-grip trn-grip" {...sessionGrip}>
+                    <GripIcon />
+                  </span>
+                )}
                 <span className="trn-row-name">
-                  {isOpen ? <SessionName value={name} onChange={(v) => patch(s.id, (q) => ({ ...q, renamed: v === s.name ? null : v }))} /> : <b>{name}</b>}
+                  {isOpen && !weekLocked ? <SessionName value={name} onChange={(v) => patch(s.id, (q) => ({ ...q, renamed: v === s.name ? null : v }))} /> : <b>{name}</b>}
                   <small>
                     {rows.length} {rows.length === 1 ? "exercise" : "exercises"}
                     {s.cardio.length ? (
@@ -1147,34 +1164,43 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 </span>
                 {/* "Not started" only where it can be: this week, or a past week left undone; a week still to come shows nothing (20 Oct, Alex). */}
                 {!(status.cls === "idle" && week.state === "ahead") && <span className={`trn-state ${status.cls}`}>{status.text}</span>}
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${name}`}>
-                    <MoreIcon />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="pb-menu">
-                    {/* Only once the programme is live, as on an exercise's menu. */}
-                    {program.status === "live" && (
-                      <DropdownMenuItem onSelect={() => replyTo(`${name}, ${week.label}`, { kind: "session", dayId: s.id })}>
-                        <ChatIcon /> Message about this session
-                      </DropdownMenuItem>
-                    )}
-                    {(rows.length > 0 || s.cardio.length > 0) && (
-                      <DropdownMenuItem onSelect={() => setDlg({ kind: "copySession", sessionId: s.id })}>
-                        <CopyIcon /> Duplicate session
-                      </DropdownMenuItem>
-                    )}
-                    {/* This session into the same slot of every later week (12 Oct). */}
-                    {(rows.length > 0 || s.cardio.length > 0) && laterLabel && (
-                      <DropdownMenuItem onSelect={() => setDlg({ kind: "applyLater", sessionId: s.id })}>
-                        <CopyIcon /> Apply to remaining weeks
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "deleteSession", sessionId: s.id })}>
-                      <TrashIcon /> Delete session
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* A done week's ⋯ holds only the message; with nothing in it (an ended programme) its room stays, so the state pill doesn't move. */}
+                {weekLocked && program.status !== "live" ? (
+                  <span className="trn-row-more-slot" aria-hidden="true" />
+                ) : (
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${name}`}>
+                      <MoreIcon />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="pb-menu">
+                      {/* Only once the programme is live, as on an exercise's menu. */}
+                      {program.status === "live" && (
+                        <DropdownMenuItem onSelect={() => replyTo(`${name}, ${week.label}`, { kind: "session", dayId: s.id })}>
+                          <ChatIcon /> Message about this session
+                        </DropdownMenuItem>
+                      )}
+                      {!weekLocked && (
+                        <>
+                          {(rows.length > 0 || s.cardio.length > 0) && (
+                            <DropdownMenuItem onSelect={() => setDlg({ kind: "copySession", sessionId: s.id })}>
+                              <CopyIcon /> Duplicate session
+                            </DropdownMenuItem>
+                          )}
+                          {/* This session into the same slot of every later week (12 Oct). */}
+                          {(rows.length > 0 || s.cardio.length > 0) && laterLabel && (
+                            <DropdownMenuItem onSelect={() => setDlg({ kind: "applyLater", sessionId: s.id })}>
+                              <CopyIcon /> Apply to remaining weeks
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "deleteSession", sessionId: s.id })}>
+                            <TrashIcon /> Delete session
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
 
               {isOpen && (
@@ -1243,14 +1269,22 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                             replyTo(`${r.name} · ${name}, ${week.label}`, { kind: "exercise", dayId: s.id, assignmentId: r.id }, r.exerciseChat[r.exerciseChat.length - 1]?.id ?? null);
                           }}
                         >
-                          <span className="rd-grip" {...rowGrip}>
-                            ⋮⋮
-                          </span>
+                          {weekLocked ? (
+                            <span />
+                          ) : (
+                            <span className="rd-grip" {...rowGrip}>
+                              ⋮⋮
+                            </span>
+                          )}
                           <span className="rd-ex">
                             <span className="rd-ex-name">
-                              <button type="button" className="rd-ex-btn" onClick={() => setDlg({ kind: "editExercise", sessionId: s.id, rowId: r.id })} title="Edit this exercise">
-                                {shownName}
-                              </button>
+                              {weekLocked ? (
+                                shownName
+                              ) : (
+                                <button type="button" className="rd-ex-btn" onClick={() => setDlg({ kind: "editExercise", sessionId: s.id, rowId: r.id })} title="Edit this exercise">
+                                  {shownName}
+                                </button>
+                              )}
                             </span>
                             {/* The demo set on it, in the same spot on every row. */}
                             <span className="rd-demo-slot">
@@ -1267,18 +1301,19 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               })()}
                             </span>
                           </span>
-                          {cols.sets && <Cell value={e.sets ?? String(r.sets)} onChange={(v) => edit({ sets: v })} label="Sets" width="sm" />}
+                          {/* On a done week the figures and the note read where they were typed (fixed). */}
+                          {cols.sets && <Cell value={e.sets ?? String(r.sets)} onChange={(v) => edit({ sets: v })} label="Sets" width="sm" fixed={weekLocked} />}
                           {cols.weight && (
                             <span title={multiGym ? r.gymKg.map((g) => `${g.gym}: ${kgOf(g.kg, lbs)} ${unit}`).join("\n") : undefined}>
-                              <WeightCell key={unit} kg={e.kg !== undefined ? e.kg : r.kg} lbs={lbs} onChange={(v) => edit({ kg: v })} />
+                              <WeightCell key={unit} kg={e.kg !== undefined ? e.kg : r.kg} lbs={lbs} onChange={(v) => edit({ kg: v })} fixed={weekLocked} />
                             </span>
                           )}
-                          {cols.reps && <Cell value={e.reps ?? r.reps} onChange={(v) => edit({ reps: v })} label="Reps" placeholder="8-10" />}
-                          {cols.rpe && <Cell value={e.rpe ?? (r.rpe == null ? "" : String(r.rpe))} onChange={(v) => edit({ rpe: v })} label="RPE" width="sm" />}
-                          {cols.tempo && <Cell value={e.tempo ?? (r.tempo ?? "")} onChange={(v) => edit({ tempo: v })} label="Tempo" />}
-                          {cols.rest && <Cell value={e.rest ?? (restOf(r.rest) ?? "")} onChange={(v) => edit({ rest: v })} label="Rest" />}
+                          {cols.reps && <Cell value={e.reps ?? r.reps} onChange={(v) => edit({ reps: v })} label="Reps" placeholder="8-10" fixed={weekLocked} />}
+                          {cols.rpe && <Cell value={e.rpe ?? (r.rpe == null ? "" : String(r.rpe))} onChange={(v) => edit({ rpe: v })} label="RPE" width="sm" fixed={weekLocked} />}
+                          {cols.tempo && <Cell value={e.tempo ?? (r.tempo ?? "")} onChange={(v) => edit({ tempo: v })} label="Tempo" fixed={weekLocked} />}
+                          {cols.rest && <Cell value={e.rest ?? (restOf(r.rest) ?? "")} onChange={(v) => edit({ rest: v })} label="Rest" fixed={weekLocked} />}
                           <span className="rd-cell rd-notecol">
-                            <input className="rd-cell-box" value={under} onChange={(ev) => edit({ note: ev.target.value })} placeholder="Add a note" aria-label={`Note on ${r.name}`} maxLength={300} />
+                            {weekLocked ? <Fixed value={under} /> : <input className="rd-cell-box" value={under} onChange={(ev) => edit({ note: ev.target.value })} placeholder="Add a note" aria-label={`Note on ${r.name}`} maxLength={300} />}
                           </span>
                           <span className="rd-did">
                             {r.logged.length === 0 ? (
@@ -1322,7 +1357,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               )}
                               {flagCols.video && (
                               <span className="rd-flag-slot">
-                                {video && videoIn(r.id) && (
+                                {video && videoIn(r.id) && weekLocked && video.state === "asked" ? (
+                                  // A done week's waiting ask is shown, not changed (23 Oct).
+                                  <span className="rd-flag video asked" title={`Video asked for · waiting for ${firstName}${video.recurring ? " · every session" : ""}`} aria-label={`Video asked for, waiting for ${firstName}`} role="img">
+                                    <VideoIcon />
+                                  </span>
+                                ) : video && videoIn(r.id) && (
                                   <button
                                     type="button"
                                     className={`rd-flag video ${video.state}`}
@@ -1361,17 +1401,23 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               </span>
                               )}
                             </span>
+                            {/* On a done week the ⋯ keeps what is about the client, not the plan: their video (watch, reply) and the message. */}
+                            {(!weekLocked || (!!video && video.state !== "asked") || program.status === "live") && (
                             <DropdownMenu modal={false}>
                               <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${r.name}`}>
                                 <MoreIcon />
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="pb-menu">
-                                <DropdownMenuItem onSelect={() => setDlg({ kind: "video", rowId: r.id })}>
-                                  {video?.media === "photo" && video.state !== "asked" ? <PhotoIcon /> : <VideoIcon />}
-                                  <span>
-                                    <SepJoin parts={!video ? ["Ask for a video"] : video.state === "asked" ? ["Video asked for", "waiting", video.recurring && "every session"] : video.media === "photo" ? (video.state === "in" ? ["See their photo", "reply"] : ["Their photo", "replied"]) : video.state === "in" ? ["Watch their video", "reply"] : ["Their video", "replied"]} />
-                                  </span>
-                                </DropdownMenuItem>
+                                {(!weekLocked || (!!video && video.state !== "asked")) && (
+                                  <DropdownMenuItem onSelect={() => setDlg({ kind: "video", rowId: r.id })}>
+                                    {video?.media === "photo" && video.state !== "asked" ? <PhotoIcon /> : <VideoIcon />}
+                                    <span>
+                                      <SepJoin parts={!video ? ["Ask for a video"] : video.state === "asked" ? ["Video asked for", "waiting", video.recurring && "every session"] : video.media === "photo" ? (video.state === "in" ? ["See their photo", "reply"] : ["Their photo", "replied"]) : video.state === "in" ? ["Watch their video", "reply"] : ["Their video", "replied"]} />
+                                    </span>
+                                  </DropdownMenuItem>
+                                )}
+                                {!weekLocked && (
+                                <>
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", rowId: r.id })}>
                                   <PlayIcon />{" "}
                                   {(demos[r.id] === undefined ? r.demo : demos[r.id]) ? (
@@ -1418,18 +1464,25 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     );
                                   })()}
                                 </DropdownMenuItem>
+                                </>
+                                )}
                                 {/* Only once the programme is live: before that the client has nothing of it to talk about. */}
                                 {program.status === "live" && (
                                   <DropdownMenuItem onSelect={() => replyTo(`${r.name} · ${name}, ${week.label}`, { kind: "exercise", dayId: s.id, assignmentId: r.id })}>
                                     <ChatIcon /> Message {firstName} about it
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "removeRow", sessionId: s.id, rowId: r.id })}>
-                                  <TrashIcon /> Remove from session
-                                </DropdownMenuItem>
+                                {!weekLocked && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "removeRow", sessionId: s.id, rowId: r.id })}>
+                                      <TrashIcon /> Remove from session
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
+                            )}
                           </span>
                         </div>
                         {/* What they did instead, opened from the orange circle: the
@@ -1530,7 +1583,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     const figures = (v: { time: string; pace: string; incline: string; distance: string }, set: (k: "time" | "pace" | "incline" | "distance", val: string) => void, name: string) => (
                       <span className="rd-cband" style={cardioStyle.band}>
                         {(["time", "pace", "incline", "distance"] as const).map((k) =>
-                          ccols[k] ? <Cell key={k} value={v[k]} onChange={(val) => set(k, val)} label={`${k.charAt(0).toUpperCase() + k.slice(1)} of ${name}`} /> : <span key={k} />
+                          ccols[k] ? <Cell key={k} value={v[k]} onChange={(val) => set(k, val)} label={`${k.charAt(0).toUpperCase() + k.slice(1)} of ${name}`} fixed={weekLocked} /> : <span key={k} />
                         )}
                       </span>
                     );
@@ -1560,29 +1613,37 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               <span />
                               <span className="rd-ex">
                                 <span className="rd-ex-name">
-                                  <button type="button" className="rd-ex-btn" onClick={() => setDlg({ kind: "editCardio", sessionId: s.id, cardioId: c.id })} title="Rename">
-                                    {c.name}
-                                  </button>
+                                  {weekLocked ? (
+                                    c.name
+                                  ) : (
+                                    <button type="button" className="rd-ex-btn" onClick={() => setDlg({ kind: "editCardio", sessionId: s.id, cardioId: c.id })} title="Rename">
+                                      {c.name}
+                                    </button>
+                                  )}
                                 </span>
                                 {/* The client did something else instead (the bike was taken). */}
                                 {c.swap && <span className="rd-cardio-swap">Did {c.swap} instead</span>}
                               </span>
                               {figures(c, (k, val) => editCardio(c.id, { [k]: val }), c.name)}
                               <span className="rd-cell rd-notecol">
-                                <input className="rd-cell-box" value={c.notes} onChange={(ev) => editCardio(c.id, { notes: ev.target.value })} placeholder="Add a note" aria-label={`Note on ${c.name}`} maxLength={300} />
+                                {weekLocked ? <Fixed value={c.notes} /> : <input className="rd-cell-box" value={c.notes} onChange={(ev) => editCardio(c.id, { notes: ev.target.value })} placeholder="Add a note" aria-label={`Note on ${c.name}`} maxLength={300} />}
                               </span>
                               <span className="rd-did">{c.done ? <span className="trn-state good">Done</span> : <em>{week.state === "ahead" ? "" : "Not done"}</em>}</span>
                               <span />
                               <span />
                               <span className="rd-row-more">
-                                {/* What the client can do instead when the machine is taken. */}
-                                <button type="button" className="rd-btn ghost sm rd-cardio-alt" onClick={() => setDlg({ kind: "cardioAlternatives", sessionId: s.id, cardioId: c.id })} title={c.alternatives?.length ? `Alternatives · ${c.alternatives.length}` : "Add alternative"} aria-label={`Alternatives for ${c.name}`}>
-                                  <DumbbellIcon />
-                                  {c.alternatives?.length ? <b>{c.alternatives.length}</b> : null}
-                                </button>
-                                <button type="button" className="rd-btn ghost sm" onClick={() => setDlg({ kind: "removeCardio", sessionId: s.id, cardioId: c.id })} aria-label={`Remove ${c.name}`} title="Remove from session">
-                                  <TrashIcon />
-                                </button>
+                                {!weekLocked && (
+                                  <>
+                                    {/* What the client can do instead when the machine is taken. */}
+                                    <button type="button" className="rd-btn ghost sm rd-cardio-alt" onClick={() => setDlg({ kind: "cardioAlternatives", sessionId: s.id, cardioId: c.id })} title={c.alternatives?.length ? `Alternatives · ${c.alternatives.length}` : "Add alternative"} aria-label={`Alternatives for ${c.name}`}>
+                                      <DumbbellIcon />
+                                      {c.alternatives?.length ? <b>{c.alternatives.length}</b> : null}
+                                    </button>
+                                    <button type="button" className="rd-btn ghost sm" onClick={() => setDlg({ kind: "removeCardio", sessionId: s.id, cardioId: c.id })} aria-label={`Remove ${c.name}`} title="Remove from session">
+                                      <TrashIcon />
+                                    </button>
+                                  </>
+                                )}
                               </span>
                             </div>
                           </div>
@@ -1618,7 +1679,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     );
                   })()}
 
-                  {adding?.session === s.id && (adding.kind === "exercise" || adding.key == null) ? (
+                  {/* Nothing is added to a done week. */}
+                  {weekLocked ? null : adding?.session === s.id && (adding.kind === "exercise" || adding.key == null) ? (
                     adding.kind === "exercise" ? (
                       <AddExerciseRow library={library} onPick={(nm, exerciseId) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "exercise", exerciseId, name: nm, sets: "", reps: "", kg: null, ...(cueOf(exerciseId) ? { note: cueOf(exerciseId) } : {}) }] }))} onClose={() => setAdding(null)} />
                     ) : (
@@ -1668,7 +1730,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             </div>
           </section>
         ))}
-        {sessions.length + incoming < MAX_SESSIONS ? (
+        {/* A done week with nothing in it says so in a word (23 Oct). */}
+        {weekLocked ? (sessions.length === 0 ? <p className="trn-none">None</p> : null) : sessions.length + incoming < MAX_SESSIONS ? (
           <button
             type="button"
             className="trn-add"
@@ -1702,6 +1765,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
       <AfterWorkoutCheck
         programId={program.id}
         firstName={firstName}
+        // An ended programme asks nothing more: its questions and answers read, none added or taken off.
+        locked={program.status === "past"}
         questions={program.workoutQuestions}
         answers={program.answersFeed}
         href={(it) => `/admin/redesign/training?client=${clientId}&tab=training&program=${program.id}&week=${it.weekIdx}#session-${it.dayId}`}
@@ -2355,18 +2420,29 @@ function RemoveDialog({ title, what, warn, onRemove, onClose }: { title: string;
   );
 }
 
-/** One editable cell: reads as a figure, types like a box. */
-function Cell({ value, onChange, label, placeholder, width }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string; width?: "sm" }) {
+/** A figure or a note on a done week (23 Oct, Alex): the words where the field was, as they read filled in; no line,
+ *  no caret, nothing to type. A dash where there is none. Cut at its column, the whole of it in the tooltip. */
+function Fixed({ value, sm }: { value: string; sm?: boolean }) {
+  const v = value.trim();
+  return (
+    <span className={`rd-cell-box rd-cell-ro${sm ? " sm" : ""}${v ? "" : " none"}`} title={v.length > 12 ? v : undefined}>
+      {v || "—"}
+    </span>
+  );
+}
+
+/** One editable cell: reads as a figure, types like a box. fixed: a done week's, read only. */
+function Cell({ value, onChange, label, placeholder, width, fixed }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string; width?: "sm"; fixed?: boolean }) {
   return (
     <span className="rd-cell">
-      <input className={`rd-cell-box${width === "sm" ? " sm" : ""}`} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder ?? "—"} aria-label={label} />
+      {fixed ? <Fixed value={value} sm={width === "sm"} /> : <input className={`rd-cell-box${width === "sm" ? " sm" : ""}`} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder ?? "—"} aria-label={label} />}
     </span>
   );
 }
 
 /** A weight cell: kept in kg, typed and shown in the unit picked. Keyed by
  *  unit where it is used, so a flip re-reads the figure. */
-function WeightCell({ kg, lbs, label, onChange }: { kg: number | null; lbs: boolean; label?: string; onChange: (kg: number | null) => void }) {
+function WeightCell({ kg, lbs, label, onChange, fixed }: { kg: number | null; lbs: boolean; label?: string; onChange: (kg: number | null) => void; /** A done week's: the figure read, in the unit picked. */ fixed?: boolean }) {
   const show = (v: number | null) => (v == null ? "" : String(half(lbs ? v * LB : v)));
   const [text, setText] = useState(show(kg));
   // A new saved figure (a page read after a save) shows, unless the box is being typed in.
@@ -2376,6 +2452,13 @@ function WeightCell({ kg, lbs, label, onChange }: { kg: number | null; lbs: bool
     setSeenKg(kg);
     setText(show(kg));
   }
+  if (fixed)
+    return (
+      <span className="rd-cell">
+        {label && <small>{label}</small>}
+        <Fixed value={show(kg)} />
+      </span>
+    );
   return (
     <span className="rd-cell">
       {label && <small>{label}</small>}
