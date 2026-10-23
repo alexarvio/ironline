@@ -236,3 +236,6 @@
 .rd.rp .rp-cap-remove:hover { color: #b42318; }
 .rd.rp .rp-cap-remove:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
 @media (hover: none) { .rd.rp .rp-cap-remove { opacity: 1; } }
+
+/* All sheets before any has closed (23 Oct): its heads, then None yet as a row. */
+.rd.rp .rp-table .rp-tnone { margin: 0; padding: 14px 18px 16px; font-size: 14px; font-weight: 500; color: #8b93a1; }

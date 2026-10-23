@@ -13,14 +13,13 @@ import CompareDialog from "./CompareDialog";
 import { Fold } from "../Fold";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
-import { CameraIcon, ChatIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CameraIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { ConfirmDialog, MessageDialog, useClickAway } from "../training/TrainingDraft";
 import { GripIcon } from "../training/TrainingParts";
 import { TrackIcon } from "../plan/PlanDraft";
 import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
 import { SortableItem, SortableList } from "../Sortable";
-import { useOpenChat } from "../ChatPanel";
 import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
@@ -196,9 +195,6 @@ function Pictures({ clientId, firstName, plan }: Props) {
   };
 
   const active = plan.slots.filter((s) => !s.paused).length;
-  // Messaging slides the chat in from the right (ChatPanel); outside the shell, the message dialog.
-  const openChat = useOpenChat();
-  const message = (label: string, link: MessageLink) => (openChat ? openChat({ area: "Lifestyle", label, link }) : setDlg({ kind: "message", label, link }));
   const photoSheet = dlg?.kind === "photo" ? (sheets.find((x) => x.period === dlg.period) ?? null) : null;
   const shownRows = all ? closed : closed.slice(0, ROWS_SHOWN);
   // The sheet's tiles: its angles, any just added, and + Add.
@@ -246,16 +242,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
               </small>
             )}
           </button>
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="trn-more" aria-label="More for shape updates">
-              <MoreIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => message("Shape update", { kind: "photos" })}>
-                <ChatIcon /> Message about shape updates
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* No ⋯ (23 Oct, Alex): it held Message alone; the chat panel is a tab away. */}
         </div>
       </header>
 
@@ -372,7 +359,9 @@ function Pictures({ clientId, firstName, plan }: Props) {
 
       {/* ---- All sheets, newest first, the closed ones (the open one is at the top until it is done): a log, the rows
           together as every log in the app (21 Oct, Alex). A row opens in place on its photos (the chevron after its title). */}
-      {closed.length > 0 && (
+      {/* Always there (23 Oct, Alex: to see where the sheets will go, before any is uploaded or even open): its heads and
+          None yet until the first sheet closes. */}
+      {(
         <section className="rls-section">
           <div className="trn-weekhead">
             <div>
@@ -388,6 +377,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
               <span>Phases</span>
               <span className="end">State</span>
             </div>
+            {closed.length === 0 && <p className="rp-tnone">None yet</p>}
             {shownRows.map((sh) => {
               const st = stateOf(sh);
               const isOpen = openRow === sh.period;
