@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>To focus on, ways it could look</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#e9ecf0;font-family:Archivo,system-ui,sans-serif;color:#141a24}
+.wrap{max-width:2000px;margin:0 auto;padding:28px 16px 48px;display:flex;gap:34px;flex-wrap:wrap;align-items:flex-start;justify-content:center}
+.col{display:flex;flex-direction:column;gap:12px;align-items:center;width:375px}
+.cap{width:100%;font-size:13px;font-weight:500;line-height:1.45;color:#5b6474}
+.cap b{display:block;margin-bottom:2px;font-size:15px;font-weight:600;color:#141a24}
+.phone{width:375px;height:700px;border-radius:44px;background:#F5F5F5;box-shadow:0 0 0 10px #141a24,0 30px 60px -20px rgba(0,0,0,.35);overflow:hidden;position:relative}
+/* Home's top: the pale wash, the bar, the greeting */
+.top{background:linear-gradient(180deg,#e3e8f1 0%,#eef1f6 70%,#F5F5F5 100%);padding:52px 0 18px}
+.bar{display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+.bar .logo{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;letter-spacing:.28em}
+.bar svg{display:block}
+.greet{padding:16px 28px 0}
+.greet small{display:block;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#5b6474}
+.greet h1{margin:6px 0 0;font-size:24px;font-weight:600;letter-spacing:-.015em}
+.sec{margin:0 16px;padding:16px 12px 0;border-top:1px solid #E1E5EB}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.eye{font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#141a24}
+.from{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:#8b93a1}
+.face{width:20px;height:20px;border-radius:999px;background:linear-gradient(135deg,#c9b8a6,#7d6a5a);flex:none}
+.face.big{width:36px;height:36px}
+.sep{display:inline-block;width:1px;height:10px;margin:0 8px;background:#c9cfd8;vertical-align:-1px}
+.grey{font-size:12px;font-weight:500;color:#8b93a1;font-variant-numeric:tabular-nums}
+.card{margin:22px 16px 0;height:260px;border-radius:28px;background:linear-gradient(170deg,#7f95a8 0%,#46566a 55%,#2a3442 100%);position:relative;overflow:hidden}
+.card div{position:absolute;left:12px;right:12px;bottom:12px;padding:14px 16px;border-radius:18px;background:rgba(20,26,36,.45);color:#fff;backdrop-filter:blur(8px)}
+.card small{font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;opacity:.8}
+.card b{display:block;margin-top:4px;font-size:18px;font-weight:600}
+
+/* 0. Now */
+.now li{display:flex;gap:12px;padding:8px 0;font-size:16px;font-weight:500;list-style:none}
+.now li i{width:6px;height:6px;margin-top:7.8px;border-radius:999px;background:#141a24;flex:none}
+.now ul{margin:0;padding:0}
+
+/* A. Numbered */
+.num ol{margin:4px 0 0;padding:0;list-style:none}
+.num li{display:grid;grid-template-columns:34px 1fr;align-items:baseline;padding:9px 0}
+.num li span{font-size:24px;font-weight:300;color:#98A2B3;font-variant-numeric:tabular-nums;line-height:1}
+.num li b{font-size:17px;font-weight:500;letter-spacing:-.01em;line-height:1.3}
+.num .call{display:flex;align-items:center;gap:10px;margin-top:10px;padding:12px 0 0}
+.ring{flex:none;display:grid;place-items:center;border-radius:999px}
+
+/* B. Spine to the call */
+.spine{position:relative;margin-top:6px}
+.spine::before{content:"";position:absolute;left:11px;top:16px;bottom:22px;width:1px;background:#C9CFD8}
+.spine .g{position:relative;display:flex;align-items:flex-start;gap:16px;padding:9px 0}
+.spine .g i{flex:none;width:9px;height:9px;margin:6px 7.5px 0;border-radius:999px;background:#F5F5F5;box-shadow:inset 0 0 0 1.6px #141a24;position:relative}
+.spine .g b{font-size:16px;font-weight:500;line-height:1.35}
+.spine .end{display:flex;align-items:center;gap:12px;padding:10px 0 0}
+.spine .end b{display:block;font-size:15px;font-weight:600}
+
+/* C. Coach's note */
+.note .who{display:flex;align-items:center;gap:12px;margin:8px 0 14px}
+.note .who b{display:block;font-size:15px;font-weight:600}
+.note .lines{border-left:2px solid #141a24;padding:2px 0 2px 16px;display:flex;flex-direction:column;gap:12px}
+.note .lines p{margin:0;font-size:19px;font-weight:500;letter-spacing:-.015em;line-height:1.3}
+.note .until{margin:14px 0 0 18px}
+
+/* D. Countdown */
+.count .body{display:grid;grid-template-columns:86px 1fr;gap:6px;margin-top:8px}
+.count .days{display:flex;flex-direction:column;align-items:flex-start;padding-top:2px}
+.count .days span{font-size:54px;font-weight:300;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.count .days small{margin-top:8px;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#5b6474;line-height:1.35}
+.count ul{margin:0;padding:0 0 0 16px;list-style:none;border-left:1px solid #E1E5EB;display:flex;flex-direction:column;gap:12px}
+.count li{font-size:16px;font-weight:500;line-height:1.3}
+.count .foot{margin:12px 0 0}
+</style></head><body>
+<div class="wrap">
+
+
+<div class="col" data-v="now">
+  <div class="phone"><div class="slot"><div class="top"><div class="bar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141a24" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="logo"><svg width="18" height="17" viewBox="0 0 24 23"><path d="M11 0l1.6 9.6L22 11.2l-9.4 1.7L11 23l-1.4-10L0 11.2l9.6-1.6z" fill="#141a24"/></svg>NORCOACH</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141a24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></div><div class="greet"><small>Saturday, October 24</small><h1>Good morning, Alex.</h1></div></div>
+    <section class="sec now">
+      <div class="head"><span class="eye">To focus on</span><span class="from"><i class="face"></i>from Finlay</span></div>
+      <ul><li><i></i>10,000 steps a day</li><li><i></i>Protein at every meal</li><li><i></i>In bed by 23:00</li></ul>
+    </section><div class="card"><div><small>Lifestyle<i class="sep" style="background:rgba(255,255,255,.5)"></i>Week 6</small><b>General wellbeing</b></div></div>
+  </div></div>
+  <p class="cap"><b>Now</b>For comparison: a list of dots, as on your phone.</p>
+</div>
+
+<div class="col" data-v="a">
+  <div class="phone"><div class="slot"><div class="top"><div class="bar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141a24" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="logo"><svg width="18" height="17" viewBox="0 0 24 23"><path d="M11 0l1.6 9.6L22 11.2l-9.4 1.7L11 23l-1.4-10L0 11.2l9.6-1.6z" fill="#141a24"/></svg>NORCOACH</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141a24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></div><div class="greet"><small>Saturday, October 24</small><h1>Good morning, Alex.</h1></div></div>
+    <section class="sec num">
+      <div class="head"><span class="eye">To focus on</span><span class="from"><i class="face"></i>from Finlay</span></div>
+      <ol>
+        <li><span>1</span><b>10,000 steps a day</b></li>
+        <li><span>2</span><b>Protein at every meal</b></li>
+        <li><span>3</span><b>In bed by 23:00</b></li>
+      </ol>
+      <div class="call">
+        <span class="ring" style="width:28px;height:28px;box-shadow:inset 0 0 0 1.6px #2f6fd6"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2f6fd6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+        <span class="grey" style="font-size:13px">Until your call<i class="sep"></i>Thu 29 Oct<i class="sep"></i>in 5 days</span>
+      </div>
+    </section><div class="card"><div><small>Lifestyle<i class="sep" style="background:rgba(255,255,255,.5)"></i>Week 6</small><b>General wellbeing</b></div></div>
+  </div></div>
+  <p class="cap"><b>A. Numbered</b>Light numerals in a column, as Home's dates are; the goals a size up. The call it runs until gets its blue ring, so the section has an end.</p>
+</div>
+
+<div class="col" data-v="b">
+  <div class="phone"><div class="slot"><div class="top"><div class="bar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141a24" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="logo"><svg width="18" height="17" viewBox="0 0 24 23"><path d="M11 0l1.6 9.6L22 11.2l-9.4 1.7L11 23l-1.4-10L0 11.2l9.6-1.6z" fill="#141a24"/></svg>NORCOACH</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141a24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></div><div class="greet"><small>Saturday, October 24</small><h1>Good morning, Alex.</h1></div></div>
+    <section class="sec">
+      <div class="head"><span class="eye">To focus on</span><span class="from"><i class="face"></i>from Finlay</span></div>
+      <div class="spine">
+        <div class="g"><i></i><b>10,000 steps a day</b></div>
+        <div class="g"><i></i><b>Protein at every meal</b></div>
+        <div class="g"><i></i><b>In bed by 23:00</b></div>
+        <div class="end">
+          <span class="ring" style="width:24px;height:24px;background:#F5F5F5;box-shadow:inset 0 0 0 1.6px #2f6fd6;position:relative"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2f6fd6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+          <span><b>Your call with Finlay</b><span class="grey">Thu 29 Oct<i class="sep"></i>in 5 days</span></span>
+        </div>
+      </div>
+    </section><div class="card"><div><small>Lifestyle<i class="sep" style="background:rgba(255,255,255,.5)"></i>Week 6</small><b>General wellbeing</b></div></div>
+  </div></div>
+  <p class="cap"><b>B. Spine to the call</b>The Events screen's line: each goal a small ring on it, and the line ends at the call. Reads as "these, until then".</p>
+</div>
+
+<div class="col" data-v="c">
+  <div class="phone"><div class="slot"><div class="top"><div class="bar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141a24" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="logo"><svg width="18" height="17" viewBox="0 0 24 23"><path d="M11 0l1.6 9.6L22 11.2l-9.4 1.7L11 23l-1.4-10L0 11.2l9.6-1.6z" fill="#141a24"/></svg>NORCOACH</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141a24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></div><div class="greet"><small>Saturday, October 24</small><h1>Good morning, Alex.</h1></div></div>
+    <section class="sec note">
+      <div class="head"><span class="eye">To focus on</span></div>
+      <div class="who"><i class="face big"></i><span><b>Finlay</b><span class="grey">From your call<i class="sep"></i>22 Oct</span></span></div>
+      <div class="lines">
+        <p>10,000 steps a day</p>
+        <p>Protein at every meal</p>
+        <p>In bed by 23:00</p>
+      </div>
+      <p class="grey until">Until your next call, Thu 29 Oct</p>
+    </section><div class="card"><div><small>Lifestyle<i class="sep" style="background:rgba(255,255,255,.5)"></i>Week 6</small><b>General wellbeing</b></div></div>
+  </div></div>
+  <p class="cap"><b>C. Finlay's note</b>Written by a person, so it looks like one: his face and the call it came from, the goals bigger behind one ink line, as a quote.</p>
+</div>
+
+<div class="col" data-v="d">
+  <div class="phone"><div class="slot"><div class="top"><div class="bar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141a24" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="logo"><svg width="18" height="17" viewBox="0 0 24 23"><path d="M11 0l1.6 9.6L22 11.2l-9.4 1.7L11 23l-1.4-10L0 11.2l9.6-1.6z" fill="#141a24"/></svg>NORCOACH</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141a24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></div><div class="greet"><small>Saturday, October 24</small><h1>Good morning, Alex.</h1></div></div>
+    <section class="sec count">
+      <div class="head"><span class="eye">To focus on</span><span class="from"><i class="face"></i>from Finlay</span></div>
+      <div class="body">
+        <div class="days"><span>5</span><small>days to<br>your call</small></div>
+        <ul>
+          <li>10,000 steps a day</li>
+          <li>Protein at every meal</li>
+          <li>In bed by 23:00</li>
+        </ul>
+      </div>
+      <p class="grey foot">Call with Finlay<i class="sep"></i>Thu 29 Oct</p>
+    </section><div class="card"><div><small>Lifestyle<i class="sep" style="background:rgba(255,255,255,.5)"></i>Week 6</small><b>General wellbeing</b></div></div>
+  </div></div>
+  <p class="cap"><b>D. Countdown</b>The days to the call big in light numerals on the left, the goals beside it. The most "dashboard"; the number changes every day.</p>
+</div>
+
+</div>
+</body></html>
