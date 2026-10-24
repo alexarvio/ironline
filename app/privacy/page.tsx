@@ -8,7 +8,7 @@ import "./legal.css";
 // and the login page. Written for what the app actually does; when a new
 // kind of data or a new service comes in, it goes in here too.
 
-export const metadata: Metadata = { title: `Privacy policy · ${LEGAL.app}` };
+export const metadata: Metadata = { title: `Privacy policy · ${LEGAL.app.toUpperCase()}` };
 
 export default function PrivacyPage() {
   const contact = LEGAL.contactEmail ? <a href={`mailto:${LEGAL.contactEmail}`}>{LEGAL.contactEmail}</a> : <em>[contact email to be added]</em>;

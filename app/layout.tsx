@@ -8,7 +8,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { clerkOn } from "./lib/clerk";
 
 export const metadata: Metadata = {
-  title: "NorCoach",
+  title: "NORCOACH", // the tab's name in capitals, as the wordmark (24 Oct, Alex)
   description: "Coach + client core loop prototype",
   // "Add to Home Screen" support: the manifest (app/manifest.ts) carries the
   // name, icons and standalone display for Android/Chrome; iOS ignores most

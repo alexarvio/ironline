@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 
 // Its own manifest (public/coach.webmanifest): added to an iPhone's Home Screen it opens here, not on the client app,
 // and an iPhone gets web push only from a Home Screen app.
-export const metadata: Metadata = { title: "NorCoach", manifest: "/coach.webmanifest" };
+export const metadata: Metadata = { title: "NORCOACH", manifest: "/coach.webmanifest" };
 export const viewport: Viewport = { themeColor: "#F5F6F8" };
 
 export default async function CoachPage() {

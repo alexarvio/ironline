@@ -7,7 +7,7 @@ import "../privacy/legal.css";
 // The support page: public, the App Store listing's support link. The
 // questions people actually have, and where to write.
 
-export const metadata: Metadata = { title: `Support · ${LEGAL.app}` };
+export const metadata: Metadata = { title: `Support · ${LEGAL.app.toUpperCase()}` };
 
 export default function SupportPage() {
   const contact = LEGAL.contactEmail ? <a href={`mailto:${LEGAL.contactEmail}`}>{LEGAL.contactEmail}</a> : <em>[contact email to be added]</em>;
