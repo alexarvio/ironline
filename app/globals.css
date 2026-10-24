@@ -19762,7 +19762,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .fdi-page { background: #F5F6F8; }
 .nd-banner.fdi-banner { padding-bottom: 20px; }
 .fdi-targets, .fdi-targets.nd-card { margin: 0 16px; padding: 18px 4px 10px; border-radius: 0; background: none; box-shadow: none; }
-.fdi-push, .fdi-push.done, .fdi-push.fdi-push-kcal { margin: 0 16px; padding: 10px 4px 12px; border-radius: 0; background: none; border-bottom: 1px solid #E1E5EB; }
+.fdi-push, .fdi-push.done, .fdi-push.fdi-push-kcal { margin: 0 16px; padding: 10px 4px 12px; border-radius: 0; background: none; }
+/* No line under it (24 Oct, Alex): space alone parts it from Saved days. */
 .fdi-push-kcal input { border-color: #E1E5EB; border-radius: 999px; padding-left: 16px; }
 .fdi-push-kcal input:focus { border-color: #141a24; }
 .fdi-push-btn { border-radius: 999px; background: #141a24; font-weight: 600; }
