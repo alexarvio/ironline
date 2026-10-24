@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "NorCoach",
+    title: "NORCOACH", // the name under the home-screen icon, in capitals (24 Oct, Alex)
     statusBarStyle: "default",
   },
 };

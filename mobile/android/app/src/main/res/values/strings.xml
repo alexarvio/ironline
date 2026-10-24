@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">NorCoach</string>
-    <string name="title_activity_main">NorCoach</string>
+    <string name="app_name">NORCOACH</string>
+    <string name="title_activity_main">NORCOACH</string>
     <string name="package_name">com.arvio.ironline</string>
     <string name="custom_url_scheme">com.arvio.ironline</string>
     <!-- Shown from the Health Connect permission screen. -->

@@ -8,8 +8,8 @@ import type { MetadataRoute } from "next";
 // (public/brand/mark.svg where an <img> needs it).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "NorCoach",
-    short_name: "NorCoach",
+    name: "NORCOACH",
+    short_name: "NORCOACH",
     description: "Your training, check-ins and progress from your coach.",
     start_url: "/client",
     display: "standalone",

@@ -20296,8 +20296,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 @media (prefers-reduced-motion: reduce) { .evt-ring.evt-ring, .evt-ring.evt-ring svg { transition: none; } }
 /* Starts → Ends: the arrow sits on the middle of the pair, but Ends' extra 6px of left padding (room for the arrow) made it wider, so the gap was off the middle and the arrow looked off centre (17 Oct, Alex). Starts gets the same room on its right, so the boxes are equal and the gap is under the arrow. */
 .evs-dates .evs-date:has(+ .evs-arrow) { padding-right: 20px; }
-/* Nutrition and the food diary show the same banner (17 Oct, Alex): one height for both, so the picture fills the same space whichever screen is open. The diary's is 298px (titles, the week strip, the tabs); Nutrition's grows to match, the extra going above its tabs, which stay at the foot. */
-.nd > .nd-banner.nd-banner, .nd-banner.fdi-banner { box-sizing: border-box; min-height: 298px; }
+/* Nutrition and the food diary show the same banner (17 Oct, Alex): one height for both, so the picture fills the same space whichever screen is open. The diary's is the top bar and 231px under it (titles, the week strip, the tabs): 298px under a phone's 67px bar, 336px under the taller 105px one (the coach's preview; 24 Oct, Alex: there it jumped, Nutrition held at 298). Nutrition's grows to match, the extra going above its tabs, which stay at the foot. */
+.nd > .nd-banner.nd-banner, .nd-banner.fdi-banner { box-sizing: border-box; min-height: calc(var(--topbar-h, 67px) + 231px); }
 .nd > .nd-banner.nd-banner { display: flex; flex-direction: column; }
 .nd > .nd-banner.nd-banner > .nd-tabs { margin-top: auto; }
 /* Objectives from the coach in the hairline language (17 Oct, Alex), on every phase's tab (Training, Nutrition, the lifestyle check-in): no white card, a flat row between hairlines; the small grey label at 600, the count plain beside it, the chevron in the label grey; opened, the list drops out flat with thin numbered rings and the body text at 500. Doubled for the dev-server CSS order. */

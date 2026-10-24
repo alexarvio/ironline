@@ -1,7 +1,7 @@
 {
   "id": "/coach",
-  "name": "NorCoach Coach",
-  "short_name": "NorCoach",
+  "name": "NORCOACH Coach",
+  "short_name": "NORCOACH",
   "description": "Your clients' chats and videos.",
   "start_url": "/coach",
   "scope": "/",
