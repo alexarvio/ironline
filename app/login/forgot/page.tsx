@@ -1,9 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requestPasswordResetAction } from "../../lib/auth-actions";
 import { resetsAvailable } from "../../lib/passwordReset";
 import { clerkOn } from "../../lib/clerk";
+import { NorCoachLogo } from "../../components/NorCoachLogo";
 
 // "Forgot password": ask for the email, send a link (lib/passwordReset.ts).
 // The page after sending says the same thing whatever the email was.
@@ -16,8 +16,7 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          NorCoach
+          <NorCoachLogo />
         </div>
         <h1 className="auth-title">Reset your password</h1>
 

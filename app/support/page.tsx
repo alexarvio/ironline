@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { NorCoachLogo } from "../components/NorCoachLogo";
 import { LEGAL } from "../lib/legal";
 import "../privacy/legal.css";
 
@@ -14,7 +15,7 @@ export default function SupportPage() {
     <main className="lg">
       <div className="lg-wrap">
         <Link href="/login" className="lg-brand">
-          {LEGAL.app}
+          <NorCoachLogo />
         </Link>
         <h1>Support</h1>
         <p className="lg-updated">Help with the {LEGAL.app} app</p>

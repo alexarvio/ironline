@@ -1,9 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logoutAction } from "../../lib/auth-actions";
 import { getSessionUser } from "../../lib/auth";
 import { getClient } from "../../lib/queries";
+import { NorCoachLogo } from "../../components/NorCoachLogo";
 
 // Signed in as one kind of account, asked for the other side's door. A coach
 // who has been testing as a client lands here when they open /admin, rather
@@ -25,8 +25,7 @@ export default async function SwitchAccountPage({ searchParams }: { searchParams
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          NorCoach
+          <NorCoachLogo />
         </div>
         <h1 className="auth-title">{want === "coach" ? "The coach side" : "The client app"}</h1>
         <p className="auth-note auth-note-top">

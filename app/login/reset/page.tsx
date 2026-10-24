@@ -1,10 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { clerkOn } from "../../lib/clerk";
 import { completePasswordResetAction } from "../../lib/auth-actions";
 import { resetTokenValid } from "../../lib/passwordReset";
 import PasswordInput from "../PasswordInput";
+import { NorCoachLogo } from "../../components/NorCoachLogo";
 
 // Where the emailed link lands: choose a new password (lib/passwordReset.ts).
 // A used, expired or made-up link gets a way to ask for a new one instead.
@@ -17,8 +17,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          NorCoach
+          <NorCoachLogo />
         </div>
         <h1 className="auth-title">Choose a new password</h1>
 

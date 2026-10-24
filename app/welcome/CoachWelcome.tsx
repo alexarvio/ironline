@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card } from "../components/ui/basics";
@@ -10,6 +9,7 @@ import TimezonePicker from "../admin/redesign/meetings/TimezonePicker";
 import { uploadCoachPhotoAction } from "../lib/actions";
 import { finishWelcomeAction, saveWelcomeAboutAction, saveWelcomeBusinessAction } from "../lib/onboarding-actions";
 import { allTimezones, tzLabel } from "../lib/timezones";
+import { NorCoachLogo } from "../components/NorCoachLogo";
 
 // The welcome steps for a new coach (26 Sep), after the owner lets them in
 // and before the coach side: about you, your business, and you're set.
@@ -86,8 +86,7 @@ export default function CoachWelcome({ data }: { data: WelcomeData }) {
       <Card className="wl-card">
         <div className="wl-top">
           <div className="auth-brand">
-            <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-            NorCoach
+            <NorCoachLogo />
           </div>
           <span className="wl-count" aria-label={`Step ${step} of 3`}>
             {step}/3

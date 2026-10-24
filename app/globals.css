@@ -8788,7 +8788,12 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
   letter-spacing: -0.01em;
 }
 
-.auth-brand img { display: block; height: 32px; width: auto; }
+/* The NorCoach logo (24 Oct, Alex: app/components/NorCoachLogo.tsx): the star
+   and the wordmark, sized by the font size of wherever it sits and in its
+   colour, so it is ink on the page and white over a photo. */
+.nc-logo { display: inline-flex; align-items: center; gap: 0.5em; line-height: 1; color: inherit; }
+.nc-logo-mark { flex: none; height: 1.35em; width: auto; }
+.nc-logo-word { flex: none; height: 0.6em; width: auto; }
 
 .auth-title {
   margin: 14px 0 18px;

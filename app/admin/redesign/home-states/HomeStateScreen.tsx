@@ -1,6 +1,7 @@
 "use client";
 
 import HomeHub from "../../../client/HomeHub";
+import { NorCoachLogo } from "../../../components/NorCoachLogo";
 import { AppleIcon, ChatIcon, DumbbellIcon, HomeIcon, MenuIcon, BellIcon } from "../../../components/icons";
 import type { HomeProps } from "./states";
 
@@ -16,7 +17,7 @@ export default function HomeStateScreen({ props }: { props: HomeProps }) {
             <button type="button" className="app-header-icon-btn" aria-label="Menu">
               <MenuIcon />
             </button>
-            <span className="app-header-brand">NorCoach</span>
+            <NorCoachLogo className="app-header-brand" />
             <div className="app-header-actions">
               <button type="button" className="app-header-icon-btn" aria-label="Notifications">
                 <BellIcon />

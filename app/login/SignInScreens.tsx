@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useRef, useState, type ReactNode } from "react";
+import { NorCoachLogo } from "../components/NorCoachLogo";
 
 // The sign-in screens for the switch to Clerk (26 Sep): no passwords, an
 // email code or Apple or Google, for coaches and clients alike. Each screen
@@ -17,8 +17,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
     <div className="auth-page">
       <div className="auth-card au-card">
         <div className="auth-brand">
-          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          NorCoach
+          <NorCoachLogo />
         </div>
         {children}
       </div>

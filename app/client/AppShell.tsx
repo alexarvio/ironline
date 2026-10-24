@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransi
 import { useRouter } from "next/navigation";
 import { markCoachNotesReadAction } from "../lib/actions";
 import { logoutAction } from "../lib/auth-actions";
+import { NorCoachLogo } from "../components/NorCoachLogo";
 import { BellIcon, CalendarIcon, CameraIcon, ChevronLeftIcon, GearIcon, MenuIcon, ChatIcon, ReceiptIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
 import PreviewBar from "./PreviewBar";
@@ -525,7 +526,7 @@ export default function AppShell({
             <button type="button" className="app-header-icon-btn" onClick={() => setMenuOpen(true)} aria-label="Menu" aria-expanded={menuOpen}>
               <MenuIcon />
             </button>
-            <span className="app-header-brand">NorCoach</span>
+            <NorCoachLogo className="app-header-brand" />
             <div className="app-header-actions">
               <button type="button" className="app-header-icon-btn" onClick={() => setPushView("notifications")} aria-label="Notifications">
                 <BellIcon />
@@ -640,7 +641,7 @@ export default function AppShell({
               <button type="button" className="app-menu-scrim" onClick={() => setMenuOpen(false)} aria-label="Close menu" />
               <nav className="app-menu" aria-label="Menu">
                 <div className="app-menu-head">
-                  <span className="app-header-brand app-menu-brand">NorCoach</span>
+                  <NorCoachLogo className="app-header-brand app-menu-brand" />
                   {/* The coach's business, hardcoded like the rail and the Settings
                       footnote until the coach profile carries it. */}
                   <span className="app-menu-name">Full Potential Coaching</span>

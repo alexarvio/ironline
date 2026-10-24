@@ -4,7 +4,8 @@ import type { MetadataRoute } from "next";
 // full-screen without browser chrome. Colours follow the design tokens at the
 // top of globals.css (--paper / --accent). Icons are app/icon.png (512) and
 // app/apple-icon.png (180), both cut from the source logo onto the paper
-// colour; the transparent mark used inside the app is public/brand/logo.png.
+// colour; the mark used inside the app is app/components/NorCoachLogo.tsx
+// (public/brand/mark.svg where an <img> needs it).
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "NorCoach",

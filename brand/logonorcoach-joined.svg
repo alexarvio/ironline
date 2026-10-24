@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><metadata><?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="XMP Core 6.0.0"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmpMM:DocumentID="xmp.did:cb9f5498-bb58-4572-8043-8c369e6bfb9b" xmpMM:InstanceID="xmp.iid:cb9f5498-bb58-4572-8043-8c369e6bfb9b" dcterms:provenance="https://cai-manifests.adobe.com/manifests/urn-c2pa-6a8da533-175d-4d6a-bac4-4c19c16423d7-adobe"> </rdf:Description></rdf:RDF></x:xmpmeta>
+<?xpacket end="w"?></metadata>
+  <defs>
+    <style>
+      .cls-1 {
+        stroke: #f3f3f3;
+        stroke-linejoin: round;
+        stroke-width: 23.27px;
+      }
+
+      .cls-1, .cls-2 {
+        fill: #0b0d12;
+      }
+
+      .cls-3 {
+        fill: #f3f3f3;
+      }
+    </style>
+  </defs>
+  <rect class="cls-3" width="1024" height="1024"/>
+  <path class="cls-1" d="M550.21,457.96l364.87,54.04-372.22-41.66,7.35-12.38Z"/>
+  <path class="cls-1" d="M381.86,126.14l168.35,331.82-7.35,12.38L381.86,126.14Z"/>
+  <g>
+    <path class="cls-2" d="M914.97,512l-328.42,54.04-43.8-95.7,372.22,41.66Z"/>
+    <path class="cls-3" d="M586.54,577.68c-4.49,0-8.66-2.61-10.58-6.79l-43.8-95.7c-1.75-3.81-1.3-8.27,1.15-11.67,2.46-3.4,6.56-5.21,10.72-4.74l372.22,41.66c5.78.65,10.19,5.45,10.34,11.26.15,5.81-4.01,10.84-9.74,11.78l-328.42,54.04c-.63.1-1.27.15-1.89.15ZM561.88,484.19l31.54,68.92,236.53-38.92-268.08-30Z"/>
+  </g>
+  <g>
+    <path class="cls-2" d="M437.34,457.96l-55.48-331.82,161,344.2-105.52-12.38Z"/>
+    <path class="cls-3" d="M542.86,481.98c-.45,0-.9-.03-1.36-.08l-105.52-12.38c-5.14-.6-9.27-4.53-10.12-9.64l-55.48-331.82c-.96-5.74,2.47-11.3,8.02-13.03,5.55-1.72,11.53.91,14,6.18l161,344.2c1.79,3.82,1.37,8.32-1.1,11.74-2.2,3.05-5.72,4.83-9.43,4.83ZM447.38,447.42l76.09,8.93-116.1-248.21,40.01,239.28Z"/>
+  </g>
+  <path class="cls-1" d="M586.66,566.04l55.48,331.82-99.28-427.52,43.8,95.7Z"/>
+  <path class="cls-1" d="M108.92,512l328.42-54.04,105.52,12.38-433.94,41.66Z"/>
+  <path class="cls-1" d="M109.03,512L473.79,566.04L642.03,897.86L542.86,470.34Z"/>
+  <line class="cls-3" x1="434.77" y1="569.53" x2="424.07" y2="564.78"/>
+</svg>

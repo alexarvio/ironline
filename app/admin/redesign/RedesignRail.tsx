@@ -84,7 +84,7 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
       <div className="rr-brand">
         <span className="rr-mark">
           {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark at its natural ratio */}
-          <img src="/brand/logo.png" alt="" />
+          <img src="/brand/mark.svg" alt="" />
         </span>
         <span className="rr-brand-text">
           <b>Full Potential</b>

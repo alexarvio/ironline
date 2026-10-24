@@ -50,7 +50,7 @@ export default function AdminSidebar({
       <div className="ad-rail-brand">
         <span className="ad-rail-mark">
           {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark at its natural ratio */}
-          <img src="/brand/logo.png" alt="" />
+          <img src="/brand/mark.svg" alt="" />
         </span>
         <div className="ad-rail-brand-text">
           <div className="ad-rail-brand-name">Full Potential</div>

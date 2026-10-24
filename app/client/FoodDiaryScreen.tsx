@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { NorCoachLogo } from "../components/NorCoachLogo";
 import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
 import {
   addCustomFoodAction,
@@ -582,7 +583,7 @@ export default function FoodDiaryScreen({
         <button type="button" className="app-header-icon-btn" onClick={onBack} aria-label="Back">
           <ChevronLeftIcon />
         </button>
-        <span className="app-header-brand">NorCoach</span>
+        <NorCoachLogo className="app-header-brand" />
         <div className="app-header-actions">
           <span className="app-header-icon-btn fdi-bar-spacer" aria-hidden="true" />
         </div>

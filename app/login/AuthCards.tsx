@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { changePasswordAction, loginAction } from "../lib/auth-actions";
 import PasswordInput from "./PasswordInput";
+import { NorCoachLogo } from "../components/NorCoachLogo";
 
 // The sign-in and choose-a-password cards, without the guards around them:
 // the pages add those (who is signed in, where they belong), and the
@@ -12,8 +12,7 @@ export function LoginCard({ error, deleted, reset, canReset }: { error?: string;
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          NorCoach
+          <NorCoachLogo />
         </div>
         <h1 className="auth-title">Sign in</h1>
 
@@ -60,8 +59,7 @@ export function ChangePasswordCard({ error }: { error?: string }) {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          NorCoach
+          <NorCoachLogo />
         </div>
         <h1 className="auth-title">Choose a password</h1>
         <p className="auth-note auth-note-top">
