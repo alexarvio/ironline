@@ -300,16 +300,16 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   };
 
   // ---- Check-ins: which way, and which rhythm (its own, apart from the metrics').
-  const [show, setShow] = useState<"table" | "graph" | "feed">("table");
+  const [show, setShow] = useState<"table" | "graph">("table");
   const [logCadence, setLogCadence] = useState<Cadence>("daily");
   const view = plan[logCadence];
   const longOf = (c: Cadence) => (c === "daily" ? plan.dailyLong : c === "weekly" ? plan.weeklyLong : plan.monthlyLong);
   const long = longOf(logCadence);
-  // The Table and the Feed show the recent window or everything since the client's first entry (6 Oct); the Graph has its own switch.
-  const [range, setRange] = useState<"recent" | "all">("recent");
-  const hasAll = long.periods.length > view.periods.length;
-  const logShown = range === "all" && hasAll ? long : view;
-  // Twenty rows a page; the pager under the Table and the Feed turns them (6 Oct).
+  // The Table is the log (24 Oct, Alex: no Feed, no Last 8 | All): everything since the client's first entry, else the
+  // recent window when that is longer; the Graph has its own switch.
+  const logOf = (c: Cadence) => (longOf(c).periods.length >= plan[c].periods.length ? longOf(c) : plan[c]);
+  const logShown = logOf(logCadence);
+  // Twenty rows a page, the Pager under the card turning them, as every log (6 Oct).
   const PAGE = 20;
   const [logPage, setLogPage] = useState(1);
   const logPages = Math.max(1, Math.ceil(logShown.periods.length / PAGE));
@@ -344,13 +344,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       frame = requestAnimationFrame(() => {
         setLogCadence(c);
         if (!period) return;
-        const recent = plan[c].periods.findIndex((p) => p.key === period);
-        const all = recent < 0 ? longOf(c).periods.findIndex((p) => p.key === period) : -1;
-        const idx = recent >= 0 ? recent : all;
+        const idx = logOf(c).periods.findIndex((p) => p.key === period);
         if (idx < 0) return;
-        setRange(recent >= 0 ? "recent" : "all");
         setLogPage(Math.floor(idx / PAGE) + 1);
-        setShow((s) => (s === "graph" ? "table" : s));
+        setShow("table");
         // Brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
         setTimeout(() => landOn(document.querySelector(`[data-checkin="${c}-${period}"]`)), 120);
       });
@@ -669,32 +666,22 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             <h2>Check-ins</h2>
           </div>
           <div className="trn-weekhead-actions">
-            {show !== "graph" && hasAll && (
-              <div className="rd-btn-group" role="group" aria-label="Range">
-                {(["recent", "all"] as const).map((r) => (
-                  <button key={r} type="button" className={range === r ? "on" : ""} aria-pressed={range === r} onClick={() => setRange(r)}>
-                    {r === "recent" ? `Last ${view.periods.length}` : `All ${long.periods.length}`}
-                  </button>
-                ))}
-              </div>
-            )}
             <div className="rd-btn-group" role="group" aria-label="Show as">
-              {(["table", "graph", "feed"] as const).map((s) => (
+              {(["table", "graph"] as const).map((s) => (
                 <button key={s} type="button" className={show === s ? "on" : ""} aria-pressed={show === s} onClick={() => setShow(s)}>
-                  {s === "table" ? "Table" : s === "graph" ? "Graph" : "Feed"}
+                  {s === "table" ? "Table" : "Graph"}
                 </button>
               ))}
             </div>
             {rhythmToggle(logCadence, setLogCadence, false)}
           </div>
         </div>
-        {/* As tall as its fullest page in the Table and the Feed (.rd-steady): a Table row is 42px with its hairline, under
-            a 45.75px head; a Feed row 49px, under 29.75px of column heads; the card's edge, padding and the rows' own
-            12px under them make up the rest. The Graph keeps its own height. */}
+        {/* As tall as its fullest page (.rd-steady): a row is 42px with its hairline, under a 45.75px head; the card's edge,
+            padding and the rows' own 12px under them make up the rest. The Graph keeps its own height. */}
         <div
           ref={logCard}
           className={`rls-card rls-log${logSteady ? " rd-steady" : ""}`}
-          style={logSteady ? ({ "--log-rows": logRows, "--log-row": show === "table" ? "42px" : "49px", "--log-head": show === "table" ? `${73.75 + logBar}px` : "57.75px" } as React.CSSProperties) : undefined}
+          style={logSteady ? ({ "--log-rows": logRows, "--log-row": "42px", "--log-head": `${73.75 + logBar}px` } as React.CSSProperties) : undefined}
         >
           {/* Not started or nothing asked: two words, the header already says the state and the dates. */}
           {plan.notStarted ? (
@@ -703,10 +690,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             <p className="rls-none">None yet</p>
           ) : show === "table" ? (
             <CheckinTable view={logPaged} whole={logShown} cadence={logCadence} summaryOf={(m) => rows.find((r) => r.id === m.id)?.summary ?? m.summary} onReply={replyTo} />
-          ) : show === "graph" ? (
-            <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
           ) : (
-            <CheckinFeed view={logPaged} cadence={logCadence} onReply={replyTo} onMessage={(label) => message({ label, link: { kind: "checkin", section: logCadence } })} />
+            <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
           )}
         </div>
         {/* The pager floats under the card, not in it (21 Oct, Alex). */}
@@ -1212,95 +1197,6 @@ function CheckinTable({ view, whole, cadence, summaryOf, onReply }: { view: Logg
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-// One row a period the client was asked for, whether or not anything came:
-// a gap is data, and it says Missed rather than being left out.
-function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues; cadence: Cadence; onMessage: (label: string) => void; onReply: (period: string) => void }) {
-  const [open, setOpen] = useState<string | null>(null);
-  const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
-  // No rhythm column (21 Oct): the section's toggle already says which (say a thing once).
-  // No empty column before the date (21 Oct, Alex: it left a gap at the card's edge); the chevron sits after the date.
-  const grid = { gridTemplateColumns: "150px minmax(240px, 1fr) 112px 32px", columnGap: 24 } as const;
-  return (
-    <div className="rd-rows">
-      <div className="rd-cols" aria-hidden="true" style={grid}>
-        <span>Date</span>
-        <span>Logged</span>
-        <span>State</span>
-        <span />
-      </div>
-      {view.periods.map((p) => {
-        const filled = view.metrics.map((m) => ({ m, v: valueFor(m.id, p.key) })).filter((x): x is { m: LoggedMetric; v: number } => x.v != null);
-        const missing = view.metrics.length - filled.length;
-        const isOpen = open === p.key;
-        const state = filled.length === 0 ? { text: "Missed", cls: "down" } : missing === 0 ? { text: "Complete", cls: "up" } : { text: `${missing} missing`, cls: "" };
-        const note = view.notes[p.key];
-        const label = `${CAD[cadence].label} check-in · ${whenOf(p.key, p.label)}`;
-        // A row opens only when it has something in it (21 Oct, Alex): nothing submitted, no chevron and no click.
-        const opens = filled.length > 0 || !!note;
-        return (
-          <div key={p.key} className={`rd-row rn-day${isOpen && opens ? " open" : ""}`} data-checkin={`${cadence}-${p.key}`}>
-            {/* A click anywhere opens it; for the keyboard the date is the button, the note and the message its siblings. */}
-            <div className={`rd-row-main${opens ? "" : " static"}`} style={grid} onClick={opens ? () => setOpen((x) => (x === p.key ? null : p.key)) : undefined}>
-              <span className="rd-ex">
-                <span className="rd-ex-name">
-                  {opens ? (
-                    <button type="button" className="rd-row-hit" aria-expanded={isOpen}>
-                      <span className="rd-logdate">{logWhen(p.key, p.label, cadence)}</span>
-                      <Fold open={isOpen} />
-                    </button>
-                  ) : (
-                    <span className="rd-logdate">{logWhen(p.key, p.label, cadence)}</span>
-                  )}
-                  {/* A note: the chat icon in the row, the words once it is opened (21 Oct, Alex), with Reply there. */}
-                  {note && (
-                    <span className="rd-notemark" title="A note from the client" aria-label="A note from the client">
-                      <ChatIcon />
-                    </span>
-                  )}
-                </span>
-              </span>
-              <span className="rm-summary">
-                <SepJoin parts={[...(filled.length ? filled.slice(0, 4).map((x) => `${x.m.name} ${withUnit(x.v, x.m.unit)}`) : ["Nothing submitted"]), filled.length > 4 && `+${filled.length - 4}`]} />
-              </span>
-              <span className={`rls-vs ${state.cls}`}>{state.text}</span>
-              {/* The row's one action: a message about this check-in (on hover), not a menu. */}
-              <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
-                <button type="button" className="rd-btn ghost sm" onClick={() => onMessage(label)} aria-label={`Message about ${p.label}`} title="Message about this check-in">
-                  <ChatIcon />
-                </button>
-              </span>
-            </div>
-            {isOpen && opens && (
-              <div className="rm-tiles">
-                {filled.map((x) => (
-                  <div key={x.m.id} className="rm-tile">
-                    <small>{x.m.name}</small>
-                    <b>
-                      {n(x.v)}
-                      {tailOf(x.m.unit) && <em>{tailOf(x.m.unit).trim()}</em>}
-                    </b>
-                  </div>
-                ))}
-                {note && (
-                  <div className="rm-tile note">
-                    <small>Note</small>
-                    <p>{note}</p>
-                    <div className="rm-notepop-foot">
-                      <button type="button" className="rm-reply" onClick={() => onReply(p.key)}>
-                        Reply
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
     </div>
   );
 }

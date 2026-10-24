@@ -5,7 +5,7 @@ import { isClientCall, takesClient } from "./calendarKinds";
 import { noteFocus, setFocusOnComplete } from "./focus";
 
 import { redirect } from "next/navigation";
-import { getData, persist, type CoachBusiness, type CoachInvoicing, type InvoiceEvery, type InvoiceLine, type MetricAskAt, type PhaseTrack } from "./db";
+import { getData, isStepsMetric, MAX_DAY_STEPS, persist, type CoachBusiness, type CoachInvoicing, type InvoiceEvery, type InvoiceLine, type MetricAskAt, type PhaseTrack } from "./db";
 import { ASK_AT } from "./metricAskAt";
 import { isGymColor, isGymKind } from "./gymColors";
 import { listClientGyms } from "./queries";
@@ -1235,6 +1235,8 @@ export async function logMetricPeriodAction(formData: FormData) {
     }
     // Phones on European locales type the decimal comma.
     const value = Number(String(raw).replace(",", "."));
+    // A step count past a day's most is a slip, not a reading (24 Oct, Alex): left as it was.
+    if (isStepsMetric(def.name) && value > MAX_DAY_STEPS) return;
     const stamp = entries.find((e) => e.metric_definition_id === def.id && e.period === period)?.logged_at ?? loggedAt;
     setMetricEntry(def.id, period, Number.isFinite(value) ? value : null, stamp);
   });

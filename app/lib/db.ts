@@ -1573,7 +1573,22 @@ export const STORE_MODE: "json" | "postgres" =
   !BUILDING && process.env.STORE === "postgres" && process.env.DATABASE_URL ? "postgres" : "json";
 
 // Reuse one in-memory copy across hot reloads in dev, always synced to disk on write.
-const globalForDb = globalThis as unknown as { _jsonDb?: Data; _ownersClaimed?: boolean; _pgSave?: (data: Data) => void };
+const globalForDb = globalThis as unknown as { _jsonDb?: Data; _ownersClaimed?: boolean; _stepsChecked?: boolean; _pgSave?: (data: Data) => void };
+
+/** The most steps a day can hold (the steps sync's own cap): more is a slip of the keyboard, never a walk. */
+export const MAX_DAY_STEPS = 200_000;
+/** A Steps metric, by its name (as the steps sync finds it). */
+export const isStepsMetric = (name: string) => /\bsteps?\b/i.test(name);
+
+/** Step counts past MAX_DAY_STEPS, already stored, go (24 Oct, Alex: one read 9,626,292,922,929 and made the average
+    253 billion). How many went. */
+function dropImpossibleSteps(data: Data): number {
+  const steps = new Set(data.metric_definitions.filter((d) => isStepsMetric(d.name)).map((d) => d.id));
+  if (!steps.size) return 0;
+  const before = data.metric_entries.length;
+  data.metric_entries = data.metric_entries.filter((e) => !(steps.has(e.metric_definition_id) && e.value != null && e.value > MAX_DAY_STEPS));
+  return before - data.metric_entries.length;
+}
 // JSON: the file loads right here. Postgres: pg/runtime.ts loads the data
 // (asynchronously) from instrumentation.ts before the first request and
 // hands it over with installStore().
@@ -1617,6 +1632,11 @@ export function getData(): Data {
   if (!globalForDb._ownersClaimed) {
     globalForDb._ownersClaimed = true;
     if (claimUnownedRows(data) > 0) persist();
+  }
+  // Once a server: impossible step counts go (24 Oct).
+  if (!globalForDb._stepsChecked) {
+    globalForDb._stepsChecked = true;
+    if (dropImpossibleSteps(data) > 0) persist();
   }
   return data;
 }
