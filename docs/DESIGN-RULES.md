@@ -12,6 +12,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 
 ## 2. Page and lines
 - Page `#F5F5F5` on Home, `#F5F6F8` on the pushed screens (Events, Workout, Notifications). One per screen, never two tones on one screen.
+- Home's top is paper (24 Oct, Alex: mockup A, docs/boards/home-background-mockup.html): no wash and no rings, the page's soft off-white from the top down, and the logo's star huge and very faint (4.5% ink) cropped off the top right, behind everything.
 - Hairline `#E1E5EB`. Separate rows and sections with **space alone** (17 Oct, Alex): no lines between list rows, no lines over sections or above buttons. The only line on a screen is a timeline's spine (Events, the Home events row), and a note's own underline where nothing sits right under it.
 - White `#fff` only for a pill or a button, and it gets `inset 0 0 0 1px #E1E5EB`, never a shadow.
 
