@@ -7,25 +7,22 @@ import "./focus.css";
 // To focus on (23 Oct, Alex): the coach's goals until the next call, the first thing on Home under the greeting.
 // Drawn as a spine to the call (24 Oct, Alex: mockup B, docs/boards/to-focus-on-v2.html): each goal a small ink ring on
 // one line, and the line ends at the call, a ring in the call's blue with "Your call with {Coach}" and when. Still
-// bullet points: nothing to tap or tick. No call booked: the line runs between the goals alone. The stored ticks stay
-// in the data, unused.
+// bullet points: nothing to tap or tick. Shown only while a call is booked (24 Oct, Alex; HomeHub). The stored ticks
+// stay in the data, unused.
 
 const CALL = MEETING_TYPES[0]; // a call with no kind of its own is a Check-in: the blue, the camera
 
-/** "Today", "Tomorrow", "in 5 days" for the call's day. */
-function inDays(date: string, today: string): string {
+/** The call's day: "Today", "Tomorrow", else "Thu 29 Oct" (24 Oct, Alex: no "in 5 days"). */
+function callDay(date: string, today: string): string {
   const days = Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000);
   if (days <= 0) return "Today";
   if (days === 1) return "Tomorrow";
-  return `in ${days} days`;
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
 export default function FocusList({ focus, coach, today }: { focus: HomeFocus; coach: { firstName: string; photoPath: string | null }; today: string }) {
   const initial = (coach.firstName || "C").trim().charAt(0).toUpperCase();
   const until = focus.until;
-  const when = until ? inDays(until.date, today) : "";
-  // The day itself only when it isn't today or tomorrow: "Thu 29 Oct".
-  const day = until && when.startsWith("in ") ? new Date(`${until.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : null;
   return (
     <section className="hm-focus" aria-label="To focus on">
       <div className="hm-tasks-head">
@@ -59,7 +56,7 @@ export default function FocusList({ focus, coach, today }: { focus: HomeFocus; c
             <span className="hm-focus-callwords">
               <b>Your call with {coach.firstName}</b>
               <span className="hm-focus-when">
-                <Bars parts={[day ?? when, until.time || null, day ? when : null]} />
+                <Bars parts={[callDay(until.date, today), until.time || null]} />
               </span>
             </span>
           </li>
