@@ -71,7 +71,6 @@ export default function ProgressPicturesScreen({
   };
 
   const open = data.openSheet;
-  const sent = open ? open.slots.filter((s) => s.src).length : 0;
   // The sheet (and the ones before it), or two sheets side by side.
   const [view, setView] = useState<"sheet" | "compare">("sheet");
   // The top row (back, the title) stays put as the page scrolls: over the
@@ -95,13 +94,13 @@ export default function ProgressPicturesScreen({
         </div>
         {/* The photo banner, the check-in's: the same size, the sheet open
             now as its title, and two pills that switch the screen between
-            the sheet and Compare. */}
+            Entries and Compare (24 Oct, Alex: as the check-in's Entries). */}
         <header className="tr-banner ci-banner pp-banner">
           <div className="tr-kicker">{open ? "Open now" : "Shape update"}</div>
           <FitTitle className="tr-name">{open ? open.title : "No sheet open"}</FitTitle>
           <div className="tr-weeks ci-views" role="tablist" aria-label="Shape update">
             <button type="button" role="tab" aria-selected={view === "sheet"} className={`tr-wk${view === "sheet" ? " on" : ""}`} onClick={() => setView("sheet")}>
-              {open ? `${sent} of ${open.slots.length} sent` : "Sheets"}
+              Entries
             </button>
             <button type="button" role="tab" aria-selected={view === "compare"} className={`tr-wk${view === "compare" ? " on" : ""}`} onClick={() => setView("compare")}>
               Compare
