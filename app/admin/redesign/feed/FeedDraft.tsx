@@ -9,15 +9,14 @@ import { Toaster } from "../../../components/ui/toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { CalendarIcon, ChatIcon, CheckIcon, EyeIcon, LockIcon, MoreIcon, PlayIcon, PlusIcon } from "../../../components/icons";
 import Pager from "../Pager";
-import { SepJoin } from "../Sep";
 import KindMark from "../KindMark";
-import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
+import { logDate, logDateWidth } from "../../../lib/dayMonth";
 import { pic } from "../../../lib/pic";
 // Types only: feedBoard.ts re-exports the server's reader, which must never reach the browser.
 import type { ActivityKind, ActivityRow, FeedBoard, NeedRow } from "../../../lib/feedBoard";
 
 // The coach's Feed (21 Oct, Alex: built from the Feed mockup, root "rd trn rls rh rfd"): every client at once, clear at a
-// glance. Training's header, Home's Since line, then
+// glance. Training's header (no Since line: 24 Oct, Alex), then
 // - Needs you: one task a row (not a client a row), its wait, its action as a white pill; ⋯ Done clears it;
 // - Activity: a log, one line a row, one list (no New / Earlier), one kind at a time, 20 a page.
 // Facts, not explanations; dates d/m (dayMonth), a log's rows by logDate; ink, never navy; weights 500 and 600.
@@ -26,8 +25,6 @@ const PAGE = 20;
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
-/** "2 sessions", "1 check-in"; nothing for none, so the part drops out. */
-const count = (n: number, one: string, many: string) => (n > 0 ? `${n} ${n === 1 ? one : many}` : null);
 /** A moment's clock time, "18:48". */
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
@@ -70,36 +67,10 @@ export default function FeedDraft({ board, now, kind }: { board: FeedBoard; /** 
         </div>
       </header>
 
-      <SinceLine since={board.since} />
       <NeedsYou needs={board.needs} now={now} />
       <Activity rows={board.activity} kind={kind} />
       <Toaster />
     </div>
-  );
-}
-
-// ---- Since the coach last looked, across every client: one quiet line, the date in ink, each count only when there is one.
-function SinceLine({ since }: { since: FeedBoard["since"] }) {
-  if (!since) return null;
-  const facts = [
-    count(since.sessions, "session", "sessions"),
-    count(since.checkIns, "check-in", "check-ins"),
-    count(since.foodDays, "food day", "food days"),
-    count(since.messages, "message", "messages"),
-    count(since.shapeUpdates, "shape update", "shape updates"),
-  ];
-  if (facts.every((f) => f == null)) return null;
-  return (
-    <p className="rh-sinceline">
-      <SepJoin
-        parts={[
-          <span key="from">
-            Since <b>{dayMonth(since.from)}</b>
-          </span>,
-          ...facts,
-        ]}
-      />
-    </p>
   );
 }
 

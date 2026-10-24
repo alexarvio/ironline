@@ -10,8 +10,10 @@
 
 .rr { position: sticky; top: 0; display: flex; flex-direction: column; height: 100vh; background: #fff; border-right: 1px solid #e1e5eb; }
 
-.rr-brand { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px 16px 14px; }
-.rr-logo { font-size: 17px; color: #141a24; }
+.rr-brand { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px 16px 14px; container-type: inline-size; }
+/* The logo spans the rail's whole width inside its padding (24 Oct, Alex): it is 8.84em wide (the star 1.41em, the
+   gap 0.5em, the word 6.94em), so its size is the rail's width over that. */
+.rr-logo { font-size: calc(100cqw / 8.85); color: #141a24; }
 .rr-brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .rr-brand-text b { font-size: 13.5px; font-weight: 600; color: #141a24; }
 .rr-brand-text small { font-size: 11px; font-weight: 500; color: #8b93a1; }
