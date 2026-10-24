@@ -14,6 +14,7 @@ import { Sep } from "./Sep";
 import NativeCoachRedirect from "../../coach/NativeCoachRedirect";
 import RefreshOnReturn from "./RefreshOnReturn";
 import { pic } from "../../lib/pic";
+import { NorCoachLogo } from "../../components/NorCoachLogo";
 
 // The left rail, in the redesign's sheet: the brand, the coach's cross-client
 // views as icon rows, every client in one scrolling list, and the coach at
@@ -81,11 +82,9 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
       <NativeCoachRedirect />
       {/* Back at the window, the page reads itself again (23 Oct, Alex): what the client logged meanwhile shows. */}
       <RefreshOnReturn />
+      {/* The NorCoach logo over the coach's business (24 Oct, Alex), as on the sign-in card. */}
       <div className="rr-brand">
-        <span className="rr-mark">
-          {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark at its natural ratio */}
-          <img src="/brand/mark.svg" alt="" />
-        </span>
+        <NorCoachLogo className="rr-logo" />
         <span className="rr-brand-text">
           <b>Full Potential</b>
           <small>Coach workstation</small>

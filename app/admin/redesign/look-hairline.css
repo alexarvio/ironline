@@ -12,7 +12,6 @@ html.look-hl .rd-page { background: #f5f6f8; }
 
 /* ---- The left rail: white, a hairline edge, ink for the place you are */
 html.look-hl .rr { background: #fff; border-right: 1px solid #e1e5eb; box-shadow: none; }
-html.look-hl .rr-mark { background: #141a24; box-shadow: none; }
 html.look-hl .rr-brand-text b { font-weight: 600; }
 html.look-hl .rr-navrow { border-radius: 999px; font-weight: 500; color: #3a4250; }
 html.look-hl .rr-navrow:hover { background: #f5f6f8; }
