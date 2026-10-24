@@ -19826,7 +19826,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .nd .nd-supp.taken .nd-supp-name { color: #8b93a1; }
 .nd .nd-supp-note, .nd .nd-supp-timing { font-weight: 500; color: #8b93a1; }
 .nd .nd-supp-qty { color: #141a24; }
-.nd .nd-coach { padding: 16px 4px 4px; border-top: 1px solid #E1E5EB; }
+/* No line over the coach's note (24 Oct, Alex): space alone parts it from the supplements. */
+.nd .nd-coach { padding: 16px 4px 4px; }
 .nd .nd-avatar { width: 40px; height: 40px; background: #141a24; font-weight: 600; }
 .nd .nd-coach-name { font-size: 14px; font-weight: 600; color: #141a24; }
 .nd .nd-coach-date { font-size: 12px; font-weight: 500; color: #8b93a1; }
