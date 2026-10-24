@@ -143,7 +143,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             </section>
           )}
 
+          {/* Keyed by the month and the day asked for, so a new page from the server (‹ ›, Today) starts on its own day,
+              never the one picked before. */}
           <CalendarBoard
+            key={`${monthKey}:${selectedDay}`}
             label={calendar.label}
             monthKey={monthKey}
             prevMonth={calendar.prevMonth}

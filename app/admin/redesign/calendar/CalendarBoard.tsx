@@ -74,7 +74,18 @@ export default function CalendarBoard({
             <Link href={href(prevMonth)} scroll={false} className="trn-more" aria-label="Previous month">
               <ChevronLeftIcon />
             </Link>
-            <Link href="/admin/redesign/calendar" scroll={false} className="trn-pill">
+            {/* In this month, Today picks today at once (24 Oct, Alex: it did nothing on another day of the same month,
+                the board keeping the day it had); from another month it loads this one. */}
+            <Link
+              href="/admin/redesign/calendar"
+              scroll={false}
+              className="trn-pill"
+              onClick={(ev) => {
+                if (!cells.some((c) => c.inMonth && c.date === today)) return;
+                ev.preventDefault();
+                pick(today);
+              }}
+            >
               Today
             </Link>
             <Link href={href(nextMonth)} scroll={false} className="trn-more" aria-label="Next month">
