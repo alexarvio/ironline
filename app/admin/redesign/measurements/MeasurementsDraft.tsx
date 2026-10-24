@@ -1239,7 +1239,6 @@ function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Ca
   const hasMid = view.periods.length > midCount;
   const shownRange: GraphRange = range === "mid" && !hasMid ? "long" : range === "long" && !hasLong ? "short" : range;
   const periods = [...(shownRange === "short" ? view.periods.slice(0, shortCount) : shownRange === "mid" ? view.periods.slice(0, midCount) : view.periods)].reverse();
-  const inWords = shownRange === "long" ? "this phase" : `in ${rangeWords(shownRange, shortCount, midCount, cadence)}`;
   return (
     <div className="rm-graphs">
       <nav className="rm-graph-list" aria-label="Metric on the graph">
@@ -1258,7 +1257,6 @@ function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Ca
               <Spark points={s.points} colour={m.colour} />
               <span className={`rm-graph-pick-delta${s.tone ? ` ${s.tone}` : ""}`}>
                 {s.delta == null ? (s.last ? "One reading" : "Nothing logged") : s.delta === 0 ? "No change" : `${s.delta > 0 ? "+" : "−"}${n(Math.abs(s.delta))}${tail}`}
-                {s.delta != null && <small> {inWords}</small>}
               </span>
             </button>
           );
@@ -1268,7 +1266,6 @@ function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Ca
         key={metric.id}
         metric={metric}
         series={seriesOf(metric, periods, valueFor)}
-        inWords={inWords}
         rangeSwitch={
           hasLong ? (
             <div className="rd-btn-group" role="group" aria-label="Range">
@@ -1341,7 +1338,7 @@ function niceTicks(lo: number, hi: number, count = 4): number[] {
   return out;
 }
 
-function MetricGraph({ metric: m, series, inWords, rangeSwitch = null }: { metric: LoggedMetric; series: ReturnType<typeof seriesOf>; inWords: string; rangeSwitch?: React.ReactNode }) {
+function MetricGraph({ metric: m, series, rangeSwitch = null }: { metric: LoggedMetric; series: ReturnType<typeof seriesOf>; rangeSwitch?: React.ReactNode }) {
   const [hover, setHover] = useState<number | null>(null);
   const { points, seen, first, last, delta, tone } = series;
   const unit = m.unit.trim();
@@ -1390,7 +1387,6 @@ function MetricGraph({ metric: m, series, inWords, rangeSwitch = null }: { metri
         {delta != null && (
           <span className={`rm-graph-delta${tone ? ` ${tone}` : ""}`}>
             {delta === 0 ? "No change" : `${delta > 0 ? "+" : "−"}${n(Math.abs(delta))}${tail}`}
-            <small> {inWords}</small>
           </span>
         )}
       </div>
