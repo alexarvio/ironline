@@ -23,10 +23,12 @@ export type ActivityDay = {
 };
 
 const PARTS = [
+  // The tracks' order (24 Oct, Alex): Lifestyle, Training, Nutrition.
+  { id: "lifestyle", label: "Check-ins", colour: "#a08a5c" },
   { id: "training", label: "Training", colour: "#3a3390" },
   { id: "nutrition", label: "Nutrition", colour: "#1d7a70" },
-  { id: "lifestyle", label: "Check-ins", colour: "#a08a5c" },
 ] as const;
+const colourOf = (id: (typeof PARTS)[number]["id"]) => PARTS.find((p) => p.id === id)!.colour;
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const doneOf = (d: ActivityDay | undefined) => (d ? PARTS.filter((p) => (p.id === "training" ? d.sessions.length > 0 : p.id === "nutrition" ? !!d.food : d.checkIns.length > 0)) : []);
@@ -154,7 +156,7 @@ function DayPanel({ day, closing }: { day: ActivityDay; closing: boolean }) {
         <div className="ac-panel-body">
           <span className="wc-list-date">{new Date(`${day.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span>
           {day.sessions.map((s, i) => (
-            <div key={i} className="ac-item" style={{ ["--ac" as string]: PARTS[0].colour }}>
+            <div key={i} className="ac-item" style={{ ["--ac" as string]: colourOf("training") }}>
               <span className="ac-item-label">Training</span>
               {/* One row: the session on the left, its exercises, gym and time on the right (wrapping under when the name is long), parted by the drawn bar; Unfinished is one more fact. */}
               <span className="ac-item-row">
@@ -171,7 +173,7 @@ function DayPanel({ day, closing }: { day: ActivityDay; closing: boolean }) {
             </div>
           ))}
           {day.food && (
-            <div className="ac-item" style={{ ["--ac" as string]: PARTS[1].colour }}>
+            <div className="ac-item" style={{ ["--ac" as string]: colourOf("nutrition") }}>
               <span className="ac-item-label">Nutrition</span>
               <span className="ac-item-row">
                 <b>{kcal(day.food.kcal)} kcal</b>
@@ -195,7 +197,7 @@ function DayPanel({ day, closing }: { day: ActivityDay; closing: boolean }) {
             </div>
           )}
           {day.checkIns.length > 0 && (
-            <div className="ac-item" style={{ ["--ac" as string]: PARTS[2].colour }}>
+            <div className="ac-item" style={{ ["--ac" as string]: colourOf("lifestyle") }}>
               <span className="ac-item-label">Check-ins</span>
               <b>
                 {day.checkIns.length} {day.checkIns.length === 1 ? "check-in" : "check-ins"}

@@ -667,9 +667,10 @@ type Area = "training" | "nutrition" | "measurements";
 const CHECKIN_NAME = { daily: "Daily check-in", weekly: "Weekly check-in", monthly: "Monthly check-in" } as const;
 function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targets: LinkTargets; onPick: (l: DraftLink & { link: MessageLink }) => void }) {
   const areas: { id: Area; label: string; empty: boolean }[] = [
+    // Lifestyle, Training, Nutrition, as everywhere (24 Oct, Alex).
+    { id: "measurements", label: "Lifestyle", empty: t.checkins.length === 0 && !t.photos },
     { id: "training", label: "Training", empty: t.training.length === 0 },
     { id: "nutrition", label: "Nutrition", empty: !t.nutrition && t.foodDays.length === 0 },
-    { id: "measurements", label: "Lifestyle", empty: t.checkins.length === 0 && !t.photos },
   ];
   const [area, setArea] = useState<Area>(areas.find((a) => !a.empty)?.id ?? "training");
   const [weekAt, setWeekAt] = useState(0);

@@ -84,9 +84,10 @@ const TRACK_ORDER: PhaseTrack[] = ["lifestyle", "training", "nutrition"];
 // Activity: All first, then one kind at a time; every source category has a home here.
 const FILTERS: { id: string; label: string; has: (e: DraftEvent) => boolean }[] = [
   { id: "all", label: "All", has: () => true },
+  // The tracks in their order everywhere, Lifestyle, Training, Nutrition (24 Oct, Alex).
+  { id: "lifestyle", label: "Lifestyle", has: (e) => e.category === "measurements" },
   { id: "training", label: "Training", has: (e) => e.category === "training" },
   { id: "nutrition", label: "Nutrition", has: (e) => e.category === "nutrition" },
-  { id: "lifestyle", label: "Lifestyle", has: (e) => e.category === "measurements" },
   { id: "invoices", label: "Invoices", has: (e) => e.category === "billing" },
   // A call asked for or a note on one: with the meetings, not the messages.
   { id: "meetings", label: "Meetings", has: (e) => e.category === "meetings" || e.tab === "meetings" },

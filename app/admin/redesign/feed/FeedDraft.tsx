@@ -240,9 +240,10 @@ function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
 type Filter = "all" | ActivityKind;
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
+  // The tracks in their order everywhere, Lifestyle, Training, Nutrition (24 Oct, Alex).
+  { id: "lifestyle", label: "Lifestyle" },
   { id: "training", label: "Training" },
   { id: "nutrition", label: "Nutrition" },
-  { id: "lifestyle", label: "Lifestyle" },
   { id: "meetings", label: "Meetings" },
   { id: "messages", label: "Messages" },
 ];
