@@ -17,6 +17,7 @@ import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
 import { SepJoin } from "../Sep";
 import { Fold } from "../Fold";
+import { pic } from "../../../lib/pic";
 
 // The New event dialog after the client's sheet and the phase dialog (10 Oct):
 // a category pill in the title, category tiles with icons, the dates as pills.
@@ -77,10 +78,12 @@ export type EventsCardProps = {
   onSaving?: (busy: boolean) => void;
   /** The client's first name: an event they added says "From Alex" (21 Oct, Alex), not "From client". */
   firstName?: string;
+  /** The faces for an event's "Added by" in its pop-up (24 Oct, Alex): the client's, and the coach's for "you". */
+  faces?: { client: string | null; coach: string | null; coachName: string };
 };
 const EV_WIN_KEY = "rq-events-window";
 
-export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, onSaving, firstName }: EventsCardProps) {
+export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, onSaving, firstName, faces }: EventsCardProps) {
   const router = useRouter();
   // What is on screen lives here, so a move or an edit shows the moment it is saved (20 Oct, Alex: a dragged trip
   // jumped back to its old length until the save came back). The page's re-read replaces it whenever its content changes.
@@ -378,6 +381,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
             event={dlg.event}
             cats={cats}
             firstName={firstName}
+            faces={faces}
             initialStart={dlg.start}
             initialKind={dlg.kind}
             readOnly={!!dlg.event && eventIsPast(dlg.event, today)}
@@ -403,7 +407,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
 
 // ---- One event: what kind, what to call it, a moment or a stretch, and a note.
 /** Also opened from the Phases overview (14 Oct), on the day clicked there. */
-export function EventDialog({ today, event, cats, firstName, initialStart, initialKind, readOnly = false, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; /** For "From Alex" on an event the client added. */ firstName?: string; /** A new event opens on this day. */ initialStart?: string; /** A new event from a lane: that lane's kind (null for "Event"). */ initialKind?: string | null; /** A past event: shown, not changed (20 Oct, Alex). */ readOnly?: boolean; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
+export function EventDialog({ today, event, cats, firstName, faces, initialStart, initialKind, readOnly = false, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; /** For "Added by Alex" on an event the client added. */ firstName?: string; /** Their faces (24 Oct, Alex): the client's, and the coach's for "Added by you". */ faces?: { client: string | null; coach: string | null; coachName: string }; /** A new event opens on this day. */ initialStart?: string; /** A new event from a lane: that lane's kind (null for "Event"). */ initialKind?: string | null; /** A past event: shown, not changed (20 Oct, Alex). */ readOnly?: boolean; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
   // The six types the client's sheet has (10 Oct); the coach's own categories went, so both sides speak the same six.
   // A new event starts on Trip, the first tile (14 Oct), or on the kind of the lane it was clicked on (20 Oct).
   const [kind, setKind] = useState<string | null>(event ? event.kind : initialKind !== undefined ? initialKind : "trip");
@@ -535,7 +539,6 @@ export function EventDialog({ today, event, cats, firstName, initialStart, initi
           <KindIcon id={kind} size={12} />
           {k.label}
         </span>
-        {event?.byClient && <span className="npd-from">From {firstName || "client"}</span>}
         {readOnly && <span className="npd-from">Past</span>}
       </DialogDescription>
 
@@ -630,6 +633,21 @@ export function EventDialog({ today, event, cats, firstName, initialStart, initi
       </div>
       </fieldset>
 
+      {/* Who added it, with their face (24 Oct, Alex: as the view pop-up, not a "From" tag): the client's name and photo,
+          or "you" and the coach's. On its own line, as Delete holds the footer's left. */}
+      {event && (
+        <div className="npd-by">
+          <span className="npd-face" aria-hidden="true">
+            {(event.byClient ? faces?.client : faces?.coach) ? (
+              // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
+              <img src={pic((event.byClient ? faces?.client : faces?.coach)!, 96)} alt="" />
+            ) : (
+              ((event.byClient ? firstName : faces?.coachName) || "?").charAt(0).toUpperCase()
+            )}
+          </span>
+          Added by <b>{event.byClient ? firstName || "the client" : "you"}</b>
+        </div>
+      )}
       <div className="npd-foot">
         {readOnly ? (
           <DialogClose className="npd-cancel">Close</DialogClose>

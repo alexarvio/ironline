@@ -1000,6 +1000,10 @@ export function loadPlan(clientId: number): DraftPlan {
     mainGoalSavedAt: d.mainGoalSavedAt ? dayMonth(d.mainGoalSavedAt) : null,
     events: listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, byClient: e.added_by === "client", repeat: e.repeat ?? null })),
     eventCategories: listEventCategories(getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0),
+    faces: (() => {
+      const coach = getCoachProfile(getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0);
+      return { client: getClient(clientId)?.avatar_path ?? null, coach: coach?.avatar_path ?? null, coachName: coach?.display_name?.trim() || "" };
+    })(),
   };
 }
 

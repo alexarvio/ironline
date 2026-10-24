@@ -58,6 +58,8 @@ export type DraftPlan = {
   mainGoalSavedAt: string | null;
   events: PlanEvent[];
   eventCategories: Category[];
+  /** The faces for an event's "Added by" (24 Oct, Alex): the client's photo, and the coach's for "you". */
+  faces: { client: string | null; coach: string | null; coachName: string };
 };
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
@@ -393,7 +395,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
       </section>
 
       {/* ---- Events: life around the plan, on the same weeks. */}
-      <EventsCard clientId={clientId} firstName={firstName} events={plan.events} categories={plan.eventCategories} today={today} thisWeek={thisWeek} intoWeek={intoWeek} windows={WINDOWS} onSaving={setEventsSaving} />
+      <EventsCard clientId={clientId} firstName={firstName} faces={plan.faces} events={plan.events} categories={plan.eventCategories} today={today} thisWeek={thisWeek} intoWeek={intoWeek} windows={WINDOWS} onSaving={setEventsSaving} />
 
       {/* ---- Goals: off the Plan tab for now (20 Oct, Alex); the code stays for when they come back. */}
       {SHOW_GOALS && (
