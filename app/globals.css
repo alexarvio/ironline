@@ -12984,10 +12984,14 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
    soft off-white page (#F5F5F5) from the top down, and the logo's star huge and very faint, cropped off the top right.
    The star sits behind everything on Home (Home is its own layer, so z-index -1 stays above its page colour) and may
    run down behind To focus on; the page clips it at the screen's edge. Settings' banner (.st-banner) keeps its own. */
+/* The shell round Home (the strip under the phone's status bar, the app's own #FAFAFA) takes Home's off-white too
+   (24 Oct, Alex: on the phone it showed as a lighter band). Home scrolls inside its own box, which cuts anything above
+   its top, so the star starts just inside it with its top point whole, cropped off the right edge only. */
+body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5F5; }
 .hm { position: relative; isolation: isolate; overflow-x: clip; }
 .hm > .hm-banner:not(.st-banner) { background: none; overflow: visible; }
 .hm > .hm-banner:not(.st-banner)::after { content: none; }
-.hm > .hm-banner:not(.st-banner)::before { z-index: -1; right: -120px; top: -70px; width: 448px; height: 430px; border: 0; border-radius: 0; -webkit-mask-image: none; mask-image: none; background: url("/brand/mark.svg") no-repeat center / contain; opacity: 0.045; }
+.hm > .hm-banner:not(.st-banner)::before { z-index: -1; right: -120px; top: 6px; width: 448px; height: 430px; border: 0; border-radius: 0; -webkit-mask-image: none; mask-image: none; background: url("/brand/mark.svg") no-repeat center / contain; opacity: 0.045; }
 .hm-body { display: flex; flex-direction: column; gap: 16px; padding: 0 16px; }
 /* The first card overlaps the banner, like Days trained on Training. */
 .hm-body > :first-child { position: relative; z-index: 2; margin-top: -36px; }
