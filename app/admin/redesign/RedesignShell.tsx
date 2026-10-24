@@ -23,6 +23,7 @@ import PhonePreview, { SCREEN_FOR_TAB } from "./PhonePreview";
 import type { PhoneScreen } from "../../client/AppShell";
 import type { DraftInvoices, RailData } from "./loaders";
 import type { DotTab, DotTrail } from "./dots";
+import { useCloseOnEmptyClick } from "./useCloseOnEmptyClick";
 
 // The redesign drafts on one page: the rail on the left, and Training,
 // Nutrition and Measurements all loaded on the right, one shown at a time.
@@ -98,6 +99,8 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   // so each one sets what the reply is about (and the message to land on).
   const [chat, setChat] = useState<ChatState>({ mounted: false, open: false, about: null, opened: 0, focus: null });
   const closeChat = () => setChat((c) => ({ ...c, open: false }));
+  // A click on empty space closes it, one on anything with a function doesn't (24 Oct, Alex).
+  useCloseOnEmptyClick(chat.open, closeChat);
   // All chats (21 Oct, Alex): the panel can show every chat and another
   // client's thread, so someone else writing is answered without leaving
   // this client's page. This client's thread stays mounted behind (what was

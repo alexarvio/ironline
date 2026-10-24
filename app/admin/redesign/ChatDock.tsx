@@ -5,6 +5,7 @@ import { ChatIcon } from "../../components/icons";
 import MessagesDraft, { type DraftMessages } from "./messages/MessagesDraft";
 import { chatDraftThreadAction } from "./messages/actions";
 import ChatList, { ChatsBack, type DockChat } from "./ChatList";
+import { useCloseOnEmptyClick } from "./useCloseOnEmptyClick";
 
 // The chat on the screens that are not one client's (12 Oct): Feed, Calendar,
 // Phases, Library, Business. The same tab on the window's right edge as on
@@ -49,6 +50,8 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
       window.sessionStorage.setItem(DOCK_KEY, JSON.stringify({ open: isOpen, chat: isOpen ? chatId : null }));
     } catch {}
   };
+  // A click on empty space closes it, one on anything with a function doesn't (24 Oct, Alex).
+  useCloseOnEmptyClick(open, close);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("[role=dialog]") && close();
