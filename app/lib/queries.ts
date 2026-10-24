@@ -11861,9 +11861,11 @@ export type FoodOption = {
   carbs: number;
   fat: number;
   servings: [string, number][];
+  /** A liquid's grams a millilitre (the catalog's), so the diary offers ml and l. */
+  ml?: number;
 };
 
-const catalogOption = (f: CatalogFood, group: FoodOption["group"]): FoodOption => ({ id: f.id, name: f.name, hint: f.category, group, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: f.servings });
+const catalogOption = (f: CatalogFood, group: FoodOption["group"]): FoodOption => ({ id: f.id, name: f.name, hint: f.category, group, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: f.servings, ...(f.ml ? { ml: f.ml } : {}) });
 const customOption = (f: CustomFood): FoodOption => ({
   id: `custom:${f.id}`,
   name: f.name,

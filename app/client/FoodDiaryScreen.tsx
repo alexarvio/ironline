@@ -72,6 +72,8 @@ export type FoodOptionView = {
   carbs: number;
   fat: number;
   servings: [string, number][];
+  /** A liquid's grams a millilitre, so ml and l are offered. */
+  ml?: number;
 };
 export type Macros = { kcal: number; protein: number; carbs: number; fat: number };
 
@@ -1705,24 +1707,25 @@ function AmountPanel({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  // A number and a unit. The unit list is grams, ounces, ml and l for a
-  // liquid, and the food's own portions ("cup", "large"), each worth so many
-  // grams; what is saved is number × unit, in grams, with the unit's name
-  // when it is not grams. A liquid is a food the catalog weighs by the fluid
-  // ounce (or a plain cup), which gives its density; the client's own foods
-  // are taken as water.
+  // A number and a unit. The unit list is grams, ml and l for a liquid, and
+  // the food's own portions ("1 slice", "1 large"), each worth so many grams;
+  // what is saved is number × unit, in grams, with the unit's name when it is
+  // not grams. No ounces (24 Oct, Alex: metric). A liquid's density comes with
+  // the catalog food (`ml`); a packaged one is weighed by the fluid ounce (or a
+  // plain cup); the client's own foods are taken as water.
   const liquid = food.servings.find(([label]) => /^fl oz\b/i.test(label)) ?? food.servings.find(([label]) => /^cup$/i.test(label));
-  const density = liquid ? liquid[1] / (/^fl oz/i.test(liquid[0]) ? ML_PER_FL_OZ : ML_PER_CUP) : food.group === "own" ? 1 : null;
+  const density = food.ml ?? (liquid ? liquid[1] / (/^fl oz/i.test(liquid[0]) ? ML_PER_FL_OZ : ML_PER_CUP) : food.group === "own" ? 1 : null);
   const units: { id: string; label: string; grams: number; portion: boolean }[] = [
     { id: "g", label: "g", grams: 1, portion: false },
-    { id: "oz", label: "oz", grams: G_PER_OZ, portion: false },
+    // A row logged in ounces before they went still opens in them.
+    ...(entry?.serving?.endsWith(" oz") ? [{ id: "oz", label: "oz", grams: G_PER_OZ, portion: false }] : []),
     ...(density ? [{ id: "ml", label: "ml", grams: density, portion: false }, { id: "l", label: "l", grams: density * 1000, portion: false }] : []),
     ...food.servings.map(([label, grams]) => ({ id: `p:${label}`, label, grams, portion: true })),
   ];
   // A row opened again comes back in the unit it was entered in; anything new
   // starts in g, the list's first (24 Oct, Alex: it opened on 3 oz (85 g)).
   const startUnit = entry
-    ? units.find((u) => u.portion && entry.serving?.endsWith(u.label))?.id ?? units.find((u) => !u.portion && u.id !== "g" && entry.serving?.endsWith(` ${u.label}`))?.id ?? "g"
+    ? units.find((u) => u.portion && (entry.serving?.endsWith(u.label) || entry.serving?.endsWith(` × ${u.label.replace(/^1 /, "")}`)))?.id ?? units.find((u) => !u.portion && u.id !== "g" && entry.serving?.endsWith(` ${u.label}`))?.id ?? "g"
     : "g";
   const [unitId, setUnitId] = useState(startUnit);
   const unit = units.find((u) => u.id === unitId) ?? units[0];
@@ -1744,7 +1747,8 @@ function AmountPanel({
 
   const amount = Number(amountText.replace(",", ".")) || 0;
   const grams = amount * unit.grams;
-  const servingLabel = unit.portion ? `${amount === 1 ? "" : `${g(amount)} × `}${unit.label}` : unit.id !== "g" ? `${g(amount)} ${unit.label}` : null;
+  // A portion said once reads "1 slice"; twice, "2 × slice" (its "1 " goes).
+  const servingLabel = unit.portion ? (amount === 1 ? unit.label : `${g(amount)} × ${unit.label.replace(/^1 /, "")}`) : unit.id !== "g" ? `${g(amount)} ${unit.label}` : null;
   const ok = grams > 0 && grams <= 5000 && !pending;
   // Changing the unit keeps the weight: 100 g becomes 3.5 oz, a cup becomes its grams.
   const changeUnit = (id: string) => {

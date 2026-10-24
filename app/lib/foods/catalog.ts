@@ -1,15 +1,18 @@
-import catalogJson from "./catalog.json";
+import foodsJson from "./foods.json";
 import commonJson from "./common.json";
 
 // The shared food catalog: generic foods from USDA FoodData Central
 // (Foundation Foods and SR Legacy), built into catalog.json by
-// scripts/build-food-catalog.mjs. On top of it, common.json (from
-// scripts/build-common-foods.mjs) names the everyday foods a client
-// actually types, "White rice, cooked", each pointing at its catalog row;
-// a search shows those first under their plain names and folds the
-// catalog's long tail away. Loaded once per server; searched here. A
-// client's own foods live in the store (custom_foods) and are searched
-// alongside in queries.ts.
+// scripts/build-food-catalog.mjs and cleaned into foods.json by
+// scripts/clean-food-catalog.mjs (24 Oct, Alex): plain names, metric
+// portions, a liquid's density, and the long tail flagged hidden (kept, so a
+// food already logged still opens, but never searched). On top of it,
+// common.json (from scripts/build-common-foods.mjs) names the everyday foods
+// a client actually types, "White rice, cooked", each pointing at its catalog
+// row, some with the portion a client means; a search shows those first under
+// their plain names and folds the rest away. Loaded once per server; searched
+// here. A client's own foods live in the store (custom_foods) and are
+// searched alongside in queries.ts.
 export type CatalogFood = {
   /** "usda:171077" */
   id: string;
@@ -22,9 +25,13 @@ export type CatalogFood = {
   fat: number;
   /** Household portions: [label, grams]. */
   servings: [string, number][];
+  /** A liquid's grams a millilitre. */
+  ml?: number;
+  /** Kept for what was logged, left out of a search. */
+  hidden?: boolean;
 };
 
-const CATALOG = catalogJson as CatalogFood[];
+const CATALOG = foodsJson as CatalogFood[];
 const BY_ID = new Map(CATALOG.map((f) => [f.id, f]));
 
 // Search terms, lowercased and split; a row is indexed by its own tokens.
@@ -35,13 +42,13 @@ const tokens = (s: string) =>
     .trim()
     .split(/\s+/)
     .filter(Boolean);
-const INDEX = CATALOG.map((f) => ({ food: f, name: f.name.toLowerCase(), tokens: tokens(f.name) }));
+const INDEX = CATALOG.filter((f) => !f.hidden).map((f) => ({ food: f, name: f.name.toLowerCase(), tokens: tokens(f.name) }));
 
-// The everyday foods, under their plain names, pointing at catalog rows.
-const COMMON = (commonJson as { name: string; id: string }[])
+// The everyday foods, under their plain names, pointing at catalog rows, with their own portions when set.
+const COMMON = (commonJson as { name: string; id: string; servings?: [string, number][] }[])
   .map((c) => {
     const food = BY_ID.get(c.id);
-    return food ? { food: { ...food, name: c.name, category: food.name }, name: c.name.toLowerCase(), tokens: tokens(c.name) } : null;
+    return food ? { food: { ...food, name: c.name, category: food.name, servings: c.servings ?? food.servings }, name: c.name.toLowerCase(), tokens: tokens(c.name) } : null;
   })
   .filter((c): c is NonNullable<typeof c> => !!c);
 
