@@ -528,15 +528,13 @@ export default function ExerciseProgressDialog({
               <span className="exp-e">e1RM</span>
               <span />
             </div>
-            {rows.slice(0, 4).map(row)}
+            {/* One run of sessions, the fold under it (24 Oct, Alex: open, it sat between the latest four and the rest and cut the list). */}
+            {(open ? rows : rows.slice(0, 4)).map(row)}
             {rows.length > 4 && (
-              <>
-                <button type="button" className="exp-more" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-                  All {rows.length} sessions
-                  <Fold open={open} />
-                </button>
-                {open && rows.slice(4).map((s, i) => row(s, i + 4))}
-              </>
+              <button type="button" className="exp-more" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+                {open ? "Latest 4" : `All ${rows.length} sessions`}
+                <Fold open={open} />
+              </button>
             )}
           </div>
         </>
