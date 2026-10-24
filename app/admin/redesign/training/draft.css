@@ -578,10 +578,10 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 /* Swaps (25 Sep): an orange circle with the swap arrows on the session's
    head (how many, when more than one) and on the swapped exercise; the
    exercise's circle opens a row under it with what was done instead. */
-.rd-swapdot { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 22px; height: 22px; margin-left: 8px; padding: 0 6px; border: 0; border-radius: 999px; background: #FBE7C6; color: #9a5b0c; font: inherit; font-size: 11px; font-weight: 800; vertical-align: middle; cursor: pointer; transition: background-color 0.15s ease; }
+.rd-swapdot { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 22px; height: 22px; margin-left: 8px; padding: 0 6px; border: 0; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px rgba(217, 138, 28, 0.5); color: #9a5b0c; font: inherit; font-size: 11px; font-weight: 600; vertical-align: middle; cursor: pointer; transition: background-color 0.15s ease, box-shadow 0.15s ease; }
 .rd-swapdot.static { cursor: default; }
-.rd-swapdot:not(.static):hover, .rd-swapdot.on { background: #d98a1c; color: #fff; }
-.rd-swapdot b { font-weight: 800; }
+.rd-swapdot:not(.static):hover, .rd-swapdot.on { background: rgba(217, 138, 28, 0.12); box-shadow: inset 0 0 0 1.5px #d98a1c; }
+.rd-swapdot b { font-weight: 600; }
 .rd-swaprow { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; }
 .rd-swaprow.open { grid-template-rows: 1fr; opacity: 1; }
 .rd-swaprow-clip { min-height: 0; overflow: hidden; }
@@ -625,10 +625,11 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-flags { display: flex; align-items: center; gap: 2px; }
 .rd-flag-slot { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
 .rd-flag-slot .rd-swapdot { margin: 0; padding: 0; min-width: 22px; width: 22px; }
-.rd-flag { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 999px; background: #e3ecf8; color: #1e3a6e; cursor: pointer; text-decoration: none; }
+.rd-flag { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px #dce1e8; color: #5b6474; cursor: pointer; text-decoration: none; }
 .rd-flag svg { width: 13px; height: 13px; }
-.rd-flag.video.in { background: #d9480f; color: #fff; }
-.rd-flag.video.replied { background: #dff3ea; color: #1b7a4b; }
+/* Rings, not filled discs (24 Oct, Alex): the state's colour on the edge and the icon. In, waiting for you: rust. Replied: green. */
+.rd-flag.video.in { box-shadow: inset 0 0 0 1.5px #b3471d; color: #b3471d; }
+.rd-flag.video.replied { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.45); color: #2f7a3f; }
 /* Asked for, waiting for the client (21 Oct, Alex: an ask had no icon): a quiet grey ring, as the client's note. */
 .rd-flag.video.asked { background: none; box-shadow: inset 0 0 0 1px #dce1e8; color: #8b93a1; }
 .rd-ex { flex-direction: row; align-items: center; gap: 8px; }
@@ -841,7 +842,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .wb-board-title { margin: 0; font-size: 18px; font-weight: 800; color: #141a24; }
 
 /* Extra sets the client added (12 Oct): a green +N beside the swap's amber arrows, on the row and the session head. */
-.rd-extradot { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #dff3ea; color: #1b7a4b; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; vertical-align: middle; cursor: default; box-sizing: border-box; }
+.rd-extradot { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.45); color: #2f7a3f; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; vertical-align: middle; cursor: default; box-sizing: border-box; }
 .rd-flag-slot .rd-extradot { padding: 0 4px; }
 
 /* The substitutes dialog (14 Oct): the library's rows, greyed when kept off this session; the session's own under them. */
