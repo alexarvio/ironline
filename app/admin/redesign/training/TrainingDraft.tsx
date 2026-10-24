@@ -308,12 +308,14 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // figure columns keep a set width, so on a wide screen they get more air.
   const GAP = 24;
   const exWidths = [cols.sets && 72, cols.weight && 92, cols.reps && 88, cols.rpe && 68, cols.tempo && 88, cols.rest && 84].filter((w): w is number => typeof w === "number");
-  const gridCols = `20px minmax(220px, 1.5fr)${exWidths.map((w) => ` ${w}px`).join("")} minmax(180px, 1fr) minmax(260px, 1.3fr) 80px 80px 112px`;
+  // The name, Note and "did" columns' least (24 Oct, Alex: a table a few px too wide for the card scrolled by a few px):
+  // 200 / 160 / 220, so a laptop's full screen holds every column without scrolling.
+  const gridCols = `20px minmax(200px, 1.5fr)${exWidths.map((w) => ` ${w}px`).join("")} minmax(160px, 1fr) minmax(220px, 1.3fr) 80px 80px 112px`;
   const colStyle = { gridTemplateColumns: gridCols, columnGap: GAP } as const;
   // The narrowest the table can be (every column at its minimum, the gaps and
   // the row's padding): every row takes at least this, so on a narrow window
   // they scroll sideways together inside the card and stay lined up.
-  const tableMinW = 20 + 220 + exWidths.reduce((t, w) => t + w, 0) + 180 + 260 + 80 + 80 + 112 + (exWidths.length + 7) * GAP + 14;
+  const tableMinW = 20 + 200 + exWidths.reduce((t, w) => t + w, 0) + 160 + 220 + 80 + 80 + 112 + (exWidths.length + 7) * GAP + 14;
   // The band the exercise figures take up, gaps included: cardio's figures
   // share it, so the name, "did" and ⋯ columns line up across both tables.
   const bandW = exWidths.reduce((t, w) => t + w, 0) + Math.max(0, exWidths.length - 1) * GAP;
@@ -323,7 +325,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const cardioAligned = exWidths.length >= 4;
   const cardioBandW = cardioAligned ? bandW : Math.max(bandW, 4 * 72 + 3 * GAP);
   const cardioStyle = {
-    grid: { gridTemplateColumns: `20px minmax(220px, 1.5fr) ${cardioBandW}px minmax(180px, 1fr) minmax(260px, 1.3fr) 80px 80px 112px`, columnGap: GAP } as const,
+    grid: { gridTemplateColumns: `20px minmax(200px, 1.5fr) ${cardioBandW}px minmax(160px, 1fr) minmax(220px, 1.3fr) 80px 80px 112px`, columnGap: GAP } as const,
     band: { gridTemplateColumns: cardioAligned ? exWidths.map((w) => `${w}px`).join(" ") : "repeat(4, minmax(0, 1fr))", columnGap: GAP } as const,
   };
 
@@ -1125,7 +1127,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           // The most marks one row of the session has, so every row's marks end at one edge (24 Oct, Alex).
           const flagWidth = (() => {
             const most = Math.max(0, ...rows.map((r) => [r.pb, extraOf(r) > 0, flagCols.chat && r.exerciseChat.some((m) => !m.mine), videoIn(r.id), r.swap].filter(Boolean).length));
-            return most > 0 ? most * 24 + (most - 1) * 2 + 8 : 0;
+            return most > 0 ? most * 22 + (most - 1) * 6 + 8 : 0;
           })();
           return (
             <SortableItem key={s.id} id={s.id} as="section" anchor={`session-${s.id}`} className={`rd-session${isOpen ? " open" : ""}`}>
@@ -1373,7 +1375,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               r.logged.map((l) => {
                                 const over = l.kg != null && r.kg != null ? l.kg - r.kg : 0;
                                 return (
-                                  <span key={l.set} className={`rd-set${over > 0 ? " up" : over < 0 ? " down" : ""}${l.set > r.sets ? " extra" : ""}${r.pb?.sets.includes(l.set) ? " pb" : ""}`} title={l.set > r.sets ? `Extra set${l.gym ? ` · ${l.gym}` : ""}` : l.gym ?? undefined}>
+                                  <span key={l.set} className={`rd-set${over > 0 ? " up" : over < 0 ? " down" : ""}${l.set > r.sets ? " extra" : ""}${r.pb?.sets.includes(l.set) ? " rd-set-pb" : ""}`} title={l.set > r.sets ? `Extra set${l.gym ? ` · ${l.gym}` : ""}` : l.gym ?? undefined}>
                                     {kgOf(l.kg, lbs)}×{l.reps ?? "—"}
                                     {l.rpe != null && <small>@{l.rpe}</small>}
                                   </span>
