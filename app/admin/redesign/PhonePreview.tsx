@@ -47,7 +47,6 @@ export default function PhonePreview({
   onScreen,
   stamp,
   active,
-  onClose,
 }: {
   clientId: number;
   firstName: string;
@@ -122,9 +121,6 @@ export default function PhonePreview({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <button type="button" className="rm-panel-x" onClick={onClose} aria-label="Close" title="Close">
-          ×
-        </button>
       </div>
       <div className="rd-phone-stage" ref={stage}>
         <div className="rd-phone-device" style={{ width: (W + EDGE * 2) * scale, height: (H + EDGE * 2) * scale }}>

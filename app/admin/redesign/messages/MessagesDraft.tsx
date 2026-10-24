@@ -432,11 +432,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   return (
     <div className={`rd rm${panel ? " rm-panel" : ""}`}>
       <header className="rd-head">
-        {panel && (
-          <button type="button" className="rm-panel-x" onClick={panel.onClose} aria-label="Close the chat" title="Close (Esc)">
-            ×
-          </button>
-        )}
+        {/* No ✕ (24 Oct, Alex): the panel closes from its tab, Esc or a click on empty space. */}
         <div className="rd-head-main">
           <span className="rd-eyebrow">{panel ? "Chat" : "Messages"}</span>
           <h1 className="rd-title">

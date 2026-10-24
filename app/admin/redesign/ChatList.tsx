@@ -23,7 +23,7 @@ export function chatWhen(at: number, now: Date): string {
   return dayMonth(d);
 }
 
-export default function ChatList({ chats, title, here = null, isUnread, onPick, onClose, autoFocus = false }: { chats: DockChat[] | null; title: string; /** The client the page is on. */ here?: number | null; isUnread: (c: DockChat) => boolean; onPick: (c: DockChat) => void; onClose: () => void; /** Mounted in place of a thread (‹ All chats): the keyboard lands in the search, not on the page behind. */ autoFocus?: boolean }) {
+export default function ChatList({ chats, title, here = null, isUnread, onPick, autoFocus = false }: { chats: DockChat[] | null; title: string; /** The client the page is on. */ here?: number | null; isUnread: (c: DockChat) => boolean; onPick: (c: DockChat) => void; onClose: () => void; /** Mounted in place of a thread (‹ All chats): the keyboard lands in the search, not on the page behind. */ autoFocus?: boolean }) {
   const [q, setQ] = useState("");
   const search = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -40,9 +40,6 @@ export default function ChatList({ chats, title, here = null, isUnread, onPick, 
           <span className="rd-eyebrow">Chat</span>
           <h1 className="rd-title">{title}</h1>
         </div>
-        <button type="button" className="rm-panel-x" onClick={onClose} aria-label="Close the chats" title="Close (Esc)">
-          ×
-        </button>
       </header>
       <input ref={search} className="rd-dock-search" type="search" value={q} placeholder="Search clients" aria-label="Search clients" onChange={(e) => setQ(e.target.value)} />
       <div className="rd-dock-rows">
