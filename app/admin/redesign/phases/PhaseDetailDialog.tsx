@@ -7,27 +7,29 @@ import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../.
 import { phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { phaseLengthLabel } from "../../../lib/phases";
 import { FEATURES } from "../../../lib/features";
+import { dayMonth } from "../../../lib/dayMonth";
 import { TrackIcon, weeksBetween } from "../plan/PlanDraft";
 import { rgbOf } from "../plan/EventsCard";
+import { relative } from "../plan/timelineParts";
 import DateSpan from "./DateSpan";
 import type { OverviewClient } from "./load";
-import { daysLeft, endingSoon, leftLabel, mondayOf, nextOnTrack, prevOnTrack, weekSegments, type OverviewPhase } from "./timeline";
+import { mondayOf, nextOnTrack, prevOnTrack, weekSegments, type OverviewPhase } from "./timeline";
 
-// A phase's detail (14 Oct; the .dlh card since 21 Oct), from a bar on the
-// Phases timeline. Read-only: the name, its track and state tags, its days big
-// (DateSpan, 23 Oct, Alex; no client name, the row says whose it is), the weeks as a strip, its goals (no "After this", 21 Oct, Alex), and
-// one way out: Open, to the track's own tab. ← and → move along the track.
+// A phase's detail (14 Oct; the .dlh card since 21 Oct), from a bar on the Phases timeline. Read-only, and one anatomy
+// with the event's (24 Oct, Alex: docs/boards/plan-popups-mockup.html): the name; its track and state as tags; its days
+// big (DateSpan; no client name, the row says whose it is), how long over where it stands ("Week 3 of 13", "In 6 days",
+// "Ended 21/10"); the weeks as the track of where today is; Open, to the track's own tab. ← and → move along the track.
 
 /** Where the phase is edited: the track's own tab, on this phase. */
 export const planHref = (clientId: number, p: OverviewPhase) =>
   p.track === "training" ? `/admin/redesign/training?client=${clientId}${p.programId ? `&program=${p.programId}` : ""}` : `/admin/redesign/${p.track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${p.id}`;
 
+const up = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const stateOf = (p: OverviewPhase, today: string) => phaseStateOf({ draft: p.draft, startWeek: p.start, endWeek: p.endWeek, today });
 
 export default function PhaseDetailDialog({ client, phase: p, today, onMove }: { client: OverviewClient; phase: OverviewPhase; today: string; /** ← and →: the phase before or after on the track. */ onMove: (p: OverviewPhase) => void }) {
   const accent = TRACK_ACCENT[p.track];
   const state = stateOf(p, today);
-  const soon = endingSoon(p, client.phases, today);
   // The Plan bar's weeks, so the two always say the same.
   const total = weeksBetween(p.start, p.endWeek) + 1;
   const weekNow = weeksBetween(p.start, mondayOf(today)) + 1;
@@ -38,6 +40,8 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
   const prev = prevOnTrack(p, client.phases);
   const goals = p.objectives.filter((g) => g.trim()).slice(0, 3);
   const openRef = useRef<HTMLAnchorElement>(null);
+  // Where it stands, under how long: the week it is in, else how far off it starts, else when it ended.
+  const standing = state === "live" ? `Week ${weekNow} of ${total}` : state === "past" ? `Ended ${dayMonth(p.end)}` : up(relative(today, p.start));
 
   return (
     <DialogContent
@@ -73,7 +77,7 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
             start={p.start}
             end={p.end}
             today={today}
-            facts={[phaseLengthLabel(p.start, p.endWeek), state === "live" ? `Week ${weekNow} of ${total}` : null, soon && <span className="phd-soon">{leftLabel(daysLeft(p, today))}</span>]}
+            facts={[phaseLengthLabel(p.start, p.endWeek), standing]}
           />
         </div>
       </DialogDescription>

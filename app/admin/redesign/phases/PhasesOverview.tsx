@@ -313,6 +313,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
             event={evMove.event}
             start={evMove.start}
             end={evMove.end}
+            today={today}
             cats={categories}
             onCancel={() => setEvMove(null)}
             onSave={() => {

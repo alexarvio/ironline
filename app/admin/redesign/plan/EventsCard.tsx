@@ -10,7 +10,8 @@ import { addClientEventAction, deleteClientEventAction, updateClientEventAction 
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../../components/icons";
 import { MonthRange } from "../MonthRange";
-import { AddCells, chromeOf, EmptyLane, eventIsPast, eventLanes, EventMark, eventPlace, gridFor, LANE, LaneRow, rgbOf, standingParts, Timeline, type Category, type PlanEvent } from "./timelineParts";
+import { AddCells, chromeOf, EmptyLane, eventIsPast, eventLanes, EventMark, eventPlace, eventState, gridFor, LANE, LaneRow, rgbOf, standingParts, Timeline, type Category, type PlanEvent } from "./timelineParts";
+import { STATE_LABEL, stateTagStyle } from "../../phaseChrome";
 import DateText from "../DateText";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
@@ -355,6 +356,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
             event={events.find((e) => e.id === moveDlg.id)!}
             start={moveDlg.start}
             end={moveDlg.end}
+            today={today}
             cats={cats}
             onCancel={() => setMoveDlg(null)}
             onSave={() => {
@@ -650,8 +652,9 @@ export function EventDialog({ today, event, cats, firstName, initialStart, initi
 }
 
 // ---- After a drag: what moves, from what to what, and a yes before it saves.
-export function MoveEventDialog({ event: e, start, end, cats, onCancel, onSave }: { event: PlanEvent; start: string; end: string; cats: Category[]; onCancel: () => void; onSave: () => void }) {
+export function MoveEventDialog({ event: e, start, end, cats, today, onCancel, onSave }: { event: PlanEvent; start: string; end: string; cats: Category[]; /** For its state tag. */ today: string; onCancel: () => void; onSave: () => void }) {
   const k = chromeOf(cats, e.kind);
+  const state = eventState(e, today);
   const single = e.start === e.end;
   const len = (a: string, b: string) => `${daysBetween(a, b) + 1} day${daysBetween(a, b) === 0 ? "" : "s"}`;
   const rows = single
@@ -661,11 +664,13 @@ export function MoveEventDialog({ event: e, start, end, cats, onCancel, onSave }
         { label: "End", was: dayMonth(e.end), now: dayMonth(end) },
         { label: "Length", was: len(e.start, e.end), now: len(start, end) },
       ];
-  // The phase's move pop-up, for an event (20 Oct, Alex): its category as a tinted tag, what it was struck through, the new value in its colour; no arrows, no sentences.
+  // The phase's move pop-up, for an event (20 Oct, Alex): its category and state as tags (24 Oct, Alex: as the phase's),
+  // what it was struck through, the new value in its colour; no picture of it, no arrows, no sentences.
   return (
     <DialogContent className="dlh mvd" style={{ "--mv": k.ink, "--mv-rgb": rgbOf(k.ink) } as React.CSSProperties}>
       <div className="dlh-head">
-        <DialogTitle className="dlh-title">Move {e.title}</DialogTitle>
+        {/* Untitled, it is named by its category: "Move family event" (24 Oct, Alex: never "something"). */}
+        <DialogTitle className="dlh-title">Move {e.title.trim() || `${k.label.toLowerCase()} event`}</DialogTitle>
         <button type="button" className="dlh-x" onClick={onCancel} aria-label="Close">
           ✕
         </button>
@@ -674,6 +679,9 @@ export function MoveEventDialog({ event: e, start, end, cats, onCancel, onSave }
         <span className="mvd-track">
           <KindIcon id={e.kind} size={12} />
           {k.label}
+        </span>
+        <span className="mvd-state" style={stateTagStyle(state)}>
+          {STATE_LABEL[state]}
         </span>
       </DialogDescription>
       <div className="mvd-rows">

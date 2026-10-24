@@ -104,20 +104,18 @@
 .dlh .dsp-day.open b { font-size: 15px; white-space: nowrap; }
 .dlh .dsp-arrow { font-size: 16px; color: #c5ccd8; }
 .dlh .dsp-facts { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 0; margin-left: auto; font-size: 13.5px; font-weight: 500; color: #5b6474; text-align: right; font-variant-numeric: tabular-nums; }
-/* With something on the right of the row (an event's Added by, 23 Oct, Alex): the days, the facts and it spread across
-   the whole row, the space shared between them, so the card isn't white on one side (23 Oct, Alex). */
-.dlh .dsp.has-aside { justify-content: space-between; }
-.dlh .dsp.has-aside .dsp-facts { align-items: flex-start; margin-left: 0; text-align: left; }
-.dlh .dsp-aside { min-width: 0; }
-.evd .evd-added { margin-top: 0; }
 .dlh .dsp-facts > span:first-child { font-size: 15px; font-weight: 600; color: #141a24; }
-/* Who added an event: their face, then the name and when (23 Oct, Alex), as the client's Events screen. */
-.evd .evd-by { display: flex; align-items: center; gap: 8px; }
-.evd .evd-face { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; overflow: hidden; background: #eef0f3; font-size: 11px; font-weight: 600; color: #5b6474; }
+/* Who added an event, bottom left of the footer (24 Oct, Alex: not a tag): their face and "Added by Finlay". */
+.dlh .dlh-by { display: inline-flex; align-items: center; gap: 8px; min-width: 0; margin-right: auto; font-size: 12.5px; font-weight: 500; color: #8b93a1; white-space: nowrap; }
+.dlh .dlh-by b { font-weight: 500; color: #3a4250; }
+/* An event's track (24 Oct, Alex): where today is along it, in its colour; a past one full and grey. */
+.dlh .dsp-track { display: block; height: 6px; margin: 4px 0 2px; border-radius: 999px; background: #eef0f3; overflow: hidden; }
+.dlh .dsp-track i { display: block; height: 100%; border-radius: 999px; background: var(--mv); }
+.dlh .dsp-track.past i { background: #c5ccd8; }
+.evd .evd-face { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; overflow: hidden; background: #eef0f3; font-size: 11px; font-weight: 600; color: #5b6474; }
 .evd .evd-face img { width: 100%; height: 100%; object-fit: cover; }
 .dlh .dlh-go[href] { display: inline-flex; align-items: center; text-decoration: none; }
-/* A phase: ending soon in rust on its fact line; the weeks as a strip, those behind in the track's colour. */
-.phd .phd-soon { font-weight: 600; color: #b8471f; }
+/* A phase: the weeks as a strip, those behind in the track's colour. */
 .phd .phd-weeks { display: grid; gap: 3px; margin: 4px 0 2px; }
 .phd .phd-weeks i { display: block; height: 6px; border-radius: 999px; background: #eef0f3; }
 .phd .phd-weeks i.done { background: var(--mv); }
@@ -126,8 +124,7 @@
 .phd .phd-goals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .phd .phd-goals li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; font-weight: 500; line-height: 1.4; color: #141a24; overflow-wrap: anywhere; }
 .phd .phd-goals li i { flex: none; width: 6px; height: 6px; margin-top: 7px; border-radius: 999px; background: var(--mv); }
-/* An event: From client and Past as hairline capsules; who added it and the note in body grey. */
-.evd .evd-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 11.5px; font-weight: 600; color: #5b6474; }
+/* An event's note in body grey. */
 .evd .evd-text { margin: 0; font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; white-space: pre-wrap; overflow-wrap: anywhere; }
 .evd .evd-note.clamp { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
 .evd .evd-more { align-self: flex-start; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }

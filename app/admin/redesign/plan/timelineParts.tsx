@@ -421,7 +421,7 @@ export const chromeOf = (_cats: Category[], id: string | null) => {
 };
 
 /** "in 3 weeks", "in 5 days", "today", "2 days ago", "6 weeks ago". */
-const relative = (today: string, d: string) => {
+export const relative = (today: string, d: string) => {
   const n = daysBetween(today, d);
   if (n === 0) return "today";
   const abs = Math.abs(n);
@@ -450,6 +450,13 @@ export const barStanding = (today: string, e: PlanEvent): string | null => {
 
 /** Over and done (20 Oct, Alex: a past event isn't editable any more): ended before today; a repeat only once its last day has gone. */
 export const eventIsPast = (e: PlanEvent, today: string) => (e.repeat ? e.repeat.until != null && e.repeat.until < today : e.end < today);
+
+/** An event's state, as a phase's (24 Oct, Alex: an event and a phase read the same): on now Live, still to come
+    Scheduled, over Past. For the state tag (STATE_TAG) on its pop-ups. */
+export const eventState = (e: PlanEvent, today: string): "live" | "scheduled" | "past" => (eventIsPast(e, today) ? "past" : today < e.start ? "scheduled" : "live");
+
+/** A name for an event in a title: its own, else its category's ("Family event"; 24 Oct, Alex: never "something"). */
+export const eventName = (e: { title: string }, label: string) => e.title.trim() || `${label} event`;
 
 /** Where an event sits on the grid, as percentages of its width; a day is a seventh of a week's column. */
 export function eventPlace(e: { start: string; end: string }, first: string, totalDays: number) {

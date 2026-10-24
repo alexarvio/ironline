@@ -22,11 +22,11 @@ function Day({ date, year }: { date: string; year: boolean }) {
 }
 
 /** start and end as yyyy-mm-dd; end null for a repeat with no end ("No end" in its place). */
-export default function DateSpan({ start, end, today, facts, aside }: { start: string; end: string | null; today: string; /** How long and where it stands, a line each. */ facts: ReactNode[]; /** On the right of the same row (an event's Added by, 23 Oct, Alex); the facts then follow the days. */ aside?: ReactNode }) {
+export default function DateSpan({ start, end, today, facts }: { start: string; end: string | null; today: string; /** How long over where it stands, on the right (24 Oct, Alex: a single day only where it stands). */ facts: ReactNode[] }) {
   const thisYear = today.slice(0, 4);
   const shown = facts.filter((f) => f != null && f !== false && f !== "");
   return (
-    <div className={`dsp${aside ? " has-aside" : ""}`}>
+    <div className="dsp">
       <span className="dsp-days">
         <Day date={start} year={start.slice(0, 4) !== thisYear} />
         {end !== start && (
@@ -51,7 +51,6 @@ export default function DateSpan({ start, end, today, facts, aside }: { start: s
           ))}
         </span>
       )}
-      {aside && <div className="dsp-aside">{aside}</div>}
     </div>
   );
 }
