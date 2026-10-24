@@ -2508,13 +2508,20 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 
+/* A pushed screen's title (24 Oct, Alex: the bold ones read too fat, and Shape
+   update's was another size): one voice on every screen the burger and the bell
+   open, and on Shape update and the check-in (.ci-title): Archivo in capitals,
+   15px at 600, spaced as the eyebrows are. The right margin takes back the last
+   letter's spacing, so the word sits truly centred. */
 .cn-title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: #333333;
-  line-height: 1.15;
+  margin: 0 -0.16em 0 0;
+  font-family: var(--font-archivo), "Archivo", sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #141a24;
+  line-height: 1.2;
 }
 
 .cn-body {
@@ -3916,7 +3923,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* Back on the left, the count on the right, the title dead centre between them. */
 .ci-back { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 999px; background: transparent; color: #333333; cursor: pointer; }
 .ci-back svg { width: 20px; height: 20px; }
-.ci-title { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; color: #333333; }
+.ci-title { margin: 0 -0.16em 0 0; font-family: var(--font-archivo), "Archivo", sans-serif; font-size: 15px; font-weight: 600; line-height: 1.2; letter-spacing: 0.16em; text-transform: uppercase; color: #141a24; }
 .ci-count { flex: none; justify-self: end; display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px 6px 8px; border-radius: 999px; background: #E0F2F1; font-size: 13px; font-weight: 700; color: #1E3A5F; font-variant-numeric: tabular-nums; }
 .ci-count-dot { width: 8px; height: 8px; margin-right: 3px; border-radius: 999px; background: #00897B; }
 .ci-count-total { font-weight: 600; color: #9E9E9E; }
@@ -16928,11 +16935,11 @@ button.pp-row { cursor: zoom-in; }
 /* A top row still inside its banner (the progress pictures screen): pinned over the photo as before, no sticky. */
 .tr-banner.ci-banner > .ci-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 2; margin: 0; height: var(--topbar-h); box-sizing: border-box; display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 12px; padding: 0 16px 10px; }
 .ci-one .ci-bar.stuck { background: rgba(244, 247, 252, 0.9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 1px 0 rgba(51, 51, 51, 0.06); }
-.ci-one .ci-bar.stuck .ci-back, .ci-one .ci-bar.stuck .ci-title { color: #333333; }
+.ci-one .ci-bar.stuck .ci-back, .ci-one .ci-bar.stuck .ci-title { color: #141a24; }
 .ci-one .ci-bar.stuck .ci-count { background: #fff; border-color: #E0E0E0; color: #333333; }
 .ci-one .ci-bar.stuck .ci-count-total { color: #757575; }
 .ci-one .ci-back { color: #fff; }
-.ci-one .ci-title { margin: 0; font-size: 18px; font-weight: 700; line-height: 40px; color: #fff; }
+.ci-one .ci-title { line-height: 40px; color: #fff; }
 .ci-one .ci-count { justify-self: end; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); color: #fff; }
 .ci-one .ci-count-total { color: rgba(255, 255, 255, 0.72); }
 .ci-one .ci-count-dot { background: #fff; }
@@ -20452,7 +20459,6 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .sw-card.sw-card .sw-targets { border-top: 0; padding-top: 4px; }
 /* The page title shows at rest too (17 Oct, Alex): white over the photo like the back arrow, ink on the frosted bar once scrolled. */
 .pp-one > .ci-bar:not(.stuck) .ci-title { opacity: 1; color: #fff; }
-.pp-one > .ci-bar .ci-title { font-size: 17px; font-weight: 600; }
 
 /* A sheet folds open and shut (17 Oct): the height eases on a grid row, the body fades and settles; the chevron turns with it. */
 .pp-app-past-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease; }
