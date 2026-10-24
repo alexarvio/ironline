@@ -7,8 +7,9 @@ import "./focus.css";
 // To focus on (23 Oct, Alex): the coach's goals until the next call, the first thing on Home under the greeting.
 // Drawn as a spine to the call (24 Oct, Alex: mockup B, docs/boards/to-focus-on-v2.html): each goal a small ink ring on
 // one line, and the line ends at the call, a ring in the call's blue with "Your call with {Coach}" and when. Still
-// bullet points: nothing to tap or tick. Shown only while a call is booked (24 Oct, Alex; HomeHub). The stored ticks
-// stay in the data, unused.
+// bullet points: nothing to tap or tick. Shown whenever there are goals, until the coach changes them or completes the
+// next call with new ones (24 Oct, Alex); the call at the line's end only while one is booked. The stored ticks stay in
+// the data, unused.
 
 const CALL = MEETING_TYPES[0]; // a call with no kind of its own is a Check-in: the blue, the camera
 

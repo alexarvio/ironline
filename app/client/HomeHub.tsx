@@ -186,9 +186,9 @@ export default function HomeHub({
     <div className="hm">
       <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
       <div className="hm-body">
-        {/* To focus on (23 Oct, Alex): the first thing they see, above Today and the cards, while the coach has set goals
-            and a call is booked (24 Oct, Alex: the goals run until it). */}
-        {focus && focus.goals.length > 0 && focus.until && <FocusList focus={focus} coach={coach} today={today} />}
+        {/* To focus on (23 Oct, Alex): the first thing they see, above Today and the cards, whenever the coach has set goals:
+            they stay until changed, or replaced by the next call's (24 Oct, Alex). The call line under them only while one is booked. */}
+        {focus && focus.goals.length > 0 && <FocusList focus={focus} coach={coach} today={today} />}
         {/* The spine (8 Oct): Today, Your plan, then the coach, so Home is never
             empty. The cards below say what is due; Today speaks only when
             nothing is, so the top of the page still says something true. */}
