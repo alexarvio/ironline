@@ -947,3 +947,66 @@ export function exerciseTrends(clientId: number, today: string = localDateStr())
   }
   return out;
 }
+
+/** The reps a target asks for: "8-10" → 8 to 10, "10+" or "12" → that many or more; nothing to read (AMRAP, a time): null. */
+export function repTarget(reps: string | null | undefined): { lo: number; hi: number } | null {
+  const s = (reps ?? "").trim();
+  const range = /^(\d+)\s*(?:-|–|—|to)\s*(\d+)$/i.exec(s);
+  if (range) {
+    const [a, b] = [Number(range[1]), Number(range[2])];
+    return a > 0 && b >= a ? { lo: a, hi: b } : null;
+  }
+  const one = /^(\d+)\s*\+?$/.exec(s);
+  return one && Number(one[1]) > 0 ? { lo: Number(one[1]), hi: Infinity } : null;
+}
+
+/**
+ * Personal bests (24 Oct, Alex: "as long as the weight is logged with a rep range inside the target"): a set is one
+ * when its reps sit inside its exercise's rep target and its weight beats every earlier set of the same exercise (any
+ * programme, any gym) whose reps sat inside that target too. The first time an exercise is done is no best: there is
+ * nothing to beat. An assisted lift is weighed as everywhere (liftedKg: body weight less the help), so less help is a
+ * best; with no body weight known it is left out. A swapped row's sets are the substitute's, so it shows none.
+ * Assignment id → the set numbers that were a best, the heaviest of them and the best before it (kg as logged; an
+ * assisted lift's the help, so no "before" is given for it).
+ */
+export type PersonalBest = { sets: number[]; kg: number; prevKg: number | null; assisted: boolean };
+export function personalBests(clientId: number, today: string = localDateStr()): Map<number, PersonalBest> {
+  const ctx = context(clientId, today, false);
+  const rowOf = new Map<number, AssignmentRow>();
+  for (const list of ctx.byDay.values()) for (const a of list) rowOf.set(a.id, a);
+  // Every weighed set of each exercise, oldest first.
+  const byKey = new Map<string, LoggedSet[]>();
+  for (const s of ctx.sets) {
+    if (!s.exerciseKey || s.weight == null || !(s.weight > 0) || s.reps == null || !(s.reps > 0)) continue;
+    const list = byKey.get(s.exerciseKey);
+    if (list) list.push(s);
+    else byKey.set(s.exerciseKey, [s]);
+  }
+  const out = new Map<number, PersonalBest>();
+  for (const list of byKey.values()) {
+    list.sort((p, q) => (Number.isFinite(p.ms) && Number.isFinite(q.ms) ? p.ms - q.ms : p.day < q.day ? -1 : p.day > q.day ? 1 : 0));
+    for (let i = 0; i < list.length; i++) {
+      const s = list[i];
+      const row = rowOf.get(s.assignmentId);
+      if (!row || row.swap) continue;
+      const target = repTarget(row.reps);
+      if (!target) continue;
+      const inside = (reps: number) => reps >= target.lo && reps <= target.hi;
+      if (!inside(s.reps!)) continue;
+      // The best before this session: earlier sets on another row (another day) inside the same target.
+      let prev = 0;
+      for (let j = 0; j < i; j++) {
+        const e = list[j];
+        if (e.assignmentId !== s.assignmentId && inside(e.reps!) && e.weight! > prev) prev = e.weight!;
+      }
+      if (!(prev > 0) || !(s.weight! > prev)) continue;
+      const kg = s.log.weight_kg ?? 0;
+      const had = out.get(s.assignmentId);
+      if (had) {
+        had.sets.push(s.log.set_number);
+        if (kg > had.kg) had.kg = kg;
+      } else out.set(s.assignmentId, { sets: [s.log.set_number], kg, prevKg: s.assisted ? null : prev, assisted: s.assisted });
+    }
+  }
+  return out;
+}

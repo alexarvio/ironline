@@ -622,9 +622,14 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-rows-scroll .rd-row-more { position: sticky; right: 0; z-index: 1; align-self: stretch; padding-left: 6px; background: #fff; box-shadow: -10px 0 8px -6px rgba(255, 255, 255, 0.9); }
 .rd-rows-scroll .rd-row.edited .rd-row-more { background: #f8fafe; box-shadow: -10px 0 8px -6px rgba(248, 250, 254, 0.9); }
 .rd-rows-scroll .rd-row-main:hover:not(.static) .rd-row-more { background: #fafbfd; }
-.rd-flags { display: flex; align-items: center; gap: 2px; }
-.rd-flag-slot { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
-.rd-flag-slot .rd-swapdot { margin: 0; padding: 0; min-width: 22px; width: 22px; }
+/* Packed against the right, the swap rightmost (24 Oct, Alex). */
+.rd-flags { display: flex; flex: none; align-items: center; justify-content: flex-end; gap: 2px; }
+.rd-flags .rd-swapdot { margin: 0; padding: 0; min-width: 22px; width: 22px; }
+.rd-flags .rd-extradot { padding: 0 4px; }
+.rd-more-room { flex: none; width: 28px; height: 28px; }
+/* A personal best (24 Oct, Alex): the extra sets' green ring with PB in it, and the sets that were one ringed in green. */
+.rd-pbdot { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 4px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.45); color: #2f7a3f; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; box-sizing: border-box; cursor: default; }
+.rd-set.pb { box-shadow: inset 0 0 0 1.5px #2f7a3f; }
 .rd-flag { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px #dce1e8; color: #5b6474; cursor: pointer; text-decoration: none; }
 .rd-flag svg { width: 13px; height: 13px; }
 /* Rings, not filled discs (24 Oct, Alex): the state's colour on the edge and the icon. In, waiting for you: rust. Replied: green. */
@@ -842,7 +847,6 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 
 /* Extra sets the client added (12 Oct): a green +N beside the swap's amber arrows, on the row and the session head. */
 .rd-extradot { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.45); color: #2f7a3f; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; vertical-align: middle; cursor: default; box-sizing: border-box; }
-.rd-flag-slot .rd-extradot { padding: 0 4px; }
 
 /* The substitutes dialog (14 Oct): the library's rows, greyed when kept off this session; the session's own under them. */
 .rd-subs-dlg { max-width: 720px; }

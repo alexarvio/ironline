@@ -103,7 +103,7 @@ import { clientPlanId, listCoachPlans } from "../../lib/coachPlans";
 import { coachIdOfClient } from "../../lib/tenancy";
 import { getCoachFocus } from "../../lib/focus";
 import { supportUnreadForCoach, supportUnreadForOwner } from "../../lib/support";
-import { exerciseTrends } from "../../lib/homeBoardData";
+import { exerciseTrends, personalBests } from "../../lib/homeBoardData";
 import { applyReads } from "./training/applyPreviewData";
 import { sub } from "../../lib/timing";
 
@@ -339,6 +339,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   // pop-up's (23 Oct, Alex: it held only this programme's same session slot, so a week the exercise sat in another session
   // never showed). W is the week of this programme; another programme's session has none.
   const trends = sub("trends", () => exerciseTrends(clientId));
+  // A set beating every earlier one of the exercise with its reps inside the target (24 Oct, Alex).
+  const bests = sub("bests", () => personalBests(clientId));
   const progressOf = new Map<string, { date: string | null; planWeek: number; gym: string | null; assisted: boolean; bodyKg: number | null; sets: { weight: number; reps: number; rpe: number | null }[] }[]>();
   const progressFor = (key: string) => {
     let list = progressOf.get(key);
@@ -385,6 +387,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         // Swapped: the sets belong to what they did instead (swapInfo), not to the prescription.
         logged: a.swap ? [] : logs.map((l) => ({ set: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual, gym: l.gym_id != null ? gymName.get(l.gym_id) ?? null : null })),
         exerciseChat: aboutExercise.get(a.id) ?? [],
+        pb: a.swap ? null : bests.get(a.id) ?? null,
         swapInfo: a.swap
           ? {
               name: (a.swap.library_exercise_id != null ? libName.get(a.swap.library_exercise_id) ?? null : null) ?? a.swap.custom_name ?? "Another exercise",

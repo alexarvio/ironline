@@ -97,6 +97,8 @@ export type DraftRow = {
   /** The swap in full: what, when, and the sets logged on it (kept out of this row's numbers). */
   /** The chat about this exercise, both sides, oldest first. */
   exerciseChat: { id: number; mine: boolean; text: string; when: string; at?: number; media?: { path: string; type: string } | null }[];
+  /** A personal best in this session (24 Oct, Alex): the sets, the heaviest, the best before it (none for an assisted lift). */
+  pb?: { sets: number[]; kg: number; prevKg: number | null; assisted: boolean } | null;
   swapInfo: { name: string; typed: boolean; when: string; sets: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[] } | null;
   /** What the coach offers instead when the machine is taken, on this session. */
   alternatives: { exerciseId: number; name: string; note: string }[];
@@ -1118,7 +1120,13 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             swap: rows.some((r) => r.swap),
             // Sets the client added beyond the prescription (12 Oct, "Add a set").
             extra: rows.some((r) => extraOf(r) > 0),
+            pb: rows.some((r) => !!r.pb),
           };
+          // The most marks one row of the session has, so every row's marks end at one edge (24 Oct, Alex).
+          const flagWidth = (() => {
+            const most = Math.max(0, ...rows.map((r) => [r.pb, extraOf(r) > 0, flagCols.chat && r.exerciseChat.some((m) => !m.mine), videoIn(r.id), r.swap].filter(Boolean).length));
+            return most > 0 ? most * 24 + (most - 1) * 2 + 8 : 0;
+          })();
           return (
             <SortableItem key={s.id} id={s.id} as="section" anchor={`session-${s.id}`} className={`rd-session${isOpen ? " open" : ""}`}>
               {(sessionGrip) => (
@@ -1160,8 +1168,25 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                   {/* The dot trail (dots.ts): a video or photo to review in it, or their note to read. Beside the chevron, so the name, its facts and the fold stay put when it comes and goes. */}
                   {dots?.training.days.includes(s.id) && <i className="rd-due" role="img" aria-label="needs you" />}
                 </span>
-                {/* What wants the coach: the client's note, a video, extra sets, a swap. */}
+                {/* What wants the coach, in the exercise rows' order (24 Oct, Alex): from the right the swap, the video or photo,
+                    their note, then extra sets and a personal best. */}
                 <span className="trn-row-flags">
+                  {(() => {
+                    const n = rows.filter((r) => r.pb).length;
+                    return n > 0 ? (
+                      <span className="rd-pbdot" title={`${n} personal best${n === 1 ? "" : "s"} in this session`} aria-label={`${n} personal best${n === 1 ? "" : "s"}`}>
+                        PB{n > 1 ? ` ${n}` : ""}
+                      </span>
+                    ) : null;
+                  })()}
+                  {(() => {
+                    const n = rows.reduce((t, r) => t + extraOf(r), 0);
+                    return n > 0 ? (
+                      <span className="rd-extradot static" title={`${firstName} added ${n} extra set${n === 1 ? "" : "s"} in this session`} aria-label={`${n} extra set${n === 1 ? "" : "s"}`}>
+                        +{n}
+                      </span>
+                    ) : null;
+                  })()}
                   {s.note && (
                     <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
                       <ChatIcon />
@@ -1180,14 +1205,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                         {photo ? <PhotoIcon /> : <VideoIcon />}
                       </span>
                     );
-                  })()}
-                  {(() => {
-                    const n = rows.reduce((t, r) => t + extraOf(r), 0);
-                    return n > 0 ? (
-                      <span className="rd-extradot static" title={`${firstName} added ${n} extra set${n === 1 ? "" : "s"} in this session`} aria-label={`${n} extra set${n === 1 ? "" : "s"}`}>
-                        +{n}
-                      </span>
-                    ) : null;
                   })()}
                   {(() => {
                     // Exercises and cardio alike (24 Oct, Alex).
@@ -1356,7 +1373,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               r.logged.map((l) => {
                                 const over = l.kg != null && r.kg != null ? l.kg - r.kg : 0;
                                 return (
-                                  <span key={l.set} className={`rd-set${over > 0 ? " up" : over < 0 ? " down" : ""}${l.set > r.sets ? " extra" : ""}`} title={l.set > r.sets ? `Extra set${l.gym ? ` · ${l.gym}` : ""}` : l.gym ?? undefined}>
+                                  <span key={l.set} className={`rd-set${over > 0 ? " up" : over < 0 ? " down" : ""}${l.set > r.sets ? " extra" : ""}${r.pb?.sets.includes(l.set) ? " pb" : ""}`} title={l.set > r.sets ? `Extra set${l.gym ? ` · ${l.gym}` : ""}` : l.gym ?? undefined}>
                                     {kgOf(l.kg, lbs)}×{l.reps ?? "—"}
                                     {l.rpe != null && <small>@{l.rpe}</small>}
                                   </span>
@@ -1370,13 +1387,22 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                             </button>
                           ))}
                           <span className="rd-row-more">
-                            {/* A slot for each kind the session has (flagCols), so
-                                each lines up down the table: their messages about
-                                it, a video they sent, a swap (opens what they did). */}
-                            <span className="rd-flags">
-                              {flagCols.chat && (
-                              <span className="rd-flag-slot">
-                                {r.exerciseChat.some((m) => !m.mine) && (
+                            {/* The marks packed against the right, in one order (24 Oct, Alex): from the right the swap, the
+                                video or photo, their message, then extra sets and a personal best; whatever a row has
+                                takes the places from the right, no gaps. One width a session, so they end at one edge. */}
+                            {flagWidth > 0 && (
+                            <span className="rd-flags" style={{ width: flagWidth }}>
+                              {r.pb && (
+                                <span className="rd-pbdot" title={r.pb.assisted ? `Personal best: less help than ever, reps on target` : `Personal best: ${kgOf(r.pb.kg, lbs)} ${unit}, reps on target (best before ${kgOf(r.pb.prevKg ?? 0, lbs)} ${unit})`} aria-label="Personal best">
+                                  PB
+                                </span>
+                              )}
+                              {extraOf(r) > 0 && (
+                                  <span className="rd-extradot static" title={`${firstName} added ${extraOf(r)} extra set${extraOf(r) === 1 ? "" : "s"}: ${r.sets} prescribed, ${r.sets + extraOf(r)} done`} aria-label={`${extraOf(r)} extra set${extraOf(r) === 1 ? "" : "s"}`}>
+                                    +{extraOf(r)}
+                                  </span>
+                                )}
+                              {r.exerciseChat.some((m) => !m.mine) && (
                                   <button
                                     type="button"
                                     className="rd-flag chat"
@@ -1387,11 +1413,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     <ChatIcon />
                                   </button>
                                 )}
-                              </span>
-                              )}
-                              {flagCols.video && (
-                              <span className="rd-flag-slot">
-                                {video && videoIn(r.id) && weekLocked && video.state === "asked" ? (
+                              {video && videoIn(r.id) && weekLocked && video.state === "asked" ? (
                                   // A done week's waiting ask is shown, not changed (23 Oct).
                                   <span className="rd-flag video asked" title={`Video asked for · waiting for ${firstName}${video.recurring ? " · every session" : ""}`} aria-label={`Video asked for, waiting for ${firstName}`} role="img">
                                     <VideoIcon />
@@ -1407,20 +1429,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     {video.media === "photo" && video.state !== "asked" ? <PhotoIcon /> : <VideoIcon />}
                                   </button>
                                 )}
-                              </span>
-                              )}
-                              {flagCols.extra && (
-                              <span className="rd-flag-slot">
-                                {extraOf(r) > 0 && (
-                                  <span className="rd-extradot static" title={`${firstName} added ${extraOf(r)} extra set${extraOf(r) === 1 ? "" : "s"}: ${r.sets} prescribed, ${r.sets + extraOf(r)} done`} aria-label={`${extraOf(r)} extra set${extraOf(r) === 1 ? "" : "s"}`}>
-                                    +{extraOf(r)}
-                                  </span>
-                                )}
-                              </span>
-                              )}
-                              {flagCols.swap && (
-                              <span className="rd-flag-slot">
-                                {r.swap && (
+                              {r.swap && (
                                   <button
                                     type="button"
                                     className={`rd-swapdot${openSwaps.includes(r.id) ? " on" : ""}`}
@@ -1432,9 +1441,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     <SwapIcon />
                                   </button>
                                 )}
-                              </span>
-                              )}
                             </span>
+                            )}
                             {/* On a done week the ⋯ keeps what is about the client, not the plan: their video (watch, reply) and the message. */}
                             {(!weekLocked || (!!video && video.state !== "asked") || program.status === "live") && (
                             <DropdownMenu modal={false}>
@@ -1519,6 +1527,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               </DropdownMenuContent>
                             </DropdownMenu>
                             )}
+                            {/* With no ⋯ its room stays, so the marks still end at the same edge as the rows that have one. */}
+                            {!(!weekLocked || (!!video && video.state !== "asked") || program.status === "live") && <span className="rd-more-room" aria-hidden="true" />}
                           </span>
                         </div>
                         {/* What they did instead, opened from the orange circle: the
@@ -1669,8 +1679,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                 {/* The client did something else instead (the bike was taken): the swap's amber ring, as an
                                     exercise's, opening what they did under the row (24 Oct, Alex). */}
                                 {s.cardio.some((x) => x.swap) && (
-                                  <span className="rd-flags">
-                                    <span className="rd-flag-slot">
+                                  <span className="rd-flags" style={{ width: 32 }}>
+                                    <>
                                       {c.swap && (
                                         <button
                                           type="button"
@@ -1683,7 +1693,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                           <SwapIcon />
                                         </button>
                                       )}
-                                    </span>
+                                    </>
                                   </span>
                                 )}
                                 {!weekLocked && (
