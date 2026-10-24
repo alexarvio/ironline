@@ -20428,7 +20428,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .fdi-pick .fdi-pick-btn.fdi-pick-btn { border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 500; color: #141a24; }
 .fdi-pick.open .fdi-pick-btn.fdi-pick-btn { box-shadow: inset 0 0 0 1.5px #141a24; }
 .fdi-pick-menu.fdi-pick-menu { border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB, 0 18px 40px -18px rgba(20, 26, 36, 0.35); }
-.fdi-pick-menu .fdi-pick-item.fdi-pick-item { font-weight: 500; color: #3a4250; }
+/* A long portion name wraps inside its own row (24 Oct, Alex: two names ran over each other at a fixed 40px). */
+.fdi-pick-menu .fdi-pick-item.fdi-pick-item { height: auto; min-height: 40px; padding: 10px 12px; line-height: 1.3; font-weight: 500; color: #3a4250; }
 .fdi-pick-menu .fdi-pick-item.fdi-pick-item.on { background: #F5F6F8; font-weight: 600; color: #141a24; }
 /* A locked week in the hairline language (17 Oct, Alex): no white card riding up over the banner; the words alone on the page, centred under the week strip: the lock in a thin ring, the title at 600 in ink, the line in the secondary grey. Doubled for the dev-server CSS order. */
 .tr .week-locked-card.week-locked-card { flex-direction: column; align-items: center; gap: 12px; margin: 0 16px; padding: 56px 12px 24px; border: 0; border-radius: 0; background: none; box-shadow: none; text-align: center; }
