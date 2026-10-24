@@ -20111,9 +20111,17 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .fdi-copy-row { position: relative; z-index: 1; }
 .fdi-copy-row.asking { background: #F7EFEB; }
 /* Supplements open (17 Oct, Alex), like Saved days in the diary: no white box round the list. The pill stays as the header; the checklist drops out under it flat on the page, tied to the capsule by a thin line down the left that runs behind the rows. */
-.nd .nd-supps:has(.nd-supps-list) { background: none; box-shadow: none; overflow: visible; }
-.nd .nd-supps:has(.nd-supps-list) .nd-supps-toggle { border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
-.nd .nd-supps-list { position: relative; padding: 4px 0 2px; }
+.nd .nd-supps.dressed { background: none; box-shadow: none; overflow: visible; }
+.nd .nd-supps.dressed .nd-supps-toggle { border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.nd .nd-supps-list { position: relative; }
+/* Its air as margins, so the folded list is truly 0 high. */
+.nd .nd-supps-list > :first-child { margin-top: 4px; }
+.nd .nd-supps-list > :last-child { margin-bottom: 2px; }
+/* The list eases open and shut (24 Oct, Alex), as the food diary's folds. */
+.nd-supps-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1); }
+.nd-supps-fold.open { grid-template-rows: 1fr; }
+.nd-supps-fold > .nd-supps-list { min-height: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .nd-supps-fold { transition: none; } }
 .nd .nd-supps-list::before { content: ""; position: absolute; left: 26px; top: 0; bottom: 18px; border-left: 1px solid #E1E5EB; pointer-events: none; z-index: 0; }
 .nd .nd-supp { position: relative; z-index: 1; padding: 11px 4px 11px 48px; border-top: 0; }
 .nd .nd-check { background: #F5F6F8; }

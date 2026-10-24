@@ -25,6 +25,18 @@ export default function SupplementsCard({ date, rows }: { date: string; rows: Su
   const [day, setDay] = useState(date);
   const storageKey = `${PREFIX}${day}`;
   const [open, setOpen] = useState(false);
+  // The open look (the pill as the header, the list flat under it) stays on while the list folds away, and goes once
+  // it has (24 Oct, Alex: the list eases open and shut).
+  const [dressed, setDressed] = useState(false);
+  const flip = () => {
+    if (!open) {
+      setDressed(true);
+      setOpen(true);
+      return;
+    }
+    setOpen(false);
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setDressed(false);
+  };
   const [taken, setTaken] = useState<string[]>([]);
   // The phone's day, now and whenever the app is back in front.
   useEffect(() => {
@@ -66,8 +78,8 @@ export default function SupplementsCard({ date, rows }: { date: string; rows: Su
     });
 
   return (
-    <div className="nd-supps">
-      <button type="button" className="nd-supps-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+    <div className={`nd-supps${dressed ? " dressed" : ""}`}>
+      <button type="button" className="nd-supps-toggle" aria-expanded={open} onClick={flip}>
         <span className="nd-supps-title">Supplements</span>
         {/* How many the coach has set; the ticks inside are optional. */}
         <span className="nd-supps-count" aria-label={`${rows.length} supplement${rows.length === 1 ? "" : "s"}`}>
@@ -77,7 +89,14 @@ export default function SupplementsCard({ date, rows }: { date: string; rows: Su
           <ChevronDownIcon />
         </span>
       </button>
-      {open && (
+      <div
+        className={`nd-supps-fold${open ? " open" : ""}`}
+        aria-hidden={!open}
+        inert={!open}
+        onTransitionEnd={(e) => {
+          if (e.target === e.currentTarget && !open) setDressed(false);
+        }}
+      >
         <div className="nd-supps-list">
           {rows.map((r, i) => {
             const on = taken.includes(r.name);
@@ -105,7 +124,7 @@ export default function SupplementsCard({ date, rows }: { date: string; rows: Su
             );
           })}
         </div>
-      )}
+      </div>
     </div>
   );
 }
