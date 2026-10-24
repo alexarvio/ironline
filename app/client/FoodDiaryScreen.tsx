@@ -1719,14 +1719,10 @@ function AmountPanel({
     ...(density ? [{ id: "ml", label: "ml", grams: density, portion: false }, { id: "l", label: "l", grams: density * 1000, portion: false }] : []),
     ...food.servings.map(([label, grams]) => ({ id: `p:${label}`, label, grams, portion: true })),
   ];
-  // A row opened again comes back in the unit it was entered in; a liquid
-  // starts in ml, anything with a portion in its first portion.
+  // A row opened again comes back in the unit it was entered in; anything new
+  // starts in g, the list's first (24 Oct, Alex: it opened on 3 oz (85 g)).
   const startUnit = entry
     ? units.find((u) => u.portion && entry.serving?.endsWith(u.label))?.id ?? units.find((u) => !u.portion && u.id !== "g" && entry.serving?.endsWith(` ${u.label}`))?.id ?? "g"
-    : liquid && /^fl oz/i.test(liquid[0])
-    ? "ml"
-    : food.servings.length
-    ? `p:${(food.servings.find(([l]) => /^(small|medium|large|extra|1 )/i.test(l)) ?? food.servings.find(([l]) => !/,/.test(l) && !/^(cup|tbsp|tsp|oz|fl oz|tablespoon|teaspoon)\b/i.test(l)) ?? food.servings[0])[0]}`
     : "g";
   const [unitId, setUnitId] = useState(startUnit);
   const unit = units.find((u) => u.id === unitId) ?? units[0];
