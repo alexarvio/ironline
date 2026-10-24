@@ -319,7 +319,9 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
 .rm-link .rm-link-x:hover { background: #141a24; color: #fff; }
 
 /* Photos, videos and files (ChatMediaGallery, shared with the client's app) in the admin's voice inside the coach's chat (21 Oct). */
-.rm .cmg-head b { font-weight: 600; color: #141a24; }
+/* The laptop's panel keeps white and a sentence-case title (the base turned to the client's voice, 24 Oct). */
+.rm .cmg { background: #fff; }
+.rm .cmg-head b { margin-right: 0; font-size: 16px; font-weight: 600; letter-spacing: normal; text-transform: none; color: #141a24; }
 .rm .cmg-back { background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #141a24; }
 .rm .cmg-back:hover { background: #f5f6f8; }
 .rm .cmg-tabs { background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; }

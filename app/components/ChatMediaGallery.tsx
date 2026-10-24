@@ -35,6 +35,8 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
           </svg>
         </button>
         <b>Media and files</b>
+        {/* Room the back button's width, so the title sits truly centred. */}
+        <span className="cmg-head-end" aria-hidden="true" />
       </div>
       <div className="cmg-tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === "media"} className={tab === "media" ? "on" : ""} onClick={() => setTab("media")}>
@@ -82,12 +84,22 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
               <li key={i.id} className="cmg-file">
                 <button type="button" className="cmg-file-main" onClick={() => show(i.id)} title="Show it in the chat">
                   <span className="cmg-file-icon" aria-hidden="true">
-                    {i.media.type === "audio" ? "🎤" : "📄"}
+                    {/* The icon alone, line-drawn (24 Oct, Alex: the emoji were the old design). */}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      {i.media.type === "audio" ? (
+                        <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3" />
+                      ) : (
+                        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5" />
+                      )}
+                    </svg>
                   </span>
                   <span className="cmg-file-text">
                     <b>{i.media.type === "audio" ? "Voice message" : i.media.name ?? "File"}</b>
                     <small>
-                      {i.who} · {i.when}
+                      {i.who}
+                      <i className="cmg-sep" aria-hidden="true" />
+                      <span className="sr-only">, </span>
+                      {i.when}
                     </small>
                   </span>
                 </button>

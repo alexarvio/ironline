@@ -20,7 +20,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 - Weights **500** and **600** only. Date numerals may be **300**. Never 700 or above on a client screen.
 - Eyebrow / label: 10–11px, 600, letter-spacing .16–.18em, uppercase, `#5b6474` or the item's colour.
 - Title: 15–17px, 500; the focused or live one 17–18px, 600. One line with an ellipsis, and a chevron when it is cut.
-- A pushed screen's own title in its top bar (24 Oct, Alex: the bold ones read too fat, and Shape update's was another size): capitals, Archivo 15px at 600, letter-spacing .16em, ink (white over a photo), centred. One look on every screen the burger and the bell open, Shape update and the check-in (`.cn-title`, `.ci-title`).
+- A pushed screen's own title in its top bar (24 Oct, Alex: the bold ones read too fat, and Shape update's was another size): capitals, Archivo 15px at 600, letter-spacing .16em, ink (white over a photo), centred. One look on every screen the burger and the bell open, Shape update, the check-in and the chat's Media and files (`.cn-title`, `.ci-title`, `.cmg-head`; 24 Oct, Alex: Media and files was still the old design, now the page colour, a plain back arrow, the white hairline capsule for its tabs and files as flat rows with a line icon).
 - Secondary: 12px, 500, `#8b93a1`. Tabular numerals for dates, counts and times.
 - Ink `#141a24`, body `#3a4250`, faint `#8b93a1`, label grey `#98A2B3`.
 

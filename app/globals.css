@@ -17906,17 +17906,21 @@ button.ci-hint { cursor: pointer; }
 /* ---- Media and files in a chat (2 Oct, ChatMediaGallery.tsx): over the
    chat it belongs to, both sides; a grid of photos and videos, a list of
    files and voice messages. ---- */
-.cmg { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; background: #fff; border-radius: inherit; overflow: hidden; }
-.cmg-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; }
-.cmg-head b { font-size: 16px; font-weight: 700; color: #333333; }
-.cmg-back { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 999px; background: #eef2f8; color: #1E3A5F; cursor: pointer; }
-.cmg-back svg { width: 18px; height: 18px; }
-.cmg-tabs { display: flex; gap: 4px; margin: 0 14px 10px; padding: 3px; border-radius: 999px; background: #F5F5F5; }
-.cmg-tabs button { flex: 1; height: 32px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #757575; cursor: pointer; }
-.cmg-tabs button.on { background: #fff; color: #1E3A5F; box-shadow: 0 1px 2px rgba(51, 51, 51, 0.08); }
-.cmg-tabs small { margin-left: 4px; font-weight: 600; color: #9E9E9E; }
-.cmg-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 14px 14px; scrollbar-width: thin; }
-.cmg-empty { margin: 24px 0; text-align: center; font-size: 13.5px; color: #9E9E9E; }
+/* 24 Oct, Alex ("still the old design"): in the client's voice, as a pushed screen. The page colour, the title in
+   capitals and centred (as .cn-title), a plain back arrow, the two tabs as the white hairline capsule with the chosen
+   one ink, files as flat rows with a line icon. The coach's laptop panel keeps its own touches (.rm in messages.css). */
+.cmg { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; background: #F5F6F8; border-radius: inherit; overflow: hidden; font-family: var(--font-archivo), "Archivo", sans-serif; color: #141a24; }
+.cmg-head { display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; padding: max(12px, calc(env(safe-area-inset-top, 0px) + 6px)) 12px 10px; }
+.cmg-head b { justify-self: center; margin-right: -0.16em; font-size: 15px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #141a24; white-space: nowrap; }
+.cmg-back { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 999px; background: none; color: #141a24; cursor: pointer; }
+.cmg-back svg { width: 20px; height: 20px; }
+.cmg-tabs { display: flex; gap: 4px; margin: 4px 16px 14px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.cmg-tabs button { flex: 1; height: 32px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 500; color: #5b6474; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
+.cmg-tabs button.on { background: #141a24; color: #fff; font-weight: 600; }
+.cmg-tabs small { margin-left: 4px; font-size: inherit; font-weight: 500; color: inherit; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.cmg-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px)); scrollbar-width: thin; }
+.cmg-empty { margin: 28px 0; text-align: center; font-size: 13px; font-weight: 500; color: #8b93a1; }
+.cmg-sep { display: inline-block; width: 1px; height: 0.8em; margin: 0 0.5em; background: #c9cfd8; vertical-align: -0.08em; }
 .cmg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
 .cmg-tile { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: #F5F5F5; }
 .cmg-thumb { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
@@ -17924,14 +17928,16 @@ button.ci-hint { cursor: pointer; }
 .cmg-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
 .cmg-play svg { width: 30px; height: 30px; padding: 7px; border-radius: 999px; background: rgba(8, 15, 35, 0.55); color: #fff; }
 .cmg-open { position: absolute; top: 5px; right: 5px; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; background: rgba(8, 15, 35, 0.55); color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; }
-.cmg-open.static { position: static; flex: none; background: #eef2f8; color: #1E3A5F; }
-.cmg-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.cmg-file { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: #f6f8fb; }
-.cmg-file-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
-.cmg-file-icon { flex: none; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: #fff; font-size: 16px; }
+.cmg-open.static { position: static; flex: none; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+/* Files: flat rows on the page, space between them; the icon alone, no tile. */
+.cmg-list { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.cmg-file { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.cmg-file-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.cmg-file-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: #141a24; }
+.cmg-file-icon svg { width: 22px; height: 22px; }
 .cmg-file-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.cmg-file-text b { font-size: 13.5px; font-weight: 700; color: #333333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cmg-file-text small { font-size: 12px; color: #9E9E9E; }
+.cmg-file-text b { font-size: 15px; font-weight: 500; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmg-file-text small { font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 /* The button that opens it, in each chat's header. */
 .cmg-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 12px; border: 0; border-radius: 999px; background: #eef2f8; font: inherit; font-size: 12.5px; font-weight: 700; color: #1E3A5F; cursor: pointer; }
 .cmg-btn svg { width: 16px; height: 16px; }
@@ -19219,10 +19225,11 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .hm .evt-ring { background: #F5F5F5; box-shadow: 0 0 0 4px #F5F5F5; }
 .hm .evt-item.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c); }
 .hm .evt-item.live .evt-ring { box-shadow: inset 0 0 0 1px var(--c); }
-/* The card scroller is its own compositing layer; without a background it can show the app layer behind Home (a lighter grey) instead of the page. */
-.pc-scroller { background: #F5F5F5; }
-/* The Home column painted in the page grey (16 Oct). */
-.hm-body { background: #F5F5F5; }
+/* The card scroller and the Home column were painted the page grey (16 Oct), the scroller because, its own compositing
+   layer, it could show the lighter app layer behind Home. Since 24 Oct the shell round Home is the page grey itself, and
+   both let Home's star through (Alex: it was cut off where the cards begin), so neither paints. */
+.pc-scroller { background: transparent; }
+.hm-body { background: transparent; }
 
 /* ---- Home in the hairline language (16 Oct, docs/DESIGN-RULES.md): the phase cards stay the hero; Latest from the coach and the meeting cards lose their boxes, gradients and shadows. */
 .hm-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.18em; color: #5b6474; }
