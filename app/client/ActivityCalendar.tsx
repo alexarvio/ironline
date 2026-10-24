@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { landOnSoon } from "../lib/landOn";
 import { ChevronLeftIcon } from "../components/icons";
 
 // The check-in's Calendar (28 Sep; hairline 23 Oct, Alex): everything the
@@ -52,10 +53,17 @@ function Ring({ parts }: { parts: readonly { colour: string }[] }) {
   );
 }
 
-export default function ActivityCalendar({ days, today }: { days: ActivityDay[]; today: string }) {
+export default function ActivityCalendar({ days, today, initialDay = null }: { days: ActivityDay[]; today: string; /** Opened on this day (a link, 24 Oct): its month, the day open under its week, landed on. */ initialDay?: string | null }) {
   const byDate = new Map(days.map((d) => [d.date, d]));
-  const [month, setMonth] = useState(today.slice(0, 7));
-  const [picked, setPicked] = useState<string | null>(null);
+  const [month, setMonth] = useState((initialDay ?? today).slice(0, 7));
+  const [picked, setPicked] = useState<string | null>(initialDay);
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Arriving from a link: the open day brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
+  useEffect(() => {
+    if (!initialDay) return;
+    return landOnSoon(() => panelRef.current, "center", 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, []);
   // The open day folding shut before it goes.
   const [closing, setClosing] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -141,7 +149,11 @@ export default function ActivityCalendar({ days, today }: { days: ActivityDay[];
             })}
           </div>
           {/* The picked day opens here, under its own week. */}
-          {day && week.includes(day.date) && <DayPanel key={day.date} day={day} closing={closing} />}
+          {day && week.includes(day.date) && (
+            <div ref={panelRef}>
+              <DayPanel key={day.date} day={day} closing={closing} />
+            </div>
+          )}
         </div>
       ))}
       {days.length === 0 && <p className="wc-empty">Nothing logged</p>}

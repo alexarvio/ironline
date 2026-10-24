@@ -4239,17 +4239,18 @@ export async function addCustomFoodAction(formData: FormData): Promise<string | 
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 // The diary steps back through the last month; nothing after today.
-function diaryDateOk(date: string): boolean {
+function diaryDateOk(date: string, daysBack = 30): boolean {
   if (!DATE.test(date)) return false;
   const today = localDateStr();
   const floor = new Date(`${today}T00:00:00`);
-  floor.setDate(floor.getDate() - 30);
+  floor.setDate(floor.getDate() - daysBack);
   return date <= today && date >= localDateStr(floor);
 }
 
 export async function getFoodDiaryAction(clientId: number, date: string): Promise<FoodDiaryView | null> {
   const owner = await requireClientAccess(Number(clientId));
-  if (!diaryDateOk(String(date))) return null;
+  // Reading reaches back a year (24 Oct, Alex: a coach's link to an older day opened today); writing keeps its 30 days.
+  if (!diaryDateOk(String(date), 366)) return null;
   return getFoodDiary(owner, String(date));
 }
 

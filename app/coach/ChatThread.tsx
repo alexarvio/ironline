@@ -270,14 +270,23 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
             <span>{m.replyTo.text}</span>
           </button>
         )}
-        {m.link && (
-          <span className={`cph-link${m.link.gone ? " gone" : ""}`}>
-            <Icon name="link" small />
-            <span>
-              <Facts parts={m.link.label.split(" · ")} />
+        {/* A link opens what it points at, as on the laptop (24 Oct, Alex: on the phone it went nowhere); one that's gone stays words. */}
+        {m.link &&
+          (m.link.href && !m.link.gone ? (
+            <a className="cph-link" href={m.link.href} onClick={(e) => e.stopPropagation()}>
+              <Icon name="link" small />
+              <span>
+                <Facts parts={m.link.label.split(" · ")} />
+              </span>
+            </a>
+          ) : (
+            <span className={`cph-link${m.link.gone ? " gone" : ""}`}>
+              <Icon name="link" small />
+              <span>
+                <Facts parts={m.link.label.split(" · ")} />
+              </span>
             </span>
-          </span>
-        )}
+          ))}
         {m.media && <Media media={m.media} onOpen={(src) => !held.current && setViewer(src)} />}
         {m.text && <span className="cph-text">{m.text}</span>}
         <span className="cph-meta">

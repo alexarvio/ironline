@@ -10,6 +10,7 @@ import PhaseObjectives from "./PhaseObjectives";
 import CoachCard from "./CoachCard";
 import { useCoachIdentity } from "./CheckInContext";
 import ActivityCalendar, { type ActivityDay } from "./ActivityCalendar";
+import { landOnSoon } from "../lib/landOn";
 
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx for why
 // a "use client" file importing queries.ts breaks the dev server). All data
@@ -114,7 +115,11 @@ export default function CheckInScreen({
   const remaining = todayRows.length - filled.length;
   // Today (the rows), Progress (a chart a metric) or Calendar; Home's
   // lifestyle card opens straight onto the last two.
-  const [view, setView] = useState<"today" | "progress" | "calendar">(initialSection === "progress" || initialSection === "calendar" ? initialSection : "today");
+  // A link to a day, week or month (24 Oct, Alex: only the last 7 days landed, weekly and monthly alike): the feed's day
+  // when it is there, else the Calendar opened on it.
+  const feedFocus = focusDay(history.days, initialSection, focusPeriod);
+  const calendarFocus = !feedFocus && focusPeriod ? calendarDay(calendar, initialSection, focusPeriod, today) : null;
+  const [view, setView] = useState<"today" | "progress" | "calendar">(calendarFocus ? "calendar" : initialSection === "progress" || initialSection === "calendar" ? initialSection : "today");
   // The day open in the pop-up, if any.
   const [open, setOpen] = useState<CheckInForm | null>(null);
   const openToday = () => setOpen({ date: today, sections, weeklyOpen, monthlyOpen });
@@ -225,7 +230,7 @@ export default function CheckInScreen({
             </div>
           )}
           {view === "calendar" ? (
-            <ActivityCalendar days={calendar} today={today} />
+            <ActivityCalendar days={calendar} today={today} initialDay={calendarFocus} />
           ) : view === "progress" ? (
             <CheckInProgress history={history} today={today} />
           ) : todayRows.length === 0 ? (
@@ -253,7 +258,7 @@ export default function CheckInScreen({
                   </button>
                 </div>
               </section>
-              <CheckInFeed days={history.days} onEdit={openDay} focus={focusDay(history.days, initialSection, focusPeriod)} />
+              <CheckInFeed days={history.days} onEdit={openDay} focus={feedFocus} />
             </>
           )}
         </div>
@@ -280,6 +285,15 @@ function focusDay(days: CheckInFeedDay[], section: string, period: string | null
   const inside = days.filter((d) => d.date >= from && d.date <= end);
   return (inside.find((d) => d.items.length > 0) ?? (section === "daily" ? inside[0] : null))?.date ?? null;
 }
+/** The day a link opens on the Calendar when the feed doesn't hold it: the newest day with something logged in that day,
+    week or month, else its first day (never past today). */
+function calendarDay(days: { date: string; sessions: unknown[]; food: unknown; checkIns: string[] }[], section: string, period: string, today: string): string {
+  const end = section === "weekly" ? isoPlus(period, 6) : section === "monthly" ? `${period.slice(0, 7)}-31` : period;
+  const from = section === "monthly" ? `${period.slice(0, 7)}-01` : period;
+  const logged = days.filter((d) => d.date >= from && d.date <= end && (d.checkIns.length > 0 || d.sessions.length > 0 || d.food != null)).map((d) => d.date).sort();
+  const day = logged[logged.length - 1] ?? from;
+  return day > today ? today : day;
+}
 const isoPlus = (iso: string, n: number) => {
   const d = new Date(`${iso}T12:00:00`);
   d.setDate(d.getDate() + n);
@@ -291,8 +305,8 @@ function CheckInFeed({ days, onEdit, focus = null }: { days: CheckInFeedDay[]; o
   const list = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!focus) return;
-    const t = setTimeout(() => list.current?.querySelector(`[data-day="${focus}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
-    return () => clearTimeout(t);
+    // Brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
+    return landOnSoon(() => list.current?.querySelector(`[data-day="${focus}"]`), "center", 120);
   }, [focus]);
   if (days.length === 0) return null;
   const label = (iso: string) => dayLabel(iso);

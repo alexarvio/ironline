@@ -27,6 +27,7 @@ import { defaultSummary, type MetricSummary } from "../../../lib/metricSummary";
 import { Sep, SepJoin } from "../Sep";
 import { Fold } from "../Fold";
 import { useHoldWhile, useSaidSaved } from "../useSaveQueue";
+import { landOn } from "../../../lib/landOn";
 
 // The Lifestyle tab, built as Training is (21 Oct, Alex): the phase's name
 // to click and type, its state tag as the menu of what can be done with it,
@@ -350,7 +351,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         setRange(recent >= 0 ? "recent" : "all");
         setLogPage(Math.floor(idx / PAGE) + 1);
         setShow((s) => (s === "graph" ? "table" : s));
-        setTimeout(() => document.querySelector(`[data-checkin="${c}-${period}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+        // Brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
+        setTimeout(() => landOn(document.querySelector(`[data-checkin="${c}-${period}"]`)), 120);
       });
     };
     arrive();

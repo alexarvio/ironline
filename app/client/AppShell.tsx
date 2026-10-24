@@ -2,7 +2,8 @@
 
 import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransition, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
-import { markCoachNotesReadAction } from "../lib/actions";
+import { markCoachNotesReadAction, markNotificationReadAction } from "../lib/actions";
+import type { NotificationCategory } from "../lib/notificationTypes";
 import { logoutAction } from "../lib/auth-actions";
 import { NorCoachLogo } from "../components/NorCoachLogo";
 import { BellIcon, CalendarIcon, CameraIcon, ChevronLeftIcon, GearIcon, MenuIcon, ChatIcon, ReceiptIcon } from "../components/icons";
@@ -119,6 +120,11 @@ function writeTab(id: string) {
 // greeting). Chat is deliberately absent: it's cut from the first beta, so
 // the bell is the only header action and Notifications is the only pushed
 // view besides the check-in flow.
+/** What a phone push asks the app to open (24 Oct): a notification, as the list would open it, or a meeting reminder's call. */
+export type Arrival =
+  | { notificationId: number; category: NotificationCategory; actionTab: string | null; actionRef: number | null; link: LinkView | null }
+  | { meetingId: number };
+
 export default function AppShell({
   clientName,
   tabs,
@@ -138,6 +144,7 @@ export default function AppShell({
   meetings = null,
   invoices = null,
   initialPush = null,
+  arrival = null,
   initialTab = null,
   preview = null,
   readOnly = false,
@@ -185,6 +192,8 @@ export default function AppShell({
   invoices?: InvoicesProps | null;
   /** A screen to open on arrival: a lock-screen notification's link (/client?open=invoices), or the preview's screen. */
   initialPush?: Exclude<PhoneScreen, "home" | "training" | "nutrition"> | null;
+  /** What a phone push asks to open (24 Oct): its notification, done as a tap on it in the list does, or a call. */
+  arrival?: Arrival | null;
   /** The tab the client was on (its cookie), so the server draws that one. */
   initialTab?: string | null;
 }) {
@@ -284,6 +293,8 @@ export default function AppShell({
   // Which row the tab we're switching to should open on arrival, set only by
   // a notification's deep link and cleared by any ordinary nav tap.
   const [focusRef, setFocusRef] = useState<number | null>(null);
+  // The invoice a notification opened Invoices on.
+  const [invoiceFocus, setInvoiceFocus] = useState<number | null>(null);
   // With a link into Training: the week to land on and the exercise to open.
   const [trainingFocus, setTrainingFocus] = useState<TrainingFocus | null>(null);
   // With a link into the food diary: the day to open it on (today otherwise).
@@ -301,12 +312,20 @@ export default function AppShell({
   const goToTab = (tab: string, ref?: number, focus?: TrainingFocus) => {
     // Not a tab: the invoice notification opens the Invoices screen.
     if (tab === "invoices") {
-      if (invoices) setPushView("invoices");
+      if (invoices) {
+        // On that invoice (24 Oct, Alex: a link lands on its thing).
+        setInvoiceFocus(ref ?? null);
+        setPushView("invoices");
+      }
       return;
     }
-    // Settings left the bottom nav for the burger (7 Oct): a report notification still gets there.
+    // Settings left the bottom nav for the burger (7 Oct): a report notification still gets there, on its report
+    // (24 Oct, Alex: the id never reached it).
     if (tab === "settings") {
-      if (settingsContent) setPushView("settings");
+      if (settingsContent) {
+        setFocusRef(ref ?? null);
+        setPushView("settings");
+      }
       return;
     }
     // The coach's note on the lifestyle phase (21 Oct) sits at the top of the check-in.
@@ -368,6 +387,30 @@ export default function AppShell({
         return;
     }
   };
+  // A phone push's arrival (24 Oct, Alex: a push lands on its thing): once, what a tap on its notification does, then
+  // the address goes back to plain /client so a reload opens the app as usual.
+  const arrived = useRef(false);
+  useEffect(() => {
+    if (!arrival || readOnly || arrived.current) return;
+    arrived.current = true;
+    const t = setTimeout(() => {
+      window.history.replaceState(null, "", "/client");
+      if ("meetingId" in arrival) {
+        openMeetingsAt?.(arrival.meetingId);
+        return;
+      }
+      void markNotificationReadAction(arrival.notificationId).catch(() => {});
+      const { category, actionTab, actionRef, link } = arrival;
+      if (link && !link.gone) openLink(link);
+      else if (actionTab === "chat" || actionTab === "video") openMessages();
+      else if (category === "event_added" || category === "event_changed") openEventsAt?.(actionRef ?? undefined);
+      else if (category === "meeting_booked" || category === "meeting_changed" || category === "meeting_notes") openMeetingsAt?.(actionRef ?? undefined);
+      else if (category === "checkin_comment") openCheckIn("daily");
+      else if (actionTab) goToTab(actionTab, actionTab === "training" ? undefined : actionRef ?? undefined);
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arriving
+  }, []);
   const backToChat = () => {
     setChatReturn(null);
     setMessageAbout(null);
@@ -451,7 +494,7 @@ export default function AppShell({
       </div>
     ) : pushView === "invoices" && invoices ? (
       <div className="app-layer app-layer-push cn-screen">
-        <InvoicesScreen {...invoices} onBack={() => setPushView(null)} />
+        <InvoicesScreen {...invoices} focusId={invoiceFocus} onBack={() => setPushView(null)} />
       </div>
     ) : pushView === "messages" ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -482,7 +525,9 @@ export default function AppShell({
                   setPushView("photos");
                 }}
               >
-                <NavigateProvider value={goToTab}>{settingsContent}</NavigateProvider>
+                <NavigateProvider value={goToTab}>
+                  <FocusRefProvider value={focusRef}>{settingsContent}</FocusRefProvider>
+                </NavigateProvider>
               </PhotosProvider>
             </CoachProvider>
           </MessagesProvider>
@@ -681,13 +726,20 @@ export default function AppShell({
                     </button>
                   )}
                   {invoices && (
-                    <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("invoices"))}>
+                    <button type="button" className="app-menu-item" onClick={() => go(() => {
+                      setInvoiceFocus(null);
+                      setPushView("invoices");
+                    })}>
                       <span className="app-menu-ico"><ReceiptIcon /></span>
                       Invoices
                     </button>
                   )}
                   {settingsContent && (
-                    <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("settings"))}>
+                    <button type="button" className="app-menu-item" onClick={() => go(() => {
+                      // From the menu: Settings at its top, not on a report a notification opened earlier.
+                      setFocusRef(null);
+                      setPushView("settings");
+                    })}>
                       <span className="app-menu-ico"><GearIcon /></span>
                       Settings
                     </button>

@@ -8,7 +8,8 @@ import { notificationTypeOf, type NotificationCategory } from "../../lib/notific
 import type { EventTypeId } from "../../lib/eventTypes";
 import { dayLabel, localDayKey, timeLabel } from "../../lib/notificationDates";
 import { pic } from "../../lib/pic";
-import { useBack, useCoachIdentity, useNavigateTab, useOpenCheckIn, useOpenEvents, useOpenMeetings, useOpenMessages } from "../CheckInContext";
+import { useBack, useCoachIdentity, useNavigateTab, useOpenCheckIn, useOpenEvents, useOpenLink, useOpenMeetings, useOpenMessages } from "../CheckInContext";
+import type { LinkView } from "../../lib/messageLinks";
 import { TypeIcon } from "../events/AddEventSheet";
 import VideoReplySheet, { type VideoReplyView } from "../VideoReplySheet";
 
@@ -31,6 +32,8 @@ export type NotifView = {
   actionRef: number | null;
   /** A reply to the client's video, opened right here. */
   videoReply: VideoReplyView | null;
+  /** The exact thing it is about, as a message link (24 Oct, Alex): a tap opens it as a message's link does. */
+  link?: LinkView | null;
 };
 
 const PAGE = 30;
@@ -40,6 +43,7 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
   const coach = useCoachIdentity();
   const back = useBack();
   const navigate = useNavigateTab();
+  const openLink = useOpenLink();
   const openMessages = useOpenMessages();
   const openEvents = useOpenEvents();
   const openMeetings = useOpenMeetings();
@@ -73,13 +77,16 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
       setReadIds((s) => new Set(s).add(n.id));
       start(() => markNotificationReadAction(n.id));
     }
-    if (n.actionTab === "chat") openMessages?.();
+    if (n.link && !n.link.gone && openLink) openLink(n.link);
+    else if (n.actionTab === "chat") openMessages?.();
     else if (n.actionTab === "video") {
       if (n.videoReply) setWatching(n.videoReply);
     } else if (n.category === "event_added" || n.category === "event_changed") openEvents?.(n.actionRef ?? undefined);
     else if (n.category === "meeting_booked" || n.category === "meeting_changed" || n.category === "meeting_notes") openMeetings?.(n.actionRef ?? undefined);
     else if (n.category === "checkin_comment") openCheckIn?.("daily");
-    else if (n.actionTab) navigate?.(n.actionTab, n.actionRef ?? undefined);
+    // A training note with no session of its own (a new plan, a week added): the tab, never its ref as a session
+    // (a programme's or a phase's id can be one; 24 Oct, Alex).
+    else if (n.actionTab) navigate?.(n.actionTab, n.actionTab === "training" ? undefined : n.actionRef ?? undefined);
   };
   const markAll = () => {
     if (!unread) return;

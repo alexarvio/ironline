@@ -51,7 +51,8 @@ export async function runMeetingReminders(now: number = Date.now()): Promise<num
         sent += await sendPush(user.id, {
           title: w.key === "day" ? `Call with ${coach} tomorrow` : `Call with ${coach} in 1 hour`,
           body: w.key === "day" ? `${topic} · ${minutes} min, this time tomorrow.` : `${topic} · ${minutes} min. The link is on your Home.`,
-          url: "/client",
+          // Tapped, it opens that call on Meetings (24 Oct, Alex: a push lands on its thing).
+          url: `/client?meeting=${m.id}`,
           tag: `meeting-${m.id}`,
         });
       } catch (e) {

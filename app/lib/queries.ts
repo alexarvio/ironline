@@ -942,6 +942,21 @@ export function describeMessageLink(clientId: number, link: MessageLink): LinkVi
   }
 }
 
+/**
+ * The exact thing a coach's notification is about, as a message link, when it is one (24 Oct, Alex: a link lands on
+ * its thing, notifications too): a training change on a session (its key `training:{day}`), a video asked for on an
+ * exercise (`video-ask:{row}`). A note about a programme or a phase (a week added, a new plan, a phase note) is no
+ * session: null, and its tab opens as before. The key says which, never the ref alone: ids are counted per table, so a
+ * programme's id can be a session's too.
+ */
+export function notificationLink(clientId: number, n: { action_tab: string | null; action_ref: number | null; dedupe_key: string | null }): LinkView | null {
+  if (n.action_tab !== "training" || n.action_ref == null || !n.dedupe_key) return null;
+  const ask = /^video-ask:(\d+):/.exec(n.dedupe_key);
+  if (ask) return describeMessageLink(clientId, { kind: "exercise", dayId: n.action_ref, assignmentId: Number(ask[1]) });
+  if (/^training:\d+:/.test(n.dedupe_key)) return describeMessageLink(clientId, { kind: "session", dayId: n.action_ref });
+  return null;
+}
+
 export function programWeekLabel(program: TrainingProgram, weekNumber: number): string {
   return `Week ${weekNumber - program.start_week + 1}`;
 }
@@ -2822,7 +2837,7 @@ export type FeedEvent = {
   dayId?: number;
   /** Exactly what the row is about, for a link that lands on it (the redesign's
       feedHref): a session in its week, a food day, a programme, an invoice. */
-  target?: { kind: "session"; dayId: number; week: number } | { kind: "food"; date: string } | { kind: "program"; programId: number } | { kind: "invoice"; invoiceId: number } | { kind: "gone" } | { kind: "chat"; messageId: number; link: MessageLink | null };
+  target?: { kind: "session"; dayId: number; week: number; /** An exercise in it (a video), landed on (24 Oct). */ rowId?: number } | { kind: "checkin"; section: string; period: string } | { kind: "sheet"; period: string } | { kind: "food"; date: string } | { kind: "program"; programId: number } | { kind: "invoice"; invoiceId: number } | { kind: "gone" } | { kind: "chat"; messageId: number; link: MessageLink | null };
   /** What happened, written to follow the client's name. */
   text: string;
   /** What happened for the coach's logs (Home's and the Feed's Activity; 23 Oct, Alex: "the rest is irrelevant on an
@@ -3131,6 +3146,8 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       text,
       thing: c.count === 0 ? `Left a note on the ${name}${on}` : c.kind === "measurements" ? `Logged measurements${on}` : `Did the ${name}${on}`,
       note: c.note,
+      // That entry on Lifestyle, not the tab's top (24 Oct, Alex: a row lands on its thing).
+      target: { kind: "checkin", section: c.kind, period: c.period },
     });
   });
 
@@ -3154,6 +3171,8 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       text: `sent ${plural(s.photos.length, "photo")} for the sheet of ${feedDay(s.period)}`,
       thing: "Sent a shape update",
       thumbs: s.photos.sort((a, b) => a.order - b.order).map((p) => p.src),
+      // That sheet, opened (24 Oct, Alex).
+      target: { kind: "sheet", period: s.period },
     });
   });
 
@@ -3170,7 +3189,8 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at: stampMs(v.submitted_at),
       tab: "training",
       dayId: day.id,
-      target: { kind: "session", dayId: day.id, week: day.week_number },
+      // The exercise it is of, not just its session (24 Oct, Alex: Review landed on the session).
+      target: { kind: "session", dayId: day.id, week: day.week_number, rowId: a.id },
       text: v.from_client ? `sent a ${v.media === "photo" ? "photo" : "video"}${v.about === "swap" ? " of what they used instead of" : " of"} ${name}, ${day.label || `Session ${day.day_of_week}`}` : `sent the video you asked for: ${name}, ${day.label || `Session ${day.day_of_week}`}`,
       // The exercise is what it is of; the session it sat in is a fact the row opens on.
       thing: v.from_client
@@ -7897,6 +7917,8 @@ export type ClientNotification = {
   action_tab: CoachActivityActionTab | null;
   action_label: string | null;
   action_ref: number | null;
+  /** What it is about, as its writer keyed it ("training:{day}:…", "video-ask:{row}:…"): read by notificationLink. */
+  dedupe_key: string | null;
 };
 
 /** A note taken back: what it said was undone the same day (a target put back where the day began). */
@@ -7962,8 +7984,9 @@ export function logCoachActivity(
     }
     return;
   }
+  const noteId = allocId("coach_activity");
   data.coach_activity.push({
-    id: allocId("coach_activity"),
+    id: noteId,
     client_id: clientId,
     message,
     created_at: new Date().toISOString(),
@@ -7992,8 +8015,9 @@ export function logCoachActivity(
         : opts.kind === "report" ? `New progress report from ${coach}`
         : opts.kind === "programme" ? `New program from ${coach}`
         : `Update from ${coach}`;
-      // Tapped, it opens where the news is: the Invoices screen for an invoice, the chat for a message (21 Oct: it opened whatever tab was last), else the app.
-      const lockScreen = { title, body: message, url: opts.actionTab === "invoices" ? "/client?open=invoices" : opts.kind === "coach_note" ? "/client?open=messages" : "/client", tag: opts.dedupeKey };
+      // Tapped, it opens where the news is: the chat for a message (21 Oct: it opened whatever tab was last), else this
+      // notification's own thing, as a tap on it in the list does (24 Oct, Alex: a session, an exercise, an invoice…).
+      const lockScreen = { title, body: message, url: opts.kind === "coach_note" ? "/client?open=messages" : `/client?n=${noteId}`, tag: opts.dedupeKey };
       void import("./push").then((push) => push.sendPushInBackground(user.id, lockScreen)).catch(() => {});
     }
   }
@@ -8020,6 +8044,7 @@ function normalizeNotification(a: {
   action_tab?: CoachActivityActionTab | null;
   action_label?: string | null;
   action_ref?: number | null;
+  dedupe_key?: string | null;
 }): ClientNotification {
   return {
     id: a.id,
@@ -8031,6 +8056,7 @@ function normalizeNotification(a: {
     action_tab: a.action_tab ?? null,
     action_label: a.action_label ?? null,
     action_ref: a.action_ref ?? null,
+    dedupe_key: a.dedupe_key ?? null,
   };
 }
 

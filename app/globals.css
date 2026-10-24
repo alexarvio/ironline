@@ -20655,3 +20655,11 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 /* No line between the phase cards and the coach's latest right under them (21 Oct, Alex). Events and Meetings keep theirs. */
 .hm-body > .hm-latest-note::before { content: none; }
 .hm-body > .hm-latest-note { padding-top: 6px; }
+
+/* ---- A link's arrival (24 Oct, Alex; app/lib/landOn.ts): the thing a link or a notification points at, lit for a moment
+   with a soft ink tint that fades out over 2.4s. One look for client and coach. Drawn as a background image of its own,
+   so it lies over the element's own background and never replaces it. ---- */
+@property --landed { syntax: "<color>"; inherits: false; initial-value: rgba(20, 26, 36, 0); }
+@keyframes nc-landed { 0%, 55% { --landed: rgba(20, 26, 36, 0.07); } 100% { --landed: rgba(20, 26, 36, 0); } }
+.landed { background-image: linear-gradient(var(--landed), var(--landed)); animation: nc-landed 2.4s ease-out; }
+@media (prefers-reduced-motion: reduce) { .landed { animation-duration: 1.2s; } }

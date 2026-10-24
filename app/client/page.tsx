@@ -54,6 +54,8 @@ import {
   listClientReports,
   listPublishedWeekNumbers,
   getNotifications,
+  notificationLink,
+  describeMessageLink,
   getNutritionGoalsSummary,
   getFoodDiary,
   listFoodEntries,
@@ -117,7 +119,7 @@ import DeleteAccountRow from "./DeleteAccountRow";
 import { clerkOn } from "../lib/clerk";
 import MyDetailsCard from "./MyDetailsCard";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
-import AppShell, { AppTab, type PhoneScreen } from "./AppShell";
+import AppShell, { AppTab, type Arrival, type PhoneScreen } from "./AppShell";
 import NativeCoachRedirect from "../coach/NativeCoachRedirect";
 import AvatarUpload from "./AvatarUpload";
 import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
@@ -511,8 +513,10 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     const title = actionOnly(latestNote.message);
     const colon = latestNote.message.indexOf(": ");
     const detail = colon > 0 ? latestNote.message.slice(colon + 2).replace(/ · /g, ". ") : null;
-    const day = latestNote.action_tab === "training" && latestNote.action_ref != null ? getData().program_days.find((pd) => pd.id === latestNote.action_ref) : null;
-    const focusWeek = day?.week_number ?? null;
+    // What a training note opens: its session or exercise (notificationLink reads which from its key, 24 Oct), never a day
+    // looked up by a ref alone, which a programme's or a phase's id can match.
+    const noteLink = notificationLink(clientId, latestNote);
+    const focusWeek = noteLink?.week ?? null;
     if (latestNote.kind === "programme") {
       if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title, body: null, cta: "View nutrition", ...base };
       if (latestNote.action_tab === "home") return { kind: "comment", context: "checkin", title, body: null, cta: "View check-in", ...base };
@@ -526,7 +530,7 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     // A change the coach made: read what it was from its tab and its words.
     if (latestNote.kind === "general") {
       const lower = latestNote.message.toLowerCase();
-      if (latestNote.action_tab === "training") return { kind: "deploy", track: "training", title, body: detail, cta: lower.includes("video") ? "View exercise" : "View training", ...base, focusWeek };
+      if (latestNote.action_tab === "training") return { kind: "deploy", track: "training", title, body: detail, cta: lower.includes("video") ? "View exercise" : "View training", ...base, focusWeek, link: noteLink && !noteLink.gone ? noteLink : null };
       if (lower.includes("goal")) return { kind: "goal", title, body: detail, cta: "Open chat", ...base };
       if (lower.includes("call") || lower.includes("meeting")) return { kind: "meeting", title, body: detail, cta: "View meeting", ...base };
       // "progress pictures" is the feature's old name (21 Oct), still in notes written before.
@@ -1242,6 +1246,8 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
         actionTab: n.action_tab,
         actionRef,
         videoReply: n.action_tab === "video" ? videoReplies.find((r) => r.id === n.action_ref) ?? null : null,
+        // The exact thing it is about, as a message link (24 Oct, Alex): a session, an exercise, the shape update.
+        link: category === "pics_reviewed" ? describeMessageLink(CLIENT_ID, { kind: "photos" }) : notificationLink(CLIENT_ID, n),
       };
     });
   return <NotificationsScreen items={items} clientId={CLIENT_ID} coachName={coachFirst} />;
@@ -1304,7 +1310,7 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
 export default async function ClientPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string; open?: string; phone?: string; screen?: string }>;
+  searchParams: Promise<{ client?: string; open?: string; phone?: string; screen?: string; /** A push's notification (24 Oct). */ n?: string; /** A meeting reminder's call. */ meeting?: string }>;
 }) {
   const params = await searchParams;
   const CLIENT_ID = await resolveClientId(params.client);
@@ -1576,10 +1582,31 @@ export default async function ClientPage({
       foodPictures={bannerPictures(CLIENT_ID, "nutrition")}
       meetings={meetings}
       invoices={invoices}
+      arrival={phone ? null : arrivalFrom(CLIENT_ID, params.n, params.meeting)}
       initialPush={phone ? (PHONE_TAB_SCREENS.has(phoneScreen) ? null : (phoneScreen as Exclude<PhoneScreen, "home" | "training" | "nutrition">)) : params.open === "invoices" ? "invoices" : params.open === "messages" ? "messages" : null}
       initialTab={initialTab}
       readOnly={phone}
     />
     </>
   );
+}
+
+/**
+ * What a phone push asks the app to open (24 Oct, Alex: a push lands on its thing): its notification (?n=), worked out
+ * as the notifications list does, or a meeting reminder's call (?meeting=). Null for anything else or another client's.
+ */
+function arrivalFrom(clientId: number, n: string | undefined, meeting: string | undefined): Arrival | null {
+  if (meeting && Number.isInteger(Number(meeting))) return { meetingId: Number(meeting) };
+  const id = Number(n);
+  if (!n || !Number.isInteger(id)) return null;
+  const note = getNotifications(clientId, 500).find((x) => x.id === id);
+  if (!note) return null;
+  const category = categorize(note);
+  return {
+    notificationId: note.id,
+    category,
+    actionTab: note.action_tab,
+    actionRef: note.action_ref,
+    link: category === "pics_reviewed" ? describeMessageLink(clientId, { kind: "photos" }) : notificationLink(clientId, note),
+  };
 }

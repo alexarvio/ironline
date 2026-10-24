@@ -24,6 +24,7 @@ import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
 import { dayMonth, dayMonthTime, logDate } from "../../../lib/dayMonth";
 import { pic } from "../../../lib/pic";
 import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
+import { landOn } from "../../../lib/landOn";
 
 // The Progress pictures tab (21 Oct, Alex), built as Training's header:
 //
@@ -187,7 +188,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
       frame = requestAnimationFrame(() => {
         if (i >= ROWS_SHOWN) setAll(true);
         setOpenRow(m[1]);
-        setTimeout(() => document.getElementById(`sheet-${m[1]}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+        // Brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
+        setTimeout(() => landOn(document.getElementById(`sheet-${m[1]}`)), 120);
       });
     };
     arrive();

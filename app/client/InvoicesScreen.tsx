@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
+import { landOnSoon } from "../lib/landOn";
 import { ChevronLeftIcon, ChevronRightIcon } from "../components/icons";
 
 // The client's invoices from their coach: the ones still to pay first, then
@@ -22,13 +24,17 @@ export type ClientInvoiceRow = {
 };
 export type InvoicesProps = { invoices: ClientInvoiceRow[] };
 
-export default function InvoicesScreen({ invoices, onBack }: InvoicesProps & { onBack: () => void }) {
+export default function InvoicesScreen({ invoices, onBack, focusId = null }: InvoicesProps & { onBack: () => void; /** The invoice a notification is about (24 Oct, Alex): landed on. */ focusId?: number | null }) {
+  useEffect(() => {
+    if (focusId == null) return;
+    return landOnSoon(() => document.getElementById(`invoice-${focusId}`), "center", 300);
+  }, [focusId]);
   const open = invoices.filter((i) => i.state !== "paid");
   const paid = invoices.filter((i) => i.state === "paid");
   const list = (rows: ClientInvoiceRow[]) => (
     <ul className="mts-list">
       {rows.map((i) => (
-        <li key={i.id}>
+        <li key={i.id} id={`invoice-${i.id}`}>
           <Link href={`/client/invoices/${i.id}`} className="mts-row inv-row">
             <span className="mts-leaf" aria-hidden="true">
               <b>{i.dayNumber}</b>

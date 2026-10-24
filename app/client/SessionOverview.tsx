@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { landOnSoon } from "../lib/landOn";
 import { useDismiss } from "./useDismiss";
 import { useKeyboardInset } from "./useKeyboardInset";
 import { saveSkipReasonAction } from "../lib/actions";
@@ -52,6 +53,7 @@ export default function SessionOverview({
   onResume,
   onEdit,
   autoStart = false,
+  focusExercise = null,
 }: {
   /** Put back after a reload: no slide in. */
   still?: boolean;
@@ -60,6 +62,8 @@ export default function SessionOverview({
   currentWeek: boolean;
   /** Another session is live: this one cannot start until it is finished. */
   liveElsewhere: string | null;
+  /** The exercise a link points at (24 Oct, Alex): it opens, folded out, and the screen lands on it. */
+  focusExercise?: number | null;
   coachName: string;
   /** The client's own training picture behind the header; none, the stock one. */
   picture?: string | null;
@@ -237,7 +241,7 @@ export default function SessionOverview({
         </div>
         <div className="so-list">
           {day.exercises.map((ex, i) => (
-            <ExerciseCard key={ex.id} exercise={ex} index={i + 1} done={done} coachName={coachName} gymId={day.gymId} />
+            <ExerciseCard key={ex.id} exercise={ex} index={i + 1} done={done} coachName={coachName} gymId={day.gymId} landed={ex.id === focusExercise} />
           ))}
           {day.cardio.map((c, i) => (
             <CardioFold key={`c${c.id}`} cardio={c} index={day.exercises.length + i + 1} done={done} />
@@ -309,7 +313,7 @@ export default function SessionOverview({
   );
 }
 
-function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: SessionExercise; index: number; done: boolean; coachName: string; gymId: number | null }) {
+function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false }: { exercise: SessionExercise; index: number; done: boolean; coachName: string; gymId: number | null; /** A link points here: open, and land on it. */ landed?: boolean }) {
   const exDone = isDone(exercise);
   // The weight at the session's gym, as the workout shows it.
   const targetWeight = (gymId != null ? exercise.gymTargets?.[gymId] : null) ?? exercise.targetWeight;
@@ -327,13 +331,20 @@ function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: S
   const nowTop = top(exercise.logs);
   const thenTop = exercise.lastSets ? top(exercise.lastSets.sets) : null;
   const delta = nowTop != null && thenTop != null ? roundTo(nowTop - thenTop, 2) : null;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(landed);
+  const cardRef = useRef<HTMLDivElement>(null);
+  // Arriving from a link (24 Oct, Alex): open, then brought to the middle and lit, once the summary has slid in.
+  useEffect(() => {
+    if (!landed) return;
+    setOpen(true);
+    return landOnSoon(() => cardRef.current, "center", 360);
+  }, [landed]);
   // The photo or video and the coach's reply open from here too (10 Oct): a finished session keeps them on the exercise they came from.
   const [videoOpen, setVideoOpen] = useState(false);
   const media = ask?.media === "photo" ? "photo" : "video";
   if (done) {
     return (
-      <div className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
+      <div ref={cardRef} className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
         <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           <span className={`so-num${exDone ? " done" : ""}`}>{index}</span>
           <span className="so-card-main">
@@ -376,7 +387,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: S
     );
   }
   return (
-    <div className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
+    <div ref={cardRef} className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
       <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span className={`so-num${exDone ? " done" : ""}`}>{index}</span>
         <span className="so-card-main">

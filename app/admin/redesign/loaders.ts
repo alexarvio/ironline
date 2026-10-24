@@ -1064,8 +1064,11 @@ export function feedHref(e: Pick<FeedEvent, "clientId" | "tab" | "category" | "t
   if (t?.kind === "program") return tab("training", `&program=${t.programId}`);
   if (t?.kind === "session") {
     const p = listPrograms(e.clientId).find((x) => t.week >= x.start_week && t.week < x.start_week + x.total_weeks);
-    return p ? tab("training", `&program=${p.id}&week=${t.week - p.start_week + 1}#session-${t.dayId}`) : tab("training");
+    return p ? tab("training", `&program=${p.id}&week=${t.week - p.start_week + 1}#session-${t.dayId}${t.rowId != null ? `-ex-${t.rowId}` : ""}`) : tab("training");
   }
+  // A check-in's entry and a shape update's sheet (24 Oct, Alex: the tab's top before).
+  if (t?.kind === "checkin") return tab("measurements", `#checkin-${t.section}-${t.period}`);
+  if (t?.kind === "sheet") return tab("pictures", `#sheet-${t.period}`);
   if (e.category === "billing") return tab("invoices");
   const route: Record<string, string> = { photos: "pictures" };
   return tab(route[e.tab] ?? e.tab);
@@ -1199,8 +1202,9 @@ export function messageLinkHref(clientId: number, link: MessageLink, week: numbe
       const part = link.kind === "exercise" ? `#session-${link.dayId}-ex-${link.assignmentId}` : `#session-${link.dayId}`;
       return p ? tab("training", `&program=${p.id}&week=${week! - p.start_week + 1}${part}`) : tab("training");
     }
+    // The meal too, when the link names one (24 Oct, Alex: it was dropped).
     case "food":
-      return tab("nutrition", `#day-${link.date}`);
+      return tab("nutrition", `#day-${link.date}${link.meal ? `-meal-${encodeURIComponent(link.meal)}` : ""}`);
     case "nutrition":
       return tab("nutrition");
     // That rhythm's log on the page with that check-in, and that sheet's row (21 Oct: both opened their tab at its top).

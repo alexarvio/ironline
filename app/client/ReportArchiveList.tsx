@@ -5,6 +5,7 @@ import { ChevronDownIcon } from "../components/icons";
 import { LineChart, Point } from "../components/LineChart";
 import { markReportOpenedAction } from "../lib/actions";
 import { useFocusRef } from "./CheckInContext";
+import { landOnSoon } from "../lib/landOn";
 
 // Deliberately does NOT import from ../lib/queries — see HomeHub.tsx for why
 // a "use client" file importing queries.ts breaks the dev server. Reports
@@ -39,6 +40,12 @@ export default function ReportArchiveList({ reports }: { reports: ArchiveReport[
   // already gone locally, the write just makes that survive a reload. The
   // write revalidates /client, which re-renders this list, so keep a record
   // of what's already been marked rather than posting again on the way back.
+  // Arrived from the notification: brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
+  useEffect(() => {
+    if (focusRef == null || !reports.some((r) => r.id === focusRef)) return;
+    return landOnSoon(() => document.getElementById(`report-${focusRef}`), "start", 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, [focusRef]);
   const marked = useRef<Set<number>>(new Set());
   useEffect(() => {
     if (openId == null || marked.current.has(openId)) return;
@@ -51,7 +58,7 @@ export default function ReportArchiveList({ reports }: { reports: ArchiveReport[
       {reports.map((r) => {
         const open = openId === r.id;
         return (
-          <div key={r.id}>
+          <div key={r.id} id={`report-${r.id}`}>
             <button type="button" className="settings-report-row" onClick={() => setOpenId(open ? null : r.id)}>
               <div className="home-dark-row-body">
                 <div className="settings-report-top">

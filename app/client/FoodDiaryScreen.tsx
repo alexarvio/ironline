@@ -34,6 +34,7 @@ import {
 import { useTween } from "./NutritionTargetsCard";
 import BarcodeScanner from "./BarcodeScanner";
 import PictureCycle from "./PictureCycle";
+import { landOn } from "../lib/landOn";
 
 // The client's food diary, opened from the ring on Nutrition. On the client
 // page model: the top bar (a back arrow in place of the burger) floating
@@ -177,7 +178,8 @@ export default function FoodDiaryScreen({
   // The day showing. Today arrives with the page; other days, and today
   // again after a change, are read through the action.
   const today = initial.date;
-  const floor = addDays(today, -DAYS_BACK);
+  // A coach's link to an older day reaches back to it (24 Oct, Alex: it opened today instead).
+  const floor = initialDate && initialDate < addDays(today, -DAYS_BACK) && initialDate > addDays(today, -366) ? initialDate : addDays(today, -DAYS_BACK);
   const [diary, setDiary] = useState<FoodDiaryProps>(initial);
   // The diary's actions no longer refresh the whole client page (17 Oct), so once
   // something has changed here, leaving refreshes it: Home's and Nutrition's totals
@@ -403,7 +405,8 @@ export default function FoodDiaryScreen({
     const el = mealRefs.current.get(initialMeal);
     if (!el) return;
     shownLinked.current = true;
-    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    // Brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
+    landOn(el);
   }, [diary, initialMeal, initialDate, initial.date]);
   const toggleFold = (id: FoodMeal) =>
     setFolded((prev) => {

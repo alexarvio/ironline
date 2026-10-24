@@ -25,6 +25,7 @@ import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
 import { Sep } from "../Sep";
 import { Fold } from "../Fold";
+import { landOn } from "../../../lib/landOn";
 
 // The Nutrition tab, built as Training and Lifestyle are (21 Oct, Alex): the
 // phase's name to click and type, its state tag as its menu, the goals and
@@ -391,16 +392,18 @@ export default function NutritionDraft({
   useEffect(() => {
     let frame = 0;
     const arrive = () => {
-      const m = /^#day-(\d{4}-\d{2}-\d{2})$/.exec(window.location.hash);
+      const m = /^#day-(\d{4}-\d{2}-\d{2})(?:-meal-(.+))?$/.exec(window.location.hash);
       if (!m) return;
       const date = m[1];
+      const meal = m[2] ? decodeURIComponent(m[2]) : null;
       const idx = daysNow.current.findIndex((d) => d.date === date);
       if (idx < 0) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         setPage(Math.floor(idx / PAGE) + 1);
         setOpen(date);
-        setTimeout(() => document.getElementById(`day-${date}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+        // On the meal when the link names one, else the day: brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
+        setTimeout(() => landOn((meal && document.getElementById(`meal-${date}-${meal}`)) || document.getElementById(`day-${date}`)), 120);
       });
     };
     arrive();
@@ -1390,7 +1393,7 @@ function DayRow({ day, open, due, grid, mealGrid, commentsOn, onToggle, onShot, 
             <span />
           </div>
           {day.meals.map((m) => (
-            <div key={m.id} className="rn-meal">
+            <div key={m.id} id={`meal-${day.date}-${m.id}`} className="rn-meal">
               <div className="rn-meal-head" style={mealGrid}>
                 <span className="rn-meal-name">{m.label}</span>
                 <span className="rd-num">{n(m.kcal)}</span>

@@ -367,7 +367,10 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
         openCoach?.();
         return;
       default:
-        goToTab?.(a.actionTab ?? "training", a.actionRef ?? undefined, a.focusWeek != null ? { week: a.focusWeek, exercise: null } : undefined);
+        // A note about a session or an exercise opens it as a message's link does (24 Oct, Alex: a link lands on its thing).
+        if (a.link && !a.link.gone && openLink) openLink(a.link);
+        // A training note with no session of its own (a new plan, a week added): the tab, never its ref as a session.
+        else goToTab?.(a.actionTab ?? "training", a.actionTab === "training" || !a.actionTab ? undefined : a.actionRef ?? undefined);
     }
   };
   const initial = (coach.firstName || "C").trim().charAt(0).toUpperCase();

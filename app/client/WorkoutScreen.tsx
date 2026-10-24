@@ -137,7 +137,9 @@ export default function WorkoutScreen({
     requestAnimationFrame(step);
   };
   useEffect(() => {
-    const t = setTimeout(() => jumpTo(readPage(day.key, editing) ?? (editing ? 0 : firstPage()), true), 0);
+    // A link to an exercise wins over the page last looked at (24 Oct, Alex: a link lands on its thing).
+    const linked = focusExercise != null ? day.exercises.findIndex((e) => e.id === focusExercise) : -1;
+    const t = setTimeout(() => jumpTo(linked >= 0 ? linked : readPage(day.key, editing) ?? (editing ? 0 : firstPage()), true), 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on opening
   }, []);

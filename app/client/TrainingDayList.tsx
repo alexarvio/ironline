@@ -413,6 +413,7 @@ export default function TrainingDayList({
           onResume={() => setView({ dayId: openDay.key, screen: "workout" })}
           onEdit={() => setView({ dayId: openDay.key, screen: "edit" })}
           autoStart={openDay.key === focus && focusStart && !openDay.startedAt && !openDay.endedAt}
+          focusExercise={openDay.key === focus ? focusExercise : null}
         />,
         host
       )}

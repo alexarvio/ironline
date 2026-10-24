@@ -10,6 +10,7 @@ import FitTitle from "./FitTitle";
 import ProgressCompare from "./ProgressCompare";
 import PhotoDeck from "./PhotoDeck";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
+import { landOnSoon } from "../lib/landOn";
 
 // Deliberately does not import from ../lib/queries (a "use client" file
 // importing queries.ts breaks the dev server); page.tsx builds these props.
@@ -49,10 +50,17 @@ export default function ProgressPicturesScreen({
   const linkedIndex = initialPeriod ? data.earlier.findIndex((s) => s.period === initialPeriod) : -1;
   const [openPast, setOpenPast] = useState<string | null>(linkedIndex >= 0 ? initialPeriod : null);
   const history = useRef<HTMLDivElement>(null);
+  // The sheet open now, when the link is to it: it is at the top already, so it is only lit (24 Oct, Alex).
+  const openRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!initialPeriod || data.openSheet?.period !== initialPeriod) return;
+    return landOnSoon(() => openRef.current, "start", 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival from a link.
+  }, []);
   useEffect(() => {
     if (linkedIndex < 0) return;
-    const t = setTimeout(() => (history.current?.children[linkedIndex] as HTMLElement | undefined)?.scrollIntoView({ block: "start" }), 120);
-    return () => clearTimeout(t);
+    // Brought into view and lit (24 Oct, Alex: a link lands on its thing).
+    return landOnSoon(() => history.current?.children[linkedIndex], "start", 120);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival from a link.
   }, []);
   // Photos picked but not sent yet; leaving would lose them, so Back asks.
@@ -109,7 +117,9 @@ export default function ProgressPicturesScreen({
             ]}
           />
         ) : data.openSheet ? (
-          <OpenSheet clientId={data.clientId} sheet={data.openSheet} onUnsentChange={setUnsent} />
+          <div ref={openRef}>
+            <OpenSheet clientId={data.clientId} sheet={data.openSheet} onUnsentChange={setUnsent} />
+          </div>
         ) : (
           !data.hasAngles && <p className="pp-app-empty">Your coach hasn&rsquo;t asked for a shape update yet.</p>
         )}
