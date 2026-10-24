@@ -778,7 +778,6 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-nophase-btn svg { width: 14px; height: 14px; }
 
 /* Cardio alternatives and swaps on the coach's rows (28 Sep). */
-.rd-cardio-swap { display: block; font-size: 11.5px; font-weight: 600; color: #b3471d; }
 .rd-cardio-alt { gap: 3px; }
 .rd-cardio-alt svg { width: 14px; height: 14px; }
 .rd-cardio-alt b { font-size: 11px; }

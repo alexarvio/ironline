@@ -650,6 +650,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // Rows whose swap is opened underneath them.
   const [openSwaps, setOpenSwaps] = useState<number[]>([]);
   const toggleSwap = (id: number) => setOpenSwaps((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
+  // A cardio's swap opens the same way (24 Oct, Alex: "treat cardio in the same logic"); its ids are another table's.
+  const [openCardioSwaps, setOpenCardioSwaps] = useState<number[]>([]);
+  const toggleCardioSwap = (id: number) => setOpenCardioSwaps((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
   // A row's messages open in the chat panel (9 Oct), on the latest of them,
   // the reply already about the exercise. They used to unfold under the row.
   // Replying to what the client said slides the chat with them in from the
@@ -1187,9 +1190,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     ) : null;
                   })()}
                   {(() => {
-                    const n = rows.filter((r) => r.swap).length;
+                    // Exercises and cardio alike (24 Oct, Alex).
+                    const n = rows.filter((r) => r.swap).length + s.cardio.filter((c) => c.swap).length;
                     return n > 0 ? (
-                      <span className="rd-swapdot static" title={`${firstName} substituted ${n} exercise${n === 1 ? "" : "s"} in this session`} aria-label={`${n} substituted`}>
+                      <span className="rd-swapdot static" title={`${firstName} swapped ${n} in this session`} aria-label={`${n} swapped`}>
                         <SwapIcon />
                         {n > 1 && <b>{n}</b>}
                       </span>
@@ -1653,8 +1657,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     </button>
                                   )}
                                 </span>
-                                {/* The client did something else instead (the bike was taken). */}
-                                {c.swap && <span className="rd-cardio-swap">Did {c.swap} instead</span>}
                               </span>
                               {figures(c, (k, val) => editCardio(c.id, { [k]: val }), c.name)}
                               <span className="rd-cell rd-notecol">
@@ -1664,6 +1666,26 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               <span />
                               <span />
                               <span className="rd-row-more">
+                                {/* The client did something else instead (the bike was taken): the swap's amber ring, as an
+                                    exercise's, opening what they did under the row (24 Oct, Alex). */}
+                                {s.cardio.some((x) => x.swap) && (
+                                  <span className="rd-flags">
+                                    <span className="rd-flag-slot">
+                                      {c.swap && (
+                                        <button
+                                          type="button"
+                                          className={`rd-swapdot${openCardioSwaps.includes(c.id) ? " on" : ""}`}
+                                          onClick={() => toggleCardioSwap(c.id)}
+                                          aria-expanded={openCardioSwaps.includes(c.id)}
+                                          title={`${firstName} did ${c.swap} instead`}
+                                          aria-label={`Swapped for ${c.swap}: show what they did`}
+                                        >
+                                          <SwapIcon />
+                                        </button>
+                                      )}
+                                    </span>
+                                  </span>
+                                )}
                                 {!weekLocked && (
                                   <>
                                     {/* What the client can do instead when the machine is taken. */}
@@ -1678,6 +1700,23 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                 )}
                               </span>
                             </div>
+                            {c.swap && (
+                              <div className={`rd-swaprow${openCardioSwaps.includes(c.id) ? " open" : ""}`} aria-hidden={!openCardioSwaps.includes(c.id)}>
+                                <div className="rd-swaprow-clip">
+                                  <div className="rd-swaprow-body" style={cardioStyle.grid}>
+                                    <span />
+                                    <span className="rd-swaprow-text" style={{ gridColumn: "2 / -1" }}>
+                                      <span className="rd-swapdot static" aria-hidden="true">
+                                        <SwapIcon />
+                                      </span>
+                                      <b>
+                                        {firstName} did {c.swap} instead
+                                      </b>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       {p.added
