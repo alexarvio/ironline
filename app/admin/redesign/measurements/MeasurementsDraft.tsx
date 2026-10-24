@@ -1285,6 +1285,31 @@ function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Ca
   );
 }
 
+/** The line through a metric's readings, drawn as Home's Weight chart (24 Oct, Alex: loose strokes "look drawn with a pen
+    whose ink is about to run out"): one joined path, straight between readings with the corners rounded off, and dashed
+    over a stretch where readings were missed, the line still joining them. A run goes on while the style does. */
+function LinePaths({ pts, colour, className }: { pts: { x: number; y: number; missed: boolean }[]; colour: string; className: string }) {
+  if (pts.length < 2) return null;
+  const last = pts.length - 1;
+  const ROUND = 0.3;
+  const pt = (i: number) => `${pts[i].x.toFixed(2)} ${pts[i].y.toFixed(2)}`;
+  const toward = (i: number, j: number) => `${(pts[i].x + (pts[j].x - pts[i].x) * ROUND).toFixed(2)} ${(pts[i].y + (pts[j].y - pts[i].y) * ROUND).toFixed(2)}`;
+  const leaves = (i: number) => (i === 0 ? pt(0) : toward(i, i + 1));
+  const reaches = (i: number) => (i === last ? pt(last) : toward(i, i - 1));
+  const line = { solid: "", dashed: "" };
+  for (let i = 1; i <= last; i++) {
+    const style = pts[i].missed ? "dashed" : "solid";
+    const goesOn = i > 1 && pts[i - 1].missed === pts[i].missed;
+    line[style] += `${goesOn ? "" : `M${leaves(i - 1)} `}L${reaches(i)} ${i < last ? `Q${pt(i)} ${leaves(i)} ` : ""}`;
+  }
+  return (
+    <>
+      {line.solid && <path className={className} d={line.solid} stroke={colour} vectorEffect="non-scaling-stroke" />}
+      {line.dashed && <path className={`${className} gap`} d={line.dashed} stroke={colour} vectorEffect="non-scaling-stroke" />}
+    </>
+  );
+}
+
 /** A metric's small line in the list: its colour, no dots, a gap dashed. */
 function Spark({ points, colour }: { points: { value: number | null }[]; colour: string }) {
   const seen = points.map((p, i) => ({ v: p.value, i })).filter((p): p is { v: number; i: number } => p.v != null);
@@ -1295,10 +1320,7 @@ function Spark({ points, colour }: { points: { value: number | null }[]; colour:
   const y = (v: number) => 4 + (1 - (v - lo) / (hi - lo || 1)) * 22;
   return (
     <svg className="rm-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
-      {seen.slice(1).map((p, k) => {
-        const a = seen[k];
-        return <line key={p.i} x1={x(a.i)} y1={y(a.v)} x2={x(p.i)} y2={y(p.v)} stroke={colour} strokeWidth={1.4} strokeLinecap="round" vectorEffect="non-scaling-stroke" strokeDasharray={p.i - a.i > 1 ? "3 4" : undefined} strokeOpacity={p.i - a.i > 1 ? 0.6 : 1} />;
-      })}
+      <LinePaths pts={seen.map((p, k) => ({ x: x(p.i), y: y(p.v), missed: k > 0 && p.i - seen[k - 1].i > 1 }))} colour={colour} className="rm-spark-line" />
     </svg>
   );
 }
@@ -1373,7 +1395,9 @@ function MetricGraph({ metric: m, series, inWords, rangeSwitch = null }: { metri
         )}
       </div>
       <div className="rm-graph-facts">
-        <SepJoin parts={[m.name, `Average ${n(avg)}${tail}`, `${seen.length} of ${points.length} logged`, m.target != null ? `Goal ${n(m.target)}${tail}` : null]} />
+        {/* The value, its change and the average alone (24 Oct, Alex: the list already says which metric). */}
+        Average {n(avg)}
+        {tail}
       </div>
       <div className="rm-graph-plot">
         <svg
@@ -1396,11 +1420,7 @@ function MetricGraph({ metric: m, series, inWords, rangeSwitch = null }: { metri
           ))}
           {m.target != null && <line className="rm-graph-goal" x1={0} x2={W} y1={y(m.target)} y2={y(m.target)} stroke={m.colour} vectorEffect="non-scaling-stroke" />}
           {/* Straight between readings in the group's colour; over a missed stretch dashed, the line still joining them. */}
-          {seen.slice(1).map((p, k) => {
-            const a = seen[k];
-            const gap = p.i - a.i > 1;
-            return <line key={p.i} className={`rm-graph-line${gap ? " gap" : ""}`} x1={x(a.i)} y1={y(a.value)} x2={x(p.i)} y2={y(p.value)} stroke={m.colour} vectorEffect="non-scaling-stroke" />;
-          })}
+          <LinePaths pts={seen.map((p, k) => ({ x: x(p.i), y: y(p.value), missed: k > 0 && p.i - seen[k - 1].i > 1 }))} colour={m.colour} className="rm-graph-line" />
           {shown && <line className="rm-graph-cross" x1={x(shown.i)} x2={x(shown.i)} y1={0} y2={H} vectorEffect="non-scaling-stroke" />}
         </svg>
         <div className="rm-graph-yaxis" aria-hidden="true">
@@ -1421,7 +1441,7 @@ function MetricGraph({ metric: m, series, inWords, rangeSwitch = null }: { metri
           {shown && <i className="on" style={{ left: pct(x(shown.i), W), top: pct(y(shown.value), H) }} />}
         </div>
         {shown && (
-          <span className="rm-graph-pill" style={{ left: pct(x(shown.i), W), top: pct(y(shown.value), H) }}>
+          <span className={`rm-graph-pill${y(shown.value) < H * 0.3 ? " below" : ""}`} style={{ left: pct(x(shown.i), W), top: pct(y(shown.value), H) }}>
             <SepJoin parts={[`${n(shown.value)}${tail}`, shown.label]} />
           </span>
         )}

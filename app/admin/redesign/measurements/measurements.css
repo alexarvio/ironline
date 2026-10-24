@@ -75,10 +75,12 @@
 .rm-graph-pick-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .rm-graph-pick-row b { min-width: 0; overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .rm-graph-pick-row em { font-size: 14px; font-style: normal; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rm-spark { display: block; width: 100%; height: 26px; }
+.rm-spark { display: block; width: 100%; height: 26px; overflow: visible; }
+.rm-spark-line { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.rm-spark-line.gap { stroke-dasharray: 3 3; }
 .rm-graph-pick-delta { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .rm-graph-pick-delta small { font-size: 12px; font-weight: 500; color: #8b93a1; }
-.rm-graph { display: flex; flex-direction: column; min-width: 0; padding: 18px 22px 14px; }
+.rm-graph { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 18px 22px 14px; }
 .rm-graph-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; min-height: 36px; }
 .rm-graph-figure { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
 .rm-graph-now { font-size: 40px; font-weight: 300; letter-spacing: -0.02em; color: #141a24; font-variant-numeric: tabular-nums; }
@@ -89,11 +91,12 @@
 .rm-graph-delta.warn, .rm-graph-pick-delta.warn { color: #b42318; }
 .rm-graph-facts { margin-top: 2px; font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .rm-graph-plot { position: relative; flex: 1; min-height: 0; margin: 18px 44px 0 0; }
-.rm-graph-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* The chart fills what is left of the card: the svg is laid over the plot, so its own proportions never stretch the card. */
+.rm-graph-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
 .rm-graph-base { stroke: #EEF0F3; stroke-width: 1; }
 .rm-graph-goal { stroke-width: 1.2; stroke-dasharray: 5 5; stroke-opacity: 0.7; }
-.rm-graph-line { fill: none; stroke-width: 1.6; stroke-linecap: round; }
-.rm-graph-line.gap { stroke-dasharray: 4 5; stroke-opacity: 0.55; }
+.rm-graph-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.rm-graph-line.gap { stroke-dasharray: 4 3; }
 .rm-graph-cross { stroke: #141a24; stroke-width: 1; stroke-opacity: 0.5; }
 .rm-graph-yaxis { position: absolute; top: 0; bottom: 0; left: 100%; width: 44px; pointer-events: none; }
 .rm-graph-yaxis span { position: absolute; left: 10px; transform: translateY(-50%); font-size: 11px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -103,6 +106,7 @@
 .rm-graph-dots i.last { border: 2px solid; background: #fff; }
 .rm-graph-dots i.on { border: 2px solid #141a24; background: #fff; }
 .rm-graph-pill { position: absolute; transform: translate(-50%, -150%); padding: 4px 10px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+.rm-graph-pill.below { transform: translate(-50%, 60%); }
 .rm-graph-axis { position: relative; height: 16px; margin: 8px 44px 0 0; }
 .rm-graph-axis span { position: absolute; transform: translateX(-50%); font-size: 11px; font-weight: 500; color: #8b93a1; white-space: nowrap; }
 .rm-graph-axis span.first { transform: none; }
