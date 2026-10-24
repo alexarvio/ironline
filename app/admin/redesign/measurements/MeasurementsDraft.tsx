@@ -1201,63 +1201,80 @@ function CheckinTable({ view, whole, cadence, summaryOf, onReply }: { view: Logg
   );
 }
 
-// One chart, one metric at a time, picked from the list beside it. One at a
-// time because weight in kilos and steps in thousands cannot share an axis.
-// Oldest on the left; a skipped period is a gap in the line.
+// The Graph (24 Oct, Alex: mockup A, docs/boards/lifestyle-graph-mockup.html). On the left every metric as a row in its
+// group's colour: the group, its name and latest, its own small line and its change over the range, the list scrolling
+// on its own when there are many (seven metrics never stretch the card). On the right the one picked, as Home's Weight
+// chart: the latest big in light numerals with its change, the facts under it, the line in the group's colour with no
+// dots, a missed stretch dashed, the coach's target dashed, the latest point ringed, the values on the right and the
+// dates under it; hovering reads a period. One at a time because kilos and steps cannot share an axis.
+type GraphRange = "short" | "mid" | "long";
+
+/** A metric's readings over the periods shown, oldest first, and what they say. */
+function seriesOf(m: LoggedMetric, periods: { key: string; label: string }[], valueFor: (m: number, p: string) => number | null) {
+  const points = periods.map((p) => ({ label: p.label, value: valueFor(m.id, p.key) }));
+  const seen = points.map((p, i) => ({ ...p, i })).filter((p): p is { label: string; value: number; i: number } => p.value != null);
+  const first = seen[0] ?? null;
+  const last = seen[seen.length - 1] ?? null;
+  const delta = first && last && seen.length > 1 ? Math.round((last.value - first.value) * 10) / 10 : null;
+  // Green toward good, red away: the metric's own way, else toward its target; grey with neither.
+  let tone: "good" | "warn" | "" = "";
+  if (delta != null && delta !== 0 && first && last) {
+    if (m.goodDirection !== "none") tone = (m.goodDirection === "down") === delta < 0 ? "good" : "warn";
+    else if (m.target != null) tone = Math.abs(last.value - m.target) < Math.abs(first.value - m.target) ? "good" : "warn";
+  }
+  return { points, seen, first, last, delta, tone };
+}
+
+const rangeWords = (r: GraphRange, shortCount: number, midCount: number, cadence: Cadence) =>
+  r === "short" ? `${shortCount} ${CAD[cadence].unit}` : r === "mid" ? `${midCount} ${CAD[cadence].unit}` : "This phase";
+
 function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Cadence; shortCount: number }) {
   const [picked, setPicked] = useState<number | null>(null);
   // 7 days, 30 days, or the whole phase (12 weeks / 6 months in the middle for the other cadences).
-  const [range, setRange] = useState<"short" | "mid" | "long">("short");
+  const [range, setRange] = useState<GraphRange>("mid");
   const midCount = cadence === "daily" ? 30 : cadence === "weekly" ? 12 : 6;
   const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
   const metric = view.metrics.find((m) => m.id === picked) ?? view.metrics[0];
   const hasLong = view.periods.length > shortCount;
   const hasMid = view.periods.length > midCount;
-  const periods = [...(range === "short" ? view.periods.slice(0, shortCount) : range === "mid" && hasMid ? view.periods.slice(0, midCount) : view.periods)].reverse();
-  const latest = (m: LoggedMetric) => {
-    for (const p of view.periods) {
-      const v = valueFor(m.id, p.key);
-      if (v != null) return v;
-    }
-    return null;
-  };
-  const cats: { label: string; colour: string; metrics: LoggedMetric[] }[] = [];
-  for (const m of view.metrics) {
-    let c = cats.find((x) => x.label === m.categoryLabel);
-    if (!c) cats.push((c = { label: m.categoryLabel, colour: m.colour, metrics: [] }));
-    c.metrics.push(m);
-  }
+  const shownRange: GraphRange = range === "mid" && !hasMid ? "long" : range === "long" && !hasLong ? "short" : range;
+  const periods = [...(shownRange === "short" ? view.periods.slice(0, shortCount) : shownRange === "mid" ? view.periods.slice(0, midCount) : view.periods)].reverse();
+  const inWords = shownRange === "long" ? "this phase" : `in ${rangeWords(shownRange, shortCount, midCount, cadence)}`;
   return (
     <div className="rm-graphs">
       <nav className="rm-graph-list" aria-label="Metric on the graph">
-        {cats.map((c) => (
-          <div key={c.label}>
-            <div className="rm-graph-cat">
-              <i style={{ background: c.colour }} aria-hidden="true" />
-              {c.label}
-            </div>
-            {c.metrics.map((m) => {
-              const v = latest(m);
-              return (
-                <button key={m.id} type="button" className={`rm-graph-pick${m.id === metric.id ? " on" : ""}`} aria-pressed={m.id === metric.id} onClick={() => setPicked(m.id)}>
-                  <span>{m.name}</span>
-                  <em>{v == null ? "—" : withUnit(v, m.unit)}</em>
-                </button>
-              );
-            })}
-          </div>
-        ))}
+        {view.metrics.map((m) => {
+          const s = seriesOf(m, periods, valueFor);
+          const tail = tailOf(m.unit);
+          return (
+            <button key={m.id} type="button" className={`rm-graph-pick${m.id === metric.id ? " on" : ""}`} aria-pressed={m.id === metric.id} onClick={() => setPicked(m.id)}>
+              <span className="rm-graph-cat" style={{ color: m.colour }}>
+                {m.categoryLabel}
+              </span>
+              <span className="rm-graph-pick-row">
+                <b>{m.name}</b>
+                <em>{s.last ? withUnit(s.last.value, m.unit) : "—"}</em>
+              </span>
+              <Spark points={s.points} colour={m.colour} />
+              <span className={`rm-graph-pick-delta${s.tone ? ` ${s.tone}` : ""}`}>
+                {s.delta == null ? (s.last ? "One reading" : "Nothing logged") : s.delta === 0 ? "No change" : `${s.delta > 0 ? "+" : "−"}${n(Math.abs(s.delta))}${tail}`}
+                {s.delta != null && <small> {inWords}</small>}
+              </span>
+            </button>
+          );
+        })}
       </nav>
       <MetricGraph
         key={metric.id}
         metric={metric}
-        points={periods.map((p) => ({ label: p.label, value: valueFor(metric.id, p.key) }))}
+        series={seriesOf(metric, periods, valueFor)}
+        inWords={inWords}
         rangeSwitch={
           hasLong ? (
             <div className="rd-btn-group" role="group" aria-label="Range">
               {(hasMid ? (["short", "mid", "long"] as const) : (["short", "long"] as const)).map((r) => (
-                <button key={r} type="button" className={range === r ? "on" : ""} onClick={() => setRange(r)} aria-pressed={range === r}>
-                  {r === "short" ? `${shortCount} ${CAD[cadence].unit}` : r === "mid" ? `${midCount} ${CAD[cadence].unit}` : "This phase"}
+                <button key={r} type="button" className={shownRange === r ? "on" : ""} onClick={() => setRange(r)} aria-pressed={shownRange === r}>
+                  {rangeWords(r, shortCount, midCount, cadence)}
                 </button>
               ))}
             </div>
@@ -1268,9 +1285,27 @@ function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Ca
   );
 }
 
+/** A metric's small line in the list: its colour, no dots, a gap dashed. */
+function Spark({ points, colour }: { points: { value: number | null }[]; colour: string }) {
+  const seen = points.map((p, i) => ({ v: p.value, i })).filter((p): p is { v: number; i: number } => p.v != null);
+  if (seen.length < 2) return null;
+  const lo = Math.min(...seen.map((p) => p.v));
+  const hi = Math.max(...seen.map((p) => p.v));
+  const x = (i: number) => (points.length === 1 ? 50 : (i / (points.length - 1)) * 100);
+  const y = (v: number) => 4 + (1 - (v - lo) / (hi - lo || 1)) * 22;
+  return (
+    <svg className="rm-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
+      {seen.slice(1).map((p, k) => {
+        const a = seen[k];
+        return <line key={p.i} x1={x(a.i)} y1={y(a.v)} x2={x(p.i)} y2={y(p.v)} stroke={colour} strokeWidth={1.4} strokeLinecap="round" vectorEffect="non-scaling-stroke" strokeDasharray={p.i - a.i > 1 ? "3 4" : undefined} strokeOpacity={p.i - a.i > 1 ? 0.6 : 1} />;
+      })}
+    </svg>
+  );
+}
+
 const W = 900;
-const H = 240;
-const PAD = { l: 8, r: 8, t: 14, b: 10 };
+const H = 260;
+const PAD = { l: 4, r: 4, t: 14, b: 10 };
 
 // 1 / 2 / 5 steps, so the axis reads 86 / 87 / 88 rather than 86.3 / 87.1.
 function niceTicks(lo: number, hi: number, count = 4): number[] {
@@ -1280,127 +1315,120 @@ function niceTicks(lo: number, hi: number, count = 4): number[] {
   const r = raw / mag;
   const step = (r > 5 ? 10 : r > 2 ? 5 : r > 1 ? 2 : 1) * mag;
   const out: number[] = [];
-  for (let v = Math.ceil(lo / step) * step; v <= hi + step / 1000; v += step) out.push(Math.round(v * 1000) / 1000);
+  for (let v = Math.ceil(lo / step) * step; v <= hi + step / 1000; v += step) out.push(Math.round(v * 1000) / 1000 + 0);
   return out;
 }
 
-function MetricGraph({ metric: m, points, rangeSwitch = null }: { metric: LoggedMetric; points: { label: string; value: number | null }[]; rangeSwitch?: React.ReactNode }) {
+function MetricGraph({ metric: m, series, inWords, rangeSwitch = null }: { metric: LoggedMetric; series: ReturnType<typeof seriesOf>; inWords: string; rangeSwitch?: React.ReactNode }) {
   const [hover, setHover] = useState<number | null>(null);
-  const seen = points.map((p, i) => ({ ...p, i })).filter((p): p is { label: string; value: number; i: number } => p.value != null);
+  const { points, seen, first, last, delta, tone } = series;
   const unit = m.unit.trim();
   const tail = tailOf(unit);
-  const head = (
-    <header className="rm-graph-head">
-      <i style={{ background: m.colour }} aria-hidden="true" />
-      <b>{m.name}</b>
-      <span>{m.categoryLabel}</span>
-      {rangeSwitch}
-    </header>
-  );
-  if (seen.length === 0) {
+  if (!first || !last) {
     return (
       <section className="rm-graph">
-        {head}
+        <header className="rm-graph-head">
+          <span className="rm-graph-cat" style={{ color: m.colour }}>
+            {m.categoryLabel}
+          </span>
+          {rangeSwitch}
+        </header>
         <p className="rm-graph-empty">Nothing logged for {m.name} in this range.</p>
       </section>
     );
   }
-  const first = seen[0];
-  const last = seen[seen.length - 1];
-  const delta = Math.round((last.value - first.value) * 10) / 10;
-  const tone = seen.length < 2 || m.goodDirection === "none" || delta === 0 ? "" : (m.goodDirection === "down") === delta < 0 ? " good" : " warn";
   const avg = Math.round((seen.reduce((t, p) => t + p.value, 0) / seen.length) * 10) / 10;
-  // A rating out of N sits on its own full scale; everything else gets some
-  // of its range as breathing room.
+  // A rating out of N sits on its own full scale; everything else gets some of its range as breathing room, and the target in view.
   const scale = /^\/\s*(\d+)$/.exec(unit);
-  const lo0 = Math.min(...seen.map((p) => p.value));
-  const hi0 = Math.max(...seen.map((p) => p.value));
+  const vals = seen.map((p) => p.value).concat(m.target != null ? [m.target] : []);
+  const lo0 = Math.min(...vals);
+  const hi0 = Math.max(...vals);
   const pad = hi0 - lo0 > 0 ? (hi0 - lo0) * 0.15 : Math.max(Math.abs(hi0) * 0.02, 0.5);
   const [lo, hi] = scale ? [0, Number(scale[1])] : [lo0 - pad, hi0 + pad];
   const x = (i: number) => PAD.l + (points.length === 1 ? (W - PAD.l - PAD.r) / 2 : (i * (W - PAD.l - PAD.r)) / (points.length - 1));
   const y = (v: number) => PAD.t + (1 - (v - lo) / (hi - lo || 1)) * (H - PAD.t - PAD.b);
-  const ticks = niceTicks(lo, hi);
-  const dateCount = points.length <= 10 ? points.length : 6;
-  const dateAt = [...new Set(Array.from({ length: dateCount }, (_, k) => (dateCount === 1 ? 0 : Math.round((k * (points.length - 1)) / (dateCount - 1)))))];
-  // Runs of consecutive logged periods: each is one stroke, so a gap stays a gap.
-  const runs: { i: number; value: number }[][] = [];
-  for (const p of seen) {
-    const run = runs[runs.length - 1];
-    if (run && run[run.length - 1].i === p.i - 1) run.push(p);
-    else runs.push([p]);
-  }
+  const ticks = niceTicks(lo, hi, 3);
+  // The first, middle and last period under it, as Home's Weight chart.
+  const dateAt = [...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])];
   const shown = hover != null ? seen.find((p) => p.i === hover) ?? null : null;
-  const allDots = seen.length <= 31;
+  const pct = (v: number, of: number) => `${(v / of) * 100}%`;
   return (
     <section className="rm-graph">
-      {head}
+      <header className="rm-graph-head">
+        <span className="rm-graph-cat" style={{ color: m.colour }}>
+          {m.categoryLabel}
+        </span>
+        {rangeSwitch}
+      </header>
       <div className="rm-graph-figure">
         <span className="rm-graph-now">
-          {n((shown ?? last).value)}
+          {n(last.value)}
           {tail && <small>{tail.trim()}</small>}
         </span>
-        <span className="rm-graph-when">
-          {shown ? (
-            shown.label
-          ) : (
-            <>
-              Latest<Sep />
-              {last.label}
-            </>
-          )}
-        </span>
-        <span className="rm-graph-stats">
-          <span className={`rm-graph-delta${tone}`}>{seen.length < 2 ? "One reading" : `${delta > 0 ? "+" : ""}${n(delta)}${tail} since ${first.label}`}</span>
-          <span>
-            Average {n(avg)}
-            {tail}
-            <Sep />
-            {seen.length} of {points.length} logged
+        {delta != null && (
+          <span className={`rm-graph-delta${tone ? ` ${tone}` : ""}`}>
+            {delta === 0 ? "No change" : `${delta > 0 ? "+" : "−"}${n(Math.abs(delta))}${tail}`}
+            <small> {inWords}</small>
           </span>
-        </span>
+        )}
       </div>
-      <div className="rm-graph-frame">
+      <div className="rm-graph-facts">
+        <SepJoin parts={[m.name, `Average ${n(avg)}${tail}`, `${seen.length} of ${points.length} logged`, m.target != null ? `Goal ${n(m.target)}${tail}` : null]} />
+      </div>
+      <div className="rm-graph-plot">
+        <svg
+          className="rm-graph-svg"
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          role="img"
+          aria-label={`${m.name}: ${seen.length} readings, latest ${n(last.value)}${tail}`}
+          onMouseLeave={() => setHover(null)}
+          onMouseMove={(e) => {
+            const box = e.currentTarget.getBoundingClientRect();
+            const at = ((e.clientX - box.left) / box.width) * W;
+            let best = seen[0];
+            for (const p of seen) if (Math.abs(x(p.i) - at) < Math.abs(x(best.i) - at)) best = p;
+            setHover(best.i);
+          }}
+        >
+          {ticks.map((t) => (
+            <line key={t} className="rm-graph-base" x1={0} x2={W} y1={y(t)} y2={y(t)} vectorEffect="non-scaling-stroke" />
+          ))}
+          {m.target != null && <line className="rm-graph-goal" x1={0} x2={W} y1={y(m.target)} y2={y(m.target)} stroke={m.colour} vectorEffect="non-scaling-stroke" />}
+          {/* Straight between readings in the group's colour; over a missed stretch dashed, the line still joining them. */}
+          {seen.slice(1).map((p, k) => {
+            const a = seen[k];
+            const gap = p.i - a.i > 1;
+            return <line key={p.i} className={`rm-graph-line${gap ? " gap" : ""}`} x1={x(a.i)} y1={y(a.value)} x2={x(p.i)} y2={y(p.value)} stroke={m.colour} vectorEffect="non-scaling-stroke" />;
+          })}
+          {shown && <line className="rm-graph-cross" x1={x(shown.i)} x2={x(shown.i)} y1={0} y2={H} vectorEffect="non-scaling-stroke" />}
+        </svg>
         <div className="rm-graph-yaxis" aria-hidden="true">
           {ticks.map((t) => (
-            <span key={t} style={{ top: `${(y(t) / H) * 100}%` }}>
+            <span key={t} style={{ top: pct(y(t), H) }}>
               {n(t)}
             </span>
           ))}
+          {m.target != null && (
+            <span className="goal" style={{ top: pct(y(m.target), H), color: m.colour }}>
+              Goal
+            </span>
+          )}
         </div>
-        <div className="rm-graph-plot">
-          <svg
-            className="rm-graph-svg"
-            viewBox={`0 0 ${W} ${H}`}
-            preserveAspectRatio="none"
-            role="img"
-            aria-label={`${m.name}: ${seen.length} readings, latest ${n(last.value)}${tail}`}
-            onMouseLeave={() => setHover(null)}
-            onMouseMove={(e) => {
-              const box = e.currentTarget.getBoundingClientRect();
-              const at = ((e.clientX - box.left) / box.width) * W;
-              let best = seen[0];
-              for (const p of seen) if (Math.abs(x(p.i) - at) < Math.abs(x(best.i) - at)) best = p;
-              setHover(best.i);
-            }}
-          >
-            {ticks.map((t) => (
-              <line key={t} className="rm-graph-base" x1={0} x2={W} y1={y(t)} y2={y(t)} vectorEffect="non-scaling-stroke" />
-            ))}
-            {runs.map((run, r) => (run.length === 1 ? null : <polyline key={r} className="rm-graph-line" points={run.map((p) => `${x(p.i)},${y(p.value)}`).join(" ")} vectorEffect="non-scaling-stroke" />))}
-            {shown && <line className="rm-graph-cross" x1={x(shown.i)} x2={x(shown.i)} y1={0} y2={H} vectorEffect="non-scaling-stroke" />}
-          </svg>
-          <div className="rm-graph-dots" aria-hidden="true">
-            {seen
-              .filter((p) => allDots || p.i === last.i || p.i === hover || runs.some((run) => run.length === 1 && run[0].i === p.i))
-              .map((p) => (
-                <i key={p.i} className={p.i === hover ? "on" : p.i === last.i ? "last" : ""} style={{ left: `${(x(p.i) / W) * 100}%`, top: `${(y(p.value) / H) * 100}%` }} />
-              ))}
-          </div>
+        <div className="rm-graph-dots" aria-hidden="true">
+          {/* No dots (as Home's Weight): the latest ringed in the colour, the period read ringed in ink. */}
+          <i className="last" style={{ left: pct(x(last.i), W), top: pct(y(last.value), H), borderColor: m.colour }} />
+          {shown && <i className="on" style={{ left: pct(x(shown.i), W), top: pct(y(shown.value), H) }} />}
         </div>
+        {shown && (
+          <span className="rm-graph-pill" style={{ left: pct(x(shown.i), W), top: pct(y(shown.value), H) }}>
+            <SepJoin parts={[`${n(shown.value)}${tail}`, shown.label]} />
+          </span>
+        )}
       </div>
       <div className="rm-graph-axis" aria-hidden="true">
-        {dateAt.map((i) => (
-          <span key={i} style={{ left: `${(x(i) / W) * 100}%` }}>
+        {dateAt.map((i, k) => (
+          <span key={i} className={k === 0 ? "first" : k === dateAt.length - 1 ? "last" : ""} style={{ left: pct(x(i), W) }}>
             {points[i].label}
           </span>
         ))}

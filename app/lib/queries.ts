@@ -12787,6 +12787,8 @@ export type LoggedMetric = {
   /** The category's own colour, for the column head. */
   colour: string;
   goodDirection: "up" | "down" | "none";
+  /** The coach's target, the Graph's dashed Goal line. */
+  target: number | null;
   /** What sums it up in its column head (21 Oct): its change over the days shown, or their average. */
   summary: MetricSummary;
 };
@@ -12827,6 +12829,7 @@ export function getLoggedValues(
       categoryLabel: g.label,
       colour: colourOfGroup(g.key),
       goodDirection: m.good_direction ?? "none",
+      target: m.target ?? null,
       summary: metricSummary(m),
     };
   });
