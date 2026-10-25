@@ -285,7 +285,7 @@ function VideoRows({ rows, now, onOpen, past = false }: { rows: PhoneVideo[]; no
                   {past ? (
                     <Facts parts={[v.reply === "review" ? "Form review" : "Written reply", v.repliedAt ? dayMonth(new Date(v.repliedAt)) : null]} />
                   ) : (
-                    <Facts parts={[v.asked ? "Asked for" : "Sent unasked", v.media === "photo" ? "Photo" : null, <span key="w" className={wait.late ? "late" : undefined}>{wait.text}</span>]} />
+                    <Facts parts={[v.asked ? "Asked for" : null, v.media === "photo" ? "Photo" : null, <span key="w" className={wait.late ? "late" : undefined}>{wait.text}</span>]} />
                   )}
                 </span>
               </span>
