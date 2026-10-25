@@ -64,6 +64,18 @@ export function ChatVideo({ src, className, controls = true, look }: { src: stri
   const poster = posterOf(src);
   // No poster to be had (no ffmpeg on the server, a file it can't read): the old way, the video's own first frame.
   const [own, setOwn] = useState(!poster);
+  // A poster not there yet (being made after a send or a start) is asked for again, twice, a few seconds apart, before
+  // the tile stays (25 Oct, Alex: a failed one stayed blank until a reload).
+  const [tries, setTries] = useState(0);
+  const missed = () => {
+    if (tries >= 2) return setOwn(true);
+    setOwn(true);
+    setTimeout(() => {
+      setTries((t) => t + 1);
+      setOwn(false);
+    }, 3000 * (tries + 1));
+  };
+  const posterSrc = poster && tries > 0 ? `${poster}&r=${tries}` : poster;
   const [full, setFull] = useState(false);
   // In the message only its poster, a small picture (25 Oct, Alex: "5 seconds for the media to load"; /api/timing
   // showed every video of the thread fetched from the bucket at once on opening, to draw a frame of each). The video
@@ -73,7 +85,7 @@ export function ChatVideo({ src, className, controls = true, look }: { src: stri
     <span className={`${className ?? ""} cmv-blank`} style={lookStyle(look)} />
   ) : (
     // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-    <img className={className} src={poster!} alt="" decoding="async" onError={() => setOwn(true)} style={lookStyle(look)} />
+    <img className={className} src={posterSrc!} alt="" decoding="async" onError={missed} style={lookStyle(look)} />
   );
   // Once it is on screen, its small copy comes down, so a tap plays at once.
   const box = useRef<HTMLSpanElement>(null);
