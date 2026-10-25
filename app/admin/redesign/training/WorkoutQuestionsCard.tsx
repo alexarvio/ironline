@@ -131,7 +131,7 @@ export default function WorkoutQuestionsCard({ programId, firstName, questions: 
                     </span>
                     <span className="rd-row-more">
                       <DropdownMenu modal={false}>
-                        <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${r.label}`}>
+                        <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${r.label}`}>
                           <MoreIcon />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="pb-menu">

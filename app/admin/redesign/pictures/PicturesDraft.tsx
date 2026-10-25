@@ -639,7 +639,7 @@ function SetupDialog({ clientId, firstName, plan, onSaved }: { clientId: number;
                     <input className="rp-ahint" value={a.hint} onChange={(e) => edit(a.key, { hint: e.target.value })} maxLength={200} placeholder="Add an instruction" aria-label={`How to take ${a.label || "this angle"}`} />
                     {a.paused && <em className="rp-apaused">Paused</em>}
                     <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger className="rp-amore" aria-label={`More for ${a.label || "this angle"}`}>
+                      <DropdownMenuTrigger className="trn-row-more rp-amore" aria-label={`More for ${a.label || "this angle"}`}>
                         <MoreIcon />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="pb-menu">

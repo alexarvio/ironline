@@ -88,7 +88,9 @@
 .riv-tpl-pop.riv-tpl-pop { width: 300px; padding: 6px; }
 .riv-tpl-list { max-height: 312px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
 .riv-tpl-row { display: flex; align-items: center; gap: 4px; border-radius: 10px; }
-.riv-tpl-row:hover, .riv-tpl-row.on { background: #f5f6f8; }
+/* One hover for every row and menu item (25 Oct, Alex): the exercise row's soft neutral; the chosen one keeps its grey. */
+.riv-tpl-row:hover { background: #fafbfd; }
+.riv-tpl-row.on { background: #f5f6f8; }
 .riv-tpl-pick { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
 .riv-tpl-pick b { overflow: hidden; font-size: 13.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
 .riv-tpl-pick small { overflow: hidden; font-size: 12px; font-weight: 500; color: #8b93a1; text-overflow: ellipsis; white-space: nowrap; }
@@ -106,7 +108,7 @@
 .riv-tpl-none { margin: 0; padding: 10px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 .riv-tpl-save { display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 4px; padding: 10px; border: 0; border-top: 1px solid #eef0f3; border-radius: 0 0 10px 10px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
 .riv-tpl-save svg { width: 14px; height: 14px; translate: 0 -0.5px; }
-.riv-tpl-save:hover:not(:disabled) { background: #f5f6f8; }
+.riv-tpl-save:hover:not(:disabled) { background: #fafbfd; }
 .riv-tpl-save:disabled { color: #98a2b3; cursor: default; }
 .riv-tpl-new { display: flex; flex-direction: column; gap: 4px; padding: 8px 8px 4px; }
 .riv-tpl-foot { display: flex; justify-content: flex-end; gap: 2px; margin-top: 8px; }

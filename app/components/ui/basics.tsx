@@ -67,7 +67,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   return <tfoot data-slot="table-footer" className={cn("bg-accent/50 font-bold", className)} {...props} />;
 }
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
-  return <tr data-slot="table-row" className={cn("border-b transition-colors hover:bg-accent/40", className)} {...props} />;
+  return <tr data-slot="table-row" className={cn("border-b transition-colors hover:bg-row-hover", className)} {...props} />;
 }
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return <th data-slot="table-head" className={cn("h-10 px-3 text-left align-middle text-[12px] font-bold whitespace-nowrap text-foreground", className)} {...props} />;

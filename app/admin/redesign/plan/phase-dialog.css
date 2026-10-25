@@ -67,7 +67,6 @@
 /* Its menu is portalled outside the card; styled only while this pop-up is open. */
 body:has(.npd.npd) .rd-picker-menu.rd-picker-menu { padding: 6px; border-radius: 14px; box-shadow: 0 24px 40px -16px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; }
 body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] { min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #141a24; }
-body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"]:hover, body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"][data-highlighted] { background: #fafbfc; color: #141a24; }
 body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background: #f5f6f8; color: #141a24; }
 body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font-size: 12px; font-weight: 500; color: #98a2b3; }
 

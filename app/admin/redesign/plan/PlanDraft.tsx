@@ -475,7 +475,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                   <span className="rq-set">{g.setIn ? shortDate(g.setIn.date) : g.setDate ? shortDate(g.setDate.slice(0, 10)) : "—"}</span>
                   <span className="rd-row-more">
                     <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${g.text}`}>
+                      <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${g.text}`}>
                         <MoreIcon />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="pb-menu">

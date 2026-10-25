@@ -54,6 +54,8 @@ function DropdownMenuContent({ className, sideOffset = 6, onCloseAutoFocus, ...p
   );
 }
 
+// One hover for every row and menu item (25 Oct, Alex): the exercise row's soft
+// neutral (bg-row-hover, ui.css), the words staying ink (red for a destructive one).
 function DropdownMenuItem({
   className,
   variant = "default",
@@ -64,7 +66,7 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       data-variant={variant}
       className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-sm px-2.5 py-2 text-[13px] font-semibold outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+        "relative flex cursor-default items-center gap-2 rounded-sm px-2.5 py-2 text-[13px] font-semibold outline-hidden select-none hover:bg-row-hover focus:bg-row-hover focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:text-destructive [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
         className
       )}
       {...props}
@@ -77,7 +79,7 @@ function DropdownMenuCheckboxItem({ className, children, checked, ...props }: Re
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-sm py-2 pr-2.5 pl-8 text-[13px] font-semibold outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex cursor-default items-center gap-2 rounded-sm py-2 pr-2.5 pl-8 text-[13px] font-semibold outline-hidden select-none hover:bg-row-hover focus:bg-row-hover focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className
       )}
       checked={checked}
@@ -103,7 +105,7 @@ function DropdownMenuSubTrigger({ className, children, ...props }: React.Compone
   return (
     <DropdownMenuPrimitive.SubTrigger
       data-slot="dropdown-menu-sub-trigger"
-      className={cn("flex cursor-default items-center gap-2 rounded-sm px-2.5 py-2 text-[13px] font-semibold outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent [&_svg]:size-4 [&_svg]:shrink-0", className)}
+      className={cn("flex cursor-default items-center gap-2 rounded-sm px-2.5 py-2 text-[13px] font-semibold outline-hidden select-none hover:bg-row-hover focus:bg-row-hover focus:text-foreground data-[state=open]:bg-row-hover [&_svg]:size-4 [&_svg]:shrink-0", className)}
       {...props}
     >
       {children}

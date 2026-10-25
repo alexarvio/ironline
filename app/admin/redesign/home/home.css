@@ -289,13 +289,14 @@
 .cc-plan-list { display: flex; flex-direction: column; max-height: 216px; overflow-y: auto; }
 .cc-plan-row { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
 .cc-plan-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cc-plan-row:hover, .cc-plan-row:focus-visible { outline: none; background: #f5f6f8; }
+/* One hover for every row and menu item (25 Oct, Alex): the exercise row's soft neutral. */
+.cc-plan-row:hover, .cc-plan-row:focus-visible { outline: none; background: #fafbfd; }
 .cc-plan-row.on { font-weight: 600; }
 .cc-plan-row.none { color: #5b6474; }
 .cc-plan-row svg { flex: none; width: 14px; height: 14px; }
 .cc-plan-empty { margin: 0; padding: 8px 10px; font-size: 13.5px; font-weight: 500; color: #98a2b3; }
 .cc-plan-make { display: block; width: 100%; height: 36px; margin-top: 4px; padding: 0 10px; border: 0; border-top: 1px solid #eef0f3; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
-.cc-plan-make:hover, .cc-plan-make:focus-visible { outline: none; background: #f5f6f8; }
+.cc-plan-make:hover, .cc-plan-make:focus-visible { outline: none; background: #fafbfd; }
 .cc-plan-new { display: flex; flex-direction: column; gap: 8px; padding: 6px 6px 4px; }
 .cc-plan-new input { height: 32px; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; }
 .cc-plan-new input:focus { border-bottom-color: #141a24; }

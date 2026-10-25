@@ -190,7 +190,8 @@
 .npd.npd .rq-pop-scroll { display: flex; flex-direction: column; max-height: calc(6 * 38px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
 .npd.npd .rq-pop-item { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 38px; margin: 0; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
 .npd.npd .rq-pop-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.npd.npd .rq-pop-item:hover, .npd.npd .rq-pop-item:focus-visible { outline: none; background: #f5f6f8; }
+/* One hover for every row and menu item (25 Oct, Alex): the exercise row's soft neutral. */
+.npd.npd .rq-pop-item:hover, .npd.npd .rq-pop-item:focus-visible { outline: none; background: #fafbfd; }
 .npd.npd .rq-pop-item small { flex: none; font-size: 12px; font-weight: 500; color: #98a2b3; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .npd.npd .rq-pop-none { margin: 0; padding: 10px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 /* A deadline of its own: the shared DatePick, typed (dd/mm/yyyy, the slashes fill in) on a clean line or picked from its icon (20 Oct, Alex). */

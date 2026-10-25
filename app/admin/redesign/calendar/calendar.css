@@ -197,7 +197,9 @@
 .cal-drop.cal-drop, .cal-times.cal-times { z-index: 60; display: flex; flex-direction: column; padding: 6px; border: 0; border-radius: 14px; outline: none; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; box-sizing: border-box; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
 .cal-drop.cal-drop { width: var(--radix-popover-trigger-width); min-width: 260px; max-width: min(560px, 100vw - 32px); max-height: calc(6 * 44px + 12px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
 .cal-opt { flex: none; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; text-align: left; cursor: pointer; }
-.cal-opt:hover, .cal-opt:focus-visible, .cal-opt[aria-selected="true"] { outline: none; background: #f5f6f8; }
+/* One hover for every row and menu item (25 Oct, Alex): the exercise row's soft neutral; the chosen one keeps its grey. */
+.cal-opt:hover, .cal-opt:focus-visible { outline: none; background: #fafbfd; }
+.cal-opt[aria-selected="true"] { outline: none; background: #f5f6f8; }
 .cal-opt .cal-face { width: 28px; height: 28px; font-size: 12px; }
 .cal-opt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .cal-opt-text b { overflow: hidden; font-size: 13.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
@@ -209,5 +211,5 @@
 .cal-times-type::placeholder { color: #98a2b3; }
 .cal-times-list { display: flex; flex-direction: column; max-height: calc(6 * 36px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
 .cal-time { flex: none; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; text-align: left; cursor: pointer; }
-.cal-time:hover, .cal-time:focus-visible { outline: none; background: #f5f6f8; }
+.cal-time:hover, .cal-time:focus-visible { outline: none; background: #fafbfd; }
 .cal-time.on, .cal-time.on:hover { background: #141a24; color: #fff; font-weight: 600; }

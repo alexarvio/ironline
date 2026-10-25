@@ -1486,7 +1486,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                             {/* On a done week the ⋯ keeps what is about the client, not the plan: their video (watch, reply) and the message. */}
                             {(!weekLocked || (!!video && video.state !== "asked") || program.status === "live") && (
                             <DropdownMenu modal={false}>
-                              <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${r.name}`}>
+                              <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${r.name}`}>
                                 <MoreIcon />
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="pb-menu">

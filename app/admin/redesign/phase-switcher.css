@@ -10,7 +10,8 @@
 .rd-switch-states.rd-switch-states > button:disabled { opacity: 0.35; }
 .rd-switch-states .rd-switch-count.rd-switch-count { font-weight: 600; opacity: 0.6; }
 .rd-switch-menu.rd-switch-menu [role="menuitem"] { min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: #141a24; }
-.rd-switch-menu.rd-switch-menu [role="menuitem"][data-highlighted],
+/* One hover for every row and menu item (25 Oct, Alex): the exercise row's soft neutral; the chosen one keeps its grey. */
+.rd-switch-menu.rd-switch-menu [role="menuitem"][data-highlighted]:not(.on) { background: #fafbfd; color: #141a24; }
 .rd-switch-menu.rd-switch-menu a.on { background: #f5f6f8; color: #141a24; }
 .rd-switch-menu.rd-switch-menu a.on { font-weight: 600; }
 .rd-switch-menu.rd-switch-menu small { font-size: 12px; font-weight: 500; color: #98a2b3; }

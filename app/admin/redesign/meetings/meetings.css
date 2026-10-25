@@ -113,7 +113,8 @@
 .rt-tzp-search { height: 34px; font-size: 13.5px; }
 .rt-tzp-list { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; scrollbar-width: thin; }
 .rt-tzp-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
-.rt-tzp-item:hover { background: #f5f6f8; }
+/* One hover for every row and menu item (25 Oct, Alex): the exercise row's soft neutral; the chosen one keeps its grey. */
+.rt-tzp-item:hover { background: #fafbfd; }
 .rt-tzp-item.on { background: #f5f6f8; font-weight: 600; }
 .rt-tzp-item span { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .rt-tzp-item small { font-size: 11.5px; color: #8b93a1; font-weight: 500; }

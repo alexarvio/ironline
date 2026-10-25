@@ -23,6 +23,9 @@
   --color-border: #dfe3e8;
   --color-ring: #2f5d8f;
   --color-destructive: #b3261e;
+  /* One hover for every row and menu item (25 Oct, Alex): the exercise row's
+     soft neutral (.rd-row-main:hover), as bg-row-hover in the ui/ parts. */
+  --color-row-hover: #fafbfd;
   --radius-sm: 8px;
   --radius-md: 10px;
   --radius-lg: 18px;
@@ -69,7 +72,6 @@
 .pb-menu [data-slot="dropdown-menu-item"] svg { width: 15px; height: 15px; color: #5b6474; }
 .pb-menu [data-slot="dropdown-menu-item"][data-variant="destructive"],
 .pb-menu [data-slot="dropdown-menu-item"][data-variant="destructive"] svg { color: #a32d2d; }
-.pb-menu [data-slot="dropdown-menu-item"][data-variant="destructive"][data-highlighted] { background: #fbeaea; }
 .pb-row-more[data-state="open"] { background: #eceff3; color: #141a24; }
 
 /* globals.css gives every h2 a 28px top margin; a dialog's title is one.

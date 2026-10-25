@@ -15558,7 +15558,6 @@ body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5
 .nc-hl .rd-picker.nc-countrypick svg, .cc-hl .rd-picker.nc-countrypick svg { flex: none; width: 14px; height: 14px; color: #8b93a1; }
 .rd-picker-menu.nc-countrymenu { max-height: min(252px, var(--radix-dropdown-menu-content-available-height, 252px)); padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; font-family: var(--font-archivo), system-ui, sans-serif; }
 .rd-picker-menu.nc-countrymenu [data-slot="dropdown-menu-item"] { min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #141a24; }
-.rd-picker-menu.nc-countrymenu [data-slot="dropdown-menu-item"][data-highlighted] { background: #fafbfc; color: #141a24; }
 .rd-picker-menu.nc-countrymenu [data-slot="dropdown-menu-item"].on { background: #f5f6f8; font-weight: 600; color: #141a24; }
 /* Its list floats over the pop-up's scrim (z 100), not under it. */
 body:has(.nc-scrim) [data-radix-popper-content-wrapper] { z-index: 110 !important; }

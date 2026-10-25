@@ -76,7 +76,6 @@
 /* Its list floats over the page (portaled): six rows, then it scrolls inside (design rules 6). */
 body:has(.rd.rst) .rd-picker-menu.rd-picker-menu { max-height: min(252px, var(--radix-dropdown-menu-content-available-height, 252px)); padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; font-family: var(--font-archivo), system-ui, sans-serif; }
 body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"] { justify-content: space-between; gap: 12px; min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #141a24; }
-body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"]:hover, body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"][data-highlighted] { background: #fafbfc; color: #141a24; }
 body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background: #f5f6f8; font-weight: 600; }
 body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font-size: 12px; font-weight: 500; color: #8b93a1; }
 
@@ -95,7 +94,7 @@ body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font-
 .rd.trn.rst .trn-state.rst-state { flex: none; justify-content: center; min-width: 96px; box-sizing: border-box; }
 /* A row that opens (a document, in a new tab): the whole row; Open shows on hover; keyboard focus underlines the name. */
 .rd.rst a.rst-row.opens { cursor: pointer; transition: background-color 0.15s; }
-.rd.rst a.rst-row.opens:hover { background: #fafbfc; }
+.rd.rst a.rst-row.opens:hover { background: #fafbfd; }
 .rd.rst a.rst-row.opens:focus-visible { outline: none; }
 .rd.rst a.rst-row.opens:focus-visible .rst-row-main b { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
 .rd.rst .rst-open { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #5b6474; opacity: 0; transition: opacity 0.12s; }

@@ -80,7 +80,8 @@
 /* ---- Extend: the floating list (portalled). */
 .pov-extend-menu.pov-extend-menu { z-index: 60; width: 210px; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; }
 .pov-extend-opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
-.pov-extend-opt:hover, .pov-extend-opt:focus-visible { outline: none; background: #f5f6f8; }
+/* One hover for every row and menu item (25 Oct, Alex): the exercise row's soft neutral. */
+.pov-extend-opt:hover, .pov-extend-opt:focus-visible { outline: none; background: #fafbfd; }
 .pov-extend-opt small { font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 /* Pick date… becomes the typed date in its own row's place (21 Oct, Alex: the menu must not change size): the same
    36px and the menu's width, drawn as the option it replaces, held (hover grey), the calendar on its icon. */
