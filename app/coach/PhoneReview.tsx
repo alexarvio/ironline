@@ -225,6 +225,27 @@ function Reviewer({ review, onBack, onSent }: { review: Review; onBack: () => vo
   const [confirm, setConfirm] = useState(false);
   const leave = () => (rec !== "ready" ? setConfirm(true) : onBack());
 
+  // The page held still while reviewing (25 Oct, Alex: drawing with a finger moved the whole screen): nothing behind
+  // scrolls or bounces, and a finger on the picture only draws (iOS scrolls on a touch unless the touch is stopped).
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("cph-locked");
+    return () => root.classList.remove("cph-locked");
+  }, []);
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const hold = (e: TouchEvent) => {
+      if (el.classList.contains("on")) e.preventDefault();
+    };
+    el.addEventListener("touchstart", hold, { passive: false });
+    el.addEventListener("touchmove", hold, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", hold);
+      el.removeEventListener("touchmove", hold);
+    };
+  });
+
   const kb = useKeyboardInset();
   const all = liveShape ? [...shapes, liveShape] : shapes;
   const showing = rec === "done" && recorder.preview ? { kind: "video" as const, url: recorder.preview, own: true } : stageReview ? { kind: "video" as const, url: stageReview, own: true } : { ...item, own: false };

@@ -166,6 +166,9 @@ a.cph-link { color: #141a24; }
 .cph-frame { position: relative; flex: none; width: min(100cqw, calc(100cqh * var(--r))); height: min(100cqh, calc(100cqw / var(--r))); }
 .cph-frame video, .cph-frame img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: fill; }
 .cph-draw { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; pointer-events: none; }
+/* The page held still while a review is open (25 Oct, Alex): no scroll, no bounce, no pinch on the stage. */
+html.cph-locked, html.cph-locked body { overflow: hidden; overscroll-behavior: none; }
+html.cph-locked .cph-stage { touch-action: none; }
 .cph-draw.on { pointer-events: auto; cursor: crosshair; }
 .cph-stage-btn { position: absolute; z-index: 3; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 10px; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(15, 18, 24, 0.55); color: #fff; }
 .cph-stage-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; color: #8b93a1; }

@@ -5,7 +5,7 @@ import { paintShapes, type Shape } from "./shapes";
 
 // Recording a form review (12 Oct): every frame, the client's video (or
 // photo), the coach's drawing and the camera bubble are painted onto one
-// offscreen canvas; the canvas and the coach's mic go into a MediaRecorder.
+// offscreen canvas; the canvas, the coach's mic and the clip's own sound (under the voice, 25 Oct) go into a MediaRecorder.
 // What comes out is one video, sent through /api/video-reply as a reply
 // file is (the server turns a WebM into an MP4 the phone plays).
 //
@@ -18,6 +18,40 @@ export type Corner = "tl" | "tr" | "bl" | "br";
 export const MAX_SECONDS = 300;
 const LONG_EDGE = 1080;
 const FPS = 30;
+/** The clip's own sound in the review, under the coach's voice (25 Oct, Alex: "it does not have the volume of the video…
+    you don't want the video to be louder than me speaking"). */
+const CLIP_LEVEL = 0.3;
+
+// A media element can be wired into Web Audio only once in its life, so its node is kept with it, in the one context.
+let audioCtx: AudioContext | null = null;
+const clipNodes = new WeakMap<HTMLMediaElement, { node: MediaElementAudioSourceNode; level: GainNode }>();
+const theAudio = (): AudioContext | null => {
+  if (typeof window === "undefined") return null;
+  const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AC) return null;
+  audioCtx ??= new AC();
+  return audioCtx;
+};
+/** The clip's sound into the recording at CLIP_LEVEL, and on to the speaker as before; null when the browser can't. */
+function clipInto(ctx: AudioContext, v: HTMLVideoElement, dest: MediaStreamAudioDestinationNode): GainNode | null {
+  try {
+    let n = clipNodes.get(v);
+    if (!n) {
+      const node = ctx.createMediaElementSource(v);
+      // Wired in, the element plays only through the graph: on to the speaker, so the coach still hears it.
+      node.connect(ctx.destination);
+      const level = ctx.createGain();
+      level.gain.value = CLIP_LEVEL;
+      node.connect(level);
+      n = { node, level };
+      clipNodes.set(v, n);
+    }
+    n.level.connect(dest);
+    return n.level;
+  } catch {
+    return null;
+  }
+}
 
 export const recordingSupported = () =>
   typeof window !== "undefined" && typeof MediaRecorder !== "undefined" && typeof HTMLCanvasElement !== "undefined" && "captureStream" in HTMLCanvasElement.prototype && !!mimeFor();
@@ -53,6 +87,8 @@ export function useReviewRecorder(src: Source) {
   const rec = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const mic = useRef<MediaStream | null>(null);
+  // The take's mix (the voice and the clip's sound), undone when the take ends.
+  const mix = useRef<(() => void) | null>(null);
   // The getters as of the last render, for the frame loop to read.
   const srcRef = useRef(src);
   useEffect(() => {
@@ -66,6 +102,8 @@ export function useReviewRecorder(src: Source) {
   const dropMic = () => {
     mic.current?.getTracks().forEach((t) => t.stop());
     mic.current = null;
+    mix.current?.();
+    mix.current = null;
   };
 
   // One frame of the recording.
@@ -138,6 +176,9 @@ export function useReviewRecorder(src: Source) {
       const s = srcRef.current;
       const m = s.media();
       if (!m) return;
+      // The sound's context woken while the tap still counts as one (Safari plays nothing otherwise).
+      const actx = theAudio();
+      void actx?.resume().catch(() => {});
       // A video with no painted frame records black: nudge it to one first.
       if (m instanceof HTMLVideoElement && (m.readyState < 2 || !m.played.length)) {
         try {
@@ -148,8 +189,8 @@ export function useReviewRecorder(src: Source) {
           m.pause();
         } catch {}
       }
-      // The client's own sound stays out of the review: only the coach's voice is in it.
-      if (m instanceof HTMLVideoElement) m.muted = true;
+      // The clip's own sound goes in, under the voice (25 Oct, Alex; it stayed out before): heard again, as it plays.
+      if (m instanceof HTMLVideoElement) m.muted = false;
       const { w, h } = s.size();
       const k = Math.min(1, LONG_EDGE / Math.max(w, h));
       // A fresh canvas each take, at the media's own shape.
@@ -170,7 +211,20 @@ export function useReviewRecorder(src: Source) {
         };
         run();
         const stream = c.captureStream(FPS);
-        audio?.getAudioTracks().forEach((t) => stream.addTrack(t));
+        // The voice and the clip's sound mixed into one track; with no Web Audio, the voice alone as before.
+        const dest = actx ? actx.createMediaStreamDestination() : null;
+        if (actx && dest) {
+          const voice = audio ? actx.createMediaStreamSource(audio) : null;
+          voice?.connect(dest);
+          const clip = m instanceof HTMLVideoElement ? clipInto(actx, m, dest) : null;
+          mix.current = () => {
+            voice?.disconnect();
+            try {
+              clip?.disconnect(dest);
+            } catch {}
+          };
+          dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
+        } else audio?.getAudioTracks().forEach((t) => stream.addTrack(t));
         const r = new MediaRecorder(stream, { mimeType: mimeFor(), videoBitsPerSecond: 4_000_000 });
         chunks.current = [];
         r.ondataavailable = (e) => e.data.size > 0 && chunks.current.push(e.data);
