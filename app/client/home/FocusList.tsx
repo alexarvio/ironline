@@ -12,6 +12,8 @@ import "./focus.css";
 // the data, unused.
 
 const CALL = MEETING_TYPES[0]; // a call with no kind of its own is a Check-in: the blue, the camera
+/** "#2f6fd6" -> "47, 111, 214", for the call's pulse. */
+const rgbOf = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ");
 
 /** The call's day: "Today", "Tomorrow", else "Thu 29 Oct" (24 Oct, Alex: no "in 5 days"). */
 function callDay(date: string, today: string): string {
@@ -43,13 +45,19 @@ export default function FocusList({ focus, coach, today }: { focus: HomeFocus; c
       <ol className="hm-focus-spine">
         {focus.goals.map((g) => (
           <li key={g.id} className="hm-focus-goal">
-            <span className="hm-focus-node" aria-hidden="true" />
+            {/* Drawn, not a box's edge: a 1.6px edge on a 9px box came out fatter on one side (25 Oct, Alex). */}
+            <svg className="hm-focus-node" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+              <circle cx="5" cy="5" r="4.2" />
+            </svg>
             <span className="hm-focus-text">{g.text}</span>
           </li>
         ))}
         {until && (
-          <li className="hm-focus-call" style={{ ["--call" as string]: CALL.color }}>
+          <li className="hm-focus-call" style={{ ["--call" as string]: CALL.color, ["--call-rgb" as string]: rgbOf(CALL.color) }}>
             <span className="hm-focus-callring" aria-hidden="true">
+              <svg className="hm-focus-calledge" width="24" height="24" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="11.2" />
+              </svg>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d={CALL.icon} />
               </svg>

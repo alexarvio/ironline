@@ -2360,6 +2360,8 @@ export async function sendChatMessageAction(formData: FormData) {
   if (file && file.size > 0) {
     const buffer = Buffer.from(await file.arrayBuffer());
     media = saveChatMedia(clientId, buffer, file.type || "application/octet-stream", file.name);
+    // A picture's small copies are made from these bytes while the original goes to the bucket (25 Oct).
+    if (media.type === "image") void prepareChatMedia(media.path, "image", buffer);
     await putUpload(media.path, buffer, file.type || undefined);
   }
   if (!text && !media) return;
@@ -2388,7 +2390,7 @@ export async function sendChatMessageAction(formData: FormData) {
   // A picture's small copies and a video's poster are made now, after the
   // answer, so the first person to open the chat doesn't wait for them (21 Oct).
   const kind = media?.type;
-  if (media && (kind === "image" || kind === "video")) afterResponse(() => prepareChatMedia(media.path, kind));
+  if (media && kind === "video") afterResponse(() => prepareChatMedia(media.path, kind));
   // The chat screens ask for their own thread after a send ("quiet"): a page
   // read on top sent the whole page back with every message (21 Oct: 211 KB
   // on the client's phone, 96 KB for the coach). Other callers still need it.

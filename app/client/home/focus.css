@@ -11,20 +11,28 @@
 .hm-focus-face { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; overflow: hidden; background: #EEF0F3; font-size: 10px; font-weight: 600; color: #5b6474; }
 .hm-focus-face img { width: 100%; height: 100%; object-fit: cover; }
 
-/* The spine. Every row puts its ring's centre 18.8px down (a goal's first line is 21.6px high, 8px in), so a row's
-   line runs from its own ring's centre to the next one's, however many lines the words wrap to. */
-.hm-focus-spine { --ring-y: 18.8px; display: flex; flex-direction: column; margin: 2px 0 0; padding: 0; list-style: none; }
+/* The spine. Every row puts its ring's centre 19px down (a goal's first line is 22px high, 8px in), so a row's
+   line runs from its own ring's centre to the next one's, however many lines the words wrap to. Whole pixels, so
+   every ring sits on the pixel grid alike (25 Oct, Alex: "some sides are fatter than the other ones"). */
+.hm-focus-spine { --ring-y: 19px; display: flex; flex-direction: column; margin: 2px 0 0; padding: 0; list-style: none; }
 .hm-focus-spine > li { position: relative; display: flex; align-items: flex-start; gap: 14px; }
 .hm-focus-spine > li:not(:last-child)::after { content: ""; position: absolute; left: 11.5px; top: var(--ring-y); bottom: calc(-1 * var(--ring-y)); width: 1px; background: #C9CFD8; }
 
 .hm-focus-goal { padding: 8px 0; }
 /* A ring on the page colour, so the line stops at its edge. Above the line drawn by the row before. */
-.hm-focus-node { position: relative; z-index: 1; flex: none; width: 9px; height: 9px; margin: 6.3px 7.5px 0; border-radius: 999px; background: #F5F5F5; box-shadow: inset 0 0 0 1.6px #141a24; }
-.hm-focus-text { flex: 1; min-width: 0; font-size: 16px; font-weight: 500; line-height: 1.35; letter-spacing: -0.01em; color: #141a24; overflow-wrap: anywhere; }
+.hm-focus-node { position: relative; z-index: 1; flex: none; display: block; width: 10px; height: 10px; margin: 6px 7px 0; overflow: visible; }
+.hm-focus-node circle { fill: #F5F5F5; stroke: #141a24; stroke-width: 1.6; }
+.hm-focus-text { flex: 1; min-width: 0; font-size: 16px; font-weight: 500; line-height: 22px; letter-spacing: -0.01em; color: #141a24; overflow-wrap: anywhere; }
 
-/* The call the goals run until: its ring centred on the same 18.8px (6.8px in, 24px high). */
-.hm-focus-call { padding: 6.8px 0 0; }
-.hm-focus-callring { position: relative; z-index: 1; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: #F5F5F5; box-shadow: inset 0 0 0 1.6px var(--call); color: var(--call); }
+/* The call the goals run until: its ring centred on the same 19px (7px in, 24px high), drawn as the goals' are. It
+   pulses in the call's blue while a call is booked, as a live event's ring does (25 Oct, Alex). */
+.hm-focus-call { padding: 7px 0 0; }
+.hm-focus-callring { position: relative; z-index: 1; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: #F5F5F5; color: var(--call); animation: hm-focus-call-pulse 2.4s ease-in-out infinite; }
+.hm-focus-callring > svg:not(.hm-focus-calledge) { position: relative; }
+.hm-focus-calledge { position: absolute; inset: 0; overflow: visible; }
+.hm-focus-calledge circle { fill: none; stroke: var(--call); stroke-width: 1.6; }
+@keyframes hm-focus-call-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(var(--call-rgb), 0.3); } 50% { box-shadow: 0 0 0 9px rgba(var(--call-rgb), 0); } }
+@media (prefers-reduced-motion: reduce) { .hm-focus-callring { animation: none; } }
 .hm-focus-callwords { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 1px; }
 .hm-focus-callwords b { font-size: 15px; font-weight: 600; line-height: 1.3; color: #141a24; }
 .hm-focus-when { font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }

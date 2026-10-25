@@ -180,16 +180,64 @@ export function smallKey(key: string, w: number, v?: string | null): string | nu
   return `${kind}/${owner}/_w${w}/${rest.join("/").replace(/\.[^.]+$/, "")}${stamp ? `-v${stamp}` : ""}.webp`;
 }
 
-/** The original's bytes, from the bucket or the disk; null when it is nowhere. */
+// ---- The small copies and posters lately made or served, kept in the server's memory (25 Oct, Alex: "the media sent
+// in chats takes a few seconds to load"): the coach, the client and the coach's phone each ask for a picture just sent,
+// and every ask went to the bucket and back. Most recently used kept, 96 MB at most; a restart empties it. On
+// globalThis, so the uploads route and the server actions (built into different bundles) share one.
+const MEMO_BYTES = 96 * 1024 * 1024;
+const shared = globalThis as unknown as { _uploadsMemo?: { map: Map<string, Buffer>; size: number }; _uploadsMaking?: Map<string, Promise<Buffer | null>> };
+const memo = (shared._uploadsMemo ??= { map: new Map(), size: 0 });
+const isCopy = (key: string) => /\/(_w\d+|_poster)\//.test(key);
+function remember(key: string, bytes: Buffer) {
+  if (bytes.length > 4 * 1024 * 1024) return;
+  const old = memo.map.get(key);
+  if (old) {
+    memo.map.delete(key);
+    memo.size -= old.length;
+  }
+  memo.map.set(key, bytes);
+  memo.size += bytes.length;
+  for (const [k, v] of memo.map) {
+    if (memo.size <= MEMO_BYTES) break;
+    memo.map.delete(k);
+    memo.size -= v.length;
+  }
+}
+function recall(key: string): Buffer | null {
+  const hit = memo.map.get(key);
+  if (!hit) return null;
+  memo.map.delete(key);
+  memo.map.set(key, hit);
+  return hit;
+}
+
+/** The bucket said there is no such file. */
+const missing = (error: unknown) => {
+  const e = error as { name?: string; $metadata?: { httpStatusCode?: number } } | null;
+  return e?.name === "NoSuchKey" || e?.name === "NotFound" || e?.$metadata?.httpStatusCode === 404;
+};
+
+/** A file's bytes: from memory, the disk (a file not copied to the bucket yet) or the bucket; null when it is nowhere.
+    One trip to the bucket, a read that answers "not there" itself (25 Oct: a check first made it two). */
 async function readUpload(key: string): Promise<Buffer | null> {
+  const hit = recall(key);
+  if (hit) return hit;
+  const file = path.join(DATA_DIR, "uploads", key);
+  if (fs.existsSync(file)) return fs.readFileSync(file);
   const b = bucket();
-  if (b && (await exists(b, key))) {
+  if (!b) return null;
+  try {
     const r = await b.s3.send(new GetObjectCommand({ Bucket: b.bucket, Key: key }));
     const bytes = await (r.Body as { transformToByteArray: () => Promise<Uint8Array> } | undefined)?.transformToByteArray();
-    return bytes ? Buffer.from(bytes) : null;
+    if (!bytes) return null;
+    inBucket.add(key);
+    const buf = Buffer.from(bytes);
+    if (isCopy(key)) remember(key, buf);
+    return buf;
+  } catch (error) {
+    if (missing(error)) return null;
+    throw error;
   }
-  const file = path.join(DATA_DIR, "uploads", key);
-  return fs.existsSync(file) ? fs.readFileSync(file) : null;
 }
 
 // ---- Made once, kept in the browser (21 Oct, Alex: the chat's pictures and
@@ -210,8 +258,8 @@ const namedOnce = (key: string) => keptForGood(key) || /^(covers|support)\//.tes
 const webp = (bytes: Buffer, cache: string) =>
   new Response(new Uint8Array(bytes), { headers: { "Content-Type": "image/webp", "Content-Length": String(bytes.length), "Cache-Control": cache } });
 
-// Two asks for one copy at once (the panel and the send's own) make it once.
-const making = new Map<string, Promise<Buffer | null>>();
+// Two asks for one copy at once (the panel and the send's own) make it once; shared across bundles as the memory is.
+const making = (shared._uploadsMaking ??= new Map<string, Promise<Buffer | null>>());
 function once(key: string, make: () => Promise<Buffer | null>): Promise<Buffer | null> {
   let p = making.get(key);
   if (!p) {
@@ -238,7 +286,9 @@ async function makeSmall(key: string, small: string, w: number, original?: Buffe
   const from = original ?? (await readUpload(key));
   if (!from) return null;
   const out = await shrink(from, w);
-  await keepCopy(small, out);
+  // Shown at once; its copy goes to the bucket behind the answer (25 Oct: the upload was waited for first).
+  remember(small, out);
+  void keepCopy(small, out).catch(() => {});
   return out;
 }
 
@@ -295,7 +345,8 @@ async function makePoster(key: string, poster: string): Promise<Buffer | null> {
   const dark = async (jpg: Buffer) => (await sharp(jpg).stats()).channels.slice(0, 3).every((c) => c.mean < 12);
   if (await dark(frame)) frame = (await firstFrame(source, 1)) ?? frame;
   const out = await sharp(frame, { failOn: "none" }).resize({ width: 720, withoutEnlargement: true }).webp({ quality: 74 }).toBuffer();
-  await keepCopy(poster, out);
+  remember(poster, out);
+  void keepCopy(poster, out).catch(() => {});
   return out;
 }
 
@@ -318,7 +369,7 @@ export async function posterCopy(key: string): Promise<Response | null> {
  * first open of a thread made each one then: the whole original read from the
  * bucket and shrunk, about three seconds a picture.
  */
-export async function prepareChatMedia(publicPath: string, type: "image" | "video") {
+export async function prepareChatMedia(publicPath: string, type: "image" | "video", bytes?: Buffer) {
   const key = keyOf(publicPath);
   if (!key) return;
   try {
@@ -328,7 +379,8 @@ export async function prepareChatMedia(publicPath: string, type: "image" | "vide
       return;
     }
     if (!smallKey(key, CHAT_WIDTHS[0])) return;
-    const original = await readUpload(key);
+    // The send's own bytes when it has them: not fetched back from the bucket it just went to (25 Oct).
+    const original = bytes ?? (await readUpload(key));
     if (!original) return;
     for (const w of CHAT_WIDTHS) {
       const small = smallKey(key, w)!;
@@ -379,7 +431,9 @@ export async function bucketLink(key: string): Promise<string | null> {
   if (!b) return null;
   const hit = linkCache.get(key);
   if (hit && hit.until > Date.now()) return hit.url;
-  if (!(await exists(b, key))) return null;
+  // Not copied to the bucket yet: served from the disk. Otherwise signed at once, no trip to the bucket to ask first
+  // (25 Oct): signing is worked out here, and a file gone from both answers 404 from the bucket.
+  if (fs.existsSync(path.join(DATA_DIR, "uploads", key))) return null;
   const url = await getSignedUrl(b.s3, new GetObjectCommand({ Bucket: b.bucket, Key: key }), { expiresIn: LINK_SECONDS });
   linkCache.set(key, { url, until: Date.now() + (LINK_SECONDS - 6 * 60) * 1000 });
   return url;
@@ -397,8 +451,14 @@ export const LINK_CACHE_SECONDS = LINK_SECONDS - 5 * 60;
  */
 export async function streamUpload(key: string, range: string | null): Promise<Response | null> {
   const b = bucket();
-  if (!b || !(await exists(b, key))) return null;
-  const r = await b.s3.send(new GetObjectCommand({ Bucket: b.bucket, Key: key, ...(range ? { Range: range } : {}) }));
+  if (!b || fs.existsSync(path.join(DATA_DIR, "uploads", key))) return null;
+  let r;
+  try {
+    r = await b.s3.send(new GetObjectCommand({ Bucket: b.bucket, Key: key, ...(range ? { Range: range } : {}) }));
+  } catch (error) {
+    if (missing(error)) return null;
+    throw error;
+  }
   const body = r.Body ? (r.Body as { transformToWebStream: () => ReadableStream }).transformToWebStream() : null;
   const headers: Record<string, string> = {
     "Content-Type": r.ContentType || mimeFor(key),
