@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 // A chat's pictures and videos as both sides draw them (21 Oct, Alex: they
 // loaded slowly): a picture at the size it is shown, never the phone's
@@ -30,5 +31,51 @@ export function ChatVideo({ src, className, controls = true, muted = false }: { 
       probe.onerror = null;
     };
   }, [poster]);
-  return <video className={className} src={own ? firstFrame(src) : src} poster={own ? undefined : poster!} controls={controls} muted={muted} playsInline preload="metadata" />;
+  const [full, setFull] = useState(false);
+  const shown = own ? firstFrame(src) : src;
+  if (!controls) return <video className={className} src={shown} poster={own ? undefined : poster!} muted={muted} playsInline preload="metadata" />;
+  // In a chat a video plays on the whole screen (25 Oct, Alex: "so the client can properly see… what the coach is
+  // drawing"), an ✕ to leave it; in the message it is its first frame with the play mark. Every chat draws it so.
+  return (
+    <>
+      <span className="cmv">
+        <video className={className} src={shown} poster={own ? undefined : poster!} muted playsInline preload="metadata" />
+        <button
+          type="button"
+          className="cmv-play"
+          onClick={(e) => {
+            e.stopPropagation();
+            setFull(true);
+          }}
+          aria-label="Play the video"
+        >
+          <span aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M8 5.5v13l11-6.5z" />
+            </svg>
+          </span>
+        </button>
+      </span>
+      {full && typeof document !== "undefined" && createPortal(<FullVideo src={src} onClose={() => setFull(false)} />, document.body)}
+    </>
+  );
+}
+
+/** A chat's video on the whole screen, playing, with its own controls and an ✕ (Esc too). */
+function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [onClose]);
+  return (
+    <div className="cmv-full" role="dialog" aria-modal="true" aria-label="Video" onClick={(e) => e.stopPropagation()}>
+      <video src={src} autoPlay controls playsInline />
+      <button type="button" className="cmv-x" onClick={onClose} aria-label="Close the video">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+  );
 }
