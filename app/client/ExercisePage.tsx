@@ -130,19 +130,29 @@ export default function ExercisePage({
   const logOf = (n: number) => exercise.logs.find((l) => l.setNumber === n) ?? null;
   // What the client stepped or typed on a set, over what the server has.
   const [drafts, setDrafts] = useState<Record<number, Partial<Vals>>>({});
-  // A set's plan: the coach's weight (one source of truth, 15 Oct), reps
-  // and RPE from what this set was last session, else the coach's figures;
-  // an extra set with no last-time twin follows the set before it.
+  // The drafts as they stand this instant (25 Oct): a weight typed and the reps' + tapped in one go used to build the
+  // set from the render before the weight landed, so it never counted as filled in and never saved.
+  const draftsNow = useRef<Record<number, Partial<Vals>>>({});
+  const enteredOf = (n: number, from: Record<number, Partial<Vals>> = drafts): Vals => {
+    const log = logOf(n);
+    return { ...(log ? { weightKg: log.weight, reps: log.reps, rpe: log.rpe } : EMPTY), ...(from[n] ?? {}) };
+  };
+  const isSaved = (v: Vals) => (!askWeight || v.weightKg != null) && v.reps != null;
+  // A set's plan: the weight the set before it was just done at, this session (25 Oct, Alex: "for the next one it is
+  // always the defaulted value"; a client who went up on set 1 saw set 2 back at the coach's figure); for the first
+  // set, the coach's weight (one source of truth, 15 Oct). Reps and RPE from what this set was last session, else the
+  // coach's figures; an extra set with no last-time twin follows the set before it.
   const planOf = (n: number): Vals => {
     const before = n > exercise.sets ? logOf(n - 1) : null;
     const prev = lastOf(n) ?? before;
-    return { weightKg: (n > exercise.sets ? before?.weight : null) ?? planWeight ?? prev?.weight ?? null, reps: prev?.reps ?? repLow, rpe: prev?.rpe ?? targetRpe };
+    // The latest set done before it, so a set two ahead follows it too.
+    let carried: number | null = null;
+    for (let m = n - 1; m >= 1 && carried == null; m--) {
+      const v = enteredOf(m);
+      if (isSaved(v)) carried = v.weightKg;
+    }
+    return { weightKg: carried ?? planWeight ?? prev?.weight ?? null, reps: prev?.reps ?? repLow, rpe: prev?.rpe ?? targetRpe };
   };
-  const enteredOf = (n: number): Vals => {
-    const log = logOf(n);
-    return { ...(log ? { weightKg: log.weight, reps: log.reps, rpe: log.rpe } : EMPTY), ...(drafts[n] ?? {}) };
-  };
-  const isSaved = (v: Vals) => (!askWeight || v.weightKg != null) && v.reps != null;
 
   // ---- Warm-ups: rows of the same kind above set 1, the client's own, never
   // counted. This week's saved ones are in; last time's come back as the
@@ -299,7 +309,12 @@ export default function ExercisePage({
       }
       return;
     }
-    const entered = { ...row.entered, ...patch };
+    // Reps put in while the weight still shows the plan in grey: that weight is the one done (25 Oct, Alex: a weight
+    // left as shown never saved, and the set with it).
+    const now = enteredOf(row.n, draftsNow.current);
+    if (patch.reps != null && askWeight && patch.weightKg === undefined && now.weightKg == null && row.plan.weightKg != null) patch = { ...patch, weightKg: row.plan.weightKg };
+    draftsNow.current = { ...draftsNow.current, [row.n]: { ...(draftsNow.current[row.n] ?? {}), ...patch } };
+    const entered = { ...now, ...patch };
     setDrafts((d) => ({ ...d, [row.n]: { ...(d[row.n] ?? {}), ...patch } }));
     if (isSaved(entered)) {
       scheduleSave(row.n, entered);
@@ -347,6 +362,9 @@ export default function ExercisePage({
   };
   const removeExtra = (row: Row) => {
     setExtraAdded((e) => Math.max(0, e - 1));
+    const { [row.n]: _gone, ...rest } = draftsNow.current;
+    void _gone;
+    draftsNow.current = rest;
     setDrafts((d) => {
       const next = { ...d };
       delete next[row.n];
