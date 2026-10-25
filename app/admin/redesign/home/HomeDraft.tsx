@@ -1062,7 +1062,9 @@ function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]
       </div>
       <div className="rh-wstrip" aria-hidden="true">
         {strip.map((p) => (
-          <i key={p.from} className={p.on ? "" : "miss"} style={{ flexGrow: p.to - p.from + 1 }} />
+          // Each mark centred on its days (25 Oct, Alex: "the dot always centred" with the bar): half a day either side of
+          // them, so the first and last are half as wide and a reading's dot sits over the middle of its mark.
+          <i key={p.from} className={p.on ? "" : "miss"} style={{ flexGrow: Math.min(days, p.to + 0.5) - Math.max(0, p.from - 0.5) }} />
         ))}
       </div>
       <div className="rh-waxis" aria-hidden="true">

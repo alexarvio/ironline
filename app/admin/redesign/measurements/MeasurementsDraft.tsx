@@ -1445,7 +1445,8 @@ function MetricGraph({ metric: m, series, rangeSwitch = null }: { metric: Logged
       {/* A mark a period (day, week, month), in the metric's colour when it was logged, pale when not (25 Oct, Alex). */}
       <div className="rm-graph-strip" aria-hidden="true">
         {points.map((p, i) => (
-          <i key={i} style={p.value != null ? { background: m.colour } : undefined} />
+          // Centred on its period, the ends half as wide, so a reading's ring sits over the middle of its mark (25 Oct, Alex).
+          <i key={i} style={{ flexGrow: points.length > 1 && (i === 0 || i === points.length - 1) ? 0.5 : 1, ...(p.value != null ? { background: m.colour } : {}) }} />
         ))}
       </div>
       <div className="rm-graph-axis" aria-hidden="true">

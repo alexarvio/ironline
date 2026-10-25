@@ -526,7 +526,8 @@ function Chart({
       </span>
       <div className="pg-strip" style={{ marginRight: right }} aria-hidden="true">
         {strip.map((q) => (
-          <i key={q.from} className={q.on ? "on" : ""} style={{ flexGrow: q.to - q.from + 1 }} />
+          // Centred on its days, the ends half as wide, so a reading's ring sits over the middle of its mark (25 Oct, Alex).
+          <i key={q.from} className={q.on ? "on" : ""} style={{ flexGrow: Math.min(end, q.to + 0.5) - Math.max(start, q.from - 0.5) }} />
         ))}
       </div>
       <div className="pg-axis" style={{ paddingRight: right }}>
