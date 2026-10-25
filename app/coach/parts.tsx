@@ -94,6 +94,72 @@ export function Sheet({ children, onClose, label, className }: { children: React
     box.current?.focus({ preventScroll: true });
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  // Dragged down, it goes (25 Oct, Alex: "I can't drag it down. I have to press cancel"): from its grip or anywhere on
+  // it while what scrolls inside is at its top; a pull past 110px, or a quick flick, closes it, less springs back. A
+  // field keeps its own touch. Touch events, not pointer ones, so the pull can stop the page's own bounce.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    let startY = 0;
+    let startT = 0;
+    let dy = 0;
+    let armed = false;
+    let dragging = false;
+    const scrollerOf = (t: HTMLElement | null) => {
+      for (let n = t; n && n !== el; n = n.parentElement) {
+        const o = getComputedStyle(n).overflowY;
+        if ((o === "auto" || o === "scroll") && n.scrollHeight > n.clientHeight + 1) return n;
+      }
+      return null;
+    };
+    const start = (e: TouchEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.touches.length !== 1 || t?.closest("input, textarea, select")) {
+        armed = false;
+        return;
+      }
+      const sc = scrollerOf(t);
+      armed = !sc || sc.scrollTop <= 0;
+      startY = e.touches[0].clientY;
+      startT = performance.now();
+      dy = 0;
+      dragging = false;
+    };
+    const move = (e: TouchEvent) => {
+      if (!armed) return;
+      const d = e.touches[0].clientY - startY;
+      if (!dragging) {
+        if (d < -4) armed = false;
+        if (d <= 8) return;
+        dragging = true;
+        el.style.transition = "none";
+      }
+      e.preventDefault();
+      dy = Math.max(0, d - 8);
+      el.style.transform = `translateY(${dy}px)`;
+    };
+    const end = () => {
+      if (!dragging) return;
+      dragging = false;
+      armed = false;
+      const fast = dy / Math.max(1, performance.now() - startT) > 0.6;
+      el.style.transition = "transform 0.22s ease";
+      if (dy > 110 || (fast && dy > 30)) {
+        el.style.transform = "translateY(100%)";
+        window.setTimeout(() => close.current(), 200);
+      } else el.style.transform = "";
+    };
+    el.addEventListener("touchstart", start, { passive: true });
+    el.addEventListener("touchmove", move, { passive: false });
+    el.addEventListener("touchend", end);
+    el.addEventListener("touchcancel", end);
+    return () => {
+      el.removeEventListener("touchstart", start);
+      el.removeEventListener("touchmove", move);
+      el.removeEventListener("touchend", end);
+      el.removeEventListener("touchcancel", end);
+    };
+  }, []);
   return (
     <div className="cph-scrim" onClick={onClose}>
       <div ref={box} className={`cph-sheet${className ? ` ${className}` : ""}`} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={(e) => e.stopPropagation()}>

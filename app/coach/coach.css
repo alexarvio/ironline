@@ -51,7 +51,10 @@ body:has(.cph) { background: #F5F6F8; }
 .cph-label.quiet { margin-top: 24px; color: #5b6474; }
 .cph-video { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 16px; text-align: left; }
 .cph-video.past { filter: grayscale(1); opacity: 0.5; }
-.cph-thumb { display: flex; flex: none; align-items: center; justify-content: center; width: 52px; height: 68px; border-radius: 10px; background: #1b2029; color: #fff; }
+.cph-thumb { position: relative; display: flex; flex: none; align-items: center; justify-content: center; overflow: hidden; width: 52px; height: 68px; border-radius: 10px; background: #1b2029; color: #fff; }
+/* The photo or the video's first frame fills it; a video keeps its play mark over the frame (25 Oct, Alex). */
+.cph-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cph-thumb img + .cph-ico, .cph-thumb img ~ svg { position: relative; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
 .cph-video-main { display: flex; flex: 1; flex-direction: column; gap: 3px; min-width: 0; }
 .cph-video-main b { overflow: hidden; font-size: 15.5px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
 .cph-video-who { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #5b6474; }
@@ -255,6 +258,12 @@ html.cph-locked .cph-stage { touch-action: none; }
 .cph-cal-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0 16px; list-style: none; }
 .cph-cal-entry { display: flex; align-items: stretch; gap: 10px; width: 100%; text-align: left; }
 .cph-cal-entry.done { opacity: 0.5; }
+/* A call with a link: Join on the entry's right, over its colour (25 Oct, Alex), the words making room for it. */
+.cph-cal-li.joins { position: relative; }
+.cph-cal-li.joins .cph-cal-pill { padding-right: 84px; }
+.cph-cal-join { position: absolute; top: 50%; right: 10px; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; font-size: 13px; font-weight: 600; text-decoration: none; transform: translateY(-50%); }
+.cph-cal-join svg { translate: 0 -0.5px; }
+.cph-cal-join:active { background: #F5F6F8; }
 .cph-cal-time { display: flex; flex: none; flex-direction: column; gap: 1px; width: 50px; padding-top: 10px; font-variant-numeric: tabular-nums; }
 .cph-cal-time b { font-size: 14px; font-weight: 500; color: #141a24; }
 .cph-cal-time small { font-size: 12px; color: #8b93a1; }
@@ -287,7 +296,8 @@ html.cph-locked .cph-stage { touch-action: none; }
    squeeze (25 Oct: the What box was pressed thin), and Cancel and Add sit at its foot. */
 .cph-ent { min-height: min(var(--ent-h, 0px), calc(100dvh - env(safe-area-inset-top, 0px) - 24px - 32px - env(safe-area-inset-bottom, 0px))); }
 .cph-ent > * { flex-shrink: 0; }
-.cph-ent > .cph-ent-foot { margin-top: auto; }
+/* Cancel and Add always in view at the sheet's foot, the form scrolling under them (25 Oct, Alex: they were cut off). */
+.cph-ent > .cph-ent-foot { position: sticky; bottom: 0; z-index: 2; margin-top: auto; background: #fff; }
 .cph-ent { display: flex; flex-direction: column; padding: 2px 12px 4px; }
 .cph-ent-title { margin: 0 4px 6px; font-size: 18px; font-weight: 600; }
 /* With on a Client call or Training alone, Link on a Client call alone; on any other category the row goes and what is

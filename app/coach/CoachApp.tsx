@@ -13,6 +13,7 @@ import { Avatar, Facts, Icon, Sheet } from "./parts";
 import CoachCalendar, { useCalendarState, type CalendarState } from "./CoachCalendar";
 import type { PhoneCalendar } from "./calendar";
 import ChatLastLine from "../components/ChatLastLine";
+import { sized } from "../components/ChatMedia";
 import { PushSwitch } from "../client/PushToggle";
 import { NativePush } from "../client/NativePush";
 
@@ -263,6 +264,22 @@ function waitFor(since: number, now: number): { text: string; late: boolean } {
   return { text: `${d} day${d === 1 ? "" : "s"}`, late: true };
 }
 
+/** The photo or the video's first frame on its row (25 Oct, Alex: "the thumbnail of the picture or video"); the mark
+    alone while it loads or when there is none to be had. */
+function Thumb({ v }: { v: PhoneVideo }) {
+  const [failed, setFailed] = useState(false);
+  const src = v.media === "photo" ? sized(v.path, 480) : `${v.path}${v.path.includes("?") ? "&" : "?"}poster=1`;
+  return (
+    <span className="cph-thumb" aria-hidden="true">
+      {!failed && v.path.startsWith("/uploads/") && (
+        // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
+        <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+      )}
+      {(failed || v.media !== "photo") && <Icon name={v.media === "photo" ? "photo" : "play"} />}
+    </span>
+  );
+}
+
 function VideoRows({ rows, now, onOpen, past = false }: { rows: PhoneVideo[]; now: number; onOpen: (id: number) => void; past?: boolean }) {
   return (
     <ul className="cph-rows">
@@ -272,9 +289,7 @@ function VideoRows({ rows, now, onOpen, past = false }: { rows: PhoneVideo[]; no
         return (
           <li key={v.id}>
             <button type="button" className={`cph-video${past ? " past" : ""}`} onClick={() => onOpen(v.id)}>
-              <span className="cph-thumb" aria-hidden="true">
-                <Icon name={v.media === "photo" ? "photo" : "play"} />
-              </span>
+              <Thumb v={v} />
               <span className="cph-video-main">
                 <b>{v.exercise}</b>
                 <span className="cph-video-who">
@@ -285,7 +300,7 @@ function VideoRows({ rows, now, onOpen, past = false }: { rows: PhoneVideo[]; no
                   {past ? (
                     <Facts parts={[v.reply === "review" ? "Form review" : "Written reply", v.repliedAt ? dayMonth(new Date(v.repliedAt)) : null]} />
                   ) : (
-                    <Facts parts={[v.asked ? "Asked for" : null, v.media === "photo" ? "Photo" : null, <span key="w" className={wait.late ? "late" : undefined}>{wait.text}</span>]} />
+                    <Facts parts={[v.asked ? "Asked for" : null, <span key="w" className={wait.late ? "late" : undefined}>{wait.text} ago</span>]} />
                   )}
                 </span>
               </span>

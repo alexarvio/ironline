@@ -20,6 +20,8 @@ export type PhoneVideo = {
   /** "Week 3" inside its programme. */
   week: string | null;
   media: "video" | "photo";
+  /** The file, for its thumbnail on the list (25 Oct, Alex). */
+  path: string;
   /** The coach asked for it (else the client sent it on their own). */
   asked: boolean;
   sentAt: number;
@@ -69,6 +71,7 @@ export function listPhoneVideos(coachId: number): PhoneVideos {
       session: p.session,
       week: p.weekNo != null ? `Week ${p.weekNo}` : null,
       media: v.media === "photo" ? "photo" : "video",
+      path: v.file_path,
       asked: !v.from_client,
       sentAt: ms(v.submitted_at),
       repliedAt: v.replied_at ? ms(v.replied_at) : null,

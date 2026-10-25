@@ -1652,6 +1652,8 @@ export async function uploadRequestedVideoAction(formData: FormData): Promise<st
   if (!saved) return "That request is gone.";
   if (saved.previous) await deleteUpload(saved.previous);
   await putUpload(saved.path, buffer, file.type);
+  // Its poster (or a photo's small copies) made now, so the coach's lists show it at once (25 Oct, Alex).
+  afterResponse(() => prepareChatMedia(saved.path, file.type.startsWith("image/") ? "image" : "video", file.type.startsWith("image/") ? buffer : undefined));
   // The coach's phone buzzes (21 Oct, /coach); not for a coach trying the client's app.
   if ((await getSessionUser())?.role === "client") pushCoachVideo(id);
   revalidatePath("/admin");
@@ -1680,6 +1682,8 @@ export async function sendExerciseMediaAction(formData: FormData): Promise<strin
   if (!saved) return "That exercise is gone.";
   if (saved.previous) await deleteUpload(saved.previous);
   await putUpload(saved.path, buffer, file.type);
+  // Its poster (or a photo's small copies) made now, so the coach's lists show it at once (25 Oct, Alex).
+  afterResponse(() => prepareChatMedia(saved.path, file.type.startsWith("image/") ? "image" : "video", file.type.startsWith("image/") ? buffer : undefined));
   if ((await getSessionUser())?.role === "client") pushCoachVideo(row.id);
   revalidatePath("/admin");
   revalidatePath("/client");

@@ -274,10 +274,13 @@ function Row({ e, cats, now, onOpen }: { e: PhoneEntry; cats: PhoneCalendar["cat
   const who = e.clientId != null ? e.clientName : null;
   // The title is always the title, the client under it (23 Oct, Alex), as the laptop's day.
   const title = e.topic || who || "Busy";
+  // A call with its link joins from the list itself (25 Oct, Alex: "press on the bubble… join call"), a white pill on
+  // the entry's right; the rest of the entry still opens its sheet.
+  const join = e.link && e.status !== "completed" ? e.link : null;
   return (
     <>
       {now && <li className="cph-cal-now" aria-hidden="true" />}
-      <li>
+      <li className={join ? "cph-cal-li joins" : undefined}>
         <button type="button" className={`cph-cal-entry${e.status === "completed" ? " done" : ""}`} onClick={onOpen}>
           <span className="cph-cal-time">
             {e.allDay || !e.time ? (
@@ -299,6 +302,14 @@ function Row({ e, cats, now, onOpen }: { e: PhoneEntry; cats: PhoneCalendar["cat
             {clash && <span className="cph-cal-clash">Overlaps {e.clashes.join(", ")}</span>}
           </span>
         </button>
+        {join && (
+          <a className="cph-cal-join" href={join} target="_blank" rel="noopener noreferrer" aria-label={`Join ${title}`}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 7h12v10H3zM15 10.5l6-3.5v10l-6-3.5" />
+            </svg>
+            Join
+          </a>
+        )}
       </li>
     </>
   );
