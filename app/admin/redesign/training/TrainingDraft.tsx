@@ -1356,20 +1356,25 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                 const demo = demos[r.id] === undefined ? r.demo : demos[r.id];
                                 if (!demo) return null;
                                 const off = demoOff[r.id] ?? r.demoHidden;
+                                // A switch, left and right, the play mark on its knob (25 Oct, Alex: "the toggle like this…
+                                // that goes left right, with the demo icon"): ink and right while shown, grey and left while hidden.
                                 const icon = (
-                                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
-                                  </svg>
+                                  <i aria-hidden="true">
+                                    <svg viewBox="0 0 24 24">
+                                      <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+                                    </svg>
+                                  </i>
                                 );
                                 return weekLocked || r.id <= 0 ? (
-                                  <span className={`rd-demo${off ? " off" : ""}`} title={off ? `Demo hidden from ${firstName}` : `Demo shown to ${firstName}`} role="img" aria-label={off ? `Demo hidden from ${firstName}` : `Demo shown to ${firstName}`}>
+                                  <span className={`rd-demo-switch fixed${off ? " off" : ""}`} title={off ? `Demo hidden from ${firstName}` : `Demo shown to ${firstName}`} role="img" aria-label={off ? `Demo hidden from ${firstName}` : `Demo shown to ${firstName}`}>
                                     {icon}
                                   </span>
                                 ) : (
                                   <button
                                     type="button"
-                                    className={`rd-demo${off ? " off" : ""}`}
-                                    aria-pressed={!off}
+                                    role="switch"
+                                    className={`rd-demo-switch${off ? " off" : ""}`}
+                                    aria-checked={!off}
                                     title={off ? `Demo hidden from ${firstName} · click to show it` : `Demo shown to ${firstName} · click to hide it`}
                                     aria-label={`Demo for ${r.name}, ${off ? "hidden from" : "shown to"} ${firstName}`}
                                     onClick={() => {
