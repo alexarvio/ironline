@@ -1,0 +1,4 @@
+# The live server needs ffmpeg for the chat's video posters and small web copies (25 Oct): the ffmpeg-static package's
+# own download can be missing, so the system's ffmpeg is installed too ("..." keeps the default packages).
+[phases.setup]
+nixPkgs = ["...", "ffmpeg"]

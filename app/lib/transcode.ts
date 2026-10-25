@@ -6,7 +6,7 @@ import fs from "fs";
 // platform it was installed on), H.264 and AAC, the index at the front so
 // it starts before it has all come down. False, and the caller keeps the
 // original, when ffmpeg is missing or the conversion fails.
-function ffmpegBin(): string | null {
+function staticBin(): string | null {
   let bin: string | null = null;
   try {
     bin = (require("ffmpeg-static") as string | null) ?? null;
@@ -16,6 +16,25 @@ function ffmpegBin(): string | null {
   // The ignore comments keep the bundler from tracing the whole project for these calls (a build warning on 9 Oct).
   return bin && fs.existsSync(/*turbopackIgnore: true*/ bin) ? bin : null;
 }
+/** The system's own ffmpeg on the PATH (25 Oct: the package's download can be missing on the live server; the build
+    installs ffmpeg from the system's packages too, nixpacks.toml / railpack.json). */
+function systemBin(): string | null {
+  const names = process.platform === "win32" ? ["ffmpeg.exe"] : ["ffmpeg"];
+  for (const dir of (process.env.PATH ?? "").split(process.platform === "win32" ? ";" : ":")) {
+    for (const n of names) {
+      const p = `${dir}/${n}`;
+      try {
+        if (dir && fs.existsSync(/*turbopackIgnore: true*/ p)) return p;
+      } catch {}
+    }
+  }
+  return null;
+}
+function ffmpegBin(): string | null {
+  return staticBin() ?? systemBin();
+}
+/** Which ffmpeg the server has, for /api/timing (25 Oct). */
+export const ffmpegInfo = () => ({ static: staticBin(), system: systemBin() });
 
 /**
  * A video's first frame (or the one `at` seconds in) as a JPEG (21 Oct, the
@@ -23,14 +42,21 @@ function ffmpegBin(): string | null {
  * reads only the parts it needs). Null when ffmpeg is missing or the video
  * can't be read.
  */
+/** The last first-frame failure, for /api/timing. */
+export let lastFrameError: string | null = null;
+
 export function firstFrame(input: string, at = 0, timeoutMs = 60 * 1000): Promise<Buffer | null> {
   return new Promise((resolve) => {
     const bin = ffmpegBin();
-    if (!bin) return resolve(null);
+    if (!bin) {
+      lastFrameError = "no ffmpeg on this server";
+      return resolve(null);
+    }
     const args = ["-hide_banner", "-loglevel", "error", ...(at > 0 ? ["-ss", String(at)] : []), "-i", input, "-frames:v", "1", "-f", "image2pipe", "-c:v", "mjpeg", "-q:v", "3", "pipe:1"];
     execFile(/*turbopackIgnore: true*/ bin, args, { timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, encoding: "buffer" }, (err, stdout) => {
       if (err || !stdout?.length) {
         if (err) console.warn("[transcode] no first frame:", err.message);
+        lastFrameError = (err?.message ?? "no output").slice(0, 300);
         return resolve(null);
       }
       resolve(stdout);

@@ -223,7 +223,7 @@ const stats = ((globalThis as unknown as { _uploadsStats?: { puts: number; putFa
   lastGetError: null,
   made: [],
 });
-export const storageStats = () => ({ memoCount: memo.map.size, memoMB: Math.round((memo.size / 1048576) * 10) / 10, ...stats, made: stats.made.slice(-12) });
+export const storageStats = async () => ({ ffmpeg: (await import("./transcode")).ffmpegInfo(), lastFrameError: (await import("./transcode")).lastFrameError, memoCount: memo.map.size, memoMB: Math.round((memo.size / 1048576) * 10) / 10, ...stats, made: stats.made.slice(-12) });
 
 /** Where each file was last read from, for the uploads route's timing (25 Oct): memory, disk, bucket, made. */
 const lastSource = new Map<string, string>();
@@ -403,6 +403,7 @@ async function makePoster(key: string, poster: string): Promise<Buffer | null> {
   if (!frame) {
     noPoster.set(key, Date.now());
     lastSource.set(poster, "missing:no-frame");
+    stats.made.push(`FAILED ${new Date().toISOString().slice(11, 19)} ${poster}`);
     return null;
   }
   const sharp = (await import("sharp")).default;
@@ -424,7 +425,9 @@ export async function posterCopy(key: string): Promise<Response | null> {
     let bytes = await readUpload(poster);
     if (!bytes) {
       bytes = await once(poster, () => makePoster(key, poster));
-      lastSource.set(poster, "made");
+      // "made" only when it was; else the reason makePoster left (25 Oct: a failure read as made).
+      if (bytes) lastSource.set(poster, "made");
+      else if (!lastSource.get(poster)?.startsWith("missing")) lastSource.set(poster, "missing");
     }
     lookLater(key, bytes);
     return bytes ? webp(bytes, smallCache(key)) : null;

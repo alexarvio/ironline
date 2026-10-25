@@ -17,5 +17,5 @@ export async function GET(request: Request) {
   if (!user || user.pending || user.role !== "coach") return notFound();
   // How far the uploads bucket is, asked now (25 Oct): its host and three small asks in ms.
   const bucket = await bucketProbe().catch(() => null);
-  return NextResponse.json({ bucket, storage: storageStats(), ...timingReport() }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ bucket, storage: await storageStats(), ...timingReport() }, { headers: { "Cache-Control": "no-store" } });
 }
