@@ -549,7 +549,8 @@ export default function ExercisePage({
           <span className="wo-video-main">
             <b>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}`) : ask.src ? (ask.media === "photo" ? (ask.about === "swap" ? "Photo of the substitute sent" : "Photo sent") : "Video sent") : `${coachName} wants a video`}</b>
             {/* A reply needs no second line (17 Oct, Alex): the title says it and Open opens it. */}
-            {!ask.reply && <small>{ask.src ? (ask.sentAt ? `Sent ${new Date(ask.sentAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · waiting for ${coachName}` : `Waiting for ${coachName}`) : ask.note || "Of this exercise, this session"}</small>}
+            {!ask.reply && <small>{/* Sent and its day alone (25 Oct, Alex: "waiting for Finlay is not necessary"). */}
+            {ask.src ? (ask.sentAt ? `Sent ${new Date(ask.sentAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : "Sent") : ask.note || "Of this exercise, this session"}</small>}
           </span>
           <span className="wo-video-action">{ask.reply ? "Open" : ask.src ? "View" : "Record"}</span>
         </button>
