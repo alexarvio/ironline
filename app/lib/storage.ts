@@ -367,17 +367,26 @@ export function posterKey(key: string): string | null {
 }
 
 // Videos ffmpeg couldn't read (or no ffmpeg): not tried again until the server restarts.
-const noPoster = new Set<string>();
+const noPoster = new Map<string, number>();
 
 async function makePoster(key: string, poster: string): Promise<Buffer | null> {
-  if (noPoster.has(key)) return null;
+  // A failure is tried again after ten minutes (25 Oct: a slow bucket once kept a video frameless until a restart).
+  const failed = noPoster.get(key);
+  if (failed && Date.now() - failed < 10 * 60 * 1000) {
+    lastSource.set(poster, "missing:failed-before");
+    return null;
+  }
   const onDisk = path.join(DATA_DIR, "uploads", key);
   const source = fs.existsSync(onDisk) ? onDisk : await bucketLink(key);
-  if (!source) return null;
+  if (!source) {
+    lastSource.set(poster, "missing:no-file");
+    return null;
+  }
   const { firstFrame } = await import("./transcode");
   let frame = await firstFrame(source);
   if (!frame) {
-    noPoster.add(key);
+    noPoster.set(key, Date.now());
+    lastSource.set(poster, "missing:no-frame");
     return null;
   }
   const sharp = (await import("sharp")).default;
@@ -450,6 +459,51 @@ export function fillChatLooks(items: { path: string; type: string }[]) {
 }
 
 /**
+ * Everything a chat or an exercise needs to show at once, made ahead for what came before (25 Oct, Alex: "I can't
+ * launch a product whose chat takes 20+ seconds to load media"): every chat picture's small copies and every video's
+ * poster, and the look (size and preview) on each message; every exercise photo's and video's poster or copy. One at
+ * a time, a while after the server starts, so pages never wait on it; what is there already is only checked.
+ */
+export async function prepareAllChatMedia(): Promise<number> {
+  const { getData } = await import("./db");
+  const data = getData();
+  let made = 0;
+  const seen = new Set<string>();
+  const items: { path: string; type: "image" | "video"; chat: boolean }[] = [];
+  for (const m of data.chat_messages) {
+    if (!m.media_path || (m.media_type !== "image" && m.media_type !== "video")) continue;
+    if (m.media_thumb || seen.has(m.media_path)) continue;
+    seen.add(m.media_path);
+    items.push({ path: m.media_path, type: m.media_type, chat: true });
+  }
+  for (const v of data.video_requests ?? []) {
+    if (!v.file_path || seen.has(v.file_path)) continue;
+    seen.add(v.file_path);
+    items.push({ path: v.file_path, type: v.media === "photo" ? "image" : "video", chat: false });
+  }
+  for (const it of items) {
+    const key = keyOf(it.path);
+    if (!key) continue;
+    const copy = it.type === "video" ? posterKey(key) : smallKey(key, CHAT_WIDTHS[0]);
+    if (!copy) continue;
+    try {
+      let bytes = await readUpload(copy);
+      if (!bytes) {
+        bytes = await once(copy, () => (it.type === "video" ? makePoster(key, copy) : makeSmall(key, copy, CHAT_WIDTHS[0])));
+        if (bytes) made++;
+      }
+      if (it.chat) {
+        looked.add(key);
+        await keepLook(it.path, bytes);
+      }
+    } catch (error) {
+      console.warn(`[uploads] could not prepare ${key}:`, error instanceof Error ? error.message : error);
+    }
+  }
+  return made;
+}
+
+/**
  * Right after a chat send (21 Oct): a picture's small copies and a video's
  * poster, so the first person to open the chat gets them at once. Before, the
  * first open of a thread made each one then: the whole original read from the
@@ -497,6 +551,9 @@ export async function webChatVideo(publicPath: string) {
     if (!(await toWebVideo(source, out))) return;
     const webPath = `/uploads/${webKey}`;
     await putUploadFromDisk(webPath, out, "video/mp4");
+    // Its poster first, so the message never points at a copy without one.
+    const poster = posterKey(webKey);
+    if (poster) await once(poster, () => makePoster(webKey, poster));
     const { swapChatMedia } = await import("./queries");
     swapChatMedia(publicPath, webPath);
     await prepareChatMedia(webPath, "video");

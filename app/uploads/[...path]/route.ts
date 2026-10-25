@@ -135,7 +135,7 @@ export async function GET(
   if (!stream && search.get("poster") === "1") {
     const poster = await posterCopy(segments.join("/"));
     const pk = posterKey(segments.join("/"));
-    return poster ? timed("poster", poster, pk ? sourceOf(pk) : null) : new Response("Not found", { status: 404 });
+    return timed("poster", poster ?? new Response("Not found", { status: 404 }), pk ? sourceOf(pk) ?? (poster ? null : "missing") : null);
   }
   if (stream) {
     const piped = await streamUpload(segments.join("/"), range);

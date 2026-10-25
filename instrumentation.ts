@@ -19,6 +19,13 @@ export async function register() {
   // not have yet, in the background so the server starts straight away.
   const { copyDiskUploadsToBucket } = await import("./app/lib/storage");
   void copyDiskUploadsToBucket().catch((e) => console.error("[uploads] copy to bucket failed:", e instanceof Error ? e.message : e));
+  // Every chat and exercise picture's and video's poster, copies and look made ahead (25 Oct), a while after start.
+  const { prepareAllChatMedia } = await import("./app/lib/storage");
+  setTimeout(() => {
+    void prepareAllChatMedia()
+      .then((n) => console.log(`[uploads] media prepared ahead: ${n} made`))
+      .catch((e) => console.error("[uploads] preparing media failed:", e instanceof Error ? e.message : e));
+  }, 30_000).unref?.();
   // Reminder pushes for booked calls (a day and an hour before), checked
   // every five minutes on the live server.
   const { meetingRemindersOn, runMeetingReminders } = await import("./app/lib/meetingReminders");

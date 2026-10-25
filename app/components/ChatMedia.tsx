@@ -59,19 +59,18 @@ function preloadVideo(src: string) {
     .finally(() => coming.delete(src));
 }
 
-/** Without a poster the video's own first frame shows, which iOS draws only when asked for a time (19 Oct). */
-const firstFrame = (src: string) => (src.includes("#") ? src : `${src}#t=0.001`);
 
-export function ChatVideo({ src, className, controls = true, muted = false, look }: { src: string; className?: string; controls?: boolean; muted?: boolean; look?: MediaLook | null }) {
+export function ChatVideo({ src, className, controls = true, look }: { src: string; className?: string; controls?: boolean; muted?: boolean; look?: MediaLook | null }) {
   const poster = posterOf(src);
   // No poster to be had (no ffmpeg on the server, a file it can't read): the old way, the video's own first frame.
   const [own, setOwn] = useState(!poster);
   const [full, setFull] = useState(false);
   // In the message only its poster, a small picture (25 Oct, Alex: "5 seconds for the media to load"; /api/timing
   // showed every video of the thread fetched from the bucket at once on opening, to draw a frame of each). The video
-  // itself loads on a tap, playing on the whole screen. The poster failing, the video's own first frame, as before.
+  // itself loads on a tap, playing on the whole screen. The poster failing, its preview or a dark tile, never the video
+  // itself (25 Oct, Alex: 23 s; /api/timing showed the whole phone originals fetched to draw a frame).
   const still = own ? (
-    <video className={className} src={firstFrame(src)} muted={muted || controls} playsInline preload="metadata" style={lookStyle(look)} />
+    <span className={`${className ?? ""} cmv-blank`} style={lookStyle(look)} />
   ) : (
     // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
     <img className={className} src={poster!} alt="" decoding="async" onError={() => setOwn(true)} style={lookStyle(look)} />
