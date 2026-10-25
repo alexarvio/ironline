@@ -3427,17 +3427,13 @@ function TrainingLegend() {
       {row(<span className="rd-pbdot">PB</span>, <><b>Personal best</b>: heavier than ever, reps on target.</>)}
       {row(<i className="rd-due" />, <><b>Needs you</b>: something here waits for you.</>)}
       <div className="rd-legend-head">What they did</div>
-      {row(<span className="rd-set up">82.5×8</span>, <>Heavier than your weight.</>)}
-      {row(<span className="rd-set">80×8</span>, <>At your weight.</>)}
-      {row(<span className="rd-set down">75×8</span>, <>Lighter than your weight.</>)}
-      {row(<span className="rd-set extra">80×6</span>, <>An extra set (dashed).</>)}
-      {row(<span className="rd-set rd-set-pb">85×8</span>, <>The set that was a personal best.</>)}
-      {row(<span className="rd-set swap">20×10</span>, <>A set on the substitute.</>)}
-      <div className="rd-legend-head">7 days | 30 days</div>
-      {row(<span className="rd-trendcell up">+4.2%</span>, <>Stronger (estimated 1RM) than the 7 or 30 days before.</>)}
-      {row(<span className="rd-trendcell down">−3.1%</span>, <>Weaker than the days before.</>)}
-      {row(<span className="rd-trendcell same">=</span>, <>No change.</>)}
-      {row(<span className="rd-trendcell none">—</span>, <>Not done in both windows.</>)}
+      {/* The colours alone, one size (25 Oct, Alex: "the boxes with colors but without the numbers… same size"). */}
+      {row(<span className="rd-set rd-legend-swatch up" />, <>Heavier than your weight.</>)}
+      {row(<span className="rd-set rd-legend-swatch" />, <>At your weight.</>)}
+      {row(<span className="rd-set rd-legend-swatch down" />, <>Lighter than your weight.</>)}
+      {row(<span className="rd-set rd-legend-swatch extra" />, <>An extra set (dashed).</>)}
+      {row(<span className="rd-set rd-legend-swatch rd-set-pb" />, <>The set that was a personal best.</>)}
+      {row(<span className="rd-set rd-legend-swatch swap" />, <>A set on the substitute.</>)}
     </div>
   );
 }
