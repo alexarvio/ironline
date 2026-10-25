@@ -31,11 +31,12 @@ export function NorCoachWordmark({ className }: Props) {
   );
 }
 
-/** The star and the word side by side, sized by the font size it sits in. */
-export function NorCoachLogo({ className }: Props) {
+/** The star and the word side by side, sized by the font size it sits in; `word` the word alone (25 Oct, Alex: the
+    client app's top bar on Home, Training and Nutrition). */
+export function NorCoachLogo({ className, word = false }: Props & { word?: boolean }) {
   return (
     <span className={`nc-logo${className ? " " + className : ""}`} role="img" aria-label="NorCoach">
-      <NorCoachMark className="nc-logo-mark" />
+      {!word && <NorCoachMark className="nc-logo-mark" />}
       <NorCoachWordmark className="nc-logo-word" />
     </span>
   );

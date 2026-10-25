@@ -571,7 +571,7 @@ export default function AppShell({
             <button type="button" className="app-header-icon-btn" onClick={() => setMenuOpen(true)} aria-label="Menu" aria-expanded={menuOpen}>
               <MenuIcon />
             </button>
-            <NorCoachLogo className="app-header-brand" />
+            <NorCoachLogo className="app-header-brand" word />
             <div className="app-header-actions">
               <button type="button" className="app-header-icon-btn" onClick={() => setPushView("notifications")} aria-label="Notifications">
                 <BellIcon />

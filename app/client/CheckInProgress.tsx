@@ -305,7 +305,20 @@ function Chart({
   const y = (v: number) => TOP + (1 - (v - lo) / (hi - lo)) * plotH;
   const crisp = (v: number) => Math.round(v) + 0.5;
   const xy = points.map((q) => ({ x: x(q.date), y: y(q.value) }));
-  const line = xy.map((q, i) => `${i ? "L" : "M"}${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join("");
+  // Smoothed (25 Oct, Alex: "very spikey"): each corner turned into a soft bend from the middle of the leg before to the
+  // middle of the leg after, the reading as its pull. The bend stays inside its two legs, so it never swings past a
+  // reading; a sharp day-to-day zigzag reads as the trend it is. The ends are the first and last readings.
+  const f1 = (n: number) => n.toFixed(1);
+  const mid = (a: { x: number; y: number }, b: { x: number; y: number }) => `${f1((a.x + b.x) / 2)} ${f1((a.y + b.y) / 2)}`;
+  const line =
+    xy.length < 3
+      ? xy.map((q, i) => `${i ? "L" : "M"}${f1(q.x)} ${f1(q.y)}`).join("")
+      : `M${f1(xy[0].x)} ${f1(xy[0].y)}L${mid(xy[0], xy[1])}` +
+        xy
+          .slice(1, -1)
+          .map((q, k) => `Q${f1(q.x)} ${f1(q.y)} ${mid(q, xy[k + 2])}`)
+          .join("") +
+        `L${f1(xy[xy.length - 1].x)} ${f1(xy[xy.length - 1].y)}`;
 
   // The marker: the latest point until the mouse is over the chart or a
   // finger is on it, then the logged point nearest it; back to the latest on
