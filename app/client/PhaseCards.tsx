@@ -443,9 +443,8 @@ export function PhaseCard({ ph, pictures, eager, coachName, today, nextSession, 
             onClick={() => goToTab?.("training", nextSession.dayId)}
           />
         )}
-        {ph.track === "training" && !nextSession && weekDone && (
-          <ActionRow label="Week done" name={`Next week starts ${weekDone.nextWeekLabel}`} action="View" onClick={() => goToTab?.("training")} />
-        )}
+        {/* The week done says just that (25 Oct, Alex: "Next week starts Mon 2…" was cut off on the card). */}
+        {ph.track === "training" && !nextSession && weekDone && <ActionRow name="Week completed" action="View" onClick={() => goToTab?.("training")} />}
         {ph.track === "nutrition" && (
           <ActionRow
             label="Today"
@@ -511,11 +510,11 @@ export function PhaseCard({ ph, pictures, eager, coachName, today, nextSession, 
 
 // A card's one thing to do: what it is on the left, a small white button on
 // the right. Its own tap only: the card around it opens the tab.
-function ActionRow({ label, name, action, onClick }: { label: string; name: string; action: string; onClick: () => void }) {
+function ActionRow({ label, name, action, onClick }: { label?: string; name: string; action: string; onClick: () => void }) {
   return (
     <div className="pc-next">
       <span className="pc-next-text">
-        <span className="pc-next-label">{label}</span>
+        {label && <span className="pc-next-label">{label}</span>}
         <span className="pc-next-name">{name}</span>
       </span>
       <button
