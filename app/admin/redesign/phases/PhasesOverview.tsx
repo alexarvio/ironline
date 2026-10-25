@@ -123,6 +123,10 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
   const [move, setMove] = useState<{ client: OverviewClient; row: PlanPhaseRow; start: string; end: string } | null>(null);
   // An event dragged or stretched the same way (21 Oct, Alex: as the Events card): the Move pop-up waits for a yes.
   const [evMove, setEvMove] = useState<{ client: OverviewClient; event: OverviewEvent; start: string; end: string } | null>(null);
+  // Saved from the Move pop-up, a bar stays at its new weeks until the server's next read lands (25 Oct, Alex: it jumped
+  // back for a second, then to the new place). Tied to the data it was saved over, so a new read lets it go by itself.
+  const [savedOf, setSavedOf] = useState<{ of: PhasesOverviewData; clientId: number; phase?: { id: number; startWeek: string; endWeek: string }; event?: { id: number; start: string; end: string } } | null>(null);
+  const saved = savedOf && savedOf.of === data ? savedOf : null;
   const [newEvent, setNewEvent] = useState<{ client: OverviewClient; day: string; /** From a kind's lane: that kind (null for "Event"); else the dialog's own first pick. */ kind?: string | null } | null>(null);
   const leave = (id: number) => setLeavingOf((s) => ({ of: data, ids: new Set(s && s.of === data ? s.ids : []).add(id) }));
   const act = (fn: () => Promise<unknown>, said: string, undo?: () => Promise<unknown>) =>
@@ -258,12 +262,12 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
                       onPick={setPicked}
                       onNewPhase={(track, startWeek) => setNewPhase({ client: c, track, start: startWeek, lock: false })}
                       onNewEvent={(day, kind) => setNewEvent({ client: c, day, kind })}
-                      pending={move && move.client.id === c.id ? { id: move.row.id, startWeek: move.start, endWeek: move.end } : null}
+                      pending={move && move.client.id === c.id ? { id: move.row.id, startWeek: move.start, endWeek: move.end } : saved?.clientId === c.id ? saved.phase ?? null : null}
                       onMove={(p, start, end) => {
                         const row = c.plan.phases.find((x) => x.id === p.id);
                         if (row) setMove({ client: c, row, start, end });
                       }}
-                      evPending={evMove && evMove.client.id === c.id ? { id: evMove.event.id, start: evMove.start, end: evMove.end } : null}
+                      evPending={evMove && evMove.client.id === c.id ? { id: evMove.event.id, start: evMove.start, end: evMove.end } : saved?.clientId === c.id ? saved.event ?? null : null}
                       onMoveEvent={(e, start, end) => setEvMove({ client: c, event: e, start, end })}
                       folded={prefs.folded.includes(c.id)}
                       onFold={() => setPrefs((p) => ({ ...p, folded: p.folded.includes(c.id) ? p.folded.filter((x) => x !== c.id) : [...p.folded, c.id] }))}
@@ -298,6 +302,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
             onCancel={() => setMove(null)}
             onSave={() => {
               const { row, start: s, end: e } = move;
+              setSavedOf({ of: data, clientId: move.client.id, phase: { id: row.id, startWeek: s, endWeek: e } });
               setMove(null);
               const form = (start: string, end: string) => phaseForm({ id: row.id, name: row.name, track: row.track, start, end });
               act(() => updateClientPhaseAction(form(s, e)), `${row.name}: ${dayMonth(s)} – ${dayMonth(addDays(e, 6))}`, () => updateClientPhaseAction(form(row.start_week, row.end_week)));
@@ -318,6 +323,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
             onCancel={() => setEvMove(null)}
             onSave={() => {
               const { client, event: e, start, end } = evMove;
+              setSavedOf({ of: data, clientId: client.id, event: { id: e.id, start, end } });
               setEvMove(null);
               const at = (s: string, en: string) => updateClientEventAction(client.id, e.id, { kind: e.kind, title: e.title, start: s, end: en, note: e.note });
               act(() => at(start, end), `${e.title}: ${start === end ? dayMonth(start) : `${dayMonth(start)} → ${dayMonth(end)}`}`, () => at(e.start, e.end));
