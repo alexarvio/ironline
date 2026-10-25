@@ -14,7 +14,6 @@ import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMess
 import type { MessageLink } from "../../../lib/messageLinks";
 import { pic } from "../../../lib/pic";
 import type { LinkTargets } from "../../../lib/queries";
-import { ConfirmDialog } from "../training/TrainingDraft";
 import { Sep, SepJoin } from "../Sep";
 
 // The Messages tab in the redesign's sheet: one chat box, and unlike the
@@ -85,7 +84,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   // After sending: one message being reworded, one getting a link, one about to go.
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
   const [relink, setRelink] = useState<number | null>(null);
-  const [remove, setRemove] = useState<DraftMessage | null>(null);
+  // Delete asks in the menu itself, as every chat does (25 Oct, Alex: one rule set for the chats).
+  const [asking, setAsking] = useState<number | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const chat = useRef<HTMLElement>(null);
   const thread = useRef<HTMLDivElement>(null);
@@ -368,11 +368,21 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
           {!m.text && <span className="rm-bubble-line end">{meta(m, inPins)}</span>}
           {/* The chevron in the corner: react, and on the coach's own, reword, link, pin or delete. */}
           {!inPins && editing?.id !== m.id && (
-            <DropdownMenu modal={false}>
+            <DropdownMenu modal={false} onOpenChange={(o) => !o && setAsking(null)}>
               <DropdownMenuTrigger className="rm-chev" aria-label="Message options">
                 <ChevronDownIcon />
               </DropdownMenuTrigger>
               <DropdownMenuContent align={m.mine ? "end" : "start"} className="pb-menu rm-menu">
+                {asking === m.id ? (
+                  <>
+                    <div className="rm-menu-ask">Delete for both of you?</div>
+                    <DropdownMenuItem onSelect={(e) => (e.preventDefault(), setAsking(null))}>Cancel</DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onSelect={() => (setAsking(null), act(() => deleteChatMessageAction(clientId, m.id, true), () => toast("Message deleted")))}>
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                <>
                 <div className="rm-menu-reacts" role="group" aria-label="React">
                   {REACTIONS.map((e) => (
                     <DropdownMenuItem key={e} className={`rm-react-pick${m.reactions?.coach === e ? " on" : ""}`} onSelect={() => react(m, m.reactions?.coach === e ? null : e)} aria-label={`React ${e}`}>
@@ -382,15 +392,18 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => startReply(m)}>Reply</DropdownMenuItem>
-                {m.mine && <DropdownMenuItem onSelect={() => setEditing({ id: m.id, text: m.text })}>Edit</DropdownMenuItem>}
+                {m.text && <DropdownMenuItem onSelect={() => void navigator.clipboard?.writeText(m.text).catch(() => {})}>Copy</DropdownMenuItem>}
+                {m.mine && m.text && <DropdownMenuItem onSelect={() => setEditing({ id: m.id, text: m.text })}>Edit</DropdownMenuItem>}
                 {m.mine && <DropdownMenuItem onSelect={() => setRelink(m.id)}>{m.link ? "Change the link" : "Link to…"}</DropdownMenuItem>}
                 {m.mine && m.link && <DropdownMenuItem onSelect={() => act(() => setMessageLinkAction(clientId, m.id, null, true))}>Remove the link</DropdownMenuItem>}
-                <DropdownMenuItem onSelect={() => act(() => pinMessageAction(clientId, m.id, !m.pinned, true))}>{m.pinned ? "Unpin" : "Pin to the top"}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => act(() => pinMessageAction(clientId, m.id, !m.pinned, true))}>{m.pinned ? "Unpin" : "Pin"}</DropdownMenuItem>
                 {m.mine && <DropdownMenuSeparator />}
                 {m.mine && (
-                  <DropdownMenuItem variant="destructive" onSelect={() => setRemove(m)}>
+                  <DropdownMenuItem variant="destructive" onSelect={(e) => (e.preventDefault(), setAsking(m.id))}>
                     Delete
                   </DropdownMenuItem>
+                )}
+                </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -632,21 +645,6 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
                 setLinking(false);
                 box.current?.focus();
               }
-            }}
-          />
-        )}
-      </Dialog>
-      <Dialog open={!!remove} onOpenChange={(o) => !o && setRemove(null)}>
-        {remove && (
-          <ConfirmDialog
-            title="Delete this message?"
-            description={`It leaves ${firstName}'s Home too. They may already have read it.`}
-            confirm="Delete"
-            danger
-            onConfirm={() => {
-              const id = remove.id;
-              setRemove(null);
-              act(() => deleteChatMessageAction(clientId, id, true), () => toast("Message deleted"));
             }}
           />
         )}

@@ -9,7 +9,7 @@ import ChatMediaGallery from "../components/ChatMediaGallery";
 import { ChatVideo, sized } from "../components/ChatMedia";
 import { dayMonth } from "../lib/dayMonth";
 import { useKeyboardInset } from "../client/useKeyboardInset";
-import { Avatar, Facts, Icon, Sheet } from "./parts";
+import { Avatar, Facts, Icon } from "./parts";
 import { ChatReview } from "./PhoneReview";
 
 // One client's chat on the coach's phone (21 Oct): the laptop's thread (its
@@ -231,11 +231,36 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
   // ---- Holding a message opens its sheet; a right click too, on a computer.
   const [menuFor, setMenuFor] = useState<DraftMessage | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The client chat's small menu beside the message (25 Oct, Alex: "why are we doing the same shit differently?"): up
+  // from the message, or down when it sits near the top of the screen. Goes on a tap elsewhere or Escape.
+  const [menuDown, setMenuDown] = useState(false);
+  const menuBox = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!menuFor) return;
+    const away = (e: PointerEvent) => {
+      if (!menuBox.current?.contains(e.target as Node)) {
+        setMenuFor(null);
+        setConfirmDelete(false);
+      }
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setMenuFor(null);
+      setConfirmDelete(false);
+    };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [menuFor]);
   const hold = useRef<{ timer: number; x: number; y: number } | null>(null);
   const held = useRef(false);
-  const openMenu = (m: DraftMessage) => {
+  const openMenu = (m: DraftMessage, el?: Element | null) => {
     held.current = true;
     setConfirmDelete(false);
+    setMenuDown((el?.getBoundingClientRect().top ?? 400) < 320);
     setMenuFor(m);
     try {
       navigator.vibrate?.(8);
@@ -245,9 +270,10 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     onPointerDown: (e: React.PointerEvent) => {
       if (e.button !== 0) return;
       held.current = false;
+      const el = e.currentTarget;
       const timer = window.setTimeout(() => {
         hold.current = null;
-        openMenu(m);
+        openMenu(m, el);
       }, HOLD_MS);
       hold.current = { timer, x: e.clientX, y: e.clientY };
     },
@@ -261,7 +287,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     onContextMenu: (e: React.MouseEvent) => {
       e.preventDefault();
       cancelHold();
-      openMenu(m);
+      openMenu(m, e.currentTarget);
     },
   });
   const cancelHold = () => {
@@ -298,6 +324,122 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
 
   const kb = useKeyboardInset();
 
+  const messageMenu = (m: DraftMessage) => (
+    <span className={`cm-menu-list right${menuDown ? " down" : ""}`} role="menu" onClick={(e) => e.stopPropagation()}>
+      {confirmDelete ? (
+        <>
+          <span className="cm-menu-ask">Delete for both of you?</span>
+          <button type="button" role="menuitem" onClick={() => setConfirmDelete(false)}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="danger"
+            onClick={() => {
+              closeMenu();
+              void act(() => deleteChatMessageAction(clientId, m.id, true));
+            }}
+          >
+            Delete
+          </button>
+        </>
+      ) : (
+        <>
+          <span className="cm-menu-reacts" role="group" aria-label="React">
+            {REACTIONS.map((e) => {
+              const on = m.reactions?.coach === e;
+              return (
+                <button
+                  key={e}
+                  type="button"
+                  className={`mr-pick${on ? " on" : ""}`}
+                  aria-pressed={on}
+                  aria-label={`React ${e}`}
+                  onClick={() => {
+                    closeMenu();
+                    void act(() => reactToMessageAction(clientId, m.id, on ? null : e, true));
+                  }}
+                >
+                  {e}
+                </button>
+              );
+            })}
+          </span>
+          {reviewable(m) && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setReviewing(m);
+                closeMenu();
+              }}
+            >
+              Review
+            </button>
+          )}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setEditing(null);
+              setReplying(m);
+              closeMenu();
+              setTimeout(() => box.current?.focus(), 0);
+            }}
+          >
+            Reply
+          </button>
+          {m.text && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                void navigator.clipboard?.writeText(m.text).catch(() => {});
+                closeMenu();
+              }}
+            >
+              Copy
+            </button>
+          )}
+          {m.mine && m.text && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setReplying(null);
+                setEditing(m);
+                setText(m.text);
+                closeMenu();
+                setTimeout(() => {
+                  grow();
+                  box.current?.focus();
+                }, 0);
+              }}
+            >
+              Edit
+            </button>
+          )}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              closeMenu();
+              void act(() => pinMessageAction(clientId, m.id, !m.pinned, true));
+            }}
+          >
+            {m.pinned ? "Unpin" : "Pin"}
+          </button>
+          {m.mine && (
+            <button type="button" role="menuitem" className="danger" onClick={() => setConfirmDelete(true)}>
+              Delete
+            </button>
+          )}
+        </>
+      )}
+    </span>
+  );
+
   const bubble = (m: DraftMessage) => (
     <div key={m.id} data-mid={m.id} className={`cph-msg ${m.mine ? "mine" : "theirs"}${flash === m.id ? " flash" : ""}`}>
       <div
@@ -333,21 +475,25 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
           {m.pinned && <Icon name="pin" small size={11} />}
           {m.edited && "Edited "}
           {timeOf(m.when)}
-          {/* Its sheet in a tap, as the client's chat has it (25 Oct, Alex): react, reply, and the rest. Holding still works. */}
-          <button
-            type="button"
-            className="cph-chev"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              openMenu(m);
-            }}
-            aria-label="More for this message"
-          >
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
+          {/* Its menu in a tap, as the client's chat has it (25 Oct, Alex): react, reply, and the rest. Holding still works. */}
+          <span className="cm-menu cph-menu" ref={menuFor?.id === m.id ? menuBox : undefined} onPointerDown={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className={`cph-chev${menuFor?.id === m.id ? " open" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (menuFor?.id === m.id) closeMenu();
+                else openMenu(m, e.currentTarget);
+              }}
+              aria-label="More for this message"
+              aria-expanded={menuFor?.id === m.id}
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {menuFor?.id === m.id && messageMenu(m)}
+          </span>
         </span>
       </div>
       {(m.reactions?.client || m.reactions?.coach) && (
@@ -510,133 +656,6 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
         </div>
       </footer>
 
-      {menuFor && (
-        <Sheet onClose={closeMenu} label="Message">
-          {confirmDelete ? (
-            <div className="cph-confirm">
-              <h2>Delete this message?</h2>
-              <p>It leaves {first}&rsquo;s app too.</p>
-              <div className="cph-confirm-row">
-                <button type="button" className="cph-text-btn" onClick={() => setConfirmDelete(false)}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="cph-text-btn danger"
-                  onClick={() => {
-                    const id = menuFor.id;
-                    closeMenu();
-                    void act(() => deleteChatMessageAction(clientId, id, true));
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="cph-react-pick" role="group" aria-label="React">
-                {REACTIONS.map((e) => {
-                  const on = menuFor.reactions?.coach === e;
-                  return (
-                    <button
-                      key={e}
-                      type="button"
-                      className={on ? "on" : ""}
-                      aria-pressed={on}
-                      aria-label={`React ${e}`}
-                      onClick={() => {
-                        const m = menuFor;
-                        closeMenu();
-                        void act(() => reactToMessageAction(clientId, m.id, on ? null : e, true));
-                      }}
-                    >
-                      {e}
-                    </button>
-                  );
-                })}
-              </div>
-              {reviewable(menuFor) && (
-                <button
-                  type="button"
-                  className="cph-sheet-row"
-                  onClick={() => {
-                    setReviewing(menuFor);
-                    closeMenu();
-                  }}
-                >
-                  <Icon name="pen" />
-                  Review
-                </button>
-              )}
-              <button
-                type="button"
-                className="cph-sheet-row"
-                onClick={() => {
-                  setEditing(null);
-                  setReplying(menuFor);
-                  closeMenu();
-                  setTimeout(() => box.current?.focus(), 0);
-                }}
-              >
-                <Icon name="reply" />
-                Reply
-              </button>
-              {menuFor.text && (
-                <button
-                  type="button"
-                  className="cph-sheet-row"
-                  onClick={() => {
-                    void navigator.clipboard?.writeText(menuFor.text).catch(() => {});
-                    closeMenu();
-                  }}
-                >
-                  <Icon name="copy" />
-                  Copy
-                </button>
-              )}
-              {menuFor.mine && menuFor.text && (
-                <button
-                  type="button"
-                  className="cph-sheet-row"
-                  onClick={() => {
-                    const m = menuFor;
-                    setReplying(null);
-                    setEditing(m);
-                    setText(m.text);
-                    closeMenu();
-                    setTimeout(() => {
-                      grow();
-                      box.current?.focus();
-                    }, 0);
-                  }}
-                >
-                  <Icon name="edit" />
-                  Edit
-                </button>
-              )}
-              <button
-                type="button"
-                className="cph-sheet-row"
-                onClick={() => {
-                  const m = menuFor;
-                  closeMenu();
-                  void act(() => pinMessageAction(clientId, m.id, !m.pinned, true));
-                }}
-              >
-                <Icon name="pin" />
-                {menuFor.pinned ? "Unpin" : "Pin"}
-              </button>
-              {menuFor.mine && (
-                <button type="button" className="cph-sheet-row danger" onClick={() => setConfirmDelete(true)}>
-                  <Icon name="trash" />
-                  Delete
-                </button>
-              )}
-            </>
-          )}
-        </Sheet>
-      )}
 
       {reviewing && reviewing.media && (
         <ChatReview

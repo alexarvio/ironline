@@ -363,3 +363,4 @@ html.look-hl .rd-chattab.rd-phonetab, html.look-hl .rd-chattab.off { background:
 html.look-hl .rd-chattab.rd-phonetab:hover, html.look-hl .rd-chattab.rd-phonetab:focus-visible, html.look-hl .rd-chattab.off:hover, html.look-hl .rd-chattab.off:focus-visible { background: #f5f6f8; }
 html.look-hl .rd-chattab.rd-phonetab.on { background: #141a24; box-shadow: none; }
 html.look-hl .rd-chattab.rd-phonetab.on:hover, html.look-hl .rd-chattab.rd-phonetab.on:focus-visible { background: #262e3b; }
+.rm-menu-ask { padding: 8px 10px 4px; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; }
