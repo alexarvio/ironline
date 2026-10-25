@@ -17831,6 +17831,10 @@ button.ci-hint { cursor: pointer; }
 .pg-view .pg-target { stroke: var(--cat); stroke-width: 1.2; stroke-dasharray: 4 4; opacity: 0.7; }
 .pg-view .pg-target-label { position: absolute; left: 0; transform: translateY(calc(-100% - 5px)); font-size: 11px; font-weight: 600; line-height: 1; color: var(--cat); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
 .pg-view .pg-line { fill: none; stroke: var(--cat); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+/* A mark a day (week, month) under the line: the category's colour when logged, pale when not (25 Oct, Alex). */
+.pg-view .pg-strip { display: flex; gap: 2px; height: 5px; margin-top: 6px; }
+.pg-view .pg-strip i { flex-basis: 0; min-width: 2px; border-radius: 2px; background: #EEF0F3; }
+.pg-view .pg-strip i.on { background: var(--cat); }
 .pg-view .pg-last { fill: #F5F6F8; stroke: var(--cat); stroke-width: 1.6; }
 .pg-view .pg-guide { stroke: #141a24; stroke-width: 1; opacity: 0.25; }
 .pg-view .pg-knob { fill: #F5F6F8; stroke: #141a24; stroke-width: 1.6; }

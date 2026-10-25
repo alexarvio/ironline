@@ -107,6 +107,8 @@
 .rm-graph-dots i.on { border: 2px solid #141a24; background: #fff; }
 .rm-graph-pill { position: absolute; transform: translate(-50%, -150%); padding: 4px 10px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
 .rm-graph-pill.below { transform: translate(-50%, 60%); }
+.rm-graph-strip { display: flex; gap: 2px; height: 6px; margin: 10px 44px 0 0; }
+.rm-graph-strip i { flex: 1 1 0; min-width: 2px; border-radius: 2px; background: #EEF0F3; }
 .rm-graph-axis { position: relative; height: 16px; margin: 8px 44px 0 0; }
 .rm-graph-axis span { position: absolute; transform: translateX(-50%); font-size: 11px; font-weight: 500; color: #8b93a1; white-space: nowrap; }
 .rm-graph-axis span.first { transform: none; }

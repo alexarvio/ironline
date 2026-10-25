@@ -1315,7 +1315,8 @@ function Spark({ points, colour }: { points: { value: number | null }[]; colour:
   const y = (v: number) => 4 + (1 - (v - lo) / (hi - lo || 1)) * 22;
   return (
     <svg className="rm-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
-      <LinePaths pts={seen.map((p, k) => ({ x: x(p.i), y: y(p.v), missed: k > 0 && p.i - seen[k - 1].i > 1 }))} colour={colour} className="rm-spark-line" />
+      {/* Solid all the way, as the big graph (25 Oct, Alex: no dashes). */}
+      <LinePaths pts={seen.map((p) => ({ x: x(p.i), y: y(p.v), missed: false }))} colour={colour} className="rm-spark-line" />
     </svg>
   );
 }
@@ -1414,7 +1415,8 @@ function MetricGraph({ metric: m, series, rangeSwitch = null }: { metric: Logged
           ))}
           {m.target != null && <line className="rm-graph-goal" x1={0} x2={W} y1={y(m.target)} y2={y(m.target)} stroke={m.colour} vectorEffect="non-scaling-stroke" />}
           {/* Straight between readings in the group's colour; over a missed stretch dashed, the line still joining them. */}
-          <LinePaths pts={seen.map((p, k) => ({ x: x(p.i), y: y(p.value), missed: k > 0 && p.i - seen[k - 1].i > 1 }))} colour={m.colour} className="rm-graph-line" />
+          {/* One solid line (25 Oct, Alex: the dashes "look drawn"; option C): the periods missed are the strip under it. */}
+          <LinePaths pts={seen.map((p) => ({ x: x(p.i), y: y(p.value), missed: false }))} colour={m.colour} className="rm-graph-line" />
           {shown && <line className="rm-graph-cross" x1={x(shown.i)} x2={x(shown.i)} y1={0} y2={H} vectorEffect="non-scaling-stroke" />}
         </svg>
         <div className="rm-graph-yaxis" aria-hidden="true">
@@ -1439,6 +1441,12 @@ function MetricGraph({ metric: m, series, rangeSwitch = null }: { metric: Logged
             <SepJoin parts={[`${n(shown.value)}${tail}`, shown.label]} />
           </span>
         )}
+      </div>
+      {/* A mark a period (day, week, month), in the metric's colour when it was logged, pale when not (25 Oct, Alex). */}
+      <div className="rm-graph-strip" aria-hidden="true">
+        {points.map((p, i) => (
+          <i key={i} style={p.value != null ? { background: m.colour } : undefined} />
+        ))}
       </div>
       <div className="rm-graph-axis" aria-hidden="true">
         {dateAt.map((i, k) => (

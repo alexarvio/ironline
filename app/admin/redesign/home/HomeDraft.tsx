@@ -932,7 +932,7 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
         />
       </span>
       {/* No "On pace for…" under it (23 Oct, Alex: take the prediction out). */}
-      {grid ? <WeightChart key={span} points={points} grid={grid} gridText={gridText} /> : charted ? <div className="rh-wempty" aria-hidden="true" /> : null}
+      {grid ? <WeightChart key={span} points={points} grid={grid} gridText={gridText} rhythm={weight.rhythm} /> : charted ? <div className="rh-wempty" aria-hidden="true" /> : null}
     </section>
   );
 }
@@ -943,7 +943,7 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
     "connect the dots anyway but have a dashed line"; `missed`, by the client's rhythm). Hovering reads the nearest
     reading by its date, never a point on the line between; with focus, ← → step the readings, Home and End the ends.
     The axis runs from the window's first reading to its last, across the whole width (23 Oct, Alex). */
-function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: { lines: [number, number, number] }; gridText: string[] }) {
+function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]; grid: { lines: [number, number, number] }; gridText: string[]; rhythm: "daily" | "weekly" | "monthly" }) {
   const plot = useRef<HTMLDivElement>(null);
   // The reading being read; none while the chart is only looked at.
   const [sel, setSel] = useState<number | null>(null);
@@ -964,14 +964,32 @@ function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: 
   // Smooth through every reading, never past one (25 Oct, Alex: option B of the weight-line mockup; the rounded
   // corners before cut inside the readings, so the hover ring sat off the line): monotoneCurve, the client's Progress
   // chart's too. Each stretch is drawn in its own style, a run going on while the style does.
-  const segs = monotoneSegments(xs.map((x, i) => ({ x, y: ys[i] })));
-  const line = { solid: "", dashed: "" };
-  for (let i = 1; i <= last; i++) {
-    const style = points[i].missed ? "dashed" : "solid";
-    const goesOn = i > 1 && points[i - 1].missed === points[i].missed;
-    line[style] += `${goesOn ? "" : `M${xs[i - 1].toFixed(2)} ${ys[i - 1].toFixed(2)} `}${segs[i - 1]} `;
-  }
-  const anyMissed = line.dashed !== "";
+  // One solid line all the way (25 Oct, Alex: the dashes over missed weigh-ins "look drawn… not high definition"; option C
+  // of docs/boards/weight-missed-mockup.html): the missed ones are the strip under it instead.
+  const path = `M${xs[0].toFixed(2)} ${ys[0].toFixed(2)} ${monotoneSegments(xs.map((x, i) => ({ x, y: ys[i] }))).join(" ")}`;
+  const anyMissed = points.some((p) => p.missed);
+  // The strip: a mark a day (a week, a month, as the client is asked to weigh in), ink when a reading came in it, pale
+  // when none did, across the chart's own days.
+  const strip = (() => {
+    const out: { from: number; to: number; on: boolean }[] = [];
+    const logged = new Set(dayAt);
+    const startOf = (n: number) => {
+      const d = new Date(t0 + n * DAY_MS);
+      if (rhythm === "weekly") return n - ((d.getDay() + 6) % 7);
+      if (rhythm === "monthly") return n - (d.getDate() - 1);
+      return n;
+    };
+    for (let n = 0; n <= days; ) {
+      const from = n;
+      let to = n;
+      while (to + 1 <= days && startOf(to + 1) === startOf(from)) to++;
+      let on = false;
+      for (let k = from; k <= to; k++) if (logged.has(k)) on = true;
+      out.push({ from, to, on });
+      n = to + 1;
+    }
+    return out;
+  })();
   // The dates under it: the chart's first day, the day halfway (rounded down), the last reading's (none twice).
   const midT = t0 + Math.floor(days / 2) * DAY_MS;
   const showMid = days >= 2;
@@ -991,7 +1009,7 @@ function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: 
   };
   const read = sel == null ? null : points[sel];
   const readText = read ? `${kg1(read.value)}, ${dayMonth(read.date)}` : "";
-  const label = `Weight, ${axisDay(t0)} to ${axisDay(ts[last])}: ${kg1(points[0].value)} to ${kg1(points[last].value)}, ${points.length} readings${anyMissed ? ", dashed where weigh-ins were missed" : ""}`;
+  const label = `Weight, ${axisDay(t0)} to ${axisDay(ts[last])}: ${kg1(points[0].value)} to ${kg1(points[last].value)}, ${points.length} readings${anyMissed ? `, ${strip.filter((p) => !p.on).length} ${rhythm === "daily" ? "days" : rhythm === "weekly" ? "weeks" : "months"} without one` : ""}`;
 
   return (
     <div className="rh-wbox">
@@ -1021,9 +1039,7 @@ function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: 
               const y = ((hi - v) / (hi - lo)) * 100;
               return <line key={v} x1={0} x2={100} y1={y} y2={y} stroke="#e1e5eb" strokeWidth={1} vectorEffect="non-scaling-stroke" shapeRendering="crispEdges" />;
             })}
-            {line.solid && <path d={line.solid.trim()} fill="none" stroke="#141a24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
-            {/* Square ends, so the 4 3 dash stays open (round caps close a 3px gap at this width). */}
-            {anyMissed && <path d={line.dashed.trim()} fill="none" stroke="#141a24" strokeWidth={2} strokeDasharray="4 3" strokeLinecap="butt" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            <path d={path} fill="none" stroke="#141a24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>
           {grid.lines.map((v, i) => (
             <span key={v} className="rh-wgrid" style={{ top: `${((hi - v) / (hi - lo)) * 100}%` }} aria-hidden="true">
@@ -1043,6 +1059,11 @@ function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: 
             </>
           )}
         </div>
+      </div>
+      <div className="rh-wstrip" aria-hidden="true">
+        {strip.map((p) => (
+          <i key={p.from} className={p.on ? "" : "miss"} style={{ flexGrow: p.to - p.from + 1 }} />
+        ))}
       </div>
       <div className="rh-waxis" aria-hidden="true">
         <span>{axisDay(t0)}</span>

@@ -309,6 +309,29 @@ function Chart({
   // Smooth through every reading, never past one (25 Oct, Alex: "very spikey", then option B of the weight-line mockup):
   // monotoneCurve, as Home's Weight card on the coach's side, so the ring always sits on the line.
   const line = monotonePath(xy);
+  // Under it, a mark a day (a week, a month, as the metric is asked; a measurement by the week), in the category's colour
+  // when something was logged in it, pale when not (25 Oct, Alex: option C of the missed weigh-ins mockup, the coach's
+  // Weight card's too).
+  const strip = (() => {
+    const per = series.cadence === "daily" ? "day" : series.cadence === "monthly" ? "month" : "week";
+    const startOf = (n: number) => {
+      const d = new Date(n * DAY);
+      if (per === "week") return n - ((d.getUTCDay() + 6) % 7);
+      if (per === "month") return n - (d.getUTCDate() - 1);
+      return n;
+    };
+    const logged = new Set(points.map((q) => dayNum(q.date)));
+    const out: { from: number; to: number; on: boolean }[] = [];
+    for (let n = start; n <= end; ) {
+      let to = n;
+      while (to + 1 <= end && startOf(to + 1) === startOf(n)) to++;
+      let on = false;
+      for (let k = n; k <= to; k++) if (logged.has(k)) on = true;
+      out.push({ from: n, to, on });
+      n = to + 1;
+    }
+    return out;
+  })();
 
   // The marker: the latest point until the mouse is over the chart or a
   // finger is on it, then the logged point nearest it; back to the latest on
@@ -501,6 +524,11 @@ function Chart({
       <span className="pg-live" aria-live="polite">
         {tipText}, {dateWord(selP.date)}
       </span>
+      <div className="pg-strip" style={{ marginRight: right }} aria-hidden="true">
+        {strip.map((q) => (
+          <i key={q.from} className={q.on ? "on" : ""} style={{ flexGrow: q.to - q.from + 1 }} />
+        ))}
+      </div>
       <div className="pg-axis" style={{ paddingRight: right }}>
         <span>{dm(dayStr(start))}</span>
         {end - start >= 2 && <span>{dm(dayStr(Math.round((start + end) / 2)))}</span>}

@@ -138,6 +138,11 @@
 .rd.rh .rh-wtip .rh-wtip-day { font-weight: 500; color: #8b93a1; }
 .rd.rh .rh-waxis { position: relative; flex: none; height: 14px; margin: 4px var(--rh-wgut, 32px) 0 0; font-size: 11px; font-weight: 500; line-height: 14px; color: #98a2b3; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd.rh .rh-waxis span { position: absolute; top: 0; left: 0; }
+/* Under the line, a mark a day (week, month) of the client's rhythm (25 Oct, Alex: option C): ink a reading came in, pale
+   none did. The dashes on the line are gone. */
+.rd.rh .rh-wstrip { display: flex; gap: 2px; height: 6px; margin: 8px var(--rh-wgut, 32px) 0 0; }
+.rd.rh .rh-wstrip i { flex-basis: 0; min-width: 2px; border-radius: 2px; background: #141a24; }
+.rd.rh .rh-wstrip i.miss { background: #EEF0F3; }
 .rd.rh .rh-waxis span.mid { left: 50%; transform: translateX(-50%); }
 .rd.rh .rh-waxis span.end { left: auto; right: 0; }
 .rd.rh .rh-pace { margin: 0; font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }

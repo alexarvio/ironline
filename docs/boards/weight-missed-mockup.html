@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Missed weigh-ins</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --muted:#8b93a1; --line:#E1E5EB; --div:#EEF0F3; --page:#F5F6F8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 60px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 auto 6px; max-width: 1040px; }
+  .sub { max-width: 1040px; margin: 0 auto 24px; color: var(--muted); font-size: 13px; font-weight: 500; }
+  .opt { max-width: 1040px; margin: 0 auto 18px; background: #fff; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); padding: 18px 22px 14px; }
+  .opt h2 { margin: 0; font-size: 15px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+  .opt h2 b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; }
+  .opt p { margin: 4px 0 12px; color: var(--body); font-size: 13px; font-weight: 500; }
+  .figs { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .figs span { color: var(--muted); font-weight: 500; margin: 0 6px; }
+  .plot { position: relative; height: 200px; margin-right: 40px; }
+  svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .yl { position: absolute; left: calc(100% + 8px); transform: translateY(-50%); font-size: 11px; color: var(--muted); font-weight: 500; }
+  .strip { display: grid; gap: 2px; margin: 8px 40px 0 0; height: 6px; }
+  .strip i { border-radius: 2px; background: var(--ink); }
+  .strip i.miss { background: var(--div); }
+  .xl { display: flex; justify-content: space-between; margin: 8px 40px 0 0; font-size: 11px; color: var(--muted); font-weight: 500; }
+</style>
+</head>
+<body>
+<h1>Missed weigh-ins: three ways, no dashes</h1>
+<div class="sub">26 Sep – 25 Oct, the same readings as your Weight card; days without a weigh-in as yours.</div>
+
+<div class="opt" data-kind="dots"><h2><b>A</b> A small dot on each reading</h2><p>The line one solid curve; where days were missed the dots are simply further apart.</p><div class="figs">89.0 kg <span>|</span> +1.8 kg</div><div class="plot"></div><div class="xl"><span>26 Sep</span><span>10 Oct</span><span>25 Oct</span></div></div>
+<div class="opt" data-kind="light"><h2><b>B</b> The missed stretch lighter, still solid</h2><p>Same smooth line; across days with no weigh-in it is drawn in a light grey instead of ink. Crisp, no dashes.</p><div class="figs">89.0 kg <span>|</span> +1.8 kg</div><div class="plot"></div><div class="xl"><span>26 Sep</span><span>10 Oct</span><span>25 Oct</span></div></div>
+<div class="opt" data-kind="strip"><h2><b>C</b> One line, the days as a strip under it</h2><p>The line solid all the way; under it a thin strip, a mark a day: ink when they weighed in, pale when they didn't.</p><div class="figs">89.0 kg <span>|</span> +1.8 kg</div><div class="plot"></div><div class="strip"></div><div class="xl"><span>26 Sep</span><span>10 Oct</span><span>25 Oct</span></div></div>
+
+<script>
+  // Days from 26 Sep (0) to 25 Oct (29); readings shaped like the screenshot, some days missed.
+  const R = [[0,87.2],[3,87.5],[5,87.3],[6,86.7],[8,86.8],[9,87.6],[10,87.4],[11,87.8],[12,87.1],[13,87.8],[17,87.3],[18,86.9],[20,87.4],[21,87.4],[22,88.0],[23,88.6],[24,88.7],[26,88.85],[27,89.1],[28,89.9],[29,89.0]];
+  const D1 = 29, LO = 86, HI = 90.3, W = 1000, H = 200;
+  const X = (d) => (d / D1) * W, Y = (v) => (1 - (v - LO) / (HI - LO)) * H;
+  function segs(pts) {
+    const n = pts.length, dx = [], s = [], m = [];
+    for (let i = 0; i < n - 1; i++) { dx[i] = pts[i+1][0] - pts[i][0]; s[i] = (pts[i+1][1] - pts[i][1]) / dx[i]; }
+    m[0] = s[0]; m[n-1] = s[n-2];
+    for (let i = 1; i < n - 1; i++) m[i] = s[i-1] * s[i] <= 0 ? 0 : (3 * (dx[i-1] + dx[i])) / ((2*dx[i] + dx[i-1]) / s[i-1] + (dx[i] + 2*dx[i-1]) / s[i]);
+    const out = [];
+    for (let i = 0; i < n - 1; i++) { const h = dx[i] / 3; out.push(`M${pts[i][0]} ${pts[i][1]}C${pts[i][0] + h} ${pts[i][1] + m[i]*h} ${pts[i+1][0] - h} ${pts[i+1][1] - m[i+1]*h} ${pts[i+1][0]} ${pts[i+1][1]}`); }
+    return out;
+  }
+  const px = R.map(([d, v]) => [X(d), Y(v)]);
+  const parts = segs(px);
+  const logged = new Set(R.map(([d]) => d));
+  for (const box of document.querySelectorAll(".opt")) {
+    const kind = box.dataset.kind, plot = box.querySelector(".plot");
+    let html = [86, 88, 90].map((v) => `<line x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" stroke="#EEF0F3" vector-effect="non-scaling-stroke"/>`).join("");
+    parts.forEach((d, i) => {
+      const missed = R[i + 1][0] - R[i][0] > 1;
+      const col = kind === "light" && missed ? "#C9CFD8" : "#141a24";
+      html += `<path d="${d}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    });
+    if (kind === "dots") for (const [x, y] of px) plot.insertAdjacentHTML("beforeend", `<i style="position:absolute;left:${(x / W) * 100}%;top:${(y / H) * 100}%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:999px;background:#141a24"></i>`);
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("preserveAspectRatio", "none"); svg.innerHTML = html; plot.appendChild(svg);
+    for (const v of [86, 88, 90]) plot.insertAdjacentHTML("beforeend", `<span class="yl" style="top:${(Y(v) / H) * 100}%">${v}</span>`);
+    const strip = box.querySelector(".strip");
+    if (strip) { strip.style.gridTemplateColumns = `repeat(${D1 + 1}, 1fr)`; for (let d = 0; d <= D1; d++) strip.insertAdjacentHTML("beforeend", `<i class="${logged.has(d) ? "" : "miss"}"></i>`); }
+  }
+</script>
+</body>
+</html>
