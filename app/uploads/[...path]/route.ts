@@ -4,7 +4,8 @@ import { Readable } from "stream";
 import { DATA_DIR } from "../../lib/db";
 import { canAccessClient, getSessionUser, isOwner } from "../../lib/auth";
 import { coachIdOfClient, coachOwnsExercise } from "../../lib/tenancy";
-import { bucketLink, LINK_CACHE_SECONDS, posterCopy, smallCopy, streamUpload } from "../../lib/storage";
+import { bucketLink, LINK_CACHE_SECONDS, posterCopy, posterKey, smallCopy, smallKey, sourceOf, streamUpload } from "../../lib/storage";
+import { recordTiming } from "../../lib/timing";
 
 // Serves files written by savePhotoUpload/saveChatMedia in queries.ts. Those
 // live under DATA_DIR/uploads rather than /public/uploads so they survive on
@@ -41,6 +42,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
+  const t0 = performance.now();
   const { path: segments } = await params;
 
   // Layout on disk mirrors the URL, so the client id is always the second
@@ -94,6 +96,18 @@ export async function GET(
     }
   }
 
+  // Timed (25 Oct, Alex: "media still takes a decent amount of seconds"): access, then the answer, into /api/timing
+  // as "upload <how>" with where the bytes came from.
+  const tAuth = performance.now();
+  const timed = (how: string, res: Response, src?: string | null) => {
+    const end = performance.now();
+    recordTiming(`upload ${how}`, end - t0, { auth: tAuth - t0, [src ? `answer.${src}` : "answer"]: end - tAuth });
+    try {
+      res.headers.set("Server-Timing", `auth;dur=${Math.round(tAuth - t0)}, answer;dur=${Math.round(end - tAuth)}${src ? `;desc=${src}` : ""}`);
+    } catch {}
+    return res;
+  };
+
   // Access is settled above. With the storage bucket on, the file downloads
   // from the bucket through a link that expires; a file not copied there yet
   // is served from the disk below. "?stream=1" (10 Oct) sends the bytes
@@ -107,21 +121,29 @@ export async function GET(
   const w = Number(search.get("w"));
   if (!stream && w) {
     const small = await smallCopy(segments.join("/"), w, search.get("v"));
-    if (small) return small;
+    const sk = smallKey(segments.join("/"), w, search.get("v"));
+    if (small) return timed(`w${w}`, small, sk ? sourceOf(sk) : null);
   }
   // "?poster=1" (21 Oct): a video's first frame, a small picture. None to be
   // had is a 404, and the chat falls back to the video's own first frame.
-  if (!stream && search.get("poster") === "1") return (await posterCopy(segments.join("/"))) ?? new Response("Not found", { status: 404 });
+  if (!stream && search.get("poster") === "1") {
+    const poster = await posterCopy(segments.join("/"));
+    const pk = posterKey(segments.join("/"));
+    return poster ? timed("poster", poster, pk ? sourceOf(pk) : null) : new Response("Not found", { status: 404 });
+  }
   if (stream) {
     const piped = await streamUpload(segments.join("/"), range);
-    if (piped) return piped;
+    if (piped) return timed("stream", piped);
   }
   const link = stream ? null : await bucketLink(segments.join("/"));
   if (link) {
-    return new Response(null, {
-      status: 302,
-      headers: { Location: link, "Cache-Control": `private, max-age=${LINK_CACHE_SECONDS}` },
-    });
+    return timed(
+      "link",
+      new Response(null, {
+        status: 302,
+        headers: { Location: link, "Cache-Control": `private, max-age=${LINK_CACHE_SECONDS}` },
+      })
+    );
   }
 
   const uploadsRoot = path.join(DATA_DIR, "uploads");

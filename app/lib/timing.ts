@@ -122,6 +122,17 @@ export function sub<T>(label: string, fn: () => T): T {
   }
 }
 
+/** One timed thing that is not a page render (25 Oct: an upload served), into the same buffer. Never throws. */
+export function recordTiming(screen: string, total: number, parts: Record<string, number>) {
+  try {
+    const rounded: Record<string, number> = {};
+    for (const [label, ms] of Object.entries(parts)) rounded[label] = tenth(ms);
+    const list = store().renders;
+    list.push({ at: new Date().toISOString(), screen, client: null, total: tenth(total), parts: rounded });
+    if (list.length > MAX) list.splice(0, list.length - MAX);
+  } catch {}
+}
+
 // ---- The report (/api/timing) ---------------------------------------------------------------------------------
 
 export type TimingStat = { count: number; median: number; p90: number };

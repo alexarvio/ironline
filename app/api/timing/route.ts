@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRequestUser } from "../../lib/auth";
 import { timingReport } from "../../lib/timing";
+import { bucketProbe } from "../../lib/storage";
 
 // The admin screens' server render times (23 Oct; app/lib/timing.ts): the last 200 renders newest first, and per
 // screen and per label the count, median and p90 ms. Any signed-in coach (23 Oct: the owner's email on Railway is not the
@@ -14,5 +15,7 @@ export async function GET(request: Request) {
   // Read from the request (23 Oct): with Clerk on, the proxy does not run on /api, so the page's own reader saw no one.
   const user = await getRequestUser(request);
   if (!user || user.pending || user.role !== "coach") return notFound();
-  return NextResponse.json(timingReport(), { headers: { "Cache-Control": "no-store" } });
+  // How far the uploads bucket is, asked now (25 Oct): its host and three small asks in ms.
+  const bucket = await bucketProbe().catch(() => null);
+  return NextResponse.json({ bucket, ...timingReport() }, { headers: { "Cache-Control": "no-store" } });
 }

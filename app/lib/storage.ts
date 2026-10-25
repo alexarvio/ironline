@@ -211,6 +211,34 @@ function recall(key: string): Buffer | null {
   return hit;
 }
 
+/** Where each file was last read from, for the uploads route's timing (25 Oct): memory, disk, bucket, made. */
+const lastSource = new Map<string, string>();
+export const sourceOf = (key: string) => {
+  const s = lastSource.get(key) ?? null;
+  lastSource.delete(key);
+  return s;
+};
+
+/** How far the bucket is (25 Oct, Alex: "media still takes a decent amount of seconds to load"): its host and three
+    smallest asks timed, for /api/timing. Null with the bucket off. */
+export async function bucketProbe(): Promise<{ host: string; region: string; ms: number[] } | null> {
+  const b = bucket();
+  if (!b) return null;
+  const ms: number[] = [];
+  for (let i = 0; i < 3; i++) {
+    const t0 = performance.now();
+    try {
+      await b.s3.send(new ListObjectsV2Command({ Bucket: b.bucket, MaxKeys: 1 }));
+    } catch {}
+    ms.push(Math.round(performance.now() - t0));
+  }
+  let host = "";
+  try {
+    host = new URL(process.env.UPLOADS_ENDPOINT ?? "").host;
+  } catch {}
+  return { host, region: process.env.UPLOADS_REGION || "auto", ms };
+}
+
 /** The bucket said there is no such file. */
 const missing = (error: unknown) => {
   const e = error as { name?: string; $metadata?: { httpStatusCode?: number } } | null;
@@ -221,9 +249,16 @@ const missing = (error: unknown) => {
     One trip to the bucket, a read that answers "not there" itself (25 Oct: a check first made it two). */
 async function readUpload(key: string): Promise<Buffer | null> {
   const hit = recall(key);
-  if (hit) return hit;
+  if (hit) {
+    lastSource.set(key, "memory");
+    return hit;
+  }
   const file = path.join(DATA_DIR, "uploads", key);
-  if (fs.existsSync(file)) return fs.readFileSync(file);
+  if (fs.existsSync(file)) {
+    lastSource.set(key, "disk");
+    return fs.readFileSync(file);
+  }
+  lastSource.set(key, "bucket");
   const b = bucket();
   if (!b) return null;
   try {
@@ -306,7 +341,11 @@ export async function smallCopy(key: string, w: number, v?: string | null): Prom
   const small = smallKey(key, w, stamp);
   if (!small || !SMALL_WIDTHS.includes(w)) return null;
   try {
-    const bytes = (await readUpload(small)) ?? (await once(small, () => makeSmall(key, small, w)));
+    let bytes = await readUpload(small);
+    if (!bytes) {
+      bytes = await once(small, () => makeSmall(key, small, w));
+      lastSource.set(small, "made");
+    }
     return bytes ? webp(bytes, stamp || namedOnce(key) ? FOR_GOOD : A_DAY) : null;
   } catch (error) {
     console.error(`[uploads] no small copy of ${key}:`, error instanceof Error ? error.message : error);
@@ -355,7 +394,11 @@ export async function posterCopy(key: string): Promise<Response | null> {
   const poster = posterKey(key);
   if (!poster) return null;
   try {
-    const bytes = (await readUpload(poster)) ?? (await once(poster, () => makePoster(key, poster)));
+    let bytes = await readUpload(poster);
+    if (!bytes) {
+      bytes = await once(poster, () => makePoster(key, poster));
+      lastSource.set(poster, "made");
+    }
     return bytes ? webp(bytes, smallCache(key)) : null;
   } catch (error) {
     console.error(`[uploads] no poster for ${key}:`, error instanceof Error ? error.message : error);
