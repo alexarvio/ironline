@@ -46,6 +46,8 @@ export type CoachMessagesProps = {
   events?: { categories: HomeEventCategory[]; today: string } | null;
   /** The client themselves is signed in; false when a coach previews the app. */
   viewerIsClient: boolean;
+  /** The coach's messages not read yet: the chat opens on the first of them (25 Oct, Alex). */
+  unreadCount?: number;
 };
 
 // How often the thread asks for anything new while it is open.
@@ -55,7 +57,7 @@ const POLL_MS = 15000;
 const mediaWord = (m: CoachMessageView) =>
   !m.media ? "" : m.media.type === "image" ? "Photo" : m.media.type === "video" ? "Video" : m.media.type === "audio" ? "Voice message" : (m.media.name ?? "File");
 
-export default function CoachMessagesScreen({ coachName, messages: fromPage, viewerIsClient, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
+export default function CoachMessagesScreen({ coachName, messages: fromPage, viewerIsClient, unreadCount = 0, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
   const [, startTransition] = useTransition();
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
   // The one message being answered (2 Oct, as WhatsApp): quoted over the box until sent or dropped.
@@ -114,35 +116,74 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh reads only clientId and viewerIsClient
   }, [clientId]);
-  // Open at the newest message, and stay there while pictures and videos
-  // load in above it (they grow the thread after the first jump, which used
-  // to leave it somewhere in the middle). Once the client scrolls up to read
-  // back, it stops following, until a new message comes in.
+  // Open on the newest message, or on the first new one when the coach wrote since (25 Oct, Alex: "always defaulted
+  // to the last message, or if there are unread new ones, to those"; it opened somewhere above them). Held there while
+  // pictures, videos and the slide-in settle, until the client's own finger or wheel moves it; then it follows the
+  // foot only while the client is at it. A programmed scroll never counts as the client moving.
   const body = useRef<HTMLElement>(null);
   const atEnd = useRef(true);
-  // A layout effect: at the bottom before the first paint, not a jump after it.
+  const held = useRef(true);
+  const firstUnread = useRef<number | null>(
+    (() => {
+      if (!unreadCount) return null;
+      const theirs = fromPage.filter((m) => !m.mine);
+      return theirs.length ? theirs[Math.max(0, theirs.length - unreadCount)].id : null;
+    })()
+  );
+  // A layout effect: in place before the first paint, not a jump after it.
   useLayoutEffect(() => {
     const el = body.current;
     if (!el) return;
-    const toEnd = () => {
-      if (atEnd.current) el.scrollTop = el.scrollHeight;
+    const place = () => {
+      if (held.current && firstUnread.current != null) {
+        const row = el.querySelector<HTMLElement>(`[data-mid="${firstUnread.current}"]`);
+        if (row) {
+          el.scrollTop = el.scrollTop + row.getBoundingClientRect().top - el.getBoundingClientRect().top - 12;
+          return;
+        }
+      }
+      if (held.current || atEnd.current) el.scrollTop = el.scrollHeight;
+    };
+    const touched = () => {
+      held.current = false;
     };
     const onScroll = () => {
-      atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      if (!held.current) atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     };
-    toEnd();
+    place();
     el.addEventListener("scroll", onScroll, { passive: true });
-    const ro = new ResizeObserver(toEnd);
-    for (const child of Array.from(el.children)) ro.observe(child);
-    // Pictures loading in grow the thread without a resize the observer sees on the scroller itself.
-    el.addEventListener("load", toEnd, true);
+    el.addEventListener("touchstart", touched, { passive: true });
+    el.addEventListener("wheel", touched, { passive: true });
+    el.addEventListener("pointerdown", touched, { passive: true });
+    // Everything inside, however it grows: the messages' wrapper and each day as it comes.
+    const ro = new ResizeObserver(place);
+    ro.observe(el);
+    const watch = () => Array.from(el.querySelectorAll(":scope > *")).forEach((c) => ro.observe(c));
+    watch();
+    const mo = new MutationObserver(watch);
+    mo.observe(el, { childList: true });
+    // A picture or a video's first frame loading in grows the thread.
+    el.addEventListener("load", place, true);
+    el.addEventListener("loadedmetadata", place, true);
+    const timers = [80, 300, 800, 1600].map((ms) => window.setTimeout(place, ms));
     return () => {
       el.removeEventListener("scroll", onScroll);
-      el.removeEventListener("load", toEnd, true);
+      el.removeEventListener("touchstart", touched);
+      el.removeEventListener("wheel", touched);
+      el.removeEventListener("pointerdown", touched);
+      el.removeEventListener("load", place, true);
+      el.removeEventListener("loadedmetadata", place, true);
+      timers.forEach(clearTimeout);
+      mo.disconnect();
       ro.disconnect();
     };
   }, []);
+  // A message sent or come in: to the foot, unless the client is still held on the first new one.
+  const count0 = useRef(messages.length);
   useEffect(() => {
+    if (messages.length === count0.current) return;
+    count0.current = messages.length;
+    firstUnread.current = null;
     atEnd.current = true;
     const el = body.current;
     if (el) el.scrollTop = el.scrollHeight;

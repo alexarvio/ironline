@@ -29,7 +29,7 @@ export type DraftLink = { area: string; label: string; gone: boolean; link?: Mes
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null };
 export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean; /** The message it answers, quoted (mine: the coach's own). */ replyTo?: { id: number; mine: boolean; text: string } | null };
 /** Newest first, as the loader hands them over. */
-export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean };
+export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean; /** The first of those (25 Oct): the phone opens on it. */ firstUnread?: number | null };
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 const POLL_MS = 15000;
 

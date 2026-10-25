@@ -20677,3 +20677,19 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 @keyframes nc-landed { 0%, 55% { --landed: rgba(20, 26, 36, 0.07); } 100% { --landed: rgba(20, 26, 36, 0); } }
 .landed { background-image: linear-gradient(var(--landed), var(--landed)); animation: nc-landed 2.4s ease-out; }
 @media (prefers-reduced-motion: reduce) { .landed { animation-duration: 1.2s; } }
+
+/* ---- The client's chat in the coach app's colours (25 Oct, Alex: "what is exactly in the client side, but with the
+   colours of the new thing"): the coach's words white with a hairline, the client's own a neutral tint with ink words
+   (no navy), Send the ink pill, and no ring round the box while typing ("get rid of this outline"). */
+.cm-msg.mine.mine.mine { background: #E9ECF1; box-shadow: none; }
+.cm-msg.mine.mine.mine .cm-msg-text { color: #141a24; }
+.cm-msg.mine.mine.mine .cm-msg-time { color: #8b93a1; }
+.cm-msg.mine.mine.mine .cm-chev { color: #8b93a1; }
+.cm-msg.mine.mine.mine .cm-quote { background: rgba(20, 26, 36, 0.06); border-left-color: #141a24; }
+.cm-msg.mine.mine.mine .cm-quote b { color: #141a24; }
+.cm-msg.mine.mine.mine .cm-quote span { color: #3a4250; }
+.cm-msg.mine.mine.mine .cm-msg-file { background: #fff; border-color: #E1E5EB; color: #141a24; }
+.cm-msg.mine.mine.mine .cm-edit-cancel { border-color: #C9CFD8; color: #141a24; }
+.cm-msg.mine.mine.mine .cm-edit-save { background: #141a24; color: #fff; }
+.cm-compose .chat-send-btn.chat-send-btn.chat-send-btn, .cm-compose .chat-send-btn.chat-send-btn.chat-send-btn:hover { background: #141a24; border-color: #141a24; color: #fff; }
+.chat-compose-form .chat-compose-box:focus, .chat-compose-form .chat-compose-box:focus-visible { outline: none; box-shadow: none; border-color: #E1E5EB; }

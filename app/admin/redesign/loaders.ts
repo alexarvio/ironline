@@ -18,6 +18,7 @@ import {
   phaseCheckInDays,
   chatQuote,
   chatUnread,
+  chatFirstUnread,
   chatUnreadCount,
   syncClientLoginEmail,
   getMetricEntries,
@@ -1258,7 +1259,7 @@ export function loadMessages(clientId: number): DraftMessages {
         })(),
       };
     });
-  return { messages, targets: listMessageLinkTargets(clientId), avatarPath: getClient(clientId)?.avatar_path ?? null, unread: chatUnread(clientId) };
+  return { messages, targets: listMessageLinkTargets(clientId), avatarPath: getClient(clientId)?.avatar_path ?? null, unread: chatUnread(clientId), firstUnread: chatFirstUnread(clientId) };
 }
 
 // ---- Invoices tab: the client's invoices as they print, and what Settings

@@ -7310,6 +7310,15 @@ export function chatUnread(clientId: number): boolean {
   return chatUnreadCount(clientId) > 0;
 }
 
+/** The oldest of them (25 Oct, Alex: a chat opens on the first new message). */
+export function chatFirstUnread(clientId: number): number | null {
+  const data = getData();
+  const seen = data.clients.find((c) => c.id === clientId)?.coach_seen ?? {};
+  const since = Date.now() - HOME_NEW_DAYS * 86400000;
+  const m = data.chat_messages.find((x) => x.client_id === clientId && x.sender === "client" && (x.text.trim() || x.media_path) && stampMs(x.created_at) >= since && !(`chat-${x.id}` in seen));
+  return m?.id ?? null;
+}
+
 /** How many of them (the coach's phone, 21 Oct, shows the count). */
 export function chatUnreadCount(clientId: number): number {
   const data = getData();

@@ -53,11 +53,19 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     [clientId]
   );
   const refresh = useCallback(async () => take(await coachThreadAction(clientId).catch(() => null)), [clientId, take]);
+  // The first unread before it is marked read (25 Oct): the thread is read first, then the chat marked seen.
+  const firstUnread = useRef<number | null | undefined>(undefined);
   useEffect(() => {
-    void markSeenAction(clientId, { tab: "messages" })
-      .then(() => readRef.current())
-      .catch(() => {});
-    coachThreadAction(clientId).then(take, () => {});
+    coachThreadAction(clientId)
+      .then((t) => {
+        if (firstUnread.current === undefined) firstUnread.current = t?.firstUnread ?? null;
+        take(t);
+      }, () => {})
+      .finally(() => {
+        void markSeenAction(clientId, { tab: "messages" })
+          .then(() => readRef.current())
+          .catch(() => {});
+      });
     const tick = () => {
       if (document.visibilityState === "visible") void refresh();
     };
@@ -72,23 +80,51 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
   const messages = plan?.messages ?? [];
   const avatar = plan?.avatarPath ?? avatarPath;
 
-  // ---- The scroll: at the newest message on opening, and kept there as messages and pictures arrive, unless the coach scrolled up to read back.
+  // ---- The scroll (25 Oct, Alex: "always defaulted to the last message, or if there are unread new ones, to those"):
+  // on opening, the first new message from the client, else the newest; held there while pictures and videos settle,
+  // until the coach's own finger or wheel moves it; after that it follows the foot only while the coach is at it.
   const scroller = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const atEnd = useRef(true);
+  const placing = useRef(true);
   const loaded = plan != null;
   useLayoutEffect(() => {
     const el = scroller.current;
     const box = inner.current;
     if (!el || !box) return;
-    const toEnd = () => {
-      if (atEnd.current) el.scrollTop = el.scrollHeight;
+    const place = () => {
+      const first = firstUnread.current;
+      if (placing.current && first != null) {
+        const row = el.querySelector<HTMLElement>(`[data-mid="${first}"]`);
+        if (row) {
+          el.scrollTop = el.scrollTop + row.getBoundingClientRect().top - el.getBoundingClientRect().top - 12;
+          return;
+        }
+      }
+      if (placing.current || atEnd.current) el.scrollTop = el.scrollHeight;
     };
-    toEnd();
-    const watch = new ResizeObserver(toEnd);
+    const touched = () => {
+      placing.current = false;
+    };
+    place();
+    const watch = new ResizeObserver(place);
     watch.observe(box);
     watch.observe(el);
-    return () => watch.disconnect();
+    el.addEventListener("touchstart", touched, { passive: true });
+    el.addEventListener("wheel", touched, { passive: true });
+    el.addEventListener("pointerdown", touched, { passive: true });
+    el.addEventListener("load", place, true);
+    el.addEventListener("loadedmetadata", place, true);
+    const timers = [80, 300, 800, 1600].map((ms) => window.setTimeout(place, ms));
+    return () => {
+      watch.disconnect();
+      el.removeEventListener("touchstart", touched);
+      el.removeEventListener("wheel", touched);
+      el.removeEventListener("pointerdown", touched);
+      el.removeEventListener("load", place, true);
+      el.removeEventListener("loadedmetadata", place, true);
+      timers.forEach(clearTimeout);
+    };
   }, [loaded]);
   const [flash, setFlash] = useState<number | null>(null);
   const goTo = (id: number) => {
@@ -297,14 +333,23 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
           {m.pinned && <Icon name="pin" small size={11} />}
           {m.edited && "Edited "}
           {timeOf(m.when)}
+          {/* Its sheet in a tap, as the client's chat has it (25 Oct, Alex): react, reply, and the rest. Holding still works. */}
+          <button
+            type="button"
+            className="cph-chev"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              openMenu(m);
+            }}
+            aria-label="More for this message"
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
         </span>
       </div>
-      {/* Their video or photo has a ⋯ to tap (25 Oct, Alex): the message's sheet, Review in it. Holding still works. */}
-      {reviewable(m) && (
-        <button type="button" className="cph-msg-more" onClick={() => openMenu(m)} aria-label="More for this message">
-          <Icon name="more" />
-        </button>
-      )}
       {(m.reactions?.client || m.reactions?.coach) && (
         <span className="cph-reacts">
           {m.reactions?.client && <span title={`${first}'s reaction`}>{m.reactions.client}</span>}
@@ -353,6 +398,8 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
         ref={scroller}
         className="cph-thread-scroll"
         onScroll={(e) => {
+          // Only the coach's own scrolling decides it; a placed one never does.
+          if (placing.current) return;
           const el = e.currentTarget;
           atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
         }}

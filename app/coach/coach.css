@@ -107,8 +107,9 @@ body:has(.cph) { background: #F5F6F8; }
 .cph-pinbar span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .cph-pinbar em { font-size: 12px; font-style: normal; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .cph-thread-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-.cph-thread-inner { display: flex; flex-direction: column; gap: 6px; padding: 4px 12px 12px; }
-.cph-day { display: flex; flex-direction: column; gap: 6px; }
+/* The client's chat, sized as theirs (25 Oct, Alex: "exactly the client side, with the colours of the new thing"). */
+.cph-thread-inner { display: flex; flex-direction: column; gap: 10px; padding: 4px 18px 16px; }
+.cph-day { display: flex; flex-direction: column; gap: 10px; }
 .cph-day-label { align-self: center; margin: 10px 0 2px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98A2B3; }
 .cph-msg { display: flex; flex-direction: column; align-items: flex-start; }
 .cph-msg.mine { align-items: flex-end; }
@@ -118,14 +119,20 @@ body:has(.cph) { background: #F5F6F8; }
 .cph-bubble { position: relative; display: flex; flex-direction: column; gap: 4px; max-width: 80%; padding: 8px 11px 6px; box-sizing: border-box; border-radius: 16px 16px 16px 6px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 15px; line-height: 1.38; color: #141a24; text-align: left; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: background 0.25s ease, opacity 0.2s ease; }
 .cph-msg.mine .cph-bubble { border-radius: 16px 16px 6px 16px; background: #E9ECF1; box-shadow: none; }
 .cph-msg.flash .cph-bubble { background: #FFF4CC; }
-.cph-bubble.visual { padding: 4px 4px 6px; }
-.cph-bubble.visual .cph-text { padding: 2px 7px 0; }
+.cph-bubble.visual { padding: 6px 6px 10px; }
+.cph-bubble.visual .cph-text { padding: 2px 10px 0; }
 .cph-bubble.visual .cph-meta { padding-right: 6px; }
+.cph-bubble { max-width: 82%; padding: 14px 16px; border-radius: 18px 18px 18px 4px; font-size: 15px; line-height: 1.5; }
+.cph-msg.mine .cph-bubble { border-radius: 18px 18px 4px 18px; }
+.cph-bubble:not(.visual) { flex-direction: row; flex-wrap: wrap; align-items: flex-end; column-gap: 12px; row-gap: 2px; }
+.cph-bubble:not(.visual) > .cph-text { flex: 1 1 auto; min-width: 0; }
+.cph-bubble:not(.visual) > .cph-quote, .cph-bubble:not(.visual) > .cph-link { flex: 1 1 100%; }
+.cph-chev { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin: -4px -6px -4px 0; padding: 0; border: 0; border-radius: 999px; background: none; color: #8b93a1; cursor: pointer; }
 .cph-bubble.out { opacity: 0.6; }
 .cph-bubble.failed { opacity: 1; box-shadow: inset 0 0 0 1px #b42318; }
 .cph-bubble.failed .cph-meta { color: #b42318; }
 .cph-text { white-space: pre-wrap; overflow-wrap: anywhere; }
-.cph-meta { display: inline-flex; align-self: flex-end; align-items: center; gap: 3px; margin-top: -2px; font-size: 10.5px; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.cph-meta { display: inline-flex; align-self: flex-end; align-items: center; gap: 4px; margin: 0 0 1px auto; font-size: 12px; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .cph-img { display: block; overflow: hidden; border-radius: 12px; }
 .cph-img img { display: block; width: 240px; max-width: 100%; max-height: 320px; object-fit: cover; }
 .cph-video-media { display: block; width: 240px; max-width: 100%; max-height: 340px; border-radius: 12px; background: #1b2029; }
@@ -151,7 +158,8 @@ a.cph-link { color: #141a24; }
 .cph-compose { flex: none; padding: 6px 10px calc(env(safe-area-inset-bottom, 0px) + 10px); background: #F5F6F8; }
 .cph-compose-row { display: flex; align-items: flex-end; gap: 8px; }
 .cph-box { flex: 1; min-width: 0; min-height: 40px; max-height: 132px; padding: 9px 14px; box-sizing: border-box; overflow-y: hidden; border: 0; border-radius: 20px; outline: 0; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 16px; line-height: 1.35; color: #141a24; resize: none; }
-.cph-box:focus { box-shadow: inset 0 0 0 1px #141a24; }
+/* No ring while typing (25 Oct, Alex: "get rid of this outline"): the hairline stays as it is. */
+.cph-box:focus, .cph-box:focus-visible { outline: none; box-shadow: inset 0 0 0 1px #E1E5EB; }
 .cph-box::placeholder { color: #98A2B3; }
 .cph-mic.recording { gap: 6px; width: auto; padding: 0 12px; border-radius: 999px; }
 .cph .vr-dot { background: #e5484d; }

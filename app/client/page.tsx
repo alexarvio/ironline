@@ -1568,6 +1568,8 @@ export default async function ClientPage({
         coachName: getCoachDisplayName(CLIENT_ID),
         messages: coachMessagesFor(CLIENT_ID),
         viewerIsClient,
+        // How many of the coach's messages are new, so the chat opens on the first of them (25 Oct, Alex).
+        unreadCount: getNotifications(CLIENT_ID).filter((n) => n.kind === "coach_note" && !n.read).length,
         events: { categories: listEventCategories(client?.coach_id ?? 0).map(({ id, label, color }) => ({ id, label, color })), today: localDateStr() },
       }}
       chatUnread={getNotifications(CLIENT_ID).some((n) => n.kind === "coach_note" && !n.read)}
