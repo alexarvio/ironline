@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
-import { markVideoSeenAction, replyToMediaAction, sendFormReviewAction } from "../lib/actions";
+import { markVideoSeenAction, replyToMediaAction, sendChatMessageAction, sendFormReviewAction } from "../lib/actions";
 import { COLORS, sameOrigin, upload } from "../admin/redesign/media-review/MediaReviewModal";
 import { pathOf, simplify, STROKE, UNDERLAY, UNDERLAY_COLOR, unitFor, worthKeeping, type Pt, type Shape, type Tool } from "../admin/redesign/media-review/shapes";
 import { recordingSupported, useReviewRecorder } from "../admin/redesign/media-review/useReviewRecorder";
@@ -30,6 +30,53 @@ const TOOLS: { id: Tool; icon: IconName; name: string }[] = [
 const PALETTE = ["#FFD60A", "#FF9F0A", "#FF453A", "#30D158", "#0A84FF", "#BF5AF2", "#FFFFFF", "#000000"].map((id) => COLORS.find((c) => c.id === id) ?? { id, name: id });
 const RATES = [1, 0.5, 0.25];
 const clock = (s: number) => (Number.isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "0:00");
+
+/** A review of a chat video or photo: the raw file to /api/chat-review, which posts it in the chat as a reply. */
+function uploadChatReview(clientId: number, replyTo: number, note: string, blob: Blob, onProgress: (share: number) => void): Promise<string | null> {
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `/api/chat-review/${clientId}?replyTo=${replyTo}&note=${encodeURIComponent(note)}`);
+    xhr.setRequestHeader("Content-Type", blob.type.split(";")[0] || "video/webm");
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(null);
+      let message = `The upload failed (${xhr.status || "no answer"}). Try again.`;
+      try {
+        message = JSON.parse(xhr.responseText).error ?? message;
+      } catch {}
+      resolve(message);
+    };
+    xhr.onerror = () => resolve("The upload broke off. Check the connection and try again.");
+    xhr.send(blob);
+  });
+}
+
+/** Where a review from the chat goes back to: the client's message it answers (25 Oct, Alex). */
+type ChatTarget = { clientId: number; replyTo: number };
+
+/**
+ * A video or photo a client sent in the chat, reviewed on the same screen as an exercise's (25 Oct, Alex: "if I review,
+ * then it goes to that screen where I have the toolbar and I can record… as a whiteboard"): draw, talk, Send. The
+ * recording, or a few words, lands in the chat as a reply to it.
+ */
+export function ChatReview({ clientId, messageId, first, name, media, words, when, onBack, onSent }: { clientId: number; messageId: number; first: string; name: string; media: { kind: "video" | "photo"; url: string }; words: string; when: string; onBack: () => void; onSent: () => void }) {
+  const review: Review = {
+    requestId: 0,
+    unseen: false,
+    client: { firstName: first, name, avatarPath: null },
+    exercise: { name: media.kind === "video" ? "Video" : "Photo", session: when, week: 0, day: 0 },
+    requested: false,
+    media: [media],
+    sentAt: null,
+    sets: [],
+    clientMessage: words ? { text: words, at: null } : null,
+    thread: [],
+    askNote: null,
+    repliedAt: null,
+    clientId,
+  };
+  return <Reviewer review={review} chat={{ clientId, replyTo: messageId }} onBack={onBack} onSent={onSent} />;
+}
 
 export default function PhoneReview({ requestId, onBack, onSent }: { requestId: number; onBack: () => void; onSent: () => void }) {
   // undefined while it loads, null when it is gone.
@@ -64,7 +111,7 @@ export default function PhoneReview({ requestId, onBack, onSent }: { requestId: 
   return <Reviewer review={review} onBack={onBack} onSent={onSent} />;
 }
 
-function Reviewer({ review, onBack, onSent }: { review: Review; onBack: () => void; onSent: () => void }) {
+function Reviewer({ review, chat = null, onBack, onSent }: { review: Review; chat?: ChatTarget | null; onBack: () => void; onSent: () => void }) {
   const first = review.client.firstName;
   const item = review.media[0];
   const canRecord = useMemo(() => recordingSupported(), []);
@@ -197,6 +244,16 @@ function Reviewer({ review, onBack, onSent }: { review: Review; onBack: () => vo
     if (!blob || progress != null) return;
     setError(null);
     setProgress(0);
+    if (chat) {
+      // From the chat: the recording and the note go back into it, as one message answering theirs.
+      const err = await uploadChatReview(chat.clientId, chat.replyTo, note.trim(), blob, setProgress);
+      setProgress(null);
+      if (err) return setError(err);
+      recorder.retake();
+      onSent();
+      onBack();
+      return;
+    }
     const err = await upload(review.requestId, blob, setProgress);
     if (err) {
       setProgress(null);
@@ -214,7 +271,16 @@ function Reviewer({ review, onBack, onSent }: { review: Review; onBack: () => vo
     if (!clean || busy) return;
     setBusy(true);
     setError(null);
-    const ok = await replyToMediaAction(review.requestId, clean).catch(() => false);
+    const ok = chat
+      ? await (async () => {
+          const fd = new FormData();
+          fd.set("clientId", String(chat.clientId));
+          fd.set("text", clean);
+          fd.set("replyTo", String(chat.replyTo));
+          fd.set("quiet", "1");
+          return sendChatMessageAction(fd).then(() => true, () => false);
+        })()
+      : await replyToMediaAction(review.requestId, clean).catch(() => false);
     setBusy(false);
     if (!ok) return setError("Not sent. Check the connection and try again.");
     onSent();

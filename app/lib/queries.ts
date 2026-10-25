@@ -8113,6 +8113,11 @@ export function mediaWords(type: ChatMediaType | null): string {
   return type === "video" ? "a video" : type === "audio" ? "a voice message" : type === "file" ? "a file" : "a photo";
 }
 
+/** A new chat file's name, without its extension: a coach's chat review is written as it streams in (25 Oct). */
+export function allocChatMediaName(tag?: string): string {
+  return `${Date.now()}-${allocId("chat_media")}${tag ? `-${tag}` : ""}`;
+}
+
 export function saveChatMedia(clientId: number, buffer: Buffer, mimeType: string, originalName?: string | null): ChatMedia {
   const type: ChatMediaType = mimeType.startsWith("video/") ? "video" : mimeType.startsWith("audio/") ? "audio" : mimeType.startsWith("image/") ? "image" : "file";
   // The extension: a file keeps its own; a voice message says it is audio

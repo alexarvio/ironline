@@ -68,5 +68,5 @@ export const config = {
   // re-checks the service worker on its own, cookie or not, and a redirect
   // to /login there would break push notifications once a session expired.
   // coach.webmanifest is the coach phone's (21 Oct, /coach), fetched with no cookie the same way.
-  matcher: ["/((?!_next/static|_next/image|api/video-reply|api/stripe/webhook|favicon.ico|manifest.webmanifest|coach.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
+  matcher: ["/((?!_next/static|_next/image|api/video-reply|api/chat-review|api/stripe/webhook|favicon.ico|manifest.webmanifest|coach.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
 };

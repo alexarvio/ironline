@@ -112,6 +112,9 @@ body:has(.cph) { background: #F5F6F8; }
 .cph-day-label { align-self: center; margin: 10px 0 2px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98A2B3; }
 .cph-msg { display: flex; flex-direction: column; align-items: flex-start; }
 .cph-msg.mine { align-items: flex-end; }
+/* Their video or photo's ⋯ (25 Oct, Alex): a round button under it, its sheet holding Review. */
+.cph-msg-more { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin: 2px 0 0 4px; padding: 0; border: 0; border-radius: 999px; background: none; color: #5b6474; cursor: pointer; }
+.cph-msg-more:active { background: #EEF0F3; }
 .cph-bubble { position: relative; display: flex; flex-direction: column; gap: 4px; max-width: 80%; padding: 8px 11px 6px; box-sizing: border-box; border-radius: 16px 16px 16px 6px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 15px; line-height: 1.38; color: #141a24; text-align: left; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: background 0.25s ease, opacity 0.2s ease; }
 .cph-msg.mine .cph-bubble { border-radius: 16px 16px 6px 16px; background: #E9ECF1; box-shadow: none; }
 .cph-msg.flash .cph-bubble { background: #FFF4CC; }

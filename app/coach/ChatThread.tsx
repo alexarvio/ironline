@@ -10,6 +10,7 @@ import { ChatVideo, sized } from "../components/ChatMedia";
 import { dayMonth } from "../lib/dayMonth";
 import { useKeyboardInset } from "../client/useKeyboardInset";
 import { Avatar, Facts, Icon, Sheet } from "./parts";
+import { ChatReview } from "./PhoneReview";
 
 // One client's chat on the coach's phone (21 Oct): the laptop's thread (its
 // loader, through coachThreadAction, which also keeps this chat's pushes
@@ -238,6 +239,9 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
 
   const [viewer, setViewer] = useState<string | null>(null);
   const [gallery, setGallery] = useState(false);
+  // A video or photo they sent, reviewed on the recorder (25 Oct, Alex).
+  const [reviewing, setReviewing] = useState<DraftMessage | null>(null);
+  const reviewable = (m: DraftMessage) => !m.mine && (m.media?.type === "video" || m.media?.type === "image");
 
   // ---- Oldest first, a label over each day; Today and Yesterday in words.
   const now = new Date();
@@ -295,6 +299,12 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
           {timeOf(m.when)}
         </span>
       </div>
+      {/* Their video or photo has a ⋯ to tap (25 Oct, Alex): the message's sheet, Review in it. Holding still works. */}
+      {reviewable(m) && (
+        <button type="button" className="cph-msg-more" onClick={() => openMenu(m)} aria-label="More for this message">
+          <Icon name="more" />
+        </button>
+      )}
       {(m.reactions?.client || m.reactions?.coach) && (
         <span className="cph-reacts">
           {m.reactions?.client && <span title={`${first}'s reaction`}>{m.reactions.client}</span>}
@@ -499,6 +509,19 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
                   );
                 })}
               </div>
+              {reviewable(menuFor) && (
+                <button
+                  type="button"
+                  className="cph-sheet-row"
+                  onClick={() => {
+                    setReviewing(menuFor);
+                    closeMenu();
+                  }}
+                >
+                  <Icon name="pen" />
+                  Review
+                </button>
+              )}
               <button
                 type="button"
                 className="cph-sheet-row"
@@ -568,6 +591,22 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
         </Sheet>
       )}
 
+      {reviewing && reviewing.media && (
+        <ChatReview
+          clientId={clientId}
+          messageId={reviewing.id}
+          first={first}
+          name={name}
+          media={{ kind: reviewing.media.type === "video" ? "video" : "photo", url: reviewing.media.path }}
+          words={reviewing.text}
+          when={dayLabel(dayOf(reviewing.when))}
+          onBack={() => setReviewing(null)}
+          onSent={() => {
+            atEnd.current = true;
+            void refresh();
+          }}
+        />
+      )}
       {gallery && <ChatMediaGallery items={messages.filter((m) => m.media).map((m) => ({ id: m.id, who: m.mine ? "You" : first, when: m.when, media: m.media! }))} onShow={goTo} onClose={() => setGallery(false)} />}
       {viewer && (
         <button type="button" className="cph-viewer" onClick={() => setViewer(null)} aria-label="Close the photo">

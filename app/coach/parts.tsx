@@ -35,6 +35,7 @@ const PATHS = {
   check: "M5 12.5l4.5 4.5L19 7.5",
   calendar: "M5 5.5h14v14H5zM5 9.5h14M9 3.5v4M15 3.5v4",
   forward: "M9 5l7 7-7 7",
+  more: "M5.2 12a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0zM11.2 12a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0zM17.2 12a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0z",
 } as const;
 export type IconName = keyof typeof PATHS;
 
