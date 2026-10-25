@@ -6840,7 +6840,9 @@ export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: Trainin
   // (a reaction from the coach counts as an answer).
   const chat = data.chat_messages.filter((m) => m.client_id === clientId && (m.text.trim() || m.media_path)).sort((a, b) => stampMs(b.created_at) - stampMs(a.created_at));
   const lastCoach = chat.find((m) => m.sender === "coach");
-  const unanswered = chat.filter((m) => m.sender === "client" && !m.reactions?.coach && (!lastCoach || stampMs(m.created_at) > stampMs(lastCoach.created_at)));
+  // Opening the chat clears it too (25 Oct, Alex): only what came in after the coach last had the chat open.
+  const readAt = client?.coach_chat_read_at ? stampMs(client.coach_chat_read_at) : 0;
+  const unanswered = chat.filter((m) => m.sender === "client" && !m.reactions?.coach && (!lastCoach || stampMs(m.created_at) > stampMs(lastCoach.created_at)) && stampMs(m.created_at) > readAt);
   if (unanswered.length) {
     const oldest = unanswered[unanswered.length - 1];
     const newest = unanswered[0];
@@ -7320,6 +7322,11 @@ export function markClientEventsSeen(clientId: number, which: { all: true } | { 
   const data = getData();
   const client = data.clients.find((c) => c.id === clientId);
   if (!client) return;
+  // The chat opened: its messages so far need the coach no more (25 Oct, Alex), answered or not.
+  if (("tab" in which && which.tab === "messages") || "all" in which) {
+    client.coach_chat_read_at = localStamp();
+    persist();
+  }
   const since = Date.now() - HOME_NEW_DAYS * 86400000;
   const recent = getActivityFeed(client.coach_id ?? 0).filter((e) => e.clientId === clientId && e.at >= since);
   // A tab clears what is on the tab itself; news about one session waits

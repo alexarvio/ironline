@@ -28,14 +28,17 @@
 .rd.rfd .rfd-name { min-width: 0; overflow: hidden; font-size: 14.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---- Needs you: who, the thing and their words (cut to the one line), the wait, the action's white pill, ⋯ on hover. */
-.rd.rfd .rfd-need { grid-template-columns: 200px minmax(0, 1fr) 88px 136px 30px; }
+/* The action pill, then the wait (25 Oct, Alex: swapped), then the check. */
+.rd.rfd .rfd-need { grid-template-columns: 200px minmax(0, 1fr) 136px 88px 30px; }
 .rd.rfd .rfd-thing { display: flex; align-items: baseline; gap: 10px; min-width: 0; overflow: hidden; white-space: nowrap; }
 .rd.rfd .rfd-what { flex: 0 1 auto; min-width: 0; overflow: hidden; font-size: 14px; font-weight: 500; color: #141a24; text-overflow: ellipsis; }
 .rd.rfd .rfd-words { flex: 1 1 6em; min-width: 0; overflow: hidden; font-size: 13px; font-weight: 500; color: #8b93a1; text-overflow: ellipsis; }
 .rd.rfd .rfd-wait { font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd.rfd .rfd-wait.late { font-weight: 600; color: #b8471f; }
-.rd.rfd .rfd-act { display: flex; justify-content: flex-end; min-width: 0; }
-.rd.trn.rfd .rfd-act .trn-pill { background: #fff; text-decoration: none; }
+.rd.rfd .rfd-act { display: flex; justify-content: flex-start; min-width: 0; }
+/* Every pill one width, the words centred, so they line up down the list (25 Oct, Alex). */
+.rd.trn.rfd .rfd-act .trn-pill { width: 100%; justify-content: center; background: #fff; text-decoration: none; }
+.rd.rfd .rfd-need > .rfd-wait { text-align: right; }
 .rd.rfd .rfd-more { display: flex; justify-content: flex-end; }
 /* Done in one click (25 Oct, Alex): the round row button with a check, green under the pointer. */
 .rd.rfd .rfd-done:hover { color: #2f7a3f; }
@@ -55,7 +58,7 @@
 
 /* ---- A narrower page: the columns give way. */
 @container rh (max-width: 860px) {
-  .rd.rfd .rfd-need { grid-template-columns: 168px minmax(0, 1fr) 80px 136px 30px; }
+  .rd.rfd .rfd-need { grid-template-columns: 168px minmax(0, 1fr) 136px 80px 30px; }
   .rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 44px 120px 16px minmax(0, 1fr); }
 }
 @container rh (max-width: 600px) {

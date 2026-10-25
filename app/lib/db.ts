@@ -41,6 +41,9 @@ type Client = {
   // id to the event's time when it was seen. An event is new to the coach
   // while it is missing here or has moved on since (a note edited again).
   coach_seen?: Record<string, number>;
+  // When the coach last opened this client's chat (25 Oct, Alex: "whenever I open that chat it clears the
+  // notification"; an "ok" needs no answer): Needs you's message item counts only what came in after it.
+  coach_chat_read_at?: string;
   // Needs-you items the coach marked as read (12 Oct): action id to when.
   // An item comes back once something newer stands behind it.
   coach_dismissed?: Record<string, number>;

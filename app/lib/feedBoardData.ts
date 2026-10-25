@@ -297,9 +297,6 @@ function sinceOf(ctx: Ctx): FeedBoard["since"] {
 
 // ---- Needs you ----------------------------------------------------------------------------------
 
-/** A call's title as the Meetings tab shows it: the recap's title once written, else the topic, else the kind's name. */
-const callTitle = (m: CallRow) =>
-  m.summary_title?.trim() || m.topic?.trim() || (m.meeting_type === "review" ? "Review call" : m.meeting_type === "other" ? "Call" : "Check-in call");
 const tab = (name: string, clientId: number, rest = "") => `/admin/redesign/${name}?client=${clientId}${rest}`;
 
 /** The live programme and the week it is in, for a link to a week on Training. */
@@ -356,7 +353,7 @@ function needFrom(ctx: Ctx, c: ClientData, a: HomeAction): NeedRow | null {
 }
 
 function needsOf(ctx: Ctx): NeedRow[] {
-  // Each row with where it sorts: blockers (0), today's calls (1), the rest (2); then a moment, earliest first.
+  // Each row with where it sorts: blockers (0), the rest (2); then a moment, earliest first.
   const ranked: { row: NeedRow; rank: number; ms: number }[] = [];
   for (const c of ctx.clients) {
     for (const a of ctx.actions.get(c.id) ?? []) {
@@ -365,28 +362,8 @@ function needsOf(ctx: Ctx): NeedRow[] {
       const blocker = row.kind === "week" || row.kind === "locked";
       ranked.push({ row, rank: blocker ? 0 : 2, ms: row.since ? new Date(row.since).getTime() : Infinity });
     }
-    // Today's calls: Prep. They wait for no one, so no wait and no Done.
-    const calls = safe(`calls ${c.id}`, () => listMeetings(c.id), []);
-    for (const m of calls) {
-      if (m.status !== "scheduled" || m.date !== ctx.today) continue;
-      const time = m.all_day ? null : (m.time ?? "").trim() || null;
-      const row: NeedRow = {
-        key: `${c.id}:meeting-${m.id}`,
-        clientId: c.id,
-        client: c.name ?? "Client",
-        avatarPath: c.avatar_path ?? null,
-        kind: "call",
-        what: callTitle(m),
-        words: null,
-        since: null,
-        time,
-        action: "Prep",
-        href: tab("meetings", c.id),
-        dismissId: null,
-      };
-      // By time; an all-day call after the timed ones.
-      ranked.push({ row, rank: 1, ms: time ? Number(time.replace(":", "")) || 0 : Infinity });
-    }
+    // No today's calls (25 Oct, Alex: "this is not the calendar"): Needs you is what the coach owes, a call is on the
+    // Calendar and the client's Meetings.
   }
   const kindRank: Partial<Record<NeedRow["kind"], number>> = { week: 0, locked: 1 };
   ranked.sort(

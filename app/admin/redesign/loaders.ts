@@ -678,11 +678,7 @@ export function loadDots(clientId: number): DotTrail {
     }
     // reply-<id>, a message: the chat tab's own dot.
   }
-  const today = localDateStr();
-  if (listMeetings(clientId).some((m) => m.status === "scheduled" && m.date === today)) {
-    tab("meetings");
-    dots.meetings = true;
-  }
+  // A call today is no dot (25 Oct, Alex: "this is not the calendar"): nothing is owed for it.
   return dots;
 }
 

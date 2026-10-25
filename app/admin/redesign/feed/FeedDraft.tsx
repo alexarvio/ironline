@@ -172,12 +172,13 @@ function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
                       <span className="rfd-what">{n.what}</span>
                       {n.words && <span className="rfd-words">&ldquo;{n.words}&rdquo;</span>}
                     </span>
-                    <span className={`rfd-wait${w.late ? " late" : ""}`}>{w.text}</span>
+                    {/* The action, then how long it has waited (25 Oct, Alex: swapped, every pill one width). */}
                     <span className="rfd-act">
                       <Link href={n.href} prefetch={false} className="trn-pill">
                         {needIcon(n.kind)} {n.action}
                       </Link>
                     </span>
+                    <span className={`rfd-wait${w.late ? " late" : ""}`}>{w.text}</span>
                     <span className="rfd-more">
                       {/* Done in one click (25 Oct, Alex: the ⋯ held only Done): the round row button with a check. */}
                       {n.dismissId && (
