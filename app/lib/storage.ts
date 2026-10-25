@@ -346,6 +346,7 @@ export async function smallCopy(key: string, w: number, v?: string | null): Prom
       bytes = await once(small, () => makeSmall(key, small, w));
       lastSource.set(small, "made");
     }
+    lookLater(key, bytes);
     return bytes ? webp(bytes, stamp || namedOnce(key) ? FOR_GOOD : A_DAY) : null;
   } catch (error) {
     console.error(`[uploads] no small copy of ${key}:`, error instanceof Error ? error.message : error);
@@ -399,10 +400,52 @@ export async function posterCopy(key: string): Promise<Response | null> {
       bytes = await once(poster, () => makePoster(key, poster));
       lastSource.set(poster, "made");
     }
+    lookLater(key, bytes);
     return bytes ? webp(bytes, smallCache(key)) : null;
   } catch (error) {
     console.error(`[uploads] no poster for ${key}:`, error instanceof Error ? error.message : error);
     return null;
+  }
+}
+
+/** A picture's look from a small copy of it (25 Oct): its width and height and a 20px preview as a data URI. */
+async function lookOf(bytes: Buffer): Promise<{ thumb: string | null; w: number | null; h: number | null }> {
+  const sharp = (await import("sharp")).default;
+  const meta = await sharp(bytes).metadata();
+  const tiny = await sharp(bytes, { failOn: "none" }).resize({ width: 20 }).webp({ quality: 40 }).toBuffer();
+  return { thumb: `data:image/webp;base64,${tiny.toString("base64")}`, w: meta.width ?? null, h: meta.height ?? null };
+}
+/** The look onto the chat messages showing this file. */
+async function keepLook(publicPath: string, bytes: Buffer | null) {
+  if (!bytes) return;
+  try {
+    const { setChatMediaLook } = await import("./queries");
+    setChatMediaLook(publicPath.split("?")[0], await lookOf(bytes));
+  } catch (error) {
+    console.error("[uploads] no look for", publicPath, error instanceof Error ? error.message : error);
+  }
+}
+// A chat picture or video from before looks were kept: its look made the first time a copy of it is served.
+const looked = ((globalThis as unknown as { _uploadsLooked?: Set<string> })._uploadsLooked ??= new Set<string>());
+function lookLater(key: string, bytes: Buffer | null) {
+  if (!bytes || !key.startsWith("chat/") || looked.has(key)) return;
+  looked.add(key);
+  void import("./queries").then(({ chatMediaLacksLook }) => (chatMediaLacksLook(`/uploads/${key}`) ? keepLook(`/uploads/${key}`, bytes) : undefined)).catch(() => {});
+}
+
+/**
+ * A thread read with pictures or videos that have no look yet (sent before 25 Oct): each made once a server run, behind
+ * the answer, from its small copy or poster, so the next read has it. Never waits, never throws.
+ */
+export function fillChatLooks(items: { path: string; type: string }[]) {
+  for (const it of items) {
+    const key = keyOf(it.path);
+    if (!key || looked.has(key) || (it.type !== "image" && it.type !== "video")) continue;
+    looked.add(key);
+    const copy = it.type === "video" ? posterKey(key) : smallKey(key, CHAT_WIDTHS[0]);
+    if (!copy) continue;
+    const make = () => (it.type === "video" ? makePoster(key, copy) : makeSmall(key, copy, CHAT_WIDTHS[0]));
+    void (async () => keepLook(it.path, (await readUpload(copy)) ?? (await once(copy, make))))().catch(() => {});
   }
 }
 
@@ -418,7 +461,7 @@ export async function prepareChatMedia(publicPath: string, type: "image" | "vide
   try {
     if (type === "video") {
       const poster = posterKey(key);
-      if (poster) await once(poster, () => makePoster(key, poster));
+      if (poster) await keepLook(publicPath, await once(poster, () => makePoster(key, poster)));
       return;
     }
     if (!smallKey(key, CHAT_WIDTHS[0])) return;
@@ -427,7 +470,8 @@ export async function prepareChatMedia(publicPath: string, type: "image" | "vide
     if (!original) return;
     for (const w of CHAT_WIDTHS) {
       const small = smallKey(key, w)!;
-      await once(small, () => makeSmall(key, small, w, original));
+      const made = await once(small, () => makeSmall(key, small, w, original));
+      if (w === CHAT_WIDTHS[0]) await keepLook(publicPath, made);
     }
   } catch (error) {
     console.error(`[uploads] could not prepare ${key}:`, error instanceof Error ? error.message : error);

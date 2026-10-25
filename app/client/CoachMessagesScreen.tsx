@@ -9,7 +9,7 @@ import { chatThreadAction, deleteMyChatMessageAction, editMyChatMessageAction, m
 import CoachMark from "./CoachMark";
 import { useOpenLink } from "./CheckInContext";
 import ChatMediaGallery from "../components/ChatMediaGallery";
-import { ChatVideo, sized } from "../components/ChatMedia";
+import { ChatImage, ChatVideo } from "../components/ChatMedia";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
 
 // The conversation with the coach, laid out as WhatsApp does: the coach's
@@ -29,7 +29,7 @@ export type CoachMessageView = {
   /** "14:02" */
   timeLabel: string;
   /** A photo, video, voice message or file sent with it. */
-  media?: { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null } | null;
+  media?: { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null; thumb?: string | null; w?: number | null; h?: number | null } | null;
   /** What in the app the message is about, when the coach linked it. */
   link?: LinkView | null;
   reactions?: { coach: string | null; client: string | null };
@@ -558,7 +558,7 @@ function LinkBubble({ view }: { view: LinkView }) {
 // A picture shows, a video and a voice message play, any other file downloads.
 // The picture at 1080 wide (19 Oct), the video behind its poster (21 Oct): ChatMedia.
 function Media({ media }: { media: NonNullable<CoachMessageView["media"]> }) {
-  if (media.type === "video") return <ChatVideo className="cm-msg-video" src={media.path} />;
+  if (media.type === "video") return <ChatVideo className="cm-msg-video" src={media.path} look={media} />;
   if (media.type === "audio") return <audio className="cm-msg-audio" src={media.path} controls preload="metadata" />;
   if (media.type === "file")
     return (
@@ -567,8 +567,7 @@ function Media({ media }: { media: NonNullable<CoachMessageView["media"]> }) {
         <span>{media.name ?? "File"}</span>
       </a>
     );
-  // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-  return <img className="cm-msg-img" src={sized(media.path, 1080)} alt="" decoding="async" />;
+  return <ChatImage className="cm-msg-img" src={media.path} look={media} />;
 }
 
 function FileGlyph() {

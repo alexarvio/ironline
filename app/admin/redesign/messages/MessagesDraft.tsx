@@ -8,7 +8,7 @@ import { ChevronDownIcon, PinIcon } from "../../../components/icons";
 import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
 import ChatMediaGallery from "../../../components/ChatMediaGallery";
-import { ChatVideo, sized } from "../../../components/ChatMedia";
+import { ChatImage, ChatVideo } from "../../../components/ChatMedia";
 import { chatDraftThreadAction } from "./actions";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
@@ -25,7 +25,7 @@ import { Sep, SepJoin } from "../Sep";
 
 /** href: where it opens on the coach's side (sent links that still open). */
 export type DraftLink = { area: string; label: string; gone: boolean; link?: MessageLink; href?: string; /** Words to start the message with (15 Oct, the progress pop-up's nudge); the coach edits them before sending. */ draft?: string };
-export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null };
+export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null; thumb?: string | null; w?: number | null; h?: number | null };
 export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean; /** The message it answers, quoted (mine: the coach's own). */ replyTo?: { id: number; mine: boolean; text: string } | null };
 /** Newest first, as the loader hands them over. */
 export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean; /** The first of those (25 Oct): the phone opens on it. */ firstUnread?: number | null };
@@ -780,7 +780,7 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
 // The picture at 1080 wide, not the phone's original (21 Oct: a 6 MB, 4000 px
 // photo for a 280 px bubble), the video behind its poster: ChatMedia.
 function Media({ media }: { media: DraftMedia }) {
-  if (media.type === "video") return <ChatVideo className="rm-media-video" src={media.path} />;
+  if (media.type === "video") return <ChatVideo className="rm-media-video" src={media.path} look={media} />;
   if (media.type === "audio") return <audio className="rm-media-audio" src={media.path} controls preload="metadata" />;
   if (media.type === "file")
     return (
@@ -793,7 +793,7 @@ function Media({ media }: { media: DraftMedia }) {
       </a>
     );
   // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-  return <img className="rm-media-img" src={sized(media.path, 1080)} alt="" decoding="async" />;
+  return <ChatImage className="rm-media-img" src={media.path} look={media} />;
 }
 
 /** A link's label as written ("Squat · Upper, Week 2"), its parts parted by the drawn bar (21 Oct). */

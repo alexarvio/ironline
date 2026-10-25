@@ -6122,6 +6122,11 @@ export type ChatMessage = {
   media_type: ChatMediaType | null;
   /** The file's own name, kept for a "file" so the download reads right. */
   media_name?: string | null;
+  /** A picture's or video's look before it loads (25 Oct, Alex: "as WhatsApp"): a tiny blurry preview as a data URI,
+      and its width and height, so the bubble has its size and a picture at once. Made with its small copies. */
+  media_thumb?: string | null;
+  media_w?: number | null;
+  media_h?: number | null;
   created_at: string;
   /** What in the client's app the message is about, when the coach linked it. */
   link?: MessageLink | null;
@@ -6136,7 +6141,23 @@ export type ChatMessage = {
 };
 
 export type ChatMediaType = "image" | "video" | "audio" | "file";
-export type ChatMedia = { path: string; type: ChatMediaType; name?: string | null };
+export type ChatMedia = { path: string; type: ChatMediaType; name?: string | null; thumb?: string | null; w?: number | null; h?: number | null };
+export type MediaLook = { thumb: string | null; w: number | null; h: number | null };
+
+/** The look of a chat file, onto every message that shows it (25 Oct). */
+export function setChatMediaLook(path: string, look: MediaLook) {
+  let n = 0;
+  for (const m of getData().chat_messages) {
+    if (m.media_path !== path) continue;
+    m.media_thumb = look.thumb;
+    m.media_w = look.w;
+    m.media_h = look.h;
+    n++;
+  }
+  if (n) persist();
+}
+/** A chat file some message shows with no look yet. */
+export const chatMediaLacksLook = (path: string) => getData().chat_messages.some((m) => m.media_path === path && !m.media_thumb);
 
 /** The reactions a message can take: a short row, the same on both sides. */
 export const MESSAGE_REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
@@ -6164,7 +6185,11 @@ export type ChatThreadView = {
   replyTo: { id: number; fromMe: boolean; text: string } | null;
 };
 export function chatThreadViews(clientId: number): ChatThreadView[] {
-  return listChatMessages(clientId)
+  const all = listChatMessages(clientId);
+  // A picture or video with no look yet gets one behind this read (25 Oct).
+  const lacking = all.filter((m) => m.media_path && !m.media_thumb && (m.media_type === "image" || m.media_type === "video"));
+  if (lacking.length) void import("./storage").then((s) => s.fillChatLooks(lacking.map((m) => ({ path: m.media_path!, type: m.media_type! })))).catch(() => {});
+  return all
     .filter((m) => m.text.trim() || m.media_path)
     .map((m) => {
       const d = new Date(m.created_at);
@@ -6172,7 +6197,7 @@ export function chatThreadViews(clientId: number): ChatThreadView[] {
         id: m.id,
         mine: m.sender === "client",
         text: m.text,
-        media: m.media_path ? { path: m.media_path, type: m.media_type ?? ("image" as const), name: m.media_name ?? null } : null,
+        media: m.media_path ? { path: m.media_path, type: m.media_type ?? ("image" as const), name: m.media_name ?? null, thumb: m.media_thumb ?? null, w: m.media_w ?? null, h: m.media_h ?? null } : null,
         reactions: { coach: m.reactions?.coach ?? null, client: m.reactions?.client ?? null },
         pinned: !!m.pinned,
         edited: !!m.edited_at,

@@ -1,5 +1,6 @@
 import { GYM_COLORS, isGymColor } from "../../lib/gymColors";
 import { redirect } from "next/navigation";
+import { fillChatLooks } from "../../lib/storage";
 import { getData, type InvoiceTemplate } from "../../lib/db";
 import { meetingRemindersOn } from "../../lib/meetingReminders";
 import type { DotTab, DotTrail } from "./dots";
@@ -1238,7 +1239,11 @@ export function loadMessages(clientId: number): DraftMessages {
   const when = dayMonthTime;
   const hrefFor = (link: MessageLink, week: number | null) => messageLinkHref(clientId, link, week);
   // Both sides, newest first: the client answers from their app.
-  const messages = listChatMessages(clientId)
+  const all = listChatMessages(clientId);
+  // A picture or video with no look yet gets one behind this read (25 Oct).
+  const lacking = all.filter((m) => m.media_path && !m.media_thumb && (m.media_type === "image" || m.media_type === "video"));
+  if (lacking.length) fillChatLooks(lacking.map((m) => ({ path: m.media_path!, type: m.media_type! })));
+  const messages = all
     .filter((m) => m.text.trim() || m.media_path)
     .reverse()
     .map((m) => {
@@ -1248,7 +1253,7 @@ export function loadMessages(clientId: number): DraftMessages {
         mine: m.sender === "coach",
         text: m.text.trim(),
         when: when(m.created_at),
-        media: m.media_path ? { path: m.media_path, type: m.media_type ?? "image", name: m.media_name ?? null } : null,
+        media: m.media_path ? { path: m.media_path, type: m.media_type ?? "image", name: m.media_name ?? null, thumb: m.media_thumb ?? null, w: m.media_w ?? null, h: m.media_h ?? null } : null,
         link: view ? { area: view.area, label: view.label, gone: view.gone, href: view.removed ? undefined : hrefFor(m.link!, view.week) } : null,
         reactions: { coach: m.reactions?.coach ?? null, client: m.reactions?.client ?? null },
         pinned: !!m.pinned,

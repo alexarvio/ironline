@@ -6,7 +6,7 @@ import type { DraftMedia, DraftMessage, DraftMessages } from "../admin/redesign/
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction } from "../lib/actions";
 import VoiceRecordButton from "../components/VoiceRecordButton";
 import ChatMediaGallery from "../components/ChatMediaGallery";
-import { ChatVideo, sized } from "../components/ChatMedia";
+import { ChatImage, ChatVideo, sized } from "../components/ChatMedia";
 import { dayMonth } from "../lib/dayMonth";
 import { useKeyboardInset } from "../client/useKeyboardInset";
 import { Avatar, Facts, Icon } from "./parts";
@@ -686,7 +686,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
 
 // A picture shows (tap: big), a video plays behind its poster, a voice message plays in the bubble, a file opens.
 function Media({ media, onOpen }: { media: DraftMedia; onOpen: (src: string) => void }) {
-  if (media.type === "video") return <ChatVideo className="cph-video-media" src={media.path} />;
+  if (media.type === "video") return <ChatVideo className="cph-video-media" src={media.path} look={media} />;
   if (media.type === "audio") return <Voice src={media.path} />;
   if (media.type === "file")
     return (
@@ -697,8 +697,7 @@ function Media({ media, onOpen }: { media: DraftMedia; onOpen: (src: string) => 
     );
   return (
     <button type="button" className="cph-img" onClick={() => onOpen(sized(media.path, 1080))} aria-label="Open the photo">
-      {/* eslint-disable-next-line @next/next/no-img-element -- the chat's own upload, served by the app */}
-      <img src={sized(media.path, 1080)} alt="" decoding="async" />
+      <ChatImage src={media.path} look={media} />
     </button>
   );
 }

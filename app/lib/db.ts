@@ -1040,6 +1040,11 @@ type ChatMessage = {
   media_type: "image" | "video" | "audio" | "file" | null;
   /** The file's own name, kept for a "file" so the download reads right. */
   media_name?: string | null;
+  /** A picture's or video's look before it loads (25 Oct, Alex: "as WhatsApp"): a tiny blurry preview as a data URI,
+      and its width and height, so the bubble has its size and a picture at once. Made with its small copies. */
+  media_thumb?: string | null;
+  media_w?: number | null;
+  media_h?: number | null;
   created_at: string;
   /** What in the client's app the message is about, when the coach linked it (see messageLinks.ts). */
   link?: MessageLink | null;
