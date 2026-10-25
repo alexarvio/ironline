@@ -6890,7 +6890,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: Trainin
   }
   // A video or photo they sent, with no reply from the coach yet.
   for (const v of data.video_requests ?? []) {
-    if (v.client_id !== clientId || !v.file_path || !v.submitted_at || v.replied_at) continue;
+    if (v.client_id !== clientId || !v.file_path || !v.submitted_at || v.replied_at || v.closed_at) continue;
     const a = data.workout_assignments.find((w) => w.id === v.assignment_id);
     const name = a ? data.exercises.find((e) => e.id === a.exercise_id)?.name ?? "an exercise" : "an exercise";
     actions.push({
@@ -12548,8 +12548,18 @@ export function saveRequestedVideo(id: number, buffer: Buffer, mimeType: string)
   row.file_path = `/uploads/videos/${row.client_id}/${filename}`;
   row.submitted_at = new Date().toISOString();
   row.seen_at = null;
+  row.closed_at = null;
   persist();
   return { path: row.file_path, previous };
+}
+
+/** Done without a reply (25 Oct, Alex): off Waiting, the Feed and the dots; nothing goes to the client. */
+export function closeVideoRequest(id: number, closed = true) {
+  const row = getData().video_requests.find((r) => r.id === id);
+  if (!row || !row.file_path) return;
+  row.closed_at = closed ? new Date().toISOString() : null;
+  if (closed && !row.seen_at) row.seen_at = row.closed_at;
+  persist();
 }
 
 export function markVideoSeen(id: number) {

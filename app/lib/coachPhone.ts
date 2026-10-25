@@ -26,8 +26,8 @@ export type PhoneVideo = {
   asked: boolean;
   sentAt: number;
   repliedAt: number | null;
-  /** How the coach answered: a recorded form review, or words. */
-  reply: "review" | "text" | null;
+  /** How the coach answered: a recorded form review, words, or marked done without a reply (25 Oct). */
+  reply: "review" | "text" | "done" | null;
 };
 export type PhoneVideos = { waiting: PhoneVideo[]; replied: PhoneVideo[] };
 /** The review screen: the laptop's MediaReview, with what the coach asked for and when they answered. */
@@ -74,8 +74,8 @@ export function listPhoneVideos(coachId: number): PhoneVideos {
       path: v.file_path,
       asked: !v.from_client,
       sentAt: ms(v.submitted_at),
-      repliedAt: v.replied_at ? ms(v.replied_at) : null,
-      reply: v.reply_file_path ? "review" : v.reply_note?.trim() ? "text" : null,
+      repliedAt: v.replied_at ? ms(v.replied_at) : v.closed_at ? ms(v.closed_at) : null,
+      reply: v.reply_file_path ? "review" : v.reply_note?.trim() ? "text" : v.closed_at ? "done" : null,
     });
   }
   return {

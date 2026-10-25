@@ -214,6 +214,9 @@ export type VideoRequest = {
   replied_at?: string | null;
   /** When the client first opened the reply. */
   reply_seen_at?: string | null;
+  /** Marked done by the coach without a reply (25 Oct, Alex: "maybe we won't review and send back… so it doesn't stay
+      there for ever"): no longer waiting anywhere; a new file from the client opens it again. */
+  closed_at?: string | null;
   /** Ask every session (15 Oct): this request renews on every later session of the same name that has this exercise, until turned off. */
   recurring?: boolean;
   /** Made from a recurring request: the one it came from. */

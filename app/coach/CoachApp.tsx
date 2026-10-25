@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { logoutAction } from "../lib/auth-actions";
 import { chatWhen } from "../admin/redesign/ChatList";
 import { dayMonth } from "../lib/dayMonth";
-import { coachInboxAction, type CoachInbox } from "./actions";
+import { coachInboxAction, markVideoDoneAction, type CoachInbox } from "./actions";
 import type { PhoneVideo } from "../lib/coachPhone";
 import ChatThread from "./ChatThread";
 import PhoneReview from "./PhoneReview";
@@ -111,6 +111,7 @@ export default function CoachApp({ inbox: fromPage, calendar, today, coach, push
       <Lists
         tab={tab}
         inbox={inbox}
+        setInbox={setInbox}
         cal={cal}
         today={today}
         coach={coach}
@@ -147,7 +148,7 @@ export default function CoachApp({ inbox: fromPage, calendar, today, coach, push
 /** Where each list was left, for coming back from a chat or a video. */
 const listY: Record<string, number> = {};
 
-function Lists({ tab, inbox, cal, today, coach, push, onOpenChat, onOpenVideo }: { tab: Tab; inbox: CoachInbox; cal: CalendarState; today: string; coach: { name: string; photoPath: string | null }; push: Push; onOpenChat: (id: number) => void; onOpenVideo: (id: number) => void }) {
+function Lists({ tab, inbox, setInbox, cal, today, coach, push, onOpenChat, onOpenVideo }: { tab: Tab; inbox: CoachInbox; setInbox: React.Dispatch<React.SetStateAction<CoachInbox>>; cal: CalendarState; today: string; coach: { name: string; photoPath: string | null }; push: Push; onOpenChat: (id: number) => void; onOpenVideo: (id: number) => void }) {
   const [q, setQ] = useState("");
   const [account, setAccount] = useState(false);
   // Back from a chat or a video: the list where it was left.
@@ -212,7 +213,16 @@ function Lists({ tab, inbox, cal, today, coach, push, onOpenChat, onOpenVideo }:
       ) : (
         <>
           <h2 className="cph-label">Waiting</h2>
-          {inbox.videos.waiting.length === 0 ? <p className="cph-empty left">None</p> : <VideoRows rows={inbox.videos.waiting} now={now.getTime()} onOpen={onOpenVideo} />}
+          {inbox.videos.waiting.length === 0 ? <p className="cph-empty left">None</p> : <VideoRows
+              rows={inbox.videos.waiting}
+              now={now.getTime()}
+              onOpen={onOpenVideo}
+              onDone={(id) => {
+                // Gone from Waiting at once; the inbox comes back with it under Replied as Done.
+                setInbox((b) => ({ ...b, videos: { ...b.videos, waiting: b.videos.waiting.filter((v) => v.id !== id) } }));
+                void markVideoDoneAction(id).then((next) => next && setInbox(next));
+              }}
+            />}
           {inbox.videos.replied.length > 0 && (
             <>
               <h2 className="cph-label quiet">Replied</h2>
@@ -280,14 +290,14 @@ function Thumb({ v }: { v: PhoneVideo }) {
   );
 }
 
-function VideoRows({ rows, now, onOpen, past = false }: { rows: PhoneVideo[]; now: number; onOpen: (id: number) => void; past?: boolean }) {
+function VideoRows({ rows, now, onOpen, onDone, past = false }: { rows: PhoneVideo[]; now: number; onOpen: (id: number) => void; onDone?: (id: number) => void; past?: boolean }) {
   return (
     <ul className="cph-rows">
       {rows.map((v) => {
         const wait = waitFor(v.sentAt, now);
         const first = v.client.split(/\s+/)[0] || v.client;
         return (
-          <li key={v.id}>
+          <li key={v.id} className="cph-video-li">
             <button type="button" className={`cph-video${past ? " past" : ""}`} onClick={() => onOpen(v.id)}>
               <Thumb v={v} />
               <span className="cph-video-main">
@@ -298,14 +308,26 @@ function VideoRows({ rows, now, onOpen, past = false }: { rows: PhoneVideo[]; no
                 </span>
                 <span className="cph-video-facts">
                   {past ? (
-                    <Facts parts={[v.reply === "review" ? "Form review" : "Written reply", v.repliedAt ? dayMonth(new Date(v.repliedAt)) : null]} />
+                    <Facts parts={[v.reply === "review" ? "Form review" : v.reply === "done" ? "Done" : "Written reply", v.repliedAt ? dayMonth(new Date(v.repliedAt)) : null]} />
                   ) : (
                     <Facts parts={[v.asked ? "Asked for" : null, <span key="w" className={wait.late ? "late" : undefined}>{wait.text} ago</span>]} />
                   )}
                 </span>
               </span>
-              {!past && <span className="cph-act">Review</span>}
             </button>
+            {/* Review it, or mark it done without a reply (25 Oct, Alex: "so it doesn't stay there for ever"). */}
+            {!past && (
+              <span className="cph-video-acts">
+                <button type="button" className="cph-round small" onClick={() => onOpen(v.id)} aria-label={`Review ${v.exercise}`}>
+                  <Icon name="pen" />
+                </button>
+                {onDone && (
+                  <button type="button" className="cph-round small" onClick={() => onDone(v.id)} aria-label={`Mark ${v.exercise} done without a reply`}>
+                    <Icon name="check" />
+                  </button>
+                )}
+              </span>
+            )}
           </li>
         );
       })}

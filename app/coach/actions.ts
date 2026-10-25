@@ -1,7 +1,7 @@
 "use server";
 
 import { coachForClient, requireCoach } from "../lib/auth";
-import { getClientIdForVideoRequest, localDateStr } from "../lib/queries";
+import { closeVideoRequest, getClientIdForVideoRequest, localDateStr } from "../lib/queries";
 import { loadPhoneCalendar, type PhoneCalendar } from "./calendar";
 import { listPhoneVideos, phoneReview, type PhoneReview, type PhoneVideos } from "../lib/coachPhone";
 import { loadChatDock, loadMessages, type DockChat } from "../admin/redesign/loaders";
@@ -35,6 +35,16 @@ export async function coachCalendarAction(monday: string, today: string): Promis
   const coach = await requireCoach();
   const day = /^\d{4}-\d{2}-\d{2}$/.test(String(today)) ? String(today) : localDateStr();
   return loadPhoneCalendar(coach.id, String(monday), day);
+}
+
+/** A video or photo marked done without a reply (25 Oct, Alex): off Waiting and everywhere it waited; the inbox again. */
+export async function markVideoDoneAction(requestId: number): Promise<CoachInbox | null> {
+  const id = Number(requestId);
+  const clientId = getClientIdForVideoRequest(id);
+  if (clientId == null || !(await coachForClient(clientId))) return null;
+  closeVideoRequest(id);
+  const coach = await requireCoach();
+  return { chats: loadChatDock(coach), videos: listPhoneVideos(coach.id) };
 }
 
 export async function coachReviewAction(requestId: number): Promise<PhoneReview | null> {
