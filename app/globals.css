@@ -20702,7 +20702,8 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 /* A chat's video (ChatMedia.tsx, 25 Oct, Alex): in the message its first frame with a round play mark; a tap plays it
    on the whole screen, black behind, an ✕ at the top right. Every chat: the client's, the coach's phone, the laptop. */
 .cmv { position: relative; display: block; width: fit-content; max-width: 100%; }
-.cmv > video { pointer-events: none; }
+.cmv > video, .cmv > img { pointer-events: none; }
+.cmv > img { object-fit: cover; background: #1b2029; }
 .cmv-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: none; cursor: pointer; }
 .cmv-play > span { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; padding-left: 3px; box-sizing: border-box; border-radius: 999px; background: rgba(20, 26, 36, 0.55); color: #fff; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .cmv-full { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background: #000; }

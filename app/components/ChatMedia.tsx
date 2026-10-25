@@ -22,24 +22,23 @@ export function ChatVideo({ src, className, controls = true, muted = false }: { 
   const poster = posterOf(src);
   // No poster to be had (no ffmpeg on the server, a file it can't read): the old way, the video's own first frame.
   const [own, setOwn] = useState(!poster);
-  useEffect(() => {
-    if (!poster) return;
-    const probe = new Image();
-    probe.onerror = () => setOwn(true);
-    probe.src = poster;
-    return () => {
-      probe.onerror = null;
-    };
-  }, [poster]);
   const [full, setFull] = useState(false);
-  const shown = own ? firstFrame(src) : src;
-  if (!controls) return <video className={className} src={shown} poster={own ? undefined : poster!} muted={muted} playsInline preload="metadata" />;
+  // In the message only its poster, a small picture (25 Oct, Alex: "5 seconds for the media to load"; /api/timing
+  // showed every video of the thread fetched from the bucket at once on opening, to draw a frame of each). The video
+  // itself loads on a tap, playing on the whole screen. The poster failing, the video's own first frame, as before.
+  const still = own ? (
+    <video className={className} src={firstFrame(src)} muted={muted || controls} playsInline preload="metadata" />
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
+    <img className={className} src={poster!} alt="" decoding="async" onError={() => setOwn(true)} />
+  );
+  if (!controls) return still;
   // In a chat a video plays on the whole screen (25 Oct, Alex: "so the client can properly see… what the coach is
   // drawing"), an ✕ to leave it; in the message it is its first frame with the play mark. Every chat draws it so.
   return (
     <>
       <span className="cmv">
-        <video className={className} src={shown} poster={own ? undefined : poster!} muted playsInline preload="metadata" />
+        {still}
         <button
           type="button"
           className="cmv-play"
