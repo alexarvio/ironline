@@ -229,7 +229,8 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
 
   const sortedClients = useMemo(() => {
     const q = clientQ.trim().toLowerCase();
-    return clients.filter((c) => !q || c.name.toLowerCase().includes(q)).sort((a, b) => Number(!!b.reason) - Number(!!a.reason) || a.name.localeCompare(b.name));
+    // The names alone, A to Z (25 Oct, Alex: "I just want the names"), never a status under them.
+    return clients.filter((c) => !q || c.name.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
   }, [clients, clientQ]);
 
   const outside = {
@@ -371,7 +372,6 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                       role="option"
                       aria-selected={c.id === clientId}
                       className="cal-opt"
-                      style={c.reason ? ({ "--rc": c.reason.color } as React.CSSProperties) : undefined}
                       onClick={() => {
                         setClientId(c.id);
                         setPicking(false);
@@ -381,7 +381,6 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                       <Face name={c.name} src={c.avatarPath} />
                       <span className="cal-opt-text">
                         <b>{c.name}</b>
-                        <small className={c.reason ? "reason" : ""}>{c.reason ? c.reason.text : "All good"}</small>
                       </span>
                     </button>
                   ))}

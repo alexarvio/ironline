@@ -54,6 +54,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - Six rows, then it scrolls inside. A Create / Use row stays pinned at its foot, outside the scroll.
 - Create your own (an exercise, a metric, a supplement) opens in that same floating panel (21 Oct, Alex): a small caps label, the name and its group on clean lines, Cancel in words and an ink Add. The card under it never stretches, and no line explains where it lands.
 - The list is as wide as its field, and a search field is only as wide as its list (560px max), not the whole row.
+- A list of clients to pick from is their faces and names alone, A to Z (25 Oct, Alex: "I just want the names"): no status, reason or fact under a name, on the laptop and the phone.
 - Never the browser's own `<datalist>` or `<select>` list. Use `Picker` or the floating list; a plain `+ Add` that opens a menu when the choices are fixed.
 
 ## 7. Dates
