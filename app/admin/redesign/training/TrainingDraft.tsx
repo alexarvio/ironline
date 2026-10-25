@@ -10,7 +10,7 @@ import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
-import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
 import HelpTip from "../HelpTip";
 import RogueSessions from "./RogueSessions";
@@ -264,6 +264,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const [, startTransition] = useTransition();
   // Every save goes to the server, then the page re-reads; what is on screen
   // follows the server's answer (derived-state resets below).
+  // A demo turned on or off for the client on its play button, shown at once (25 Oct, Alex).
+  const [demoOff, setDemoOff] = useState<Record<number, boolean>>({});
   const act = (fn: () => Promise<unknown>, said?: string) =>
     startTransition(async () => {
       const r = await fn();
@@ -1345,18 +1347,39 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                 </button>
                               )}
                             </span>
-                            {/* The demo set on it, in the same spot on every row. */}
+                            {/* The demo set on it, in the same spot on every row. The button is its switch for the client
+                                (25 Oct, Alex: "if the exercise has a demo we deploy it automatically, but for some clients
+                                you do not want to show all demos"): on, the light circle; off, grey; a click turns it. The
+                                demo plays from ⋯. A done week only shows it. */}
                             <span className="rd-demo-slot">
                               {(() => {
                                 const demo = demos[r.id] === undefined ? r.demo : demos[r.id];
-                                // Hidden from this client: the dot stays, greyed, so a demo is known to exist.
-                                return demo ? (
-                                  <a className={`rd-demo${r.demoHidden ? " off" : ""}`} href={demo.url} target="_blank" rel="noopener noreferrer" title={r.demoHidden ? `Demo hidden from ${firstName} · play it` : "Demo set · play it"} aria-label={`Play the demo for ${r.name}${r.demoHidden ? ` (hidden from ${firstName})` : ""}`}>
-                                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                                      <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
-                                    </svg>
-                                  </a>
-                                ) : null;
+                                if (!demo) return null;
+                                const off = demoOff[r.id] ?? r.demoHidden;
+                                const icon = (
+                                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+                                  </svg>
+                                );
+                                return weekLocked || r.id <= 0 ? (
+                                  <span className={`rd-demo${off ? " off" : ""}`} title={off ? `Demo hidden from ${firstName}` : `Demo shown to ${firstName}`} role="img" aria-label={off ? `Demo hidden from ${firstName}` : `Demo shown to ${firstName}`}>
+                                    {icon}
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className={`rd-demo${off ? " off" : ""}`}
+                                    aria-pressed={!off}
+                                    title={off ? `Demo hidden from ${firstName} · click to show it` : `Demo shown to ${firstName} · click to hide it`}
+                                    aria-label={`Demo for ${r.name}, ${off ? "hidden from" : "shown to"} ${firstName}`}
+                                    onClick={() => {
+                                      setDemoOff((m) => ({ ...m, [r.id]: !off }));
+                                      act(() => setRowDemoHiddenAction(r.id, !off));
+                                    }}
+                                  >
+                                    {icon}
+                                  </button>
+                                );
                               })()}
                             </span>
                           </span>
@@ -1479,10 +1502,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     "Add demo"
                                   )}
                                 </DropdownMenuItem>
-                                {/* The exercise has a demo, but this client needs no guidance on it: keep it off this row (and the weeks after). */}
-                                {r.id > 0 && (demos[r.id] === undefined ? r.demo : demos[r.id]) && (
-                                  <DropdownMenuItem onSelect={() => act(() => setRowDemoHiddenAction(r.id, !r.demoHidden), r.demoHidden ? `Demo back on for ${firstName}` : `Demo hidden from ${firstName} on ${r.name}`)}>
-                                    <EyeIcon /> {r.demoHidden ? "Show the demo again" : `Hide the demo from ${firstName}`}
+                                {/* On or off for the client is the play button itself (25 Oct, Alex); here it plays. */}
+                                {(demos[r.id] === undefined ? r.demo : demos[r.id]) && (
+                                  <DropdownMenuItem onSelect={() => window.open((demos[r.id] === undefined ? r.demo : demos[r.id])!.url, "_blank", "noopener,noreferrer")}>
+                                    <PlayIcon /> Play the demo
                                   </DropdownMenuItem>
                                 )}
                                 {/* Which of the exercise's variations (close grip…) this row asks for, from the Library; a new one can be made here too.
