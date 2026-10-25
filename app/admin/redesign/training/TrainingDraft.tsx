@@ -12,6 +12,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
+import HelpTip from "../HelpTip";
 import RogueSessions from "./RogueSessions";
 import ClientNote from "./ClientNote";
 import ApplyChangesDialog from "./ApplyChanges";
@@ -1076,6 +1077,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                   )}
             </DropdownMenuContent>
           </DropdownMenu>
+          {/* What the marks and the colours in a session mean (25 Oct, Alex: "a legend… inside a question mark next to the
+              kg lbs toggle"). */}
+          <HelpTip title="In a session" wide>
+            <TrainingLegend />
+          </HelpTip>
           {/* KG / LBS beside the sessions it changes (20 Oct, Alex: it was in the programme's header). */}
           <div className="trn-unit" role="radiogroup" aria-label="Unit">
             {(["kg", "lbs"] as const).map((u) => (
@@ -3376,6 +3382,42 @@ function NoteDialog({ firstName, note, onSeen }: { firstName: string; note: { te
 
 /** Sets the client logged beyond the prescription ("Add a set", 12 Oct). A swapped row's sets are the swap's. */
 const extraOf = (r: { sets: number; swap: string | null; logged: { set: number }[] }) => (r.swap ? 0 : r.logged.filter((l) => l.set > r.sets).length);
+
+/** The legend behind the ? by KG / LBS (25 Oct, Alex): each mark and colour drawn as the session draws it, with a few
+    words; in the marks' own order. Classes `.rd-legend` (draft.css). */
+function TrainingLegend() {
+  const row = (mark: React.ReactNode, words: React.ReactNode) => (
+    <div className="rd-legend-row">
+      <span className="rd-legend-mark">{mark}</span>
+      <span>{words}</span>
+    </div>
+  );
+  return (
+    <div className="rd-legend">
+      <div className="rd-legend-head">Marks</div>
+      {row(<span className="rd-swapdot static"><SwapIcon /></span>, <><b>Swapped</b>: they did a substitute; click it to see what.</>)}
+      {row(<span className="rd-flag video in"><VideoIcon /></span>, <><b>Video or photo in</b>: waiting for your reply.</>)}
+      {row(<span className="rd-flag video asked"><VideoIcon /></span>, <><b>Asked for</b>: waiting for them to send it.</>)}
+      {row(<span className="rd-flag video replied"><VideoIcon /></span>, <><b>Replied</b>.</>)}
+      {row(<span className="rd-flag chat"><ChatIcon /></span>, <><b>They wrote</b> about it, or left a note on the session.</>)}
+      {row(<span className="rd-extradot static">+2</span>, <><b>Extra sets</b> beyond what you set.</>)}
+      {row(<span className="rd-pbdot">PB</span>, <><b>Personal best</b>: heavier than ever, reps on target.</>)}
+      {row(<i className="rd-due" />, <><b>Needs you</b>: something here waits for you.</>)}
+      <div className="rd-legend-head">What they did</div>
+      {row(<span className="rd-set up">82.5×8</span>, <>Heavier than your weight.</>)}
+      {row(<span className="rd-set">80×8</span>, <>At your weight.</>)}
+      {row(<span className="rd-set down">75×8</span>, <>Lighter than your weight.</>)}
+      {row(<span className="rd-set extra">80×6</span>, <>An extra set (dashed).</>)}
+      {row(<span className="rd-set rd-set-pb">85×8</span>, <>The set that was a personal best.</>)}
+      {row(<span className="rd-set swap">20×10</span>, <>A set on the substitute.</>)}
+      <div className="rd-legend-head">7 days | 30 days</div>
+      {row(<span className="rd-trendcell up">+4.2%</span>, <>Stronger (estimated 1RM) than the 7 or 30 days before.</>)}
+      {row(<span className="rd-trendcell down">−3.1%</span>, <>Weaker than the days before.</>)}
+      {row(<span className="rd-trendcell same">=</span>, <>No change.</>)}
+      {row(<span className="rd-trendcell none">—</span>, <>Not done in both windows.</>)}
+    </div>
+  );
+}
 
 // Two arrows passing each other: a swap.
 function SwapIcon() {
