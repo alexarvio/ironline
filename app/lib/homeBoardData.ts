@@ -364,7 +364,7 @@ function lifestyleFigure(ctx: Ctx): { value: string; suffix: string } | null {
   const data = getData();
   const running = ctx.phases.lifestyle?.id ?? null;
   const asked = data.metric_definitions.filter(
-    (m) => m.client_id === ctx.clientId && m.frequency === "daily" && m.visible_to_client !== false && (m.phase_id == null || m.phase_id === running) && !ctx.fedIds.has(m.id)
+    (m) => m.client_id === ctx.clientId && !m.retired_at && m.frequency === "daily" && m.visible_to_client !== false && (m.phase_id == null || m.phase_id === running) && !ctx.fedIds.has(m.id)
   );
   if (!asked.length) return null;
   const ids = new Set(asked.map((m) => m.id));
@@ -689,7 +689,7 @@ function weighInRhythm(ctx: Ctx): WeighInRhythm {
   const running = ctx.phases.lifestyle?.id ?? null;
   const data = getData();
   const asked = data.metric_definitions.filter(
-    (m) => m.client_id === ctx.clientId && WEIGHT_NAME.test(m.name.trim()) && (m.phase_id == null || m.phase_id === running)
+    (m) => m.client_id === ctx.clientId && !m.retired_at && WEIGHT_NAME.test(m.name.trim()) && (m.phase_id == null || m.phase_id === running)
   );
   if (!asked.length) return data.measurement_fields.some((f) => f.client_id === ctx.clientId && WEIGHT_NAME.test(f.name.trim())) ? "weekly" : "daily";
   if (asked.some((m) => m.frequency === "daily")) return "daily";

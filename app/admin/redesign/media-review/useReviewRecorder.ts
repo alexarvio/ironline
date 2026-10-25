@@ -18,13 +18,15 @@ export type Corner = "tl" | "tr" | "bl" | "br";
 export const MAX_SECONDS = 300;
 const LONG_EDGE = 1080;
 const FPS = 30;
-/** The clip's own sound in the review, under the coach's voice (25 Oct, Alex: "it does not have the volume of the video…
-    you don't want the video to be louder than me speaking"). */
-const CLIP_LEVEL = 0.3;
+/** The clip's own sound while the coach records, in the speaker and the take alike: half (25 Oct, Alex: "when I record,
+    the volume of the video sent by the client decreases automatically by 50%… so we always hear ourselves good"). */
+const CLIP_LEVEL = 0.5;
+/** The voice a touch over the mic's own level, so it always sits on top of the clip. */
+const VOICE_LEVEL = 1.6;
 
 // A media element can be wired into Web Audio only once in its life, so its node is kept with it, in the one context.
 let audioCtx: AudioContext | null = null;
-const clipNodes = new WeakMap<HTMLMediaElement, { node: MediaElementAudioSourceNode; level: GainNode }>();
+const clipNodes = new WeakMap<HTMLMediaElement, { node: MediaElementAudioSourceNode; level: GainNode; out: GainNode }>();
 const theAudio = (): AudioContext | null => {
   if (typeof window === "undefined") return null;
   const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -32,22 +34,32 @@ const theAudio = (): AudioContext | null => {
   audioCtx ??= new AC();
   return audioCtx;
 };
-/** The clip's sound into the recording at CLIP_LEVEL, and on to the speaker as before; null when the browser can't. */
-function clipInto(ctx: AudioContext, v: HTMLVideoElement, dest: MediaStreamAudioDestinationNode): GainNode | null {
+/** The clip's sound into the recording at CLIP_LEVEL, and on to the speaker at the same level while recording; the
+    undo puts the speaker back to full. Null when the browser can't. */
+function clipInto(ctx: AudioContext, v: HTMLVideoElement, dest: MediaStreamAudioDestinationNode): (() => void) | null {
   try {
     let n = clipNodes.get(v);
     if (!n) {
       const node = ctx.createMediaElementSource(v);
       // Wired in, the element plays only through the graph: on to the speaker, so the coach still hears it.
-      node.connect(ctx.destination);
+      const out = ctx.createGain();
+      node.connect(out);
+      out.connect(ctx.destination);
       const level = ctx.createGain();
       level.gain.value = CLIP_LEVEL;
       node.connect(level);
-      n = { node, level };
+      n = { node, level, out };
       clipNodes.set(v, n);
     }
-    n.level.connect(dest);
-    return n.level;
+    const { level, out } = n;
+    out.gain.value = CLIP_LEVEL;
+    level.connect(dest);
+    return () => {
+      out.gain.value = 1;
+      try {
+        level.disconnect(dest);
+      } catch {}
+    };
   } catch {
     return null;
   }
@@ -176,9 +188,18 @@ export function useReviewRecorder(src: Source) {
       const s = srcRef.current;
       const m = s.media();
       if (!m) return;
-      // The sound's context woken while the tap still counts as one (Safari plays nothing otherwise).
+      // The mic first (25 Oct, Alex: the take had the clip and no voice): iPhone gives a sound context made before the
+      // mic silence from it. With the mic on, its context may start without the tap.
+      let audio: MediaStream | null = null;
+      if (opts.mic) {
+        audio = await getMic();
+        setMicDenied(!audio);
+      }
+      mic.current = audio;
       const actx = theAudio();
-      void actx?.resume().catch(() => {});
+      await Promise.race([actx?.resume().catch(() => {}), new Promise((r) => setTimeout(r, 800))]);
+      // A context that won't run would record nothing at all: the voice alone then, straight from the mic.
+      const live = actx && actx.state === "running" ? actx : null;
       // A video with no painted frame records black: nudge it to one first.
       if (m instanceof HTMLVideoElement && (m.readyState < 2 || !m.played.length)) {
         try {
@@ -198,12 +219,6 @@ export function useReviewRecorder(src: Source) {
       c.width = Math.round((w * k) / 2) * 2;
       c.height = Math.round((h * k) / 2) * 2;
       canvas.current = c;
-      let audio: MediaStream | null = null;
-      if (opts.mic) {
-        audio = await getMic();
-        setMicDenied(!audio);
-      }
-      mic.current = audio;
       try {
         const run = () => {
           paint();
@@ -212,16 +227,18 @@ export function useReviewRecorder(src: Source) {
         run();
         const stream = c.captureStream(FPS);
         // The voice and the clip's sound mixed into one track; with no Web Audio, the voice alone as before.
-        const dest = actx ? actx.createMediaStreamDestination() : null;
-        if (actx && dest) {
-          const voice = audio ? actx.createMediaStreamSource(audio) : null;
-          voice?.connect(dest);
-          const clip = m instanceof HTMLVideoElement ? clipInto(actx, m, dest) : null;
+        const dest = live ? live.createMediaStreamDestination() : null;
+        if (live && dest) {
+          const voice = audio ? live.createMediaStreamSource(audio) : null;
+          const lift = live.createGain();
+          lift.gain.value = VOICE_LEVEL;
+          voice?.connect(lift);
+          lift.connect(dest);
+          const clip = m instanceof HTMLVideoElement ? clipInto(live, m, dest) : null;
           mix.current = () => {
             voice?.disconnect();
-            try {
-              clip?.disconnect(dest);
-            } catch {}
+            lift.disconnect();
+            clip?.();
           };
           dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
         } else audio?.getAudioTracks().forEach((t) => stream.addTrack(t));

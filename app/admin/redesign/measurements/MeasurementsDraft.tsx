@@ -240,9 +240,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
     setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, summary: s } : r)));
     save(() => setMetricSummaryAction(m.id, s));
   };
-  const removeMetric = (m: DraftMetric) => {
+  // With what was logged deleted, or kept for when it is added back (25 Oct, Alex).
+  const removeMetric = (m: DraftMetric, wipe: boolean) => {
     setRows((prev) => prev.filter((r) => r.id !== m.id));
-    saveMetrics({ removes: [m.id] });
+    saveMetrics(wipe ? { removes: [m.id] } : { retires: [m.id] });
   };
   // The rows of the rhythm on screen; a drag reorders them among themselves.
   const shown = rows.filter((r) => r.frequency === cadence);
@@ -723,10 +724,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           <RemoveMetricDialog
             metric={dlg.metric}
             firstName={firstName}
-            onRemove={() => {
+            onRemove={(wipe) => {
               const m = dlg.metric;
               close();
-              removeMetric(m);
+              removeMetric(m, wipe);
             }}
             onClose={close}
           />
@@ -844,9 +845,9 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   );
 }
 
-/** Taking a metric off the check-in, in the delete pop-up's style (21 Oct). Its
- *  logged values go with it, so when there are any a tick has to be checked first. */
-function RemoveMetricDialog({ metric: m, firstName, onRemove, onClose }: { metric: DraftMetric; firstName: string; onRemove: () => void; onClose: () => void }) {
+/** Taking a metric off the check-in, in the delete pop-up's style (21 Oct). What was logged stays unless the tick
+ *  says delete it too (25 Oct, Alex: "why can I not remove this thing if I don't want to delete the whole data"). */
+function RemoveMetricDialog({ metric: m, firstName, onRemove, onClose }: { metric: DraftMetric; firstName: string; onRemove: (wipe: boolean) => void; onClose: () => void }) {
   const [agreed, setAgreed] = useState(false);
   const cancel = useRef<HTMLButtonElement>(null);
   const logged = m.last != null;
@@ -865,7 +866,7 @@ function RemoveMetricDialog({ metric: m, firstName, onRemove, onClose }: { metri
           ✕
         </button>
       </div>
-      <DialogDescription className="dlh-what">{logged ? "This permanently deletes what was logged for it. It can’t be undone." : `It comes off ${firstName}’s check-in.`}</DialogDescription>
+      <DialogDescription className="dlh-what">{logged && agreed ? "This permanently deletes what was logged for it. It can’t be undone." : logged ? `It comes off ${firstName}’s check-in. What they logged stays.` : `It comes off ${firstName}’s check-in.`}</DialogDescription>
       {logged && (
         <button type="button" role="checkbox" aria-checked={agreed} className="dlh-ack" onClick={() => setAgreed((x) => !x)}>
           <span className={`dlh-box${agreed ? " on" : ""}`} aria-hidden="true">
@@ -878,7 +879,7 @@ function RemoveMetricDialog({ metric: m, firstName, onRemove, onClose }: { metri
         <button ref={cancel} type="button" className="dlh-cancel" onClick={onClose}>
           Cancel
         </button>
-        <button type="button" className="dlh-delete" disabled={logged && !agreed} onClick={onRemove}>
+        <button type="button" className="dlh-delete" onClick={() => onRemove(logged && agreed)}>
           Remove
         </button>
       </div>

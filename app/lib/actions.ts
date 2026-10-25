@@ -152,6 +152,8 @@ import {
   removeMeeting,
   removeMeetingNote,
   removeMetricDefinition,
+  retireMetricDefinition,
+  unretireMetricDefinition,
   togglePinMetric,
   togglePinMeasurementField,
   removeMetricTemplateCategory,
@@ -1024,6 +1026,8 @@ export async function applyMetricChangesAction(input: {
   phaseId: number | null;
   adds: { name: string; unit: string; group: string; cadence: "daily" | "weekly" | "monthly"; source: "library" | "custom"; askAt?: MetricAskAt }[];
   removes: number[];
+  /** Taken off with what was logged kept (25 Oct, Alex). */
+  retires?: number[];
   cadence: { id: number; value: "daily" | "weekly" | "monthly" }[];
   /** When in the day each changed metric is asked for. */
   askAt?: { id: number; value: MetricAskAt }[];
@@ -1038,8 +1042,10 @@ export async function applyMetricChangesAction(input: {
   // The changes in words for the client's note, names read before the rows go.
   const metricName = (id: number) => getData().metric_definitions.find((m) => m.id === id)?.name ?? "a metric";
   const said: string[] = [];
-  const removedNames = (Array.isArray(input.removes) ? input.removes : []).filter(mine).map(metricName);
+  const retires = (Array.isArray(input.retires) ? input.retires : []).filter(mine);
+  const removedNames = [...(Array.isArray(input.removes) ? input.removes : []).filter(mine), ...retires].map(metricName);
   for (const id of Array.isArray(input.removes) ? input.removes : []) if (mine(id)) removeMetricDefinition(id);
+  for (const id of retires) retireMetricDefinition(id);
   for (const c of Array.isArray(input.cadence) ? input.cadence : []) {
     if (mine(c.id) && (c.value === "daily" || c.value === "weekly" || c.value === "monthly")) {
       setMetricCadence(c.id, c.value);
@@ -1058,7 +1064,16 @@ export async function applyMetricChangesAction(input: {
     .map((a) => ({ name: String(a.name ?? "").trim().slice(0, 60), unit: String(a.unit ?? "").trim().slice(0, 20), group: String(a.group ?? "other"), cadence: a.cadence === "weekly" ? ("weekly" as const) : a.cadence === "monthly" ? ("monthly" as const) : ("daily" as const), source: a.source }))
     .filter((a) => a.name)
     // Already asked for on this phase (or in the standing set): not added twice, as when a save is retried (21 Oct).
-    .filter((a) => !getData().metric_definitions.some((m) => m.client_id === clientId && (m.phase_id == null || m.phase_id === phaseId) && m.name.trim().toLowerCase() === a.name.toLowerCase()));
+    .filter((a) => !getData().metric_definitions.some((m) => m.client_id === clientId && !m.retired_at && (m.phase_id == null || m.phase_id === phaseId) && m.name.trim().toLowerCase() === a.name.toLowerCase()))
+    // One taken off with its data kept comes back, its history with it (25 Oct, Alex), instead of a new one.
+    .filter((a) => {
+      const id = unretireMetricDefinition(clientId, a.name, phaseId);
+      if (id != null) {
+        setMetricCadence(id, a.cadence);
+        said.push(`Added ${a.name} back`);
+      }
+      return id == null;
+    });
   // A monthly metric added or moved in, and no monthly check-in yet: it opens on the 1st.
   const toMonthly = adds.some((a) => a.cadence === "monthly") || (Array.isArray(input.cadence) ? input.cadence : []).some((c) => mine(c.id) && c.value === "monthly");
   if (toMonthly && phaseCheckInDays(clientId, phaseId).monthly == null) setPhaseCheckInDays(clientId, phaseId, { monthly: 1 });

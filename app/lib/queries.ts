@@ -3898,6 +3898,9 @@ export type MetricDefinition = {
   category: string;
   name: string;
   unit: string;
+  /** Taken off the check-in with what was logged kept (25 Oct, Alex: "why can I not remove this thing if I don't want
+      to delete the whole data"): out of every list and every ask, its entries untouched; adding it again brings it back. */
+  retired_at?: string | null;
   // The rhythm the client is asked for this on. "monthly" is what the
   // old separate measurements sheet became: cadence is a property of a
   // metric, which is why Daily Tracker and Weekly Tracker stopped being
@@ -4060,7 +4063,7 @@ export function listAllMetrics(clientId: number): MetricDefinition[] {
   const groupRank = new Map<string, number>(METRIC_GROUPS.map((g, i) => [g.key as string, i]));
   const custom = !!getData().clients.find((c) => c.id === clientId)?.metrics_custom_order;
   return getData()
-    .metric_definitions.filter((m) => m.client_id === clientId)
+    .metric_definitions.filter((m) => m.client_id === clientId && !m.retired_at)
     .sort((a, b) => {
       const g = custom ? 0 : (groupRank.get(metricGroup(a.category).key) ?? 99) - (groupRank.get(metricGroup(b.category).key) ?? 99);
       if (g !== 0) return g;
@@ -4148,7 +4151,7 @@ export function listMetricDefinitions(
   const running = runningLifestylePhaseId(clientId);
   return getData()
     .metric_definitions.filter(
-      (m) => m.client_id === clientId && m.frequency === frequency && (m.phase_id == null || m.phase_id === running)
+      (m) => m.client_id === clientId && !m.retired_at && m.frequency === frequency && (m.phase_id == null || m.phase_id === running)
     )
     .sort((a, b) => a.order_index - b.order_index);
 }
@@ -4233,7 +4236,7 @@ export function copyPhaseMetrics(fromPhaseId: number | null, toPhaseId: number, 
   const data = getData();
   const source = listMetricsForPhase(clientId, fromPhaseId, fromIsLive);
   const already = new Set(
-    data.metric_definitions.filter((m) => m.client_id === clientId && m.phase_id === toPhaseId).map((m) => m.name.toLowerCase())
+    data.metric_definitions.filter((m) => m.client_id === clientId && m.phase_id === toPhaseId && !m.retired_at).map((m) => m.name.toLowerCase())
   );
   for (const m of source) {
     if (already.has(m.name.toLowerCase())) continue;
@@ -4273,6 +4276,27 @@ export function setMetricCadence(id: number, frequency: MetricCadence) {
   persist();
 }
 
+/** Off the check-in, everything logged for it kept (25 Oct, Alex). */
+export function retireMetricDefinition(id: number) {
+  const def = getData().metric_definitions.find((m) => m.id === id);
+  if (!def || def.retired_at) return;
+  def.retired_at = new Date().toISOString();
+  def.pinned = false;
+  persist();
+}
+
+/** A retired metric of this name brought back for the phase (or the standing set), history and all; its id, or null. */
+export function unretireMetricDefinition(clientId: number, name: string, phaseId: number | null): number | null {
+  const key = name.trim().toLowerCase();
+  const def = getData()
+    .metric_definitions.filter((m) => m.client_id === clientId && !!m.retired_at && m.name.trim().toLowerCase() === key && (m.phase_id == null || m.phase_id === phaseId))
+    .sort((a, b) => (b.retired_at ?? "").localeCompare(a.retired_at ?? ""))[0];
+  if (!def) return null;
+  def.retired_at = null;
+  persist();
+  return def.id;
+}
+
 export function removeMetricDefinition(id: number) {
   const data = getData();
   keepMetricReadings(id);
@@ -4291,7 +4315,7 @@ export const PINNED_METRIC_LIMIT = 4;
 export function countPinned(clientId: number): number {
   const data = getData();
   return (
-    data.metric_definitions.filter((m) => m.client_id === clientId && m.pinned).length +
+    data.metric_definitions.filter((m) => m.client_id === clientId && m.pinned && !m.retired_at).length +
     data.measurement_fields.filter((f) => f.client_id === clientId && f.pinned).length
   );
 }
@@ -4335,7 +4359,7 @@ export type PinnedMetricSummary = {
 // Page's pinned-metrics panel.
 export function getPinnedMetricsSummary(clientId: number): PinnedMetricSummary[] {
   const data = getData();
-  const defs = data.metric_definitions.filter((m) => m.client_id === clientId && m.pinned);
+  const defs = data.metric_definitions.filter((m) => m.client_id === clientId && m.pinned && !m.retired_at);
   return defs.map((def) => {
     const logged = data.metric_entries
       .filter((e) => e.metric_definition_id === def.id && e.value != null)
@@ -9264,7 +9288,7 @@ export function phaseContentGap(phaseId: number): string | null {
     const plan = getNutritionGoalsSummary(phase.client_id);
     return own || (plan.trainingKcal ?? 0) > 0 || (plan.restKcal ?? 0) > 0 ? null : "Nothing in it yet: set its targets on the Nutrition tab first.";
   }
-  const asks = data.metric_definitions.some((m) => m.client_id === phase.client_id && m.phase_id === phase.id);
+  const asks = data.metric_definitions.some((m) => m.client_id === phase.client_id && m.phase_id === phase.id && !m.retired_at);
   return asks ? null : "Nothing in it yet: add the metrics it asks for on the Lifestyle tab first.";
 }
 

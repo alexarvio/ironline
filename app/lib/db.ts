@@ -721,6 +721,9 @@ type MetricDefinition = {
   category: string;
   name: string;
   unit: string;
+  /** Taken off the check-in with what was logged kept (25 Oct, Alex: "why can I not remove this thing if I don't want
+      to delete the whole data"): out of every list and every ask, its entries untouched; adding it again brings it back. */
+  retired_at?: string | null;
   // The rhythm the client is asked for this on. "monthly" is what the
   // old separate measurements sheet became: cadence is a property of a
   // metric, which is why Daily Tracker and Weekly Tracker stopped being
@@ -1501,7 +1504,8 @@ export function prepareStore(parsed: Partial<Data>): { data: Data; changed: bool
 export function mergeDuplicateMetricDefinitions(data: Data): number {
   const groups = new Map<string, MetricDefinition[]>();
   for (const m of data.metric_definitions) {
-    const key = `${m.client_id}:${m.phase_id ?? "standing"}:${m.frequency}:${m.name.trim().toLowerCase()}`;
+    // A retired metric never merges with a live one of its name (25 Oct): its history waits for it to come back.
+    const key = `${m.client_id}:${m.phase_id ?? "standing"}:${m.frequency}:${m.name.trim().toLowerCase()}:${m.retired_at ? "retired" : "live"}`;
     const list = groups.get(key) ?? [];
     list.push(m);
     groups.set(key, list);
