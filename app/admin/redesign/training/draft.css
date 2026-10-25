@@ -800,8 +800,9 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
    Reply were the old way): as Lifestyle's and Nutrition's opened notes, no band, no tint, never navy. The chat icon at
    1.6, "{First} wrote" grey, their words in quotes, Reply the check-ins' small ink pill (.rm-reply) right after them.
    Held at the card's left while the table scrolls sideways. */
-.rd-rows-scroll > .rd-cnote { min-width: 0; position: sticky; left: 0; }
-.rd-cnote { display: flex; align-items: center; gap: 8px; width: fit-content; max-width: min(100%, 760px); margin: 4px 0 10px 10px; box-sizing: border-box; }
+/* On the right of the session, over the marks' end (25 Oct, Alex: "have this comment here on the right side"). */
+.rd-rows-scroll > .rd-cnote { min-width: 0; position: sticky; right: 0; }
+.rd-cnote { display: flex; align-items: center; gap: 8px; width: fit-content; max-width: min(100%, 760px); margin: 4px 10px 10px auto; box-sizing: border-box; }
 .rd-cnote-icon { flex: none; display: inline-flex; color: #5b6474; }
 .rd-cnote-icon svg { width: 16px; height: 16px; }
 .rd-cnote-icon svg path { stroke-width: 1.6; }
