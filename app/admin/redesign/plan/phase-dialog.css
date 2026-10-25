@@ -43,6 +43,9 @@
 .npd.npd .npd-seg button.on:focus-visible { background: #2a3242; }
 
 /* The calendar beside the dates. */
+/* The calendar's key keeps two rows of room whatever the track (25 Oct, Alex: switching Training, Nutrition and Lifestyle
+   resized the pop-up as the key went from one row to two). */
+.npd.npd .rdd-cal .rdd-legend { box-sizing: border-box; min-height: 46px; align-content: flex-start; }
 .npd.npd .npd-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 0.85fr); gap: 28px; align-items: start; margin-top: 22px; }
 .npd.npd .npd-side { display: flex; flex-direction: column; min-width: 0; }
 .npd.npd .npd-side > .npd-field { margin-top: 16px; }
