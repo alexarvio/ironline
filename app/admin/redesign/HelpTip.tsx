@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/pop
  * Meetings; the same one goes wherever a screen needs a word of explanation
  * without carrying it in the layout.
  */
-export default function HelpTip({ title, children, wide = false }: { title: string; children: React.ReactNode; /** A legend that needs the room (25 Oct): 420px. */ wide?: boolean }) {
+export default function HelpTip({ title, children, wide = false, untitled = false }: { title: string; children: React.ReactNode; /** A legend that needs the room (25 Oct): 420px. */ wide?: boolean; /** The title for screen readers only (25 Oct, Alex: the legend needs none). */ untitled?: boolean }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -23,7 +23,7 @@ export default function HelpTip({ title, children, wide = false }: { title: stri
         </button>
       </PopoverTrigger>
       <PopoverContent side="bottom" align={wide ? "end" : "start"} className={wide ? "w-[420px]" : "w-80"}>
-        <b className="mb-1.5 block text-[13px] font-semibold text-foreground">{title}</b>
+        {!untitled && <b className="mb-1.5 block text-[13px] font-semibold text-foreground">{title}</b>}
         <div className="text-[12.5px] leading-relaxed text-muted-foreground [&_b]:font-semibold [&_b]:text-foreground [&_p]:m-0 [&_p+p]:mt-1.5">{children}</div>
       </PopoverContent>
     </Popover>

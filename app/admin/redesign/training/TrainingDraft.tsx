@@ -1079,11 +1079,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                   )}
             </DropdownMenuContent>
           </DropdownMenu>
-          {/* What the marks and the colours in a session mean (25 Oct, Alex: "a legend… inside a question mark next to the
-              kg lbs toggle"). */}
-          <HelpTip title="In a session" wide>
-            <TrainingLegend />
-          </HelpTip>
           {/* KG / LBS beside the sessions it changes (20 Oct, Alex: it was in the programme's header). */}
           <div className="trn-unit" role="radiogroup" aria-label="Unit">
             {(["kg", "lbs"] as const).map((u) => (
@@ -1092,6 +1087,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               </button>
             ))}
           </div>
+          {/* What the marks and the colours in a session mean (25 Oct, Alex: "a legend… inside a question mark", on the
+              right of KG / LBS, no title over it). */}
+          <HelpTip title="What the marks and colours in a session mean" wide untitled>
+            <TrainingLegend />
+          </HelpTip>
         </div>
       </div>
 
