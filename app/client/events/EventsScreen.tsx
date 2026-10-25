@@ -12,6 +12,7 @@ import { ChevronLeftIcon } from "../../components/icons";
 import { useCoachIdentity } from "../CheckInContext";
 import type { HomeEvent, HomeEvents } from "../EventsCard";
 import AddEventSheet, { type EventValues } from "./AddEventSheet";
+import { Bars } from "../Bars";
 
 // The Events screen (9 Oct), restyled as an itinerary (15 Oct): one 1px
 // spine, thin rings with fine-line category icons, light type, no cards.
@@ -60,32 +61,32 @@ const hasMore = (e: HomeEvent, status?: Status) => (e.phase || status === "past"
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const monthOf = (iso: string) => MONTHS[Number(iso.slice(5, 7)) - 1];
 
-/** The row's "when" line. */
-function whenOf(e: HomeEvent, status: Status, today: string): string {
+/** The row's "when" line, as its facts: drawn parted by Bars, read out with commas. */
+function whenOf(e: HomeEvent, status: Status, today: string): string[] {
   // Repeating (19 Oct): the days, then when it comes next, and its end if it has one.
   if (e.repeat && status !== "past") {
     const every = repeatWords(e.repeat, { until: false });
-    const until = e.repeat.until ? ` · until ${shortDay(e.repeat.until, today)}` : "";
-    if (status === "next") return `${every} · from ${shortDay(e.start, today)}${until}`;
+    const until = e.repeat.until ? `until ${shortDay(e.repeat.until, today)}` : "";
+    if (status === "next") return [every, `from ${shortDay(e.start, today)}`, until].filter(Boolean);
     const next = nextOccurrence(e.start, e.end, e.repeat, today);
-    return `${every} · ${next === today ? "today" : next ? `next ${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][isoWeekday(next) - 1]} ${shortDay(next, today)}` : "done"}${until}`;
+    return [every, next === today ? "today" : next ? `next ${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][isoWeekday(next) - 1]} ${shortDay(next, today)}` : "done", until].filter(Boolean);
   }
   if (status === "next") {
     // The countdown, then the date it starts (16 Oct); a stretch shows both ends.
     const n = daysBetween(today, e.start);
     const rel = n <= 1 ? "Tomorrow" : n < 21 ? `In ${n} days` : n <= 60 ? `In ${Math.round(n / 7)} weeks` : null;
     const date = e.start === e.end ? shortDay(e.start, today) : `${shortDay(e.start, today)} – ${shortDay(e.end, today)}`;
-    return rel ? `${rel} · ${date}` : date;
+    return rel ? [rel, date] : [date];
   }
   if (status === "now") {
-    if (e.start === e.end) return "Today";
+    if (e.start === e.end) return ["Today"];
     const { day, total } = dayOf(e, today);
-    return `Day ${day} of ${total}`;
+    return [`Day ${day} of ${total}`];
   }
-  if (ongoing(e, today)) return "Ongoing";
+  if (ongoing(e, today)) return ["Ongoing"];
   const n = daysBetween(e.end, today);
   const ago = n <= 30 ? `${n} day${n === 1 ? "" : "s"} ago` : shortDay(e.end, today);
-  return e.start === e.end ? ago : `Ended · ${ago}`;
+  return e.start === e.end ? [ago] : ["Ended", ago];
 }
 
 /** A fine-line icon: 1.6 stroke, round caps and joins, no fills. */
@@ -437,7 +438,7 @@ function EventRow(p: RowProps) {
   const when = whenOf(e, status, today);
   const who = e.mine ? me?.name || "You" : coachName;
   const photo = e.mine ? (me?.photoPath ?? null) : coachPhoto;
-  const spoken = `${label ? `${label} ` : ""}${e.title}, ${c.label}, ${when}, added by ${who}${status === "past" ? ", past" : ""}`;
+  const spoken = `${label ? `${label} ` : ""}${e.title}, ${c.label}, ${when.join(", ")}, added by ${who}${status === "past" ? ", past" : ""}`;
   const progress = isNow && e.start !== e.end && !e.repeat ? dayOf(e, today) : null;
   // A title cut short (16 Oct) gets the chevron too: open, the row shows it in full.
   const titleRef = useRef<HTMLSpanElement>(null);
@@ -482,7 +483,7 @@ function EventRow(p: RowProps) {
               {photo ? <img src={pic(photo, 96)} alt="" /> : (who || "?").trim().charAt(0).toUpperCase()}
             </span>
           </span>
-          <span className="evp-when">{when}</span>
+          <span className="evp-when"><Bars parts={when} /></span>
           {progress && (
             <span className="evp-progress" role="progressbar" aria-valuenow={progress.day} aria-valuemin={1} aria-valuemax={progress.total} aria-label={`Day ${progress.day} of ${progress.total}`}>
               <span className="evp-track">

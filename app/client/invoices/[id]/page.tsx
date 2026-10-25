@@ -7,6 +7,7 @@ import { formatMoney } from "../../../lib/countries";
 import InvoiceSheet from "../../../components/InvoiceSheet";
 import InvoicePrintButton from "../../../components/InvoicePrintButton";
 import PayButton from "./PayButton";
+import { Bars } from "../../Bars";
 
 // One of the client's invoices, the sheet the coach sees, to read, print or
 // save as PDF, and to pay online when the coach has Stripe connected
@@ -39,8 +40,12 @@ export default async function ClientInvoicePage({ params, searchParams }: { para
       {payable && !paid && (
         <div className="ivp-paybar">
           <span>
-            <b>{formatMoney(v.total, v.currency, v.from.country_code)}</b>
-            {v.dueDate ? ` · due ${new Date(`${v.dueDate}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}
+            <Bars
+              parts={[
+                <b key="t">{formatMoney(v.total, v.currency, v.from.country_code)}</b>,
+                v.dueDate && `due ${new Date(`${v.dueDate}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`,
+              ]}
+            />
           </span>
           <PayButton invoiceId={v.id} label={`Pay ${formatMoney(v.total, v.currency, v.from.country_code)}`} />
         </div>

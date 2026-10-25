@@ -19412,7 +19412,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .cl-sep { display: inline-block; width: 1px; height: 0.8em; margin: 0 0.5em; background: #c9cfd8; vertical-align: -0.08em; }
 /* In a flex row with its own gap (the workout's eyebrow) the gap is the air; over a photo or the ink pill, the words' own white, fainter. */
 .wo-eyebrow > .cl-sep { flex: none; align-self: center; margin: 0 2px; }
-.tr-kicker .cl-sep, .wo-pill-gym .cl-sep { background: currentColor; opacity: 0.5; }
+.tr-kicker .cl-sep, .wo-pill-gym .cl-sep, .so-start .cl-sep, .pc-left .cl-sep { background: currentColor; opacity: 0.5; }
 .ntf-text.open .ntf-title, .ntf-text.open .ntf-body { display: block; -webkit-line-clamp: unset; overflow: visible; }
 .ntf-more { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: -4px -6px 0 0; padding: 0; border: 0; border-radius: 50%; background: none; color: #98A2B3; cursor: pointer; }
 .ntf-more svg { transition: transform 0.25s; }
@@ -19478,7 +19478,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-ex-top .wo-ex-name, .lw .wo-ex-name { font-size: 25px; font-weight: 500; letter-spacing: -0.01em; }
 .lw .wo-nextup-label { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #8b93a1; }
 .lw .wo-nextup-name { font-size: 12px; font-weight: 500; color: #8b93a1; }
-.lw .wo-nextup-label::after { content: " ·"; }
+.lw .wo-nextup-label::after { content: ""; display: inline-block; width: 1px; height: 0.8em; margin-left: 0.5em; background: #c9cfd8; vertical-align: -0.08em; }
 .lw .ts-coachnote { margin-top: 4px; padding: 12px 4px 0; border-top: 1px solid #E1E5EB; }
 .lw .ts-coachnote-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
 .lw .ts-coachnote-text { font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; }

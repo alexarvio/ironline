@@ -11,6 +11,7 @@ import GymPickerDialog from "./GymPickerDialog";
 import RestTimerPill, { useRestTimer } from "./RestTimer";
 import SwipeToEnd from "./SwipeToEnd";
 import FreeAddPage from "./FreeAddPage";
+import { Bars } from "./Bars";
 import type { LibraryPick, WeightUnit } from "./workoutShared";
 import {
   CardioCard,
@@ -307,10 +308,10 @@ export default function WorkoutScreen({
             className={`wo-pill${ended ? " ended" : ""}`}
             onClick={() => day.gyms.length > 0 && setGymOpen(true)}
             disabled={day.gyms.length === 0}
-            aria-label={`${gymName ?? (editing ? `Editing · ${day.title}` : day.title)}, ${clock(ms)} elapsed${day.gyms.length > 0 ? ". Switch gym" : ""}`}
+            aria-label={`${gymName ?? (editing ? `Editing ${day.title}` : day.title)},${clock(ms)} elapsed${day.gyms.length > 0 ? ". Switch gym" : ""}`}
           >
             <span className="wo-pill-glow" aria-hidden="true" />
-            <span className="wo-pill-gym">{gymName ?? (editing ? `Editing · ${day.title}` : day.gyms.length > 0 ? "Pick a gym" : day.title)}</span>
+            <span className="wo-pill-gym">{gymName ?? (editing ? <Bars parts={["Editing", day.title]} /> : day.gyms.length > 0 ? "Pick a gym" : day.title)}</span>
             <span className="wo-pill-clock">
               <i className="wo-pill-dot" aria-hidden="true" />
               {clock(ms)}
@@ -404,7 +405,7 @@ export default function WorkoutScreen({
                 exercise={day.exercises[p.index]}
                 index={p.index + 1}
                 total={day.exercises.length}
-                sessionLabel={editing ? `Editing · ${day.title}` : day.title}
+                sessionLabel={editing ? <Bars parts={["Editing", day.title]} /> : day.title}
                 gymId={gymId}
                 coachName={coachName}
                 coachPhoto={coachPhoto}
@@ -440,7 +441,7 @@ export default function WorkoutScreen({
                   cardio={day.cardio[p.index]}
                   index={day.exercises.length + p.index + 1}
                   coachName={coachName}
-                  sessionLabel={editing ? `Editing · ${day.title}` : day.title}
+                  sessionLabel={editing ? <Bars parts={["Editing", day.title]} /> : day.title}
                   position={{ n: p.index + 1, total: day.cardio.length }}
                   free={!!day.free && !editing}
                   // On to what's next once it's done, as an exercise does (23 Oct, Alex).
@@ -537,7 +538,7 @@ export default function WorkoutScreen({
         ))}
       </div>
 
-      {/* A line as an exercise completes (13 Oct): "{name} done · on to {next}". */}
+      {/* A line as an exercise completes (13 Oct): "{name} done, on to {next}". */}
       {toast && (
         <div className="wo-toast" role="status">
           {toast}

@@ -18,6 +18,7 @@ import { pic } from "../lib/pic";
 import type { LinkView } from "../lib/messageLinks";
 import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 import FocusList from "./home/FocusList";
+import { Bars } from "./Bars";
 import type { HomeFocus } from "../lib/focus";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -60,7 +61,7 @@ export type UpcomingMeeting = {
   weekdayCap: string;
   topic: string;
   inLabel: string;
-  /** "Sunday 18:00 · 30 min". */
+  /** "Sunday 18:00 · 30 min": its parts joined by " · ", drawn on screen parted by Bars. */
   whenLabel: string;
   /** The start as a UTC moment (ISO), and how long it runs: the card shows it in the phone's timezone and follows the clock. */
   startIso: string | null;
@@ -494,7 +495,7 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
         </div>
         <div className="hm-mt-main">
           <div className="hm-mt-top">
-            <span className="hm-mt-eyebrow">Next · with {coachFirstName}</span>
+            <span className="hm-mt-eyebrow"><Bars parts={["Next", `with ${coachFirstName}`]} /></span>
             {/* Only Today or Live (17 Oct, Alex): the countdown ("In 6 days") is gone, the date beside it says it. */}
             {(live || shown.inLabel === "Today") && (
               <span className={`hm-mt-pill${live ? " live" : " today"}`} aria-label={pillLabel}>
@@ -504,7 +505,7 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
             )}
           </div>
           <div className="hm-mt-title">{m.topic}</div>
-          <div className="hm-mt-when">{shown.whenLabel}</div>
+          <div className="hm-mt-when"><Bars parts={shown.whenLabel.split(" · ")} /></div>
         </div>
       </div>
       {/* The call's link is always there: Open meeting link before, Join call
@@ -522,7 +523,7 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
       )}
       {recap && (
         <div className="hm-mt-recap">
-          <span className="hm-mt-recap-label">Last meeting · {recap.dateLabel}</span>
+          <span className="hm-mt-recap-label"><Bars parts={["Last meeting", recap.dateLabel]} /></span>
           <RecapFold recap={recap} />
         </div>
       )}

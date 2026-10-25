@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { degreeOf, firstNameOf, type CoachProfileView } from "../lib/coachProfileView";
 import { CalendarIcon, ChevronLeftIcon } from "../components/icons";
 import { pic } from "../lib/pic";
+import { Bars } from "./Bars";
 
 // The coach's profile as the client reads it, pushed over the Account tab,
 // and the same component the coach sees in the admin's live preview. It
@@ -204,7 +205,7 @@ function FullProfile({ profile, onBack, onBook }: { profile: CoachProfileView; o
         <article className="cpf-article">
           <section ref={overviewRef} className="cpf-overview">
             {profile.headline && <h2 className="cpf-headline">{profile.headline}</h2>}
-            <div className="cpf-meta">{["Your coach", profile.location, profile.languages].filter(Boolean).join(" · ")}</div>
+            <div className="cpf-meta"><Bars parts={["Your coach", profile.location, profile.languages]} /></div>
             {pills.length > 0 && (
               <div className="cpf-pills">
                 {pills.map((p) => (

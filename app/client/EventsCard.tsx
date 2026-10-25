@@ -11,6 +11,7 @@ import { useOpenEvents } from "./CheckInContext";
 import { eventTypeOf } from "../lib/eventTypes";
 import { dayOf } from "../lib/eventDates";
 import { TypeIcon } from "./events/AddEventSheet";
+import { Bars } from "./Bars";
 
 // Home's "Events" card (7 Oct): what is coming up in the client's life that
 // the plan should know about: a trip, an injury, the day they started a
@@ -76,7 +77,7 @@ export default function EventsCard({ events, today }: { events: HomeEvents; coac
                 return (
                   <span className="ev-now hm-ev-nowcard" style={style}>
                     <span className="ev-aura" aria-hidden="true" />
-                    <span className="ev-now-eyebrow">Happening now · {t.label}</span>
+                    <span className="ev-now-eyebrow"><Bars parts={["Happening now", t.label]} /></span>
                     <span className="ev-card-row">
                       <span className="ev-card-title">{running.title}</span>
                     </span>

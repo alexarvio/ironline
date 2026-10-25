@@ -39,6 +39,7 @@ import {
   type TrainingFocus,
 } from "./CheckInContext";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
+import { Bars } from "./Bars";
 
 export type AppTab = {
   id: string;
@@ -767,7 +768,7 @@ export default function AppShell({
                       Log out
                     </button>
                   </form>
-                  <span className="app-menu-footnote">NorCoach · Full Potential Coaching</span>
+                  <span className="app-menu-footnote"><Bars parts={["NorCoach", "Full Potential Coaching"]} /></span>
                 </div>
               </nav>
             </>

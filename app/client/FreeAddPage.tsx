@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { LibraryPick } from "./workoutShared";
+import { Bars } from "./Bars";
 
 // A free session's own page (19 Oct, Alex: "an empty canvas"): the next
 // exercise, typed. Matches from the coach's library come up as the name is
@@ -43,7 +44,7 @@ export default function FreeAddPage({
   return (
     <div className="wo-page-inner fa">
       <div className="fa-head">
-        <span className="fa-eyebrow">Rogue session · {count === 0 ? "nothing yet" : `${count} exercise${count === 1 ? "" : "s"}`}</span>
+        <span className="fa-eyebrow"><Bars parts={["Rogue session", count === 0 ? "nothing yet" : `${count} exercise${count === 1 ? "" : "s"}`]} /></span>
         <h2 className="fa-title">Add exercise</h2>
       </div>
       <input

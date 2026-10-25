@@ -9,6 +9,7 @@ import PictureCycle from "./PictureCycle";
 import CheckInDialog, { type CheckInForm } from "./CheckInDialog";
 import { FEATURES } from "../lib/features";
 import { pic } from "../lib/pic";
+import { Bars } from "./Bars";
 
 /** The coach's goals for a phase, none while phase goals are off (23 Oct, Alex: To focus on replaces them). */
 const goalsOf = (ph: HomePhase) => (FEATURES.phaseGoals ? ph.objectives : []);
@@ -61,7 +62,7 @@ export type Progress = {
   p: number;
   /** "Wk 4 of 12", or "Week 4" with no end. */
   weekLabel: string;
-  /** "12 days left", "Last day", "Starts in 3 days", "Ended 2 Sep · waiting on Finlay". */
+  /** "12 days left", "Last day", "Starts in 3 days", "Ended 2 Sep · waiting on Finlay" (its parts joined by " · ", drawn parted by Bars). */
   leftLabel: string | null;
   /** The left label is the faint overdue line rather than the track's ink. */
   overdue: boolean;
@@ -160,7 +161,7 @@ export default function PhaseCards({
 }
 
 function cardLabel(ph: HomePhase, pr: Progress) {
-  return `${TRACK_LABEL[ph.track]} phase: ${ph.name}, ${pr.openEnded ? pr.weekLabel : pr.throughLabel}${pr.leftLabel ? `, ${pr.leftLabel}` : ""}`;
+  return `${TRACK_LABEL[ph.track]} phase: ${ph.name}, ${pr.openEnded ? pr.weekLabel : pr.throughLabel}${pr.leftLabel ? `, ${pr.leftLabel.split(" · ").join(", ")}` : ""}`;
 }
 
 export function Bar({ pr, small }: { pr: Progress; small?: boolean }) {
@@ -420,7 +421,7 @@ export function PhaseCard({ ph, pictures, eager, coachName, today, nextSession, 
               {ph.name}
             </FitTitle>
           </h3>
-          <span className={`pc-left${pr.overdue ? " overdue" : ""}`}>{pr.leftLabel ?? pr.throughLabel}</span>
+          <span className={`pc-left${pr.overdue ? " overdue" : ""}`}><Bars parts={(pr.leftLabel ?? pr.throughLabel).split(" · ")} /></span>
         </div>
         <div className="pc-progress">
           <Bar pr={pr} />
@@ -580,7 +581,7 @@ function PhaseCardStack({ ph, coachName, today, defaultOpen }: { ph: HomePhase; 
           <Bar pr={pr} small />
           <span className="pc-srow">
             <span className="pc-sdates">{ph.end ? `${short(ph.start)} – ${short(ph.end)}` : `Started ${short(ph.start)}`}</span>
-            {pr.leftLabel && <span className={`pc-left${pr.overdue ? " overdue" : ""}`}>{pr.leftLabel}</span>}
+            {pr.leftLabel && <span className={`pc-left${pr.overdue ? " overdue" : ""}`}><Bars parts={pr.leftLabel.split(" · ")} /></span>}
           </span>
         </span>
       </button>

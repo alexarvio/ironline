@@ -9,6 +9,7 @@ import { pic } from "../lib/pic";
 import { useCoachIdentity } from "./CheckInContext";
 import { cleanNumeric, isWholeMetric } from "./CheckInLine";
 import type { CheckInMetric, CheckInSection } from "./CheckInScreen";
+import { Bars } from "./Bars";
 
 // A day's check-in as a centred pop-up (13 Oct, "Rows"): the gym pop-up's
 // language, a sand glow at the top, one bordered row a metric, one navy
@@ -303,7 +304,7 @@ export default function CheckInDialog({
       setToast("Check-in saved");
       setTimeout(onClose, 1500);
     } catch {
-      setToast("Couldn't save · try again");
+      setToast("Couldn't save. Try again");
       setTimeout(() => setToast(null), 2500);
     } finally {
       setPending(false);
@@ -348,7 +349,7 @@ export default function CheckInDialog({
               </span>
             </span>
             <div className="cki-head-text">
-              <span className="cki-eyebrow">{phaseName ? `Lifestyle · ${phaseName}` : "Lifestyle"}</span>
+              <span className="cki-eyebrow"><Bars parts={["Lifestyle", phaseName]} /></span>
               <h2 id="cki-title" className="cki-title">
                 {isToday ? "Today's check-in" : dayLabel(form.date, true)}
               </h2>

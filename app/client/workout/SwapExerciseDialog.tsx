@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { groupColour } from "../../lib/muscleGroups";
 import { pic } from "../../lib/pic";
 import { useKeyboardInset } from "../useKeyboardInset";
+import { Bars } from "../Bars";
 
 // "Swap exercise" (14 Oct, after the New event and gym pop-ups): a centred
 // pop-up, not a sheet. The machine is taken: the client picks one of the
@@ -84,7 +85,7 @@ export default function SwapExerciseDialog({
   const targetLine = useMemo(() => {
     const parts = [`${targets.sets} × ${targets.time ? targets.time : targets.reps || "—"}`];
     if (targets.rpe != null && !targets.time) parts.push(`RPE ${targets.rpe}`);
-    return parts.join(" · ");
+    return parts;
   }, [targets]);
 
   return createPortal(
@@ -109,7 +110,7 @@ export default function SwapExerciseDialog({
 
           <div className="sw-targets">
             <span className="sw-targets-label">Targets carry over</span>
-            <span className="sw-targets-val">{targetLine}</span>
+            <span className="sw-targets-val"><Bars parts={targetLine} /></span>
           </div>
 
           {list.length > 0 && (

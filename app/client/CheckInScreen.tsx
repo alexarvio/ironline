@@ -11,6 +11,7 @@ import CoachCard from "./CoachCard";
 import { useCoachIdentity } from "./CheckInContext";
 import ActivityCalendar, { type ActivityDay } from "./ActivityCalendar";
 import { landOnSoon } from "../lib/landOn";
+import { Bars } from "./Bars";
 
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx for why
 // a "use client" file importing queries.ts breaks the dev server). All data
@@ -183,7 +184,7 @@ export default function CheckInScreen({
         {/* One height on all three views (23 Oct, Alex: the photo jumped as Progress made it taller). */}
         <header className="tr-banner ci-banner">
           {pictures && pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
-          <div className="tr-kicker">{["Daily", weeklyOpen ? "weekly" : null, monthlyOpen && sections.some((s) => s.id === "monthly") ? "monthly" : null].filter(Boolean).join(" · ")}</div>
+          <div className="tr-kicker"><Bars parts={["Daily", weeklyOpen && "weekly", monthlyOpen && sections.some((s) => s.id === "monthly") && "monthly"]} /></div>
           <FitTitle className="tr-name">{dateLabel}</FitTitle>
           <div className="tr-weeks ci-views" role="tablist" aria-label="Check-in">
             {(["today", "progress", "calendar"] as const).map((v) => (

@@ -6,6 +6,7 @@ import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import type { VideoAsk } from "./VideoAskSheet";
 import type { GymOption } from "./GymPickerDialog";
+import { Bars } from "./Bars";
 
 // What the client's Training tab, a session's overview and the workout all
 // share: the shapes the server page hands over, the unit rules, and the
@@ -242,13 +243,13 @@ export function CoachNote({ assignmentId, note }: { assignmentId: number | null;
 // Cardio: the targets as tiles, the coach's note, one button to tick it
 // off, a second tap to undo. Bike taken: Swap says what was done instead
 // (the coach's alternatives, or typed), which ticks it off too (28 Sep).
-export function CardioCard({ cardio, index, readOnly = false, coachName = "Your coach", sessionLabel = null, position = null, free = false, nextName = null, onNext }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: string | null; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean; /** What comes after it, for the line on the way there. */ nextName?: string | null; /** On to what's next, as an exercise moves on once its last set is in (23 Oct, Alex: Done on a cardio stayed put). */ onNext?: (line?: string) => void }) {
+export function CardioCard({ cardio, index, readOnly = false, coachName = "Your coach", sessionLabel = null, position = null, free = false, nextName = null, onNext }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: React.ReactNode; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean; /** What comes after it, for the line on the way there. */ nextName?: string | null; /** On to what's next, as an exercise moves on once its last set is in (23 Oct, Alex: Done on a cardio stayed put). */ onNext?: (line?: string) => void }) {
   const [pending, startTransition] = useTransition();
   // Marked done: 1.4s, as an exercise's last set, then on to the next; taking it back in that time stays here.
   const nextTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestNext = useRef({ onNext, line: nextName ? `${cardio.swap ?? cardio.name} done · on to ${nextName}` : undefined });
+  const latestNext = useRef({ onNext, line: nextName ? `${cardio.swap ?? cardio.name} done, on to ${nextName}` : undefined });
   useEffect(() => {
-    latestNext.current = { onNext, line: nextName ? `${cardio.swap ?? cardio.name} done · on to ${nextName}` : undefined };
+    latestNext.current = { onNext, line: nextName ? `${cardio.swap ?? cardio.name} done, on to ${nextName}` : undefined };
   });
   useEffect(
     () => () => {
@@ -289,11 +290,14 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
     <div className={`wo-cardio${done ? " done" : ""}`} data-index={index}>
       <div className="wo-ex-head">
         <div className="wo-eyebrow">
-          {sessionLabel && <span className="wo-eyebrow-session">{sessionLabel}</span>}
-          <span className="wo-eyebrow-count">
-            {sessionLabel ? "· " : ""}
-            {position ? `Cardio ${position.n} of ${position.total}` : "Cardio"}
-          </span>
+          <Bars
+            parts={[
+              sessionLabel && <span key="s" className="wo-eyebrow-session">{sessionLabel}</span>,
+              <span key="c" className="wo-eyebrow-count">
+                {position ? `Cardio ${position.n} of ${position.total}` : "Cardio"}
+              </span>,
+            ]}
+          />
         </div>
         <div className="wo-ex-top">
           <h2 className="wo-ex-name">{cardio.swap ?? cardio.name}</h2>
@@ -430,7 +434,7 @@ export function SkipReason({ dayId, text, onSaved }: { dayId: number; text: stri
   }
   return text ? (
     <button type="button" className="ts-skip said" onClick={() => setEditing(true)}>
-      <span className="ts-skip-label">Couldn&rsquo;t train{saving ? " · saving…" : ""}</span>
+      <span className="ts-skip-label"><Bars parts={["Couldn’t train", saving && "saving…"]} /></span>
       <span className="ts-skip-text">{text}</span>
     </button>
   ) : (

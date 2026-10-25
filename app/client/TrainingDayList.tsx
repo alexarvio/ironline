@@ -307,8 +307,7 @@ export default function TrainingDayList({
                                   <Bars parts={[`Set ${l.setNumber}`, l.setNumber > ex.sets && "Extra"]} />
                                 </span>
                                 <span className="tr-x-v">
-                                  {l.weight != null ? `${roundTo(l.weight, 2)} kg` : "–"} × {l.reps ?? "–"}
-                                  {l.rpe != null && <small> · RPE {l.rpe}</small>}
+                                  <Bars parts={[`${l.weight != null ? `${roundTo(l.weight, 2)} kg` : "–"} × ${l.reps ?? "–"}`, l.rpe != null && <small key="r">RPE {l.rpe}</small>]} />
                                 </span>
                               </span>
                             ))
@@ -436,7 +435,7 @@ export default function TrainingDayList({
             const minutes = openDay.startedAt ? Math.max(1, Math.round((Date.now() - Date.parse(openDay.startedAt)) / 60000)) : null;
             const sets = loggedSets(openDay);
             setView(null);
-            setToast({ title: `${openDay.title} saved`, sub: `${minutes != null ? `${minutes} min · ` : ""}${sets} set${sets === 1 ? "" : "s"} · ${coachName} can see it now` });
+            setToast({ title: `${openDay.title} saved`, sub: `${minutes != null ? `${minutes} min, ` : ""}${sets} set${sets === 1 ? "" : "s"}. ${coachName} can see it now` });
           }}
           onDiscarded={() => {
             // A free session discarded is gone, not put back as unstarted.

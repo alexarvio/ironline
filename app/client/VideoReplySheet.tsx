@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { markVideoReplySeenAction } from "../lib/actions";
+import { Bars } from "./Bars";
 
 // The coach's reply to a video the client sent: their comment and their
 // video (often a screen recording of the client's, drawn over), with the
@@ -34,7 +35,7 @@ export function VideoReplyBody({ reply }: { reply: VideoReplyView }) {
   }, [reply.id, reply.seen]);
   return (
     <div className="vr-reply">
-      <span className="vr-reply-label">Your coach replied · {day(reply.repliedAt)}</span>
+      <span className="vr-reply-label"><Bars parts={["Your coach replied", day(reply.repliedAt)]} /></span>
       {reply.replySrc && <video className="vr-sheet-video" src={reply.replySrc} controls playsInline preload="metadata" />}
       {reply.replyNote && <p className="vr-reply-note">{reply.replyNote}</p>}
     </div>

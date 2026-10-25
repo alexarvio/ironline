@@ -8,6 +8,7 @@ import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
 import { CoachNote, shownName, type SessionExercise } from "./workoutShared";
 import CoachMark from "./CoachMark";
+import { Bars } from "./Bars";
 
 // One exercise, as a page of the workout (13 Oct, "Stepper sheet"): logging
 // is the whole screen. The sets card holds one row a set; exactly one is
@@ -65,8 +66,8 @@ export default function ExercisePage({
   exercise: SessionExercise;
   index: number;
   total: number;
-  /** The session's name, for the eyebrow ("Pull · Exercise 1 of 6"). */
-  sessionLabel?: string;
+  /** The session's name, for the eyebrow ("Pull | Exercise 1 of 6"). */
+  sessionLabel?: React.ReactNode;
   gymId: number | null;
   coachName: string;
   coachPhoto?: string | null;
@@ -272,9 +273,9 @@ export default function ExercisePage({
   // and names sit in a ref, so the timer survives the re-renders of the
   // save landing and the server's refresh (13 Oct: they used to cancel it).
   const doneSeen = useRef(allDone);
-  const latest = useRef({ onNext, line: nextName ? `${shownName(exercise)} done · on to ${nextName}` : undefined });
+  const latest = useRef({ onNext, line: nextName ? `${shownName(exercise)} done, on to ${nextName}` : undefined });
   useEffect(() => {
-    latest.current = { onNext, line: nextName ? `${shownName(exercise)} done · on to ${nextName}` : undefined };
+    latest.current = { onNext, line: nextName ? `${shownName(exercise)} done, on to ${nextName}` : undefined };
   });
   const jumpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -474,10 +475,14 @@ export default function ExercisePage({
     <div className="wo-page-inner lw" data-ex={exercise.id}>
       <div className="wo-ex-head">
         <div className="wo-eyebrow">
-          {sessionLabel && <span className="wo-eyebrow-session">{sessionLabel}</span>}
-          <span className="wo-eyebrow-count">
-            {sessionLabel ? "· " : ""}Exercise {index} of {total}
-          </span>
+          <Bars
+            parts={[
+              sessionLabel && <span key="s" className="wo-eyebrow-session">{sessionLabel}</span>,
+              <span key="c" className="wo-eyebrow-count">
+                Exercise {index} of {total}
+              </span>,
+            ]}
+          />
         </div>
         <div className="wo-ex-top">
           <h2 key={exercise.id} className="wo-ex-name">{shownName(exercise)}</h2>
@@ -667,7 +672,7 @@ export default function ExercisePage({
         <button type="button" className="lw-addset" onClick={addSet}>
           + Add a set
         </button>
-        {failed && <div className="lw-offline">Couldn&rsquo;t save · trying again on your next change</div>}
+        {failed && <div className="lw-offline">Couldn&rsquo;t save. Trying again on your next change</div>}
       </div>
 
       {swapped ? null : noteOpen ? (

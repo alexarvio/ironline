@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { saveProgramNoteAction } from "../lib/actions";
 import { ChatIcon } from "../components/icons";
+import { Bars } from "./Bars";
 
 // The client's note to the coach about the programme as a whole: how it is
 // feeling, what is not working, what they want more of. One per programme,
@@ -118,8 +119,7 @@ export default function ProgramNote({
     <div className="tr-note tr-note-saved">
       <div className="tr-note-head">
         <span className="tr-note-label">
-          Your note to {coachName}
-          {note?.dateLabel ? ` · ${note.dateLabel}` : ""}
+          <Bars parts={[`Your note to ${coachName}`, note?.dateLabel]} />
         </span>
         <button type="button" className="tr-note-edit" onClick={open}>
           Edit

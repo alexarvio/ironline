@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { landOnSoon } from "../lib/landOn";
 import { ChevronLeftIcon, ChevronRightIcon } from "../components/icons";
+import { Bars } from "./Bars";
 
 // The client's invoices from their coach: the ones still to pay first, then
 // the paid ones. A row opens the invoice itself, to read, print or save as
@@ -43,7 +44,7 @@ export default function InvoicesScreen({ invoices, onBack, focusId = null }: Inv
             <span className="mts-row-text">
               <span className="mts-row-title">{i.what}</span>
               <span className="mts-row-sub">
-                {i.number} · <span className={`inv-state ${i.state}`}>{i.stateLabel}</span>
+                <Bars parts={[i.number, <span key="s" className={`inv-state ${i.state}`}>{i.stateLabel}</span>]} />
               </span>
             </span>
             <span className="inv-total">{i.total}</span>

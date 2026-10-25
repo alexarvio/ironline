@@ -177,7 +177,7 @@ export default function SessionOverview({
         )}
         </div>
         <div className="so-kicker">
-          Week {day.week} · Session {day.index}
+          <Bars parts={[`Week ${day.week}`, `Session ${day.index}`]} />
         </div>
         <div className="so-title-row">
           <h1 className="so-title">{day.title}</h1>
@@ -192,7 +192,7 @@ export default function SessionOverview({
         {(status === "skipped" || status === "missed") && (
         <p className="so-sub">
           {status === "skipped"
-            ? `Couldn't train · ${day.skipReason}`
+            ? <Bars parts={["Couldn't train", day.skipReason]} />
             : status === "missed"
             ? "Not done that week."
             : null}
@@ -254,7 +254,9 @@ export default function SessionOverview({
         <div className="so-cta">
           {live ? (
             <button type="button" className="so-start" onClick={onResume}>
-              Resume · {clock(ms)}
+              <span>
+                <Bars parts={["Resume", clock(ms)]} />
+              </span>
             </button>
           ) : (
             <>

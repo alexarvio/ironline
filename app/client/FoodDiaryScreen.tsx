@@ -35,6 +35,7 @@ import { useTween } from "./NutritionTargetsCard";
 import BarcodeScanner from "./BarcodeScanner";
 import PictureCycle from "./PictureCycle";
 import { landOn } from "../lib/landOn";
+import { Bars } from "./Bars";
 
 // The client's food diary, opened from the ring on Nutrition. On the client
 // page model: the top bar (a back arrow in place of the burger) floating
@@ -121,7 +122,8 @@ const g = (v: number) => (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round
 const G_PER_OZ = 28.349523125;
 const ML_PER_FL_OZ = 29.5735295625;
 const ML_PER_CUP = 236.5882365;
-const amountLabel = (e: { grams: number; serving: string | null }) => (e.serving ? `${e.serving} · ${g(e.grams)} g` : `${g(e.grams)} g`);
+/** A row's amount, its parts for Bars: the portion when there is one, then the grams. */
+const amountParts = (e: { grams: number; serving: string | null }) => [e.serving, `${g(e.grams)} g`];
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const addDays = (date: string, days: number) => {
   const d = new Date(`${date}T00:00:00`);
@@ -764,7 +766,7 @@ export default function FoodDiaryScreen({
                     </>
                   ) : logged != null ? (
                     <>
-                      <b>{n(total)} kcal</b> eaten · {n(logged)} logged
+                      <Bars parts={[<><b>{n(total)} kcal</b> eaten</>, `${n(logged)} logged`]} />
                     </>
                   ) : (
                     <>
@@ -1189,7 +1191,7 @@ export default function FoodDiaryScreen({
                           <span className="fdi-row-main">
                             <span className="fdi-row-name">{e.name}</span>
                             <span className="fdi-row-amount">
-                              {amountLabel(e)} · {n(e.kcal)} kcal
+                              <Bars parts={[...amountParts(e), `${n(e.kcal)} kcal`]} />
                             </span>
                           </span>
                         </button>
@@ -1415,13 +1417,7 @@ function MacroRow({ id, eaten, goal }: { id: (typeof MACROS)[number]; eaten: num
           )}
         </div>
         <div className="nd-macro-name">
-          {NAME[id]}
-          {goal != null && (
-            <>
-              {" · "}
-              <span className="nd-macro-of">of {n(goal)} g</span>
-            </>
-          )}
+          <Bars parts={[NAME[id], goal != null && <span className="nd-macro-of">of {n(goal)} g</span>]} />
         </div>
       </div>
     </div>

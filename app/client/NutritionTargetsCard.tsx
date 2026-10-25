@@ -4,6 +4,7 @@ import { ReactNode, useRef, useState } from "react";
 import PictureCycle from "./PictureCycle";
 import { useOpenFood } from "./CheckInContext";
 import { useTween } from "../components/useTween";
+import { Bars } from "./Bars";
 
 // The top of the client's Nutrition tab: the banner (Training day / Rest day
 // tabs, the phase; the app's top bar floats over its top) and the calories card overlapping it (the
@@ -172,10 +173,14 @@ export default function NutritionTargetsCard({
                         <small>g</small>
                       </div>
                       <div className="nd-macro-name">
-                        {m.name} ·{" "}
-                        <span className="nd-macro-share" style={{ color: HUE[m.id] }}>
-                          <Tween value={m.share * 100} format={(v) => String(Math.round(v))} />%
-                        </span>
+                        <Bars
+                          parts={[
+                            m.name,
+                            <span key="s" className="nd-macro-share" style={{ color: HUE[m.id] }}>
+                              <Tween value={m.share * 100} format={(v) => String(Math.round(v))} />%
+                            </span>,
+                          ]}
+                        />
                       </div>
                     </div>
                   </div>

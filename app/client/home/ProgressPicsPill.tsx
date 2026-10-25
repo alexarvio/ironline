@@ -3,6 +3,7 @@
 import type React from "react";
 import { useOpenPhotos } from "../CheckInContext";
 import type { ProgressPics } from "../ProgressPicsCard";
+import { Bars } from "../Bars";
 
 // Home's progress pictures row as a hairline pill (16 Oct): a thin ring with
 // one segment per photo the coach asks for, filling in rust as they upload,
@@ -37,7 +38,7 @@ export default function ProgressPicsPill({ pics }: { pics: NonNullable<ProgressP
   const n = Math.max(1, pics.total);
   const k = Math.min(n, pics.uploaded);
   const state: "due" | "progress" | "done" = done ? "done" : k > 0 ? "progress" : "due";
-  const label = state === "done" ? "Completed" : state === "progress" ? `In progress · ${k} of ${n}` : `Due today · 0 of ${n}`;
+  const label = state === "done" ? "Completed" : <Bars parts={state === "progress" ? ["In progress", `${k} of ${n}`] : ["Due today", `0 of ${n}`]} />;
   const button = state === "done" ? "View" : state === "progress" ? "Continue" : "Start";
   const spoken = state === "done" ? "Shape update, completed. View." : state === "progress" ? `Shape update, in progress, ${k} of ${n}. Continue.` : `Shape update, due today, 0 of ${n}. Start.`;
   return (

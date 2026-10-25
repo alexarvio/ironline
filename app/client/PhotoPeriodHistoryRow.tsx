@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import PhotoDeck from "./PhotoDeck";
+import { Bars } from "./Bars";
 import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
 
 type Photo = { slotId: number; label: string; src: string | null };
@@ -74,8 +75,7 @@ export default function PhotoPeriodHistoryRow({
         <span className="pp-app-past-text">
           <span className="pp-app-past-title">{title}</span>
           <span className="pp-app-past-meta">
-            {done ? <b className="pp-app-past-done">All {photos.length} sent</b> : <>{inCount} of {photos.length}</>}
-            {!done && metaExtra && ` · ${metaExtra}`}
+            <Bars parts={[done ? <b key="d" className="pp-app-past-done">All {photos.length} sent</b> : `${inCount} of ${photos.length}`, !done && metaExtra]} />
           </span>
         </span>
         <span className={`pp-app-past-chevron${open ? " open" : ""}`} aria-hidden="true">

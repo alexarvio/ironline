@@ -104,6 +104,7 @@ import type { ProgressPics } from "./ProgressPicsCard";
 import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
 import CoachCard from "./CoachCard";
 import FitTitle from "./FitTitle";
+import { Bars } from "./Bars";
 import PictureCycle from "./PictureCycle";
 import PhaseObjectives from "./PhaseObjectives";
 import { FEATURES } from "../lib/features";
@@ -620,8 +621,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                 </div>
                 {/* No "N sessions left" (17 Oct, Alex): the figure and the ring say it. Only a complete week or an unfinished session gets a line. */}
                 {(() => {
-                  const line = [sessionsLeft <= 0 && !unfinished ? "Week complete" : null, unfinished ? `${unfinished} unfinished` : null].filter(Boolean).join(" · ");
-                  return line ? <div className={`tr-days-status${sessionsLeft <= 0 && !unfinished ? " done" : ""}`}>{line}</div> : null;
+                  const line = [sessionsLeft <= 0 && !unfinished ? "Week complete" : null, unfinished ? `${unfinished} unfinished` : null].filter(Boolean);
+                  return line.length > 0 ? <div className={`tr-days-status${sessionsLeft <= 0 && !unfinished ? " done" : ""}`}><Bars parts={line} /></div> : null;
                 })()}
               </div>
               {/* Green once the week is complete, like a finished session's pill. */}
@@ -1068,9 +1069,9 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         : null,
     };
   });
-  // "1 new · 3 saved" while anything is unopened, otherwise just the count.
+  // "1 new | 3 saved" while anything is unopened, otherwise just the count.
   const newReportCount = reports.filter((r) => r.isNew).length;
-  const reportCountLabel = `${newReportCount > 0 ? `${newReportCount} new · ` : ""}${reports.length} saved`;
+  const reportCountLabel = <Bars parts={[newReportCount > 0 && `${newReportCount} new`, `${reports.length} saved`]} />;
 
   // Weekly summary and the units toggle are out for now: the summary is
   // not built, and the units live on the Kg | Lbs switch in a session.
@@ -1194,7 +1195,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           Log out
         </button>
       </form>
-      <div className="settings-footnote">NorCoach · Full Potential Coaching</div>
+      <div className="settings-footnote"><Bars parts={["NorCoach", "Full Potential Coaching"]} /></div>
       </div>
     </div>
   );
