@@ -37,6 +37,8 @@
 .rd.rfd .rfd-act { display: flex; justify-content: flex-end; min-width: 0; }
 .rd.trn.rfd .rfd-act .trn-pill { background: #fff; text-decoration: none; }
 .rd.rfd .rfd-more { display: flex; justify-content: flex-end; }
+/* Done in one click (25 Oct, Alex): the round row button with a check, green under the pointer. */
+.rd.rfd .rfd-done:hover { color: #2f7a3f; }
 
 /* ---- Activity: the date, the time centred in its own column, the client, the kind's icon, the thing in body grey
    and the client's own words grey after it on the one line. New and Earlier as small caps inside the card. */

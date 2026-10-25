@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { dismissHomeActionAction } from "../../../lib/actions";
 import { Toaster } from "../../../components/ui/toast";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { CalendarIcon, ChatIcon, CheckIcon, EyeIcon, LockIcon, MoreIcon, PlayIcon, PlusIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, CheckIcon, EyeIcon, LockIcon, PlayIcon, PlusIcon } from "../../../components/icons";
 import Pager from "../Pager";
 import KindMark from "../KindMark";
 import { logDate, logDateWidth } from "../../../lib/dayMonth";
@@ -180,17 +179,20 @@ function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
                       </Link>
                     </span>
                     <span className="rfd-more">
+                      {/* Done in one click (25 Oct, Alex: the ⋯ held only Done): the round row button with a check. */}
                       {n.dismissId && (
-                        <DropdownMenu modal={false}>
-                          <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${n.client}: ${n.what}`}>
-                            <MoreIcon />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="pb-menu">
-                            <DropdownMenuItem onSelect={() => done(n)}>
-                              <CheckIcon /> Done
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <button
+                          type="button"
+                          className="trn-row-more rfd-done"
+                          title="Done"
+                          aria-label={`Done: ${n.client}, ${n.what}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            done(n);
+                          }}
+                        >
+                          <CheckIcon />
+                        </button>
                       )}
                     </span>
                   </div>
