@@ -9708,10 +9708,14 @@ export function sessionAnswers(day: ProgramDay): SessionAnswer[] {
   return old;
 }
 
-/** Answered by the workout, so not asked in the check-in: named for a question this client is asked with a number. */
-export function workoutFed(clientId: number, name: string): boolean {
-  const kind = metricFromWorkout(name);
-  return !!kind && getWorkoutQuestions(clientId).some((q) => q.id === kind && q.kind !== "text");
+/** Answered by the workout, so not asked in the check-in. Since 25 Oct, Alex ("if it is asked on daily it should be shown
+    there, if it is asked on the questionnaire it should be shown there"): never. A metric the coach asks in a check-in
+    is asked there and holds the client's own answer; the workout questionnaire's answers stay with the session. The
+    two no longer hide or write each other; what the workout wrote before stays. */
+export function workoutFed(_clientId: number, _name: string): boolean {
+  void _clientId;
+  void _name;
+  return false;
 }
 
 /** The client ended the session, with a word to the coach or not, and the questionnaire's answers. */
