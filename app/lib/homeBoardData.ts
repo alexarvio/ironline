@@ -2,7 +2,7 @@
 // Home tab, and the note of when the coach looked, so "Since 18/10" counts from the visit before this one.
 // Never throws: a client with no programme, no phases, no weight and no logs gets nulls and zeros.
 
-import type { ConsistencyDay, ConsistencyWeek, HomeBoard, MuscleGroup, MuscleWindow, PerGroup, StrengthWindow } from "./homeBoard";
+import type { ConsistencyDay, HomeBoard, MuscleGroup, MuscleWindow, PerGroup, StrengthWindow } from "./homeBoard";
 import { getData, persist, type Data, type PhaseTrack } from "./db";
 import {
   coachGroups,
@@ -307,7 +307,8 @@ export function getHomeBoard(clientId: number): HomeBoard {
     strength: part("strength", () => strengthOf(ctx), empty.strength),
     weight: part("weight", () => weightOf(ctx), null),
     days: part("days", () => thirtyDaysOf(ctx), empty.days),
-    phaseDays: part("phaseDays", () => phaseDaysOf(ctx), null),
+    // The phase span is gone from Consistency (25 Oct, Alex): the last 30 days alone.
+    phaseDays: null,
   };
 }
 
@@ -792,64 +793,6 @@ function thirtyDaysOf(ctx: Ctx): HomeBoard["days"] {
   for (let d = addDays(ctx.today, 1); dates.length + ahead.length < CONSISTENCY_DAYS; d = addDays(d, 1)) ahead.push({ date: d, trained: false, food: false, checkIn: false, future: true });
   return [...daysOf(ctx, dates), ...ahead];
 }
-
-/** The phase for the consistency strip: the live ones together, from the earliest first day to the latest last day.
-    Up to 8 weeks it goes by day, from its first day (at most 120 days back) to today; longer, by week (21 Oct, Alex). */
-const PHASE_DAYS_MAX = 120;
-const PHASE_BY_DAY_MAX = 56;
-const PHASE_WEEKS_MAX = 53;
-function phaseDaysOf(ctx: Ctx): HomeBoard["phaseDays"] {
-  const live = [ctx.phases.lifestyle, ctx.phases.training, ctx.phases.nutrition].filter((p): p is PhaseRow => !!p && p.start_week <= ctx.today);
-  if (!live.length) return null;
-  const starts = live.map((p) => p.start_week).sort();
-  const ends = live.map((p) => phaseLastDay(p.end_week)).sort();
-  const first = starts[0];
-  const last = ends[ends.length - 1] < ctx.today ? ctx.today : ends[ends.length - 1];
-  if (daysBetween(first, last) + 1 > PHASE_BY_DAY_MAX) return { since: first, by: "week", weeks: weeksOf(ctx, first, last) };
-  const floor = addDays(ctx.today, -(PHASE_DAYS_MAX - 1));
-  const since = first < floor ? floor : first;
-  const dates: string[] = [];
-  for (let d = since; d <= ctx.today; d = addDays(d, 1)) dates.push(d);
-  // Always 30 at least: a young phase runs on into the days still to come, empty, filling in as they pass.
-  const ahead: ConsistencyDay[] = [];
-  for (let d = addDays(ctx.today, 1); dates.length + ahead.length < CONSISTENCY_DAYS; d = addDays(d, 1)) ahead.push({ date: d, trained: false, food: false, checkIn: false, future: true });
-  return { since, by: "day", days: [...daysOf(ctx, dates), ...ahead] };
-}
-
-/** Every week (Monday to Sunday) of a long phase, the weeks to come included: of its days in the phase up to today, how
-    many had each. Over a year, the 53 weeks up to this one. */
-function weeksOf(ctx: Ctx, since: string, until: string): ConsistencyWeek[] {
-  const firstMonday = weekStart(since);
-  const thisMonday = weekStart(ctx.today);
-  let from = firstMonday;
-  const yearBack = addDays(thisMonday, -7 * (PHASE_WEEKS_MAX - 1));
-  if (from < yearBack) from = yearBack;
-  const weeks: ConsistencyWeek[] = [];
-  for (let monday = from; monday <= until && weeks.length < PHASE_WEEKS_MAX; monday = addDays(monday, 7)) {
-    const week = Math.round(daysBetween(firstMonday, monday) / 7) + 1;
-    if (monday > ctx.today) {
-      weeks.push({ start: monday, week, days: 0, trained: 0, food: 0, checkIn: 0, future: true });
-      continue;
-    }
-    const dates: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = addDays(monday, i);
-      if (d >= since && d <= until && d <= ctx.today) dates.push(d);
-    }
-    const flags = daysOf(ctx, dates);
-    weeks.push({
-      start: monday,
-      week,
-      days: dates.length,
-      trained: flags.filter((f) => f.trained).length,
-      food: flags.filter((f) => f.food).length,
-      checkIn: flags.filter((f) => f.checkIn).length,
-    });
-  }
-  return weeks;
-}
-
-// ---- The coach's look -------------------------------------------------------------------------------
 
 /**
  * The coach has this client on screen (loadHome, any of their tabs): a look more than 30 minutes after the last starts a

@@ -297,7 +297,7 @@ export default function HomeDraft({
 
       {/* ---- Consistency, and beside it the calls and the invoices, each a card that opens its tab. */}
       <div className="rh-trio">
-        <ConsistencyCard days={board.days} phaseDays={board.phaseDays} />
+        <ConsistencyCard days={board.days} />
         <MeetingsCard next={board.nextCall} last={board.lastCall} onOpen={() => onOpenTab("meetings")} />
         <InvoicesCard owed={board.outstanding} paid={board.lastPaid} next={board.nextInvoice} onOpen={() => onOpenTab("invoices")} />
       </div>
@@ -1057,77 +1057,38 @@ function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: 
   );
 }
 
-// ---- Consistency: the last 30 days or the phase (as the server sends them), a square a day (a week, in a long phase) per behaviour. A day done wears its
-// track as a phase does (21 Oct, Alex): the colour soft inside, its full strength on the edge; a day not done is grey.
-// The rows in the tracks' order (21 Oct, Alex): Check-in, Trained, Food, each named by its track's icon alone.
+// ---- Consistency: the last 30 days (25 Oct, Alex: the Phase span dropped; a week a square read as a day, and the phases'
+// lengths differ), a square a day per behaviour. A day done wears its track as a phase does (21 Oct, Alex): the colour
+// soft inside, its full strength on the edge; a day not done is grey. The rows in the tracks' order (21 Oct, Alex):
+// Check-in, Trained, Food, each named by its track's icon alone.
 const CONS: { key: "trained" | "food" | "checkIn"; label: string; track: PhaseTrack; yes: string; no: string }[] = [
   { key: "checkIn", label: "Check-in", track: "lifestyle", yes: "checked in", no: "no check-in" },
   { key: "trained", label: "Trained", track: "training", yes: "trained", no: "no session" },
   { key: "food", label: "Food", track: "nutrition", yes: "food logged", no: "no food logged" },
 ];
-function ConsistencyCard({ days: last30, phaseDays }: { days: HomeBoard["days"]; phaseDays: HomeBoard["phaseDays"] }) {
-  // 30 days | Phase (21 Oct, Alex): the phase from its first day, at least 30 squares (days to come stay empty). A phase
-  // over 8 weeks goes by week (21 Oct, Alex: 180 days won't fit), a square a week, stronger the more days were done.
-  const [span, setSpan] = useState<"30" | "phase">("30");
-  const weeks = span === "phase" && phaseDays?.by === "week" ? phaseDays.weeks : null;
-  const days = weeks ? [] : span === "phase" && phaseDays?.by === "day" ? phaseDays.days : last30;
-  const count = weeks ? weeks.length : days.length;
-  // Evenly spaced, no gap before a Monday (21 Oct, Alex): the two spans start on different weekdays, and the gaps moved
-  // the squares when switching between them.
+function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
   return (
     <section className="rls-card rh-panel rh-cons" aria-label="Consistency">
       <div className="rh-panel-head">
         <h2 className="rh-panel-title">Consistency</h2>
-        <span className="rh-cons-tools">
-          {phaseDays ? (
-            <span className="rd-btn-group" role="group" aria-label="Span">
-              {([
-                ["30", "30 days"],
-                ["phase", "Phase"],
-              ] as const).map(([id, word]) => (
-                <button key={id} type="button" className={span === id ? "on" : ""} aria-pressed={span === id} onClick={() => setSpan(id)}>
-                  {word}
-                </button>
-              ))}
-            </span>
-          ) : (
-            days.length > 0 && <span className="rh-panel-aside">Last {days.length} days</span>
-          )}
-        </span>
       </div>
-      {count === 0 ? (
+      {days.length === 0 ? (
         <p className="rls-none">None yet</p>
       ) : (
         <div className="rh-cons-rows">
           {CONS.map((c) => {
             const color = TRACK_ACCENT[c.track];
-            let said: string;
-            if (weeks) {
-              const past = weeks.filter((w) => !w.future);
-              said = `${c.label}: ${past.reduce((n, w) => n + w[c.key], 0)} of ${past.reduce((n, w) => n + w.days, 0)} days, over ${past.length} ${past.length === 1 ? "week" : "weeks"}`;
-            } else {
-              const past = days.filter((d) => !d.future);
-              said = `${c.label}: ${past.filter((d) => d[c.key]).length} of ${past.length} days`;
-            }
+            const past = days.filter((d) => !d.future);
+            const said = `${c.label}: ${past.filter((d) => d[c.key]).length} of ${past.length} days`;
             return (
               <div key={c.key} className="rh-cons-row" style={{ "--rh-c": color, "--rh-t": tintOf(color, 0.18) } as CSSProperties}>
                 <span className="rh-cons-label" title={c.label} aria-hidden="true">
                   <TrackIcon track={c.track} size={16} />
                 </span>
                 <span className="rh-cons-days" role="img" aria-label={said}>
-                  {weeks
-                    ? weeks.map((w) => {
-                        const head = `Week ${w.week} (${dayMonth(w.start)})`;
-                        if (w.future) return <span key={w.start} className="rh-day ahead" title={`${head}: to come`} />;
-                        const n = w[c.key];
-                        // The share of the week's days done sets the fill and the edge: a full week strongest.
-                        const f = w.days ? n / w.days : 0;
-                        const look = n ? { background: tintOf(color, 0.05 + 0.2 * f), boxShadow: `inset 0 0 0 1.5px ${tintOf(color, 0.3 + 0.7 * f)}` } : undefined;
-                        return <span key={w.start} className="rh-day" style={look} title={`${head}: ${c.yes} on ${n} of ${w.days} ${w.days === 1 ? "day" : "days"}`} />;
-                      })
-                    : days.map((d) => (
-                        <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${d.future ? " ahead" : ""}`} title={d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />
-                      ))}
+                  {days.map((d) => (
+                    <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${d.future ? " ahead" : ""}`} title={d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />
+                  ))}
                 </span>
               </div>
             );
