@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { addCalendarEntryAction, updateCalendarEntryAction } from "../lib/actions";
 import { TRAINING_ICON } from "../lib/eventTypes";
@@ -123,6 +123,17 @@ export default function EntrySheet({
   const endMin = toMin(time) + length;
   // Only a Client call has a link; one typed that isn't a link yet holds Save back, as the laptop's link pop-up.
   const withLink = isClientCall(cat);
+  // One height whatever the category (25 Oct, Alex: "the toggle for the categories is always in the same place"): the
+  // form is measured once with every row in, before it is painted, and keeps that height; a category with fewer rows
+  // leaves the room under the note, Cancel and Add staying at the foot. The tiles never move.
+  const form = useRef<HTMLDivElement>(null);
+  const [measuring, setMeasuring] = useState(true);
+  const [fullH, setFullH] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (!measuring || !form.current) return;
+    setFullH(form.current.scrollHeight);
+    setMeasuring(false);
+  }, [measuring]);
   const linkBad = withLink && !!link.trim() && callLink(link) == null;
   const ok = !!date && (allDay || !!time) && !linkBad;
   // A client picked with no title yet: the laptop's suggestion, kept when nothing is typed.
@@ -270,7 +281,7 @@ export default function EntrySheet({
 
   return (
     <Sheet onClose={onClose} label={e ? "Edit entry" : "New entry"} className="tall">
-      <div className="cph-ent">
+      <div className="cph-ent" ref={form} style={fullH ? ({ "--ent-h": `${fullH}px` } as React.CSSProperties) : undefined}>
         <h2 className="cph-ent-title">{e ? "Edit entry" : "New entry"}</h2>
 
         <span className="cph-ent-label">Category</span>
@@ -293,7 +304,7 @@ export default function EntrySheet({
 
         {/* With on a Client call or Training alone (23 Oct, Alex); on any other category it keeps its room unseen (not
             read out, not reached), so tapping tiles never makes the sheet jump, as the laptop's pop-up. */}
-        <div className={`cph-ent-withrow${withClient ? "" : " off"}`} aria-hidden={withClient ? undefined : true} inert={!withClient}>
+        <div className={`cph-ent-withrow${withClient || measuring ? "" : " off"}`} aria-hidden={withClient ? undefined : true} inert={!withClient}>
           <span className="cph-ent-label">With</span>
           <button type="button" className="cph-ent-box cph-ent-with" onClick={() => setPage("with")}>
             {client ? (
@@ -313,7 +324,7 @@ export default function EntrySheet({
 
         {/* Link on a Client call alone (25 Oct, Alex), its room kept unseen on the rest as With's. One not a link yet says
             so on its label's line and rings the box rust, so nothing under it moves. */}
-        <div className={`cph-ent-withrow${withLink ? "" : " off"}`} aria-hidden={withLink ? undefined : true} inert={!withLink}>
+        <div className={`cph-ent-withrow${withLink || measuring ? "" : " off"}`} aria-hidden={withLink ? undefined : true} inert={!withLink}>
           <label className="cph-ent-label cph-ent-labelrow" htmlFor="cph-ent-link">
             Link
             {linkBad && <span className="cph-ent-bad">Not a link yet</span>}

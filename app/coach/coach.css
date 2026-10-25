@@ -283,6 +283,11 @@ html.cph-locked .cph-stage { touch-action: none; }
 /* An entry added or changed: the sheets' voice (white, labels small and grey, fields white with a hairline, ink while typing). */
 .cph-sheet.tall { display: flex; flex-direction: column; max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 24px); }
 .cph-sheet.tall > .cph-ent { overflow-y: auto; overscroll-behavior: contain; }
+/* The entry form keeps its fullest height (EntrySheet measures it), so the category tiles stay put; its rows never
+   squeeze (25 Oct: the What box was pressed thin), and Cancel and Add sit at its foot. */
+.cph-ent { min-height: min(var(--ent-h, 0px), calc(100dvh - env(safe-area-inset-top, 0px) - 24px - 32px - env(safe-area-inset-bottom, 0px))); }
+.cph-ent > * { flex-shrink: 0; }
+.cph-ent > .cph-ent-foot { margin-top: auto; }
 .cph-ent { display: flex; flex-direction: column; padding: 2px 12px 4px; }
 .cph-ent-title { margin: 0 4px 6px; font-size: 18px; font-weight: 600; }
 /* With on a Client call or Training alone, Link on a Client call alone; on any other category the row goes and what is
