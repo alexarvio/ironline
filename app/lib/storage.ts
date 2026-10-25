@@ -434,6 +434,33 @@ export async function prepareChatMedia(publicPath: string, type: "image" | "vide
   }
 }
 
+/**
+ * A client's chat video as its small web copy (25 Oct, Alex: videos slow to play): made beside the original
+ * ("chat/9/abc.mov" -> "chat/9/abc-web.mp4"), put in the bucket, the messages pointed at it and its poster made. The
+ * original stays where it was. Nothing changes when ffmpeg can't make one.
+ */
+export async function webChatVideo(publicPath: string) {
+  const key = keyOf(publicPath);
+  if (!key || /-web\.mp4$/i.test(key)) return;
+  try {
+    const onDisk = path.join(DATA_DIR, "uploads", key);
+    const source = fs.existsSync(onDisk) ? onDisk : await bucketLink(key);
+    if (!source) return;
+    const webKey = key.replace(/\.[^./]+$/, "") + "-web.mp4";
+    const out = path.join(DATA_DIR, "uploads", webKey);
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    const { toWebVideo } = await import("./transcode");
+    if (!(await toWebVideo(source, out))) return;
+    const webPath = `/uploads/${webKey}`;
+    await putUploadFromDisk(webPath, out, "video/mp4");
+    const { swapChatMedia } = await import("./queries");
+    swapChatMedia(publicPath, webPath);
+    await prepareChatMedia(webPath, "video");
+  } catch (error) {
+    console.error(`[uploads] no web copy of ${key}:`, error instanceof Error ? error.message : error);
+  }
+}
+
 /** Deletes every object whose key starts with `prefix` ("progress/9/"); returns how many. */
 export async function deleteAllUnder(s3: S3Client, bucketName: string, prefix: string): Promise<number> {
   let deleted = 0;

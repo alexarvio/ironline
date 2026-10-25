@@ -8155,6 +8155,18 @@ export function allocChatMediaName(tag?: string): string {
   return `${Date.now()}-${allocId("chat_media")}${tag ? `-${tag}` : ""}`;
 }
 
+/** A chat video's file replaced by its small web copy (25 Oct): every message that shows it, now the copy. */
+export function swapChatMedia(from: string, to: string): number {
+  let n = 0;
+  for (const m of getData().chat_messages) {
+    if (m.media_path !== from) continue;
+    m.media_path = to;
+    n++;
+  }
+  if (n) persist();
+  return n;
+}
+
 export function saveChatMedia(clientId: number, buffer: Buffer, mimeType: string, originalName?: string | null): ChatMedia {
   const type: ChatMediaType = mimeType.startsWith("video/") ? "video" : mimeType.startsWith("audio/") ? "audio" : mimeType.startsWith("image/") ? "image" : "file";
   // The extension: a file keeps its own; a voice message says it is audio

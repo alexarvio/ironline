@@ -94,6 +94,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   // there as messages arrive or pictures load, unless the coach has
   // scrolled up to read back.
   const atEnd = useRef(true);
+  // When the coach last wheeled, touched, pressed or typed in the thread: a scroll then is theirs.
+  const touched = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const ready = text.trim().length > 0 && !pending;
   const t = plan.targets;
@@ -149,6 +151,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     toEnd();
     const watch = new ResizeObserver(toEnd);
     watch.observe(inner);
+    // The box itself too: a reply bar or the pinned line coming in shrinks it from below.
+    watch.observe(el);
     return () => watch.disconnect();
   }, []);
   useLayoutEffect(() => {
@@ -508,7 +512,14 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
         <div
           ref={thread}
           className="rm-thread"
+          // Only the coach scrolling decides whether it follows the newest (25 Oct, Alex: it opened a few messages up):
+          // pictures loading above shifted it, the browser scrolled to keep its place, and that read as leaving the end.
+          onWheel={() => (touched.current = Date.now())}
+          onTouchMove={() => (touched.current = Date.now())}
+          onPointerDown={() => (touched.current = Date.now())}
+          onKeyDown={() => (touched.current = Date.now())}
           onScroll={(e) => {
+            if (Date.now() - touched.current > 1000) return;
             const el = e.currentTarget;
             atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
           }}

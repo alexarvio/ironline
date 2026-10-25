@@ -53,3 +53,34 @@ export function toMp4(input: string, output: string, timeoutMs = 10 * 60 * 1000)
     });
   });
 }
+
+// One at a time (25 Oct): a phone video made small is minutes of work for the server's few cores, and two at once
+// would slow every page while they run.
+let line: Promise<unknown> = Promise.resolve();
+
+/**
+ * A phone video as one every browser starts at once (25 Oct, Alex: "it takes so long for the videos to load"): H.264
+ * and AAC, its long edge 1280 at most, the index at the front. A phone's original is often HEVC in a .mov, tens of
+ * MB, which a laptop's browser plays late or not at all. From a file or a link into the bucket; false, the caller
+ * keeping the original, when ffmpeg is missing or it fails.
+ */
+export function toWebVideo(input: string, output: string, timeoutMs = 15 * 60 * 1000): Promise<boolean> {
+  const run = () =>
+    new Promise<boolean>((resolve) => {
+      const bin = ffmpegBin();
+      if (!bin) return resolve(false);
+      const fit = "scale='if(gt(iw,ih),min(1280,iw),-2)':'if(gt(iw,ih),-2,min(1280,ih))'";
+      const args = ["-y", "-hide_banner", "-loglevel", "error", "-i", input, "-vf", fit, "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-pix_fmt", "yuv420p", "-threads", "2", "-movflags", "+faststart", "-c:a", "aac", "-b:a", "128k", output];
+      execFile(/*turbopackIgnore: true*/ bin, args, { timeout: timeoutMs, maxBuffer: 1024 * 1024 }, (err) => {
+        if (err) {
+          console.warn("[transcode] web video failed:", err.message);
+          fs.rmSync(output, { force: true });
+          return resolve(false);
+        }
+        resolve(fs.existsSync(output) && fs.statSync(output).size > 0);
+      });
+    });
+  const next = line.then(run, run);
+  line = next.catch(() => {});
+  return next;
+}

@@ -381,7 +381,7 @@ import {
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import { COACH_PROFILE_LIMITS } from "./coachProfileView";
-import { deleteUpload, keyOf, prepareChatMedia, putUpload } from "./storage";
+import { deleteUpload, keyOf, prepareChatMedia, putUpload, webChatVideo } from "./storage";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
 import { FEATURES } from "./features";
@@ -2394,7 +2394,8 @@ export async function sendChatMessageAction(formData: FormData) {
   // A picture's small copies and a video's poster are made now, after the
   // answer, so the first person to open the chat doesn't wait for them (21 Oct).
   const kind = media?.type;
-  if (media && kind === "video") afterResponse(() => prepareChatMedia(media.path, kind));
+  // A video: its poster at once, then its small web copy, which the message then shows (25 Oct, Alex).
+  if (media && kind === "video") afterResponse(async () => (await prepareChatMedia(media.path, kind), await webChatVideo(media.path)));
   // The chat screens ask for their own thread after a send ("quiet"): a page
   // read on top sent the whole page back with every message (21 Oct: 211 KB
   // on the client's phone, 96 KB for the coach). Other callers still need it.

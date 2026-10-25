@@ -6,6 +6,12 @@ import { canAccessClient, getSessionUser, isOwner } from "../../lib/auth";
 import { coachIdOfClient, coachOwnsExercise } from "../../lib/tenancy";
 import { bucketLink, LINK_CACHE_SECONDS, posterCopy, posterKey, smallCopy, smallKey, sourceOf, streamUpload } from "../../lib/storage";
 import { recordTiming } from "../../lib/timing";
+import { after } from "next/server";
+import { webChatVideo } from "../../lib/storage";
+
+// A chat video sent before its small web copy was made (25 Oct): the first time it is played, the copy is made behind
+// the answer, once a server run, and the messages show it from then on.
+const webbing = ((globalThis as unknown as { _webbing?: Set<string> })._webbing ??= new Set<string>());
 
 // Serves files written by savePhotoUpload/saveChatMedia in queries.ts. Those
 // live under DATA_DIR/uploads rather than /public/uploads so they survive on
@@ -134,6 +140,11 @@ export async function GET(
   if (stream) {
     const piped = await streamUpload(segments.join("/"), range);
     if (piped) return timed("stream", piped);
+  }
+  const joined = segments.join("/");
+  if (kind === "chat" && /.(mov|mp4|m4v|webm)$/i.test(joined) && !/-web.mp4$/i.test(joined) && !webbing.has(joined)) {
+    webbing.add(joined);
+    after(() => webChatVideo(`/uploads/${joined}`));
   }
   const link = stream ? null : await bucketLink(segments.join("/"));
   if (link) {
