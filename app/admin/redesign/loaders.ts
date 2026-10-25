@@ -104,7 +104,8 @@ import { coachIdOfClient } from "../../lib/tenancy";
 import { getCoachFocus } from "../../lib/focus";
 import { supportUnreadForCoach, supportUnreadForOwner } from "../../lib/support";
 import { exerciseTrends, personalBests } from "../../lib/homeBoardData";
-import { applyReads } from "./training/applyPreviewData";
+import { applyReader, applyReads } from "./training/applyPreviewData";
+import { changedWeeks } from "./training/applyShape";
 import { sub } from "../../lib/timing";
 
 // What the redesign drafts read, gathered on the server for the shell that
@@ -454,6 +455,23 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   // neither is offered when it would change nothing (23 Oct, Alex: "once I apply and there are no other changes, the
   // button disappears"). The week on screen only, and not a done one (nothing is applied from it).
   const applyFrom = stateOf(program) !== "past" && weeks[weekIdx - 1]?.state !== "past" ? sub("applyPreview", () => applyReads(clientId, program, weekNumber)) : null;
+  // The weeks whose copy would change the week on screen, read as Apply to the rest reads (25 Oct, Alex: "Copy Week 3
+  // here" stood over a Week 4 that was Week 3; the weights the progression had raised made the two look different). A
+  // weight the progression would raise again, and a session already logged on, are no change; kg and lbs as shown.
+  const copyIn = stateOf(program) !== "past" && weeks[weekIdx - 1]?.state !== "past"
+    ? sub("copyIn", () => {
+        const read = applyReader(clientId);
+        const kg: number[] = [];
+        const lbs: number[] = [];
+        for (const w of weeks) {
+          if (w.index === weekIdx || w.trained.length === 0) continue;
+          const p = read.week(program, program.start_week + w.index - 1, [weekNumber]);
+          if (changedWeeks(p, false).length) kg.push(w.index);
+          if (changedWeeks(p, true).length) lbs.push(w.index);
+        }
+        return { kg, lbs };
+      })
+    : null;
 
   const phase = getData().client_phases.find((p) => p.program_id === program.id) ?? null;
   const noteMeta = getClientProgramNoteMeta(clientId, program.id);
@@ -478,6 +496,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     weeks,
     sessions,
     apply: applyFrom ? { week: weekIdx, ...applyFrom } : null,
+    copyIn: copyIn ? { week: weekIdx, ...copyIn } : null,
     rogue,
     bodyKg,
     gyms,

@@ -656,7 +656,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-demo-switch.fixed { cursor: default; }
 .rd-demo-switch > i { position: absolute; top: 2px; left: 18px; display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 999px; background: #fff; color: #141a24; transition: left 0.2s ease, color 0.2s ease; }
 .rd-demo-switch.off > i { left: 2px; color: #98A2B3; }
-.rd-demo-switch svg { width: 8px; height: 8px; margin-left: 1px; }
+.rd-demo-switch svg { width: 16px; height: 16px; margin-left: 1px; }
 .rd-demo-switch:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(20, 26, 36, 0.18); }
 @media (prefers-reduced-motion: reduce) { .rd-demo-switch, .rd-demo-switch > i { transition: none; } }
 .rd-demo { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: #eef2f8; color: #1e3a6e; }

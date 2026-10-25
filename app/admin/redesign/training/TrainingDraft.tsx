@@ -163,6 +163,8 @@ export type DraftProgram = {
    * session id, whether its Apply to remaining weeks would change one. Null for a done week or the last.
    */
   apply?: { week: number; rest: { kg: number[]; lbs: number[] }; sessions: Record<number, { kg: boolean; lbs: boolean }> } | null;
+  /** The weeks whose copy would change the week on screen (25 Oct), as Apply to the rest reads a change. */
+  copyIn?: { week: number; kg: number[]; lbs: number[] } | null;
   /** The client's rogue sessions (19 Oct), by week index: their own workouts off the plan, read only. */
   rogue: Record<number, DraftRogue[]>;
   /** The client's body weight now (latest reading, else their starting weight; 23 Oct): what an assisted lift really lifts is this less the help. */
@@ -776,7 +778,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // A copy that would change nothing isn't offered (20 Oct, Alex: Week 4 was Week 3 and still said "Copy week 3 here").
   const sameWeeks = (a: number, b: number) => weeks.find((w) => w.index === a)?.print === weeks.find((w) => w.index === b)?.print;
   // An empty week copies nothing (copyProgramWeek), so it is never offered as a source.
-  const copyable = (i: number) => (weeks.find((w) => w.index === i)?.trained.length ?? 0) > 0 && !sameWeeks(i, viewIdx);
+  // Read as Apply to the rest reads a change when the server has it (25 Oct, Alex: the progression's raised weights made
+  // a Week 4 that was Week 3 still offer "Copy Week 3 here"); else the weeks' prints.
+  const copyRead = program.copyIn && program.copyIn.week === viewIdx ? (lbs ? program.copyIn.lbs : program.copyIn.kg) : null;
+  const copyable = (i: number) => (weeks.find((w) => w.index === i)?.trained.length ?? 0) > 0 && (copyRead ? copyRead.includes(i) : !sameWeeks(i, viewIdx));
   const copyFromChoices = weeks.filter((w) => w.index !== viewIdx && copyable(w.index));
   // Apply to the rest reaches only the later weeks it would really change (20 Oct, Alex: "Copy to weeks 4–6" when week 4
   // was already the same; 23 Oct: "once I apply and there are no other changes, the button disappears"). Read by the
@@ -1498,11 +1503,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                 <>
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", rowId: r.id })}>
                                   <PlayIcon />{" "}
+                                  {/* One word for what it does (25 Oct, Alex: "Demo video | change" → Change demo). */}
                                   {(demos[r.id] === undefined ? r.demo : demos[r.id]) ? (
-                                    <span>
-                                      Demo video<Sep />
-                                      change
-                                    </span>
+                                    "Change demo"
                                   ) : (
                                     "Add demo"
                                   )}
