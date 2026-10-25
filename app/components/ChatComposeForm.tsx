@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendChatMessageAction } from "../lib/actions";
+import { withVideoFrame } from "./ChatMedia";
 import type { MessageAbout } from "../lib/messageLinks";
 import VoiceRecordButton from "./VoiceRecordButton";
 
@@ -109,7 +110,7 @@ export default function ChatComposeForm({
     if (about) fd.set("link", JSON.stringify(about.link));
     if (replyTo) fd.set("replyTo", String(replyTo.id));
     start(async () => {
-      await deliver(fd);
+      await deliver(await withVideoFrame(fd, file));
     });
   };
 

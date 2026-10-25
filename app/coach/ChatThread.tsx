@@ -6,7 +6,7 @@ import type { DraftMedia, DraftMessage, DraftMessages } from "../admin/redesign/
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction } from "../lib/actions";
 import VoiceRecordButton from "../components/VoiceRecordButton";
 import ChatMediaGallery from "../components/ChatMediaGallery";
-import { ChatImage, ChatVideo, sized } from "../components/ChatMedia";
+import { ChatImage, ChatVideo, sized, withVideoFrame } from "../components/ChatMedia";
 import { dayMonth } from "../lib/dayMonth";
 import { useKeyboardInset } from "../client/useKeyboardInset";
 import { Avatar, Facts, Icon } from "./parts";
@@ -209,7 +209,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     fd.set("quiet", "1");
     if (replying) fd.set("replyTo", String(replying.id));
     try {
-      await sendChatMessageAction(fd);
+      await sendChatMessageAction(await withVideoFrame(fd, file));
       setReplying(null);
       atEnd.current = true;
       await refresh();

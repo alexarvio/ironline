@@ -146,3 +146,54 @@ function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
     </div>
   );
 }
+
+/**
+ * A video's first frame taken on the sender's own device, as WhatsApp does (25 Oct, Alex: the boxes stayed black; the
+ * server could not make one): a JPEG 720 wide at most, sent with the video as "poster". Null when the browser can't
+ * read the video in a few seconds; the server then makes one itself if it can.
+ */
+export function videoFrame(file: File): Promise<Blob | null> {
+  if (typeof document === "undefined" || !file.type.startsWith("video/")) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    let done = false;
+    const finish = (b: Blob | null) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+      v.removeAttribute("src");
+      v.load();
+      resolve(b);
+    };
+    const timer = setTimeout(() => finish(null), 5000);
+    v.muted = true;
+    v.playsInline = true;
+    v.preload = "auto";
+    v.onloadeddata = () => {
+      v.currentTime = Math.min(0.1, (v.duration || 1) / 2);
+    };
+    v.onseeked = () => {
+      try {
+        const k = Math.min(1, 720 / Math.max(v.videoWidth || 1, 1));
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round((v.videoWidth || 720) * k));
+        c.height = Math.max(1, Math.round((v.videoHeight || 720) * k));
+        c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
+        c.toBlob((b) => finish(b), "image/jpeg", 0.8);
+      } catch {
+        finish(null);
+      }
+    };
+    v.onerror = () => finish(null);
+    v.src = url;
+  });
+}
+
+/** The chat send's FormData with the video's first frame added, when it is a video and one can be had. */
+export async function withVideoFrame(fd: FormData, file: File): Promise<FormData> {
+  const frame = await videoFrame(file);
+  if (frame) fd.set("poster", new File([frame], "poster.jpg", { type: "image/jpeg" }));
+  return fd;
+}

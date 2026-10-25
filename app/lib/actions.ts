@@ -381,7 +381,7 @@ import {
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import { COACH_PROFILE_LIMITS } from "./coachProfileView";
-import { deleteUpload, keyOf, prepareChatMedia, putUpload, webChatVideo } from "./storage";
+import { deleteUpload, keyOf, posterFromDevice, prepareChatMedia, putUpload, webChatVideo } from "./storage";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
 import { FEATURES } from "./features";
@@ -2364,6 +2364,9 @@ export async function sendChatMessageAction(formData: FormData) {
   if (file && file.size > 0) {
     const buffer = Buffer.from(await file.arrayBuffer());
     media = saveChatMedia(clientId, buffer, file.type || "application/octet-stream", file.name);
+    // A video's first frame taken by the sending device (25 Oct, as WhatsApp): its poster at once.
+    const frame = formData.get("poster") as File | null;
+    if (media.type === "video" && frame && frame.size > 0 && frame.size < 5 * 1024 * 1024) await posterFromDevice(media.path, Buffer.from(await frame.arrayBuffer()));
     // A picture's small copies are made from these bytes while the original goes to the bucket (25 Oct).
     if (media.type === "image") void prepareChatMedia(media.path, "image", buffer);
     await putUpload(media.path, buffer, file.type || undefined);

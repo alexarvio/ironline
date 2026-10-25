@@ -8,7 +8,7 @@ import { ChevronDownIcon, PinIcon } from "../../../components/icons";
 import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
 import ChatMediaGallery from "../../../components/ChatMediaGallery";
-import { ChatImage, ChatVideo } from "../../../components/ChatMedia";
+import { ChatImage, ChatVideo, withVideoFrame } from "../../../components/ChatMedia";
 import { chatDraftThreadAction } from "./actions";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
@@ -209,7 +209,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     if (link?.link) fd.set("link", JSON.stringify(link.link));
     if (replying) fd.set("replyTo", String(replying.id));
     act(
-      () => sendChatMessageAction(fd),
+      async () => sendChatMessageAction(await withVideoFrame(fd, file)),
       () => {
         setReplying(null);
         setLink(null);

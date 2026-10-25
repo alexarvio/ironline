@@ -523,6 +523,23 @@ export async function prepareAllChatMedia(): Promise<number> {
   return made;
 }
 
+/** A video's first frame sent by the device that sent it (25 Oct): made its poster (WebP, 720 at most) and its look,
+    so it shows at once whatever the server's ffmpeg can do. */
+export async function posterFromDevice(publicPath: string, frame: Buffer) {
+  const key = keyOf(publicPath);
+  const poster = key ? posterKey(key) : null;
+  if (!key || !poster) return;
+  try {
+    const sharp = (await import("sharp")).default;
+    const out = await sharp(frame, { failOn: "none" }).rotate().resize({ width: 720, withoutEnlargement: true }).webp({ quality: 74 }).toBuffer();
+    remember(poster, out);
+    await keepCopy(poster, out);
+    await keepLook(publicPath, out);
+  } catch (error) {
+    console.error(`[uploads] no device poster for ${key}:`, error instanceof Error ? error.message : error);
+  }
+}
+
 /**
  * Right after a chat send (21 Oct): a picture's small copies and a video's
  * poster, so the first person to open the chat gets them at once. Before, the
@@ -535,7 +552,8 @@ export async function prepareChatMedia(publicPath: string, type: "image" | "vide
   try {
     if (type === "video") {
       const poster = posterKey(key);
-      if (poster) await keepLook(publicPath, await once(poster, () => makePoster(key, poster)));
+      // One the sending device gave is kept; else made here.
+      if (poster) await keepLook(publicPath, (await readUpload(poster)) ?? (await once(poster, () => makePoster(key, poster))));
       return;
     }
     if (!smallKey(key, CHAT_WIDTHS[0])) return;
@@ -571,9 +589,16 @@ export async function webChatVideo(publicPath: string) {
     if (!(await toWebVideo(source, out))) return;
     const webPath = `/uploads/${webKey}`;
     await putUploadFromDisk(webPath, out, "video/mp4");
-    // Its poster first, so the message never points at a copy without one.
+    // Its poster first, so the message never points at a copy without one: made, else the original's carried over.
     const poster = posterKey(webKey);
-    if (poster) await once(poster, () => makePoster(webKey, poster));
+    if (poster && !(await once(poster, () => makePoster(webKey, poster)))) {
+      const was = posterKey(key);
+      const bytes = was ? await readUpload(was) : null;
+      if (bytes) {
+        remember(poster, bytes);
+        await keepCopy(poster, bytes);
+      }
+    }
     const { swapChatMedia } = await import("./queries");
     swapChatMedia(publicPath, webPath);
     await prepareChatMedia(webPath, "video");
