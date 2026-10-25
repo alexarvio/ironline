@@ -94,6 +94,7 @@ export async function putUpload(publicPath: string | null | undefined, body: Buf
   if (!b || !key) return;
   try {
     await b.s3.send(new PutObjectCommand({ Bucket: b.bucket, Key: key, Body: body, ContentType: contentType || mimeFor(key) }));
+    stats.puts++;
     inBucket.add(key);
     linkCache.delete(key);
     dropDiskCopy(key);
@@ -101,6 +102,8 @@ export async function putUpload(publicPath: string | null | undefined, body: Buf
     // The file is on the disk and is served from there; the startup copy
     // puts it in the bucket next time. Worth knowing about, not worth
     // failing the client's upload over.
+    stats.putFails++;
+    stats.lastPutError = `${key}: ${error instanceof Error ? `${error.name} ${error.message}` : String(error)}`.slice(0, 300);
     console.error(`[uploads] could not copy ${key} to the bucket:`, error instanceof Error ? error.message : error);
     import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error)).catch(() => {});
   }
@@ -211,6 +214,17 @@ function recall(key: string): Buffer | null {
   return hit;
 }
 
+/** How the copies fare, for /api/timing (25 Oct): what memory holds, the bucket's saves and reads, the last error. */
+const stats = ((globalThis as unknown as { _uploadsStats?: { puts: number; putFails: number; lastPutError: string | null; getFails: number; lastGetError: string | null; made: string[] } })._uploadsStats ??= {
+  puts: 0,
+  putFails: 0,
+  lastPutError: null,
+  getFails: 0,
+  lastGetError: null,
+  made: [],
+});
+export const storageStats = () => ({ memoCount: memo.map.size, memoMB: Math.round((memo.size / 1048576) * 10) / 10, ...stats, made: stats.made.slice(-12) });
+
 /** Where each file was last read from, for the uploads route's timing (25 Oct): memory, disk, bucket, made. */
 const lastSource = new Map<string, string>();
 export const sourceOf = (key: string) => {
@@ -271,6 +285,8 @@ async function readUpload(key: string): Promise<Buffer | null> {
     return buf;
   } catch (error) {
     if (missing(error)) return null;
+    stats.getFails++;
+    stats.lastGetError = `${key}: ${error instanceof Error ? `${error.name} ${error.message}` : String(error)}`.slice(0, 300);
     throw error;
   }
 }
@@ -395,6 +411,7 @@ async function makePoster(key: string, poster: string): Promise<Buffer | null> {
   if (await dark(frame)) frame = (await firstFrame(source, 1)) ?? frame;
   const out = await sharp(frame, { failOn: "none" }).resize({ width: 720, withoutEnlargement: true }).webp({ quality: 74 }).toBuffer();
   remember(poster, out);
+  stats.made.push(`${new Date().toISOString().slice(11, 19)} ${poster}`);
   void keepCopy(poster, out).catch(() => {});
   return out;
 }
