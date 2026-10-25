@@ -26,6 +26,7 @@ import type { PhaseTrack } from "../../../lib/db";
 import KindMark from "../KindMark";
 import HelpTip from "../HelpTip";
 import type { ActivityMark } from "../../../lib/activityMark";
+import { monotoneSegments } from "../../../lib/monotoneCurve";
 
 // The client's Home (21 Oct, Alex: built from the Home mockup, root "rd trn rls rh"): Training's header, then the board.
 //
@@ -960,22 +961,15 @@ function WeightChart({ points, grid, gridText }: { points: WeightPoint[]; grid: 
   const ys = points.map((p) => ((hi - p.value) / (hi - lo)) * 100);
   // The line in runs, each reading joined to the one before: solid where it came on time, dashed where weigh-ins were
   // missed between the two. A run goes on while the style does, so its corners stay joined.
-  // Straight between readings, the corners rounded off (23 Oct, Alex: "a bit smoother", then: a curve through every
-  // reading "looks drawn with a pen"). Each corner is cut a third of the way along both of its sides and joined with a
-  // soft bend through the reading's own point, so a peak or a dip stays where the reading is.
-  const ROUND = 0.3;
-  const pt = (i: number) => `${xs[i].toFixed(2)} ${ys[i].toFixed(2)}`;
-  const toward = (i: number, j: number) => `${(xs[i] + (xs[j] - xs[i]) * ROUND).toFixed(2)} ${(ys[i] + (ys[j] - ys[i]) * ROUND).toFixed(2)}`;
-  // Where the line leaves reading i (past its corner) and reaches it (before its corner); the ends are the readings.
-  const leaves = (i: number) => (i === 0 ? pt(0) : toward(i, i + 1));
-  const reaches = (i: number) => (i === last ? pt(last) : toward(i, i - 1));
+  // Smooth through every reading, never past one (25 Oct, Alex: option B of the weight-line mockup; the rounded
+  // corners before cut inside the readings, so the hover ring sat off the line): monotoneCurve, the client's Progress
+  // chart's too. Each stretch is drawn in its own style, a run going on while the style does.
+  const segs = monotoneSegments(xs.map((x, i) => ({ x, y: ys[i] })));
   const line = { solid: "", dashed: "" };
   for (let i = 1; i <= last; i++) {
-    // Each stretch draws its run up to the next corner and that corner, in its own style (solid, or dashed where
-    // weigh-ins were missed); a run goes on while the style does.
     const style = points[i].missed ? "dashed" : "solid";
     const goesOn = i > 1 && points[i - 1].missed === points[i].missed;
-    line[style] += `${goesOn ? "" : `M${leaves(i - 1)} `}L${reaches(i)} ${i < last ? `Q${pt(i)} ${leaves(i)} ` : ""}`;
+    line[style] += `${goesOn ? "" : `M${xs[i - 1].toFixed(2)} ${ys[i - 1].toFixed(2)} `}${segs[i - 1]} `;
   }
   const anyMissed = line.dashed !== "";
   // The dates under it: the chart's first day, the day halfway (rounded down), the last reading's (none twice).

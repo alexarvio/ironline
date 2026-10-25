@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Weight line options</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --muted:#8b93a1; --line:#E1E5EB; --div:#EEF0F3; --page:#F5F6F8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 60px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 auto 6px; max-width: 1040px; }
+  .sub { max-width: 1040px; margin: 0 auto 24px; color: var(--muted); font-size: 13px; font-weight: 500; }
+  .opt { max-width: 1040px; margin: 0 auto 18px; background: #fff; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); padding: 18px 22px 14px; }
+  .opt h2 { margin: 0; font-size: 15px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+  .opt h2 b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; }
+  .opt p { margin: 4px 0 12px; color: var(--body); font-size: 13px; font-weight: 500; }
+  .figs { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .figs span { color: var(--muted); font-weight: 500; margin: 0 6px; }
+  .plot { position: relative; height: 180px; margin-right: 40px; }
+  svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .grid line { stroke: var(--div); }
+  .yl { position: absolute; left: calc(100% + 8px); transform: translateY(-50%); font-size: 11px; color: var(--muted); font-weight: 500; }
+  .xl { display: flex; justify-content: space-between; margin: 8px 40px 0 0; font-size: 11px; color: var(--muted); font-weight: 500; }
+  .guide { stroke: var(--ink); stroke-opacity: .5; }
+  .pill { position: absolute; transform: translate(-50%, -150%); background: #fff; box-shadow: inset 0 0 0 1px var(--line); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; }
+  .pill i { font-style: normal; color: var(--muted); font-weight: 500; }
+  .ring { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; background: #fff; border: 2px solid var(--ink); pointer-events: none; }
+</style>
+</head>
+<body>
+<h1>Weight line: three ways</h1>
+<div class="sub">Same readings as your screenshot (5–25 Oct, a few days missed). Hover any chart: the ring sits on the line in all three.</div>
+
+<div class="opt" data-kind="straight">
+  <h2><b>A</b> Straight between readings, a small dot on each</h2>
+  <p>Every reading exactly where it is; the classic chart. Shows each day's ups and downs.</p>
+  <div class="figs">89.0 kg <span>|</span> +1.9 kg</div>
+  <div class="plot"></div><div class="xl"><span>5 Oct</span><span>15 Oct</span><span>25 Oct</span></div>
+</div>
+
+<div class="opt" data-kind="smooth">
+  <h2><b>B</b> A smooth curve that goes through every reading</h2>
+  <p>Soft, no sharp corners, and it never overshoots: it bends only between readings, so the dot is always on it.</p>
+  <div class="figs">89.0 kg <span>|</span> +1.9 kg</div>
+  <div class="plot"></div><div class="xl"><span>5 Oct</span><span>15 Oct</span><span>25 Oct</span></div>
+</div>
+
+<div class="opt" data-kind="trend">
+  <h2><b>C</b> The trend, with the readings faint behind it</h2>
+  <p>As weight apps do (trend weight): a calm line through the average of the last days, each day's weigh-in a faint dot. Water days stop looking like jumps.</p>
+  <div class="figs">88.9 kg trend <span>|</span> +1.6 kg</div>
+  <div class="plot"></div><div class="xl"><span>5 Oct</span><span>15 Oct</span><span>25 Oct</span></div>
+</div>
+
+<script>
+  // Readings (day of October, kg), a few days missed, shaped like the screenshot.
+  const R = [[5,87.1],[6,87.6],[7,87.7],[8,87.6],[10,86.9],[11,87.2],[12,87.4],[13,87.4],[14,88.1],[15,88.5],[16,88.7],[17,88.8],[19,88.9],[20,89.0],[21,89.1],[23,89.9],[24,89.6],[25,89.0]];
+  const D0 = 5, D1 = 25, LO = 86, HI = 90.4, W = 1000, H = 180;
+  const X = (d) => ((d - D0) / (D1 - D0)) * W, Y = (v) => (1 - (v - LO) / (HI - LO)) * H;
+  // C: an exponentially smoothed trend (a quarter of each day's difference).
+  const trend = []; let t = R[0][1];
+  for (const [d, v] of R) { t = t + 0.25 * (v - t); trend.push([d, +t.toFixed(2)]); }
+  // Monotone cubic (Fritsch–Carlson): through every point, never past one.
+  function monotone(pts) {
+    const n = pts.length, dx = [], m = [], s = [];
+    for (let i = 0; i < n - 1; i++) { dx[i] = pts[i+1][0] - pts[i][0]; s[i] = (pts[i+1][1] - pts[i][1]) / dx[i]; }
+    m[0] = s[0]; m[n-1] = s[n-2];
+    for (let i = 1; i < n - 1; i++) m[i] = s[i-1] * s[i] <= 0 ? 0 : (3 * (dx[i-1] + dx[i])) / ((2*dx[i] + dx[i-1]) / s[i-1] + (dx[i] + 2*dx[i-1]) / s[i]);
+    let d = `M${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 0; i < n - 1; i++) { const h = dx[i] / 3; d += `C${pts[i][0] + h} ${pts[i][1] + m[i]*h} ${pts[i+1][0] - h} ${pts[i+1][1] - m[i+1]*h} ${pts[i+1][0]} ${pts[i+1][1]}`; }
+    return d;
+  }
+  const ns = "http://www.w3.org/2000/svg";
+  for (const box of document.querySelectorAll(".opt")) {
+    const kind = box.dataset.kind, plot = box.querySelector(".plot");
+    const svg = document.createElementNS(ns, "svg"); svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("preserveAspectRatio", "none");
+    let html = `<g class="grid">${[86,88,90].map(v => `<line x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" vector-effect="non-scaling-stroke"/>`).join("")}</g>`;
+    const line = kind === "trend" ? trend : R;
+    const px = line.map(([d, v]) => [X(d), Y(v)]);
+    const path = kind === "straight" ? "M" + px.map(p => p.join(" ")).join("L") : monotone(px);
+    if (kind === "trend") html += R.map(([d, v]) => `<circle cx="${X(d)}" cy="${Y(v)}" r="3.2" fill="#141a24" fill-opacity=".18"/>`).join("");
+    html += `<path d="${path}" fill="none" stroke="#141a24" stroke-width="${kind === "trend" ? 2 : 1.6}" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    if (kind === "straight") html += R.map(([d, v]) => `<circle cx="${X(d)}" cy="${Y(v)}" r="2.6" fill="#141a24"/>`).join("");
+    html += `<line class="guide" x1="0" x2="0" y1="0" y2="${H}" vector-effect="non-scaling-stroke" style="display:none"/>`;
+    svg.innerHTML = html; plot.appendChild(svg);
+    for (const v of [86,88,90]) plot.insertAdjacentHTML("beforeend", `<span class="yl" style="top:${(Y(v)/H)*100}%">${v}</span>`);
+    const ring = document.createElement("i"); ring.className = "ring"; ring.style.display = "none"; plot.appendChild(ring);
+    const pill = document.createElement("span"); pill.className = "pill"; pill.style.display = "none"; plot.appendChild(pill);
+    const guide = svg.querySelector(".guide");
+    plot.addEventListener("mousemove", (e) => {
+      const r = plot.getBoundingClientRect(), at = ((e.clientX - r.left) / r.width) * (D1 - D0) + D0;
+      let k = 0; line.forEach(([d], i) => { if (Math.abs(d - at) < Math.abs(line[k][0] - at)) k = i; });
+      const [d, v] = line[k], left = (X(d) / W) * 100 + "%", top = (Y(v) / H) * 100 + "%";
+      guide.setAttribute("x1", X(d)); guide.setAttribute("x2", X(d)); guide.style.display = "";
+      Object.assign(ring.style, { display: "", left, top });
+      const raw = R.find(x => x[0] === d)[1];
+      pill.innerHTML = kind === "trend" ? `${v.toFixed(1)} kg trend <i>| weighed ${raw} | ${d}/10</i>` : `${v} kg <i>| ${d}/10</i>`;
+      Object.assign(pill.style, { display: "", left, top });
+    });
+    plot.addEventListener("mouseleave", () => { guide.style.display = "none"; ring.style.display = "none"; pill.style.display = "none"; });
+  }
+</script>
+</body>
+</html>

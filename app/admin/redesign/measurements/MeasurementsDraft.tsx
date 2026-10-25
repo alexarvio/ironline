@@ -28,6 +28,7 @@ import { Sep, SepJoin } from "../Sep";
 import { Fold } from "../Fold";
 import { useHoldWhile, useSaidSaved } from "../useSaveQueue";
 import { landOn } from "../../../lib/landOn";
+import { monotoneSegments } from "../../../lib/monotoneCurve";
 
 // The Lifestyle tab, built as Training is (21 Oct, Alex): the phase's name
 // to click and type, its state tag as the menu of what can be done with it,
@@ -1288,16 +1289,13 @@ function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Ca
 function LinePaths({ pts, colour, className }: { pts: { x: number; y: number; missed: boolean }[]; colour: string; className: string }) {
   if (pts.length < 2) return null;
   const last = pts.length - 1;
-  const ROUND = 0.3;
-  const pt = (i: number) => `${pts[i].x.toFixed(2)} ${pts[i].y.toFixed(2)}`;
-  const toward = (i: number, j: number) => `${(pts[i].x + (pts[j].x - pts[i].x) * ROUND).toFixed(2)} ${(pts[i].y + (pts[j].y - pts[i].y) * ROUND).toFixed(2)}`;
-  const leaves = (i: number) => (i === 0 ? pt(0) : toward(i, i + 1));
-  const reaches = (i: number) => (i === last ? pt(last) : toward(i, i - 1));
+  // Smooth through every reading, never past one (25 Oct, Alex: option B; monotoneCurve, as Home's Weight card).
+  const segs = monotoneSegments(pts);
   const line = { solid: "", dashed: "" };
   for (let i = 1; i <= last; i++) {
     const style = pts[i].missed ? "dashed" : "solid";
     const goesOn = i > 1 && pts[i - 1].missed === pts[i].missed;
-    line[style] += `${goesOn ? "" : `M${leaves(i - 1)} `}L${reaches(i)} ${i < last ? `Q${pt(i)} ${leaves(i)} ` : ""}`;
+    line[style] += `${goesOn ? "" : `M${pts[i - 1].x.toFixed(2)} ${pts[i - 1].y.toFixed(2)} `}${segs[i - 1]} `;
   }
   return (
     <>
