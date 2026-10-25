@@ -59,6 +59,10 @@ body:has(.cph) { background: #F5F6F8; }
 .cph-video-facts .late { color: #b8471f; }
 .cph-act { flex: none; font-size: 13px; font-weight: 600; color: #141a24; }
 
+/* The scrollbar's room kept whether a screen scrolls or not (25 Oct, Alex: switching Chats and Videos made the bar jump,
+   the long list's scrollbar moving the window's centre). */
+:root:has(.cph) { scrollbar-gutter: stable; }
+
 /* The tab bar: a white pill floating over the list, the tab on screen in ink. */
 .cph-nav { position: fixed; z-index: 10; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); left: 50%; display: flex; gap: 4px; padding: 5px; transform: translateX(-50%); border-radius: 999px; background: rgba(255, 255, 255, 0.9); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: inset 0 0 0 1px #E1E5EB; }
 .cph-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: min(104px, calc((100vw - 54px) / 3)); height: 52px; border-radius: 999px; font-size: 11px; color: #8b93a1; transition: color 0.2s ease; }
