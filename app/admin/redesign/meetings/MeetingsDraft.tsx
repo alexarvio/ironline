@@ -9,7 +9,7 @@ import type React from "react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, ChatIcon, CheckIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, CheckIcon, MoreIcon, PencilIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
@@ -298,20 +298,12 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
   const [openAlso, setOpenAlso] = useState<number | null>(null);
   // The tile, the title (its time after it), the link, ⋯ (23 Oct, Alex: no length or how soon on the right).
   const aGrid = { gridTemplateColumns: "44px minmax(200px, 1fr) auto 32px", columnGap: 24 } as const;
-  /** The call's link on its row: Add a link, or Join with its host and Edit (once, not again in the body). */
+  /** The call's link on its row: Add a link, or the Join call pill alone (25 Oct, Alex: no URL on the page; Edit link is in ⋯). */
   const linkControl = (m: DraftMeeting) =>
     m.link ? (
-      <span className="rt-linkcell">
-        <a className="trn-pill" href={m.link} target="_blank" rel="noopener noreferrer">
-          <PlayIcon /> Join {m.provider}
-        </a>
-        <span className="rt-host">
-          {m.host}
-          <button type="button" onClick={() => setDlg({ kind: "link", meetingId: m.id })}>
-            Edit
-          </button>
-        </span>
-      </span>
+      <a className="trn-pill" href={m.link} target="_blank" rel="noopener noreferrer">
+        <PlayIcon /> Join call
+      </a>
     ) : (
       <button type="button" className="trn-pill" onClick={() => setDlg({ kind: "link", meetingId: m.id })}>
         <PlusIcon /> Add a link
@@ -417,6 +409,11 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
               <DropdownMenuItem onSelect={() => setDlg({ kind: "schedule", date: m.date, reschedule: m })}>
                 <CalendarIcon /> Reschedule
               </DropdownMenuItem>
+              {m.link && (
+                <DropdownMenuItem onSelect={() => setDlg({ kind: "link", meetingId: m.id })}>
+                  <PencilIcon /> Edit link
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "delete", meetingId: m.id })}>
                 <TrashIcon /> Delete

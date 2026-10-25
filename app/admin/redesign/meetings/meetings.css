@@ -28,9 +28,6 @@
 .rd.rt .rt-band-right .trn-btn, .rd.rt .rt-band-right .trn-pill { text-decoration: none; }
 .rd.rt .rt-band-right .trn-btn { height: 36px; }
 .rd.rt .rt-band-right .trn-btn svg { width: 14px; height: 14px; }
-.rd.rt .rt-host { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 500; color: #8b93a1; }
-.rd.rt .rt-host button { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: #5b6474; cursor: pointer; }
-.rd.rt .rt-host button:hover { color: #141a24; }
 
 /* Under the band: Prep notes | Meeting notes | Summary, one at a time, each the words on the page. */
 .rd.rt .rt-body { display: flex; flex-direction: column; padding: 0; }
@@ -144,10 +141,10 @@
 .rd.rt .rt-kind.wide { display: flex; justify-content: center; width: 100%; height: 24px; padding: 0 8px; box-sizing: border-box; }
 .rd.rt .rt-untitled { font-weight: 500; color: #8b93a1; }
 
-/* The call's link on its row (23 Oct, Alex): Add a link, or Join with its host and Edit under it, at the row's right. */
+/* The call's link on its row (23 Oct, Alex), at the row's right: Add a link, or the Join call pill alone (25 Oct, Alex:
+   no URL on the page; Edit link is in the row's ⋯). */
 .rd.rt .rt-linkslot { display: flex; justify-content: flex-end; }
 .rd.rt .rt-linkslot .trn-pill { text-decoration: none; }
-.rd.rt .rt-linkcell { display: flex; align-items: center; gap: 12px; }
 .rd.rt .rd-row-hit .rt-facts { margin-left: 2px; }
 
 /* ---- To focus on (23 Oct, Alex): the client's goals until the next call (lib/focus.ts). */
