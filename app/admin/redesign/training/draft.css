@@ -448,9 +448,12 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-gymname em { font-size: 10px; font-style: normal; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; }
 .rd-weekpick { display: flex; gap: 6px; }
 .rd-colmenu { min-width: 240px; }
-.rd-coltabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin: 2px 2px 6px; padding: 3px; border-radius: 9px; background: #e6ecf3; }
-.rd-coltabs button { height: 28px; border: 0; border-radius: 7px; background: transparent; font: inherit; font-size: 12.5px; font-weight: 700; color: #5b6474; cursor: pointer; }
-.rd-coltabs button.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.08); }
+/* Exercises | Cardio as every two-way choice is (25 Oct, Alex: "old design"): the white capsule with its hairline, the
+   chosen one ink. */
+.rd-coltabs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; height: 36px; margin: 2px 2px 6px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.rd-coltabs button { height: 28px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 500; color: #5b6474; cursor: pointer; }
+.rd-coltabs button:hover:not(.on) { color: #141a24; }
+.rd-coltabs button.on { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; }
 .rd-cardio { margin-top: 14px; padding-top: 6px; border-top: 1px solid #eceff3; }
 .rd-cardio .rd-cols { padding-top: 8px; }
 .rd-cardio .rd-row.cardio .rd-ex { font-weight: 600; }

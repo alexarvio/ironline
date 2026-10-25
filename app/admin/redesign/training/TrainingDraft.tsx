@@ -1064,7 +1064,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                       <DropdownMenuItem onSelect={() => draftOnly("Custom column")}>
                         <PlusIcon /> Custom column
                       </DropdownMenuItem>
-                      <p className="rd-menu-hint">{MAX_COLS} at a time</p>
                     </>
                   ) : (
                     <>
