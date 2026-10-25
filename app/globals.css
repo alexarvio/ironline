@@ -19361,6 +19361,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .mtp-next-date small { margin-top: 3px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: var(--c, #98A2B3); }
 .mtp-next-ring { display: block; width: 28px; height: 28px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #C9CFD8; }
 .mtp-join { flex: none; display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px; background: #141a24; color: #fff; font-size: 13.5px; font-weight: 600; text-decoration: none; }
+/* Before the call is on, Join is the white hairline pill (25 Oct, Alex): the link opens any time, the ink one only while live. */
+.mtp-join.quiet { height: 36px; padding: 0 16px; background: #fff; color: #141a24; box-shadow: inset 0 0 0 1px #E1E5EB; }
 .mtp-more { align-self: flex-start; height: 28px; margin: 0 20px 4px 28px; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 600; color: #5b6474; cursor: pointer; }
 .mtp-scroll { scroll-padding-top: 48px; }
 .mtp-tl { padding: 8px 0 calc(70vh + env(safe-area-inset-bottom, 0px)); }
@@ -19408,6 +19410,9 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ntf-sep { display: inline-block; width: 1px; height: 10px; margin: 0 7px; background: #c9cfd8; vertical-align: -1px; }
 /* The client app's drawn bar between facts (Bars.tsx; 23 Oct, Alex: "Set 3 | Extra"), scaled to its line. */
 .cl-sep { display: inline-block; width: 1px; height: 0.8em; margin: 0 0.5em; background: #c9cfd8; vertical-align: -0.08em; }
+/* In a flex row with its own gap (the workout's eyebrow) the gap is the air; over a photo or the ink pill, the words' own white, fainter. */
+.wo-eyebrow > .cl-sep { flex: none; align-self: center; margin: 0 2px; }
+.tr-kicker .cl-sep, .wo-pill-gym .cl-sep { background: currentColor; opacity: 0.5; }
 .ntf-text.open .ntf-title, .ntf-text.open .ntf-body { display: block; -webkit-line-clamp: unset; overflow: visible; }
 .ntf-more { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: -4px -6px 0 0; padding: 0; border: 0; border-radius: 50%; background: none; color: #98A2B3; cursor: pointer; }
 .ntf-more svg { transition: transform 0.25s; }

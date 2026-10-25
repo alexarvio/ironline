@@ -17,3 +17,18 @@ export function takesClient(category: string | null | undefined): boolean {
 export function isClientCall(category: string | null | undefined): boolean {
   return category == null || category === "" || category === "call";
 }
+
+/** A call's link as typed, made one to open (25 Oct, Alex: the phone's Link row): trimmed, https:// put in front when
+ *  no scheme is typed, only http(s) with a real host. Empty is none; anything else that isn't a link is null too, so
+ *  the sheet holds Save back while it is typed and the server never stores it. */
+export function callLink(raw: string | null | undefined): string | null {
+  const t = String(raw ?? "").trim();
+  if (!t || t.length > 500) return null;
+  try {
+    const u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(t) ? t : `https://${t}`);
+    if ((u.protocol !== "https:" && u.protocol !== "http:") || !u.hostname.includes(".")) return null;
+    return u.href;
+  } catch {
+    return null;
+  }
+}

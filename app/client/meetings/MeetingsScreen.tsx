@@ -9,6 +9,7 @@ import { meetingTypeOf, type MeetingTypeId } from "../../lib/meetingTypes";
 import { eventTypeOf } from "../../lib/eventTypes";
 import { agoLabel, agreedPoints, icsDataUrl, startingNow, timeRange, untilLabel } from "../../lib/meetingDates";
 import { useOpenEvents } from "../CheckInContext";
+import { Bars } from "../Bars";
 import { TypeIcon } from "../events/AddEventSheet";
 
 // The Meetings screen (9 Oct), reshaped 16 Oct: calls are few, so the top is
@@ -240,8 +241,7 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
               <span className="evp-add-text">
                 <b>You asked {coachFirst} for a call</b>
                 <small>
-                  {ask.about}
-                  {ask.whenSuits ? ` · ${ask.whenSuits}` : ""}
+                  <Bars parts={[ask.about, ask.whenSuits]} />
                 </small>
               </span>
               <button type="button" className="mtp-withdraw" onClick={withdraw} disabled={pending}>
@@ -324,7 +324,8 @@ function NextPill({ m, now, coachFirst, open = false, lit = false, onToggle }: {
   const d = new Date(ms);
   const live = now != null && !!m.startIso && startingNow(ms, m.durationMin, now);
   const time = m.startIso ? timeRange(ms, m.durationMin) : "All day";
-  const when = live ? `Starting now · ${time}` : `${now != null ? `${untilLabel(ms, now)} · ` : ""}${time}`;
+  const whenParts = live ? ["Starting now", time] : [now != null ? untilLabel(ms, now) : null, time];
+  const when = whenParts.filter(Boolean).join(", ");
   const t = meetingTypeOf(m.type);
   const { points, prose } = agreedPoints(m.notes);
   const has = points.length > 0;
@@ -345,14 +346,19 @@ function NextPill({ m, now, coachFirst, open = false, lit = false, onToggle }: {
                 </svg>
               )}
             </span>
-            <small>{when}</small>
+            <small>
+              <Bars parts={whenParts} />
+            </small>
           </span>
         </button>
-        {live && m.joinUrl ? (
-          <a className="mtp-join" href={m.joinUrl} target="_blank" rel="noopener noreferrer" aria-label={`Join call with ${coachFirst}`}>
+        {/* The link opens from the pill whenever there is one (25 Oct, Alex: "I should be able to click on a link here"):
+            the ink Join while it is on, a white one before. Add to calendar stays beside it. */}
+        {m.joinUrl && (
+          <a className={`mtp-join${live ? "" : " quiet"}`} href={m.joinUrl} target="_blank" rel="noopener noreferrer" aria-label={`Join call with ${coachFirst}`}>
             Join
           </a>
-        ) : (
+        )}
+        {!live && (
           <a className="mtp-cal" href={icsDataUrl({ title: m.title, startMs: ms, durationMin: m.durationMin, url: m.joinUrl, coach: coachFirst })} download={`${m.title.replace(/[^\w ]+/g, "").trim() || "call"}.ics`} aria-label="Add to calendar">
             <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M4 6h16v14H4zM4 10h16M9 3v4M15 3v4M12 13v5M9.5 15.5h5" />
@@ -491,7 +497,7 @@ function PastRow({ m, label, now, focus, open, lit, refFn, onTap }: { m: ClientM
   const has = points.length > 0 || m.linkedEvents.length > 0;
   const openEvents = useOpenEvents();
   const ago = now != null ? agoLabel(ms, now) : "";
-  const when = m.missed ? `Missed · ${ago}` : ago.charAt(0).toUpperCase() + ago.slice(1);
+  const when = m.missed ? `Missed, ${ago}` : ago.charAt(0).toUpperCase() + ago.slice(1);
   // A title cut short gets the chevron too: open, the row shows it in full.
   const titleRef = useRef<HTMLSpanElement>(null);
   const [clipped, setClipped] = useState(false);
@@ -529,7 +535,7 @@ function PastRow({ m, label, now, focus, open, lit, refFn, onTap }: { m: ClientM
               </svg>
             )}
           </span>
-          <span className="evp-when">{when}</span>
+          <span className="evp-when">{m.missed ? <Bars parts={["Missed", ago]} /> : when}</span>
         </span>
       </button>
       {opens && (

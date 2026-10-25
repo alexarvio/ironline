@@ -10,7 +10,7 @@ import type { LinkView, MessageLink } from "./messageLinks";
 import { coachIdOfClient } from "./tenancy";
 import { inViewZone } from "./viewZone";
 import { isTimezone } from "./timezones";
-import { isClientCall, takesClient } from "./calendarKinds";
+import { callLink, isClientCall, takesClient } from "./calendarKinds";
 import { dayMonth } from "./dayMonth";
 import { countryOf, invoicingFor } from "./countries";
 import { addressLine } from "./address";
@@ -5846,7 +5846,7 @@ export function removeMeeting(id: number) {
 }
 
 /** One entry as the Calendar's dialog writes it. note is the coach-only prep_notes. */
-export type CalendarEntryInput = { date: string; time: string; /** The timezone the time was typed in; absent: the server's. */ tz?: string | null; durationMinutes: number; allDay: boolean; topic: string; clientId: number | null; category: string | null; note: string };
+export type CalendarEntryInput = { date: string; time: string; /** The timezone the time was typed in; absent: the server's. */ tz?: string | null; durationMinutes: number; allDay: boolean; topic: string; clientId: number | null; category: string | null; note: string; /** The call's link (the phone's sheet); absent: left as it is, as the laptop's pop-up has none. */ link?: string | null };
 
 const cleanEntry = (v: CalendarEntryInput) => {
   const allDay = !!v.allDay;
@@ -5865,6 +5865,8 @@ const entryOk = (c: ReturnType<typeof cleanEntry>) => /^\d{4}-\d{2}-\d{2}$/.test
 
 /** The entry's client: none unless its category takes one (a Client call or Training; calendarKinds.ts). */
 const entryClient = (v: CalendarEntryInput, c: ReturnType<typeof cleanEntry>) => (v.clientId == null || !takesClient(c.category) ? null : v.clientId);
+/** The entry's link: only a call has one (the Meetings tab's Join); undefined when none was sent, so the laptop's pop-up leaves it be. */
+const entryLink = (v: CalendarEntryInput, c: ReturnType<typeof cleanEntry>) => (v.link === undefined ? undefined : isClientCall(c.category) ? callLink(v.link) : null);
 
 /** A new Calendar entry: a client's meeting, or the coach's own block when clientId is null. */
 export function addCalendarEntry(coachId: number, v: CalendarEntryInput): number | null {
@@ -5872,7 +5874,7 @@ export function addCalendarEntry(coachId: number, v: CalendarEntryInput): number
   if (!entryOk(c)) return null;
   const id = allocId("meetings");
   const clientId = entryClient(v, c);
-  getData().meetings.push({ id, client_id: clientId, coach_id: clientId == null ? coachId : null, ...c, status: "scheduled", link: null });
+  getData().meetings.push({ id, client_id: clientId, coach_id: clientId == null ? coachId : null, ...c, status: "scheduled", link: entryLink(v, c) ?? null });
   persist();
   return id;
 }
@@ -5888,6 +5890,8 @@ export function updateCalendarEntry(coachId: number, id: number, v: CalendarEntr
   if (!row || !entryOk(c)) return;
   const clientId = entryClient(v, c);
   Object.assign(row, c, { client_id: clientId, coach_id: clientId == null ? coachId : null });
+  const link = entryLink(v, c);
+  if (link !== undefined) row.link = link;
   persist();
 }
 

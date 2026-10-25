@@ -21,6 +21,8 @@ export type PhoneEntry = {
   status: "scheduled" | "completed" | "no-show" | "cancelled";
   category: string | null;
   note: string;
+  /** The call's link, for Join call; never shown as words. */
+  link: string | null;
   /** Who and when it is double-booked with: "Ben 10:15–11:00"; empty when it isn't. */
   clashes: string[];
 };
@@ -73,6 +75,7 @@ export function loadPhoneCalendar(coachId: number, monday: string, today: string
       status: m.status,
       category: m.category ?? null,
       note: m.prep_notes ?? "",
+      link: m.link ?? null,
       clashes: clashOf.get(m.id) ?? [],
     }));
   return {

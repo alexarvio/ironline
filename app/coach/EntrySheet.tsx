@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { addCalendarEntryAction, updateCalendarEntryAction } from "../lib/actions";
 import { TRAINING_ICON } from "../lib/eventTypes";
-import { takesClient } from "../lib/calendarKinds";
+import { callLink, isClientCall, takesClient } from "../lib/calendarKinds";
 import { dayMonth } from "../lib/dayMonth";
 import { MonthRange } from "../admin/redesign/MonthRange";
 import { paletteOf, type Category } from "../admin/redesign/palette";
@@ -23,6 +23,8 @@ import { Avatar, Icon, Sheet } from "./parts";
 // chosen choice ink, the category's colour on its icon, one ink pill.
 // With is only for a Client call or Training (23 Oct, Alex; calendarKinds.ts):
 // on any other category the row keeps its room unseen, and no client is saved.
+// Link is a call's alone (25 Oct, Alex), the link the Meetings tab's Join opens: typed on a Client call, its room
+// kept unseen on the rest as With's, and saved with the entry (none on any other category).
 
 /** A preset category's icon, its placeholder and its usual length, as the laptop's pop-up has them. A coach's own category wears the tag. */
 export const ENTRY_PRESET: Record<string, { icon: string; placeholder: string; length: number }> = {
@@ -105,6 +107,7 @@ export default function EntrySheet({
   const [customLength, setCustomLength] = useState(e ? !LENGTHS.includes(e.durationMinutes) : false);
   const [clientId, setClientId] = useState<number | null>(e?.clientId ?? null);
   const [note, setNote] = useState(e?.note ?? "");
+  const [link, setLink] = useState(e?.link ?? "");
   const [page, setPage] = useState<Page>("form");
   const [q, setQ] = useState("");
   const [saving, setSaving] = useState(false);
@@ -118,7 +121,10 @@ export default function EntrySheet({
   const client = withClient && clientId != null ? clients.find((c) => c.id === clientId) ?? null : null;
   const first = (name: string) => name.split(" ")[0];
   const endMin = toMin(time) + length;
-  const ok = !!date && (allDay || !!time);
+  // Only a Client call has a link; one typed that isn't a link yet holds Save back, as the laptop's link pop-up.
+  const withLink = isClientCall(cat);
+  const linkBad = withLink && !!link.trim() && callLink(link) == null;
+  const ok = !!date && (allDay || !!time) && !linkBad;
   // A client picked with no title yet: the laptop's suggestion, kept when nothing is typed.
   const suggested = client && !topic.trim() ? `${current?.label ?? "Call"} · ${first(client.name)}` : null;
   const title = topic.trim() || suggested || "";
@@ -144,7 +150,7 @@ export default function EntrySheet({
     setSaving(true);
     setError(null);
     // The time is in this phone's timezone, as every time on the Calendar reads.
-    const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: length, allDay, topic: title, clientId: withClient ? clientId : null, category: cat, note: note.trim() };
+    const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: length, allDay, topic: title, clientId: withClient ? clientId : null, category: cat, note: note.trim(), link: withLink ? callLink(link) : null };
     try {
       if (e) await updateCalendarEntryAction(e.id, v);
       else if ((await addCalendarEntryAction(v)) == null) throw new Error("not saved");
@@ -303,6 +309,30 @@ export default function EntrySheet({
               </>
             )}
           </button>
+        </div>
+
+        {/* Link on a Client call alone (25 Oct, Alex), its room kept unseen on the rest as With's. One not a link yet says
+            so on its label's line and rings the box rust, so nothing under it moves. */}
+        <div className={`cph-ent-withrow${withLink ? "" : " off"}`} aria-hidden={withLink ? undefined : true} inert={!withLink}>
+          <label className="cph-ent-label cph-ent-labelrow" htmlFor="cph-ent-link">
+            Link
+            {linkBad && <span className="cph-ent-bad">Not a link yet</span>}
+          </label>
+          <input
+            id="cph-ent-link"
+            className="cph-ent-box"
+            type="url"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={link}
+            onChange={(x) => setLink(x.target.value)}
+            placeholder="https://meet.google.com/abc-defg-hij"
+            maxLength={500}
+            enterKeyHint="done"
+            aria-invalid={linkBad || undefined}
+          />
         </div>
 
         <div className="cph-ent-two">

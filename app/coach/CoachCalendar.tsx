@@ -304,7 +304,7 @@ function Row({ e, cats, now, onOpen }: { e: PhoneEntry; cats: PhoneCalendar["cat
   );
 }
 
-/** An entry opened: what, its category, when, with whom and the note; then Chat, Edit and Remove (which asks first). */
+/** An entry opened: what, its category, when, with whom and the note; then Join call (when it has a link), Chat, Edit and Remove (which asks first). */
 function EntryRead({ e, cats, avatar, onClose, onChat, onEdit, onRemoved }: { e: PhoneEntry; cats: PhoneCalendar["categories"]; avatar: string | null; onClose: () => void; onChat: () => void; onEdit: () => void; onRemoved: () => void }) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -355,6 +355,13 @@ function EntryRead({ e, cats, avatar, onClose, onChat, onEdit, onRemoved }: { e:
             )}
             {e.note && <p className="cph-read-note">{e.note}</p>}
           </div>
+          {/* The call's link as an action alone, never its URL (25 Oct, Alex), opening outside the app. */}
+          {e.link && (
+            <a className="cph-sheet-row" href={e.link} target="_blank" rel="noopener noreferrer">
+              <CatIcon d={entryIcon("call")} size={20} />
+              Join call
+            </a>
+          )}
           {e.clientId != null && (
             <button type="button" className="cph-sheet-row" onClick={onChat}>
               <Icon name="chat" />
