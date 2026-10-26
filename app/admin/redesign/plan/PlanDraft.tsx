@@ -993,7 +993,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
           {/* No end (26 Oct, Alex: mockup A): its own row under the dates, the words and a switch, white while off and ink
               while on; it runs on a week at a time. New phases and existing ones alike. */}
           <label className="npd-endrow">
-            <span>No end</span>
+            <span>Indefinite</span>
             <button type="button" role="switch" aria-checked={openEnded} className={`npd-switch${openEnded ? " on" : ""}`} onClick={() => setOpenEnded((o) => !o)}>
               <i aria-hidden="true" />
             </button>
