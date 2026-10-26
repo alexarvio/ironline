@@ -8,10 +8,21 @@ import { findUserByEmail, getSessionUser } from "../../lib/auth";
 // account yet gets a coach account that waits for the owner's approval.
 export const dynamic = "force-dynamic";
 
-export default async function ContinuePage() {
+// The page they were sent to sign in from (?next=, proxy.ts), when it fits the account (26 Oct, Alex: the coach phone
+// app, /coach, signed in to the admin): a coach back to the phone app or an admin screen, a client to their app. A
+// path on this site only, never another address.
+function backTo(next: string | undefined, role: string): string | null {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return null;
+  const path = next.split(/[?#]/)[0];
+  const fits = role === "client" ? path === "/client" || path.startsWith("/client/") : path === "/coach" || path.startsWith("/coach/") || path.startsWith("/admin");
+  return fits ? next : null;
+}
+
+export default async function ContinuePage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   if (!clerkOn()) redirect("/login");
+  const { next } = await searchParams;
   const user = await getSessionUser();
-  if (user) redirect(user.role === "client" ? "/client" : user.pending ? "/auth/waiting" : "/admin/redesign");
+  if (user) redirect(user.pending ? "/auth/waiting" : (backTo(next, user.role) ?? (user.role === "client" ? "/client" : "/admin/redesign")));
 
   const who = await clerkIdentity();
   if (!who) redirect("/login");

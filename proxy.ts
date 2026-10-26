@@ -36,8 +36,11 @@ const withClerk = !clerkOn ? null : clerkMiddleware(async (auth, request) => {
   const { userId } = await auth();
   if (userId) return;
   const url = request.nextUrl.clone();
+  // Where they were going rides along (26 Oct, Alex: the coach phone app signed in to the admin), and sign-in takes
+  // them back there (/auth/continue checks it fits the account).
+  const { pathname, search } = request.nextUrl;
   url.pathname = "/login";
-  url.search = "";
+  url.search = pathname !== "/" && !pathname.startsWith("/api/") ? `?next=${encodeURIComponent(pathname + search)}` : "";
   return NextResponse.redirect(url);
 }, { signInUrl: "/login", signUpUrl: "/signup" });
 

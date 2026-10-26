@@ -13,7 +13,14 @@ import { AuthShell, CodeScreen, CoachSignUpScreen, InviteWelcomeScreen, SignInSc
 // Whatever happens, the last stop is /auth/continue, which looks up our own
 // account for them and sends them on (lib/clerk.ts links the two).
 
-const CONTINUE = "/auth/continue";
+// Where sign-in goes on to, with the page they were sent here from (?next=, set by proxy.ts), so the coach phone app
+// (/coach) comes back to itself and not to the admin (26 Oct, Alex).
+const CONTINUE_BASE = "/auth/continue";
+function continueUrl(): string {
+  if (typeof window === "undefined") return CONTINUE_BASE;
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next ? `${CONTINUE_BASE}?next=${encodeURIComponent(next)}` : CONTINUE_BASE;
+}
 const INTENT = "ironline_intent";
 
 /** Clerk's own message for what went wrong, in a sentence. */
@@ -32,7 +39,7 @@ const signedIn = (error: unknown) => isClerkAPIResponseError(error) && error.err
 
 /** After Clerk says yes: a full page load, so the server sees the new session. */
 // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load on purpose: the server must read the new session cookie
-const land = () => window.location.assign(CONTINUE);
+const land = () => window.location.assign(continueUrl());
 
 /**
  * The email-code steps, shared by sign-in and coach sign-up: send a code to
@@ -117,7 +124,7 @@ function useEmailCode() {
     if (!ready) return;
     setBusy(true);
     // A Google or Apple account Clerk doesn't know yet is signed up on the way back.
-    signIn.authenticateWithRedirect({ strategy, redirectUrl: "/sso-callback", redirectUrlComplete: CONTINUE }).catch((e) => {
+    signIn.authenticateWithRedirect({ strategy, redirectUrl: "/sso-callback", redirectUrlComplete: continueUrl() }).catch((e) => {
       if (signedIn(e)) return land();
       setError(says(e));
       setBusy(false);
