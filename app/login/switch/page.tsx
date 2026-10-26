@@ -22,8 +22,8 @@ export default async function SwitchAccountPage({ searchParams }: { searchParams
   const here = user.role === "coach" ? "/admin/redesign" : "/client";
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
+    <div className="auth-page au-page">
+      <div className="auth-card au-card">
         <div className="auth-brand">
           <NorCoachLogo />
         </div>

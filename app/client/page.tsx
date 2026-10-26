@@ -1338,6 +1338,9 @@ export default async function ClientPage({
     viewer?.role === "coach" && CLIENT_ID != null && !phone
       ? { current: { id: CLIENT_ID, name: getClient(CLIENT_ID)?.name ?? "" }, clients: listClients(viewer.id).map((c) => ({ id: c.id, name: c.name })) }
       : null;
+  // A coach with no clients signed in to the client app (26 Oct, Alex: the client app on a phone that signed in with
+  // the coach account): the switch screen, who this is and Sign out, not a dead end.
+  if (CLIENT_ID == null && viewer?.role === "coach" && !phone) redirect("/login/switch?to=client");
   if (CLIENT_ID == null) {
     return (
       <div className="phone-frame">
