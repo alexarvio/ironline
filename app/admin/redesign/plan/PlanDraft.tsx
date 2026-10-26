@@ -991,7 +991,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             </div>
           </div>
           {/* No end (26 Oct, Alex): on and off, white while off and ink while on; it runs on a week at a time. */}
-          <button type="button" className={`npd-open${openEnded ? " on" : ""}`} aria-pressed={openEnded} onClick={() => setOpenEnded((o) => !o)}>
+          <button type="button" className={`npd-endless${openEnded ? " on" : ""}`} aria-pressed={openEnded} onClick={() => setOpenEnded((o) => !o)}>
             No end
           </button>
           {/* Type the weeks and the end follows; pick the end and the weeks follow. An uneven span shows its length beside it. */}

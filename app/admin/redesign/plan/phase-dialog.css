@@ -237,7 +237,7 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 
 /* No end (26 Oct, Alex): a pill under the dates, white while off and ink while on; with it on, Ends says so and the
    weeks read Ongoing. */
-.npd.npd .npd-open { align-self: flex-start; display: inline-flex; align-items: center; height: 30px; margin-top: 10px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
-.npd.npd .npd-open.on { background: #141a24; box-shadow: none; color: #fff; }
+.npd.npd .npd-endless { align-self: flex-start; display: inline-flex; align-items: center; height: 30px; margin-top: 10px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.npd.npd .npd-endless.on { background: #141a24; box-shadow: none; color: #fff; }
 .npd.npd .npd-noend { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
 .npd.npd .npd-ongoing { display: inline-flex; align-items: center; color: #141a24; }
