@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { connectStripeAction, disconnectStripeAction, saveCoachBusinessAction, saveCoachInvoicingAction } from "../../../lib/actions";
 import type { PaymentsState } from "../../../lib/payments";
-import { changeOwnPasswordAction, logoutAction } from "../../../lib/auth-actions";
+import { changeOwnEmailAction, changeOwnPasswordAction, logoutAction } from "../../../lib/auth-actions";
 import type { CoachBusiness, CoachInvoicing } from "../../../lib/db";
 import { ArrowRightIcon } from "../../../components/icons";
 import { COUNTRIES, CURRENCIES, countryCodeFromName, countryOf, currencyName, invoicingFor } from "../../../lib/countries";
@@ -71,7 +71,57 @@ function useDraft<T extends Record<string, unknown>>(initial: T, save: (v: T) =>
 }
 
 // ---- Account & security
-export function AccountSettings({ email }: { email: string }) {
+export function AccountSettings({ email, passwordless = false }: { email: string; /** Sign-in through Clerk (26 Oct): no password here, and the email can be changed. */ passwordless?: boolean }) {
+  if (passwordless) return <AccountEmail email={email} />;
+  return <AccountPassword email={email} />;
+}
+
+/** The account's email with the sign-in through Clerk: where clients' replies to invites go, changed in place. Signing
+ *  in is Clerk's (Google, or a code to the email), so no password. */
+function AccountEmail({ email }: { email: string }) {
+  const [value, setValue] = useState(email);
+  const [busy, start] = useTransition();
+  const [error, setError] = useState("");
+  const changed = value.trim().toLowerCase() !== email;
+  const save = () =>
+    start(async () => {
+      const r = await changeOwnEmailAction(value);
+      if (!r.ok) return setError(r.error ?? "Couldn't change it.");
+      setError("");
+      toast.success("Email changed");
+    });
+  return (
+    <>
+      <Section title="Sign-in">
+      <div className="rls-card rst-card">
+        <div className="rst-grid">
+          <Field label="Email" wide>
+            <input className="dlh-line" type="email" value={value} onChange={(e) => setValue(e.target.value)} autoComplete="email" />
+          </Field>
+          {changed && (
+            <div className="rst-foot wide">
+              <span className="rst-err">{error}</span>
+              <button type="button" className="dlh-go" onClick={save} disabled={busy}>
+                {busy ? "Saving…" : "Save"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      </Section>
+      <Section
+        title="This device"
+        actions={
+          <button type="button" className="trn-pill rst-pill" onClick={() => logoutAction()}>
+            Sign out
+          </button>
+        }
+      />
+    </>
+  );
+}
+
+function AccountPassword({ email }: { email: string }) {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [again, setAgain] = useState("");

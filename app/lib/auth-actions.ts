@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isLoginLocked, recordLoginFailure } from "./loginLockout";
 import { recordLoginLock } from "./queries";
@@ -23,7 +24,7 @@ import { getData } from "./db";
 import { deleteUserForClient } from "./auth";
 import { eraseClient } from "./erase";
 import { completePasswordReset, requestPasswordReset } from "./passwordReset";
-import { approveCoach, createPasswordlessUser } from "./auth";
+import { approveCoach, createPasswordlessUser, setUserEmail } from "./auth";
 import { sendCoachApprovedEmail } from "./mail";
 import { cookies } from "next/headers";
 import { clerkIdentity, clerkOn } from "./clerk";
@@ -225,6 +226,23 @@ export async function changeOwnPasswordAction(current: string, next: string): Pr
   const pw = String(next ?? "");
   if (pw.length < 8) return { ok: false, error: "At least 8 characters." };
   setPassword(user.id, pw, false);
+  return { ok: true };
+}
+
+// Settings → Account & security with the sign-in through Clerk (26 Oct): a coach changes the email on their account,
+// where clients' replies to invites go. Signing in is not touched: the account is tied to its Clerk login, and the
+// emails that sign in are Clerk's.
+export async function changeOwnEmailAction(email: string): Promise<{ ok: boolean; error?: string }> {
+  const user = await getSessionUser();
+  if (!user || user.role !== "coach") return { ok: false, error: "Signed out. Sign in again." };
+  const e = String(email ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return { ok: false, error: "That isn't an email address." };
+  try {
+    setUserEmail(user.id, e);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Couldn't change it." };
+  }
+  revalidatePath("/admin");
   return { ok: true };
 }
 

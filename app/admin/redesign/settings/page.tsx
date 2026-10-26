@@ -1,4 +1,5 @@
 import { isOwner, requireCoach } from "../../../lib/auth";
+import { clerkOn } from "../../../lib/clerk";
 import { getCoachProfileView, getCoachSettings, listCoachAccounts } from "../../../lib/queries";
 import { getData } from "../../../lib/db";
 import { COUNTRIES } from "../../../lib/countries";
@@ -93,7 +94,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       tag: profile && <span className={`trn-state${profile.published ? " good" : ""}`}>{profile.published ? "Published" : "Not published"}</span>,
       body: profile ? <ProfileEditor key={coachId} profile={profile} coaches={coaches} details={details} countries={countries} /> : <p className="rpf-empty">No coach profile</p>,
     },
-    { key: "account", body: <AccountSettings email={coach.email} /> },
+    { key: "account", body: <AccountSettings email={coach.email} passwordless={clerkOn()} /> },
     { key: "business", body: <BusinessSettings key={JSON.stringify(business)} initial={business} /> },
     // Keyed on the business's country too: a new one there brings its own defaults here.
     { key: "invoicing", body: <InvoicingSettings key={JSON.stringify([invoicing, business.country_code ?? null, business.country ?? null])} initial={invoicing} business={business} payments={payments} /> },
