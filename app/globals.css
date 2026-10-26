@@ -20704,6 +20704,9 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .cmv { position: relative; display: block; width: fit-content; max-width: 100%; }
 .cmv > video, .cmv > img { pointer-events: none; }
 .cmv > img { object-fit: cover; background: #1b2029; }
+/* A poster with no known size takes the blank tile's (26 Oct, Alex: "it jumps"): one size before, while and after it
+   loads, so the thread never moves under it. */
+.cmv > img:not([style*="aspect-ratio"]) { width: 240px; max-width: 100%; height: auto; aspect-ratio: 4 / 5; }
 /* No poster to be had: its preview, else a dark tile, at its size (4:5 when unknown). */
 .cmv-blank { display: block; width: 240px; max-width: 100%; aspect-ratio: 4 / 5; background-color: #1b2029; }
 /* Its wrapper is as wide as what it holds; an empty tile would be none, so the tile sets the width (25 Oct: a sliver). */

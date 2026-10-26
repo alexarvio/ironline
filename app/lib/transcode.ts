@@ -1,5 +1,7 @@
 import { execFile } from "child_process";
 import fs from "fs";
+import os from "os";
+import path from "path";
 
 // A WebM from the coach's browser recorder as an MP4 the client's phone
 // plays (9 Oct): ffmpeg from the ffmpeg-static package (the binary for the
@@ -30,8 +32,10 @@ function systemBin(): string | null {
   }
   return null;
 }
+// The system one first (26 Oct, Alex: every chat poster failed on the live server: the package's static build could not
+// read the bucket's https links, while the system's reads them).
 function ffmpegBin(): string | null {
-  return staticBin() ?? systemBin();
+  return systemBin() ?? staticBin();
 }
 /** Which ffmpeg the server has, for /api/timing (25 Oct). */
 export const ffmpegInfo = () => ({ static: staticBin(), system: systemBin() });
@@ -45,7 +49,28 @@ export const ffmpegInfo = () => ({ static: staticBin(), system: systemBin() });
 /** The last first-frame failure, for /api/timing. */
 export let lastFrameError: string | null = null;
 
-export function firstFrame(input: string, at = 0, timeoutMs = 60 * 1000): Promise<Buffer | null> {
+export async function firstFrame(input: string, at = 0, timeoutMs = 60 * 1000): Promise<Buffer | null> {
+  const frame = await frameOf(input, at, timeoutMs);
+  if (frame || !/^https?:/i.test(input)) return frame;
+  // A link ffmpeg could not read: the video downloaded to a file first, then read from there.
+  const tmp = path.join(os.tmpdir(), `frame-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  try {
+    const res = await fetch(input);
+    if (!res.ok) {
+      lastFrameError = `download ${res.status}`;
+      return null;
+    }
+    fs.writeFileSync(tmp, Buffer.from(await res.arrayBuffer()));
+    return await frameOf(tmp, at, timeoutMs);
+  } catch (error) {
+    lastFrameError = `download: ${error instanceof Error ? error.message : String(error)}`.slice(0, 300);
+    return null;
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
+}
+
+function frameOf(input: string, at: number, timeoutMs: number): Promise<Buffer | null> {
   return new Promise((resolve) => {
     const bin = ffmpegBin();
     if (!bin) {
