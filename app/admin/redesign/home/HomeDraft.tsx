@@ -908,7 +908,10 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
   return (
     <section className="rls-card rh-panel rh-weight" aria-label="Weight" style={gutter ? ({ "--rh-wgut": `${gutter}px` } as CSSProperties) : undefined}>
       <div className="rh-panel-head tall">
-        <h2 className="rh-panel-title">Weight</h2>
+        {/* The latest beside the title (26 Oct, Alex), the change in kg and in % under it. */}
+        <h2 className="rh-panel-title">
+          Weight <span className="rh-wnow">{kg1(latest)}</span>
+        </h2>
         <span className="rh-panel-tools">
           <span className="rd-btn-group" role="group" aria-label="Window">
             {STRENGTH_SPANS.filter((s) => s.id !== "phase" || hasPhase).map((s) => (
@@ -921,14 +924,15 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
       </div>
       <span className="rh-under">
         <SepJoin
-          parts={[
-            <b key="now">{kg1(latest)}</b>,
-            w.change != null && w.since ? (
-              <span key="change">
-                <b>{signed1(w.change)} kg</b>
-              </span>
-            ) : null,
-          ]}
+          parts={
+            w.change != null && w.since
+              ? [
+                  <b key="kg">{signed1(w.change)} kg</b>,
+                  // The change on where the window began: the latest less the change.
+                  latest - w.change !== 0 ? <b key="pct">{signed1((w.change / (latest - w.change)) * 100)}%</b> : null,
+                ]
+              : []
+          }
         />
       </span>
       {/* No "On pace for…" under it (23 Oct, Alex: take the prediction out). */}
