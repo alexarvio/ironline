@@ -49,7 +49,10 @@ function toCanonical(request: NextRequest): NextResponse | null {
   if (!CANONICAL) return null;
   const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "").split(":")[0].toLowerCase();
   if (!host || host === CANONICAL || request.nextUrl.pathname.startsWith("/api/")) return null;
-  if (!host.endsWith(".up.railway.app") && host !== `www.${CANONICAL}`) return null;
+  // On a subdomain (app.norcoachapp.com), the bare domain and its www go to it too, until the website takes them.
+  const parent = CANONICAL.split(".").length > 2 ? CANONICAL.slice(CANONICAL.indexOf(".") + 1) : null;
+  const ours = host === `www.${CANONICAL}` || (parent != null && (host === parent || host === `www.${parent}`));
+  if (!host.endsWith(".up.railway.app") && !ours) return null;
   return NextResponse.redirect(`https://${CANONICAL}${request.nextUrl.pathname}${request.nextUrl.search}`, 308);
 }
 

@@ -4,7 +4,7 @@
   "webDir": "www",
   "backgroundColor": "#f8f9fb",
   "server": {
-    "url": "https://norcoachapp.com/client",
+    "url": "https://app.norcoachapp.com/client",
     "errorPath": "index.html"
   },
   "ios": {
