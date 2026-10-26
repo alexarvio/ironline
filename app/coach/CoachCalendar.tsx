@@ -195,7 +195,7 @@ export default function CoachCalendar({ state, serverToday, me, onOpenChat }: { 
         </span>
       </div>
 
-      <div className={`cph-cal-week${weekSlide ? ` in-${weekSlide}` : ""}`} key={monday} {...weekSwipe}>
+      <div className={`cph-cal-week${weekSlide ? ` in-${weekSlide}` : ""}`} key={`week-${monday}`} {...weekSwipe}>
         {days.map((d, i) => {
           const marks = ofDay(d);
           return (
@@ -228,7 +228,7 @@ export default function CoachCalendar({ state, serverToday, me, onOpenChat }: { 
         {list.length > 0 && <span className="cph-cal-count">{`${list.length} ${list.length === 1 ? "entry" : "entries"}`}</span>}
       </div>
 
-      <div className={`cph-cal-daybody${slide ? ` in-${slide}` : ""}`} key={chosen} {...daySwipe}>
+      <div className={`cph-cal-daybody${slide ? ` in-${slide}` : ""}`} key={`day-${chosen}`} {...daySwipe}>
         {!week ? null : list.length === 0 ? (
           <p className="cph-empty">Nothing booked</p>
         ) : (
