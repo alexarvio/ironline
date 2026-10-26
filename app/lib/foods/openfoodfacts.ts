@@ -20,7 +20,7 @@ export type OffProduct = {
   serving_grams: number | null;
 };
 
-const UA = "NorCoach/1.0 (coaching app; https://ironline-production-e741.up.railway.app)";
+const UA = "NorCoach/1.0 (coaching app; https://norcoachapp.com)";
 const TIMEOUT_MS = 7000;
 const FIELDS = "code,product_name,product_name_en,brands,quantity,nutriments,serving_size,serving_quantity";
 

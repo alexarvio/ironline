@@ -55,9 +55,14 @@ export async function clerkUserRow() {
   if (linked) return linked;
   const who = await clerkIdentity();
   if (!who) return null;
-  const match = data.users.find((u) => !u.clerk_user_id && who.emails.includes(u.email));
+  // Linked under another Clerk instance (26 Oct: the test one before the switch to the live one) counts as not linked:
+  // the live sign-in links it afresh by its verified email, so nobody is locked out by a link the live Clerk never made.
+  const instance = (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "").slice(-12);
+  const row = (u: (typeof data.users)[number]) => u as typeof u & { clerk_instance?: string };
+  const match = data.users.find((u) => (!u.clerk_user_id || row(u).clerk_instance !== instance) && who.emails.includes(u.email));
   if (!match) return null;
   match.clerk_user_id = userId;
+  row(match).clerk_instance = instance;
   persist();
   return match;
 }

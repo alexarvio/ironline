@@ -4,7 +4,7 @@
   "webDir": "www",
   "backgroundColor": "#f8f9fb",
   "server": {
-    "url": "https://ironline-production-e741.up.railway.app/client",
+    "url": "https://norcoachapp.com/client",
     "errorPath": "index.html"
   },
   "ios": {

@@ -28,6 +28,7 @@ function says(error: unknown, fallback = "Something went wrong. Try again."): st
 }
 const notFound = (error: unknown) => isClerkAPIResponseError(error) && error.errors.some((e) => e.code === "form_identifier_not_found");
 const exists = (error: unknown) => isClerkAPIResponseError(error) && error.errors.some((e) => e.code === "form_identifier_exists");
+const signedIn = (error: unknown) => isClerkAPIResponseError(error) && error.errors.some((e) => e.code === "session_exists");
 
 /** After Clerk says yes: a full page load, so the server sees the new session. */
 // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load on purpose: the server must read the new session cookie
@@ -57,6 +58,8 @@ function useEmailCode() {
       await attempt.prepareFirstFactor({ strategy: "email_code", emailAddressId: factor.emailAddressId });
       setStep({ email, via: "in" });
     } catch (e) {
+      // A session from earlier is still open in this browser: on into the app.
+      if (signedIn(e)) return land();
       if (!notFound(e)) {
         setError(says(e));
         setBusy(false);
@@ -113,6 +116,7 @@ function useEmailCode() {
     setBusy(true);
     // A Google or Apple account Clerk doesn't know yet is signed up on the way back.
     signIn.authenticateWithRedirect({ strategy, redirectUrl: "/sso-callback", redirectUrlComplete: CONTINUE }).catch((e) => {
+      if (signedIn(e)) return land();
       setError(says(e));
       setBusy(false);
     });

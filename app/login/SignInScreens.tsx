@@ -29,14 +29,20 @@ function ErrorLine({ error }: { error?: string | null }) {
   return error ? <p className="auth-error au-error">{error}</p> : null;
 }
 
+/** Sign in with Apple, off until it is set up for the live sign-in (26 Oct: NEXT_PUBLIC_APPLE_SIGNIN=off on the server
+    until Apple approves the developer account); on everywhere else. */
+const APPLE_ON = process.env.NEXT_PUBLIC_APPLE_SIGNIN !== "off";
+
 /** Apple and Google, then "or", then the email box. */
 function Providers({ verb = "Continue", onApple, onGoogle, busy }: Oauth & { verb?: string; busy?: boolean }) {
   return (
     <div className="au-providers">
-      <button type="button" className="au-provider apple" onClick={onApple} disabled={busy}>
-        <AppleGlyph />
-        {verb} with Apple
-      </button>
+      {APPLE_ON && (
+        <button type="button" className="au-provider apple" onClick={onApple} disabled={busy}>
+          <AppleGlyph />
+          {verb} with Apple
+        </button>
+      )}
       <button type="button" className="au-provider" onClick={onGoogle} disabled={busy}>
         <GoogleGlyph />
         {verb} with Google

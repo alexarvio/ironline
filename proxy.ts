@@ -41,7 +41,21 @@ const withClerk = !clerkOn ? null : clerkMiddleware(async (auth, request) => {
   return NextResponse.redirect(url);
 }, { signInUrl: "/login", signUpUrl: "/signup" });
 
+// The app's own address (26 Oct: norcoachapp.com). With CANONICAL_HOST set, a page asked for at the old Railway
+// address or at www goes to it, path and query kept: the live sign-in only works on the own domain. /api is left
+// alone, so a webhook or the phone app's calls never meet a redirect.
+const CANONICAL = process.env.CANONICAL_HOST?.trim().toLowerCase() || null;
+function toCanonical(request: NextRequest): NextResponse | null {
+  if (!CANONICAL) return null;
+  const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "").split(":")[0].toLowerCase();
+  if (!host || host === CANONICAL || request.nextUrl.pathname.startsWith("/api/")) return null;
+  if (!host.endsWith(".up.railway.app") && host !== `www.${CANONICAL}`) return null;
+  return NextResponse.redirect(`https://${CANONICAL}${request.nextUrl.pathname}${request.nextUrl.search}`, 308);
+}
+
 export function proxy(request: NextRequest, event: NextFetchEvent) {
+  const moved = toCanonical(request);
+  if (moved) return moved;
   if (withClerk) return withClerk(request, event);
   const { pathname } = request.nextUrl;
 

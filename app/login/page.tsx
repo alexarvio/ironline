@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { resetsAvailable } from "../lib/passwordReset";
 import { ensureCoachFromEnv, ensureOwnerFromEnv, getSessionUser, resetCoachFromEnv, resetWorkspaceFromEnv } from "../lib/auth";
 import { LoginCard } from "./AuthCards";
-import { clerkOn } from "../lib/clerk";
+import { clerkIdentity, clerkOn } from "../lib/clerk";
 import { SignInFlow } from "./ClerkFlows";
 
 export default async function LoginPage({
@@ -30,6 +30,10 @@ export default async function LoginPage({
 
   const { error, deleted, reset } = await searchParams;
   // Sign-in through Clerk: no passwords (lib/clerk.ts).
+  // Signed in to Clerk with no account of ours behind it: /auth/continue says
+  // so (and offers another email), where this form would only answer
+  // "You're already signed in".
+  if (clerkOn() && (await clerkIdentity())) redirect("/auth/continue");
   if (clerkOn()) return <SignInFlow notice={deleted ? "Your account and everything in it has been deleted." : null} />;
   return <LoginCard error={error} deleted={deleted} reset={reset} canReset={resetsAvailable()} />;
 }
