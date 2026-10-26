@@ -140,10 +140,6 @@
 .pb-menu a { display: flex; align-items: center; gap: 9px; color: inherit; text-decoration: none; }
 
 /* No clients yet (NoClients.tsx, 26 Sep): a welcome and one button. */
-.rnc { max-width: 520px; margin: 12vh auto 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.rnc-title { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
-.rnc-lead { margin: 0 0 8px; font-size: 15px; font-weight: 500; line-height: 1.5; color: #5b6474; }
-.rnc-btn { height: 40px; padding: 0 18px; }
 
 /* The tour of the rail (RailTour.tsx, 26 Sep): the part lit, the rest dimmed, a card beside it. */
 .rtour { position: fixed; inset: 0; z-index: 200; }
