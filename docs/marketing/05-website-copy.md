@@ -219,15 +219,15 @@ A few questions so we can set you up properly. We read every one.
 
 ### Why we built NorCoach
 
-I've been coached by Finlay for `[Proof: how long]`. He's the reason I train the way I do.
+I've been coached by Finlay for `[Proof: how long]`. He's the reason I train the way I do. `[Confirm: Alex's words]`
 
 For a long time, his whole business ran on spreadsheets. A sheet per client, a tab per week, every set's weight and RPE typed in and read back by hand. He'd tried a couple of coaching apps `[Proof: which]` and gone back to the sheets `[Proof: why]`.
 
-From my side, as his client, I could feel when he was stretched. A reply that came a day late. A week where nobody noticed my bench had stalled. Not because he didn't care, he cares more than anyone, but because one person reading forty spreadsheets can't see everything.
+From my side, as his client, I could feel when he was stretched. A reply that came a day late. A week where nobody noticed my bench had stalled. `[Confirm: replace with what really happened]` Not because he didn't care, he cares more than anyone, but because one person reading forty spreadsheets can't see everything.
 
 So I asked him what he actually needed. Not more features. He needed the things that matter to come to him: who stalled, whose video is waiting, whose check-in came in, who hasn't trained this week. And he needed his clients to feel coached, every day, not just on check-in day.
 
-We built NorCoach with his clients, week by week, for months. Every screen has been used by a real coach on real people before you'll see it.
+We built NorCoach with his clients, week by week, for months. `[Confirm: how long]` Every screen has been used by a real coach on real people before you'll see it.
 
 If you coach, I'd love to hear what your week looks like. Write to me: `[Decision: contact]`.
 
