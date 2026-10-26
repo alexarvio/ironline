@@ -275,7 +275,7 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
         <div ref={scrollRef} className="evp-scroll mtp-scroll" onScroll={onScroll}>
           <div className="evp-tl mtp-tl">
             <span className="evp-spine" aria-hidden="true" />
-            {pastSorted.length > 0 ? <div className="evp-sec">Past meetings</div> : <p className="evp-empty mtp-empty">After your first call, what you and {coachFirst} agree shows up here.</p>}
+            {pastSorted.length > 0 ? <div className="evp-sec">Past meetings</div> : <p className="evp-empty mtp-empty">After your first call, your past calls show here.</p>}
             {pastShown.map((m, i) => (
               <PastRow
                 key={m.id}
