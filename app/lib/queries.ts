@@ -3386,10 +3386,13 @@ export function feedClock(at: number): string {
 }
 
 /** A call that is over, as the coach's logs say it (23 Oct, Alex): what happened and the kind of call, never its title
-    (the coach's words). A past call nobody marked held or missed is only said to have been booked. */
+    (the coach's words). A past call nobody marked held or missed is the kind of call alone (26 Oct, Alex: "Booked a
+    check-in call" read as the client booking one). */
 export function callThing(m: { status: string; meeting_type?: string | null }): string {
   const kind = m.meeting_type === "review" ? "review call" : m.meeting_type === "other" ? "call" : "check-in call";
-  return `${m.status === "completed" ? "Had" : m.status === "no-show" ? "Missed" : "Booked"} a ${kind}`;
+  if (m.status === "completed") return `Had a ${kind}`;
+  if (m.status === "no-show") return `Missed a ${kind}`;
+  return kind.charAt(0).toUpperCase() + kind.slice(1);
 }
 
 /** "3/9 · 14:05", or just "3/9" when the time was never recorded (day/month, 20 Oct, Alex). */
