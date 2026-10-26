@@ -14,7 +14,7 @@ type Oauth = { onApple?: () => void; onGoogle?: () => void };
 
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
-    <div className="auth-page">
+    <div className="auth-page au-page">
       <div className="auth-card au-card">
         <div className="auth-brand">
           <NorCoachLogo />
@@ -90,7 +90,9 @@ export function SignInScreen({ onEmail, onApple, onGoogle, busy, error, notice, 
         Coaching others? <a href={signupHref}>Create a coach account</a>
       </p>
       <p className="auth-note auth-legal">
-        <a href="/privacy">Privacy policy</a> · <a href="/support">Support</a>
+        <a href="/privacy">Privacy policy</a>
+        <i className="au-sep" aria-hidden="true" />
+        <a href="/support">Support</a>
       </p>
     </AuthShell>
   );

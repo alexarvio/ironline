@@ -20714,3 +20714,39 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .cmv-full > video { width: 100%; height: 100%; object-fit: contain; }
 .cmv-x { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 14px; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.16); color: #fff; cursor: pointer; }
 .cmv-x:active { background: rgba(255, 255, 255, 0.28); }
+
+/* ---- The sign-in screens in the app's own look (26 Oct, Alex): Archivo, the page colour, a white card with a hairline,
+   the logo across the whole row, small grey uppercase labels over white hairline fields (ink while typing), Google as
+   the white hairline pill, the ink pill to send, the links grey words, facts parted by the drawn bar. Scoped to
+   .au-card, the Clerk screens (SignInScreens.tsx); the old password screens keep theirs. */
+.auth-page.au-page { background: #F5F6F8; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+.au-card.auth-card { max-width: 400px; padding: 30px 28px 24px; border: 0; border-radius: 20px; background: #fff; box-shadow: 0 0 0 1px #E1E5EB; }
+.au-card .auth-brand { display: block; margin-bottom: 26px; color: #141a24; }
+.au-card .auth-brand .nc-logo { display: flex; align-items: center; gap: 14px; width: 100%; }
+.au-card .auth-brand .nc-logo-mark { height: 46px; }
+.au-card .auth-brand .nc-logo-word { flex: 1 1 auto; width: 100%; height: auto; min-width: 0; }
+.au-card .auth-title { margin: 0 0 18px; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
+.au-card .au-lead { color: #5b6474; font-size: 14px; font-weight: 500; }
+.au-card .auth-field span { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.au-card .auth-field input { height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; }
+.au-card .auth-field input::placeholder { color: #98A2B3; }
+.au-card .auth-field input:focus { outline: none; box-shadow: inset 0 0 0 1.5px #141a24; }
+.au-card .au-provider { height: 44px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 14.5px; font-weight: 600; color: #141a24; }
+.au-card .au-provider:hover { background: #fafbfd; }
+.au-card .au-provider.apple { box-shadow: none; background: #141a24; color: #fff; }
+.au-card .au-or { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.au-card .au-or::before, .au-card .au-or::after { background: #E1E5EB; }
+.au-card .btn.auth-submit { display: flex; align-items: center; height: 44px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font: inherit; font-size: 14.5px; font-weight: 600; box-shadow: none; }
+.au-card .btn.auth-submit:hover { background: #262e3b; }
+.au-card .btn.auth-submit:disabled { opacity: 0.5; }
+.au-card .auth-note { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
+.au-card .auth-note a, .au-card .au-link { color: #5b6474; font-weight: 600; text-decoration: none; }
+.au-card .auth-note a:hover, .au-card .au-link:hover { color: #141a24; }
+.au-card .auth-note b { color: #141a24; font-weight: 600; }
+.au-card .auth-legal { display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 1; }
+.au-card .au-sep { display: inline-block; width: 1px; height: 11px; background: #C9CFD8; }
+.au-card .au-code input { height: 52px; border: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #141a24; }
+.au-card .au-code input:focus { outline: none; box-shadow: inset 0 0 0 1.5px #141a24; }
+.au-card .auth-error { border: 0; background: none; padding: 0; color: #b42318; font-size: 13px; font-weight: 500; }
+.au-card .auth-ok { border: 0; background: none; padding: 0; color: #2f7a3f; font-size: 13px; font-weight: 500; }
+.au-card .au-coach { background: #141a24; }
