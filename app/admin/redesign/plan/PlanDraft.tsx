@@ -1003,7 +1003,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             <span className="npd-label">Weeks</span>
             <span className="npd-weeks-row">
               {openEnded ? (
-                <span className="npd-line npd-weeks npd-ongoing">Ongoing</span>
+                <span className="npd-line npd-weeks npd-ongoing">Indefinite</span>
               ) : (
                 <input className="npd-line npd-weeks" type="number" inputMode="numeric" min={1} max={104} step={1} value={weeksShown} onChange={(e) => setWeeks(e.target.value)} onBlur={() => setWeeksText(null)} onFocus={() => setPicking("end")} aria-label="Length in weeks" />
               )}

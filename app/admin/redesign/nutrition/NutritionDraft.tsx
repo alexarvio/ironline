@@ -594,7 +594,7 @@ export default function NutritionDraft({
           {plan.startDate && (
             // The facts parted by a short upright line, the dates last (21 Oct, as Lifestyle).
             <span className="trn-meta">
-              <span>{plan.openEnded ? "Ongoing" : `${plan.weeks} ${plan.weeks === 1 ? "week" : "weeks"}`}</span>
+              <span>{plan.openEnded ? "Indefinite" : `${plan.weeks} ${plan.weeks === 1 ? "week" : "weeks"}`}</span>
               {plan.weekIdx != null && (
                 <span className="trn-meta-part">
                   week {plan.weekIdx}

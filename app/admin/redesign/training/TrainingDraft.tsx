@@ -903,7 +903,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           </div>
           {/* The facts parted by a short upright line, not a dot (21 Oct, Alex); the dates last. */}
           <span className="trn-meta">
-            <span>{program.openEnded ? "Ongoing" : `${weeks.length} ${weeks.length === 1 ? "week" : "weeks"}`}</span>
+            <span>{program.openEnded ? "Indefinite" : `${weeks.length} ${weeks.length === 1 ? "week" : "weeks"}`}</span>
             {program.startDate && (
               <span className="trn-meta-part">
                 {program.openEnded ? `from ${fmtDate(program.startDate)}` : fmtDate(program.startDate)}

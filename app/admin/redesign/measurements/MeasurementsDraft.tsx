@@ -481,7 +481,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           {plan.startDate && (
             // The facts parted by a thin upright line, not a dot (21 Oct, Alex), as the metrics' line under it.
             <span className="trn-meta">
-              <span>{plan.openEnded ? "Ongoing" : `${plan.weeks} ${plan.weeks === 1 ? "week" : "weeks"}`}</span>
+              <span>{plan.openEnded ? "Indefinite" : `${plan.weeks} ${plan.weeks === 1 ? "week" : "weeks"}`}</span>
               {plan.weekIdx != null && (
                 <span className="trn-meta-part">
                   week {plan.weekIdx}

@@ -379,7 +379,7 @@ export function PhaseBar({ phase: p, at, grid, row, today, thisWeek, intoWeek, o
       <Edges drag={drag} left={!sp.clippedStart} right={!sp.clippedEnd && !p.open} />
       <span className="rq-bar-main">
         <span className="rq-bar-name">{p.name}</span>
-        <span className="rq-bar-meta">{p.open ? "Ongoing" : `${total} ${total === 1 ? "week" : "weeks"}`}</span>
+        <span className="rq-bar-meta">{p.open ? "Indefinite" : `${total} ${total === 1 ? "week" : "weeks"}`}</span>
       </span>
       {/* Nothing in it yet (20 Oct, Alex): a warning sign, what is missing on hover. Not on a past phase. */}
       {p.gap && state !== "past" && <GapSign text={p.gap} />}
