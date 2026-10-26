@@ -59,7 +59,7 @@ export async function clerkUserRow() {
   // the live sign-in links it afresh by its verified email, so nobody is locked out by a link the live Clerk never made.
   const instance = (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "").slice(-12);
   const row = (u: (typeof data.users)[number]) => u as typeof u & { clerk_instance?: string };
-  const match = data.users.find((u) => (!u.clerk_user_id || row(u).clerk_instance !== instance) && who.emails.includes(u.email));
+  const match = data.users.find((u) => (!u.clerk_user_id || row(u).clerk_instance !== instance) && who.emails.includes(String(u.email ?? "").trim().toLowerCase()));
   if (!match) return null;
   match.clerk_user_id = userId;
   row(match).clerk_instance = instance;
