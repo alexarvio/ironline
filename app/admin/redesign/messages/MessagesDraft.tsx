@@ -9,6 +9,7 @@ import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
 import ChatMediaGallery from "../../../components/ChatMediaGallery";
 import { ChatImage, ChatVideo, withVideoFrame } from "../../../components/ChatMedia";
+import MediaReviewModal, { chatMediaReview } from "../media-review/MediaReviewModal";
 import { chatDraftThreadAction } from "./actions";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
@@ -230,6 +231,10 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   };
   const quoteOf = (m: DraftMessage) => m.text.trim() || (m.media?.type === "image" ? "📷 Photo" : m.media?.type === "video" ? "🎥 Video" : m.media?.type === "audio" ? "🎤 Voice message" : m.media ? `📄 ${m.media.name ?? "File"}` : "");
   const photoInput = useRef<HTMLInputElement>(null);
+  // A photo or video they sent, reviewed on the recorder (26 Oct, Alex: the phone had Review, the laptop did not); the
+  // recording or words go back into the chat answering it.
+  const [reviewing, setReviewing] = useState<DraftMessage | null>(null);
+  const reviewable = (m: DraftMessage) => !m.mine && (m.media?.type === "video" || m.media?.type === "image");
   // Media and files sent in the chat, over it (ChatMediaGallery).
   const [gallery, setGallery] = useState(false);
   const react = (m: DraftMessage, emoji: string | null) => act(() => reactToMessageAction(clientId, m.id, emoji, true));
@@ -395,6 +400,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
                   ))}
                 </div>
                 <DropdownMenuSeparator />
+                {reviewable(m) && <DropdownMenuItem onSelect={() => setReviewing(m)}>Review</DropdownMenuItem>}
                 <DropdownMenuItem onSelect={() => startReply(m)}>Reply</DropdownMenuItem>
                 {m.text && <DropdownMenuItem onSelect={() => void navigator.clipboard?.writeText(m.text).catch(() => {})}>Copy</DropdownMenuItem>}
                 {m.mine && m.text && <DropdownMenuItem onSelect={() => setEditing({ id: m.id, text: m.text })}>Edit</DropdownMenuItem>}
@@ -476,6 +482,19 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
       </header>
 
       <section ref={chat} className="rd-session open rm-chat" aria-label={`Conversation with ${firstName}`}>
+        {reviewing?.media && (
+          <Dialog open onOpenChange={(o) => !o && setReviewing(null)}>
+            <MediaReviewModal
+              key={reviewing.id}
+              review={chatMediaReview(firstName, reviewing.media.type === "video" ? "video" : "photo", reviewing.media.path, reviewing.text, dayOf(reviewing.when))}
+              chat={{ clientId, replyTo: reviewing.id }}
+              onClose={() => {
+                setReviewing(null);
+                void refreshThread();
+              }}
+            />
+          </Dialog>
+        )}
         {gallery && (
           <ChatMediaGallery
             items={messages.filter((m) => m.media).map((m) => ({ id: m.id, who: m.mine ? "You" : firstName, when: m.when, media: m.media! }))}

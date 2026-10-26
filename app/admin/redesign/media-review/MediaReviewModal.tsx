@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { markVideoSeenAction, replyToMediaAction, sendFormReviewAction } from "../../../lib/actions";
+import { markVideoSeenAction, replyToMediaAction, sendChatMessageAction, sendFormReviewAction } from "../../../lib/actions";
 import { pic } from "../../../lib/pic";
 import { pathOf, simplify, SIZES, STROKE, UNDERLAY, UNDERLAY_COLOR, unitFor, worthKeeping, type Pt, type Shape, type Tool } from "./shapes";
 import { MAX_SECONDS, recordingSupported, useReviewRecorder, type Corner } from "./useReviewRecorder";
@@ -96,7 +96,48 @@ export function upload(id: number, blob: Blob, onProgress: (share: number) => vo
   });
 }
 
-export default function MediaReviewModal({ review, onClose }: { review: MediaReview; onClose: () => void }) {
+/** A review of a chat video or photo: the raw file to /api/chat-review, which posts it in the chat as a reply to their
+    message. The laptop's chat and the coach's phone both send through it (26 Oct, Alex). */
+export function uploadChatReview(clientId: number, replyTo: number, note: string, blob: Blob, onProgress: (share: number) => void): Promise<string | null> {
+  return new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `/api/chat-review/${clientId}?replyTo=${replyTo}&note=${encodeURIComponent(note)}`);
+    xhr.setRequestHeader("Content-Type", blob.type.split(";")[0] || "video/webm");
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(null);
+      let message = `The upload failed (${xhr.status || "no answer"}). Try again.`;
+      try {
+        message = JSON.parse(xhr.responseText).error ?? message;
+      } catch {}
+      resolve(message);
+    };
+    xhr.onerror = () => resolve("The upload broke off. Check the connection and try again.");
+    xhr.send(blob);
+  });
+}
+
+/** Where a review from the chat goes back to: the client's message it answers. */
+export type ChatTarget = { clientId: number; replyTo: number };
+
+/** A photo or video a client sent in the chat, as a review (26 Oct, Alex: the laptop's chat had no Review, the phone's
+    did): the same recorder, its recording or words going back into the chat as a reply to their message. */
+export function chatMediaReview(first: string, kind: "video" | "photo", url: string, words: string, when: string): MediaReview {
+  return {
+    requestId: 0,
+    unseen: false,
+    client: { firstName: first, name: first, avatarPath: null },
+    exercise: { name: kind === "video" ? "Video" : "Photo", session: when, week: 0, day: 0 },
+    requested: false,
+    media: [{ kind, url }],
+    sentAt: null,
+    sets: [],
+    clientMessage: words ? { text: words, at: null } : null,
+    thread: [],
+  };
+}
+
+export default function MediaReviewModal({ review, chat = null, onClose }: { review: MediaReview; /** From the chat: what it answers. */ chat?: ChatTarget | null; onClose: () => void }) {
   const router = useRouter();
   const first = review.client.firstName;
   // Opens on the recorder (15 Oct, Alex): the panel is the client, the video, where it comes from, and the recording. The thread and the text box went; a review reaches the chat on its own.
@@ -110,8 +151,8 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
 
   // Seen, once opened.
   useEffect(() => {
-    if (review.unseen) void markVideoSeenAction(review.requestId);
-  }, [review.unseen, review.requestId]);
+    if (review.unseen && !chat) void markVideoSeenAction(review.requestId);
+  }, [review.unseen, review.requestId, chat]);
 
   // ---- The stage and the frame the media sits in, fitted to it.
   const stageRef = useRef<HTMLDivElement>(null);
@@ -371,6 +412,22 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
     if (!clean || busy) return;
     setBusy(true);
     setError(null);
+    if (chat) {
+      // From the chat: the words go back into it, answering their message.
+      const fd = new FormData();
+      fd.set("clientId", String(chat.clientId));
+      fd.set("text", clean);
+      fd.set("replyTo", String(chat.replyTo));
+      fd.set("quiet", "1");
+      const sentOk = await sendChatMessageAction(fd).then(
+        () => true,
+        () => false
+      );
+      setBusy(false);
+      if (!sentOk) return setError("That did not send. Try again.");
+      onClose();
+      return;
+    }
     const ok = await replyToMediaAction(review.requestId, clean);
     setBusy(false);
     if (!ok) return setError("That did not send. Try again.");
@@ -385,6 +442,15 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
     if (!blob || progress != null) return;
     setError(null);
     setProgress(0);
+    if (chat) {
+      // From the chat: the recording and the note go back into it, as one message answering theirs.
+      const chatErr = await uploadChatReview(chat.clientId, chat.replyTo, reviewNote.trim(), blob, setProgress);
+      setProgress(null);
+      if (chatErr) return setError(chatErr);
+      recorder.retake();
+      onClose();
+      return;
+    }
     const err = await upload(review.requestId, blob, setProgress);
     if (err) {
       setProgress(null);
@@ -671,7 +737,8 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
             <small>
               {review.exercise.name}
               <Sep />
-              {review.media.length} {item.kind === "photo" ? (review.media.length === 1 ? "photo" : "photos") : review.media.length === 1 ? "video" : "videos"}
+              {/* From the chat: the day it was sent, not a count. */}
+              {chat ? review.exercise.session : <>{review.media.length} {item.kind === "photo" ? (review.media.length === 1 ? "photo" : "photos") : review.media.length === 1 ? "video" : "videos"}</>}
               {review.sentAt ? (
                 <>
                   <Sep />
@@ -688,6 +755,8 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
         {mode === "talk" ? (
           <div className="mrv-body talk" key="talk">
             <div className="mrv-scroll">
+              {/* An exercise's video only: a chat one has no session, week or sets (26 Oct, Alex). */}
+              {!chat && (
               <section className="mrv-ctx">
                 <div className="mrv-ctx-row">
                   <span className="mrv-eyebrow">
@@ -712,6 +781,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                   <p className="mrv-nosets">No sets logged on it yet.</p>
                 )}
               </section>
+              )}
 
               {review.clientMessage && (
                 <div className="mrv-msg theirs">
@@ -817,6 +887,8 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
         ) : (
           <div className="mrv-body record" key="record">
             <div className="mrv-scroll">
+              {/* An exercise's video only: a chat one has no session, week or sets (26 Oct, Alex). */}
+              {!chat && (
               <section className="mrv-ctx">
                 <div className="mrv-ctx-row">
                   <span className="mrv-eyebrow">
@@ -841,6 +913,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                   <p className="mrv-nosets">No sets logged on it yet.</p>
                 )}
               </section>
+              )}
 
               {review.clientMessage && (
                 <div className="mrv-msg theirs">

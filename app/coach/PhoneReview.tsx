@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { markVideoSeenAction, replyToMediaAction, sendChatMessageAction, sendFormReviewAction } from "../lib/actions";
-import { COLORS, sameOrigin, upload } from "../admin/redesign/media-review/MediaReviewModal";
+import { COLORS, sameOrigin, upload, uploadChatReview, type ChatTarget } from "../admin/redesign/media-review/MediaReviewModal";
 import { pathOf, simplify, STROKE, UNDERLAY, UNDERLAY_COLOR, unitFor, worthKeeping, type Pt, type Shape, type Tool } from "../admin/redesign/media-review/shapes";
 import { recordingSupported, useReviewRecorder } from "../admin/redesign/media-review/useReviewRecorder";
 import type { PhoneReview as Review } from "../lib/coachPhone";
@@ -31,28 +31,6 @@ const PALETTE = ["#FFD60A", "#FF9F0A", "#FF453A", "#30D158", "#0A84FF", "#BF5AF2
 const RATES = [1, 0.5, 0.25];
 const clock = (s: number) => (Number.isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "0:00");
 
-/** A review of a chat video or photo: the raw file to /api/chat-review, which posts it in the chat as a reply. */
-function uploadChatReview(clientId: number, replyTo: number, note: string, blob: Blob, onProgress: (share: number) => void): Promise<string | null> {
-  return new Promise((resolve) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/chat-review/${clientId}?replyTo=${replyTo}&note=${encodeURIComponent(note)}`);
-    xhr.setRequestHeader("Content-Type", blob.type.split(";")[0] || "video/webm");
-    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) return resolve(null);
-      let message = `The upload failed (${xhr.status || "no answer"}). Try again.`;
-      try {
-        message = JSON.parse(xhr.responseText).error ?? message;
-      } catch {}
-      resolve(message);
-    };
-    xhr.onerror = () => resolve("The upload broke off. Check the connection and try again.");
-    xhr.send(blob);
-  });
-}
-
-/** Where a review from the chat goes back to: the client's message it answers (25 Oct, Alex). */
-type ChatTarget = { clientId: number; replyTo: number };
 
 /**
  * A video or photo a client sent in the chat, reviewed on the same screen as an exercise's (25 Oct, Alex: "if I review,
