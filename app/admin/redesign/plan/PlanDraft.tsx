@@ -64,8 +64,9 @@ export type DraftPlan = {
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
 /** A phase's fields as the actions read them. */
-export const phaseForm = (v: { id?: number; clientId?: number; name: string; track: PhaseTrack; start: string; end: string; programId?: number | null; /** The dialog's Phase goals (19 Oct): sent only when given, so other forms leave them be. */ goals?: string[] }) => {
+export const phaseForm = (v: { id?: number; clientId?: number; name: string; track: PhaseTrack; start: string; end: string; programId?: number | null; /** The dialog's Phase goals (19 Oct): sent only when given, so other forms leave them be. */ goals?: string[]; /** No end (26 Oct): sent only when given. */ openEnded?: boolean }) => {
   const fd = new FormData();
+  if (v.openEnded != null) fd.set("openEnded", v.openEnded ? "1" : "0");
   if (v.id != null) fd.set("id", String(v.id));
   if (v.clientId != null) fd.set("clientId", String(v.clientId));
   fd.set("track", v.track);
@@ -371,7 +372,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                     return (
                       <PhaseBar
                         key={p.id}
-                        phase={{ id: p.id, name: p.name, track: p.track, startWeek: p.start_week, endWeek: p.end_week, draft: p.draft || p.program?.status === "draft", gap: p.gap }}
+                        phase={{ id: p.id, name: p.name, track: p.track, startWeek: p.start_week, endWeek: p.end_week, draft: p.draft || p.program?.status === "draft", gap: p.gap, open: p.openEnded }}
                         at={liveWeeks(p)}
                         grid={grid}
                         row={lanes.laneOf.get(p.id) ?? 0}
@@ -678,7 +679,7 @@ export { MonthRange };
 /** The week grid's maths, in the timeline's own module (timelineParts.tsx) since 21 Oct; still exported from here for their callers. */
 export { gridFor, weeksBetween };
 
-export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, initialStart, others, programs, onSave, onDelete, onDuplicate, onSend, onUnschedule }: { clientId: number; firstName: string; /** A scheduled phase back to a draft (its state tag's menu). */ onUnschedule?: () => void; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase opens on this day (the Phases overview: the day after the one ending). */ initialStart?: string; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null; goals: string[] }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean; goals: string[] }) => void }) {
+export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, initialStart, others, programs, onSave, onDelete, onDuplicate, onSend, onUnschedule }: { clientId: number; firstName: string; /** A scheduled phase back to a draft (its state tag's menu). */ onUnschedule?: () => void; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase opens on this day (the Phases overview: the day after the one ending). */ initialStart?: string; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null; goals: string[]; openEnded: boolean }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean; goals: string[]; openEnded: boolean }) => void }) {
   const editing = !!phase;
   // The phase's goals (19 Oct), one a line, the same three the tab's Goals pill edits.
   // Three slots, as the client's Home shows them under the phase (20 Oct, Alex); folded behind its chevron until opened.
@@ -697,6 +698,8 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   // What is being typed into the weeks field; null shows the span the dates make.
   const [weeksText, setWeeksText] = useState<string | null>(null);
   const [programChoice, setProgramChoice] = useState<string>(phase?.program ? String(phase.program.id) : "new");
+  // No end (26 Oct, Alex): it runs on a week at a time (extendOpenPhases); an end date picked turns it off.
+  const [openEnded, setOpenEnded] = useState(!!phase?.openEnded);
   // A live programme starts on the week it went out, where the client began it: only the end moves.
   const startLocked = !!phase?.program && phase.program.status === "live";
   const isDraft = !phase ? true : phase.draft || phase.program?.status === "draft";
@@ -708,20 +711,24 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const state = phaseStateOf({ draft: isDraft, startWeek, endWeek, today });
   const chrome = phaseChrome(track, state);
   const weeks = phaseWeeks(startWeek, endWeek);
-  const planned = others.filter((o) => o.track === track && o.id !== phase?.id).map((o) => ({ name: o.name, from: o.start_week, to: addDays(o.end_week, 6), draft: o.draft || o.program?.status === "draft" }));
-  // Against the days that will be saved, so a training phase is checked by its whole weeks.
+  const planned = others.filter((o) => o.track === track && o.id !== phase?.id).map((o) => ({ name: o.name, from: o.start_week, to: addDays(o.end_week, 6), draft: o.draft || o.program?.status === "draft", open: !!o.openEnded }));
+  // Against the days that will be saved, so a training phase is checked by its whole weeks; with no end, every week on.
   const savedTo = addDays(endWeek, 6);
+  const checkTo = openEnded ? "9999-12-31" : savedTo;
+  // A phase with no end on this track that starts before this one ends the week before it (endOpenPhaseBefore): not
+  // in the way, and said.
+  const endsOpen = planned.find((p) => p.open && p.from < startWeek) ?? null;
   // What can block (21 Oct, Alex: a live phase's end wouldn't move): only phases planned for real, not drafts
   // (a draft is checked when it is scheduled); and when the start is locked (a live programme), only those
   // after it: a clash at a start that can't move is history, not something the coach can fix here.
-  const blocking = planned.filter((p) => !p.draft && (!startLocked || p.from > startWeek));
-  const overlap = blocking.find((p) => p.from <= savedTo && p.to >= startWeek) ?? null;
+  const blocking = planned.filter((p) => !p.draft && !(p.open && p.from < startWeek) && (!startLocked || p.from > startWeek));
+  const overlap = blocking.find((p) => p.from <= checkTo && p.to >= startWeek) ?? null;
   // The day the coach picked when training's weeks moved it, to say so.
   const [moved, setMoved] = useState<{ side: "start" | "end"; picked: string; to: string } | null>(null);
   // Training can't overlap: say the weeks rule and the nearest week that fits, and hold Save.
   const weekClash = overlap ? (overlap.from > startWeek ? { side: "end" as const, day: addDays(overlap.from, -1) } : { side: "start" as const, day: addDays(overlap.to, 1) }) : null;
   // A clash says only what is in the way; its fix button names the nearest week that fits (20 Oct, Alex: facts, no explanations).
-  const note = overlap ? `Overlaps ${overlap.name}, ${fmtDay(overlap.from)} – ${fmtDay(overlap.to)}.` : moved ? `${fmtDay(moved.picked)} moved to ${fmtDay(moved.to)}.` : " ";
+  const note = overlap ? `Overlaps ${overlap.name}, ${fmtDay(overlap.from)} – ${fmtDay(overlap.to)}.` : moved ? `${fmtDay(moved.picked)} moved to ${fmtDay(moved.to)}.` : endsOpen ? `${endsOpen.name} ends ${fmtDay(addDays(startWeek, -1))}.` : " ";
   // One click to the other side: the clash's nearest week, or the week after (or before) the one a picked day moved to.
   const movedAlt = moved && !overlap ? { side: moved.side, day: addDays(moved.to, moved.side === "start" ? 7 : -7), instead: true } : null;
   const fix = weekClash ? { ...weekClash, instead: false } : movedAlt && (movedAlt.side === "start" ? movedAlt.day <= to : movedAlt.day > from) ? movedAlt : null;
@@ -739,6 +746,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   };
   const setEnd = (d: string) => {
     if (d < earliest) return;
+    setOpenEnded(false);
     const e = addDays(mondayOf(d), 6);
     if (e < from) return setStart(d);
     setWeeksText(null);
@@ -820,7 +828,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             type="button"
             className="dlh-go"
             autoFocus
-            onClick={() => (going === "draft" ? onUnschedule?.() : onSend({ name: called, track, start: startWeek, end: endWeek, now: going === "live", goals: goalLines }))}
+            onClick={() => (going === "draft" ? onUnschedule?.() : onSend({ name: called, track, start: startWeek, end: openEnded ? (phase ? phase.end_week : startWeek) : endWeek, now: going === "live", goals: goalLines, openEnded }))}
           >
             {t.go}
           </button>
@@ -969,18 +977,33 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </span>
-            <div className={`npd-date${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")}>
+            <div className={`npd-date${picking === "end" && !openEnded ? " arm" : ""}${openEnded ? " open" : ""}`} onClick={() => setPicking("end")}>
               <span className="npd-date-head">Ends</span>
-              {/* A training phase ends on its week's Sunday, so that is the day shown. */}
-              <DateText value={savedTo} min={earliest} onChange={(d) => setEnd(d)} label="End date" onFocus={() => setPicking("end")} />
+              {/* A training phase ends on its week's Sunday, so that is the day shown. With no end, the words; a click on
+                  a day in the calendar (or here) gives it its end again. */}
+              {openEnded ? (
+                <button type="button" className="npd-noend" onClick={() => (setOpenEnded(false), setPicking("end"))}>
+                  No end
+                </button>
+              ) : (
+                <DateText value={savedTo} min={earliest} onChange={(d) => setEnd(d)} label="End date" onFocus={() => setPicking("end")} />
+              )}
             </div>
           </div>
+          {/* No end (26 Oct, Alex): on and off, white while off and ink while on; it runs on a week at a time. */}
+          <button type="button" className={`npd-open${openEnded ? " on" : ""}`} aria-pressed={openEnded} onClick={() => setOpenEnded((o) => !o)}>
+            No end
+          </button>
           {/* Type the weeks and the end follows; pick the end and the weeks follow. An uneven span shows its length beside it. */}
           <label className="npd-field">
             <span className="npd-label">Weeks</span>
             <span className="npd-weeks-row">
-              <input className="npd-line npd-weeks" type="number" inputMode="numeric" min={1} max={104} step={1} value={weeksShown} onChange={(e) => setWeeks(e.target.value)} onBlur={() => setWeeksText(null)} onFocus={() => setPicking("end")} aria-label="Length in weeks" />
-              {days % 7 ? <small className="npd-meta">{phaseLengthLabel(startWeek, endWeek)}</small> : null}
+              {openEnded ? (
+                <span className="npd-line npd-weeks npd-ongoing">Ongoing</span>
+              ) : (
+                <input className="npd-line npd-weeks" type="number" inputMode="numeric" min={1} max={104} step={1} value={weeksShown} onChange={(e) => setWeeks(e.target.value)} onBlur={() => setWeeksText(null)} onFocus={() => setPicking("end")} aria-label="Length in weeks" />
+              )}
+              {days % 7 && !openEnded ? <small className="npd-meta">{phaseLengthLabel(startWeek, endWeek)}</small> : null}
             </span>
           </label>
           {/* The same days as a phase on another track, so the two run in tandem. */}
@@ -1024,7 +1047,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
           </button>
         )}
         <DialogClose className="npd-cancel">Cancel</DialogClose>
-        <button type="button" className="npd-save" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: endWeek, programId: linkedProgram?.id ?? null, goals: goalLines })}>
+        <button type="button" className="npd-save" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: openEnded ? (phase ? phase.end_week : startWeek) : endWeek, programId: linkedProgram?.id ?? null, goals: goalLines, openEnded })}>
           {editing ? "Save" : "Add"}
         </button>
       </div>

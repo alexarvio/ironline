@@ -25,6 +25,8 @@ export type OverviewPhase = {
   programId: number | null;
   /** What it still lacks for the client (the Plan's warning sign on its bar, 20 Oct). */
   gap: string | null;
+  /** No end (26 Oct): it runs on a week at a time. */
+  openEnded?: boolean;
 };
 export type OverviewEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; addedBy: "coach" | "client"; /** When it was added, yyyy-mm-dd. */ createdAt: string; /** Comes back on these weekdays (19 Oct), lib/eventRepeat.ts. */ repeat?: EventRepeat | null };
 

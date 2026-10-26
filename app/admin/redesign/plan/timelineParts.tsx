@@ -325,7 +325,7 @@ const bodyDown = (drag?: BarDrag) =>
       }
     : undefined;
 
-export type BarPhase = { id: number; name: string; track: PhaseTrack; /** The Monday of its first week, as stored. */ startWeek: string; /** The Monday of its last week, as stored. */ endWeek: string; draft: boolean; /** What it still lacks (the Plan's warning sign). */ gap?: string | null };
+export type BarPhase = { id: number; name: string; track: PhaseTrack; /** The Monday of its first week, as stored. */ startWeek: string; /** The Monday of its last week, as stored. */ endWeek: string; draft: boolean; /** What it still lacks (the Plan's warning sign). */ gap?: string | null; /** No end (26 Oct): drawn on to the window's end, "Ongoing". */ open?: boolean };
 
 /** A phase's bar, the Plan's: its state's colours, the name with its length under it, the state pill on the right. Opens on a click. */
 export function PhaseBar({ phase: p, at, grid, row, today, thisWeek, intoWeek, onOpen, drag, keyboard = true }: {
@@ -344,7 +344,9 @@ export function PhaseBar({ phase: p, at, grid, row, today, thisWeek, intoWeek, o
   keyboard?: boolean;
 }) {
   const s = at?.startWeek ?? p.startWeek;
-  const e = at?.endWeek ?? p.endWeek;
+  // No end (26 Oct, Alex): the bar goes on to the window's last week, whatever its weeks so far.
+  const lastShown = addDays(grid.first, (grid.count - 1) * 7);
+  const e = p.open && (at?.endWeek ?? p.endWeek) < lastShown ? lastShown : (at?.endWeek ?? p.endWeek);
   const sp = weekSpan(s, e, grid.first, grid.count);
   if (!sp.visible) return null;
   const total = weeksBetween(s, e) + 1;
@@ -358,8 +360,8 @@ export function PhaseBar({ phase: p, at, grid, row, today, thisWeek, intoWeek, o
       style={{ gridColumn: `${sp.a + 1} / span ${shownW}`, gridRow: row + 1, paddingLeft: `calc(14px + ${(Math.max(0, grid.shift - sp.a) / shownW) * 100}%)`, background: chrome.band, color: chrome.edge, borderColor: chrome.dashed ? chrome.line : `rgba(${rgbOf(chrome.edge)}, 0.5)`, borderStyle: chrome.dashed ? "dashed" : "solid" }}
       role={keyboard ? "button" : undefined}
       tabIndex={keyboard ? 0 : undefined}
-      aria-label={keyboard ? `${TRACK_LABEL[p.track]}: ${p.name}, ${STATE_LABEL[state]}, ${dayMonth(p.startWeek)} to ${dayMonth(addDays(p.endWeek, 6))}` : undefined}
-      title={`${p.name} · ${dayMonth(p.startWeek)} – ${dayMonth(addDays(p.endWeek, 6))}`}
+      aria-label={keyboard ? `${TRACK_LABEL[p.track]}: ${p.name}, ${STATE_LABEL[state]}, ${dayMonth(p.startWeek)} to ${p.open ? "no end" : dayMonth(addDays(p.endWeek, 6))}` : undefined}
+      title={`${p.name} · ${dayMonth(p.startWeek)} – ${p.open ? "no end" : dayMonth(addDays(p.endWeek, 6))}`}
       onPointerDown={bodyDown(drag)}
       onClick={onOpen}
       onKeyDown={
@@ -374,12 +376,10 @@ export function PhaseBar({ phase: p, at, grid, row, today, thisWeek, intoWeek, o
     >
       {elapsed > 0 && <span className="rq-bar-elapsed" style={{ width: `${(elapsed / shownW) * 100}%` }} />}
       {/* No handle on an edge cut off by the window. */}
-      <Edges drag={drag} left={!sp.clippedStart} right={!sp.clippedEnd} />
+      <Edges drag={drag} left={!sp.clippedStart} right={!sp.clippedEnd && !p.open} />
       <span className="rq-bar-main">
         <span className="rq-bar-name">{p.name}</span>
-        <span className="rq-bar-meta">
-          {total} {total === 1 ? "week" : "weeks"}
-        </span>
+        <span className="rq-bar-meta">{p.open ? "Ongoing" : `${total} ${total === 1 ? "week" : "weeks"}`}</span>
       </span>
       {/* Nothing in it yet (20 Oct, Alex): a warning sign, what is missing on hover. Not on a past phase. */}
       {p.gap && state !== "past" && <GapSign text={p.gap} />}
@@ -392,7 +392,8 @@ export function PhaseBar({ phase: p, at, grid, row, today, thisWeek, intoWeek, o
         <span className="rq-bar-pill" style={stateTagStyle(state)}>
           <b>Live</b>
           <Sep />
-          week {weeksBetween(s, thisWeek) + 1} of {total}
+          week {weeksBetween(s, thisWeek) + 1}
+          {p.open ? null : ` of ${total}`}
         </span>
       ) : state === "scheduled" ? (
         <span className="rq-bar-pill" style={stateTagStyle(state)}>

@@ -1245,6 +1245,70 @@ export function applyDueProgramDeployments() {
       });
     });
   if (healed) persist();
+  // Phases with no end take on this week (26 Oct).
+  extendOpenPhases();
+}
+
+/**
+ * Phases with no end (26 Oct, Alex: "always adds a week once the current one finishes"): each Monday a running one
+ * takes on the new week. Lifestyle and Nutrition just go on (their metrics and targets carry on). A training one's
+ * programme gets the week as a copy of the week before ("week by week, the numbers depending on what was done the
+ * previous week"): copyProgramWeek, then that week's logged lifts run through the weight rule (progressTargetFromLogs),
+ * so each weight goes up to what was lifted or stays. A draft, or one not started, waits. Returns the weeks added.
+ */
+export function extendOpenPhases(): number {
+  const data = getData();
+  const thisMonday = weekStart(localDateStr());
+  let added = 0;
+  for (const ph of data.client_phases) {
+    if (!ph.open_ended || ph.draft || ph.start_week > thisMonday) continue;
+    for (let guard = 0; ph.end_week < thisMonday && guard < 104; guard++) {
+      const before = ph.end_week;
+      const program = ph.track === "training" && ph.program_id ? data.training_programs.find((p) => p.id === ph.program_id) : null;
+      if (program) {
+        const last = program.start_week + program.total_weeks - 1;
+        updateProgramTotalWeeks(program.id, program.total_weeks + 1, false);
+        copyProgramWeek(program.client_id, last, last + 1);
+        if (program.status === "deployed") publishWeek(program.client_id, last + 1);
+        const lastDays = new Set(data.program_days.filter((pd) => pd.client_id === program.client_id && pd.week_number === last).map((pd) => pd.id));
+        const logged = new Set(data.set_logs.map((l) => l.workout_assignment_id));
+        for (const wa of data.workout_assignments) if (lastDays.has(wa.program_day_id) && logged.has(wa.id)) progressTargetFromLogs(wa.id);
+        // The programme's phase follows its weeks (syncProgramPhase); one it did not move goes on by hand.
+        if (ph.end_week === before) ph.end_week = addDaysIso(before, 7);
+      } else {
+        ph.end_week = addDaysIso(before, 7);
+      }
+      added++;
+    }
+  }
+  if (added) persist();
+  return added;
+}
+
+/** A phase with no end, or back to its dates (26 Oct). Ending it keeps the weeks it has run so far. */
+export function setPhaseOpenEnded(phaseId: number, open: boolean) {
+  const ph = getData().client_phases.find((p) => p.id === phaseId);
+  if (!ph || !!ph.open_ended === open) return;
+  if (open) ph.open_ended = true;
+  else delete ph.open_ended;
+  persist();
+  if (open) extendOpenPhases();
+}
+
+/**
+ * A new phase on a track whose open-ended phase is running (26 Oct): that one ends the week before the new one starts,
+ * keeping its weeks, so the two never overlap. Returns the phase it ended, if any.
+ */
+export function endOpenPhaseBefore(clientId: number, track: PhaseTrack, newStart: string, exceptId?: number): ClientPhase | null {
+  const data = getData();
+  const monday = weekStart(newStart);
+  const open = data.client_phases.find((p) => p.client_id === clientId && p.track === track && p.open_ended && p.id !== exceptId && p.start_week < monday);
+  if (!open) return null;
+  delete open.open_ended;
+  const lastWeek = addDaysIso(monday, -7);
+  if (open.end_week > lastWeek) open.end_week = lastWeek < open.start_week ? open.start_week : lastWeek;
+  persist();
+  return open;
 }
 
 // Same lazy-catch-up pattern as applyDueProgramDeployments (no background
@@ -11432,6 +11496,8 @@ export type PlanPhaseRow = {
   gap: string | null;
   /** The coach's goals for it (up to three), for the phase dialog's Phase goals box. */
   objectives?: string[];
+  /** No end (26 Oct): it runs on a week at a time. */
+  openEnded?: boolean;
 };
 export type PlanProgramOption = { id: number; name: string; status: PlanProgramStatus; weeks: number; linked: boolean };
 export type PlanGoalRow = {
@@ -11478,6 +11544,7 @@ export function getPlanPhases(clientId: number) {
       emptyReason: phaseEmptyReason(p.id),
       gap: phaseContentGap(p.id),
       objectives: p.objectives ?? [],
+      openEnded: !!p.open_ended,
     };
   });
   const linked = new Set(phases.map((p) => p.program?.id).filter((x): x is number => x != null));

@@ -152,6 +152,8 @@ export type DraftProgram = {
   startDate: string | null;
   endDate: string | null;
   weekIdx: number;
+  /** No end (26 Oct): "Ongoing" and the week, no total. */
+  openEnded?: boolean;
   liveIdx: number;
   /** trained: each session completed; missed: begun and left unfinished; skipped: the client said they couldn't do it. Neither: not started. */
   /** print: what a copy of the week would carry, so a week the same as another offers no copy of it. */
@@ -901,13 +903,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           </div>
           {/* The facts parted by a short upright line, not a dot (21 Oct, Alex); the dates last. */}
           <span className="trn-meta">
-            <span>
-              {weeks.length} {weeks.length === 1 ? "week" : "weeks"}
-            </span>
+            <span>{program.openEnded ? "Ongoing" : `${weeks.length} ${weeks.length === 1 ? "week" : "weeks"}`}</span>
             {program.startDate && (
               <span className="trn-meta-part">
-                {fmtDate(program.startDate)}
-                {program.endDate && ` – ${fmtDate(program.endDate)}`}
+                {program.openEnded ? `from ${fmtDate(program.startDate)}` : fmtDate(program.startDate)}
+                {program.endDate && !program.openEnded && ` – ${fmtDate(program.endDate)}`}
               </span>
             )}
           </span>

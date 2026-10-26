@@ -470,6 +470,10 @@ export type ClientPhase = {
   // could start and end on any day (Sept 2026).
   start_week: string;
   end_week: string;
+  /** No end (26 Oct, Alex): the phase runs on a week at a time. end_week is its last week so far, moved on each Monday
+      (extendOpenPhases); a training phase's programme gets the week as a copy of the one before, its weights moved on
+      by what was lifted in it. Ending it: an end date, or the next phase on its track. */
+  open_ended?: boolean;
   // A nutrition phase's own daily targets and note, so the coach can set a
   // future block's numbers before it starts. The client sees the running
   // phase's; a phase without them shows the client-level plan.

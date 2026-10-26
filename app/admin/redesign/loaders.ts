@@ -493,6 +493,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     coachNote: phase?.client_note ?? "",
     startDate: phase?.start_week ?? null,
     endDate: phase?.end_week ?? null,
+    openEnded: !!phase?.open_ended,
     weekIdx,
     liveIdx,
     weeks,
@@ -569,6 +570,7 @@ export function loadNutrition(clientId: number, params: { phase?: string }): Dra
     status: phase.state,
     weeks: phase.weeks,
     weekIdx: phase.start && phase.end && phase.state === "live" ? phaseWeekIndex(phase.start, phase.end, today) : null,
+    openEnded: !!getData().client_phases.find((p) => p.id === phase.id)?.open_ended,
     startDate: phase.start,
     endDate: phase.end,
     training: phase.training,
@@ -793,6 +795,7 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
     status: selected ? STATE[selected.status] : "live",
     weeks: selected ? phaseWeeks(selected.start_week, selected.end_week) : 0,
     weekIdx: selected && selected.status === "now" ? phaseWeekIndex(selected.start_week, selected.end_week, today) : null,
+    openEnded: !!(selected && getData().client_phases.find((p) => p.id === selected.id)?.open_ended),
     startDate: selected?.start_week ?? null,
     endDate: selected?.end_week ?? null,
     // This phase's own days: one phase's never carry into the next.

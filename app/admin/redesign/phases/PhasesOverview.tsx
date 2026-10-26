@@ -699,7 +699,7 @@ function ClientBlock({
                 {drawn.map((p) => (
                   <PhaseBar
                     key={p.id}
-                    phase={{ id: p.id, name: p.name, track: p.track, startWeek: p.start, endWeek: p.endWeek, draft: p.draft, gap: p.gap }}
+                    phase={{ id: p.id, name: p.name, track: p.track, startWeek: p.start, endWeek: p.endWeek, draft: p.draft, gap: p.gap, open: p.openEnded }}
                     grid={grid}
                     row={lanes.laneOf.get(p.id) ?? 0}
                     today={today}

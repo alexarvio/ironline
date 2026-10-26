@@ -61,6 +61,8 @@ export type DraftMeasurements = {
   status: State;
   weeks: number;
   weekIdx: number | null;
+  /** No end (26 Oct): "Ongoing" and the week, no total. */
+  openEnded?: boolean;
   startDate: string | null;
   /** The stored end_week: the last day is six days on. */
   endDate: string | null;
@@ -479,18 +481,17 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           {plan.startDate && (
             // The facts parted by a thin upright line, not a dot (21 Oct, Alex), as the metrics' line under it.
             <span className="trn-meta">
-              <span>
-                {plan.weeks} {plan.weeks === 1 ? "week" : "weeks"}
-              </span>
+              <span>{plan.openEnded ? "Ongoing" : `${plan.weeks} ${plan.weeks === 1 ? "week" : "weeks"}`}</span>
               {plan.weekIdx != null && (
                 <span className="trn-meta-part">
-                  week {plan.weekIdx} of {plan.weeks}
+                  week {plan.weekIdx}
+                  {plan.openEnded ? null : ` of ${plan.weeks}`}
                 </span>
               )}
               {/* The dates last (21 Oct, Alex). */}
               <span className="trn-meta-part">
-                {fmtDate(plan.startDate)}
-                {lastDay && ` – ${fmtDate(lastDay)}`}
+                {plan.openEnded ? `from ${fmtDate(plan.startDate)}` : fmtDate(plan.startDate)}
+                {lastDay && !plan.openEnded && ` – ${fmtDate(lastDay)}`}
               </span>
             </span>
           )}

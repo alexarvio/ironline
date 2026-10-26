@@ -392,7 +392,8 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
         track,
         name: ph.name,
         start: ph.start_week,
-        end: phaseLastDay(ph.end_week),
+        // No end (26 Oct): the card says the week it is in, no countdown.
+        end: ph.open_ended ? null : phaseLastDay(ph.end_week),
         coverUrl: ph.cover_path ?? defaultPhaseCover(track, ph.id),
         coachCover: !!ph.cover_path,
         objectives: FEATURES.phaseGoals ? ph.objectives ?? [] : [],

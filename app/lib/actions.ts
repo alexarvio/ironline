@@ -152,6 +152,8 @@ import {
   removeMeeting,
   removeMeetingNote,
   removeMetricDefinition,
+  endOpenPhaseBefore,
+  setPhaseOpenEnded,
   retireMetricDefinition,
   unretireMetricDefinition,
   togglePinMetric,
@@ -3222,6 +3224,14 @@ function readPhaseForm(formData: FormData) {
   return { track, name, start, end };
 }
 
+// No end, or back to its dates (26 Oct): only when the form says ("openEnded"), so other forms leave it be.
+function openEndedFrom(id: number, fields: { track: PhaseTrack; start: string }, formData: FormData) {
+  const open = formData.get("openEnded");
+  if (open !== "1" && open !== "0") return;
+  if (open === "1") endOpenPhaseBefore(getClientIdForPhase(id) ?? 0, fields.track, fields.start, id);
+  setPhaseOpenEnded(id, open === "1");
+}
+
 // The phase dialog posts its objectives as repeated "objectives" fields, and
 // "objectivesSent" so a form without the list leaves them as they are.
 // Phase goals off (23 Oct, Alex: To focus on replaces them): the stored ones stay as they are.
@@ -3237,8 +3247,11 @@ export async function addClientPhaseAction(formData: FormData): Promise<{ phaseI
   const rawProgram = String(formData.get("programId") ?? "");
   // Only one of this client's own programmes can be linked.
   const programId = /^\d+$/.test(rawProgram) && getClientIdForProgram(Number(rawProgram)) === clientId ? Number(rawProgram) : null;
+  // A running phase with no end on this track ends the week before (26 Oct).
+  endOpenPhaseBefore(clientId, fields.track, fields.start);
   const added = addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId);
   saveObjectivesFrom(added.id, formData);
+  if (formData.get("openEnded") === "1") setPhaseOpenEnded(added.id, true);
   revalidatePath("/admin");
   revalidatePath("/client");
   return { phaseId: added.id, programId: added.program_id ?? null };
@@ -3333,6 +3346,7 @@ export async function saveAndSchedulePhaseOrSayWhyAction(formData: FormData): Pr
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return "That phase no longer exists.";
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
   saveObjectivesFrom(id, formData);
+  openEndedFrom(id, fields, formData);
   // The edits are kept; an empty draft just doesn't go out, and says why (20 Oct: the toast said "scheduled" anyway).
   const empty = phaseEmptyReason(id);
   if (!empty) schedulePhase(id, fields.name, fields.start, fields.end);
@@ -3347,6 +3361,7 @@ export async function saveAndDeployPhaseNowAction(formData: FormData): Promise<s
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return "That phase no longer exists.";
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
   saveObjectivesFrom(id, formData);
+  openEndedFrom(id, fields, formData);
   // Saved either way; live only with something in it, and if not, why not (5 Oct).
   const empty = phaseEmptyReason(id);
   if (!empty) deployPhaseNow(id);
@@ -3368,6 +3383,7 @@ export async function updateClientPhaseAction(formData: FormData) {
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
   saveObjectivesFrom(id, formData);
+  openEndedFrom(id, fields, formData);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
