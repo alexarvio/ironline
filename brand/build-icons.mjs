@@ -50,3 +50,7 @@ writeFileSync("mobile/assets/icon-foreground.png", await icon(1024, 0.46, null))
 writeFileSync("mobile/assets/icon-background.png", await sharp({ create: { width: 1024, height: 1024, channels: 3, background: PAPER } }).png().toBuffer());
 writeFileSync("mobile/assets/splash.png", await icon(2732, 0.16));
 console.log("icons written");
+
+// The sender's picture for mail (26 Oct, Alex: the Google account behind the app's email address), cut to a circle by
+// Gmail, so the star a little smaller than on an icon.
+writeFileSync("public/brand/profile-photo.png", await icon(1024, 0.56));
