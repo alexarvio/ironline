@@ -41,8 +41,19 @@ export function ChatImage({ src, className, look }: { src: string; className?: s
 // at once. The last few only.
 const ready = new Map<string, string>();
 const coming = new Set<string>();
-function preloadVideo(src: string) {
-  if (ready.has(src) || coming.has(src) || !/-web\.mp4$/i.test(src)) return;
+// One at a time, newest first, and only once the pictures on screen are in (26 Oct, Alex: "way too long" from Thailand:
+// a thread shares one connection, and its videos coming down whole all at once held its pictures back behind them).
+const waiting: string[] = [];
+let busy = false;
+const picturesIn = () => Array.from(document.images).every((img) => img.complete);
+function nextVideo() {
+  if (busy || !waiting.length) return;
+  if (!picturesIn()) {
+    setTimeout(nextVideo, 600);
+    return;
+  }
+  const src = waiting.pop()!;
+  busy = true;
   coming.add(src);
   fetch(`${src}?stream=1`)
     .then((r) => (r.ok ? r.blob() : null))
@@ -56,7 +67,17 @@ function preloadVideo(src: string) {
       }
     })
     .catch(() => {})
-    .finally(() => coming.delete(src));
+    .finally(() => {
+      coming.delete(src);
+      busy = false;
+      nextVideo();
+    });
+}
+function preloadVideo(src: string) {
+  if (ready.has(src) || coming.has(src) || waiting.includes(src) || !/-web\.mp4$/i.test(src)) return;
+  waiting.push(src);
+  // A moment for the thread to settle and its pictures to start, then the queue.
+  setTimeout(nextVideo, 1200);
 }
 
 
