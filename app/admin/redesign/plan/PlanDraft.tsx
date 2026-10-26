@@ -990,10 +990,14 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
               )}
             </div>
           </div>
-          {/* No end (26 Oct, Alex): on and off, white while off and ink while on; it runs on a week at a time. */}
-          <button type="button" className={`npd-endless${openEnded ? " on" : ""}`} aria-pressed={openEnded} onClick={() => setOpenEnded((o) => !o)}>
-            No end
-          </button>
+          {/* No end (26 Oct, Alex: mockup A): its own row under the dates, the words and a switch, white while off and ink
+              while on; it runs on a week at a time. New phases and existing ones alike. */}
+          <label className="npd-endrow">
+            <span>No end</span>
+            <button type="button" role="switch" aria-checked={openEnded} className={`npd-switch${openEnded ? " on" : ""}`} onClick={() => setOpenEnded((o) => !o)}>
+              <i aria-hidden="true" />
+            </button>
+          </label>
           {/* Type the weeks and the end follows; pick the end and the weeks follow. An uneven span shows its length beside it. */}
           <label className="npd-field">
             <span className="npd-label">Weeks</span>
