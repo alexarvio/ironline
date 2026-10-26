@@ -104,7 +104,9 @@ function useEmailCode() {
           return;
         }
       }
-      setError(`Almost: Clerk wants one more step (${done.status}). Tell the coach.`);
+      // Name what Clerk still wants (26 Oct: a live setting asked for more than the test one), so it can be switched off.
+      const missing = "missingFields" in done && Array.isArray(done.missingFields) && done.missingFields.length ? `: ${done.missingFields.join(", ")}` : ` (${done.status})`;
+      setError(`Almost: Clerk wants one more step${missing}. Tell the coach.`);
     } catch (e) {
       setError(says(e));
     }
