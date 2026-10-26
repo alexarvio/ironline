@@ -73,6 +73,8 @@ export type FeedBoard = {
   needs: NeedRow[];
   /** Newest first: each kind's newest 200. */
   activity: ActivityRow[];
+  /** The coach's clients A to Z, for Activity's client filter (26 Oct, Alex). */
+  clients: { id: number; name: string; avatarPath: string | null }[];
 };
 
 export { getFeedBoard, noteFeedLooked } from "./feedBoardData";

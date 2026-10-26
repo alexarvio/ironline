@@ -227,7 +227,7 @@ function safe<T>(part: string, fn: () => T, fallback: T): T {
 
 export function getFeedBoard(coachId: number): FeedBoard {
   const today = localDateStr();
-  const empty: FeedBoard = { today, since: null, needs: [], activity: [] };
+  const empty: FeedBoard = { today, since: null, needs: [], activity: [], clients: [] };
   let ctx: Ctx;
   try {
     ctx = context(coachId, today);
@@ -240,6 +240,9 @@ export function getFeedBoard(coachId: number): FeedBoard {
     since: safe("since", () => sinceOf(ctx), null),
     needs: safe("needs", () => needsOf(ctx), []),
     activity: safe("activity", () => activityOf(ctx), []),
+    clients: ctx.clients
+      .map((c) => ({ id: c.id, name: c.name ?? "Client", avatarPath: c.avatar_path ?? null }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
   };
 }
 

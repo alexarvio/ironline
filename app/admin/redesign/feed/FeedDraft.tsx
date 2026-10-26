@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { Popover as PopoverPrimitive } from "radix-ui";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { dismissHomeActionAction } from "../../../lib/actions";
@@ -67,7 +68,7 @@ export default function FeedDraft({ board, now, kind }: { board: FeedBoard; /** 
       </header>
 
       <NeedsYou needs={board.needs} now={now} />
-      <Activity rows={board.activity} kind={kind} />
+      <Activity rows={board.activity} kind={kind} clients={board.clients} />
       <Toaster />
     </div>
   );
@@ -207,6 +208,70 @@ function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
   );
 }
 
+// ---- A client to filter Activity by: the calendar pop-up's picker (26 Oct, Alex): a pill with the face and name (or
+// All clients), opening a floating list with a search line on top, faces and names A to Z, All clients first.
+function ClientFilter({ clients, value, onChange }: { clients: FeedBoard["clients"]; value: number | null; onChange: (id: number | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const picked = clients.find((c) => c.id === value) ?? null;
+  const shown = clients.filter((c) => !q.trim() || c.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const pick = (id: number | null) => {
+    onChange(id);
+    setOpen(false);
+    setQ("");
+  };
+  return (
+    <PopoverPrimitive.Root open={open} onOpenChange={(o) => (setOpen(o), !o && setQ(""))}>
+      <PopoverPrimitive.Trigger asChild>
+        <button type="button" className={`rfd-pick${picked ? " on" : ""}`} aria-label="Filter by client">
+          {picked ? <Face name={picked.name} src={picked.avatarPath} /> : null}
+          <span>{picked ? picked.name : "All clients"}</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      </PopoverPrimitive.Trigger>
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content align="end" sideOffset={6} className="rfd-drop" role="listbox" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <span className="rfd-drop-search">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="M16 16l4 4" />
+            </svg>
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search clients"
+              aria-label="Search clients"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && shown[0]) pick(shown[0].id);
+              }}
+            />
+          </span>
+          <div className="rfd-drop-list">
+            {!q.trim() && (
+              <button type="button" role="option" aria-selected={value == null} className="rfd-opt" onClick={() => pick(null)}>
+                <span className="rfd-face none" aria-hidden="true">
+                  –
+                </span>
+                <b>All clients</b>
+              </button>
+            )}
+            {shown.map((c) => (
+              <button key={c.id} type="button" role="option" aria-selected={c.id === value} className="rfd-opt" onClick={() => pick(c.id)}>
+                <Face name={c.name} src={c.avatarPath} />
+                <b>{c.name}</b>
+              </button>
+            ))}
+            {shown.length === 0 && <p className="rfd-drop-none">No match</p>}
+          </div>
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
+  );
+}
+
 // ---- Activity: a log (design rules 8), one line a row. The date, the time in its own column, the client semi-bold, the
 // kind's icon in its colour (KindMark, as Home's), the thing, and only their own words grey after it, in quotes (23 Oct,
 // Alex). One list, newest first (23 Oct, Alex: no New / Earlier split). One kind at a time, 20 a page, always a full
@@ -224,11 +289,13 @@ const FILTERS: { id: Filter; label: string }[] = [
 /** ?cat= as the old Feed wrote it too ("measurements" was Lifestyle). */
 const filterOf = (cat: string | null | undefined): Filter => (cat === "measurements" ? "lifestyle" : (FILTERS.find((f) => f.id === cat)?.id ?? "all"));
 
-function Activity({ rows, kind }: { rows: ActivityRow[]; kind?: string | null }) {
+function Activity({ rows, kind, clients }: { rows: ActivityRow[]; kind?: string | null; clients: FeedBoard["clients"] }) {
   const open = useRowOpen();
   const [filter, setFilter] = useState<Filter>(() => filterOf(kind));
+  // One client's activity alone (26 Oct, Alex: "a dropdown next to the toggle… as the calendar's"), or everyone's.
+  const [who, setWho] = useState<number | null>(null);
   const [page, setPage] = useState(1);
-  const matching = filter === "all" ? rows : rows.filter((r) => r.kind === filter);
+  const matching = rows.filter((r) => (filter === "all" || r.kind === filter) && (who == null || r.clientId === who));
   const pages = Math.max(1, Math.ceil(matching.length / PAGE));
   const at = Math.min(page, pages);
   const from = (at - 1) * PAGE;
@@ -277,6 +344,14 @@ function Activity({ rows, kind }: { rows: ActivityRow[]; kind?: string | null })
               </button>
             ))}
           </div>
+          <ClientFilter
+            clients={clients}
+            value={who}
+            onChange={(id) => {
+              setWho(id);
+              setPage(1);
+            }}
+          />
         </div>
       </div>
       {/* Always a full page tall (design rules 8): another kind or the last page never moves the pager. A full page is as
