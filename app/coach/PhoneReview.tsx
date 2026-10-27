@@ -137,8 +137,8 @@ function Reviewer({ review, chat = null, onBack, onSent }: { review: Review; cha
     v.currentTime = Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * dur;
     setT(v.currentTime);
   };
-  const cycleRate = () => {
-    const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length];
+  // Slow motion (27 Oct, Alex: mockup C): 1× | 0.5× | 0.25× as a capsule at the bar's end.
+  const setSpeed = (next: number) => {
     setRate(next);
     const v = videoOf();
     if (v) v.playbackRate = next;
@@ -165,8 +165,7 @@ function Reviewer({ review, chat = null, onBack, onSent }: { review: Review; cha
   const down = (e: React.PointerEvent<SVGSVGElement>) => {
     setPalette(false);
     e.currentTarget.setPointerCapture(e.pointerId);
-    const v = videoOf();
-    if (v && !v.paused) v.pause();
+    // Drawing never stops the video (27 Oct, Alex): only pause does.
     const p = toMedia(e);
     liveRef.current = { tool, color, size: 1, pts: [p, p] };
     redraw();
@@ -425,9 +424,13 @@ function Reviewer({ review, chat = null, onBack, onSent }: { review: Review; cha
             <span className="cph-play-time">
               {clock(t)} / {clock(dur)}
             </span>
-            <button type="button" className="cph-rate" onClick={cycleRate} aria-label={`Speed ${rate}×`}>
-              {rate === 1 ? "1×" : rate === 0.5 ? "½×" : "¼×"}
-            </button>
+            <span className="cph-rate" role="radiogroup" aria-label="Speed">
+              {RATES.map((r) => (
+                <button key={r} type="button" role="radio" aria-checked={rate === r} className={rate === r ? "on" : ""} onClick={() => setSpeed(r)}>
+                  {r}×
+                </button>
+              ))}
+            </span>
           </div>
         )}
       </div>

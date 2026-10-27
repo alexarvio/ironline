@@ -194,8 +194,8 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
     v.currentTime = Math.max(0, Math.min(v.duration || 0, v.currentTime + d));
     setT(v.currentTime);
   };
-  const cycleRate = () => {
-    const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length];
+  // Slow motion (27 Oct, Alex: mockup C): 1× | 0.5× | 0.25× as a capsule at the bar's end.
+  const setSpeed = (next: number) => {
     setRate(next);
     const v = videoOf();
     if (v) v.playbackRate = next;
@@ -243,7 +243,6 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
   const redraw = () => setLiveShape(liveRef.current ? { ...liveRef.current, pts: [...liveRef.current.pts] } : null);
   // Drawings made for this recording (those on screen when it started count too).
   const [drawn, setDrawn] = useState(0);
-  const [flash, setFlash] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const toMedia = (e: React.PointerEvent): Pt => {
     const r = svgRef.current!.getBoundingClientRect();
@@ -253,12 +252,7 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
     if (mode !== "record") return;
     setPalette(false);
     e.currentTarget.setPointerCapture(e.pointerId);
-    const v = videoOf();
-    if (v && !v.paused) {
-      v.pause();
-      setFlash(true);
-      setTimeout(() => setFlash(false), 1600);
-    }
+    // Drawing never stops the video (27 Oct, Alex): only pause does.
     const p = toMedia(e);
     liveRef.current = { tool, color, size, pts: [p, p] };
     redraw();
@@ -581,7 +575,6 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
               );
             })}
           </svg>
-          {flash && <span className="mrv-flash">Paused to draw</span>}
         </div>
         </div>
 
@@ -620,9 +613,13 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
             <span className="mrv-time">
               {clock(t)} / {clock(dur)}
             </span>
-            <button type="button" className="mrv-rate" onClick={cycleRate} aria-label={`Speed ${rate}×`} title="Speed">
-              {rate}×
-            </button>
+            <span className="mrv-rate" role="radiogroup" aria-label="Speed">
+              {RATES.map((r) => (
+                <button key={r} type="button" role="radio" aria-checked={rate === r} className={rate === r ? "on" : ""} onClick={() => setSpeed(r)}>
+                  {r}×
+                </button>
+              ))}
+            </span>
           </div>
         )}
 

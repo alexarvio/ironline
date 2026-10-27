@@ -18316,8 +18316,7 @@ button.ci-hint { cursor: pointer; }
 .mrv-frame > video, .mrv-frame > img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .mrv-draw { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; touch-action: none; }
 .mrv-draw.on { pointer-events: auto; cursor: crosshair; }
-.mrv-bar, .mrv-status, .mrv-tools, .mrv-flash { background: rgba(14, 17, 24, 0.6); -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.16); }
-.mrv-flash { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 999px; font-size: 11.5px; font-weight: 800; color: #fff; white-space: nowrap; }
+.mrv-bar, .mrv-status, .mrv-tools { background: rgba(14, 17, 24, 0.6); -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.16); }
 
 /* Playback */
 .mrv-bar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 54px; width: min(560px, calc(100% - 32px)); height: 46px; box-sizing: border-box; border-radius: 15px; display: flex; align-items: center; gap: 4px; padding: 0 8px; color: #fff; z-index: 4; }
@@ -18329,7 +18328,11 @@ button.ci-hint { cursor: pointer; }
 .mrv-scrub-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: #fff; }
 .mrv-scrub-knob { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 999px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
 .mrv-time { flex: none; padding: 0 4px; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; white-space: nowrap; }
-.mrv-rate { flex: none; min-width: 26px; height: 26px; padding: 0 6px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, 0.16); font: inherit; font-size: 11px; font-weight: 800; color: #fff; cursor: pointer; }
+/* Speed (27 Oct, Alex: mockup C): 1× | 0.5× | 0.25×, the chosen one white. */
+.mrv-rate { flex: none; display: flex; gap: 2px; margin-left: 4px; padding: 3px; border-radius: 10px; background: rgba(255, 255, 255, 0.1); }
+.mrv-rate button { min-width: 34px; height: 26px; padding: 0 7px; border: 0; border-radius: 7px; background: transparent; font: inherit; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; color: rgba(255, 255, 255, 0.8); cursor: pointer; }
+.mrv-rate button:hover { color: #fff; }
+.mrv-rate button.on { background: #fff; color: #141a24; }
 
 /* Conversation-mode extras on the stage */
 .mrv-recpill { position: absolute; left: 18px; top: 18px; z-index: 5; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 12px; border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 999px; background: rgba(255, 255, 255, 0.12); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font: inherit; font-size: 13px; font-weight: 800; color: #fff; cursor: pointer; }
