@@ -1,76 +1,100 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { HomeFocus } from "../../lib/focus";
-import { MEETING_TYPES } from "../../lib/meetingTypes";
+import { ChevronDownIcon } from "../../components/icons";
 import { pic } from "../../lib/pic";
-import { Bars } from "../Bars";
 import "./focus.css";
 
 // To focus on (23 Oct, Alex): the coach's goals until the next call, the first thing on Home under the greeting.
-// Drawn as a spine to the call (24 Oct, Alex: mockup B, docs/boards/to-focus-on-v2.html): each goal a small ink ring on
-// one line, and the line ends at the call, a ring in the call's blue with "Your call with {Coach}" and when. Still
-// bullet points: nothing to tap or tick. Shown whenever there are goals, until the coach changes them or completes the
-// next call with new ones (24 Oct, Alex); the call at the line's end only while one is booked. The stored ticks stay in
-// the data, unused.
+// Since 27 Oct (Alex: "just a little pill with a title"; mocked first) a pill that opens a list, as Nutrition's
+// Supplements: the white hairline pill says "To focus on" with the list mark in the call's blue (To focus on's own
+// colour), the coach's face and how many; a tap drops the goals out under it, flat on the page, each a small ink ring
+// on a thin line down the left from the pill's mark. Still bullet points: nothing to tick. No call at the end (27 Oct,
+// Alex: the next meeting is on Home already) and no "until" line. New goals arrive open once; after that the pill
+// stays as the client left it (kept on the phone).
 
-const CALL = MEETING_TYPES[0]; // a call with no kind of its own is a Check-in: the blue, the camera
-/** "#2f6fd6" -> "47, 111, 214", for the call's pulse. */
-const rgbOf = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ");
+const KEY = "norcoach.focus";
 
-/** The call's day: "Today", "Tomorrow", else "Thu 29 Oct" (24 Oct, Alex: no "in 5 days"). */
-function callDay(date: string, today: string): string {
-  const days = Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000);
-  if (days <= 0) return "Today";
-  if (days === 1) return "Tomorrow";
-  return new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-}
-
-export default function FocusList({ focus, coach, today }: { focus: HomeFocus; coach: { firstName: string; photoPath: string | null }; today: string }) {
+export default function FocusList({ focus, coach }: { focus: HomeFocus; coach: { firstName: string; photoPath: string | null }; today?: string }) {
   const initial = (coach.firstName || "C").trim().charAt(0).toUpperCase();
-  const until = focus.until;
+  const goals = focus.goals;
+  // What the goals are, to tell a new list from the one already seen.
+  const stamp = goals.map((g) => `${g.id}:${g.text}`).join("|");
+  const [open, setOpen] = useState(false);
+  // The open look (the pill as the header, the list flat under it) stays on while the list folds away.
+  const [dressed, setDressed] = useState(false);
+
+  // After mount (the server render has no storage): a list not seen yet opens; else as it was left.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      let was: { stamp?: string; open?: boolean } = {};
+      try {
+        was = JSON.parse(window.localStorage.getItem(KEY) ?? "{}");
+      } catch {}
+      const next = was.stamp !== stamp ? true : !!was.open;
+      setOpen(next);
+      setDressed(next);
+      try {
+        window.localStorage.setItem(KEY, JSON.stringify({ stamp, open: next }));
+      } catch {}
+    }, 0);
+    return () => clearTimeout(t);
+  }, [stamp]);
+
+  const flip = () => {
+    const next = !open;
+    if (next) setDressed(true);
+    else if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setDressed(false);
+    setOpen(next);
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify({ stamp, open: next }));
+    } catch {}
+  };
+
+  if (goals.length === 0) return null;
   return (
-    <section className="hm-focus" aria-label="To focus on">
-      <div className="hm-tasks-head">
-        <span className="hm-eyebrow">To focus on</span>
-        <span className="hm-focus-from">
-          <span className="hm-focus-face" aria-hidden="true">
-            {coach.photoPath ? (
-              // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-              <img src={pic(coach.photoPath, 96)} alt="" />
-            ) : (
-              initial
-            )}
-          </span>
-          from {coach.firstName}
+    <section className={`hm-focus${dressed ? " dressed" : ""}`} aria-label="To focus on">
+      <button type="button" className="hm-focus-pill" aria-expanded={open} onClick={flip}>
+        <svg className="hm-focus-mark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+        </svg>
+        <span className="hm-focus-title">To focus on</span>
+        <span className="hm-focus-face" aria-hidden="true">
+          {coach.photoPath ? (
+            // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
+            <img src={pic(coach.photoPath, 96)} alt="" />
+          ) : (
+            initial
+          )}
         </span>
+        <span className="hm-focus-count" aria-label={`${goals.length} from ${coach.firstName}`}>
+          {goals.length}
+        </span>
+        <span className="hm-focus-chev" aria-hidden="true">
+          <ChevronDownIcon />
+        </span>
+      </button>
+      <div
+        className={`hm-focus-fold${open ? " open" : ""}`}
+        aria-hidden={!open}
+        inert={!open}
+        onTransitionEnd={(e) => {
+          if (e.target === e.currentTarget && !open) setDressed(false);
+        }}
+      >
+        <ol className="hm-focus-list">
+          {goals.map((g) => (
+            <li key={g.id} className="hm-focus-goal">
+              {/* Drawn, not a box's edge: a 1.6px edge on a 9px box came out fatter on one side (25 Oct, Alex). */}
+              <svg className="hm-focus-node" width="11" height="11" viewBox="0 0 11 11" aria-hidden="true">
+                <circle cx="5.5" cy="5.5" r="4.2" />
+              </svg>
+              <span className="hm-focus-text">{g.text}</span>
+            </li>
+          ))}
+        </ol>
       </div>
-      <ol className="hm-focus-spine">
-        {focus.goals.map((g) => (
-          <li key={g.id} className="hm-focus-goal">
-            {/* Drawn, not a box's edge: a 1.6px edge on a 9px box came out fatter on one side (25 Oct, Alex). */}
-            <svg className="hm-focus-node" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-              <circle cx="5" cy="5" r="4.2" />
-            </svg>
-            <span className="hm-focus-text">{g.text}</span>
-          </li>
-        ))}
-        {until && (
-          <li className="hm-focus-call" style={{ ["--call" as string]: CALL.color, ["--call-rgb" as string]: rgbOf(CALL.color) }}>
-            <span className="hm-focus-callring" aria-hidden="true">
-              <svg className="hm-focus-calledge" width="24" height="24" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="11.2" />
-              </svg>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d={CALL.icon} />
-              </svg>
-            </span>
-            <span className="hm-focus-callwords">
-              <b>Your call with {coach.firstName}</b>
-              <span className="hm-focus-when">
-                <Bars parts={[callDay(until.date, today), until.time || null]} />
-              </span>
-            </span>
-          </li>
-        )}
-      </ol>
     </section>
   );
 }
