@@ -6246,6 +6246,7 @@ export type ChatThreadView = {
   reactions: { coach: string | null; client: string | null };
   pinned: boolean;
   edited: boolean;
+  seen: boolean;
   dateIso: string;
   dayLabel: string;
   timeLabel: string;
@@ -6253,8 +6254,17 @@ export type ChatThreadView = {
   /** The message this one answers, quoted: fromMe, the client's own. */
   replyTo: { id: number; fromMe: boolean; text: string } | null;
 };
+/** Seen (27 Oct, Alex): whether the side that did not send a message has had the chat open since. */
+export function chatSeenTest(clientId: number): (m: ChatMessage) => boolean {
+  const c = getData().clients.find((x) => x.id === clientId);
+  const coachAt = c?.chat_seen_by_coach_at ? stampMs(c.chat_seen_by_coach_at) : 0;
+  const clientAt = c?.chat_seen_by_client_at ? stampMs(c.chat_seen_by_client_at) : 0;
+  return (m) => stampMs(m.created_at) <= (m.sender === "client" ? coachAt : clientAt);
+}
+
 export function chatThreadViews(clientId: number): ChatThreadView[] {
   const all = listChatMessages(clientId);
+  const seen = chatSeenTest(clientId);
   // A picture or video with no look yet gets one behind this read (25 Oct).
   const lacking = all.filter((m) => m.media_path && !m.media_thumb && (m.media_type === "image" || m.media_type === "video"));
   if (lacking.length) void import("./storage").then((s) => s.fillChatLooks(lacking.map((m) => ({ path: m.media_path!, type: m.media_type! })))).catch(() => {});
@@ -6270,6 +6280,7 @@ export function chatThreadViews(clientId: number): ChatThreadView[] {
         reactions: { coach: m.reactions?.coach ?? null, client: m.reactions?.client ?? null },
         pinned: !!m.pinned,
         edited: !!m.edited_at,
+        seen: seen(m),
         dateIso: m.created_at.slice(0, 10),
         dayLabel: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
         timeLabel: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
@@ -7464,6 +7475,8 @@ export function markClientEventsSeen(clientId: number, which: { all: true } | { 
   // The chat opened: its messages so far need the coach no more (25 Oct, Alex), answered or not.
   if (("tab" in which && which.tab === "messages") || "all" in which) {
     client.coach_chat_read_at = localStamp();
+    // The chat itself open (not a "mark all"): what the client sent reads Seen (27 Oct).
+    if ("tab" in which) client.chat_seen_by_coach_at = localStamp();
     persist();
   }
   const since = Date.now() - HOME_NEW_DAYS * 86400000;
@@ -8226,6 +8239,13 @@ export function markNotificationRead(id: number) {
 // Opening the coach's message feed reads every message at once.
 export function markCoachNotesRead(clientId: number) {
   const data = getData();
+  // The client has the chat open: what the coach sent reads Seen (27 Oct).
+  const client = data.clients.find((c) => c.id === clientId);
+  if (client) {
+    client.chat_seen_by_client_at = localStamp();
+    persist();
+    chatChanged(clientId);
+  }
   let changed = false;
   data.coach_activity.forEach((a) => {
     if (a.client_id === clientId && a.kind === "coach_note" && !a.read) {

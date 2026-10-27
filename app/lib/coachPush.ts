@@ -46,6 +46,15 @@ function coachWants(coachId: number, kind: "chat" | "video"): boolean {
 }
 
 
+/** The coach's quiet hours, for the client's chat to say so while they hold (27 Oct, Alex): null when off. */
+export function coachQuietHours(clientId: number): { from: string; to: string; tz: string | null } | null {
+  const coachId = coachIdOfClient(clientId);
+  const settings = getData().users.find((u) => u.id === coachId && u.role === "coach")?.coach_settings;
+  const n = settings?.notify;
+  if (!n?.quiet) return null;
+  return { from: n.quietFrom ?? "22:00", to: n.quietTo ?? "07:00", tz: settings?.timezone || null };
+}
+
 /** A client wrote in the chat: their name, the first line (or what they sent), and a tap opens the chat. */
 export function pushCoachMessage(clientId: number, message: { text: string; media?: ChatMediaKind | null }) {
   const coachId = coachIdOfClient(clientId);

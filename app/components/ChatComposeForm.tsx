@@ -26,7 +26,10 @@ export default function ChatComposeForm({
   replyTo = null,
   onClearReply,
   onAddEvent = null,
+  onTyping,
 }: {
+  /** Called as words are typed (27 Oct, Alex: Typing… on the other side). */
+  onTyping?: () => void;
   /** The plus menu's "Add an event" (7 Oct): what it does; "preview" lists it greyed (a coach previewing the
       client's app can't add one as them); null leaves it out (the coach's own chat panel). */
   onAddEvent?: (() => void) | "preview" | null;
@@ -224,6 +227,7 @@ export default function ChatComposeForm({
         onChange={(e) => {
           setText(e.target.value);
           fit(e.currentTarget);
+          if (e.target.value.trim()) onTyping?.();
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !window.matchMedia("(pointer: coarse)").matches) {

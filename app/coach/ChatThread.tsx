@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useChatStream } from "../components/useChatStream";
+import { useChatStream, useChatTyping, useTypingSignal } from "../components/useChatStream";
 import { coachThreadAction } from "./actions";
 import type { DraftMedia, DraftMessage, DraftMessages } from "../admin/redesign/messages/MessagesDraft";
-import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction } from "../lib/actions";
+import { chatTypingAction, deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction } from "../lib/actions";
 import VoiceRecordButton from "../components/VoiceRecordButton";
 import RingEdge from "../components/RingEdge";
-import ChatMediaGallery from "../components/ChatMediaGallery";
+import ChatMediaGallery, { exerciseOf } from "../components/ChatMediaGallery";
 import { ChatImage, ChatVideo, sized, withVideoFrame } from "../components/ChatMedia";
 import { dayMonth } from "../lib/dayMonth";
 import { useKeyboardInset } from "../client/useKeyboardInset";
@@ -47,7 +47,8 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     (next: DraftMessages | null) => {
       if (!next) return;
       setPlan(next);
-      if (next.unread) {
+      // Read only while it is on screen (27 Oct: Seen must mean seen).
+      if (next.unread && document.visibilityState === "visible") {
         void markSeenAction(clientId, { tab: "messages" }).catch(() => {});
         readRef.current();
       }
@@ -87,6 +88,12 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
   }, [clientId, refresh, take]);
 
   const messages = plan?.messages ?? [];
+  // Typing… and Seen (27 Oct, Alex): the client typing shows over the box; Seen under the coach's last message once
+  // the client has had the chat open since.
+  const theyType = useChatTyping(clientId, "client");
+  const typed = useTypingSignal(() => chatTypingAction(clientId));
+  const lastOwn = messages.find((m) => m.mine);
+  const seenId = lastOwn?.seen ? lastOwn.id : null;
   const avatar = plan?.avatarPath ?? avatarPath;
 
   // ---- The scroll (25 Oct, Alex: "always defaulted to the last message, or if there are unread new ones, to those"):
@@ -559,7 +566,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
             days.map((d) => (
               <div key={d.day} className="cph-day">
                 <span className="cph-day-label">{dayLabel(d.day)}</span>
-                {d.items.map(bubble)}
+                {d.items.map((m) => [bubble(m), seenId === m.id && outbox.length === 0 ? <span key={`seen-${m.id}`} className="cph-seen">Seen</span> : null])}
               </div>
             ))
           )}
@@ -584,6 +591,11 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
       </div>
 
       <footer className="cph-compose">
+        {theyType && (
+          <p className="chat-typing" aria-live="polite">
+            {first} is typing<i aria-hidden="true" />
+          </p>
+        )}
         {error && (
           <p className="cph-error" role="alert">
             {error}
@@ -636,6 +648,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
             onChange={(e) => {
               setText(e.target.value);
               grow();
+              if (e.target.value.trim() && !editing) typed();
             }}
             onKeyDown={(e) => {
               // Enter sends on a computer; on a phone it is a new line, and the arrow sends.
@@ -676,7 +689,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
           }}
         />
       )}
-      {gallery && <ChatMediaGallery items={messages.filter((m) => m.media).map((m) => ({ id: m.id, who: m.mine ? "You" : first, when: m.when, media: m.media! }))} onShow={goTo} onClose={() => setGallery(false)} />}
+      {gallery && <ChatMediaGallery items={messages.map((m) => ({ id: m.id, who: m.mine ? "You" : first, when: m.when, media: m.media ?? null, text: m.text, about: exerciseOf(m.link?.link, m.link?.label) }))} onShow={goTo} onClose={() => setGallery(false)} />}
       {viewer && (
         <button type="button" className="cph-viewer" onClick={() => setViewer(null)} aria-label="Close the photo">
           {/* eslint-disable-next-line @next/next/no-img-element -- the chat's own upload, served by the app */}

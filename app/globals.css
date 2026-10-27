@@ -20818,3 +20818,41 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
 @media (prefers-reduced-motion: reduce) {
   .hm-phases-fold.hm-phases-fold, .tr-session-fold.tr-session-fold, .ts-fold.ts-fold, .fdi-fold.fdi-fold, .pc-sbody-wrap.pc-sbody-wrap, .ci-day-body.ci-day-body, .hl-fold.hl-fold, .cv-fold-wrap.cv-fold-wrap, .nd-supps-fold.nd-supps-fold, .pc-obj-body.pc-obj-body, .po-body.po-body, .mts-body.mts-body, .ev-x.ev-x, .mt-body.mt-body, .pp-app-past-fold.pp-app-past-fold { transition: none; }
 }
+
+/* Typing… and Seen (27 Oct, Alex), every chat alike: the other side typing as a quiet line over the box, laid over
+   the thread's foot so nothing moves; Seen in faint words under your last message once they have had the chat open. */
+.cm-compose, .cph-compose, .rm-bar { position: relative; }
+.chat-typing { position: absolute; left: 16px; bottom: 100%; z-index: 2; margin: 0 0 6px; padding: 3px 10px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12px; font-weight: 500; line-height: 18px; color: #5b6474; pointer-events: none; animation: chat-typing-in 0.2s ease-out; }
+.chat-typing i { display: inline-block; width: 14px; text-align: left; }
+.chat-typing i::after { content: "…"; animation: chat-typing-dots 1.2s steps(4, end) infinite; display: inline-block; overflow: hidden; vertical-align: bottom; width: 0; }
+@keyframes chat-typing-dots { to { width: 14px; } }
+@keyframes chat-typing-in { from { opacity: 0; transform: translateY(4px); } }
+.cm-seen, .cph-seen, .rm-seen { display: block; margin: 2px 4px 0 auto; width: max-content; font-size: 11px; font-weight: 500; color: #8b93a1; }
+@media (prefers-reduced-motion: reduce) { .chat-typing, .chat-typing i::after { animation: none; } .chat-typing i::after { width: auto; } }
+
+/* Media and files finds things (27 Oct, Alex): a search line over it (a short field: white with the hairline, ink
+   while typing), the words found picked out in ink at 600 (no fill), and the exercises the photos and videos are
+   about as chips over the grid (white with the hairline, the chosen one ink). */
+.cmg-search { display: flex; align-items: center; gap: 8px; margin: 4px 16px 10px; padding: 0 14px; height: 40px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #8b93a1; }
+.cmg-search:focus-within { box-shadow: inset 0 0 0 1px #141a24; }
+.cmg-search svg { flex: none; width: 17px; height: 17px; }
+.cmg-search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; font: inherit; font-size: 16px; font-weight: 500; color: #141a24; outline: none; -webkit-appearance: none; appearance: none; }
+.cmg-search input::placeholder { color: #98A2B3; }
+.cmg-found-text { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cmg-mark { background: none; color: #141a24; font-weight: 600; }
+.cmg-chips { display: flex; gap: 6px; margin: 0 -16px 12px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
+.cmg-chips::-webkit-scrollbar { display: none; }
+.cmg-chips button { flex: none; height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 12.5px; font-weight: 500; color: #3a4250; cursor: pointer; white-space: nowrap; }
+.cmg-chips button.on { background: #141a24; box-shadow: none; color: #fff; font-weight: 600; }
+
+/* A voice message waits before it goes (27 Oct, Alex): ✕ throws it away, ▶ plays it back with its length, the ink
+   arrow sends it; one white hairline pill where the mic was. */
+.vr-review { flex: none; display: inline-flex; align-items: center; gap: 2px; height: 38px; padding: 0 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.vr-review audio { display: none; }
+.vr-review button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; min-width: 30px; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; color: #141a24; cursor: pointer; }
+.vr-review .vr-drop { color: #8b93a1; }
+.vr-review .vr-play { padding: 0 8px; }
+.vr-review .vr-time { font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.vr-review .vr-send { background: #141a24; color: #fff; }
+/* The coach's quiet hours in the client's chat (27 Oct, Alex): one quiet fact over the box. */
+.cm-away { margin: 0 0 8px; font-size: 12px; font-weight: 500; color: #8b93a1; text-align: center; }

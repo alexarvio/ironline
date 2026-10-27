@@ -1,6 +1,6 @@
 "use server";
 
-import { chatChanged, chatCurrent, chatRev, timedChatRead } from "./chatBus";
+import { chatChanged, chatCurrent, chatRev, chatTyping, timedChatRead } from "./chatBus";
 import { isMeetingTypeId } from "./meetingTypes";
 import { isClientCall, takesClient } from "./calendarKinds";
 import { noteFocus, setFocusOnComplete } from "./focus";
@@ -2428,6 +2428,15 @@ export async function chatThreadAction(clientId: number, known?: string | null):
   // Nothing changed since the screen's copy (27 Oct): nothing to send.
   if (chatCurrent(id, known)) return null;
   return { rev: chatRev(id), messages: timedChatRead("chat · client", () => chatThreadViews(id)) };
+}
+
+/** Typing… (27 Oct, Alex): this side is typing in the chat; nothing is saved. A coach previewing the app is the coach. */
+export async function chatTypingAction(clientId: number) {
+  const user = await getSessionUser();
+  if (!user) return;
+  const id = user.role === "coach" ? ((await coachForClient(Number(clientId))) ? Number(clientId) : null) : user.client_id;
+  if (id == null) return;
+  chatTyping(id, user.role === "coach" ? "coach" : "client");
 }
 
 // A thumbs up on a message, from either side. Which side is decided by the

@@ -1,4 +1,5 @@
 import { isEventTypeId } from "../lib/eventTypes";
+import { coachQuietHours } from "../lib/coachPush";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "../lib/auth";
 import { touchPresence } from "../lib/presence";
@@ -1572,6 +1573,8 @@ export default async function ClientPage({
       coachMessages={{
         coachName: getCoachDisplayName(CLIENT_ID),
         messages: coachMessagesFor(CLIENT_ID),
+        // The coach's quiet hours: the chat says they are away while they hold (27 Oct, Alex).
+        quiet: coachQuietHours(CLIENT_ID),
         viewerIsClient,
         // How many of the coach's messages are new, so the chat opens on the first of them (25 Oct, Alex).
         unreadCount: getNotifications(CLIENT_ID).filter((n) => n.kind === "coach_note" && !n.read).length,

@@ -7,7 +7,8 @@
 // One server process holds the store (as presence.ts), so the listeners live in memory. Kept on globalThis: server
 // actions and route handlers can load this module twice, and both must share one set of listeners.
 
-type Listener = (clientId: number, rev: string) => void;
+/** `typing`: no change, only that side typing (27 Oct, Alex: Typing…). */
+type Listener = (clientId: number, rev: string, typing?: "coach" | "client") => void;
 type Bus = { epoch: string; revs: Map<number, number>; listeners: Set<Listener> };
 
 const g = globalThis as unknown as { __norcoachChatBus?: Bus };
@@ -32,6 +33,21 @@ export function chatChanged(clientId: number | null | undefined) {
   for (const fn of bus.listeners) {
     try {
       fn(clientId, rev);
+    } catch {}
+  }
+}
+
+/** One side typing in this chat (27 Oct): told to everyone listening, nothing changed. At most once a second a side. */
+const lastTyping = new Map<string, number>();
+export function chatTyping(clientId: number, side: "coach" | "client") {
+  const key = `${clientId}:${side}`;
+  const now = Date.now();
+  if (now - (lastTyping.get(key) ?? 0) < 1000) return;
+  lastTyping.set(key, now);
+  const rev = chatRev(clientId);
+  for (const fn of bus.listeners) {
+    try {
+      fn(clientId, rev, side);
     } catch {}
   }
 }

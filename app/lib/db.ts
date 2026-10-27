@@ -44,6 +44,10 @@ type Client = {
   // When the coach last opened this client's chat (25 Oct, Alex: "whenever I open that chat it clears the
   // notification"; an "ok" needs no answer): Needs you's message item counts only what came in after it.
   coach_chat_read_at?: string;
+  // Seen (27 Oct, Alex): when the coach last had this chat open, and when the client last had it open. A message
+  // the other side sent before it reads Seen under it; set only by the chat itself (never a "mark all" or a preview).
+  chat_seen_by_coach_at?: string;
+  chat_seen_by_client_at?: string;
   // Needs-you items the coach marked as read (12 Oct): action id to when.
   // An item comes back once something newer stands behind it.
   coach_dismissed?: Record<string, number>;

@@ -40,6 +40,7 @@ import {
   describeMessageLink,
   getClient,
   listChatMessages,
+  chatSeenTest,
   listMessageLinkTargets,
   getPhotoCadence,
   getPhotoInstructions,
@@ -1244,6 +1245,7 @@ export function loadMessages(clientId: number): DraftMessages {
   const hrefFor = (link: MessageLink, week: number | null) => messageLinkHref(clientId, link, week);
   // Both sides, newest first: the client answers from their app.
   const all = listChatMessages(clientId);
+  const seen = chatSeenTest(clientId);
   // A picture or video with no look yet gets one behind this read (25 Oct).
   const lacking = all.filter((m) => m.media_path && !m.media_thumb && (m.media_type === "image" || m.media_type === "video"));
   if (lacking.length) fillChatLooks(lacking.map((m) => ({ path: m.media_path!, type: m.media_type! })));
@@ -1258,10 +1260,11 @@ export function loadMessages(clientId: number): DraftMessages {
         text: m.text.trim(),
         when: when(m.created_at),
         media: m.media_path ? { path: m.media_path, type: m.media_type ?? "image", name: m.media_name ?? null, thumb: m.media_thumb ?? null, w: m.media_w ?? null, h: m.media_h ?? null } : null,
-        link: view ? { area: view.area, label: view.label, gone: view.gone, href: view.removed ? undefined : hrefFor(m.link!, view.week) } : null,
+        link: view ? { area: view.area, label: view.label, gone: view.gone, link: m.link!, href: view.removed ? undefined : hrefFor(m.link!, view.week) } : null,
         reactions: { coach: m.reactions?.coach ?? null, client: m.reactions?.client ?? null },
         pinned: !!m.pinned,
         edited: !!m.edited_at,
+        seen: seen(m),
         replyTo: (() => {
           const q = chatQuote(clientId, m.reply_to);
           return q ? { id: q.id, mine: q.sender === "coach", text: q.text } : null;

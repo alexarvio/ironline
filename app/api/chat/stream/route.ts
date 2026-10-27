@@ -31,8 +31,8 @@ export async function GET(request: Request) {
       };
       // Open: the screen reads its thread once, in case something came in while it was away.
       say(`retry: 3000\nevent: hello\ndata: {}\n\n`);
-      const off = onChatChange((clientId, rev) => {
-        if (hears(clientId)) say(`data: ${JSON.stringify({ c: clientId, r: rev })}\n\n`);
+      const off = onChatChange((clientId, rev, typing) => {
+        if (hears(clientId)) say(`data: ${JSON.stringify(typing ? { c: clientId, r: rev, t: typing } : { c: clientId, r: rev })}\n\n`);
       });
       const beat = setInterval(() => say(`: beat\n\n`), BEAT_MS);
       stop = () => {

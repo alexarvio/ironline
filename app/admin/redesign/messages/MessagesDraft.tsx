@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
-import { useChatStream } from "../../../components/useChatStream";
+import { useChatStream, useChatTyping, useTypingSignal } from "../../../components/useChatStream";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ChevronDownIcon, PinIcon } from "../../../components/icons";
 import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
-import ChatMediaGallery from "../../../components/ChatMediaGallery";
+import ChatMediaGallery, { exerciseOf } from "../../../components/ChatMediaGallery";
 import { ChatImage, ChatVideo, withVideoFrame } from "../../../components/ChatMedia";
 import MediaReviewModal, { chatMediaReview } from "../media-review/MediaReviewModal";
 import { chatDraftThreadAction } from "./actions";
-import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
+import { chatTypingAction, deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { pic } from "../../../lib/pic";
 import type { LinkTargets } from "../../../lib/queries";
@@ -28,7 +28,7 @@ import { Sep, SepJoin } from "../Sep";
 /** href: where it opens on the coach's side (sent links that still open). */
 export type DraftLink = { area: string; label: string; gone: boolean; link?: MessageLink; href?: string; /** Words to start the message with (15 Oct, the progress pop-up's nudge); the coach edits them before sending. */ draft?: string };
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null; thumb?: string | null; w?: number | null; h?: number | null };
-export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean; /** The message it answers, quoted (mine: the coach's own). */ replyTo?: { id: number; mine: boolean; text: string } | null };
+export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean; /** The other side has had the chat open since (27 Oct): Seen under the last of yours. */ seen?: boolean; /** The message it answers, quoted (mine: the coach's own). */ replyTo?: { id: number; mine: boolean; text: string } | null };
 /** Newest first, as the loader hands them over. */
 export type DraftMessages = { /** The chat's revision (chatBus.ts): handed back, so an unchanged chat sends nothing. */ rev?: string; messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean; /** The first of those (25 Oct): the phone opens on it. */ firstUnread?: number | null };
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
@@ -66,13 +66,19 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     setPlan(next);
     // Something the client wrote came in while the chat is open: it is read
     // (21 Oct: it stayed new on the rail and the Feed after the chat closed).
-    if (next.unread && activeRef.current) void markSeenAction(clientId, { tab: "messages" }).catch(() => {});
+    if (next.unread && activeRef.current && document.visibilityState === "visible") void markSeenAction(clientId, { tab: "messages" }).catch(() => {});
   };
   const activeRef = useRef(active);
   useEffect(() => {
     activeRef.current = active;
   }, [active]);
   const messages = plan.messages;
+  // Typing… and Seen (27 Oct, Alex): the client typing shows over the box; Seen under the coach's last message once
+  // the client has had the chat open since.
+  const theyType = useChatTyping(active ? clientId : null, "client");
+  const typed = useTypingSignal(() => chatTypingAction(clientId));
+  const lastOwn = messages.find((m) => m.mine);
+  const seenId = lastOwn?.seen ? lastOwn.id : null;
   const [text, setText] = useState("");
   const [link, setLink] = useState<DraftLink | null>(null);
   // Opened from a reply: the reply points at what was said, and the box is ready.
@@ -505,7 +511,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
         )}
         {gallery && (
           <ChatMediaGallery
-            items={messages.filter((m) => m.media).map((m) => ({ id: m.id, who: m.mine ? "You" : firstName, when: m.when, media: m.media! }))}
+            items={messages.map((m) => ({ id: m.id, who: m.mine ? "You" : firstName, when: m.when, media: m.media ?? null, text: m.text, about: exerciseOf(m.link?.link, m.link?.label) }))}
             onShow={goToMessage}
             onClose={() => setGallery(false)}
           />
@@ -558,7 +564,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
             days.map((d) => (
               <div key={d.day} className="rm-day">
                 <span className="rm-day-label">{d.day}</span>
-                {d.items.map((m) => bubble(m))}
+                {d.items.map((m) => [bubble(m), seenId === m.id ? <span key={`seen-${m.id}`} className="rm-seen">Seen</span> : null])}
               </div>
             ))
           )}
@@ -567,6 +573,11 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
 
         {/* The bar at the foot: the link, if one, then the box and Send. */}
         <div className="rm-bar">
+          {theyType && (
+            <p className="chat-typing" aria-live="polite">
+              {firstName} is typing<i aria-hidden="true" />
+            </p>
+          )}
           {link && (
             <span className="rm-link">
               <LinkGlyph />
@@ -630,6 +641,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
               value={text}
               onChange={(e) => {
                 setText(e.target.value);
+                if (e.target.value.trim()) typed();
                 const el = e.currentTarget;
                 el.style.height = "auto";
                 el.style.height = `${Math.min(el.scrollHeight, 140)}px`;

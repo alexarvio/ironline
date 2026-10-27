@@ -2,15 +2,15 @@
 
 import type { HomeEventCategory } from "./EventsCard";
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
-import { useChatStream } from "../components/useChatStream";
+import { useChatStream, useChatTyping, useTypingSignal } from "../components/useChatStream";
 import { ChevronDownIcon, ChevronLeftIcon, PinIcon } from "../components/icons";
 import ChatComposeForm from "../components/ChatComposeForm";
 import RingEdge from "../components/RingEdge";
 import { REACTIONS } from "../components/MessageReactions";
-import { chatThreadAction, deleteMyChatMessageAction, editMyChatMessageAction, markCoachNotesReadAction, reactToMessageAction, unpinMessageAction } from "../lib/actions";
+import { chatThreadAction, chatTypingAction, deleteMyChatMessageAction, editMyChatMessageAction, markCoachNotesReadAction, reactToMessageAction, unpinMessageAction } from "../lib/actions";
 import CoachMark from "./CoachMark";
 import { useOpenLink } from "./CheckInContext";
-import ChatMediaGallery from "../components/ChatMediaGallery";
+import ChatMediaGallery, { exerciseOf } from "../components/ChatMediaGallery";
 import { ChatImage, ChatVideo } from "../components/ChatMedia";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
 
@@ -37,12 +37,16 @@ export type CoachMessageView = {
   reactions?: { coach: string | null; client: string | null };
   pinned?: boolean;
   edited?: boolean;
+  /** The other side has had the chat open since (27 Oct): Seen under the last of yours. */
+  seen?: boolean;
   /** The message it answers, quoted (fromMe: the client's own), 2 Oct. */
   replyTo?: { id: number; fromMe: boolean; text: string } | null;
 };
 
 export type CoachMessagesProps = {
   coachName: string;
+  /** The coach's quiet hours, in their time zone (27 Oct, Alex): "Finlay is away until 07:00" while they hold. */
+  quiet?: { from: string; to: string; tz: string | null } | null;
   messages: CoachMessageView[];
   /** The coach's event categories and today; the composer's "Add an event" is gone (17 Oct, Alex), so the chat ignores it. */
   events?: { categories: HomeEventCategory[]; today: string } | null;
@@ -59,7 +63,33 @@ const POLL_MS = 15000;
 const mediaWord = (m: CoachMessageView) =>
   !m.media ? "" : m.media.type === "image" ? "Photo" : m.media.type === "video" ? "Video" : m.media.type === "audio" ? "Voice message" : (m.media.name ?? "File");
 
-export default function CoachMessagesScreen({ coachName, messages: fromPage, viewerIsClient, unreadCount = 0, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
+/** "07:00" while the coach's quiet hours hold now, else null; read again every minute. */
+function useAwayUntil(quiet: CoachMessagesProps["quiet"]): string | null {
+  const [until, setUntil] = useState<string | null>(null);
+  useEffect(() => {
+    if (!quiet) return;
+    const check = () => {
+      let now: string;
+      try {
+        now = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: quiet.tz || undefined }).format(new Date());
+      } catch {
+        now = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+      }
+      // A window over midnight (22:00 to 07:00) holds from its start to midnight and from midnight to its end.
+      const away = quiet.from <= quiet.to ? now >= quiet.from && now < quiet.to : now >= quiet.from || now < quiet.to;
+      setUntil(away ? quiet.to : null);
+    };
+    check();
+    const t = setInterval(check, 60_000);
+    return () => {
+      clearInterval(t);
+      setUntil(null);
+    };
+  }, [quiet]);
+  return until;
+}
+
+export default function CoachMessagesScreen({ coachName, quiet = null, messages: fromPage, viewerIsClient, unreadCount = 0, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
   const [, startTransition] = useTransition();
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
   // The one message being answered (2 Oct, as WhatsApp): quoted over the box until sent or dropped.
@@ -101,7 +131,8 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
     threadRef.current = t;
     setSending((s) => s.filter((x) => !t.some((m) => m.mine === x.mine && m.id > (sentAfter.current.get(x.id) ?? 0) && m.text.trim() === x.text.trim())));
     const newest = Math.max(0, ...t.filter((m) => !m.mine).map((m) => m.id));
-    if (newest > readUpTo.current) {
+    // Read only while it is on screen (27 Oct: Seen must mean seen, not a locked phone polling).
+    if (newest > readUpTo.current && document.visibilityState === "visible") {
       readUpTo.current = newest;
       if (viewerIsClient) void markCoachNotesReadAction(clientId).catch(() => {});
     }
@@ -116,6 +147,14 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
       .catch(() => {});
   // In real time (27 Oct, Alex): the coach's words, edits and reactions come in as they happen.
   useChatStream(clientId, () => void refresh());
+  // Typing… and Seen (27 Oct, Alex): the other side typing shows over the box; Seen under your last message once
+  // they have had the chat open since.
+  const theyType = useChatTyping(clientId, viewerIsClient ? "coach" : "client");
+  // The coach's quiet hours (27 Oct, Alex): one fact over the box while they hold.
+  const awayUntil = useAwayUntil(quiet);
+  const typed = useTypingSignal(() => chatTypingAction(clientId));
+  const lastOwn = [...thread].reverse().find((m) => (viewerIsClient ? m.mine : !m.mine));
+  const seenId = lastOwn?.seen ? lastOwn.id : null;
   const messages = sending.length ? [...thread, ...sending] : thread;
   // Media and files sent in the chat, newest first, over it (ChatMediaGallery).
   const [gallery, setGallery] = useState(false);
@@ -129,10 +168,11 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
   // Your own messages are the ones you can change: the client's, or the
   // coach's when a coach is previewing the app (they send as the coach).
   const own = (m: CoachMessageView) => (viewerIsClient ? m.mine : !m.mine);
+  // Every message, newest first: the screen searches their words and shows what was sent (27 Oct).
   const galleryItems = messages
-    .filter((m) => m.media && m.id > 0)
+    .filter((m) => m.id > 0)
     .reverse()
-    .map((m) => ({ id: m.id, who: own(m) ? "You" : viewerIsClient ? coachName : "Your client", when: `${m.dayLabel.split(", ").slice(1).join(", ") || m.dayLabel}, ${m.timeLabel}`, media: m.media! }));
+    .map((m) => ({ id: m.id, who: own(m) ? "You" : viewerIsClient ? coachName : "Your client", when: `${m.dayLabel.split(", ").slice(1).join(", ") || m.dayLabel}, ${m.timeLabel}`, media: m.media ?? null, text: m.text, about: exerciseOf(m.link?.link, m.link?.label) }));
   // Which side's reaction is yours, and which is theirs.
   const mySide = viewerIsClient ? "client" : "coach";
   const theirSide = viewerIsClient ? "coach" : "client";
@@ -344,6 +384,7 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
             )}
           </div>
         </div>
+        {seenId === m.id && <span className="cm-seen">Seen</span>}
       </article>
     );
   };
@@ -407,7 +448,17 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
         )}
       </main>
       <footer className="cm-compose">
+        {theyType && (
+          <p className="chat-typing" aria-live="polite">
+            {viewerIsClient ? coachName.trim().split(/\s+/)[0] || coachName : "Your client"} is typing<i aria-hidden="true" />
+          </p>
+        )}
         {/* A coach previewing the app writes as the coach, not as the client. */}
+        {awayUntil && !theyType && (
+          <p className="cm-away">
+            {coachName.trim().split(/\s+/)[0] || coachName} is away until {awayUntil}
+          </p>
+        )}
         {!viewerIsClient && <p className="cm-preview-note">You&rsquo;re previewing as {coachName}: what you send here comes from {coachName}.</p>}
         <ChatComposeForm
           clientId={clientId}
@@ -438,6 +489,7 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
             ]);
           }}
           onSent={() => void refresh()}
+          onTyping={typed}
           onFailed={(text) => setSending((s) => s.filter((m) => m.text !== text))}
         />
       </footer>
