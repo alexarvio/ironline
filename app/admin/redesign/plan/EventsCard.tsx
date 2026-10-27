@@ -13,7 +13,7 @@ import { MonthRange } from "../MonthRange";
 import { AddCells, chromeOf, EmptyLane, eventIsPast, eventLanes, EventMark, eventPlace, eventState, gridFor, LANE, LaneRow, rgbOf, standingParts, Timeline, type Category, type PlanEvent } from "./timelineParts";
 import { STATE_LABEL, stateTagStyle } from "../../phaseChrome";
 import DateText from "../DateText";
-import { dayMonth, logDate, logDateWidth, logRange, spanLength } from "../../../lib/dayMonth";
+import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
 import { SepJoin } from "../Sep";
 import { Fold } from "../Fold";
@@ -308,37 +308,39 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
           // The date column only as wide as the log needs (21 Oct, Alex: too much empty room): a range's two dates, else one.
           <div
             className={`rd-rows${pages > 1 ? " rd-steady" : ""}`}
-            style={{ "--ev-when": listed.some((e) => e.repeat || e.start !== e.end) ? "188px" : `${logDateWidth(listed.map((e) => e.start))}px`, ...(pages > 1 ? { "--log-rows": PAGE, "--log-row": "43px", "--log-head": "12px" } : {}) } as React.CSSProperties}
+            style={{ "--ev-start": `${logDateWidth(listed.map((e) => e.start))}px`, "--ev-end": listed.some((e) => e.repeat || e.start !== e.end) ? `${logDateWidth(listed.filter((e) => e.repeat || e.start !== e.end).map((e) => e.repeat?.until ?? e.end))}px` : "0px", "--ev-arrow": listed.some((e) => e.repeat || e.start !== e.end) ? "30px" : "0px", ...(pages > 1 ? { "--log-rows": PAGE, "--log-row": "43px", "--log-head": "12px" } : {}) } as React.CSSProperties}
           >
             {onPage.map((e) => {
               const k = chromeOf(cats, e.kind);
               return (
                 <div key={e.id} className="rd-row">
                   <button type="button" className="rd-row-main rq-evrow" onClick={() => setDlg({ event: e })}>
+                    {/* The dates in columns (27 Oct, Alex: "the items centred in columns so they follow harmony"): every start
+                        under every start, the faint arrows under each other, every end under every end; a day alone keeps the
+                        start column. Then who added it, their face. */}
                     <span className="rq-evrow-when">
-                      {/* The date first, as every log (21 Oct, Alex: logDate); a span is one short span with its length after it in
-                          grey (27 Oct, Alex: no arrow between two dates; logRange). */}
-                      <b>
-                        {e.repeat && !e.repeat.until ? (
-                          <>
-                            <span className="rd-logdate">From {logDate(e.start)}</span>
-                            <span className="rq-evrow-len">no end</span>
-                          </>
-                        ) : e.start !== e.end || e.repeat ? (
-                          <>
-                            <span className="rd-logdate">{logRange(e.start, e.repeat?.until ?? e.end)}</span>
-                            <span className="rq-evrow-len">{spanLength(e.start, e.repeat?.until ?? e.end)}</span>
-                          </>
-                        ) : (
-                          <span className="rd-logdate">{logDate(e.start)}</span>
-                        )}
-                      </b>
+                      <span className="rd-logdate">{logDate(e.start)}</span>
+                      {(e.repeat || e.start !== e.end) && (
+                        <>
+                          <i aria-hidden="true">
+                            <RangeArrow />
+                          </i>
+                          <span className="rd-logdate">{e.repeat && !e.repeat.until ? "no end" : logDate(e.repeat?.until ?? e.end)}</span>
+                        </>
+                      )}
+                    </span>
+                    <span className="rq-evrow-face" title={`Added by ${e.byClient ? firstName || "the client" : "you"}`}>
+                      {(e.byClient ? faces?.client : faces?.coach) ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
+                        <img src={pic((e.byClient ? faces?.client : faces?.coach)!, 96)} alt="" />
+                      ) : (
+                        ((e.byClient ? firstName : faces?.coachName) || "?").charAt(0).toUpperCase()
+                      )}
                     </span>
                     {/* Then the title, its repeat days and its note running on right after it (21 Oct, Alex), so every row is
                         one line high (the log keeps one height); the kind after them. */}
                     <span className="rq-evrow-main">
                       <b>{e.title}</b>
-                      {e.byClient && <span className="rq-ev-by">From {firstName || "client"}</span>}
                       {(e.repeat || e.note) && (
                         <span className="rq-evrow-note">
                           <SepJoin parts={[e.repeat ? repeatWords(e.repeat, { until: false }) : null, e.note || null]} />

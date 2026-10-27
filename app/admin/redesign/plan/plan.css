@@ -268,5 +268,11 @@
 .rq-evlog-fold.open { grid-template-rows: 1fr; opacity: 1; }
 .rq-evlog-clip { min-height: 0; overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .rq-evlog-fold { transition: none; } }
-/* A span's length after it, grey (27 Oct, Alex: `4–28 Nov  25 days`, no arrow between two dates). */
-.rq-evrow-len { margin-left: 8px; font-size: 12.5px; font-weight: 500; color: #98A2B3; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* The log in columns (27 Oct, Alex: "the arrows are fine, the items centred in columns"): the start, the arrow, the end,
+   each a column of its own so they stand under each other; then who added it (their face, 22px), the title, the kind,
+   where it stands. */
+.rd-row-main.rq-evrow.rq-evrow, .rq-evrow.rq-evrow { grid-template-columns: calc(var(--ev-start, 84px) + var(--ev-arrow, 0px) + var(--ev-end, 0px)) 22px minmax(0, 1fr) 108px 110px; }
+.rq-evrow .rq-evrow-when { display: grid; grid-template-columns: var(--ev-start, 84px) var(--ev-arrow, 0px) var(--ev-end, 0px); align-items: center; white-space: nowrap; }
+.rq-evrow .rq-evrow-when > i { display: inline-flex; justify-content: center; margin: 0; color: #98a2b3; }
+.rq-evrow-face { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; overflow: hidden; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 10px; font-weight: 600; color: #5b6474; }
+.rq-evrow-face img { width: 100%; height: 100%; object-fit: cover; }
