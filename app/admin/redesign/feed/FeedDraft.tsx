@@ -320,7 +320,11 @@ function Activity({ rows, kind, clients }: { rows: ActivityRow[]; kind?: string 
             date
           )}
           <span className="rd-logtime">{r.timeKnown ? clock(r.at) : r.allDay ? "All day" : ""}</span>
-          <span className="rfd-name">{r.client}</span>
+          {/* The face before the name (27 Oct, Alex: a feed with more than one person shows each one's picture). */}
+          <span className="rfd-who-cell">
+            <Face name={r.client} src={r.avatarPath} />
+            <span className="rfd-name">{r.client}</span>
+          </span>
           <KindMark mark={r.mark} />
           {/* The thing, then only the client's own words (23 Oct, Alex): no facts after it. */}
           <span className="rfd-line">

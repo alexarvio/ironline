@@ -433,18 +433,20 @@ function activityOf(ctx: Ctx): ActivityRow[] {
   // The thing alone and the client's own words (23 Oct, Alex: "only a subheading if the client left a note or sent a
   // message"), in Home's words: one row a session, its cardio in it.
   const rows: ActivityRow[] = [];
+  const faceOf = (id: number) => ctx.clients.find((c) => c.id === id)?.avatar_path ?? null;
   for (const r of kept) {
     if (r.feed) {
       const e = r.feed;
       // A client who deleted their account has no tab to open: the departure is on Business.
       const href = safe(`href ${e.id}`, () => feedHref(e), null) ?? (e.target?.kind === "gone" ? "/admin/redesign/business" : tab("home", e.clientId));
-      rows.push({ id: e.id, clientId: e.clientId, client: e.clientName, kind: r.kind, mark: activityMarkOf(e), at: new Date(e.at).toISOString(), timeKnown: e.timeKnown, title: e.thing || cap(e.text), quote: activityWords(e), href, isNew: isNew(e.at) });
+      rows.push({ id: e.id, clientId: e.clientId, client: e.clientName, avatarPath: faceOf(e.clientId), kind: r.kind, mark: activityMarkOf(e), at: new Date(e.at).toISOString(), timeKnown: e.timeKnown, title: e.thing || cap(e.text), quote: activityWords(e), href, isNew: isNew(e.at) });
     } else if (r.call) {
       const { m, time } = r.call;
       rows.push({
         id: r.id,
         clientId: r.call.clientId,
         client: r.call.client,
+        avatarPath: faceOf(r.call.clientId),
         kind: "meetings",
         mark: "meetings",
         at: new Date(r.at).toISOString(),

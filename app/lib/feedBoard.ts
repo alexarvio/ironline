@@ -42,6 +42,8 @@ export type ActivityRow = {
   id: string;
   clientId: number;
   client: string;
+  /** Their face (27 Oct, Alex: a feed with more than one person shows each one's picture). */
+  avatarPath: string | null;
   /** Which filter it is under. */
   kind: ActivityKind;
   /** Its icon in its colour (KindMark): the kind's, a shape update's camera under Lifestyle. */

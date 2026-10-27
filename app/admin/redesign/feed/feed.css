@@ -89,3 +89,8 @@
 .rfd-opt[aria-selected="true"] b { font-weight: 600; }
 .rfd-opt .rfd-face { width: 28px; height: 28px; font-size: 12px; }
 .rfd-drop-none { margin: 0; padding: 12px 10px; font-size: 13px; color: #8b93a1; }
+/* Activity: the face before each name (27 Oct, Alex). */
+.rd.rfd .rfd-who-cell { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 48px 184px 16px minmax(0, 1fr); }
+@container rh (max-width: 860px) { .rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 44px 150px 16px minmax(0, 1fr); } }
+@container rh (max-width: 600px) { .rd.rfd .rfd-log { grid-template-columns: var(--rfd-date, 84px) 130px minmax(0, 1fr); } }
