@@ -350,9 +350,6 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                     <span className="rq-state" style={{ background: k.tint, color: k.ink }}>
                       {k.label}
                     </span>
-                    <span className="rq-evrow-rel">
-                      <SepJoin parts={standingParts(today, e)} />
-                    </span>
                   </button>
                 </div>
               );
