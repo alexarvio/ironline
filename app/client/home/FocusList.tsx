@@ -8,8 +8,8 @@ import "./focus.css";
 
 // To focus on (23 Oct, Alex): the coach's goals until the next call, the first thing on Home under the greeting.
 // Since 27 Oct (Alex: "just a little pill with a title"; mocked first) a pill that opens a list, as Nutrition's
-// Supplements: the white hairline pill says "To focus on" with the list mark in the call's blue (To focus on's own
-// colour), the coach's face and how many; a tap drops the goals out under it, flat on the page, each a small ink ring
+// Supplements: the white hairline pill says "To focus on" with the list mark in ink (27 Oct, Alex: the blue meant
+// nothing here once the call went), the coach's face and how many; a tap drops the goals out under it, flat on the page, each a small ink ring
 // on a thin line down the left from the pill's mark. Still bullet points: nothing to tick. No call at the end (27 Oct,
 // Alex: the next meeting is on Home already) and no "until" line. New goals arrive open once; after that the pill
 // stays as the client left it (kept on the phone).
@@ -24,6 +24,8 @@ export default function FocusList({ focus, coach }: { focus: HomeFocus; coach: {
   const [open, setOpen] = useState(false);
   // The open look (the pill as the header, the list flat under it) stays on while the list folds away.
   const [dressed, setDressed] = useState(false);
+  // Drawn as it was left before anything eases: only a tap animates (27 Oct, Alex: it opened on every load, jumpy).
+  const [still, setStill] = useState(true);
 
   // After mount (the server render has no storage): a list not seen yet opens; else as it was left.
   useEffect(() => {
@@ -38,6 +40,8 @@ export default function FocusList({ focus, coach }: { focus: HomeFocus; coach: {
       try {
         window.localStorage.setItem(KEY, JSON.stringify({ stamp, open: next }));
       } catch {}
+      // Two frames on, once that state is painted, taps ease again.
+      requestAnimationFrame(() => requestAnimationFrame(() => setStill(false)));
     }, 0);
     return () => clearTimeout(t);
   }, [stamp]);
@@ -76,7 +80,7 @@ export default function FocusList({ focus, coach }: { focus: HomeFocus; coach: {
         </span>
       </button>
       <div
-        className={`hm-focus-fold${open ? " open" : ""}`}
+        className={`hm-focus-fold${open ? " open" : ""}${still ? " still" : ""}`}
         aria-hidden={!open}
         inert={!open}
         onTransitionEnd={(e) => {
