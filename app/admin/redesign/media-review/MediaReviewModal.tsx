@@ -7,7 +7,7 @@ import { DialogContent, DialogDescription, DialogTitle } from "../../../componen
 import { markVideoSeenAction, replyToMediaAction, sendChatMessageAction, sendFormReviewAction } from "../../../lib/actions";
 import { pic } from "../../../lib/pic";
 import { pathOf, simplify, SIZES, STROKE, UNDERLAY, UNDERLAY_COLOR, unitFor, worthKeeping, type Pt, type Shape, type Tool } from "./shapes";
-import { MAX_SECONDS, recordingSupported, useReviewRecorder, type Corner } from "./useReviewRecorder";
+import { MAX_SECONDS, recordingSupported, setClipMuted, useReviewRecorder, type Corner } from "./useReviewRecorder";
 import { Sep, SepJoin } from "../Sep";
 
 // The coach's media review (12 Oct, design 18a): one modal for every photo or
@@ -195,6 +195,12 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
     setT(v.currentTime);
   };
   // Slow motion (27 Oct, Alex: mockup C): 1× | 0.5× | 0.25× as a capsule at the bar's end.
+  // The clip's sound off or on (27 Oct, Alex): in the speaker and the recording alike.
+  const [muted, setMuted] = useState(false);
+  const setMute = (next: boolean) => {
+    setMuted(next);
+    setClipMuted(videoOf(), next);
+  };
   const setSpeed = (next: number) => {
     setRate(next);
     const v = videoOf();
@@ -543,6 +549,7 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
                 if (v.videoWidth && v.videoHeight) setNatural({ w: v.videoWidth, h: v.videoHeight });
                 setDur(v.duration || 0);
                 v.playbackRate = rate;
+                setClipMuted(v, muted);
               }}
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
@@ -613,6 +620,12 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
             <span className="mrv-time">
               {clock(t)} / {clock(dur)}
             </span>
+            <button type="button" className="mrv-mute" aria-pressed={muted} aria-label={muted ? "Sound off" : "Sound on"} title={muted ? "Sound off" : "Sound on"} onClick={() => setMute(!muted)}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M11 5L6 9H3v6h3l5 4z" />
+                {muted ? <path d="M16 9.5l5 5M21 9.5l-5 5" /> : <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" />}
+              </svg>
+            </button>
             <span className="mrv-rate" role="radiogroup" aria-label="Speed">
               {RATES.map((r) => (
                 <button key={r} type="button" role="radio" aria-checked={rate === r} className={rate === r ? "on" : ""} onClick={() => setSpeed(r)}>

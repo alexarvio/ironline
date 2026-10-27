@@ -24,6 +24,9 @@ const CLIP_LEVEL = 0.5;
 /** The voice a touch over the mic's own level, so it always sits on top of the clip. */
 const VOICE_LEVEL = 1.6;
 
+/** The clip's sound off (27 Oct, Alex: "ugly if it is slowed down… decide if we want the sound of the video recorded"):
+    silent in the speaker and the take alike. One switch for the page; setClipMuted sets it. */
+let clipMuted = false;
 // A media element can be wired into Web Audio only once in its life, so its node is kept with it, in the one context.
 let audioCtx: AudioContext | null = null;
 const clipNodes = new WeakMap<HTMLMediaElement, { node: MediaElementAudioSourceNode; level: GainNode; out: GainNode }>();
@@ -52,16 +55,35 @@ function clipInto(ctx: AudioContext, v: HTMLVideoElement, dest: MediaStreamAudio
       clipNodes.set(v, n);
     }
     const { level, out } = n;
-    out.gain.value = CLIP_LEVEL;
+    out.gain.value = clipMuted ? 0 : CLIP_LEVEL;
+    level.gain.value = clipMuted ? 0 : CLIP_LEVEL;
     level.connect(dest);
+    recordingClip = v;
     return () => {
-      out.gain.value = 1;
+      recordingClip = null;
+      out.gain.value = clipMuted ? 0 : 1;
       try {
         level.disconnect(dest);
       } catch {}
     };
   } catch {
     return null;
+  }
+}
+
+/** The clip being recorded, so a mute during the take reaches its sound in the graph. */
+let recordingClip: HTMLMediaElement | null = null;
+
+/** The clip's sound on or off, now (the element) and in the take (its node in the graph, when it has one). */
+export function setClipMuted(v: HTMLVideoElement | null, muted: boolean) {
+  clipMuted = muted;
+  if (!v) return;
+  v.muted = muted;
+  const n = clipNodes.get(v);
+  if (n) {
+    const live = recordingClip === v;
+    n.out.gain.value = muted ? 0 : live ? CLIP_LEVEL : 1;
+    n.level.gain.value = muted ? 0 : CLIP_LEVEL;
   }
 }
 
@@ -211,7 +233,7 @@ export function useReviewRecorder(src: Source) {
         } catch {}
       }
       // The clip's own sound goes in, under the voice (25 Oct, Alex; it stayed out before): heard again, as it plays.
-      if (m instanceof HTMLVideoElement) m.muted = false;
+      if (m instanceof HTMLVideoElement) m.muted = clipMuted;
       const { w, h } = s.size();
       const k = Math.min(1, LONG_EDGE / Math.max(w, h));
       // A fresh canvas each take, at the media's own shape.
