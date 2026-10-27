@@ -146,6 +146,18 @@ function CallTitle({ m, tag = true }: { m: { summaryTitle: string; topic: string
   );
 }
 
+/** The kind of call as its icon in its colour (27 Oct, Alex: a category in a log is its icon, as Activity draws it). */
+function KindMarkIcon({ kind }: { kind: MeetingTypeId }) {
+  const t = meetingTypeOf(kind);
+  return (
+    <span className="rt-kindicon" style={{ color: t.color }} title={t.label}>
+      <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={t.icon} />
+      </svg>
+    </span>
+  );
+}
+
 /** The kind of call as a tag in its colour (21 Oct, Alex: it showed nowhere): the tint behind, the icon and word in it.
     `wide`: a column's tag, the column's width with the word centred, as every pill down a column. */
 function KindTag({ kind, wide }: { kind: MeetingTypeId; wide?: boolean }) {
@@ -426,7 +438,8 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
     </div>
   );
   // The kind of call in a column of its own by Status (21 Oct, Alex: so it always lines up), its tag the column's width.
-  const pGrid = { gridTemplateColumns: "150px minmax(200px, 1fr) 110px 130px 32px", columnGap: 24 } as const;
+  // Past calls are a log (27 Oct, Alex): the kind is its icon before the call, no Type column.
+  const pGrid = { gridTemplateColumns: "150px minmax(200px, 1fr) 130px 32px", columnGap: 24 } as const;
 
   return (
     // Built as the track tabs are (21 Oct, Alex): Training's header, each section's title on the page and its content in one hairline card.
@@ -554,7 +567,6 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
               <div className="rd-cols" aria-hidden="true" style={pGrid}>
                 <span>Date</span>
                 <span>Call</span>
-                <span>Type</span>
                 <span>Status</span>
                 <span />
               </div>
@@ -575,11 +587,9 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
                       </span>
                       <span className="rd-ex">
                         <span className="rd-ex-name rt-call">
+                          <KindMarkIcon kind={m.kind} />
                           <CallTitle m={m} tag={false} />
                         </span>
-                      </span>
-                      <span>
-                        <KindTag kind={m.kind} wide />
                       </span>
                       <span>
                         <span className={`rt-state ${st.cls}`}>{st.text}</span>

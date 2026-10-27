@@ -337,8 +337,12 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                         ((e.byClient ? firstName : faces?.coachName) || "?").charAt(0).toUpperCase()
                       )}
                     </span>
-                    {/* Then the title, its repeat days and its note running on right after it (21 Oct, Alex), so every row is
-                        one line high (the log keeps one height); the kind after them. */}
+                    {/* Its kind as its icon in its colour, right before the title (27 Oct, Alex: a category in a log is its icon,
+                        as Activity draws it; pills are for states). Then the title, its repeat days and its note right after it
+                        (21 Oct, Alex), so every row is one line high (the log keeps one height). */}
+                    <span className="rq-evrow-kind" style={{ color: k.ink }} title={k.label}>
+                      <KindIcon id={e.kind} size={16} />
+                    </span>
                     <span className="rq-evrow-main">
                       <b>{e.title}</b>
                       {(e.repeat || e.note) && (
@@ -346,9 +350,6 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                           <SepJoin parts={[e.repeat ? repeatWords(e.repeat, { until: false }) : null, e.note || null]} />
                         </span>
                       )}
-                    </span>
-                    <span className="rq-state" style={{ background: k.tint, color: k.ink }}>
-                      {k.label}
                     </span>
                   </button>
                 </div>
