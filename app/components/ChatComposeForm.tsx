@@ -253,9 +253,12 @@ export default function ChatComposeForm({
         }}
         disabled={pending}
       />
+      {/* The round ink arrow, as every chat's (27 Oct, Alex: one composer for all three). */}
       {text.trim() ? (
-        <button type="submit" className="btn chat-send-btn" disabled={pending}>
-          {pending ? "…" : "Send"}
+        <button type="submit" className="chat-send-btn chat-send-round" disabled={pending} aria-label="Send" title="Send">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+                <path d="M4.5 12h14M13 6.5l5.5 5.5-5.5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
         </button>
       ) : (
         <VoiceRecordButton className="chat-attach-btn chat-mic-btn" onRecorded={sendFile} disabled={pending} ring={38} />

@@ -646,7 +646,13 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
           />
           {text.trim() ? (
             <button type="button" className="cph-round ink" onClick={() => void send()} aria-label={editing ? "Save" : "Send"}>
-              <Icon name={editing ? "check" : "send"} />
+              {editing ? (
+                <Icon name="check" />
+              ) : (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+                <path d="M4.5 12h14M13 6.5l5.5 5.5-5.5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              )}
             </button>
           ) : (
             <VoiceRecordButton className="cph-round cph-mic" onRecorded={(f) => void sendFile(f)} disabled={sendingFile || !!editing} ring={40} />

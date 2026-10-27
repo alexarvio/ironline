@@ -20873,3 +20873,18 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
    at 40px, + / the mic / Send round 40px, on one line along their foot. */
 .rm .rm-bar .rm-box.rm-box { box-sizing: border-box; min-height: 40px; padding: 9px 14px; line-height: 20px; }
 .rm .rm-bar .rm-send.rm-send, .rm .rm-bar .rm-linkbtn.rm-linkbtn:not(.recording) { box-sizing: border-box; width: 40px; height: 40px; min-height: 40px; padding: 0; border-radius: 999px; }
+
+/* One composer for every chat (27 Oct, Alex: "have them all the same, make it a rule"; the laptop's was the model):
+   the bar the page's own colour, so it reads as see-through (no white block, no line over it); + and the mic plain
+   icons in body grey, no ring; the box white with a hairline, ink while typing, 40px for a line; Send a round ink
+   button with the arrow pointing right. The client's (.cm-compose) and the coach's phone (.cph-compose) as the
+   laptop's (.rm-bar, messages.css). Phones keep the box at 16px, so it never zooms. */
+.cm-compose.cm-compose { border-top: 0; background: #F5F6F8; }
+.cm-compose .chat-compose-form.chat-compose-form { align-items: flex-end; gap: 8px; }
+.cm-compose .chat-attach-btn.chat-attach-btn:not(.recording), .cph-compose .cph-round.cph-round:not(.ink):not(.recording) { width: 40px; height: 40px; border: 0; border-radius: 999px; background: none; box-shadow: none; --ring: transparent; color: #5b6474; }
+.cm-compose .chat-attach-btn.chat-attach-btn:not(.recording):hover, .cph-compose .cph-round.cph-round:not(.ink):not(.recording):hover { background: #EBEDF1; color: #141a24; }
+.cm-compose .chat-attach-btn .ring-edge.ring-edge, .cph-compose .cph-round:not(.ink) .ring-edge.ring-edge { display: none; }
+.cm-compose .chat-compose-form .chat-compose-box.chat-compose-box, .cph-compose .cph-box.cph-box { min-height: 40px; padding: 9px 14px; border: 1px solid #E1E5EB; border-radius: 20px; background: #fff; box-shadow: none; font-size: 16px; line-height: 20px; color: #141a24; }
+.cm-compose .chat-compose-form .chat-compose-box.chat-compose-box:focus, .cph-compose .cph-box.cph-box:focus, .cph-compose .cph-box.cph-box:focus-visible { outline: none; border-color: #141a24; box-shadow: none; }
+.cm-compose .chat-send-btn.chat-send-round, .cm-compose .chat-send-btn.chat-send-round:hover { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 40px; height: 40px; min-width: 40px; padding: 0; border: 0; border-radius: 999px; background: #141a24; box-shadow: none; color: #fff; cursor: pointer; }
+.cm-compose .chat-send-btn.chat-send-round:disabled { opacity: 0.45; }
