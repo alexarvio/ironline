@@ -20819,10 +20819,11 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
   .hm-phases-fold.hm-phases-fold, .tr-session-fold.tr-session-fold, .ts-fold.ts-fold, .fdi-fold.fdi-fold, .pc-sbody-wrap.pc-sbody-wrap, .ci-day-body.ci-day-body, .hl-fold.hl-fold, .cv-fold-wrap.cv-fold-wrap, .nd-supps-fold.nd-supps-fold, .pc-obj-body.pc-obj-body, .po-body.po-body, .mts-body.mts-body, .ev-x.ev-x, .mt-body.mt-body, .pp-app-past-fold.pp-app-past-fold { transition: none; }
 }
 
-/* Typing… and Seen (27 Oct, Alex), every chat alike: the other side typing as a quiet line over the box, laid over
+/* Typing… and Seen (27 Oct, Alex), every chat alike: the other side typing as quiet words over the box, laid over
    the thread's foot so nothing moves; Seen in faint words under your last message once they have had the chat open. */
 .cm-compose, .cph-compose, .rm-bar { position: relative; }
-.chat-typing { position: absolute; left: 16px; bottom: 100%; z-index: 2; margin: 0 0 6px; padding: 3px 10px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12px; font-weight: 500; line-height: 18px; color: #5b6474; pointer-events: none; animation: chat-typing-in 0.2s ease-out; }
+/* The words alone (27 Oct, Alex: no outline). */
+.chat-typing { position: absolute; left: 18px; bottom: 100%; z-index: 2; margin: 0 0 6px; padding: 0; font-size: 12px; font-weight: 500; line-height: 18px; color: #5b6474; pointer-events: none; animation: chat-typing-in 0.2s ease-out; }
 .chat-typing i { display: inline-block; width: 14px; text-align: left; }
 .chat-typing i::after { content: "…"; animation: chat-typing-dots 1.2s steps(4, end) infinite; display: inline-block; overflow: hidden; vertical-align: bottom; width: 0; }
 @keyframes chat-typing-dots { to { width: 14px; } }
