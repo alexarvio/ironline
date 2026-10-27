@@ -7,29 +7,25 @@
    and the ink Save once something is changed (SaveBar, SaveHost). Ink, never navy; weights 500 and 600. Prefix rst-.
    Overrides of a shared class carry an extra class (.rd.rst), whichever file the dev server loads last. */
 
-/* ---- The sections (SettingsBoard.tsx): one under another, space between, one open at a time. The page is held in
-   place by the board while heights ease (the browser's own anchoring kept out of it, so the two never pull apart). */
-.rd.rst .rst-secs { display: flex; flex-direction: column; gap: 2px; overflow-anchor: none; }
-.rd.rst .rst-sec { scroll-margin-top: 24px; }
-.rd.rst .rst-sechead { margin: 0; font: inherit; }
-/* The title row, all of it the button: the title, the chevron right after it (rule 8's Fold), a tag after that. */
-.rd.rst .rst-sectoggle { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
-.rd.rst .rst-sectitle { position: relative; min-width: 0; font-size: 20px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
-.rd.rst .rst-sectoggle:hover .rd-fold { color: #5b6474; }
-.rd.rst .rst-sectoggle:focus-visible { outline: none; }
-.rd.rst .rst-sectoggle:focus-visible .rst-sectitle { text-decoration: underline; text-decoration-color: #c5ccd8; text-decoration-thickness: 1px; text-underline-offset: 5px; }
-/* Unsaved changes held in a section, open or folded: an ink dot at the title's top right, moving nothing. */
-.rd.rst .rd-due.rst-unsaved { position: absolute; top: 3px; right: -9px; background: #141a24; }
-/* Its content: the height eases from nothing to all of it (as the rail's Needs you list), clipped while it moves,
-   unclipped once open (so the profile's phone can follow the page), hidden from find and focus while folded. */
-.rd.rst .rst-body { display: grid; grid-template-rows: 0fr; overflow: hidden; overflow: clip; visibility: hidden; transition: grid-template-rows 0.22s ease, visibility 0s linear 0.22s; }
-.rd.rst .rst-sec.open > .rst-body { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows 0.22s ease, visibility 0s; }
-.rd.rst .rst-sec.open.settled > .rst-body { overflow: visible; }
-.rd.rst .rst-inner { min-width: 0; min-height: 0; }
-.rd.rst .rst-content { display: flex; flex-direction: column; gap: 22px; padding: 6px 0 30px; }
-/* Opened on arrival (#invoicing): at once. */
-.rd.rst .rst-secs.still .rst-body, .rd.rst .rst-secs.still .rd-fold { transition: none; }
-@media (prefers-reduced-motion: reduce) { .rd.rst .rst-body, .rd.rst .rst-sec.open > .rst-body { transition: none; } }
+/* ---- The sections (SettingsBoard.tsx; 27 Oct, Alex: mockup B): the list on the left, a section a row, its name
+   (15px/600) over one quiet fact (12.5px grey); the one showing a white hairline card. The section picked on the
+   right: its title (20px/600) and a tag, then its parts. A narrow page puts the list over it. */
+.rd.rst .rst-split { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 32px; }
+.rd.rst .rst-list { position: sticky; top: 24px; flex: 0 1 230px; min-width: 200px; max-width: 260px; display: flex; flex-direction: column; gap: 2px; }
+.rd.rst .rst-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 12px 14px; border: 0; border-radius: 12px; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; transition: background 0.15s ease; }
+.rd.rst .rst-item:hover { background: #fafbfd; }
+.rd.rst .rst-item.on { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.rd.rst .rst-item:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
+.rd.rst .rst-item-name { position: relative; font-size: 15px; font-weight: 600; line-height: 1.3; }
+.rd.rst .rst-item-fact { max-width: 100%; overflow: hidden; font-size: 12.5px; font-weight: 500; line-height: 1.4; color: #8b93a1; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Unsaved changes held in a section: an ink dot at its name's top right, moving nothing. */
+.rd.rst .rd-due.rst-unsaved { position: absolute; top: 2px; right: -9px; background: #141a24; }
+.rd.rst .rst-shown { flex: 999 1 420px; min-width: 0; }
+.rd.rst .rst-sec[hidden] { display: none; }
+.rd.rst .rst-sechead { display: flex; align-items: center; gap: 10px; min-height: 40px; margin: 0; font: inherit; }
+.rd.rst .rst-sectitle { min-width: 0; font-size: 20px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; color: #141a24; }
+.rd.rst .rst-content { display: flex; flex-direction: column; gap: 22px; padding: 10px 0 30px; }
+@media (max-width: 900px) { .rd.rst .rst-list { position: static; max-width: none; } }
 
 /* A section's part: its small caps label (and a fact, grey after the bar) over its card, its control on the right. */
 .rd.rls.rst .rls-section.rst-sub { gap: 10px; }
