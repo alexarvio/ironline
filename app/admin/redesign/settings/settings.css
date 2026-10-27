@@ -114,3 +114,15 @@ body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font-
 .rd.rst .rst-bar-text { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; color: #3a4250; font-variant-numeric: tabular-nums; }
 .rd.rst .rst-bar-text.bad { color: #b42318; }
 @media (prefers-reduced-motion: reduce) { .rd.rst .rst-suffixed, .rd.rst .rd-picker.rst-pick, .rd.rst .rst-open, .rd.rst .rst-hover, .rd.rst a.rst-row.opens { transition: none; } }
+
+/* ---- Added 27 Oct (Alex: the whole Settings, mockup B). The logins under the email line in Sign-in's card, a hairline
+   between; a switch white while off and ink while on; quiet hours' two times as short clean lines in the row. */
+.rd.rst .rst-rows-after { border-top: 1px solid #eef0f3; }
+.rd.rst .rst-switch { position: relative; flex: none; width: 34px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; cursor: pointer; transition: background 0.2s ease, box-shadow 0.2s ease; }
+.rd.rst .rst-switch i { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #98a2b3; transition: left 0.2s ease, background 0.2s ease; }
+.rd.rst .rst-switch.on { background: #141a24; box-shadow: none; }
+.rd.rst .rst-switch.on i { left: 17px; background: #fff; }
+.rd.rst .rst-switch:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
+.rd.rst .rst-quiet { align-items: center; }
+.rd.rst .rst-time.dlh-line { width: 56px; flex: none; padding: 4px 0; text-align: center; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .rd.rst .rst-switch, .rd.rst .rst-switch i { transition: none; } }

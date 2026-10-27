@@ -5,7 +5,7 @@ import { isClientCall, takesClient } from "./calendarKinds";
 import { noteFocus, setFocusOnComplete } from "./focus";
 
 import { redirect } from "next/navigation";
-import { getData, isStepsMetric, MAX_DAY_STEPS, persist, type CoachBusiness, type CoachInvoicing, type InvoiceEvery, type InvoiceLine, type MetricAskAt, type PhaseTrack } from "./db";
+import { getData, isStepsMetric, MAX_DAY_STEPS, persist, type CoachBusiness, type CoachInvoicing, type CoachNotify, type InvoiceEvery, type InvoiceLine, type MetricAskAt, type PhaseTrack } from "./db";
 import { ASK_AT } from "./metricAskAt";
 import { isGymColor, isGymKind } from "./gymColors";
 import { listClientGyms } from "./queries";
@@ -223,6 +223,8 @@ import {
   addCalendarEntry,
   saveCoachBusiness,
   saveCoachInvoicing,
+  saveCoachNotify,
+  saveCoachPreferences,
   createInvoice,
   addInvoiceRepeat,
   deleteInvoiceTemplate,
@@ -4461,6 +4463,20 @@ export async function saveCoachInvoicingAction(i: CoachInvoicing) {
   const coach = await requireCoach();
   saveCoachInvoicing(coach.id, i ?? {});
   revalidatePath("/admin/redesign/settings");
+}
+
+/** Settings, Notifications (27 Oct): what reaches the coach's phone, and quiet hours. */
+export async function saveCoachNotifyAction(n: CoachNotify) {
+  const coach = await requireCoach();
+  saveCoachNotify(coach.id, n ?? {});
+  revalidatePath("/admin/redesign/settings");
+}
+
+/** Settings, Preferences (27 Oct): kg or lbs by default, and the coach's time zone. */
+export async function saveCoachPreferencesAction(p: { units?: string; timezone?: string }) {
+  const coach = await requireCoach();
+  saveCoachPreferences(coach.id, p ?? {});
+  revalidatePath("/admin/redesign", "layout");
 }
 
 // ---- Invoices in the redesign (the client's Invoices tab) ----

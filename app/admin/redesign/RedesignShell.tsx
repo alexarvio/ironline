@@ -324,7 +324,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
         </div>
         <div hidden={tab !== "training"}>
           {training.draft ? (
-            <TrainingTab key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} cardioMoves={training.cardioMoves} coachVideos={training.videos} dots={dots} />
+            <TrainingTab key={training.draft.id} clientId={clientId} firstName={firstName} lbsFirst={rail.coach.units === "lbs"} program={training.draft} library={training.library} cardioMoves={training.cardioMoves} coachVideos={training.videos} dots={dots} />
           ) : hasPhase("training") ? (
             <NoProgramme clientId={clientId} firstName={firstName} />
           ) : (

@@ -25,11 +25,31 @@ export function noteCoachReading(coachId: number, clientId: number) {
 
 const readingNow = (coachId: number, clientId: number) => Date.now() - (reading.get(key(coachId, clientId)) ?? 0) < READING_MS;
 
+/** What the coach asked for in Settings, Notifications (27 Oct): the kind on (unless switched off), and not in quiet
+ *  hours, read in the coach's own time zone (else the server's). */
+function coachWants(coachId: number, kind: "chat" | "video"): boolean {
+  const settings = getData().users.find((u) => u.id === coachId && u.role === "coach")?.coach_settings;
+  const n = settings?.notify;
+  if (n?.[kind] === false) return false;
+  if (!n?.quiet) return true;
+  const from = n.quietFrom ?? "22:00";
+  const to = n.quietTo ?? "07:00";
+  let now: string;
+  try {
+    now = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: settings?.timezone || undefined }).format(new Date());
+  } catch {
+    now = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+  }
+  // A window over midnight (22:00 to 07:00) holds from its start to midnight and from midnight to its end.
+  const quiet = from <= to ? now >= from && now < to : now >= from || now < to;
+  return !quiet;
+}
+
 
 /** A client wrote in the chat: their name, the first line (or what they sent), and a tap opens the chat. */
 export function pushCoachMessage(clientId: number, message: { text: string; media?: ChatMediaKind | null }) {
   const coachId = coachIdOfClient(clientId);
-  if (coachId == null || readingNow(coachId, clientId)) return;
+  if (coachId == null || readingNow(coachId, clientId) || !coachWants(coachId, "chat")) return;
   const name = getData().clients.find((c) => c.id === clientId)?.name?.trim() || "A client";
   const line = message.text.trim().split("\n")[0].slice(0, 160);
   const body = line || (message.media ? MEDIA_NAME[message.media] : "");
@@ -44,7 +64,7 @@ export function pushCoachVideo(requestId: number) {
   const v = (data.video_requests ?? []).find((x) => x.id === requestId);
   if (!v) return;
   const coachId = coachIdOfClient(v.client_id);
-  if (coachId == null) return;
+  if (coachId == null || !coachWants(coachId, "video")) return;
   const name = data.clients.find((c) => c.id === v.client_id)?.name?.trim() || "A client";
   const a = data.workout_assignments.find((w) => w.id === v.assignment_id);
   const exercise = a ? data.exercises.find((e) => e.id === a.exercise_id)?.name : null;

@@ -1,4 +1,4 @@
-import { AccountIcon, BuildingIcon, ChatIcon, LockIcon, ReceiptIcon, ShieldIcon } from "../../components/icons";
+import { AccountIcon, BellIcon, BuildingIcon, ChatIcon, GearIcon, LockIcon, ReceiptIcon, ReportIcon, ShieldIcon } from "../../components/icons";
 
 // Settings is one page of folding sections, one open at a time (23 Oct, Alex); these are the rail's rows to them, in
 // the page's order, each section's key its id and the address's #key (a row opens its section). A plain module, so
@@ -10,6 +10,9 @@ export const SETTINGS = [
   { key: "account", label: "Account & security", href: `${SETTINGS_PATH}#account`, Icon: LockIcon },
   { key: "business", label: "Business details", href: `${SETTINGS_PATH}#business`, Icon: BuildingIcon },
   { key: "invoicing", label: "Invoicing & payments", href: `${SETTINGS_PATH}#invoicing`, Icon: ReceiptIcon },
+  { key: "notifications", label: "Notifications", href: `${SETTINGS_PATH}#notifications`, Icon: BellIcon },
+  { key: "preferences", label: "Preferences", href: `${SETTINGS_PATH}#preferences`, Icon: GearIcon },
+  { key: "data", label: "Your data", href: `${SETTINGS_PATH}#data`, Icon: ReportIcon },
   { key: "privacy", label: "Privacy & legal", href: `${SETTINGS_PATH}#privacy`, Icon: ShieldIcon },
   // A coach's line to the company (lib/support.ts): coaches only.
   { key: "support", label: "Support", href: `${SETTINGS_PATH}#support`, Icon: ChatIcon },

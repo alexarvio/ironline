@@ -251,11 +251,11 @@ type Dlg =
   | { kind: "deletePhase" }
   | null;
 
-export default function TrainingDraft({ clientId, firstName, program, library, cardioMoves = [], coachVideos = [], dots }: { clientId: number; firstName: string; program: DraftProgram; library: Library; cardioMoves?: CardioMove[]; coachVideos?: CoachClip[]; /** The dot trail (dots.ts): the weeks and sessions with something the coach owes; an exercise's own is its video mark in rust. */ dots?: DotTrail }) {
+export default function TrainingDraft({ clientId, firstName, lbsFirst = false, program, library, cardioMoves = [], coachVideos = [], dots }: { clientId: number; firstName: string; /** Opens in lbs (Settings, Preferences, 27 Oct); KG/LBS still switches it. */ lbsFirst?: boolean; program: DraftProgram; library: Library; cardioMoves?: CardioMove[]; coachVideos?: CoachClip[]; /** The dot trail (dots.ts): the weeks and sessions with something the coach owes; an exercise's own is its video mark in rust. */ dots?: DotTrail }) {
   // An exercise added from the library starts with its default cue as the note (5 Oct).
   const cueOf = (exerciseId: number | null) => (exerciseId == null ? "" : library.flatMap((g) => g.exercises).find((e) => e.id === exerciseId)?.cue ?? "");
   const router = useRouter();
-  const [lbs, setLbs] = useState(false);
+  const [lbs, setLbs] = useState(lbsFirst);
   const unit = lbs ? "lbs" : "kg";
   // The product's six columns, six at a time; what the client did and the
   // two trends are always there. Cardio has its own four.

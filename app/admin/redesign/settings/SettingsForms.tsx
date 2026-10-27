@@ -16,6 +16,8 @@ import { useSaveSlot, useUnsaved } from "./SaveHost";
 import { goToSetting } from "./settingsScroll";
 import { Dialog } from "../../../components/ui/dialog";
 import { ConfirmDialog } from "../training/TrainingDraft";
+import type { AccountSecurity } from "../../../lib/accountSecurity";
+import ClerkAccount from "./ClerkAccount";
 
 // Settings' sections on the admin rules (22 Oct; docs/DESIGN-RULES-ADMIN.md), each a folding section of the one
 // Settings page (23 Oct, Alex; SettingsBoard.tsx): its parts as small caps labels over one white hairline card each,
@@ -26,7 +28,7 @@ import { ConfirmDialog } from "../training/TrainingDraft";
 
 /** A label over its field. `group` for a field that is not one input (a capsule, a list), so a click on the label
  *  never presses the first of its buttons. */
-function Field({ label, fact, wide = false, group = false, error, children }: { label: string; fact?: ReactNode; wide?: boolean; group?: boolean; error?: string; children: ReactNode }) {
+export function Field({ label, fact, wide = false, group = false, error, children }: { label: string; fact?: ReactNode; wide?: boolean; group?: boolean; error?: string; children: ReactNode }) {
   const inner = (
     <>
       <span className="dlh-label">{fact ? <SepJoin parts={[label, <small key="fact">{fact}</small>]} /> : label}</span>
@@ -39,7 +41,7 @@ function Field({ label, fact, wide = false, group = false, error, children }: { 
 }
 
 /** A part of a section: its small caps label (and one quiet fact) over its card, its controls on the right. */
-function Section({ title, fact, actions, children }: { title: ReactNode; fact?: ReactNode; actions?: ReactNode; children?: ReactNode }) {
+export function Section({ title, fact, actions, children }: { title: ReactNode; fact?: ReactNode; actions?: ReactNode; children?: ReactNode }) {
   return (
     <section className="rls-section rst-sub">
       <div className="trn-weekhead">
@@ -61,7 +63,7 @@ function Section({ title, fact, actions, children }: { title: ReactNode; fact?: 
 
 /** A form's working copy, what it started from, and Save / Cancel for the page's bar (which says saved or not, and
  *  draws the page again once everything changed is in). */
-function useDraft<T extends Record<string, unknown>>(initial: T, save: (v: T) => Promise<unknown>) {
+export function useDraft<T extends Record<string, unknown>>(initial: T, save: (v: T) => Promise<unknown>) {
   const [v, setV] = useState<T>(initial);
   const dirty = JSON.stringify(v) !== JSON.stringify(initial);
   const set = <K extends keyof T>(k: K, val: T[K]) => setV((o) => ({ ...o, [k]: val }));
@@ -71,14 +73,14 @@ function useDraft<T extends Record<string, unknown>>(initial: T, save: (v: T) =>
 }
 
 // ---- Account & security
-export function AccountSettings({ email, passwordless = false }: { email: string; /** Sign-in through Clerk (26 Oct): no password here, and the email can be changed. */ passwordless?: boolean }) {
-  if (passwordless) return <AccountEmail email={email} />;
+export function AccountSettings({ email, passwordless = false, security = null }: { email: string; /** Sign-in through Clerk (26 Oct): no password here, and the email can be changed. */ passwordless?: boolean; /** The linked logins and devices, from Clerk (27 Oct). */ security?: AccountSecurity | null }) {
+  if (passwordless) return <ClerkAccount email={email} security={security} />;
   return <AccountPassword email={email} />;
 }
 
 /** The account's email with the sign-in through Clerk: where clients' replies to invites go, changed in place. Signing
  *  in is Clerk's (Google, or a code to the email), so no password. */
-function AccountEmail({ email }: { email: string }) {
+export function AccountEmail({ email, bare = false }: { email: string; /** Inside a card of the caller's (27 Oct: Account & security's Sign-in card). */ bare?: boolean }) {
   const [value, setValue] = useState(email);
   const [busy, start] = useTransition();
   const [error, setError] = useState("");
@@ -90,6 +92,23 @@ function AccountEmail({ email }: { email: string }) {
       setError("");
       toast.success("Email changed");
     });
+  // The email line alone, for the caller's card.
+  if (bare)
+    return (
+      <div className="rst-grid">
+        <Field label="Email" wide>
+          <input className="dlh-line" type="email" value={value} onChange={(e) => setValue(e.target.value)} autoComplete="email" />
+        </Field>
+        {changed && (
+          <div className="rst-foot wide">
+            <span className="rst-err">{error}</span>
+            <button type="button" className="dlh-go" onClick={save} disabled={busy}>
+              {busy ? "Saving…" : "Save"}
+            </button>
+          </div>
+        )}
+      </div>
+    );
   return (
     <>
       <Section title="Sign-in">

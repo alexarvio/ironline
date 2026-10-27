@@ -12,6 +12,8 @@ import { loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import { AccountSettings, BusinessSettings, InvoicingSettings, PrivacySettings } from "./SettingsForms";
 import SupportSection from "./SupportSection";
+import { DataSettings, NotificationsSettings, PreferencesSettings } from "./MoreSettings";
+import { loadAccountSecurity } from "../../../lib/accountSecurity";
 import ProfileEditor from "../profile/ProfileEditor";
 import SettingsBoard, { type SettingsSection } from "./SettingsBoard";
 import "../../../components/ui/ui.css";
@@ -84,16 +86,25 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const business = settings.business ?? {};
   const invoicing = settings.invoicing ?? {};
   const support = t.time("support", () => loadSupportSection(coach));
+  // Account & security's logins and devices, from Clerk (27 Oct); null with Clerk off or not answering.
+  const security = await t.time("security", () => loadAccountSecurity());
+  const notify = settings.notify ?? {};
+  const units = settings.units === "lbs" ? "lbs" : "kg";
+  const timezone = settings.timezone || process.env.TZ || "Europe/Amsterdam";
+  const clientCount = getData().clients.filter((cl) => cl.coach_id === coach.id).length;
 
   // The list's quiet fact under each name (27 Oct, Alex: mockup B), parts joined by the drawn bar's words.
   const join = (parts: (string | null | undefined | false)[]) => parts.filter(Boolean).join(" | ") || null;
   const land = business.country_code ? countryOf(business.country_code) : null;
   const facts = {
     profile: profile ? (profile.published ? "Published" : "Not published") : null,
-    account: coach.email,
     business: join([business.business_name, land?.name ?? business.country]) ?? "Not set",
     invoicing: join([invoicing.currency ?? land?.currency ?? "EUR", invoicing.vat_rate != null ? `${invoicing.vat_rate}% ${land?.tax ?? "tax"}` : null, payments.status === "active" ? "Stripe" : null]),
     privacy: `Policy updated ${legalDate(LEGAL.updated)}`,
+    account: join([coach.email, security?.logins.some((l) => l.provider === "google") ? "Google" : null]),
+    notifications: join([notify.chat === false && notify.video === false ? "Phone off" : "Phone on", notify.quiet ? `quiet ${notify.quietFrom ?? "22:00"}–${notify.quietTo ?? "07:00"}` : null]),
+    preferences: join([units, timezone]),
+    data: "Export",
   };
 
   // In the rail's order, a section a line (its label from settingsNav's SETTINGS unless given; no body, left out).
@@ -106,10 +117,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       tag: profile && <span className={`trn-state${profile.published ? " good" : ""}`}>{profile.published ? "Published" : "Not published"}</span>,
       body: profile ? <ProfileEditor key={coachId} profile={profile} coaches={coaches} details={details} countries={countries} /> : <p className="rpf-empty">No coach profile</p>,
     },
-    { key: "account", fact: facts.account, body: <AccountSettings email={coach.email} passwordless={clerkOn()} /> },
+    { key: "account", fact: facts.account, body: <AccountSettings email={coach.email} passwordless={clerkOn()} security={security} /> },
     { key: "business", fact: facts.business, body: <BusinessSettings key={JSON.stringify(business)} initial={business} /> },
     // Keyed on the business's country too: a new one there brings its own defaults here.
     { key: "invoicing", fact: facts.invoicing, body: <InvoicingSettings key={JSON.stringify([invoicing, business.country_code ?? null, business.country ?? null])} initial={invoicing} business={business} payments={payments} /> },
+    { key: "notifications", fact: facts.notifications, body: <NotificationsSettings key={JSON.stringify(notify)} initial={notify} /> },
+    { key: "preferences", fact: facts.preferences, body: <PreferencesSettings key={`${units}|${timezone}`} units={units} timezone={timezone} /> },
+    { key: "data", fact: facts.data, body: <DataSettings clients={clientCount} /> },
     { key: "privacy", fact: facts.privacy, body: <PrivacySettings company={LEGAL.company} country={LEGAL.country} contactEmail={LEGAL.contactEmail} updated={legalDate(LEGAL.updated)} /> },
     // A coach's thread with the company; the owner answers from Coaches and has none (null leaves it out).
     { key: "support", label: "Support", body: support && <SupportSection {...support} /> },

@@ -2,7 +2,7 @@ import fs from "fs";
 import { sortReasons, type AttentionReason } from "./attentionReasons";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, mergeDuplicateMetricDefinitions, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceEvery, InvoiceLine, InvoiceParty, InvoiceRecipient, InvoiceRepeat, InvoiceTemplate, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion, MeetingRequest } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachNotify, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceEvery, InvoiceLine, InvoiceParty, InvoiceRecipient, InvoiceRepeat, InvoiceTemplate, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion, MeetingRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -13204,6 +13204,24 @@ function setSettings(coachId: number, patch: Partial<CoachSettings>) {
   if (!user) return;
   user.coach_settings = { ...(user.coach_settings ?? {}), ...patch };
   persist();
+}
+
+/** Settings, Notifications (27 Oct): what reaches the coach's phone, and quiet hours. */
+export function saveCoachNotify(coachId: number, n: CoachNotify) {
+  const hhmm = (v: unknown, fallback: string) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(String(v ?? "")) ? String(v) : fallback);
+  setSettings(coachId, { notify: { chat: n.chat !== false, video: n.video !== false, quiet: !!n.quiet, quietFrom: hhmm(n.quietFrom, "22:00"), quietTo: hhmm(n.quietTo, "07:00") } });
+}
+
+/** Settings, Preferences (27 Oct): weights by default, and the coach's time zone (new meetings start in it). */
+export function saveCoachPreferences(coachId: number, p: { units?: string; timezone?: string }) {
+  const zone = String(p.timezone ?? "").trim();
+  let valid = false;
+  try {
+    valid = !!zone && !!new Intl.DateTimeFormat("en-GB", { timeZone: zone });
+  } catch {
+    valid = false;
+  }
+  setSettings(coachId, { units: p.units === "lbs" ? "lbs" : "kg", ...(valid ? { timezone: zone } : {}) });
 }
 
 export function saveCoachBusiness(coachId: number, b: CoachBusiness) {

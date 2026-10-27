@@ -622,7 +622,7 @@ function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEv
   }
   return { spots, total: ranked.length, owed: ranked.filter((r) => r.rank !== -1).length };
 }
-export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean; /** Support lines not read: the company's to a coach (the Support row), every coach's to the owner (Coaches). */ supportUnread: number };
+export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null; /** Weights shown in by default (Settings, Preferences, 27 Oct). */ units: "kg" | "lbs" }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean; /** Support lines not read: the company's to a coach (the Support row), every coach's to the owner (Coaches). */ supportUnread: number };
 
 /** The dot trail on one client's screens (dots.ts): what the rail counts for them, each placed where it is. */
 export function loadDots(clientId: number): DotTrail {
@@ -710,7 +710,7 @@ export function loadRail(coach: { id: number; email: string; role: "coach" | "cl
   return sub("coach", () => {
     const profile = getCoachProfile(coach.id);
     const owner = isOwner(coach);
-    return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: owner, inviteReady: mailConfigured(), clerk: clerkOn(), supportUnread: owner ? supportUnreadForOwner() : supportUnreadForCoach(coach.id) };
+    return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null, units: getData().users.find((u) => u.id === coach.id)?.coach_settings?.units === "lbs" ? "lbs" : "kg" }, isOwner: owner, inviteReady: mailConfigured(), clerk: clerkOn(), supportUnread: owner ? supportUnreadForOwner() : supportUnreadForCoach(coach.id) };
   });
 }
 
