@@ -1,6 +1,7 @@
 "use server";
 
 import { coachForClient, requireCoach } from "../lib/auth";
+import { chatCurrent, timedChatRead } from "../lib/chatBus";
 import { closeVideoRequest, getClientIdForVideoRequest, localDateStr } from "../lib/queries";
 import { loadPhoneCalendar, type PhoneCalendar } from "./calendar";
 import { listPhoneVideos, phoneReview, type PhoneReview, type PhoneVideos } from "../lib/coachPhone";
@@ -22,12 +23,14 @@ export async function coachInboxAction(): Promise<CoachInbox> {
 }
 
 /** One client's chat, as the laptop's thread reads it (loadMessages); asked for while it shows, which also keeps its pushes quiet (coachPush.ts). */
-export async function coachThreadAction(clientId: number): Promise<DraftMessages | null> {
+export async function coachThreadAction(clientId: number, known?: string | null): Promise<DraftMessages | null> {
   const id = Number(clientId);
   const coach = await coachForClient(id);
   if (!coach) return null;
   noteCoachReading(coach.id, id);
-  return loadMessages(id);
+  // Nothing changed since the phone's copy (27 Oct): nothing to send.
+  if (chatCurrent(id, known)) return null;
+  return timedChatRead("chat · phone", () => loadMessages(id));
 }
 
 /** One week of the Calendar (from its Monday), as the phone's Calendar tab draws it; today is the phone's, for the clashes still to come. */

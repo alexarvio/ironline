@@ -2,6 +2,7 @@
 
 import type { HomeEventCategory } from "./EventsCard";
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { useChatStream } from "../components/useChatStream";
 import { ChevronDownIcon, ChevronLeftIcon, PinIcon } from "../components/icons";
 import ChatComposeForm from "../components/ChatComposeForm";
 import RingEdge from "../components/RingEdge";
@@ -74,6 +75,18 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
     setSeenFromPage(fromPage);
     setThread(fromPage);
   }
+  // The revision the thread on screen is at (chatBus.ts): an unchanged chat sends nothing. A new copy from the page
+  // has none, so the next read is a whole one.
+  const revRef = useRef<string | null>(null);
+  useEffect(() => {
+    revRef.current = null;
+  }, [fromPage]);
+  const threadRef = useRef(thread);
+  /** Each message sending (its id on screen) and the newest message there was when it was sent. */
+  const sentAfter = useRef(new Map<number, number>());
+  useEffect(() => {
+    threadRef.current = thread;
+  }, [thread]);
   const [sending, setSending] = useState<CoachMessageView[]>([]);
   // The newest message from the other side that has been read here: one that
   // comes in while the chat is open is read too (21 Oct: it stayed unread, so
@@ -81,15 +94,28 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
   // a coach previewing never sets their read marks.
   const readUpTo = useRef(Math.max(0, ...fromPage.filter((m) => !m.mine).map((m) => m.id)));
   const took = (t: CoachMessageView[]) => {
+    // What is sending goes once its copy has come in, and only then (27 Oct: a read in real time can land between
+    // a send and its answer, and a message still on its way must not blink out): a message of the same words,
+    // newer than the thread was when it was sent.
     setThread(t);
-    setSending([]);
+    threadRef.current = t;
+    setSending((s) => s.filter((x) => !t.some((m) => m.mine === x.mine && m.id > (sentAfter.current.get(x.id) ?? 0) && m.text.trim() === x.text.trim())));
     const newest = Math.max(0, ...t.filter((m) => !m.mine).map((m) => m.id));
     if (newest > readUpTo.current) {
       readUpTo.current = newest;
       if (viewerIsClient) void markCoachNotesReadAction(clientId).catch(() => {});
     }
   };
-  const refresh = () => chatThreadAction(clientId).then(took).catch(() => {});
+  const refresh = () =>
+    chatThreadAction(clientId, revRef.current)
+      .then((r) => {
+        if (!r) return;
+        revRef.current = r.rev;
+        took(r.messages);
+      })
+      .catch(() => {});
+  // In real time (27 Oct, Alex): the coach's words, edits and reactions come in as they happen.
+  useChatStream(clientId, () => void refresh());
   const messages = sending.length ? [...thread, ...sending] : thread;
   // Media and files sent in the chat, newest first, over it (ChatMediaGallery).
   const [gallery, setGallery] = useState(false);
@@ -392,10 +418,12 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
           onClearReply={() => setReplying(null)}
           onSending={(text) => {
             const now = new Date();
+            const sid = -Date.now() - sending.length;
+            sentAfter.current.set(sid, Math.max(0, ...threadRef.current.map((m) => m.id)));
             setSending((s) => [
               ...s,
               {
-                id: -Date.now() - s.length,
+                id: sid,
                 mine: viewerIsClient,
                 text,
                 dayLabel: now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),

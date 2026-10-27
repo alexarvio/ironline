@@ -1,5 +1,6 @@
 "use server";
 
+import { chatChanged, chatCurrent, chatRev, timedChatRead } from "./chatBus";
 import { isMeetingTypeId } from "./meetingTypes";
 import { isClientCall, takesClient } from "./calendarKinds";
 import { noteFocus, setFocusOnComplete } from "./focus";
@@ -2421,9 +2422,12 @@ function chatSaved(quiet = false) {
  * is open (every 15 s, and after a send, an edit or a reaction): a few
  * kilobytes, instead of drawing the whole client page again each time.
  */
-export async function chatThreadAction(clientId: number): Promise<ChatThreadView[]> {
+export async function chatThreadAction(clientId: number, known?: string | null): Promise<{ rev: string; messages: ChatThreadView[] } | null> {
   const id = await requireClientAccess(Number(clientId));
-  return id ? chatThreadViews(id) : [];
+  if (!id) return { rev: "", messages: [] };
+  // Nothing changed since the screen's copy (27 Oct): nothing to send.
+  if (chatCurrent(id, known)) return null;
+  return { rev: chatRev(id), messages: timedChatRead("chat · client", () => chatThreadViews(id)) };
 }
 
 // A thumbs up on a message, from either side. Which side is decided by the
@@ -3758,6 +3762,8 @@ export async function saveCoachNoteAction(clientId: number, text: string) {
 export async function markSeenAction(clientId: number, which: { all: true } | { dayId: number } | { ids: string[] } | { tab: string }) {
   if (!(await coachForClient(Number(clientId)))) return;
   markClientEventsSeen(Number(clientId), which);
+  // The chat read: its unread mark goes on every open screen of it (27 Oct).
+  if ("tab" in which && which.tab === "messages") chatChanged(Number(clientId));
   revalidatePath("/admin");
 }
 

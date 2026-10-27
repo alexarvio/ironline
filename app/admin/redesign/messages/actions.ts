@@ -1,6 +1,7 @@
 "use server";
 
 import { coachForClient, requireCoach } from "../../../lib/auth";
+import { chatCurrent, timedChatRead } from "../../../lib/chatBus";
 import { loadChatDock, loadMessages, type DockChat } from "../loaders";
 import type { DraftMessages } from "./MessagesDraft";
 
@@ -10,9 +11,11 @@ import type { DraftMessages } from "./MessagesDraft";
  * place of re-reading the whole page, which redrew every tab of the client
  * under the coach's hands.
  */
-export async function chatDraftThreadAction(clientId: number): Promise<DraftMessages | null> {
+export async function chatDraftThreadAction(clientId: number, known?: string | null): Promise<DraftMessages | null> {
   if (!(await coachForClient(Number(clientId)))) return null;
-  return loadMessages(Number(clientId));
+  // Nothing changed since the screen's copy (27 Oct): nothing to send (null, as for no access: the screen keeps its own).
+  if (chatCurrent(Number(clientId), known)) return null;
+  return timedChatRead("chat · laptop", () => loadMessages(Number(clientId)));
 }
 
 /**

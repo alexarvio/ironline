@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useChatStream } from "../components/useChatStream";
 import { coachThreadAction } from "./actions";
 import type { DraftMedia, DraftMessage, DraftMessages } from "../admin/redesign/messages/MessagesDraft";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction } from "../lib/actions";
@@ -53,7 +54,14 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     },
     [clientId]
   );
-  const refresh = useCallback(async () => take(await coachThreadAction(clientId).catch(() => null)), [clientId, take]);
+  // The revision the thread on screen is at (chatBus.ts): an unchanged chat sends nothing.
+  const revRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    revRef.current = plan?.rev;
+  }, [plan?.rev]);
+  const refresh = useCallback(async () => take(await coachThreadAction(clientId, revRef.current).catch(() => null)), [clientId, take]);
+  // In real time (27 Oct, Alex): what the client writes, edits and reacts comes in as it happens.
+  useChatStream(clientId, () => void refresh());
   // The first unread before it is marked read (25 Oct): the thread is read first, then the chat marked seen.
   const firstUnread = useRef<number | null | undefined>(undefined);
   useEffect(() => {

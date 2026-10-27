@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useChatStream } from "../components/useChatStream";
 import { useSearchParams } from "next/navigation";
 import { logoutAction } from "../lib/auth-actions";
 import { chatWhen } from "../admin/redesign/ChatList";
@@ -53,6 +54,8 @@ export default function CoachApp({ inbox: fromPage, calendar, today, coach, push
     const next = await coachInboxAction().catch(() => null);
     if (next) setInbox(next);
   }, []);
+  // In real time (27 Oct, Alex): a new message moves its chat to the top as it comes in.
+  useChatStream("all", () => void refresh(), 400);
   useEffect(() => {
     const tick = () => {
       if (document.visibilityState === "visible") void refresh();

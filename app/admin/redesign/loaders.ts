@@ -1,4 +1,5 @@
 import { GYM_COLORS, isGymColor } from "../../lib/gymColors";
+import { chatRev } from "../../lib/chatBus";
 import { redirect } from "next/navigation";
 import { fillChatLooks } from "../../lib/storage";
 import { getData, type InvoiceTemplate } from "../../lib/db";
@@ -1267,7 +1268,7 @@ export function loadMessages(clientId: number): DraftMessages {
         })(),
       };
     });
-  return { messages, targets: listMessageLinkTargets(clientId), avatarPath: getClient(clientId)?.avatar_path ?? null, unread: chatUnread(clientId), firstUnread: chatFirstUnread(clientId) };
+  return { rev: chatRev(clientId), messages, targets: listMessageLinkTargets(clientId), avatarPath: getClient(clientId)?.avatar_path ?? null, unread: chatUnread(clientId), firstUnread: chatFirstUnread(clientId) };
 }
 
 // ---- Invoices tab: the client's invoices as they print, and what Settings

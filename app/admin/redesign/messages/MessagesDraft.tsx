@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { useChatStream } from "../../../components/useChatStream";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
@@ -29,7 +30,7 @@ export type DraftLink = { area: string; label: string; gone: boolean; link?: Mes
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null; thumb?: string | null; w?: number | null; h?: number | null };
 export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean; /** The message it answers, quoted (mine: the coach's own). */ replyTo?: { id: number; mine: boolean; text: string } | null };
 /** Newest first, as the loader hands them over. */
-export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean; /** The first of those (25 Oct): the phone opens on it. */ firstUnread?: number | null };
+export type DraftMessages = { /** The chat's revision (chatBus.ts): handed back, so an unchanged chat sends nothing. */ rev?: string; messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean; /** The first of those (25 Oct): the phone opens on it. */ firstUnread?: number | null };
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 const POLL_MS = 15000;
 
@@ -54,8 +55,13 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     setSeenPage(pageKey);
     setPlan(fromPage);
   }
+  // The revision the thread on screen is at (chatBus.ts): an unchanged chat sends nothing.
+  const revRef = useRef(plan.rev);
+  useEffect(() => {
+    revRef.current = plan.rev;
+  }, [plan.rev]);
   const refreshThread = async () => {
-    const next = await chatDraftThreadAction(clientId).catch(() => null);
+    const next = await chatDraftThreadAction(clientId, revRef.current).catch(() => null);
     if (!next) return;
     setPlan(next);
     // Something the client wrote came in while the chat is open: it is read
@@ -114,6 +120,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshThread reads only clientId
   }, [clientId, active]);
+  // In real time (27 Oct, Alex): what the client writes, edits and reacts comes in as it happens, while it shows.
+  useChatStream(active ? clientId : null, () => void refreshThread());
   // The box takes all the room there is, from where it starts to the foot of
   // the window, and never so much that the page itself scrolls. Measured
   // when the tab is shown (it mounts hidden behind the other tabs) and when

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useChatStream } from "../../components/useChatStream";
 import { useSearchParams } from "next/navigation";
 import { ChatIcon } from "../../components/icons";
 import { OpenChatContext, type OpenChat } from "./ChatPanel";
@@ -168,6 +169,8 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
     const id = setInterval(pullChats, CHAT_LIST_POLL_MS);
     return () => clearInterval(id);
   }, [chat.open, mode, pullChats]);
+  // In real time (27 Oct, Alex): All chats moves as messages come in, while the panel is open.
+  useChatStream(chat.open && mode === "chat" ? "all" : null, pullChats, 400);
   const inOther = view === "other" && other != null && otherThread?.id === other.id;
   const shownId = view === "own" ? clientId : inOther ? other.id : null;
   const isUnread = (c: DockChat) => c.unread && (c.last?.at ?? 0) > (seenAt[c.id] ?? 0);

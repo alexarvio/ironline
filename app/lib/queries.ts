@@ -1,6 +1,7 @@
 import fs from "fs";
 import { sortReasons, type AttentionReason } from "./attentionReasons";
 import path from "path";
+import { chatChanged } from "./chatBus";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, mergeDuplicateMetricDefinitions, CardioEntry } from "./db";
 import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachNotify, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceEvery, InvoiceLine, InvoiceParty, InvoiceRecipient, InvoiceRepeat, InvoiceTemplate, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion, MeetingRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
@@ -6220,6 +6221,7 @@ export function setChatMediaLook(path: string, look: MediaLook) {
     m.media_w = look.w;
     m.media_h = look.h;
     n++;
+    chatChanged(m.client_id);
   }
   if (n) persist();
 }
@@ -6323,6 +6325,7 @@ export function sendChatMessage(
     ...(answers != null ? { reply_to: answers } : {}),
   });
   persist();
+  chatChanged(clientId);
   if (sender === "coach") {
     // The row is the message's unread mark (the Chat tab's dot, Home's count;
     // the bell leaves coach_note out), so it is written whatever the client
@@ -6344,6 +6347,7 @@ export function setChatReaction(clientId: number, messageId: number, who: "clien
   if (Object.keys(next).length) m.reactions = next;
   else delete m.reactions;
   persist();
+  chatChanged(clientId);
 }
 
 /** The coach's own message, or nothing: only theirs can be reworded, re-pointed or taken back. */
@@ -6369,6 +6373,7 @@ export function editChatMessage(clientId: number, messageId: number, text: strin
   msg.text = clean;
   msg.edited_at = new Date().toISOString();
   persist();
+  chatChanged(clientId);
 }
 
 /** Takes a coach message back: from the chat, the client's Home and their notifications. Returns its file to delete from the bucket, when nothing else shows it (chatFileLeft). */
@@ -6380,6 +6385,7 @@ export function deleteChatMessage(clientId: number, messageId: number): string |
   data.chat_messages = data.chat_messages.filter((m) => m !== msg);
   if (note) data.coach_activity = data.coach_activity.filter((a) => a !== note);
   persist();
+  chatChanged(clientId);
   return chatFileLeft(msg.media_path);
 }
 
@@ -6408,6 +6414,7 @@ export function editClientChatMessage(clientId: number, messageId: number, text:
   msg.text = clean;
   msg.edited_at = new Date().toISOString();
   persist();
+  chatChanged(clientId);
 }
 
 /** The client takes back one of their own messages (never the coach's). Returns its file to delete, as deleteChatMessage. */
@@ -6417,6 +6424,7 @@ export function deleteClientChatMessage(clientId: number, messageId: number): st
   if (!msg) return null;
   data.chat_messages = data.chat_messages.filter((m) => m !== msg);
   persist();
+  chatChanged(clientId);
   return chatFileLeft(msg.media_path);
 }
 
@@ -6427,6 +6435,7 @@ export function setChatMessageLink(clientId: number, messageId: number, link: Me
   if (link) msg.link = link;
   else delete msg.link;
   persist();
+  chatChanged(clientId);
 }
 
 /** Keeps a message (either side's) at the top of the chat, or lets it go. */
@@ -6436,6 +6445,7 @@ export function setChatMessagePinned(clientId: number, messageId: number, pinned
   if (pinned) msg.pinned = true;
   else delete msg.pinned;
   persist();
+  chatChanged(clientId);
 }
 
 // ---- Events on the plan ------------------------------------------------------
@@ -8254,6 +8264,7 @@ export function swapChatMedia(from: string, to: string): number {
     if (m.media_path !== from) continue;
     m.media_path = to;
     n++;
+    chatChanged(m.client_id);
   }
   if (n) persist();
   return n;
@@ -12814,6 +12825,7 @@ export function removeMealComment(clientId: number, messageId: number) {
   const note = data.coach_activity.find((a) => a.client_id === clientId && a.kind === "coach_note" && a.message === msg.text && Math.abs(new Date(a.created_at).getTime() - sent) < 5000);
   if (note) data.coach_activity = data.coach_activity.filter((a) => a !== note);
   persist();
+  chatChanged(clientId);
 }
 
 /**
@@ -12831,6 +12843,7 @@ export function editMealComment(clientId: number, messageId: number, text: strin
   if (note) note.message = clean;
   msg.text = clean;
   persist();
+  chatChanged(clientId);
 }
 
 export const hasMealComment = (clientId: number, date: string, meal: string) => (mealCommentsOn(clientId, date).get(meal)?.length ?? 0) > 0;
