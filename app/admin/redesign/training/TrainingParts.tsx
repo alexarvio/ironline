@@ -239,7 +239,7 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
             key={w.index}
             role="tab"
             aria-selected={on}
-            aria-label={`Week ${w.index}${now ? ", current week" : ""}, ${done} of ${total} sessions done${w.missed?.some(Boolean) ? `, ${w.missed.filter(Boolean).length} unfinished` : ""}${w.skipped?.some(Boolean) ? `, ${w.skipped.filter(Boolean).length} skipped` : ""}${owed ? ", needs you" : ""}`}
+            aria-label={`Week ${w.index}${now ? ", current week" : ""}, ${done} of ${total} sessions done${w.missed?.some(Boolean) ? `, ${w.missed.filter(Boolean).length} unfinished` : ""}${w.skipped?.some(Boolean) ? `, ${w.skipped.filter(Boolean).length} skipped` : ""}${w.state === "past" && w.trained.some((t, i) => !t && !w.skipped?.[i] && !w.missed?.[i]) ? `, ${w.trained.filter((t, i) => !t && !w.skipped?.[i] && !w.missed?.[i]).length} not done` : ""}${owed ? ", needs you" : ""}`}
             href={hrefFor(w.index)}
             scroll={false}
             className={`trn-week${on ? " on" : ""}`}
@@ -266,10 +266,10 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
               )}
             </span>
             <span className="trn-bars" aria-hidden="true">
-              {/* A bar a session (27 Oct, Alex): done green, begun and left unfinished green at less strength, skipped rust, not
-                  started grey. */}
+              {/* A bar a session (27 Oct, Alex): done green, begun and left unfinished green at less strength, skipped rust, never
+                  started rust at less strength once its week is over ("the moment the week ends"), else grey. */}
               {w.trained.map((t, i) => (
-                <i key={i} className={t ? "on" : w.skipped?.[i] ? "skipped" : w.missed?.[i] ? "part" : ""} />
+                <i key={i} className={t ? "on" : w.skipped?.[i] ? "skipped" : w.missed?.[i] ? "part" : w.state === "past" ? "none" : ""} />
               ))}
             </span>
             <span className="trn-week-foot">

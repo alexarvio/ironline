@@ -480,3 +480,5 @@ html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { box-shadow: in
 /* A session's bar (27 Oct, Alex): begun and left unfinished, green at less strength; skipped, rust. */
 .rd.trn .trn-bars i.part { background: rgba(47, 122, 63, 0.38); }
 .rd.trn .trn-bars i.skipped { background: #b8471f; }
+/* Never started and its week over (27 Oct, Alex: "the moment the week ends"): rust at less strength. */
+.rd.trn .trn-bars i.none { background: rgba(184, 71, 31, 0.35); }
