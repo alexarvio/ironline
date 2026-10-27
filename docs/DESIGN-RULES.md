@@ -32,7 +32,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 
 ## 5. Icons
 - The existing category icons, drawn at **stroke 1.6**, round caps and joins, no fills.
-- The icon alone. A ring around it only when the item is live or in focus; a live ring pulses in its colour. No tile, no disc, no halo.
+- The icon alone, in a thin ring: no tile, no disc, no halo. On the Events screen and Home's events timeline every event wears its ring (27 Oct, Alex): one still to come in its category's colour at the row's softer strength, one that is over in grey (`#C9CFD8`), the focused one in full; only what is on today pulses, in its colour.
 
 ## 6. Buttons and controls
 - Primary: ink pill `#141a24`, white text, height 38–44, 600. One per screen at most.

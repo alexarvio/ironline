@@ -20753,3 +20753,17 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .au-card .auth-error { border: 0; background: none; padding: 0; color: #b42318; font-size: 13px; font-weight: 500; }
 .au-card .auth-ok { border: 0; background: none; padding: 0; color: #2f7a3f; font-size: 13px; font-weight: 500; }
 .au-card .au-coach { background: #141a24; }
+
+/* Every event wears its ring (27 Oct, Alex): one still to come a thin ring in its category's colour at the row's
+   softer strength, never pulsing (only what is on today pulses); one that is over a grey ring, so it reads as done.
+   The live and the focused one keep theirs. Events screen (evp-) and Home's timeline (evt-) alike. */
+.evp-r.next .evp-ring:not(.now) { box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.55), 0 0 0 4px #F5F6F8; }
+.evp-r.next.focus .evp-ring:not(.now) { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 4px #F5F6F8; }
+.evp-r.past .evp-ring { box-shadow: inset 0 0 0 1px #C9CFD8, 0 0 0 4px #F5F6F8; }
+.evp-r.past.focus .evp-ring { box-shadow: inset 0 0 0 1px #98A2B3, 0 0 0 4px #F5F6F8; }
+.evt-item.upcoming .evt-ring { box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.55); }
+.evt-item.past .evt-ring { box-shadow: inset 0 0 0 1px #C9CFD8; }
+.hm .evt-item.upcoming .evt-ring { box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.55), 0 0 0 4px #F5F5F5; }
+.hm .evt-item.past .evt-ring { box-shadow: inset 0 0 0 1px #C9CFD8, 0 0 0 4px #F5F5F5; }
+.evt-item.upcoming.on .evt-ring, .hm .evt-item.upcoming.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c); }
+.evt-item.past.on .evt-ring, .hm .evt-item.past.on .evt-ring { box-shadow: inset 0 0 0 1px #98A2B3; }
