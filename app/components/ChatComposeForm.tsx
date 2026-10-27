@@ -5,6 +5,7 @@ import { sendChatMessageAction } from "../lib/actions";
 import { withVideoFrame } from "./ChatMedia";
 import type { MessageAbout } from "../lib/messageLinks";
 import VoiceRecordButton from "./VoiceRecordButton";
+import RingEdge from "./RingEdge";
 
 // Deliberately does NOT import from ../lib/queries (see CheckInHub.tsx for
 // why a "use client" file importing queries.ts breaks the dev server).
@@ -171,6 +172,7 @@ export default function ChatComposeForm({
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
+          <RingEdge size={38} />
         </button>
         {plusOpen && (
           <div className="chat-plus-menu" role="menu">
@@ -236,7 +238,7 @@ export default function ChatComposeForm({
           {pending ? "…" : "Send"}
         </button>
       ) : (
-        <VoiceRecordButton className="chat-attach-btn chat-mic-btn" onRecorded={sendFile} disabled={pending} />
+        <VoiceRecordButton className="chat-attach-btn chat-mic-btn" onRecorded={sendFile} disabled={pending} ring={38} />
       )}
     </form>
     </>

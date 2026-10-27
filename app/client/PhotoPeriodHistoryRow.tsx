@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import PhotoDeck from "./PhotoDeck";
 import { Bars } from "./Bars";
 import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
+import RingEdge from "../components/RingEdge";
 
 type Photo = { slotId: number; label: string; src: string | null };
 
@@ -70,6 +71,7 @@ export default function PhotoPeriodHistoryRow({
             <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
               <path d="m5 12.5 4.5 4.5L19 7.5" />
             </svg>
+            <RingEdge size={36} stroke={1.5} />
           </span>
         )}
         <span className="pp-app-past-text">
@@ -176,9 +178,11 @@ export function PhotoViewer({
         <div className="pp-app-viewer-nav">
           <button type="button" className="pp-app-viewer-step" onClick={() => go(-1)} disabled={index === 0} aria-label="Previous photo">
             <ChevronLeftIcon />
+            <RingEdge size={44} />
           </button>
           <button type="button" className="pp-app-viewer-step next" onClick={() => go(1)} disabled={index === photos.length - 1} aria-label="Next photo">
             <ChevronLeftIcon />
+            <RingEdge size={44} />
           </button>
         </div>
       )}

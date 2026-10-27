@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { landOnSoon } from "../lib/landOn";
 import { ChevronLeftIcon } from "../components/icons";
+import RingEdge from "../components/RingEdge";
 
 // The check-in's Calendar (28 Sep; hairline 23 Oct, Alex): everything the
 // client did, a month at a time, Monday first, flat on the page. Each day's
@@ -101,12 +102,14 @@ export default function ActivityCalendar({ days, today, initialDay = null }: { d
       <div className="wc-head">
         <button type="button" className="wc-nav" onClick={() => move(-1)} aria-label="Previous month">
           <ChevronLeftIcon />
+          <RingEdge size={32} />
         </button>
         <span className="wc-title">
           <b>{first.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</b>
         </span>
         <button type="button" className="wc-nav next" onClick={() => move(1)} aria-label="Next month" disabled={month >= today.slice(0, 7)}>
           <ChevronLeftIcon />
+          <RingEdge size={32} />
         </button>
       </div>
       <div className="ac-legend" aria-hidden="true">
@@ -143,7 +146,10 @@ export default function ActivityCalendar({ days, today, initialDay = null }: { d
                   aria-label={parts.length ? `${d}: ${parts.map((p) => p.label.toLowerCase()).join(", ")}` : d}
                 >
                   <Ring parts={parts} />
-                  <span className="ac-num">{Number(d.slice(8))}</span>
+                  <span className="ac-num">
+                    {Number(d.slice(8))}
+                    <RingEdge size={28} stroke={1.5} />
+                  </span>
                 </button>
               );
             })}

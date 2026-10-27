@@ -12,6 +12,7 @@ import RestTimerPill, { useRestTimer } from "./RestTimer";
 import SwipeToEnd from "./SwipeToEnd";
 import FreeAddPage from "./FreeAddPage";
 import { Bars } from "./Bars";
+import RingEdge from "../components/RingEdge";
 import type { LibraryPick, WeightUnit } from "./workoutShared";
 import {
   CardioCard,
@@ -482,6 +483,7 @@ export default function WorkoutScreen({
                         <button type="button" className="wo-check-hit" onClick={() => jumpTo(j)} aria-label={`${name}: ${status}`} />
                         <span className={`wo-check-circle${complete ? " done" : ""}`} aria-hidden="true">
                           {complete ? "✓" : j + 1}
+                          <RingEdge size={28} stroke={complete ? 1.5 : 1} />
                         </span>
                         <span className="wo-check-name" aria-hidden="true">
                           {name}

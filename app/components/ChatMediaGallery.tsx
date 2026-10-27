@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChatVideo, sized } from "./ChatMedia";
+import RingEdge from "./RingEdge";
 
 // Everything sent in a chat, gathered (2 Oct): the photos and videos as a
 // grid, and the files and voice messages as a list, newest first. Tapping
@@ -105,6 +106,7 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
                 </button>
                 <a className="cmg-open static" href={i.media.path} target="_blank" rel="noreferrer" download={i.media.type === "file" ? i.media.name ?? undefined : undefined} aria-label="Open the file" title="Open">
                   ↗
+                  <RingEdge size={26} />
                 </a>
               </li>
             ))}

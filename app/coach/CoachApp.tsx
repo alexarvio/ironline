@@ -13,6 +13,7 @@ import { Avatar, Facts, Icon, Sheet } from "./parts";
 import CoachCalendar, { useCalendarState, type CalendarState } from "./CoachCalendar";
 import type { PhoneCalendar } from "./calendar";
 import ChatLastLine from "../components/ChatLastLine";
+import RingEdge from "../components/RingEdge";
 import { sized } from "../components/ChatMedia";
 import { PushSwitch } from "../client/PushToggle";
 import { NativePush } from "../client/NativePush";
@@ -320,10 +321,12 @@ function VideoRows({ rows, now, onOpen, onDone, past = false }: { rows: PhoneVid
               <span className="cph-video-acts">
                 <button type="button" className="cph-round small" onClick={() => onOpen(v.id)} aria-label={`Review ${v.exercise}`}>
                   <Icon name="pen" />
+                  <RingEdge size={36} />
                 </button>
                 {onDone && (
                   <button type="button" className="cph-round small" onClick={() => onDone(v.id)} aria-label={`Mark ${v.exercise} done without a reply`}>
                     <Icon name="check" />
+                    <RingEdge size={36} />
                   </button>
                 )}
               </span>

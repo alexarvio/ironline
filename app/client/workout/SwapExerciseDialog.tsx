@@ -7,6 +7,7 @@ import { groupColour } from "../../lib/muscleGroups";
 import { pic } from "../../lib/pic";
 import { useKeyboardInset } from "../useKeyboardInset";
 import { Bars } from "../Bars";
+import RingEdge from "../../components/RingEdge";
 
 // "Swap exercise" (14 Oct, after the New event and gym pop-ups): a centred
 // pop-up, not a sheet. The machine is taken: the client picks one of the
@@ -105,6 +106,7 @@ export default function SwapExerciseDialog({
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 6l12 12M18 6 6 18" />
               </svg>
+              <RingEdge size={32} />
             </button>
           </header>
 
@@ -163,6 +165,7 @@ export default function SwapExerciseDialog({
                             <svg viewBox="0 0 24 24">
                               <path d="M8 5.5v13l11-6.5z" />
                             </svg>
+                            <RingEdge size={24} />
                           </span>
                         </button>
                       ) : (
@@ -175,10 +178,12 @@ export default function SwapExerciseDialog({
                         <span className={`sw-note${s.note ? "" : " none"}`}>{s.note ? `“${s.note}”` : "No note"}</span>
                       </span>
                       <span className="sw-check" aria-hidden="true">
-                        {on && (
+                        {on ? (
                           <svg viewBox="0 0 24 24">
                             <path d="m5 12.5 4.5 4.5L19 7.5" />
                           </svg>
+                        ) : (
+                          <RingEdge size={24} />
                         )}
                       </span>
                     </div>

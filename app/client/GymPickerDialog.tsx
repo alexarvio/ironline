@@ -6,6 +6,7 @@ import { clientAddGymAction, uploadGymLogoAction } from "../lib/actions";
 import { coverJpeg } from "../lib/coverJpeg";
 import { pic } from "../lib/pic";
 import { GYM_COLORS, GYM_COLOR_KEYS, GYM_KINDS, gymColor, initials, nextFreeColor, type GymColorKey, type GymKind } from "../lib/gymColors";
+import RingEdge from "../components/RingEdge";
 
 // Which gym the session is at (13 Oct, "Gym rows"): a centred pop-up over
 // the dimmed session overview, the first step of starting a workout.
@@ -53,6 +54,7 @@ const CameraDot = () => (
       <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7H8l1.5-2.5h5L16 7h3.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z" />
       <circle cx="12" cy="13" r="3.4" />
     </svg>
+    <RingEdge size={20} />
   </span>
 );
 
@@ -232,6 +234,7 @@ export default function GymPickerDialog({
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="m14.5 6-6 6 6 6" />
                   </svg>
+                  <RingEdge size={32} />
                 </button>
               )}
               <h2 id="gpk-title" className="gpk-title sm">
@@ -303,6 +306,7 @@ export default function GymPickerDialog({
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M6 6l12 12M18 6 6 18" />
                 </svg>
+                <RingEdge size={32} />
               </button>
             </div>
             <div className="gpk-rows" role="radiogroup" aria-label="Your gyms">
@@ -321,10 +325,12 @@ export default function GymPickerDialog({
                       <span className="gpk-row-meta">{meta(g)}</span>
                     </span>
                     <span className={`gpk-radio${on ? " on" : ""}`} style={on ? { background: c.hex } : undefined} aria-hidden="true">
-                      {on && (
+                      {on ? (
                         <svg viewBox="0 0 24 24">
                           <path d="m5 12.5 4.5 4.5L19 7.5" />
                         </svg>
+                      ) : (
+                        <RingEdge size={24} stroke={1.5} />
                       )}
                     </span>
                   </button>

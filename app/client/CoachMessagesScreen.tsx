@@ -4,6 +4,7 @@ import type { HomeEventCategory } from "./EventsCard";
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { ChevronDownIcon, ChevronLeftIcon, PinIcon } from "../components/icons";
 import ChatComposeForm from "../components/ChatComposeForm";
+import RingEdge from "../components/RingEdge";
 import { REACTIONS } from "../components/MessageReactions";
 import { chatThreadAction, deleteMyChatMessageAction, editMyChatMessageAction, markCoachNotesReadAction, reactToMessageAction, unpinMessageAction } from "../lib/actions";
 import CoachMark from "./CoachMark";
@@ -551,6 +552,7 @@ function LinkBubble({ view }: { view: LinkView }) {
         <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
         <path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5" />
       </svg>
+      <RingEdge size={28} />
     </button>
   );
 }

@@ -5,6 +5,7 @@ import { degreeOf, firstNameOf, type CoachProfileView } from "../lib/coachProfil
 import { CalendarIcon, ChevronLeftIcon } from "../components/icons";
 import { pic } from "../lib/pic";
 import { Bars } from "./Bars";
+import RingEdge from "../components/RingEdge";
 
 // The coach's profile as the client reads it, pushed over the Account tab,
 // and the same component the coach sees in the admin's live preview. It
@@ -266,7 +267,9 @@ function FullProfile({ profile, onBack, onBook }: { profile: CoachProfileView; o
                   <ol className="cpf-timeline">
                     {profile.experience.map((r, i) => (
                       <li key={i} className={`cpf-step${i === 0 ? " first" : ""}`}>
-                        <span className="cpf-step-dot" aria-hidden="true" />
+                        <span className="cpf-step-dot" aria-hidden="true">
+                          <RingEdge size={11} stroke={2} />
+                        </span>
                         {r.years && <div className="cpf-step-years">{r.years}</div>}
                         <div className="cpf-step-role">{r.role}</div>
                         {r.place && <div className="cpf-step-place">{r.place}</div>}

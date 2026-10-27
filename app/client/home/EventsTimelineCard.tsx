@@ -6,6 +6,7 @@ import { eventTypeOf } from "../../lib/eventTypes";
 import { buildTimeline, ITEM_WIDTH, STRIDE, type TimelineItem } from "../../lib/eventTimeline";
 import { useOpenEvents, useTabActive } from "../CheckInContext";
 import type { HomeEvents } from "../EventsCard";
+import RingEdge from "../../components/RingEdge";
 
 // Home's events as a hairline timeline (15 Oct, restyled the same evening):
 // every event a thin ring with a fine-line icon in its colour, strung along
@@ -144,6 +145,7 @@ function Item({ item, focused, onPick }: { item: TimelineItem; focused: boolean;
     <button type="button" role="option" aria-selected={focused} aria-label={spoken} className={cls} style={{ "--c": ink ? "#141a24" : c.color, "--rgb": ink ? "20,26,36" : c.rgb } as React.CSSProperties} onClick={onPick}>
       <span className="evt-ring">
         <LineIcon path={icon} />
+        <RingEdge size={focused ? 62 : 48} />
       </span>
       <span className="evt-text">
         <span className="evt-label">{item.slot === "more" ? "All" : item.label}</span>

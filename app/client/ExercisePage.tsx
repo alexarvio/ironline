@@ -9,6 +9,7 @@ import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
 import { CoachNote, shownName, type SessionExercise } from "./workoutShared";
 import CoachMark from "./CoachMark";
 import { Bars } from "./Bars";
+import RingEdge from "../components/RingEdge";
 
 // One exercise, as a page of the workout (13 Oct, "Stepper sheet"): logging
 // is the whole screen. The sets card holds one row a set; exactly one is
@@ -617,6 +618,7 @@ export default function ExercisePage({
                     ) : (
                       row.label
                     )}
+                    <RingEdge size={36} stroke={row.saved ? 1.5 : 1} />
                   </span>
                   <span className="lw-row-sum">{summaryCells(row)}</span>
                   {/* The RPE slot is always there, empty on a warm-up, so the numbers line up down the card. */}

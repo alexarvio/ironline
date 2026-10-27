@@ -9,6 +9,7 @@ import { dayOf, daysBetween, shortDay } from "../../lib/eventDates";
 import { isoWeekday, nextOccurrence, repeatWords } from "../../lib/eventRepeat";
 import { pic } from "../../lib/pic";
 import { ChevronLeftIcon } from "../../components/icons";
+import RingEdge from "../../components/RingEdge";
 import { useCoachIdentity } from "../CheckInContext";
 import type { HomeEvent, HomeEvents } from "../EventsCard";
 import AddEventSheet, { type EventValues } from "./AddEventSheet";
@@ -468,6 +469,7 @@ function EventRow(p: RowProps) {
         <span className="evp-node" aria-hidden="true">
           <span className={`evp-ring${isNow ? " now" : ""}`}>
             <LineIcon path={c.icon} size={isNow ? 19 : 18} />
+            <RingEdge size={focus ? (isNow ? 56 : 46) : isNow ? 44 : 36} />
           </span>
         </span>
         <span className="evp-text">
@@ -511,7 +513,9 @@ function FreeDayRow({ today, title, focus, refFn }: { today: string; title: stri
           <small>{monthOf(today)}</small>
         </span>
         <span className="evp-node" aria-hidden="true">
-          <span className="evp-ring" />
+          <span className="evp-ring">
+            <RingEdge size={focus ? 46 : 36} />
+          </span>
         </span>
         <span className="evp-text">
           <span className="evp-label">Today</span>

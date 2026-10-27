@@ -7,6 +7,7 @@ import { EVENT_TYPES, eventTypeOf, type EventTypeId } from "../../lib/eventTypes
 import { addDays, longDay } from "../../lib/eventDates";
 import { isoWeekday, openEnd, repeatWords, WEEKDAY_LETTERS, type EventRepeat } from "../../lib/eventRepeat";
 import type { HomeEvent } from "../EventsCard";
+import RingEdge from "../../components/RingEdge";
 
 // The "New event" sheet (9 Oct), colour-coded: the type picked colours the
 // top of the sheet (wash, glow, grabber, the pill by the title), the picker
@@ -242,6 +243,7 @@ export default function AddEventSheet({
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
                 <path d="M6 6l12 12M18 6 6 18" />
               </svg>
+              <RingEdge size={32} />
             </button>
           </div>
 
@@ -372,6 +374,7 @@ function WhenSection({ mode, start, end, until, days, today, onMode, onStart, on
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
+              <RingEdge size={24} />
             </span>
             {field("UNTIL", until, start, onUntil, " ends", "No end")}
           </>
@@ -384,6 +387,7 @@ function WhenSection({ mode, start, end, until, days, today, onMode, onStart, on
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
+              <RingEdge size={24} />
             </span>
             {field("ENDS", end, start, onEnd, " ends")}
           </>
@@ -395,6 +399,7 @@ function WhenSection({ mode, start, end, until, days, today, onMode, onStart, on
             {WEEKDAY_LETTERS.map((l, i) => (
               <button key={i} type="button" className={days.includes(i + 1) ? "on" : ""} aria-pressed={days.includes(i + 1)} aria-label={["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][i]} onClick={() => onDay(i + 1)}>
                 {l}
+                <RingEdge size={42} />
               </button>
             ))}
           </div>

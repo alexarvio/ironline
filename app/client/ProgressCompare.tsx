@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDownIcon } from "../components/icons";
 import { PhotoViewer } from "./PhotoPeriodHistoryRow";
+import RingEdge from "../components/RingEdge";
 
 // The client's Compare on the Shape update screen (23 Oct, Alex): the phone twin of the coach's
 // (admin/redesign/pictures/CompareDialog.tsx), in the client's hairline voice, flat on the page.
@@ -262,6 +263,7 @@ function Reveal({ left, right, leftSrc, rightSrc, angle }: { left: string; right
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M9 7l-5 5 5 5M15 7l5 5-5 5" />
         </svg>
+        <RingEdge size={36} />
       </span>
       <span className="pc-cmp-tag left">{left}</span>
       <span className="pc-cmp-tag right">{right}</span>

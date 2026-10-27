@@ -3,6 +3,7 @@
 import { ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { useTabActive, useTrainingFocus } from "./CheckInContext";
 import PictureCycle from "./PictureCycle";
+import RingEdge from "../components/RingEdge";
 
 // Read-only week switcher for the client's own Training tab — every
 // existing week's content is pre-rendered server-side (see TrainingTab in
@@ -140,6 +141,7 @@ export default function ClientWeekSwitcher({
         <div className="week-locked-card">
           <span className="week-locked-icon" aria-hidden="true">
             <LockIcon />
+            <RingEdge size={44} />
           </span>
           <div>
             <div className="week-locked-title">{weekLabels?.[selected] ?? `Week ${selected}`} is locked</div>

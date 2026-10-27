@@ -6197,8 +6197,10 @@ a.cd-entry:hover { border-color: var(--accent); }
   width: 38px;
   height: 38px;
   flex-shrink: 0;
+  position: relative;
   border-radius: 999px;
-  border: 1px solid var(--border);
+  border: 0;
+  --ring: var(--border);
   background: white;
   color: var(--steel);
   cursor: pointer;
@@ -14106,7 +14108,7 @@ body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5
 .cpf-timeline { position: relative; margin: 6px 0 0; padding: 0 0 0 22px; list-style: none; }
 .cpf-timeline::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: 5px; width: 1.5px; background: #EDF3FC; }
 .cpf-step { position: relative; padding-bottom: 18px; }
-.cpf-step-dot { position: absolute; top: 3px; left: -22px; width: 11px; height: 11px; box-sizing: border-box; border: 2px solid #334EAC; border-radius: 999px; background: #fff; }
+.cpf-step-dot { position: absolute; top: 3px; left: -22px; width: 11px; height: 11px; box-sizing: border-box; border: 0; --ring: #334EAC; border-radius: 999px; background: #fff; }
 .cpf-step.first .cpf-step-dot { background: #334EAC; }
 .cpf-step-years { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #334EAC; }
 .cpf-step-role { margin-top: 2px; font-size: 14.5px; font-weight: 800; color: #1E3A5F; }
@@ -15864,7 +15866,7 @@ body:has(.nc-scrim) [data-radix-popper-content-wrapper] { z-index: 110 !importan
 .cm-pins { flex: none; display: flex; flex-direction: column; gap: 8px; max-height: 34%; overflow-y: auto; padding: 8px 18px 10px; border-bottom: 1px solid #EEEEEE; background: #fff; }
 .cm-pins-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #9E9E9E; }
 /* The mic beside the paperclip, and its recording state. */
-.chat-mic-btn.recording, .msg-mic.recording { gap: 6px; width: auto; padding: 0 12px; border-color: #C62828; background: #FFF8E1; color: #C62828; }
+.chat-mic-btn.recording, .msg-mic.recording { gap: 6px; width: auto; padding: 0 12px; border: 1px solid #C62828; background: #FFF8E1; color: #C62828; }
 .vr-dot { width: 8px; height: 8px; border-radius: 999px; background: #F9A825; animation: vr-pulse 1s infinite; }
 .vr-time { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 @keyframes vr-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -17065,8 +17067,9 @@ button.pp-row { cursor: zoom-in; }
 .pc-cmp-none { box-sizing: border-box; border: 1px dashed #C9CFD8; border-radius: 12px; background: #F5F6F8; }
 .pc-cmp-none > span { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: 13px; font-weight: 500; color: #8b93a1; white-space: nowrap; }
 .pc-cmp-line { position: absolute; top: 0; bottom: 0; width: 1.5px; margin-left: -0.75px; background: #fff; box-shadow: 0 0 0 0.5px rgba(20, 26, 36, 0.14); pointer-events: none; }
-.pc-cmp-handle { position: absolute; top: 50%; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; box-sizing: border-box; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; transform: translate(-50%, -50%); cursor: ew-resize; outline: none; }
-.pc-cmp-handle:focus-visible { box-shadow: inset 0 0 0 1.5px #141a24; }
+.pc-cmp-handle { position: absolute; top: 50%; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; box-sizing: border-box; border-radius: 50%; background: #fff; box-shadow: none; --ring: #E1E5EB; color: #141a24; transform: translate(-50%, -50%); cursor: ew-resize; outline: none; }
+.pc-cmp-handle:focus-visible { --ring: #141a24; }
+.pc-cmp-handle:focus-visible > svg.ring-edge > circle { stroke-width: 1.5px; }
 .pc-cmp-tag { position: absolute; bottom: 10px; display: block; max-width: calc(50% - 16px); height: 24px; box-sizing: border-box; padding: 0 10px; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 11px; font-weight: 600; line-height: 24px; color: #141a24; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; pointer-events: none; }
 .pc-cmp-tag.left { left: 10px; }
 .pc-cmp-tag.right { right: 10px; }
@@ -17596,7 +17599,7 @@ button.ci-hint { cursor: pointer; }
 .wc-title { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .wc-title b { font-size: 15px; font-weight: 600; color: #141a24; }
 /* ‹ ›: white circles on the hairline, an ink chevron; faint when there is no next month. */
-.wc-nav { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; cursor: pointer; transition: color 0.2s ease; }
+.wc-nav { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: #fff; --ring: #E1E5EB; color: #141a24; cursor: pointer; transition: color 0.2s ease; }
 .wc-nav.next svg { transform: rotate(180deg); }
 .wc-nav:disabled { color: #C9CFD8; cursor: default; }
 .wc-nav svg { width: 16px; height: 16px; }
@@ -17723,12 +17726,12 @@ button.ci-hint { cursor: pointer; }
 /* 40px, so the ring's inner edge keeps a pixel of air round the 28px numeral (and the open day's ink ring). */
 .ac-ring { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; }
 /* The numeral: ink when the day has something, faint grey for a past day with nothing, fainter for a day still to come. */
-.ac-num { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; font-size: 13.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
+.ac-num { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; font-size: 13.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; --ring: transparent; transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
 .ac-day.did .ac-num { color: #141a24; }
 .ac-day.soon .ac-num { color: #C9CFD8; }
 /* The open day ringed in ink inside its coloured ring; today keeps its ink disc alone. */
-.ac-day.on .ac-num { box-shadow: inset 0 0 0 1.5px #141a24; }
-.ac-day.today .ac-num { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; }
+.ac-day.on .ac-num { --ring: #141a24; }
+.ac-day.today .ac-num { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; --ring: transparent; }
 .ac-day:disabled { opacity: 1; }
 .ac-panel { display: grid; grid-template-rows: 1fr; animation: ac-open 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
 .ac-panel.closing { grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.22s ease, opacity 0.18s ease; }
@@ -17931,7 +17934,7 @@ button.ci-hint { cursor: pointer; }
 .cmg-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
 .cmg-play svg { width: 30px; height: 30px; padding: 7px; border-radius: 999px; background: rgba(8, 15, 35, 0.55); color: #fff; }
 .cmg-open { position: absolute; top: 5px; right: 5px; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; background: rgba(8, 15, 35, 0.55); color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; }
-.cmg-open.static { position: static; flex: none; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.cmg-open.static { position: relative; flex: none; background: #fff; --ring: #E1E5EB; color: #141a24; }
 /* Files: flat rows on the page, space between them; the icon alone, no tile. */
 .cmg-list { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .cmg-file { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
@@ -18554,7 +18557,7 @@ button.ci-hint { cursor: pointer; }
 .cv-fold-pic.failed img { opacity: 0.3; filter: grayscale(1); }
 .cv-fold-pic.asking img { opacity: 0.35; }
 .cv-fold-x { position: absolute; top: 0; right: 0; display: flex; align-items: flex-start; justify-content: flex-end; width: 30px; height: 30px; padding: 4px; border: 0; background: none; color: #141a24; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.cv-fold-x > span { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.cv-fold-x > span { position: relative; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #fff; --ring: #E1E5EB; }
 .cv-fold-remove { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 600; color: #141a24; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .cv-fold-add { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0; border: 0; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .cv-fold-add:active { background: #F5F6F8; }
@@ -19023,7 +19026,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .sw-thumb { position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 13px; overflow: hidden; background: linear-gradient(150deg, #4a5778, #1a2030); cursor: pointer; }
 .sw-thumb.none { background: #F4F6FA; border: 1.5px dashed #C5CCD8; font-size: 10px; font-weight: 800; color: #98A2B3; cursor: default; }
 .sw-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.sw-playdisc { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.25); border: 1px solid rgba(255, 255, 255, 0.4); color: #fff; }
+.sw-playdisc { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.25); border: 0; --ring: rgba(255, 255, 255, 0.4); color: #fff; }
 .sw-playdisc svg { width: 11px; height: 11px; fill: currentColor; }
 .sw-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .sw-name { font-size: 15px; font-weight: 800; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -19098,7 +19101,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evt-spine { position: absolute; left: 0; right: 0; top: 48px; border-top: 1px solid #E1E5EB; pointer-events: none; }
 .evt-row { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 24px 0 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-snap-type: x mandatory; touch-action: pan-x pan-y; outline: none; }
 .evt-row::-webkit-scrollbar { display: none; }
-.evt-row:focus-visible .evt-item.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 2px #1d3466; }
+.evt-row:focus-visible .evt-item.on .evt-ring { --ring: var(--c); box-shadow: 0 0 0 2px #1d3466; }
 .evt-item { flex: none; display: flex; flex-direction: column; align-items: center; gap: 12px; width: 140px; padding: 0; border: 0; background: none; font: inherit; color: inherit; scroll-snap-align: center; cursor: pointer; }
 .evt-text, .evt-ring svg { transition: opacity 0.25s, filter 0.25s; }
 .evt-ring { position: relative; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: #F5F6F8; box-shadow: none; color: var(--c); transform: scale(1); transition: box-shadow 0.25s, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
@@ -19116,10 +19119,10 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evt-item.upcoming .evt-text, .evt-item.upcoming .evt-ring svg, .evt-item.more .evt-text, .evt-item.more .evt-ring svg { opacity: 0.55; }
 .evt-item.past .evt-text, .evt-item.past .evt-ring svg { opacity: 0.42; filter: blur(1.2px) grayscale(1); }
 .evt-item.live .evt-text, .evt-item.live .evt-ring svg { opacity: 0.75; }
-.evt-item.live .evt-ring { box-shadow: inset 0 0 0 1px var(--c); animation: evt-pulse 2.4s ease-in-out infinite; }
-@keyframes evt-pulse { 0%, 100% { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 0 rgba(var(--rgb), 0.3); } 50% { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 9px rgba(var(--rgb), 0); } }
+.evt-item.live .evt-ring { --ring: var(--c); box-shadow: none; animation: evt-pulse 2.4s ease-in-out infinite; }
+@keyframes evt-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0.3); } 50% { box-shadow: 0 0 0 9px rgba(var(--rgb), 0); } }
 .evt-item.on .evt-text, .evt-item.on .evt-ring svg { opacity: 1; filter: none; }
-.evt-item.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c); transform: scale(1.3); }
+.evt-item.on .evt-ring { --ring: var(--c); box-shadow: none; transform: scale(1.3); }
 .evt-item.on .evt-label { color: var(--c); }
 .evt-item.on .evt-title { font-size: 17px; font-weight: 600; }
 .evt-item.on .evt-when { color: #3a4250; }
@@ -19161,11 +19164,11 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evp-date small { margin-top: 3px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: #98A2B3; }
 .evp-node { flex: none; display: flex; justify-content: center; width: 56px; }
 .evp-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #F5F6F8; box-shadow: 0 0 0 4px #F5F6F8; color: var(--c); transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.evp-ring.now { width: 44px; height: 44px; box-shadow: inset 0 0 0 1px var(--c); animation: evp-pulse 2.4s ease-in-out infinite; }
-@keyframes evp-pulse { 0%, 100% { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 0 rgba(var(--rgb), 0.3); } 50% { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 9px rgba(var(--rgb), 0); } }
+.evp-ring.now { width: 44px; height: 44px; --ring: var(--c); box-shadow: none; animation: evp-pulse 2.4s ease-in-out infinite; }
+@keyframes evp-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0.3); } 50% { box-shadow: 0 0 0 9px rgba(var(--rgb), 0); } }
 /* The row at the snap point. */
-.evp-r.focus .evp-ring { transform: scale(1.25); box-shadow: inset 0 0 0 1px var(--c); }
-.evp-r.focus .evp-ring.now, .evp-ring.now { box-shadow: inset 0 0 0 1px var(--c); }
+.evp-r.focus .evp-ring { transform: scale(1.25); --ring: var(--c); box-shadow: none; }
+.evp-r.focus .evp-ring.now, .evp-ring.now { --ring: var(--c); box-shadow: none; }
 .evp-r.focus .evp-title { font-size: 18px; font-weight: 600; }
 .evp-r.past.focus .evp-date, .evp-r.past.focus .evp-text, .evp-r.past.focus .evp-ring svg { opacity: 0.85; }
 .evp-chev { flex: none; color: #98A2B3; transition: transform 0.25s; }
@@ -19226,8 +19229,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evt-row { padding: 14px 0 10px; }
 /* On Home the ring discs wear the Home page grey, not the Events page tint. */
 .hm .evt-ring { background: #F5F5F5; box-shadow: 0 0 0 4px #F5F5F5; }
-.hm .evt-item.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c); }
-.hm .evt-item.live .evt-ring { box-shadow: inset 0 0 0 1px var(--c); }
+.hm .evt-item.on .evt-ring { --ring: var(--c); box-shadow: none; }
+.hm .evt-item.live .evt-ring { --ring: var(--c); box-shadow: none; }
 /* The card scroller and the Home column were painted the page grey (16 Oct), the scroller because, its own compositing
    layer, it could show the lighter app layer behind Home. Since 24 Oct the shell round Home is the page grey itself, and
    both let Home's star through (Alex: it was cut off where the cards begin), so neither paints. */
@@ -19348,7 +19351,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evp-x .mt-linked { padding-top: 10px; border-top: 1px solid #E1E5EB; }
 .evp-x .mt-linked-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #98A2B3; }
 /* The Today row with nothing on (Events, Meetings): an empty ring always drawn in ink, so today is marked even when it isn't the focus. */
-.evp-r.today .evp-ring { box-shadow: inset 0 0 0 1.5px #141a24, 0 0 0 4px #F5F6F8; }
+.evp-r.today .evp-ring { --ring: #141a24; box-shadow: 0 0 0 4px #F5F6F8; }
 /* Meetings reshaped (16 Oct): the next call fixed under the ask as a white pill; the past a feed whose snap spot sits near its top. */
 .mtp-next { flex: none; display: flex; flex-direction: column; margin: 4px 20px; border-radius: 32px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
 .mtp-next.empty { background: none; box-shadow: inset 0 0 0 1px #E1E5EB; }
@@ -19359,7 +19362,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .mtp-next-date { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 64px; line-height: 1; }
 .mtp-next-date b { font-size: 24px; font-weight: 300; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #141a24; }
 .mtp-next-date small { margin-top: 3px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: var(--c, #98A2B3); }
-.mtp-next-ring { display: block; width: 28px; height: 28px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #C9CFD8; }
+.mtp-next-ring { position: relative; display: block; width: 28px; height: 28px; border-radius: 50%; --ring: #C9CFD8; }
 .mtp-join { flex: none; display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px; background: #141a24; color: #fff; font-size: 13.5px; font-weight: 600; text-decoration: none; }
 /* Before the call is on, Join is the white hairline pill (25 Oct, Alex): the link opens any time, the ink one only while live. */
 .mtp-join.quiet { height: 36px; padding: 0 16px; background: #fff; color: #141a24; box-shadow: inset 0 0 0 1px #E1E5EB; }
@@ -19501,13 +19504,13 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-row.done { color: #141a24; }
 .lw-row.done .lw-row-sum, .lw-row.done .lw-row-rpe, .lw-row.done .lw-row-badge { opacity: 0.6; }
 .lw-row:active { background: rgba(20, 26, 36, 0.03); }
-.lw-row-badge, .lw-row.extra .lw-row-badge { width: 28px; height: 28px; border: 0; background: #F5F6F8; box-shadow: inset 0 0 0 1px #C9CFD8; outline: 0; font-size: 12px; font-weight: 500; color: #8b93a1; }
-.lw-row.done .lw-row-badge, .lw-row.done.extra .lw-row-badge { background: #F5F6F8; box-shadow: inset 0 0 0 1px #2f7a3f; outline: 0; }
+.lw-row-badge, .lw-row.extra .lw-row-badge { position: relative; width: 28px; height: 28px; border: 0; background: #F5F6F8; box-shadow: none; --ring: #C9CFD8; outline: 0; font-size: 12px; font-weight: 500; color: #8b93a1; }
+.lw-row.done .lw-row-badge, .lw-row.done.extra .lw-row-badge { background: #F5F6F8; box-shadow: none; --ring: #2f7a3f; outline: 0; }
 .lw-row-badge svg, .lw-row.done.extra .lw-row-badge svg { stroke: #2f7a3f; stroke-width: 2.4; }
-.lw-row.extra .lw-row-badge { box-shadow: none; outline: 1px dashed #C9CFD8; outline-offset: -1px; }
-.lw-row.warm .lw-row-badge { box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.5); color: #a8761f; }
+.lw-row.extra .lw-row-badge { box-shadow: none; --ring: none; outline: 1px dashed #C9CFD8; outline-offset: -1px; }
+.lw-row.warm .lw-row-badge { box-shadow: none; --ring: rgba(168, 118, 31, 0.5); color: #a8761f; }
 .lw-row.done.warm { color: #a8761f; }
-.lw-row.done.warm .lw-row-badge { background: #F5F6F8; box-shadow: inset 0 0 0 1px #a8761f; }
+.lw-row.done.warm .lw-row-badge { background: #F5F6F8; box-shadow: none; --ring: #a8761f; }
 .lw-row.done.warm .lw-row-badge svg { stroke: #a8761f; }
 .lw-row-sum { flex: 1; justify-content: flex-start; font-size: 16px; font-weight: 500; }
 .lw-row-w { min-width: 0; text-align: left; }
@@ -19565,7 +19568,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .so-screen.so-st-done .so-list-head h2::before { content: "Completed ·"; letter-spacing: 0.18em; }
 .so-screen.so-st-unfinished .so-list-head h2 { color: #a8761f; }
 .so-screen.so-st-unfinished .so-list-head h2::before { content: "Unfinished ·"; letter-spacing: 0.18em; }
-.so-screen .so-num.done { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin-left: -2px; border-radius: 50%; box-shadow: inset 0 0 0 1px #2f7a3f; font-size: 0; background: center / 13px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7a3f' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.so-screen .so-num.done { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin-left: -2px; border-radius: 50%; box-shadow: none; --ring: #2f7a3f; font-size: 0; background: center / 13px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7a3f' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
 .so-screen.so-st-done .so-num:not(.done), .so-screen.so-st-unfinished .so-num:not(.done) { color: #C9CFD8; }
 .so-screen.so-st-done .so-card:not(.done) .so-card-name, .so-screen.so-st-unfinished .so-card:not(.done) .so-card-name { color: #8b93a1; }
 .so-screen .so-card + .so-card::before { left: 48px; }
@@ -19585,12 +19588,12 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .tr-body .tr-row, .tr-body .tr-row.done, .tr-body .tr-row.done.done, .tr-body .tr-row.unfinished, .tr-body .tr-row.live, .tr-body .tr-row.next { position: relative; gap: 14px; padding: 14px 8px 14px 12px; border: 0; border-radius: 0; background: none; box-shadow: none; }
 .tr-body .tr-row:active { background: rgba(20, 26, 36, 0.03); }
 .tr-body .tr-row + .tr-row::after { content: ""; position: absolute; top: 0; left: 58px; right: 8px; height: 1px; background: #E1E5EB; }
-.tr-body .tr-row-tile, .tr-body .tr-row-tile.live, .tr-body .tr-row-tile.next, .tr-body .tr-row-tile.skipped, .tr-body .tr-row-tile.missed, .tr-body .tr-row-tile.done, .tr-body .tr-row-tile.unfinished { position: relative; width: 32px; height: 32px; border-radius: 50%; background: #F5F5F5; box-shadow: inset 0 0 0 1px #C9CFD8; color: #1E3A5F; font-size: 14px; font-weight: 500; }
-.tr-body .tr-row-tile.next { box-shadow: inset 0 0 0 1.5px #141a24; color: #141a24; }
-.tr-body .tr-row-tile.live { box-shadow: inset 0 0 0 1.5px #3a3390; color: #3a3390; animation: trh-pulse 2.4s ease-in-out infinite; }
-@keyframes trh-pulse { 0%, 100% { box-shadow: inset 0 0 0 1.5px #3a3390, 0 0 0 0 rgba(58, 51, 144, 0.3); } 50% { box-shadow: inset 0 0 0 1.5px #3a3390, 0 0 0 8px rgba(58, 51, 144, 0); } }
-.tr-body .tr-row-tile.done { box-shadow: inset 0 0 0 1px #2f7a3f; font-size: 0; background: #F5F5F5 center / 14px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7a3f' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
-.tr-body .tr-row-tile.unfinished { box-shadow: inset 0 0 0 1px #a8761f; color: #a8761f; }
+.tr-body .tr-row-tile, .tr-body .tr-row-tile.live, .tr-body .tr-row-tile.next, .tr-body .tr-row-tile.skipped, .tr-body .tr-row-tile.missed, .tr-body .tr-row-tile.done, .tr-body .tr-row-tile.unfinished { position: relative; width: 32px; height: 32px; border-radius: 50%; background: #F5F5F5; box-shadow: none; --ring: #C9CFD8; color: #1E3A5F; font-size: 14px; font-weight: 500; }
+.tr-body .tr-row-tile.next { --ring: #141a24; color: #141a24; }
+.tr-body .tr-row-tile.live { --ring: #3a3390; color: #3a3390; animation: trh-pulse 2.4s ease-in-out infinite; }
+@keyframes trh-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(58, 51, 144, 0.3); } 50% { box-shadow: 0 0 0 8px rgba(58, 51, 144, 0); } }
+.tr-body .tr-row-tile.done { --ring: #2f7a3f; font-size: 0; background: #F5F5F5 center / 14px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7a3f' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.tr-body .tr-row-tile.unfinished { --ring: #a8761f; color: #a8761f; }
 .tr-body .tr-row-tile.skipped, .tr-body .tr-row-tile.missed { color: #98A2B3; }
 .tr-body .tr-row-title { font-size: 15.5px; font-weight: 500; color: #141a24; }
 .tr-body .tr-row.next .tr-row-title, .tr-body .tr-row.live .tr-row-title { font-size: 17px; font-weight: 600; }
@@ -19651,7 +19654,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .pp-app-viewer-close.pp-app-viewer-close { padding: 0 10px 0 2px; background: none; font-weight: 600; }
 .pp-app-viewer-title.pp-app-viewer-title { font-size: 15px; font-weight: 600; }
 .pp-app-viewer-count.pp-app-viewer-count { font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, 0.6); }
-.pp-app-viewer-step.pp-app-viewer-step { width: 44px; height: 44px; background: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); }
+.pp-app-viewer-step.pp-app-viewer-step { position: relative; width: 44px; height: 44px; background: none; box-shadow: none; --ring: rgba(255, 255, 255, 0.3); }
 .pp-todo .pp-app-sheet-scrim { background: rgba(20, 26, 36, 0.45); }
 .pp-todo .pp-app-sheet { gap: 14px; padding: 18px 18px calc(16px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; }
 .pp-todo .pp-app-sheet-head { gap: 3px; padding: 2px 4px 0; }
@@ -19733,10 +19736,11 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ci-day, .ci-day.done, .ci-day.unfinished { position: relative; border: 0; border-radius: 0; background: none; overflow: visible; }
 .ci-day + .ci-day::after { content: ""; position: absolute; top: 0; left: 48px; right: 4px; height: 1px; background: #E1E5EB; }
 .ci-day-head { position: relative; padding: 13px 4px 13px 48px; }
-.ci-day-head::before { content: ""; position: absolute; left: 4px; top: 50%; width: 28px; height: 28px; margin-top: -14px; border-radius: 50%; background: #F5F6F8; box-shadow: inset 0 0 0 1px #C9CFD8; }
-.ci-day.done .ci-day-head::before { box-shadow: inset 0 0 0 1px #2f7a3f; background: #F5F6F8 center / 13px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7a3f' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
-.ci-day.done.unfinished .ci-day-head::before, .ci-day.unfinished .ci-day-head::before { box-shadow: inset 0 0 0 1px #a8761f; background-image: none; }
-.ci-today .ci-day:not(.done) .ci-day-head::before { box-shadow: inset 0 0 0 1.5px #141a24; }
+/* The day's ring, a span with its circle as a vector (27 Oct; was a ::before with an inset shadow). */
+.ci-day-ring { position: absolute; left: 4px; top: 50%; width: 28px; height: 28px; margin-top: -14px; border-radius: 50%; background: #F5F6F8; --ring: #C9CFD8; pointer-events: none; }
+.ci-day.done .ci-day-ring { --ring: #2f7a3f; background: #F5F6F8 center / 13px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7a3f' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.ci-day.done.unfinished .ci-day-ring, .ci-day.unfinished .ci-day-ring { --ring: #a8761f; background-image: none; }
+.ci-today .ci-day:not(.done) .ci-day-ring { --ring: #141a24; }
 .ci-day-date, .ci-day.done .ci-day-date { font-size: 15px; font-weight: 500; color: #141a24; }
 .ci-day:not(.done) .ci-day-date { font-weight: 500; color: #3a4250; }
 .ci-day-sub { font-size: 12px; font-weight: 500; color: #8b93a1; }
@@ -19828,8 +19832,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .nd .nd-supps-chev { color: #98A2B3; }
 .nd .nd-supps-list { background: none; }
 .nd .nd-supp { padding: 12px 16px; border-top-color: #E1E5EB; }
-.nd .nd-check { border: 0; box-shadow: inset 0 0 0 1px #C9CFD8; }
-.nd .nd-supp.taken .nd-check { background: #fff; box-shadow: inset 0 0 0 1px #2f7a3f; color: #2f7a3f; }
+.nd .nd-check { position: relative; border: 0; box-shadow: none; --ring: #C9CFD8; }
+.nd .nd-supp.taken .nd-check { background: #fff; box-shadow: none; --ring: #2f7a3f; color: #2f7a3f; }
 .nd .nd-supp.taken .nd-check svg { stroke: #2f7a3f; }
 .nd .nd-supp-name { font-weight: 500; color: #141a24; }
 .nd .nd-supp.taken .nd-supp-name { color: #8b93a1; }
@@ -19883,7 +19887,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .cm-msg.mine .cm-msg-text { color: #fff; }
 .cm-msg.mine .cm-edit-save { color: #141a24; }
 .cm-msg.mine .cm-linkdot, .cm-msg.mine.media .cm-linkdot { border-color: #E1E5EB; color: #141a24; }
-.cm-linkdot { border-color: #E1E5EB; box-shadow: 0 0 0 3px #F5F6F8; }
+.cm-linkdot { border: 0; --ring: #E1E5EB; box-shadow: 0 0 0 3px #F5F6F8; }
 .cm-preview-note { font-weight: 500; color: #8b93a1; }
 .cn-screen:has(.mts-scroll) .cn-header, .cn-screen:has(.cm-body) .cn-header { background: #F5F6F8; }
 /* The bottom nav's current tab in ink (17 Oct, Alex), like every other selected thing now, not navy; 600, not 800. */
@@ -19957,9 +19961,9 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ppd-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .ppd-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #8b93a1; font-size: 14px; font-weight: 500; }
 .ppd-chip { position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px 0 4px; border-radius: 999px; background: rgba(20, 26, 36, 0.42); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #fff; font-size: 12.5px; font-weight: 600; }
-.ppd-chip b { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); font-size: 11px; font-weight: 600; }
+.ppd-chip b { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); font-size: 11px; font-weight: 600; }
 .ppd-card.empty .ppd-chip { background: #F5F6F8; color: #141a24; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px #E1E5EB; }
-.ppd-card.empty .ppd-chip b { background: #fff; box-shadow: inset 0 0 0 1px #C9CFD8; }
+.ppd-card.empty .ppd-chip b { background: #fff; box-shadow: none; --ring: #C9CFD8; }
 .ppd-foot { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ppd-state { display: inline-flex; align-items: center; height: 28px; padding: 0 11px; border-radius: 999px; background: rgba(20, 26, 36, 0.42); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #fff; font-size: 12px; font-weight: 600; }
 .ppd-state.sent { background: rgba(47, 122, 63, 0.85); }
@@ -19975,7 +19979,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* Progress pictures deck, hairline (17 Oct, Alex): an empty angle is see-through, only a thin border; its chip plain (a number ring and the name), Add photo a white hairline pill. */
 .ppd-card.empty .ppd-tap { background: transparent; outline: 0; box-shadow: inset 0 0 0 1px #C9CFD8; }
 .ppd-card.empty .ppd-chip { background: none; box-shadow: none; padding-left: 0; }
-.ppd-card.empty .ppd-chip b { background: transparent; box-shadow: inset 0 0 0 1px #C9CFD8; color: #5b6474; }
+.ppd-card.empty .ppd-chip b { background: transparent; box-shadow: none; --ring: #C9CFD8; color: #5b6474; }
 .ppd-card.empty .ppd-action { background: #fff; color: #141a24; box-shadow: inset 0 0 0 1px #E1E5EB; }
 .ppd-empty { color: #98A2B3; }
 /* A sent photo is locked (17 Oct, Alex): a thin green ring round the card, "Sent" with a lock on a green glass pill, no Change; the card no longer reacts to a tap. */
@@ -19993,7 +19997,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evs-grab { background: #E1E5EB; }
 .evs-head h2 { font-size: 19px; font-weight: 600; color: #141a24; }
 .evs-pill { display: none; }
-.evs-x { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #5b6474; }
+.evs-x { position: relative; background: #fff; box-shadow: none; --ring: #E1E5EB; color: #5b6474; }
 .evs-type { height: 66px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12.5px; font-weight: 500; color: #141a24; }
 .evs-type.on { background: #141a24; box-shadow: none; color: #fff; font-weight: 600; }
 .evs-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
@@ -20008,7 +20012,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evs-date-head { font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: #98A2B3; }
 .evs-date b { font-size: 15px; font-weight: 500; color: #141a24; }
 .evs-date.empty b { font-weight: 500; color: #98A2B3; }
-.evs-arrow { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #5b6474; }
+.evs-arrow { background: #fff; box-shadow: none; --ring: #E1E5EB; color: #5b6474; }
 .evs-note textarea { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
 .evs-note textarea:focus { box-shadow: inset 0 0 0 1.5px #141a24; }
 .evs-note textarea::placeholder { color: #98A2B3; }
@@ -20059,13 +20063,13 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .cki-confirm button { border-radius: 999px; font-weight: 600; }
 .cki-confirm .keep { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
 .cki-confirm .discard { background: #b8471f; }
-.gpk-round { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #5b6474; }
+.gpk-round { position: relative; background: #fff; box-shadow: none; --ring: #E1E5EB; color: #5b6474; }
 .gpk-row { border-radius: 16px; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
 .gpk-row.on { box-shadow: inset 0 0 0 1.5px #141a24; }
 .gpk-row-name { font-size: 15px; font-weight: 600; color: #141a24; }
 .gpk-row-meta { font-weight: 500; color: #8b93a1; }
 .gpk-badge { font-weight: 600; }
-.gpk-radio { border-width: 1.5px; border-color: #C9CFD8; }
+.gpk-radio { position: relative; border: 0; --ring: #C9CFD8; }
 .gpk-addrow { border-radius: 16px; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #141a24; }
 .gpk-addrow-ico { background: none; }
 .gpk-addrow-ico svg { stroke: #141a24; }
@@ -20206,7 +20210,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .gpk-badge-img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .gpk-badge-btn { border: 0; padding: 0; font: inherit; cursor: pointer; }
 .gpk-badge-btn:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
-.gpk-badge-cam { position: absolute; right: -5px; bottom: -5px; display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.gpk-badge-cam { position: absolute; right: -5px; bottom: -5px; display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: none; --ring: #E1E5EB; color: #141a24; }
 .gpk-badge.big .gpk-badge-cam { width: 24px; height: 24px; right: -6px; bottom: -6px; }
 .gpk-badge-cam svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 .gpk-badge.big .gpk-badge-cam svg { width: 14px; height: 14px; }
@@ -20229,13 +20233,13 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-row.lw-row .lw-row-x { font-size: 18px; }
 .lw-row.lw-row .lw-row-rpe { font-size: 13px; }
 .lw-row.lw-row.done { color: #2f7a3f; }
-.lw-row.lw-row.done .lw-row-badge { box-shadow: inset 0 0 0 1.5px #82ad8b; outline: 0; }
+.lw-row.lw-row.done .lw-row-badge { box-shadow: none; --ring: #82ad8b; outline: 0; }
 .lw-row.lw-row.done .lw-row-badge svg { stroke: #82ad8b; }
 .lw-row.lw-row.done.warm { color: #a8761f; }
-.lw-row.lw-row.done.warm .lw-row-badge { box-shadow: inset 0 0 0 1.5px #cbad79; }
+.lw-row.lw-row.done.warm .lw-row-badge { box-shadow: none; --ring: #cbad79; }
 .lw-row.lw-row.done.warm .lw-row-badge svg { stroke: #cbad79; }
-.lw-row.lw-row.extra .lw-row-badge { box-shadow: none; outline: 1.5px dashed #C9CFD8; outline-offset: -1.5px; }
-.lw-row.lw-row.done.extra .lw-row-badge { box-shadow: none; outline: 1.5px dashed #82ad8b; outline-offset: -1.5px; }
+.lw-row.lw-row.extra .lw-row-badge { box-shadow: none; --ring: none; outline: 1.5px dashed #C9CFD8; outline-offset: -1.5px; }
+.lw-row.lw-row.done.extra .lw-row-badge { box-shadow: none; --ring: none; outline: 1.5px dashed #82ad8b; outline-offset: -1.5px; }
 /* Your note in the hairline language (17 Oct, Alex), like From your coach above it: no white box, a hairline over it, the same 10px label and 14px text, the pencil in the label grey. Editing keeps it flat: the text sits on a hairline underline, Cancel a text action, Save a small ink pill. Doubled for the dev-server CSS order. */
 .lw .wo-note.wo-note, .lw .wo-note.wo-note.editing { gap: 6px; margin-top: 4px; padding: 12px 4px 0; border: 0; border-top: 1px solid #E1E5EB; border-radius: 0; background: none; box-shadow: none; color: #3a4250; }
 .lw .wo-note.wo-note .wo-note-head { gap: 8px; }
@@ -20257,8 +20261,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-wrap .wo-check-row, .wo-wrap .wo-check-row.done { min-height: 52px; padding: 6px 4px; border-top: 1px solid #E1E5EB; background: none; }
 .wo-wrap .wo-check-row:first-child { border-top: 0; }
 .wo-wrap .wo-check-row:active { background: rgba(20, 26, 36, 0.03); }
-.wo-wrap .wo-check-circle { width: 28px; height: 28px; background: none; box-shadow: inset 0 0 0 1px #C9CFD8; font-size: 12px; font-weight: 500; color: #8b93a1; }
-.wo-wrap .wo-check-circle.done { background: none; box-shadow: inset 0 0 0 1.5px #2f7a3f; color: #2f7a3f; }
+.wo-wrap .wo-check-circle { position: relative; width: 28px; height: 28px; background: none; box-shadow: none; --ring: #C9CFD8; font-size: 12px; font-weight: 500; color: #8b93a1; }
+.wo-wrap .wo-check-circle.done { background: none; box-shadow: none; --ring: #2f7a3f; color: #2f7a3f; }
 .wo-wrap .wo-check-name { font-size: 15px; font-weight: 500; color: #141a24; }
 .wo-wrap .wo-check-status { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
 .wo-wrap .wo-check-status.done { font-weight: 600; color: #2f7a3f; }
@@ -20368,7 +20372,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .sw-card.sw-card .sw-pill { height: 22px; padding: 0 9px; background: none; box-shadow: inset 0 0 0 1px var(--c); color: var(--c); font-size: 11px; font-weight: 600; }
 .sw-card.sw-card .sw-sub { font-size: 13px; font-weight: 500; color: #8b93a1; }
 .sw-card.sw-card .sw-sub b { font-weight: 600; color: #141a24; }
-.sw-card.sw-card .sw-close { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.sw-card.sw-card .sw-close { position: relative; background: #fff; box-shadow: none; --ring: #E1E5EB; color: #141a24; }
 .sw-card.sw-card .sw-targets { padding: 10px 4px; border-radius: 0; background: none; border-top: 1px solid #E1E5EB; border-bottom: 1px solid #E1E5EB; }
 .sw-card.sw-card .sw-targets-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
 .sw-card.sw-card .sw-targets-val { font-weight: 600; }
@@ -20378,7 +20382,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .sw-card.sw-card .sw-thumb.none { background: #F5F6F8; border: 1px dashed #C9CFD8; font-weight: 500; }
 .sw-card.sw-card .sw-name { font-weight: 600; color: #141a24; }
 .sw-card.sw-card .sw-note { font-weight: 500; color: #8b93a1; }
-.sw-card.sw-card .sw-check { border: 1px solid #C9CFD8; }
+.sw-card.sw-card .sw-check { position: relative; border: 0; --ring: #C9CFD8; }
 .sw-card.sw-card .sw-row.on .sw-check { border: 0; background: #141a24; }
 .sw-card.sw-card .sw-check svg { stroke: #fff; stroke-width: 3; }
 .sw-card.sw-card .sw-field { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
@@ -20449,7 +20453,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .fdi-pick-menu .fdi-pick-item.fdi-pick-item.on { background: #F5F6F8; font-weight: 600; color: #141a24; }
 /* A locked week in the hairline language (17 Oct, Alex): no white card riding up over the banner; the words alone on the page, centred under the week strip: the lock in a thin ring, the title at 600 in ink, the line in the secondary grey. Doubled for the dev-server CSS order. */
 .tr .week-locked-card.week-locked-card { flex-direction: column; align-items: center; gap: 12px; margin: 0 16px; padding: 56px 12px 24px; border: 0; border-radius: 0; background: none; box-shadow: none; text-align: center; }
-.tr .week-locked-card.week-locked-card .week-locked-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; box-shadow: inset 0 0 0 1px #C9CFD8; color: #5b6474; }
+.tr .week-locked-card.week-locked-card .week-locked-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; box-shadow: none; --ring: #C9CFD8; color: #5b6474; }
 .tr .week-locked-card.week-locked-card .week-locked-icon svg { width: 18px; height: 18px; stroke-width: 1.6; }
 .tr .week-locked-card.week-locked-card .week-locked-title { font-size: 17px; font-weight: 600; color: #141a24; }
 .tr .week-locked-card.week-locked-card .week-locked-sub { max-width: 300px; margin: 6px auto 0; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #8b93a1; }
@@ -20538,11 +20542,11 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .fdi-targets .nd-ring-arc.nd-ring-arc { transition: none; }
 /* A finished sheet (17 Oct, Alex): a thin green ring with a tick before its name, "All 3 sent" in green; the rest of the row as it was. */
 .pp-app-past-head.done { gap: 14px; }
-.pp-app-past-tick { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #2f7a3f; color: #2f7a3f; }
+.pp-app-past-tick { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; box-shadow: none; --ring: #2f7a3f; color: #2f7a3f; }
 .pp-app-past-done { font-weight: 600; color: #2f7a3f; }
 /* Today with nothing on pulses like a live event, in ink (17 Oct, Alex); the page-grey halo stays so the spine still breaks around it. */
 .evp-r.today .evp-ring.evp-ring { animation: evp-today-pulse 2.4s ease-in-out infinite; }
-@keyframes evp-today-pulse { 0%, 100% { box-shadow: inset 0 0 0 1.5px #141a24, 0 0 0 4px #F5F6F8, 0 0 0 4px rgba(20, 26, 36, 0.25); } 50% { box-shadow: inset 0 0 0 1.5px #141a24, 0 0 0 4px #F5F6F8, 0 0 0 13px rgba(20, 26, 36, 0); } }
+@keyframes evp-today-pulse { 0%, 100% { box-shadow: 0 0 0 4px #F5F6F8, 0 0 0 4px rgba(20, 26, 36, 0.25); } 50% { box-shadow: 0 0 0 4px #F5F6F8, 0 0 0 13px rgba(20, 26, 36, 0); } }
 @media (prefers-reduced-motion: reduce) { .evp-r.today .evp-ring.evp-ring { animation: none; } }
 /* An empty chat (17 Oct, Alex): no paragraph at the top; one small centred line sitting low, just over the message box. */
 .cm-body:has(> .cm-start) { display: flex; flex-direction: column; }
@@ -20556,7 +20560,7 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 /* No phase yet (17 Oct, Alex): the Training and Nutrition banners in black and white, like the empty cards on Home. */
 .tr.tr-naked .tr-banner, .tr-banner.nd-naked-banner { filter: grayscale(1); }
 /* Today's empty ring pulses exactly like Home's and like a live event (17 Oct, Alex: the halo was thicker): the shared evp-pulse in ink, 1px edge and a soft glow out to 9px. */
-.evp-r.today .evp-ring.evp-ring { animation: evp-pulse 2.4s ease-in-out infinite; box-shadow: inset 0 0 0 1px #141a24; }
+.evp-r.today .evp-ring.evp-ring { animation: evp-pulse 2.4s ease-in-out infinite; --ring: #141a24; box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { .evp-r.today .evp-ring.evp-ring { animation: none; } }
 /* Check-in with nothing to log and nothing logged (17 Oct, Alex): the Training banner's size, in black and white, no pills. */
 .tr-banner.ci-banner.ci-naked-banner { filter: grayscale(1); padding-bottom: 26px; }
@@ -20579,8 +20583,8 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 
 /* Repeating events (19 Oct, Alex): the weekdays it comes back on, seven round buttons, the chosen ones in ink; under them the rule in words, and No end to take the last day off. Shared by the coach's dialog and the client's sheet. */
 .evr-days { display: flex; gap: 6px; margin-top: 10px; }
-.evr-days button { flex: 1; min-width: 0; max-width: 40px; aspect-ratio: 1; padding: 0; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; transition: background 0.15s, color 0.15s; }
-.evr-days button.on { background: #141a24; box-shadow: none; color: #fff; }
+.evr-days button { position: relative; flex: 1; min-width: 0; max-width: 40px; aspect-ratio: 1; padding: 0; border: 0; border-radius: 999px; background: #fff; box-shadow: none; --ring: #E1E5EB; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.evr-days button.on { background: #141a24; box-shadow: none; --ring: transparent; color: #fff; }
 .evr-says { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 8px 2px 0; font-size: 12.5px; font-weight: 500; color: #5b6474; }
 .evr-noend { padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 /* Eight event types (19 Oct, Alex): four across, two rows, so the grid stays even; a touch less padding so "Supplement" fits a phone's quarter. */
@@ -20757,16 +20761,16 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 /* Every event wears its ring (27 Oct, Alex): one still to come a thin ring in its category's colour at the row's
    softer strength, never pulsing (only what is on today pulses); one that is over a grey ring, so it reads as done.
    The live and the focused one keep theirs. Events screen (evp-) and Home's timeline (evt-) alike. */
-.evp-r.next .evp-ring:not(.now) { box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.55), 0 0 0 4px #F5F6F8; }
-.evp-r.next.focus .evp-ring:not(.now) { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 4px #F5F6F8; }
-.evp-r.past .evp-ring { box-shadow: inset 0 0 0 1px #C9CFD8, 0 0 0 4px #F5F6F8; }
-.evp-r.past.focus .evp-ring { box-shadow: inset 0 0 0 1px #98A2B3, 0 0 0 4px #F5F6F8; }
-.evt-item.upcoming .evt-ring { box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.55); }
-.evt-item.past .evt-ring { box-shadow: inset 0 0 0 1px #C9CFD8; }
-.hm .evt-item.upcoming .evt-ring { box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.55), 0 0 0 4px #F5F5F5; }
-.hm .evt-item.past .evt-ring { box-shadow: inset 0 0 0 1px #C9CFD8, 0 0 0 4px #F5F5F5; }
-.evt-item.upcoming.on .evt-ring, .hm .evt-item.upcoming.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c); }
-.evt-item.past.on .evt-ring, .hm .evt-item.past.on .evt-ring { box-shadow: inset 0 0 0 1px #98A2B3; }
+.evp-r.next .evp-ring:not(.now) { --ring: rgba(var(--rgb), 0.55); box-shadow: 0 0 0 4px #F5F6F8; }
+.evp-r.next.focus .evp-ring:not(.now) { --ring: var(--c); box-shadow: 0 0 0 4px #F5F6F8; }
+.evp-r.past .evp-ring { --ring: #C9CFD8; box-shadow: 0 0 0 4px #F5F6F8; }
+.evp-r.past.focus .evp-ring { --ring: #98A2B3; box-shadow: 0 0 0 4px #F5F6F8; }
+.evt-item.upcoming .evt-ring { --ring: rgba(var(--rgb), 0.55); box-shadow: none; }
+.evt-item.past .evt-ring { --ring: #C9CFD8; box-shadow: none; }
+.hm .evt-item.upcoming .evt-ring { --ring: rgba(var(--rgb), 0.55); box-shadow: 0 0 0 4px #F5F5F5; }
+.hm .evt-item.past .evt-ring { --ring: #C9CFD8; box-shadow: 0 0 0 4px #F5F5F5; }
+.evt-item.upcoming.on .evt-ring, .hm .evt-item.upcoming.on .evt-ring { --ring: var(--c); box-shadow: none; }
+.evt-item.past.on .evt-ring, .hm .evt-item.past.on .evt-ring { --ring: #98A2B3; box-shadow: none; }
 
 /* ---- The workout's "you are here" (27 Oct, Alex, from the gym): the set being logged has its ink ring pulsing in ink,
    as a live thing does; the exercise on screen fills its segment of the top bar in training purple and pulses, so the
@@ -20776,3 +20780,12 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .lw .lw-open:not(.saved) .lw-open-head .lw-badge.lw-badge.lw-badge { animation: lw-here 2.4s ease-in-out infinite; }
 .wo-segments .wo-seg.now:not(.done) span { background: #3a3390; animation: wo-seg-here 2.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .lw .lw-open:not(.saved) .lw-open-head .lw-badge.lw-badge.lw-badge, .wo-segments .wo-seg.now:not(.done) span { animation: none; } }
+
+/* ---- Rings as vectors (27 Oct, Alex: "fatter on one side", the Training tab's numbered rings and many before):
+   an inset shadow or a border on a circle that lands on a half pixel comes out thicker on one side on iOS. Every
+   ring is an SVG circle now (`RingEdge`, app/components/RingEdge.tsx), its colour the circle's `--ring` (none, no
+   ring), so a state that changed the shadow changes `--ring`; outer halos and pulses stay box-shadows. Strong enough
+   that the icon rules (`.evp-ring svg` fades, greys and grows the icon) never touch the ring. */
+svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge { position: absolute; inset: 0; display: block; width: 100%; height: 100%; margin: 0; overflow: visible; opacity: 1; filter: none; transform: none; pointer-events: none; transition: none; }
+svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; stroke: var(--ring, none); vector-effect: non-scaling-stroke; transition: stroke 0.25s; }
+@media (prefers-reduced-motion: reduce) { svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { transition: none; } }

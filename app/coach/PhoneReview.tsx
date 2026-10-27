@@ -11,6 +11,7 @@ import { dayMonth } from "../lib/dayMonth";
 import { useKeyboardInset } from "../client/useKeyboardInset";
 import { coachReviewAction } from "./actions";
 import { Facts, Icon, Sheet, type IconName } from "./parts";
+import RingEdge from "../components/RingEdge";
 
 // A client's exercise video (or photo) on the coach's phone (21 Oct): the
 // laptop's review, laid out for a phone. It opens on the recorder, as the
@@ -389,7 +390,9 @@ function Reviewer({ review, chat = null, onBack, onSent }: { review: Review; cha
                       setColor(c.id);
                       setPalette(false);
                     }}
-                  />
+                  >
+                    <RingEdge size={30} />
+                  </button>
                 ))}
               </span>
             )}
@@ -492,12 +495,15 @@ function Reviewer({ review, chat = null, onBack, onSent }: { review: Review; cha
           <div className="cph-rec-row">
             <button type="button" className={`cph-round${micOn ? " ink" : ""}`} onClick={() => setMicOn(!micOn)} aria-pressed={micOn} aria-label={micOn ? "Mute the mic" : "Turn the mic on"}>
               <Icon name={micOn ? "mic" : "micoff"} />
+              <RingEdge size={46} />
             </button>
             <button type="button" className="cph-stop" onClick={recorder.stop} aria-label="Stop recording">
               <i />
+              <RingEdge size={68} stroke={3} />
             </button>
             <button type="button" className="cph-round" onClick={rec === "paused" ? recorder.resume : recorder.pause} aria-label={rec === "paused" ? "Go on recording" : "Pause recording"}>
               <Icon name={rec === "paused" ? "play" : "pause"} />
+              <RingEdge size={46} />
             </button>
           </div>
         )}

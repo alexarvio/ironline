@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { requestMeetingAction, withdrawMeetingRequestAction } from "../../lib/actions";
 import type React from "react";
 import { ChevronLeftIcon } from "../../components/icons";
+import RingEdge from "../../components/RingEdge";
 import { meetingTypeOf, type MeetingTypeId } from "../../lib/meetingTypes";
 import { eventTypeOf } from "../../lib/eventTypes";
 import { agoLabel, agreedPoints, icsDataUrl, startingNow, timeRange, untilLabel } from "../../lib/meetingDates";
@@ -312,7 +313,9 @@ function NextPill({ m, now, coachFirst, open = false, lit = false, onToggle }: {
     return (
       <div className="mtp-next empty" aria-label="No upcoming meetings">
         <span className="mtp-next-date" aria-hidden="true">
-          <i className="mtp-next-ring" />
+          <i className="mtp-next-ring">
+            <RingEdge size={28} stroke={1.5} />
+          </i>
         </span>
         <span className="evp-add-text">
           <b>No upcoming meetings</b>
@@ -420,6 +423,7 @@ function AskSheet({ clientId, coachFirst, onClose, onSent }: { clientId: number;
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
               <path d="M6 6l12 12M18 6 6 18" />
             </svg>
+            <RingEdge size={32} />
           </button>
         </div>
         <label className="evs-field">
@@ -521,6 +525,7 @@ function PastRow({ m, label, now, focus, open, lit, refFn, onTap }: { m: ClientM
         <span className="evp-node" aria-hidden="true">
           <span className="evp-ring">
             <LineIcon path={t.icon} size={18} />
+            <RingEdge size={focus ? 46 : 36} />
           </span>
         </span>
         <span className="evp-text">

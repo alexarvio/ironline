@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import RingEdge from "./RingEdge";
 
 // A voice message: tap to start, tap to stop, and the recording is handed
 // over as a file for the chat to send. Records with what the browser has
 // (audio/webm on Chrome and Android, audio/mp4 on iPhone). Shows the
 // seconds while it runs; a second tap ends it, Escape throws it away.
-export default function VoiceRecordButton({ onRecorded, className = "", disabled = false }: { onRecorded: (file: File) => void; className?: string; disabled?: boolean }) {
+// `ring`: the round button's size, when its outline is a vector ring (`RingEdge`); while recording it is a pill.
+export default function VoiceRecordButton({ onRecorded, className = "", disabled = false, ring }: { onRecorded: (file: File) => void; className?: string; disabled?: boolean; ring?: number }) {
   const [state, setState] = useState<"idle" | "recording" | "denied">("idle");
   const [seconds, setSeconds] = useState(0);
   const rec = useRef<MediaRecorder | null>(null);
@@ -78,6 +80,7 @@ export default function VoiceRecordButton({ onRecorded, className = "", disabled
         <rect x="9" y="3" width="6" height="11" rx="3" />
         <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
       </svg>
+      {ring != null && <RingEdge size={ring} />}
     </button>
   );
 }

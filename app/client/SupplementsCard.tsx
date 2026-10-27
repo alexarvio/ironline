@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckIcon, ChevronDownIcon } from "../components/icons";
+import RingEdge from "../components/RingEdge";
 
 // The coach's supplements, folded into the foot of the calories card: one
 // row with a chevron and how many are ticked, opening to the list. Each item
@@ -119,6 +120,7 @@ export default function SupplementsCard({ date, rows }: { date: string; rows: Su
                 {/* The tick circle on the right, after the dose. */}
                 <span className="nd-check" aria-hidden="true">
                   {on && <CheckIcon />}
+                  <RingEdge size={22} />
                 </span>
               </button>
             );

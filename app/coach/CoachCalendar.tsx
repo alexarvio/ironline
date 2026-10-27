@@ -9,6 +9,7 @@ import { coachCalendarAction } from "./actions";
 import type { PhoneCalendar, PhoneEntry } from "./calendar";
 import EntrySheet, { CatIcon, entryIcon, hhmm, lengthLabel, shortDay, toMin, type EntryOpen } from "./EntrySheet";
 import { Avatar, Facts, Icon, Sheet } from "./parts";
+import RingEdge from "../components/RingEdge";
 
 // The Calendar on the coach's phone (22 Oct, Alex): the laptop's Calendar
 // (/admin/redesign/calendar) for a thumb, the same entries and the same
@@ -159,6 +160,7 @@ export default function CoachCalendar({ state, serverToday, me, onOpenChat }: { 
         <span className="cph-head-tools">
           <button type="button" className="cph-round" onClick={addAt} aria-label={`Add to ${spokenDay(chosen)}`}>
             <Icon name="plus" />
+            <RingEdge size={40} />
           </button>
           {me}
         </span>
@@ -185,12 +187,14 @@ export default function CoachCalendar({ state, serverToday, me, onOpenChat }: { 
         <span className="cph-cal-pan">
           <button type="button" className="cph-round small" onClick={() => go(addDays(chosen, -7))} aria-label="Week before">
             <Icon name="back" small />
+            <RingEdge size={36} />
           </button>
           <button type="button" className="cph-cal-today" onClick={() => go(today)}>
             Today
           </button>
           <button type="button" className="cph-round small" onClick={() => go(addDays(chosen, 7))} aria-label="Week after">
             <Icon name="forward" small />
+            <RingEdge size={36} />
           </button>
         </span>
       </div>
@@ -208,7 +212,11 @@ export default function CoachCalendar({ state, serverToday, me, onOpenChat }: { 
               aria-label={`${spokenDay(d)}${marks.length ? `, ${marks.length} ${marks.length === 1 ? "entry" : "entries"}` : ""}`}
             >
               <span className="cph-cal-dow">{DOW[i]}</span>
-              <span className="cph-cal-num">{Number(d.slice(8))}</span>
+              <span className="cph-cal-num">
+                {Number(d.slice(8))}
+                {/* The chosen day's ring; on today's ink disc, a white ring a little in. */}
+                <RingEdge size={38} stroke={1.5} inset={d === today ? 2 : 0} />
+              </span>
               {/* What is on it, a short line each in its category's colour (a clash rust), three at most. */}
               <span className="cph-cal-marks" aria-hidden="true">
                 {marks.slice(0, 3).map((e) => (

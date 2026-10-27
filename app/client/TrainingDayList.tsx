@@ -8,6 +8,7 @@ import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
 import { CompassIcon } from "../components/icons";
+import RingEdge from "../components/RingEdge";
 import { useFocusRef, useNavigateTab, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
 import { clock, durationMinutes, elapsedMs, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type LibraryPick, type SessionCardio, type SessionDay, type SessionExercise } from "./workoutShared";
 
@@ -274,7 +275,10 @@ export default function TrainingDayList({
           return (
             <Fragment key={d.key}>
             <button type="button" className={`tr-row ${tone}${isOpen ? " open" : ""}`} onClick={() => (ended ? setExpanded((k) => (k === d.key ? null : d.key)) : setView({ dayId: d.key, screen: d.free ? "workout" : "overview" }))} aria-expanded={ended ? isOpen : undefined}>
-              <span className={`tr-row-tile ${tone}`}>{d.index}</span>
+              <span className={`tr-row-tile ${tone}`}>
+                {d.index}
+                <RingEdge size={32} stroke={tone === "next" || tone === "live" ? 1.5 : 1} />
+              </span>
               <span className="tr-row-main">
                 <span className="tr-row-title">{d.title}</span>
                 <span className="tr-row-sub">

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { pic } from "../lib/pic";
+import RingEdge from "../components/RingEdge";
 
 // A sheet's progress pictures as a swipe of big cards (17 Oct, Alex), like the
 // phase cards on Home: one card per angle the coach asked for, in order, the
@@ -53,7 +54,10 @@ export default function PhotoDeck({ items, onTap, disabled = false }: { items: D
                   </span>
                 )}
                 <span className="ppd-chip" aria-hidden="true">
-                  <b>{i + 1}</b>
+                  <b>
+                    {i + 1}
+                    <RingEdge size={20} />
+                  </b>
                   {it.label}
                 </span>
                 {(it.state || it.action) && (

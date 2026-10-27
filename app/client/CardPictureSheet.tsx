@@ -7,6 +7,7 @@ import type { PhaseTrack } from "../lib/db";
 import { discardCardPicturesAction, resetCardCoverAction, saveCardPicturesAction, stageCardPictureAction } from "../lib/actions";
 import { coverJpeg } from "../lib/coverJpeg";
 import { pic } from "../lib/pic";
+import RingEdge from "../components/RingEdge";
 
 // The client's own picture on a Home card (12 Oct). Press and hold a card
 // on Home and this sheet comes up: the picture as it is, "Choose from your
@@ -448,6 +449,7 @@ function CardPictureFold({
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                         <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                       </svg>
+                      <RingEdge size={22} />
                     </span>
                   </button>
                 </span>

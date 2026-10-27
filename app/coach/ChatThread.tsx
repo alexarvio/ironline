@@ -5,6 +5,7 @@ import { coachThreadAction } from "./actions";
 import type { DraftMedia, DraftMessage, DraftMessages } from "../admin/redesign/messages/MessagesDraft";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction } from "../lib/actions";
 import VoiceRecordButton from "../components/VoiceRecordButton";
+import RingEdge from "../components/RingEdge";
 import ChatMediaGallery from "../components/ChatMediaGallery";
 import { ChatImage, ChatVideo, sized, withVideoFrame } from "../components/ChatMedia";
 import { dayMonth } from "../lib/dayMonth";
@@ -604,6 +605,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
         <div className="cph-compose-row">
           <button type="button" className="cph-round" onClick={() => fileInput.current?.click()} disabled={sendingFile || !!editing} aria-label="Send a photo, video or file">
             <Icon name="plus" />
+            <RingEdge size={40} />
           </button>
           <input
             ref={fileInput}
@@ -644,7 +646,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
               <Icon name={editing ? "check" : "send"} />
             </button>
           ) : (
-            <VoiceRecordButton className="cph-round cph-mic" onRecorded={(f) => void sendFile(f)} disabled={sendingFile || !!editing} />
+            <VoiceRecordButton className="cph-round cph-mic" onRecorded={(f) => void sendFile(f)} disabled={sendingFile || !!editing} ring={40} />
           )}
         </div>
       </footer>

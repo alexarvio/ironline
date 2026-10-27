@@ -7,6 +7,7 @@ import { useKeyboardInset } from "./useKeyboardInset";
 import { saveSkipReasonAction } from "../lib/actions";
 import { pic } from "../lib/pic";
 import { ChevronLeftIcon } from "../components/icons";
+import RingEdge from "../components/RingEdge";
 import GymPickerDialog from "./GymPickerDialog";
 import { Bars } from "./Bars";
 import { VideoAskSheet } from "./VideoAskSheet";
@@ -348,7 +349,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
     return (
       <div ref={cardRef} className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
         <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-          <span className={`so-num${exDone ? " done" : ""}`}>{index}</span>
+          <span className={`so-num${exDone ? " done" : ""}`}>{index}{exDone && <RingEdge size={26} />}</span>
           <span className="so-card-main">
             <span className="so-card-name">{shownName(exercise)}</span>
           </span>
@@ -391,7 +392,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
   return (
     <div ref={cardRef} className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
       <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className={`so-num${exDone ? " done" : ""}`}>{index}</span>
+        <span className={`so-num${exDone ? " done" : ""}`}>{index}{exDone && <RingEdge size={26} />}</span>
         <span className="so-card-main">
           <span className="so-card-name">{shownName(exercise)}</span>
           {exercise.swap && <span className="so-card-summary">Substituted with {exercise.name}</span>}
@@ -442,7 +443,7 @@ function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: num
   return (
     <div className={`so-card so-card-fold${open ? " open" : ""}${cardio.done ? " done" : ""}`}>
       <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className={`so-num${cardio.done ? " done" : ""}`}>{index}</span>
+        <span className={`so-num${cardio.done ? " done" : ""}`}>{index}{cardio.done && <RingEdge size={26} />}</span>
         <span className="so-card-main">
           <span className="so-card-name">{cardio.swap ?? cardio.name}</span>
           {cardio.swap && <span className="so-card-summary">Substituted with {cardio.swap}</span>}

@@ -12,6 +12,7 @@ import { useCoachIdentity } from "./CheckInContext";
 import ActivityCalendar, { type ActivityDay } from "./ActivityCalendar";
 import { landOnSoon } from "../lib/landOn";
 import { Bars } from "./Bars";
+import RingEdge from "../components/RingEdge";
 
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx for why
 // a "use client" file importing queries.ts breaks the dev server). All data
@@ -251,6 +252,9 @@ export default function CheckInScreen({
                 <h2 className="ci-feed-title">Today</h2>
                 <div className={`ci-day${complete ? " done" : filled.length > 0 ? " done unfinished" : ""}`}>
                   <button type="button" className="ci-day-head" onClick={openToday} aria-label={`${dayLabel(today)}: ${complete ? "everything filled in" : `${remaining} still to fill`}. ${filled.length > 0 ? "Edit" : "Fill in"}`}>
+                    <span className="ci-day-ring" aria-hidden="true">
+                      <RingEdge size={28} stroke={complete || filled.length > 0 ? 1 : 1.5} />
+                    </span>
                     <span className="ci-day-text">
                       <span className="ci-day-date">{dayLabel(today)}</span>
                       <span className="ci-day-sub">{complete ? `${filled.length} of ${todayRows.length} logged` : filled.length > 0 ? `${remaining} still to fill` : `${todayRows.length} to fill in`}</span>
@@ -329,6 +333,9 @@ function CheckInFeed({ days, onEdit, focus = null }: { days: CheckInFeedDay[]; o
               aria-label={fillable ? `${label(d.date)}: nothing logged. Fill in` : undefined}
               onClick={() => (done ? setOpen(isOpen ? null : d.date) : onEdit(d))}
             >
+              <span className="ci-day-ring" aria-hidden="true">
+                <RingEdge size={28} />
+              </span>
               <span className="ci-day-text">
                 <span className="ci-day-date">{label(d.date)}</span>
                 <span className="ci-day-sub">{done ? `${d.items.length} logged` : "Nothing logged"}</span>
