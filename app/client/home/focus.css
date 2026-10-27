@@ -5,20 +5,27 @@
 
 .hm > .hm-body > .hm-focus { position: relative; margin-top: 14px; margin-bottom: 4px; }
 
-.hm-focus-pill { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; margin: 0; padding: 0 16px; border: 0; border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
+/* Its edge a real border, not an inset shadow (27 Oct, Alex: the lower edge went missing while folded; on a phone an
+   inset shadow on a half pixel loses a side, a border is drawn on the screen's own pixels). */
+.hm-focus-pill { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: 100%; min-height: 56px; margin: 0; padding: 0 15px; border: 1px solid #E1E5EB; border-radius: 28px; background: #fff; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
 .hm-focus-mark { flex: none; color: #141a24; }
 .hm-focus-title { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; }
 .hm-focus-face { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; overflow: hidden; background: #EEF0F3; font-size: 10px; font-weight: 600; color: #5b6474; }
 .hm-focus-face img { width: 100%; height: 100%; object-fit: cover; }
 .hm-focus-count { flex: none; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.hm-focus-chev { flex: none; display: flex; color: #98A2B3; transition: transform 0.25s ease; }
+.hm-focus-chev { flex: none; display: flex; color: #98A2B3; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
 .hm-focus-chev svg { width: 16px; height: 16px; }
 .hm-focus-pill[aria-expanded="true"] .hm-focus-chev { transform: rotate(180deg); }
 .hm-focus-pill:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
 
-/* The list eases open and shut (grid rows 0fr → 1fr), flat on the page, no box round it. */
-.hm-focus-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1); }
-.hm-focus-fold.open { grid-template-rows: 1fr; }
+/* The list eases open and shut as Home's Meeting summary does (27 Oct, Alex: "as smooth as the meeting summary"; the
+   one fold, docs/DESIGN-RULES.md §7): grid rows 0fr → 1fr over 340ms on a soft ease-out, the goals fading in over 220ms
+   and settling 4px down, flat on the page, no box round it. */
+.hm-focus-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; }
+.hm-focus-fold.open { grid-template-rows: 1fr; opacity: 1; }
+.hm-focus-goal { transform: translateY(-4px); transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+.hm-focus-fold.open .hm-focus-goal { transform: none; }
+.hm-focus-fold.still .hm-focus-goal { transition: none; }
 /* No padding on what folds (it kept the list from folding to nothing, and it snapped at the end): the room is the
    first and last goals' own. Drawn as it was left, with no easing, until the first tap (.still). */
 .hm-focus-list { position: relative; min-height: 0; overflow: hidden; margin: 0; padding: 0; list-style: none; }
@@ -34,4 +41,4 @@
 .hm-focus-node circle { fill: #F5F5F5; stroke: #141a24; stroke-width: 1.6; }
 .hm-focus-text { flex: 1; min-width: 0; font-size: 16px; font-weight: 500; line-height: 22px; letter-spacing: -0.01em; color: #141a24; overflow-wrap: anywhere; }
 
-@media (prefers-reduced-motion: reduce) { .hm-focus-fold, .hm-focus-chev { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .hm-focus-fold, .hm-focus-chev, .hm-focus-goal { transition: none; } }

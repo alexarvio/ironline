@@ -48,6 +48,8 @@ export default function FocusList({ focus, coach }: { focus: HomeFocus; coach: {
 
   const flip = () => {
     const next = !open;
+    // A tap always eases, even before the frames above have run.
+    setStill(false);
     if (next) setDressed(true);
     else if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setDressed(false);
     setOpen(next);

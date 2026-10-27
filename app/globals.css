@@ -20802,3 +20802,15 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
 .lw-doubt-btns button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .lw-doubt-yes { background: #141a24; color: #fff; }
 .lw-doubt-alt { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+
+/* Every fold on the client's screens opens as Home's Meeting summary does (27 Oct, Alex: "make this a rule for every
+   dropdown to work as smoothly as the meeting summary"; docs/DESIGN-RULES.md §7): its rows over 340ms on the soft
+   ease-out, what fades in over 220ms, the chevron turning on the same curve. Doubled, so it wins over each fold's own
+   line wherever the dev server puts this file's parts. */
+.hm-phases-fold.hm-phases-fold, .ts-fold.ts-fold, .fdi-fold.fdi-fold, .pc-sbody-wrap.pc-sbody-wrap, .ci-day-body.ci-day-body, .hl-fold.hl-fold, .cv-fold-wrap.cv-fold-wrap, .nd-supps-fold.nd-supps-fold { transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+.tr-session-fold.tr-session-fold { transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.34s; }
+.pc-obj-body.pc-obj-body, .po-body.po-body, .mts-body.mts-body, .ev-x.ev-x, .mt-body.mt-body, .pp-app-past-fold.pp-app-past-fold { transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; }
+.cv-fold-chev.cv-fold-chev, .hm-focus-chev.hm-focus-chev { transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .hm-phases-fold.hm-phases-fold, .tr-session-fold.tr-session-fold, .ts-fold.ts-fold, .fdi-fold.fdi-fold, .pc-sbody-wrap.pc-sbody-wrap, .ci-day-body.ci-day-body, .hl-fold.hl-fold, .cv-fold-wrap.cv-fold-wrap, .nd-supps-fold.nd-supps-fold, .pc-obj-body.pc-obj-body, .po-body.po-body, .mts-body.mts-body, .ev-x.ev-x, .mt-body.mt-body, .pp-app-past-fold.pp-app-past-fold { transition: none; }
+}
