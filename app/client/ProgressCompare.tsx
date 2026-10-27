@@ -1,5 +1,6 @@
 "use client";
 
+import { pic } from "../lib/pic";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDownIcon } from "../components/icons";
 import { PhotoViewer } from "./PhotoPeriodHistoryRow";
@@ -132,7 +133,7 @@ export default function ProgressCompare({ sheets }: { sheets: CompareSheet[] }) 
                 {src ? (
                   <button type="button" className="pc-cmp-zoom" onClick={() => setViewing(big.findIndex((b) => b.slotId === i))} aria-label={`${angleLabel}, ${nameOf(s)}: full screen`}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app */}
-                    <img src={src} alt={`${angleLabel}, ${nameOf(s)}`} decoding="async" />
+                    <img src={pic(src, 1080)} alt={`${angleLabel}, ${nameOf(s)}`} decoding="async" />
                   </button>
                 ) : (
                   <span className="pc-cmp-hole">Not taken</span>
@@ -223,7 +224,7 @@ function Reveal({ left, right, leftSrc, rightSrc, angle }: { left: string; right
     >
       {rightSrc ? (
         // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
-        <img className="pc-cmp-layer" src={rightSrc} alt={`${angle}, ${right}`} draggable={false} decoding="async" />
+        <img className="pc-cmp-layer" src={pic(rightSrc, 1080)} alt={`${angle}, ${right}`} draggable={false} decoding="async" />
       ) : (
         <span className="pc-cmp-layer pc-cmp-none">
           <span style={{ left: `${(pos + 100) / 2}%` }}>Not taken</span>
@@ -232,7 +233,7 @@ function Reveal({ left, right, leftSrc, rightSrc, angle }: { left: string; right
       <div className="pc-cmp-layer pc-cmp-over" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
         {leftSrc ? (
           // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
-          <img src={leftSrc} alt={`${angle}, ${left}`} draggable={false} decoding="async" />
+          <img src={pic(leftSrc, 1080)} alt={`${angle}, ${left}`} draggable={false} decoding="async" />
         ) : (
           <span className="pc-cmp-layer pc-cmp-none">
             <span style={{ left: `${pos / 2}%` }}>Not taken</span>

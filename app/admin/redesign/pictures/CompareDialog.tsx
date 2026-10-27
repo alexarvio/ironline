@@ -1,5 +1,6 @@
 "use client";
 
+import { pic } from "../../../lib/pic";
 import { useEffect, useRef, useState } from "react";
 import type React from "react";
 import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
@@ -157,7 +158,7 @@ function Photo({ src, alt, onOpen }: { src: string | null; alt: string; onOpen?:
   return (
     <button type="button" className="cmp-photo" onClick={onOpen} aria-label={`Open ${alt} big`}>
       {/* eslint-disable-next-line @next/next/no-img-element -- client-uploaded file */}
-      <img src={src} alt={alt} />
+      <img src={pic(src, 1080)} alt={alt} decoding="async" />
     </button>
   );
 }
@@ -190,7 +191,7 @@ function Reveal({ left, right, leftSrc, rightSrc, angle }: { left: Sheet | null;
       >
         {rightSrc ? (
           // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-          <img className="cmp-under" src={rightSrc} alt={`${angle}, ${b}`} draggable={false} />
+          <img className="cmp-under" src={pic(rightSrc, 1080)} alt={`${angle}, ${b}`} draggable={false} decoding="async" />
         ) : (
           <span className="cmp-under cmp-empty">
             <CameraIcon />
@@ -199,7 +200,7 @@ function Reveal({ left, right, leftSrc, rightSrc, angle }: { left: Sheet | null;
         <div className="cmp-over" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
           {leftSrc ? (
             // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-            <img src={leftSrc} alt={`${angle}, ${a}`} draggable={false} />
+            <img src={pic(leftSrc, 1080)} alt={`${angle}, ${a}`} draggable={false} decoding="async" />
           ) : (
             <span className="cmp-empty">
               <CameraIcon />

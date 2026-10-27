@@ -386,7 +386,7 @@ import {
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import { COACH_PROFILE_LIMITS } from "./coachProfileView";
-import { deleteUpload, keyOf, posterFromDevice, prepareChatMedia, putUpload, webChatVideo } from "./storage";
+import { deleteUpload, keyOf, posterFromDevice, prepareChatMedia, putUpload, warmSmallCopies, webChatVideo } from "./storage";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
 import { FEATURES } from "./features";
@@ -1526,7 +1526,10 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   if (!file || file.size === 0) return;
   const buffer = Buffer.from(await file.arrayBuffer());
   // Saved to the disk, then copied into the storage bucket when it is on.
-  await putUpload(savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg"), buffer, file.type);
+  const saved = savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg");
+  await putUpload(saved, buffer, file.type);
+  // Its small copies made from these bytes behind the answer (27 Oct), so the coach's first look is quick.
+  if (saved) afterResponse(() => warmSmallCopies(saved, buffer));
   revalidatePath("/admin");
   revalidatePath("/client");
 }

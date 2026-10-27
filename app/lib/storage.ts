@@ -344,6 +344,26 @@ async function makeSmall(key: string, small: string, w: number, original?: Buffe
 }
 
 /**
+ * A picture's small copies made now from the bytes just uploaded (27 Oct, Alex: shape update photos "take a little bit
+ * to load"): the grid's 480 and the deck's, the viewer's and Compare's 1080, so the first look is never the one that
+ * waits for the bucket and the resize. As the chat's are made at the send (prepareChatMedia). Never throws.
+ */
+export async function warmSmallCopies(publicPath: string, original: Buffer, widths: number[] = [480, 1080]): Promise<void> {
+  const at = publicPath.indexOf("?");
+  const key = (at < 0 ? publicPath : publicPath.slice(0, at)).replace(/^\/uploads\//, "");
+  const v = versionOf(publicPath);
+  for (const w of widths) {
+    const small = smallKey(key, w, v);
+    if (!small) continue;
+    try {
+      await once(small, () => makeSmall(key, small, w, original));
+    } catch (error) {
+      console.error(`[uploads] no small copy of ${key} at ${w}:`, error instanceof Error ? error.message : error);
+    }
+  }
+}
+
+/**
  * The small copy as a response, always its bytes through the app (23 Oct: a
  * link into the bucket is signed afresh every few minutes and on every
  * restart, and the browser fetched each face again with every new one). For

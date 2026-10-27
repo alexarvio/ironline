@@ -1,5 +1,6 @@
 "use client";
 
+import { pic } from "../lib/pic";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import PhotoDeck from "./PhotoDeck";
@@ -51,7 +52,8 @@ export default function PhotoPeriodHistoryRow({
       const img = new Image();
       img.decoding = "async";
       img.onload = img.onerror = () => next();
-      img.src = src;
+      // The copy the deck and the viewer show (27 Oct: it fetched the phone's full-size originals, several MB each).
+      img.src = pic(src, 1080);
     };
     const t = setTimeout(next, 600);
     return () => {
@@ -172,7 +174,7 @@ export function PhotoViewer({
       </div>
       <div className="pp-app-viewer-stage">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photo.src} alt={photo.label} className="pp-app-viewer-img" decoding="async" />
+        <img src={pic(photo.src, 1080)} alt={photo.label} className="pp-app-viewer-img" decoding="async" />
       </div>
       {photos.length > 1 && (
         <div className="pp-app-viewer-nav">

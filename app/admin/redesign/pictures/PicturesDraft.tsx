@@ -1024,7 +1024,7 @@ function PhotoDialog({ sheet, sheets, slotId, onMove }: { sheet: Sheet; sheets: 
       </div>
       <div className="rp-big">
         {/* eslint-disable-next-line @next/next/no-img-element -- client-uploaded file */}
-        <img src={cell.src ?? ""} alt={`${cell.label}, ${sheet.title}`} />
+        <img src={pic(cell.src ?? "", 1080)} alt={`${cell.label}, ${sheet.title}`} decoding="async" />
         {cells.length > 1 && (
           <>
             <button type="button" className="rp-arrow left" onClick={() => step(-1)} aria-label="Previous angle">
