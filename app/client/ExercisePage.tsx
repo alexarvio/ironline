@@ -122,11 +122,17 @@ export default function ExercisePage({
     return top > 0 ? top : null;
   })();
   const [doubt, setDoubt] = useState<{ n: number; weight: boolean; reps: boolean } | null>(null);
-  const vouched = useRef<{ kg: number[]; reps: number[] }>({ kg: [], reps: [] });
-  const doubtOf = (v: Vals) => ({
-    weight: v.weightKg != null && refKg != null && refKg > 0 && v.weightKg > refKg * 1.4 && v.weightKg - refKg >= 5 && !vouched.current.kg.includes(v.weightKg),
-    reps: v.reps != null && repTop != null && v.reps > Math.max(repTop * 2, repTop + 8) && !vouched.current.reps.includes(v.reps),
-  });
+  // Asked once an exercise a session (27 Oct, Alex: "we should not have to answer yes every time"): a Yes on the weight
+  // (or the reps) settles it for the rest of the exercise, and a set already logged today raises the bar for the others.
+  const vouched = useRef({ weight: false, reps: false });
+  const doubtOf = (v: Vals, todayKg: number, todayReps: number) => {
+    const kgBar = Math.max(refKg ?? 0, todayKg);
+    const repBar = Math.max(repTop ?? 0, todayReps);
+    return {
+      weight: !vouched.current.weight && v.weightKg != null && kgBar > 0 && v.weightKg > kgBar * 1.4 && v.weightKg - kgBar >= 5,
+      reps: !vouched.current.reps && v.reps != null && repBar > 0 && v.reps > Math.max(repBar * 2, repBar + 8),
+    };
+  };
   // The unit a save goes out in, read when it goes (a switch to lbs from the question lands before its save).
   const unitNow = useRef(unit);
   useEffect(() => {
@@ -224,7 +230,8 @@ export default function ExercisePage({
     ...warm.map((w, i): Row => ({ id: `w${i}`, kind: "warm", n: i + 1, label: `W${i + 1}`, plan: w.plan, entered: w.entered, saved: w.saved, extra: true })),
     ...Array.from({ length: workCount }, (_, i) => i + 1).map((n): Row => {
       const entered = enteredOf(n);
-      return { id: `s${n}`, kind: "work", n, label: String(n), plan: planOf(n), entered, saved: isSaved(entered), extra: n > exercise.sets };
+      // A set held on a question is not done (27 Oct, Alex: it read Saved and the exercise moved on).
+      return { id: `s${n}`, kind: "work", n, label: String(n), plan: planOf(n), entered, saved: isSaved(entered) && doubt?.n !== n, extra: n > exercise.sets };
     }),
   ];
   const workRows = rows.filter((r) => r.kind === "work");
@@ -345,7 +352,8 @@ export default function ExercisePage({
     setDrafts((d) => ({ ...d, [row.n]: { ...(d[row.n] ?? {}), ...patch } }));
     if (isSaved(entered)) {
       // Far off: held, and asked under the set (27 Oct).
-      const d = doubtOf(entered);
+      const others = workRows.filter((r) => r.n !== row.n && r.saved);
+      const d = doubtOf(entered, Math.max(0, ...others.map((r) => r.entered.weightKg ?? 0)), Math.max(0, ...others.map((r) => r.entered.reps ?? 0)));
       if (d.weight || d.reps) {
         const t = saveTimers.current.get(row.n);
         if (t) clearTimeout(t);
@@ -361,8 +369,8 @@ export default function ExercisePage({
   // "Yes": the figures as they are, saved, and not asked again this session.
   const vouch = (row: Row) => {
     const v = enteredOf(row.n, draftsNow.current);
-    if (v.weightKg != null) vouched.current.kg.push(v.weightKg);
-    if (v.reps != null) vouched.current.reps.push(v.reps);
+    if (doubt?.weight) vouched.current.weight = true;
+    if (doubt?.reps) vouched.current.reps = true;
     setDoubt(null);
     scheduleSave(row.n, v);
     scheduleAdvance(row.id);
