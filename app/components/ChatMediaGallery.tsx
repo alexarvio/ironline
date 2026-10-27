@@ -9,8 +9,8 @@ import RingEdge from "./RingEdge";
 // one goes to it in the chat; ↗ opens the file itself. One view for both
 // sides: the coach's chat (Messages and the panel) and the client's.
 // Since 27 Oct (Alex: "finding the form check from week three means scrolling past two months of chat") it finds
-// things too: a search line over it reads every message's words and every file's name and exercise, and the photos
-// and videos sent about an exercise can be picked by it (chips over the grid).
+// things too: a search line over it reads every message's words and every file's name and exercise. The photos and
+// videos are tiles alone (27 Oct, Alex: the ↗ did what a tap does; the chips by exercise taken out for now).
 // Deliberately does NOT import from ../lib/queries (see ChatComposeForm.tsx).
 
 export type GalleryItem = {
@@ -54,16 +54,10 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
   const files = withMedia.filter((i) => i.media!.type === "file" || i.media!.type === "audio");
   const [tab, setTab] = useState<"media" | "files">(visual.length || !files.length ? "media" : "files");
   const [q, setQ] = useState("");
-  const [exercise, setExercise] = useState<string | null>(null);
   const show = (id: number) => {
     onClose();
     onShow(id);
   };
-  // The exercises the photos and videos are about, the most sent first.
-  const counts = new Map<string, number>();
-  for (const i of visual) if (i.about) counts.set(i.about, (counts.get(i.about) ?? 0) + 1);
-  const exercises = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name);
-  const shownVisual = exercise ? visual.filter((i) => i.about === exercise) : visual;
   const term = q.trim();
   const needle = term.toLowerCase();
   const found = term ? items.filter((i) => [i.text, i.about, i.media?.name, i.media ? kindWord(i.media.type) : null].some((w) => w && w.toLowerCase().includes(needle))) : [];
@@ -133,20 +127,8 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
                 <p className="cmg-empty">No photos or videos sent yet.</p>
               ) : (
                 <>
-                  {exercises.length > 0 && (
-                    <div className="cmg-chips" role="group" aria-label="By exercise">
-                      <button type="button" aria-pressed={exercise == null} className={exercise == null ? "on" : ""} onClick={() => setExercise(null)}>
-                        All
-                      </button>
-                      {exercises.map((name) => (
-                        <button key={name} type="button" aria-pressed={exercise === name} className={exercise === name ? "on" : ""} onClick={() => setExercise(exercise === name ? null : name)}>
-                          {name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                   <div className="cmg-grid">
-                    {shownVisual.map((i) => (
+                    {visual.map((i) => (
                       <div key={i.id} className="cmg-tile">
                         <button type="button" className="cmg-thumb" onClick={() => show(i.id)} aria-label={`${i.media!.type === "video" ? "Video" : "Photo"} from ${i.who}, ${i.when}${i.about ? `, ${i.about}` : ""}: show it in the chat`} title={`${i.who} | ${i.when}${i.about ? ` | ${i.about}` : ""}`}>
                           {i.media!.type === "video" ? (
@@ -163,9 +145,6 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
                             <img src={sized(i.media!.path, 480)} alt="" loading="lazy" decoding="async" />
                           )}
                         </button>
-                        <a className="cmg-open" href={i.media!.path} target="_blank" rel="noreferrer" aria-label="Open it full size" title="Open">
-                          ↗
-                        </a>
                       </div>
                     ))}
                   </div>
