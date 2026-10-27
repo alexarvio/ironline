@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { HomeFocus } from "../../lib/focus";
 import { FOCUS_COOKIE, focusStamp } from "../../lib/focusStamp";
 import { ChevronDownIcon } from "../../components/icons";
@@ -32,17 +33,48 @@ export default function FocusList({ focus, coach, initialOpen = true }: { focus:
     document.cookie = `${FOCUS_COOKIE}=${stamp}:${initialOpen ? 1 : 0}; path=/; max-age=31536000; samesite=lax`;
   }, [stamp, initialOpen]);
 
+  // Opening and folding move what is under the list by a transform alone (27 Oct, Alex: "still quite laggy"): the list
+  // takes its room at once and everything below it slides from where it was, on the phone's graphics chip. Easing the
+  // list's height made the phone lay out and repaint the photo cards and their glass every frame.
+  const ref = useRef<HTMLElement>(null);
   const flip = () => {
     const next = !open;
-    if (next) setDressed(true);
-    else if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setDressed(false);
-    setOpen(next);
+    const sec = ref.current;
+    const still = !sec || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const before = sec?.getBoundingClientRect().height ?? 0;
+    flushSync(() => {
+      setOpen(next);
+      setDressed(next);
+    });
     remember(next);
+    if (still || !sec) return;
+    const shift = before - sec.getBoundingClientRect().height;
+    if (!shift) return;
+    const below: HTMLElement[] = [];
+    for (let n = sec.nextElementSibling; n; n = n.nextElementSibling) if (n instanceof HTMLElement) below.push(n);
+    for (const n of below) {
+      n.style.transition = "none";
+      // translate, not transform: a card that has a transform of its own keeps it.
+      n.style.translate = `0 ${shift}px`;
+      n.style.willChange = "translate";
+    }
+    // Read once so the start is drawn, then let go: it eases back to its own place (no frame callback to wait on).
+    void sec.offsetHeight;
+    for (const n of below) {
+      n.style.transition = "translate 0.34s cubic-bezier(0.22, 1, 0.36, 1)";
+      n.style.translate = "";
+    }
+    setTimeout(() => {
+      for (const n of below) {
+        n.style.transition = "";
+        n.style.willChange = "";
+      }
+    }, 400);
   };
 
   if (goals.length === 0) return null;
   return (
-    <section className={`hm-focus${dressed ? " dressed" : ""}`} aria-label="To focus on">
+    <section ref={ref} className={`hm-focus${dressed ? " dressed" : ""}`} aria-label="To focus on">
       <button type="button" className="hm-focus-pill" aria-expanded={open} onClick={flip}>
         <svg className="hm-focus-mark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
@@ -67,9 +99,6 @@ export default function FocusList({ focus, coach, initialOpen = true }: { focus:
         className={`hm-focus-fold${open ? " open" : ""}`}
         aria-hidden={!open}
         inert={!open}
-        onTransitionEnd={(e) => {
-          if (e.target === e.currentTarget && !open) setDressed(false);
-        }}
       >
         <ol className="hm-focus-list">
           {goals.map((g) => (

@@ -21,7 +21,9 @@
 /* The list eases open and shut as Home's Meeting summary does (27 Oct, Alex: "as smooth as the meeting summary"; the
    one fold, docs/DESIGN-RULES.md §7): grid rows 0fr → 1fr over 340ms on a soft ease-out, the goals fading in over 220ms
    and settling 4px down, flat on the page, no box round it. */
-.hm-focus-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; }
+/* Since 27 Oct (Alex: "still quite laggy") the list takes its room at once and what is under it slides by a transform
+   (FocusList.tsx); only its goals fade in and settle, so no frame lays out the page. */
+.hm-focus-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: opacity 0.22s ease; }
 .hm-focus-fold.open { grid-template-rows: 1fr; opacity: 1; }
 .hm-focus-goal { transform: translateY(-4px); transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
 .hm-focus-fold.open .hm-focus-goal { transform: none; }

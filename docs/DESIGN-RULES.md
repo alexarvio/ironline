@@ -54,7 +54,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 ## 7. Motion
 - 200–250ms ease for size and colour. Scroll-driven focus follows the finger live.
 - Snap to one spot; the item in the spot grows (ring ×1.25–1.3, title to 17–18px) and nothing else moves. Rows keep a fixed height so content below never jumps.
-- Every fold opens as Home's Meeting summary (27 Oct, Alex: "every dropdown as smooth as the meeting summary"): its rows 0fr → 1fr over 340ms on `cubic-bezier(.22, 1, .36, 1)`, what is in it fading in over 220ms and settling 4px down where it can, the chevron turning over 280ms on the same curve; drawn as it was left on load, only a tap easing. One block at the end of globals.css holds it for every client fold; a new fold joins it.
+- Every fold opens as Home's Meeting summary (27 Oct, Alex: "every dropdown as smooth as the meeting summary"): its rows 0fr → 1fr over 340ms on `cubic-bezier(.22, 1, .36, 1)`, what is in it fading in over 220ms and settling 4px down where it can, the chevron turning over 280ms on the same curve; drawn as it was left on load, only a tap easing. One block at the end of globals.css holds it for every client fold; a new fold joins it. A fold near the top of a screen with heavy things under it (To focus on, over the photo cards; 27 Oct, Alex: "still quite laggy") takes its room at once and slides what is under it by `translate` on the same curve (FocusList.tsx), so no frame lays out the page under it.
 - Only live things pulse. Respect `prefers-reduced-motion`.
 
 ## 8. Layout
