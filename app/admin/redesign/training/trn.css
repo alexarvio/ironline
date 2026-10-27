@@ -482,3 +482,11 @@ html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { box-shadow: in
 .rd.trn .trn-bars i.skipped { background: #b8471f; }
 /* Never started and its week over (27 Oct, Alex: "the moment the week ends"): rust at less strength. */
 .rd.trn .trn-bars i.none { background: rgba(184, 71, 31, 0.35); }
+/* The weeks' ? (27 Oct, Alex): at the rail's top right, on the fact line's level; its legend draws each bar as the cards do. */
+.rd.trn .trn-rail-wrap { position: relative; }
+.rd.trn .trn-rail-help { position: absolute; right: 0; bottom: calc(100% + 6px); display: inline-flex; }
+.trn-legend-bar { display: block; width: 36px; height: 4px; border-radius: 2px; background: #E1E5EB; }
+.trn-legend-bar.on { background: #2f7a3f; }
+.trn-legend-bar.part { background: rgba(47, 122, 63, 0.38); }
+.trn-legend-bar.skipped { background: #b8471f; }
+.trn-legend-bar.none { background: rgba(184, 71, 31, 0.35); }

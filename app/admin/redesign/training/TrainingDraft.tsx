@@ -960,7 +960,14 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         </div>
       </header>
 
-      {/* ---- The weeks: a card each, one bar a session, NOW on this calendar week. */}
+      {/* ---- The weeks: a card each, one bar a session, NOW on this calendar week. Its ? (27 Oct, Alex) at the top right,
+          on the fact line's level, says what the bars mean. */}
+      <div className="trn-rail-wrap">
+        <span className="trn-rail-help">
+          <HelpTip title="What the bars on a week mean" wide untitled>
+            <WeeksLegend />
+          </HelpTip>
+        </span>
       <WeekRail
         weeks={weeks}
         viewIdx={viewIdx}
@@ -975,6 +982,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         addFrom={addFrom}
         due={(index) => weekDue(dots, program.id, index)}
       />
+      </div>
 
       {/* ---- The week's sessions. */}
       <div className="trn-weekhead">
@@ -3415,6 +3423,28 @@ const extraOf = (r: { sets: number; swap: string | null; logged: { set: number }
 
 /** The legend behind the ? by KG / LBS (25 Oct, Alex): each mark and colour drawn as the session draws it, with a few
     words; in the marks' own order. Classes `.rd-legend` (draft.css). */
+/** The week cards' bars (27 Oct, Alex: "a legend… under a question mark", as the sessions' one): a bar a session. */
+function WeeksLegend() {
+  const row = (state: string, words: React.ReactNode) => (
+    <div className="rd-legend-row">
+      <span className="rd-legend-mark">
+        <i className={`trn-legend-bar ${state}`} />
+      </span>
+      <span>{words}</span>
+    </div>
+  );
+  return (
+    <div className="rd-legend">
+      <div className="rd-legend-head">Sessions</div>
+      {row("on", <><b>Done</b>.</>)}
+      {row("part", <><b>Started</b>, not finished.</>)}
+      {row("skipped", <><b>Skipped</b>: they said they couldn&rsquo;t do it.</>)}
+      {row("none", <><b>Not done</b>: never started, and the week is over.</>)}
+      {row("", <><b>To do</b>: not started yet, the week still on or to come.</>)}
+    </div>
+  );
+}
+
 function TrainingLegend() {
   const row = (mark: React.ReactNode, words: React.ReactNode) => (
     <div className="rd-legend-row">
