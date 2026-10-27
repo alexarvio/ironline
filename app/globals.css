@@ -20789,3 +20789,13 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge { position: absolute; inset: 0; display: block; width: 100%; height: 100%; margin: 0; overflow: visible; opacity: 1; filter: none; transform: none; pointer-events: none; transition: none; }
 svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; stroke: var(--ring, none); vector-effect: non-scaling-stroke; transition: stroke 0.25s; }
 @media (prefers-reduced-motion: reduce) { svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { transition: none; } }
+
+/* ---- A set far off its exercise (27 Oct, Alex: 608 kg typed for 17.5): the question under its numbers, in line with
+   them, the words in rust, "Yes, 608 kg" the small ink pill and "I meant lbs" the white hairline pill. The set saves only
+   once answered (ExercisePage.tsx). */
+.lw-doubt { margin: 12px 0 6px; padding-left: 48px; }
+.lw-doubt p { margin: 0; font-size: 14px; font-weight: 500; line-height: 1.45; color: #b8471f; }
+.lw-doubt-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.lw-doubt-btns button { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.lw-doubt-yes { background: #141a24; color: #fff; }
+.lw-doubt-alt { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }

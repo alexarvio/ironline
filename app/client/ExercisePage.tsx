@@ -107,6 +107,31 @@ export default function ExercisePage({
   const swapNote = exercise.swap?.libraryExerciseId != null ? exercise.alternatives.find((a) => a.id === exercise.swap!.libraryExerciseId)?.note?.trim() || null : null;
   const targetWeight = swapped ? null : gymWeight;
   const targetRpe = swapped ? null : exercise.targetRpe;
+
+  // ---- A figure far off this exercise (27 Oct, Alex: 608 kg typed for 17.5, 42 reps for 12): the set waits under its
+  // numbers, unsaved, until the client says it is right, so nothing (the weight rule, next week) builds on a slip. A
+  // weight over 40% (and 5 kg) above the best last time, else above the target; reps over double the target's top
+  // (else last time's most). Lighter or fewer is never asked. A figure said right is not asked again this session.
+  const lastBestKg = swapped ? 0 : Math.max(0, ...(exercise.lastSets?.sets ?? []).map((st) => st.weight ?? 0));
+  const refKg = swapped ? null : lastBestKg > 0 ? lastBestKg : targetWeight;
+  const refFrom: "last" | "target" = lastBestKg > 0 ? "last" : "target";
+  const repTop = (() => {
+    if (swapped) return null;
+    const asked = (exercise.reps.match(/\d+/g) ?? []).map(Number);
+    const top = asked.length ? Math.max(...asked) : Math.max(0, ...(exercise.lastSets?.sets ?? []).map((st) => st.reps ?? 0));
+    return top > 0 ? top : null;
+  })();
+  const [doubt, setDoubt] = useState<{ n: number; weight: boolean; reps: boolean } | null>(null);
+  const vouched = useRef<{ kg: number[]; reps: number[] }>({ kg: [], reps: [] });
+  const doubtOf = (v: Vals) => ({
+    weight: v.weightKg != null && refKg != null && refKg > 0 && v.weightKg > refKg * 1.4 && v.weightKg - refKg >= 5 && !vouched.current.kg.includes(v.weightKg),
+    reps: v.reps != null && repTop != null && v.reps > Math.max(repTop * 2, repTop + 8) && !vouched.current.reps.includes(v.reps),
+  });
+  // The unit a save goes out in, read when it goes (a switch to lbs from the question lands before its save).
+  const unitNow = useRef(unit);
+  useEffect(() => {
+    unitNow.current = unit;
+  }, [unit]);
   // RPE is off the set rows (14 Oct, Alex, after Strava): weight and reps only, side by side, typed (the − and + went the same day; the arrow keys still step). A figure logged before stays in the data.
   const askRpe = false;
   const last = exercise.lastSets;
@@ -228,7 +253,7 @@ export default function ExercisePage({
     fd.set("weight", v.weightKg == null ? "" : String(v.weightKg));
     fd.set("reps", v.reps == null ? "" : String(v.reps));
     fd.set("rpe", v.rpe == null ? "" : String(v.rpe));
-    fd.set("unit", unit);
+    fd.set("unit", unitNow.current);
     setSaving((s) => [...s, n]);
     logSetAction(fd)
       .then(() => {
@@ -319,9 +344,39 @@ export default function ExercisePage({
     const entered = { ...now, ...patch };
     setDrafts((d) => ({ ...d, [row.n]: { ...(d[row.n] ?? {}), ...patch } }));
     if (isSaved(entered)) {
+      // Far off: held, and asked under the set (27 Oct).
+      const d = doubtOf(entered);
+      if (d.weight || d.reps) {
+        const t = saveTimers.current.get(row.n);
+        if (t) clearTimeout(t);
+        if (advanceTimer.current) clearTimeout(advanceTimer.current);
+        setDoubt({ n: row.n, ...d });
+        return;
+      }
+      if (doubt?.n === row.n) setDoubt(null);
       scheduleSave(row.n, entered);
       scheduleAdvance(row.id);
-    }
+    } else if (doubt?.n === row.n) setDoubt(null);
+  };
+  // "Yes": the figures as they are, saved, and not asked again this session.
+  const vouch = (row: Row) => {
+    const v = enteredOf(row.n, draftsNow.current);
+    if (v.weightKg != null) vouched.current.kg.push(v.weightKg);
+    if (v.reps != null) vouched.current.reps.push(v.reps);
+    setDoubt(null);
+    scheduleSave(row.n, v);
+    scheduleAdvance(row.id);
+    buzz(10);
+  };
+  // "I meant lbs": the figure as typed, read in lbs; the exercise goes to lbs, and the set is checked again.
+  const meantLbs = (row: Row) => {
+    const v = enteredOf(row.n, draftsNow.current);
+    if (v.weightKg == null) return;
+    const typedFigure = kgToDisplay(v.weightKg, "kg");
+    unitNow.current = "lb";
+    setUnit("lb");
+    setDoubt(null);
+    applyRow(row, { weightKg: displayToKg(typedFigure, "lb") });
   };
   const step = (row: Row, field: Field, dir: 1 | -1) => {
     const have = row.entered[field === "weight" ? "weightKg" : field];
@@ -665,6 +720,33 @@ export default function ExercisePage({
                 {(askWeight || row.kind === "warm") && <Stepper row={row} field="weight" label={uLabel.toUpperCase()} shown={shownOf(row, "weight")} onStep={(d) => step(row, "weight", d)} onTyped={(t) => typed(row, "weight", t)} ariaUnit={unit === "kg" ? "kilograms" : "pounds"} inputRef={(el) => (fieldRefs.current[`${row.id}:weight`] = el)} hasNext={nextField(row, "weight") != null} onNext={() => focusNext(row, "weight")} />}
                 <Stepper row={row} field="reps" label="REPS" shown={shownOf(row, "reps")} onStep={(d) => step(row, "reps", d)} onTyped={(t) => typed(row, "reps", t)} ariaUnit="reps" inputRef={(el) => (fieldRefs.current[`${row.id}:reps`] = el)} hasNext={nextField(row, "reps") != null} onNext={() => focusNext(row, "reps")} />
                 </div>
+                {/* Far off what this exercise is (27 Oct, Alex): asked here, the set saved only once answered. */}
+                {doubt?.n === row.n && row.kind === "work" && (() => {
+                  const v = enteredOf(row.n, draftsNow.current);
+                  const w = v.weightKg != null ? `${fmtWeight(kgToDisplay(v.weightKg, unit))} ${uLabel}` : "";
+                  const ref = refKg != null ? `${fmtWeight(kgToDisplay(refKg, unit))} ${uLabel}` : "";
+                  const line = doubt.weight && doubt.reps
+                    ? `${w} and ${v.reps} reps are far over ${refFrom === "last" ? "last time" : "the target"}.`
+                    : doubt.weight
+                      ? `${w} is far over ${refFrom === "last" ? "last time" : "the target"}, ${ref}.`
+                      : `${v.reps} reps is far over the ${repTop} asked.`;
+                  const yes = doubt.weight && doubt.reps ? "Yes, save it" : doubt.weight ? `Yes, ${w}` : `Yes, ${v.reps} reps`;
+                  return (
+                    <div className="lw-doubt" role="alert">
+                      <p>{line}</p>
+                      <div className="lw-doubt-btns">
+                        <button type="button" className="lw-doubt-yes" onClick={() => vouch(row)}>
+                          {yes}
+                        </button>
+                        {doubt.weight && unit === "kg" && (
+                          <button type="button" className="lw-doubt-alt" onClick={() => meantLbs(row)}>
+                            I meant lbs
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
               </Fold>
             );
