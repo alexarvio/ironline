@@ -327,7 +327,7 @@ function needFrom(ctx: Ctx, c: ClientData, a: HomeAction): NeedRow | null {
   const open = needView(c.id, a, ctx.byEventId).open;
   if (a.id === "week") {
     const live = liveWeek(c.id);
-    return { ...base, kind: "week", what: a.title, words: null, since: null, action: "Add sessions", href: live ? tab("training", c.id, `&program=${live.programId}&week=${live.index}`) : tab("training", c.id) };
+    return { ...base, kind: "week", what: a.title, words: null, since: null, action: "Add", href: live ? tab("training", c.id, `&program=${live.programId}&week=${live.index}`) : tab("training", c.id) };
   }
   if (a.id === "locked") {
     // No Done: the lock stands until it ends or is reset (Home stamps it afresh on every read, so a dismissal never holds).
