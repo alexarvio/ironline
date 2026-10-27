@@ -239,7 +239,7 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
             key={w.index}
             role="tab"
             aria-selected={on}
-            aria-label={`Week ${w.index}${now ? ", current week" : ""}, ${done} of ${total} sessions done${owed ? ", needs you" : ""}`}
+            aria-label={`Week ${w.index}${now ? ", current week" : ""}, ${done} of ${total} sessions done${w.missed?.some(Boolean) ? `, ${w.missed.filter(Boolean).length} unfinished` : ""}${w.skipped?.some(Boolean) ? `, ${w.skipped.filter(Boolean).length} skipped` : ""}${owed ? ", needs you" : ""}`}
             href={hrefFor(w.index)}
             scroll={false}
             className={`trn-week${on ? " on" : ""}`}
@@ -266,8 +266,10 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
               )}
             </span>
             <span className="trn-bars" aria-hidden="true">
+              {/* A bar a session (27 Oct, Alex): done green, begun and left unfinished green at less strength, skipped rust, not
+                  started grey. */}
               {w.trained.map((t, i) => (
-                <i key={i} className={t ? "on" : ""} />
+                <i key={i} className={t ? "on" : w.skipped?.[i] ? "skipped" : w.missed?.[i] ? "part" : ""} />
               ))}
             </span>
             <span className="trn-week-foot">

@@ -474,3 +474,9 @@ html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { box-shadow: in
 .apx-added, .apx-removed { font-style: normal; font-size: 12.5px; font-weight: 600; }
 .apx-added { color: #2f7a3f; }
 .apx-removed { font-weight: 500; color: #8b93a1; }
+/* The week rail scrolls with no bar showing (27 Oct, Alex: a week cut off at the edge says it scrolls). */
+.rd.trn .trn-rail.trn-rail, .rd.trn .trn-rail.scroll { scrollbar-width: none; }
+.rd.trn .trn-rail::-webkit-scrollbar { display: none; }
+/* A session's bar (27 Oct, Alex): begun and left unfinished, green at less strength; skipped, rust. */
+.rd.trn .trn-bars i.part { background: rgba(47, 122, 63, 0.38); }
+.rd.trn .trn-bars i.skipped { background: #b8471f; }
