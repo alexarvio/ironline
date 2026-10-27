@@ -1257,6 +1257,27 @@ export function applyDueProgramDeployments() {
  * previous week"): copyProgramWeek, then that week's logged lifts run through the weight rule (progressTargetFromLogs),
  * so each weight goes up to what was lifted or stays. A draft, or one not started, waits. Returns the weeks added.
  */
+/** A phase one week longer: a training one's programme takes that week as a copy of its last, its weights moved on by
+    what was lifted in it (the weight rule), and published when the programme is live. */
+function extendPhaseOneWeek(ph: ClientPhase) {
+  const data = getData();
+  const before = ph.end_week;
+  const program = ph.track === "training" && ph.program_id ? data.training_programs.find((p) => p.id === ph.program_id) : null;
+  if (program) {
+    const last = program.start_week + program.total_weeks - 1;
+    updateProgramTotalWeeks(program.id, program.total_weeks + 1, false);
+    copyProgramWeek(program.client_id, last, last + 1);
+    if (program.status === "deployed") publishWeek(program.client_id, last + 1);
+    const lastDays = new Set(data.program_days.filter((pd) => pd.client_id === program.client_id && pd.week_number === last).map((pd) => pd.id));
+    const logged = new Set(data.set_logs.map((l) => l.workout_assignment_id));
+    for (const wa of data.workout_assignments) if (lastDays.has(wa.program_day_id) && logged.has(wa.id)) progressTargetFromLogs(wa.id);
+    // The programme's phase follows its weeks (syncProgramPhase); one it did not move goes on by hand.
+    if (ph.end_week === before) ph.end_week = addDaysIso(before, 7);
+  } else {
+    ph.end_week = addDaysIso(before, 7);
+  }
+}
+
 export function extendOpenPhases(): number {
   const data = getData();
   const thisMonday = weekStart(localDateStr());
@@ -1264,21 +1285,7 @@ export function extendOpenPhases(): number {
   for (const ph of data.client_phases) {
     if (!ph.open_ended || ph.draft || ph.start_week > thisMonday) continue;
     for (let guard = 0; ph.end_week < thisMonday && guard < 104; guard++) {
-      const before = ph.end_week;
-      const program = ph.track === "training" && ph.program_id ? data.training_programs.find((p) => p.id === ph.program_id) : null;
-      if (program) {
-        const last = program.start_week + program.total_weeks - 1;
-        updateProgramTotalWeeks(program.id, program.total_weeks + 1, false);
-        copyProgramWeek(program.client_id, last, last + 1);
-        if (program.status === "deployed") publishWeek(program.client_id, last + 1);
-        const lastDays = new Set(data.program_days.filter((pd) => pd.client_id === program.client_id && pd.week_number === last).map((pd) => pd.id));
-        const logged = new Set(data.set_logs.map((l) => l.workout_assignment_id));
-        for (const wa of data.workout_assignments) if (lastDays.has(wa.program_day_id) && logged.has(wa.id)) progressTargetFromLogs(wa.id);
-        // The programme's phase follows its weeks (syncProgramPhase); one it did not move goes on by hand.
-        if (ph.end_week === before) ph.end_week = addDaysIso(before, 7);
-      } else {
-        ph.end_week = addDaysIso(before, 7);
-      }
+      extendPhaseOneWeek(ph);
       added++;
     }
   }
@@ -1305,8 +1312,11 @@ export function endOpenPhaseBefore(clientId: number, track: PhaseTrack, newStart
   const monday = weekStart(newStart);
   const open = data.client_phases.find((p) => p.client_id === clientId && p.track === track && p.open_ended && p.id !== exceptId && p.start_week < monday);
   if (!open) return null;
-  delete open.open_ended;
   const lastWeek = addDaysIso(monday, -7);
+  // Its weeks run on up to the new one at once (27 Oct, Alex: "we add 6 weeks automatically with the exercises and
+  // all"): each a copy of the week before, as each Monday would have made it, so the programme is whole to its end.
+  for (let guard = 0; open.end_week < lastWeek && guard < 104; guard++) extendPhaseOneWeek(open);
+  delete open.open_ended;
   if (open.end_week > lastWeek) open.end_week = lastWeek < open.start_week ? open.start_week : lastWeek;
   persist();
   return open;
@@ -8997,6 +9007,9 @@ export function syncProgramPhase(programId: number, dates = true) {
     phase.start_week = start;
     phase.end_week = end;
   }
+  // Scheduled from the Training tab too (27 Oct, Alex): an Indefinite programme running before it ends the week before,
+  // its weeks filled up to then (endOpenPhaseBefore), as a phase added on the Plan does.
+  if (!phase.draft) endOpenPhaseBefore(program.client_id, "training", start, phase.id);
   persist();
 }
 

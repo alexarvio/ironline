@@ -285,19 +285,12 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
       })}
       {/* + Week opens a white menu whose choice is the action (20 Oct, Alex: the pop-up was too black): Blank, or a copy of the week before it, or of the one on screen. */}
       {indefinite ? (
+        // ∞ over Indefinite, in the + Week card's outline (27 Oct, Alex): no date, nothing is planned after it.
         <div className="trn-week add indef" role="presentation">
-          <span className="trn-week-top">
-            <span className="trn-week-name">
-              <svg width="22" height="12" viewBox="0 0 26 14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
-                <path d="M13 7c-2.5-3.5-4.5-5-7-5a5 5 0 0 0 0 10c2.5 0 4.5-1.5 7-5zm0 0c2.5 3.5 4.5 5 7 5a5 5 0 0 0 0-10c-2.5 0-4.5 1.5-7 5z" />
-              </svg>
-              Indefinite
-            </span>
-          </span>
-          <span className="trn-bars" aria-hidden="true" />
-          <span className="trn-week-foot" aria-hidden="true">
-            <span>&nbsp;</span>
-          </span>
+          <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+            <path d="M13 7c-2.5-3.5-4.5-5-7-5a5 5 0 0 0 0 10c2.5 0 4.5-1.5 7-5zm0 0c2.5 3.5 4.5 5 7 5a5 5 0 0 0 0-10c-2.5 0-4.5 1.5-7 5z" />
+          </svg>
+          <span className="trn-week-name">Indefinite</span>
         </div>
       ) : canAdd && (
         <DropdownMenu modal={false}>
