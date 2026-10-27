@@ -224,7 +224,7 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
 
 type Week = DraftProgram["weeks"][number];
 
-export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onAdd, canAdd = true, addFrom, due }: { weeks: Week[]; viewIdx: number; dateOf: (index: number) => string | null; hrefFor: (index: number) => string; isLocal: (index: number) => boolean; onShow: (index: number) => void; /** null: a blank week; else the week it copies. */ onAdd: (from: number | null) => void; /** False on an ended programme (23 Oct): every week is done, so no + Week. */ canAdd?: boolean; /** The weeks offered to copy, first the one before the new week. */ addFrom: { index: number; sessions: number }[]; /** The dot trail (dots.ts): a week with something the coach owes in it. */ due?: (index: number) => boolean }) {
+export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onAdd, canAdd = true, addFrom, due, indefinite = false }: { /** An Indefinite programme (27 Oct, Alex: mockup D): its weeks add themselves, so the + Week card says ∞ Indefinite and does nothing. */ indefinite?: boolean; weeks: Week[]; viewIdx: number; dateOf: (index: number) => string | null; hrefFor: (index: number) => string; isLocal: (index: number) => boolean; onShow: (index: number) => void; /** null: a blank week; else the week it copies. */ onAdd: (from: number | null) => void; /** False on an ended programme (23 Oct): every week is done, so no + Week. */ canAdd?: boolean; /** The weeks offered to copy, first the one before the new week. */ addFrom: { index: number; sessions: number }[]; /** The dot trail (dots.ts): a week with something the coach owes in it. */ due?: (index: number) => boolean }) {
   return (
     // One row: up to 8 weeks share it evenly with + Week; more, and the rail scrolls sideways.
     <div className={`trn-rail${weeks.length > 8 ? " scroll" : ""}`} role="tablist" aria-label="Weeks" style={{ "--trn-cards": weeks.length + (canAdd ? 1 : 0) } as React.CSSProperties}>
@@ -284,7 +284,22 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
         );
       })}
       {/* + Week opens a white menu whose choice is the action (20 Oct, Alex: the pop-up was too black): Blank, or a copy of the week before it, or of the one on screen. */}
-      {canAdd && (
+      {indefinite ? (
+        <div className="trn-week add indef" role="presentation">
+          <span className="trn-week-top">
+            <span className="trn-week-name">
+              <svg width="22" height="12" viewBox="0 0 26 14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+                <path d="M13 7c-2.5-3.5-4.5-5-7-5a5 5 0 0 0 0 10c2.5 0 4.5-1.5 7-5zm0 0c2.5 3.5 4.5 5 7 5a5 5 0 0 0 0-10c-2.5 0-4.5 1.5-7 5z" />
+              </svg>
+              Indefinite
+            </span>
+          </span>
+          <span className="trn-bars" aria-hidden="true" />
+          <span className="trn-week-foot" aria-hidden="true">
+            <span>&nbsp;</span>
+          </span>
+        </div>
+      ) : canAdd && (
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger className="trn-week add">
             <span className="trn-week-top">

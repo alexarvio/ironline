@@ -492,3 +492,8 @@ html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { box-shadow: in
 .trn-legend-bar.none { background: rgba(184, 71, 31, 0.35); }
 /* The week on screen is its ink edge alone, no shadow under it (27 Oct, Alex). */
 html .rd.trn .trn-rail .trn-week.on.on, html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { box-shadow: inset 0 0 0 1.5px var(--trn-ink); }
+/* An Indefinite programme's last card (27 Oct, Alex: mockup D): the + Week card's shape, ∞ and Indefinite in it, no click. */
+.rd.trn .trn-week.add.indef { cursor: default; }
+.rd.trn .trn-week.add.indef .trn-week-name { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--trn-ink); }
+.rd.trn .trn-week.add.indef .trn-week-name svg { flex: none; translate: 0 -0.5px; }
+.rd.trn .trn-week.add.indef:hover { box-shadow: inset 0 0 0 1px var(--trn-btnline); }

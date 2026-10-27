@@ -979,6 +979,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         // No new week once every week is done: an ended programme, or a live one whose weeks have run out (a week added
         // there would come back done, and locked empty).
         canAdd={program.status !== "past" && weeks.some((w) => w.state !== "past")}
+        indefinite={!!program.openEnded && program.status !== "past"}
         addFrom={addFrom}
         due={(index) => weekDue(dots, program.id, index)}
       />
