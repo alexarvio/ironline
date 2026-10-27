@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { useChatStream, useChatTyping, useTypingSignal } from "../../../components/useChatStream";
+import { landed, useChatOutbox, useKeptDraft } from "../../../components/chatOutbox";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
@@ -73,13 +74,16 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     activeRef.current = active;
   }, [active]);
   const messages = plan.messages;
+  const { outbox, send: queue, retry } = useChatOutbox<{ mine: boolean; text: string }>(clientId, "coach", () => refreshThread());
+  const sending = outbox.filter((o) => !landed(o, messages.filter((m) => m.mine)));
   // Typing… and Seen (27 Oct, Alex): the client typing shows over the box; Seen under the coach's last message once
   // the client has had the chat open since.
   const theyType = useChatTyping(active ? clientId : null, "client");
   const typed = useTypingSignal(() => chatTypingAction(clientId));
   const lastOwn = messages.find((m) => m.mine);
   const seenId = lastOwn?.seen ? lastOwn.id : null;
-  const [text, setText] = useState("");
+  // The words in the box kept on this computer (27 Oct, step 2): leaving the chat never loses them.
+  const [text, setText] = useKeptDraft(`coach.${clientId}`);
   const [link, setLink] = useState<DraftLink | null>(null);
   // Opened from a reply: the reply points at what was said, and the box is ready.
   const [seenOpen, setSeenOpen] = useState(0);
@@ -190,28 +194,21 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
       done?.();
     });
 
+  /** The box back to one line once its words have gone. */
+  const shrinkBox = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.overflowY = "hidden";
+  };
   const send = () => {
     if (!ready) return;
-    const fd = new FormData();
-    fd.set("clientId", String(clientId));
-    fd.set("text", text.trim());
-    fd.set("quiet", "1");
-    if (link?.link) fd.set("link", JSON.stringify(link.link));
-    if (replying) fd.set("replyTo", String(replying.id));
-    act(
-      () => sendChatMessageAction(fd),
-      () => {
-        setText("");
-        setLink(null);
-        setReplying(null);
-        if (box.current) {
-          box.current.style.height = "auto";
-          box.current.style.overflowY = "hidden";
-        }
-        box.current?.focus();
-      },
-      "Not sent"
-    );
+    // On screen at once, kept until the server has it, Not sent with a click to try again (27 Oct, step 2).
+    queue(text.trim(), { replyTo: replying?.id ?? null, quote: replying ? { mine: replying.mine, text: replying.text || (replying.media ? "Media" : "") } : null, link: link?.link ? JSON.stringify(link.link) : null, after: Math.max(0, ...messages.map((m) => m.id)) });
+    setText("");
+    setLink(null);
+    setReplying(null);
+    shrinkBox(box.current);
+    box.current?.focus();
   };
   // A photo, video, file or voice message carries the link over the box too,
   // as the words do and as the client's do (21 Oct: it went without it).
@@ -564,10 +561,32 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
             days.map((d) => (
               <div key={d.day} className="rm-day">
                 <span className="rm-day-label">{d.day}</span>
-                {d.items.map((m) => [bubble(m), seenId === m.id ? <span key={`seen-${m.id}`} className="rm-seen">Seen</span> : null])}
+                {d.items.map((m) => [bubble(m), seenId === m.id && sending.length === 0 ? <span key={`seen-${m.id}`} className="rm-seen">Seen</span> : null])}
               </div>
             ))
           )}
+          {sending.map((o) => (
+            <div key={o.key} className={`rm-bubble-row mine rm-out${o.failed ? " failed" : ""}`}>
+              <div className="rm-bubble-wrap">
+                <div className="rm-bubble">
+                  {o.quote && (
+                    <span className={`rm-quote${o.quote.mine ? " mine" : ""}`}>
+                      <b>{o.quote.mine ? "You" : firstName}</b>
+                      <span>{o.quote.text}</span>
+                    </span>
+                  )}
+                  <span className="rm-bubble-body">
+                    <span className="rm-bubble-text">{o.text}</span>
+                  </span>
+                </div>
+              </div>
+              {o.failed && (
+                <button type="button" className="rm-notsent" onClick={() => retry(o.key)}>
+                  Not sent. Click to try again
+                </button>
+              )}
+            </div>
+          ))}
           </div>
         </div>
 

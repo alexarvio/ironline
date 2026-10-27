@@ -322,10 +322,10 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
         <div className={`npd-field${withClient ? "" : " cal-with-off"}`} aria-hidden={withClient ? undefined : true} inert={!withClient}>
           <span className="npd-label">With</span>
           {client && !picking ? (
-            <div className="cal-with" style={client.reason ? ({ "--rc": client.reason.color } as React.CSSProperties) : undefined}>
+            /* The face and the name alone, as the list it was picked from (27 Oct, Alex: the old reason line stayed here). */
+            <div className="cal-with">
               <Face name={client.name} src={client.avatarPath} />
               <span className="cal-with-name">{client.name}</span>
-              <small className={client.reason ? "reason" : ""}>{client.reason ? client.reason.text : "All good"}</small>
               <button type="button" className="npd-act" onClick={() => setPicking(true)}>
                 Change
               </button>

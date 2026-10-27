@@ -75,3 +75,15 @@ export function timedChatRead<T>(screen: string, read: () => T): T {
   });
   return out;
 }
+
+/** A send's one-time key (27 Oct: the outbox, components/chatOutbox.ts): true the first time, false for a retry of a
+ *  send that already arrived, so it is never posted twice. Kept a day. */
+const g2 = globalThis as unknown as { __norcoachSendKeys?: Map<string, number> };
+const sendKeys = (g2.__norcoachSendKeys ??= new Map());
+export function firstSend(key: string): boolean {
+  const now = Date.now();
+  if (sendKeys.size > 5000) for (const [k, at] of sendKeys) if (now - at > 86_400_000) sendKeys.delete(k);
+  if (sendKeys.has(key)) return false;
+  sendKeys.set(key, now);
+  return true;
+}

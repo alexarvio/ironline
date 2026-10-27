@@ -3,6 +3,7 @@
 import type { HomeEventCategory } from "./EventsCard";
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { useChatStream, useChatTyping, useTypingSignal } from "../components/useChatStream";
+import { landed, useChatOutbox } from "../components/chatOutbox";
 import { ChevronDownIcon, ChevronLeftIcon, PinIcon } from "../components/icons";
 import ChatComposeForm from "../components/ChatComposeForm";
 import RingEdge from "../components/RingEdge";
@@ -39,6 +40,8 @@ export type CoachMessageView = {
   edited?: boolean;
   /** The other side has had the chat open since (27 Oct): Seen under the last of yours. */
   seen?: boolean;
+  /** Still sending (27 Oct, step 2): its outbox key, and whether it failed (Not sent, tap to try again). */
+  out?: { key: string; failed: boolean };
   /** The message it answers, quoted (fromMe: the client's own), 2 Oct. */
   replyTo?: { id: number; fromMe: boolean; text: string } | null;
 };
@@ -112,24 +115,17 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
     revRef.current = null;
   }, [fromPage]);
   const threadRef = useRef(thread);
-  /** Each message sending (its id on screen) and the newest message there was when it was sent. */
-  const sentAfter = useRef(new Map<number, number>());
   useEffect(() => {
     threadRef.current = thread;
   }, [thread]);
-  const [sending, setSending] = useState<CoachMessageView[]>([]);
   // The newest message from the other side that has been read here: one that
   // comes in while the chat is open is read too (21 Oct: it stayed unread, so
   // the dot and Home's count came back on the next visit). The client only:
   // a coach previewing never sets their read marks.
   const readUpTo = useRef(Math.max(0, ...fromPage.filter((m) => !m.mine).map((m) => m.id)));
   const took = (t: CoachMessageView[]) => {
-    // What is sending goes once its copy has come in, and only then (27 Oct: a read in real time can land between
-    // a send and its answer, and a message still on its way must not blink out): a message of the same words,
-    // newer than the thread was when it was sent.
     setThread(t);
     threadRef.current = t;
-    setSending((s) => s.filter((x) => !t.some((m) => m.mine === x.mine && m.id > (sentAfter.current.get(x.id) ?? 0) && m.text.trim() === x.text.trim())));
     const newest = Math.max(0, ...t.filter((m) => !m.mine).map((m) => m.id));
     // Read only while it is on screen (27 Oct: Seen must mean seen, not a locked phone polling).
     if (newest > readUpTo.current && document.visibilityState === "visible") {
@@ -155,6 +151,27 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
   const typed = useTypingSignal(() => chatTypingAction(clientId));
   const lastOwn = [...thread].reverse().find((m) => (viewerIsClient ? m.mine : !m.mine));
   const seenId = lastOwn?.seen ? lastOwn.id : null;
+  // What is sending (27 Oct, step 2): on screen at once, kept on the phone until the server has it, Not sent with a
+  // tap to try again; it goes once its own copy is in the thread (chatOutbox.ts).
+  const { outbox, send: queue, retry } = useChatOutbox<{ id: number; fromMe: boolean; text: string }>(clientId, viewerIsClient ? "client" : "coach", refresh);
+  const ownSent = thread.filter((m) => (viewerIsClient ? m.mine : !m.mine));
+  const today = new Date();
+  const sending: CoachMessageView[] = outbox
+    .filter((o) => !landed(o, ownSent))
+    .map((o, i) => ({
+      id: -(i + 1),
+      mine: viewerIsClient,
+      text: o.text,
+      dayLabel: today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+      timeLabel: today.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+      media: null,
+      link: null,
+      reactions: { coach: null, client: null },
+      pinned: false,
+      edited: false,
+      replyTo: o.quote,
+      out: { key: o.key, failed: o.failed },
+    }));
   const messages = sending.length ? [...thread, ...sending] : thread;
   // Media and files sent in the chat, newest first, over it (ChatMediaGallery).
   const [gallery, setGallery] = useState(false);
@@ -302,7 +319,7 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
     const mine = m.reactions?.[mySide] ?? null;
     const theirs = m.reactions?.[theirSide] ?? null;
     return (
-      <article key={m.id} data-mid={m.id} className={`cm-item${m.mine ? " mine" : ""}${flash === m.id ? " flash" : ""}`}>
+      <article key={m.id} data-mid={m.id} className={`cm-item${m.mine ? " mine" : ""}${flash === m.id ? " flash" : ""}${m.out ? (m.out.failed ? " out failed" : " out") : ""}`}>
         <div className="cm-msg-row">
           <div className="cm-msg-wrap">
             <div className={`cm-msg${m.mine ? " mine" : ""}${m.media ? " media" : ""}${m.link ? " linked" : ""}`}>
@@ -384,7 +401,12 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
             )}
           </div>
         </div>
-        {seenId === m.id && <span className="cm-seen">Seen</span>}
+        {seenId === m.id && sending.length === 0 && <span className="cm-seen">Seen</span>}
+        {m.out?.failed && (
+          <button type="button" className="cm-notsent" onClick={() => retry(m.out!.key)}>
+            Not sent. Tap to try again
+          </button>
+        )}
       </article>
     );
   };
@@ -467,30 +489,12 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
           onClearAbout={onClearAbout}
           replyTo={replying ? { id: replying.id, who: own(replying) ? "yourself" : viewerIsClient ? coachName : "them", text: quoteOf(replying), own: replying.mine } : null}
           onClearReply={() => setReplying(null)}
-          onSending={(text) => {
-            const now = new Date();
-            const sid = -Date.now() - sending.length;
-            sentAfter.current.set(sid, Math.max(0, ...threadRef.current.map((m) => m.id)));
-            setSending((s) => [
-              ...s,
-              {
-                id: sid,
-                mine: viewerIsClient,
-                text,
-                dayLabel: now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
-                timeLabel: now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-                media: null,
-                link: null,
-                reactions: { coach: null, client: null },
-                pinned: false,
-                edited: false,
-                replyTo: replying ? { id: replying.id, fromMe: replying.mine, text: quoteOf(replying) } : null,
-              },
-            ]);
-          }}
+          onSendText={(words, opts) =>
+            queue(words, { replyTo: opts.replyTo, link: opts.link, quote: replying ? { id: replying.id, fromMe: replying.mine, text: quoteOf(replying) } : null, after: Math.max(0, ...thread.map((m) => m.id)) })
+          }
+          draftKey={`${viewerIsClient ? "client" : "coach"}.${clientId}`}
           onSent={() => void refresh()}
           onTyping={typed}
-          onFailed={(text) => setSending((s) => s.filter((m) => m.text !== text))}
         />
       </footer>
     </>

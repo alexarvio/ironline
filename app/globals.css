@@ -20856,3 +20856,9 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
 .vr-review .vr-send { background: #141a24; color: #fff; }
 /* The coach's quiet hours in the client's chat (27 Oct, Alex): one quiet fact over the box. */
 .cm-away { margin: 0 0 8px; font-size: 12px; font-weight: 500; color: #8b93a1; text-align: center; }
+
+/* What is sending, every chat alike (27 Oct, step 2): faint until the server has it; one that failed says Not sent
+   under it in rust, a tap trying again (it goes again by itself when the signal or the app comes back). */
+.cm-item.out .cm-msg, .rm-out .rm-bubble { opacity: 0.6; }
+.cm-item.out.failed .cm-msg, .rm-out.failed .rm-bubble { opacity: 1; }
+.cm-notsent, .rm-notsent { display: block; margin: 4px 4px 0 auto; padding: 0; border: 0; background: none; font: inherit; font-size: 11.5px; font-weight: 600; color: #b8471f; cursor: pointer; }

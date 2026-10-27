@@ -1,5 +1,6 @@
 "use client";
 
+import { useKeptDraft } from "./chatOutbox";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendChatMessageAction } from "../lib/actions";
 import { withVideoFrame } from "./ChatMedia";
@@ -27,7 +28,13 @@ export default function ChatComposeForm({
   onClearReply,
   onAddEvent = null,
   onTyping,
+  onSendText,
+  draftKey,
 }: {
+  /** The words go to the screen's outbox (27 Oct, step 2: kept until the server has them) instead of being sent here. */
+  onSendText?: (words: string, opts: { replyTo: number | null; link: string | null }) => void;
+  /** Keeps what is typed on the phone under this key (27 Oct): leaving the chat never loses it. */
+  draftKey?: string;
   /** Called as words are typed (27 Oct, Alex: Typing… on the other side). */
   onTyping?: () => void;
   /** The plus menu's "Add an event" (7 Oct): what it does; "preview" lists it greyed (a coach previewing the
@@ -76,7 +83,8 @@ export default function ChatComposeForm({
     if (f) sendFile(f);
   };
   const [pending, start] = useTransition();
-  const [text, setText] = useState("");
+  const [text, setKept] = useKeptDraft(draftKey ?? "off");
+  const setText = (v: string | ((t: string) => string)) => setKept(v, !!draftKey);
   const boxRef = useRef<HTMLTextAreaElement>(null);
   const fit = (el: HTMLTextAreaElement | null) => {
     if (!el) return;
@@ -150,6 +158,14 @@ export default function ChatComposeForm({
         if (!text.trim() || pending) return;
         const fd = new FormData();
         const words = text.trim();
+        if (onSendText) {
+          onSendText(words, { replyTo: replyTo?.id ?? null, link: about ? JSON.stringify(about.link) : null });
+          setText("");
+          if (boxRef.current) boxRef.current.style.height = "auto";
+          onClearAbout?.();
+          onClearReply?.();
+          return;
+        }
         fd.set("clientId", String(clientId));
         fd.set("text", words);
         if (about) fd.set("link", JSON.stringify(about.link));

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useChatStream, useChatTyping, useTypingSignal } from "../components/useChatStream";
+import { landed, useChatOutbox, useKeptDraft } from "../components/chatOutbox";
 import { coachThreadAction } from "./actions";
 import type { DraftMedia, DraftMessage, DraftMessages } from "../admin/redesign/messages/MessagesDraft";
 import { chatTypingAction, deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction } from "../lib/actions";
@@ -32,7 +33,6 @@ const clock = (s: number) => (Number.isFinite(s) ? `${Math.floor(s / 60)}:${Stri
 const quoteOf = (m: DraftMessage) => m.text.trim() || (m.media?.type === "image" ? "Photo" : m.media?.type === "video" ? "Video" : m.media?.type === "audio" ? "Voice message" : m.media ? m.media.name ?? "File" : "");
 const NOT_SENT = "Not sent. Check the connection and try again.";
 
-type Outgoing = { key: number; text: string; failed: boolean; replyTo: DraftMessage | null };
 
 export default function ChatThread({ clientId, name, avatarPath, onBack, onRead }: { clientId: number; name: string; avatarPath: string | null; onBack: () => void; onRead: () => void }) {
   const [plan, setPlan] = useState<DraftMessages | null>(null);
@@ -154,10 +154,12 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
   };
 
   // ---- Writing.
-  const [text, setText] = useState("");
+  // The words in the box kept on the phone, and what is sending kept until the server has it (27 Oct, step 2).
+  const [text, setText] = useKeptDraft(`coach.${clientId}`);
   const [replying, setReplying] = useState<DraftMessage | null>(null);
   const [editing, setEditing] = useState<DraftMessage | null>(null);
-  const [outbox, setOutbox] = useState<Outgoing[]>([]);
+  const { outbox: queued, send: queue, retry } = useChatOutbox<DraftMessage>(clientId, "coach", refresh);
+  const outbox = queued.filter((o) => !landed(o, messages.filter((m) => m.mine)));
   const [sendingFile, setSendingFile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
@@ -170,25 +172,10 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     el.style.overflowY = el.scrollHeight > 132 ? "auto" : "hidden";
   };
   const resetBox = () => {
-    setText("");
+    setText("", !editing);
     requestAnimationFrame(grow);
   };
 
-  const deliver = async (o: Outgoing) => {
-    const fd = new FormData();
-    fd.set("clientId", String(clientId));
-    fd.set("text", o.text);
-    fd.set("quiet", "1");
-    if (o.replyTo) fd.set("replyTo", String(o.replyTo.id));
-    try {
-      await sendChatMessageAction(fd);
-    } catch {
-      setOutbox((list) => list.map((x) => (x.key === o.key ? { ...x, failed: true } : x)));
-      return;
-    }
-    await refresh();
-    setOutbox((list) => list.filter((x) => x.key !== o.key));
-  };
   const send = async () => {
     const words = text.trim();
     if (!words) return;
@@ -207,13 +194,11 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
       return;
     }
     // On screen at once, faint until the server has it (21 Oct: answer fast).
-    const o: Outgoing = { key: Date.now(), text: words, failed: false, replyTo: replying };
-    setOutbox((list) => [...list, o]);
+    queue(words, { replyTo: replying?.id ?? null, quote: replying, after: Math.max(0, ...messages.map((m) => m.id)) });
     setReplying(null);
     resetBox();
     atEnd.current = true;
     box.current?.focus();
-    await deliver(o);
   };
   const sendFile = async (file: File) => {
     setError(null);
@@ -425,7 +410,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
               onClick={() => {
                 setReplying(null);
                 setEditing(m);
-                setText(m.text);
+                setText(m.text, false);
                 closeMenu();
                 setTimeout(() => {
                   grow();
@@ -572,18 +557,15 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
           )}
           {outbox.map((o) => (
             <div key={o.key} className="cph-msg mine">
-              <button type="button" className={`cph-bubble out${o.failed ? " failed" : ""}`} disabled={!o.failed} onClick={() => {
-                setOutbox((list) => list.map((x) => (x.key === o.key ? { ...x, failed: false } : x)));
-                void deliver({ ...o, failed: false });
-              }}>
-                {o.replyTo && (
-                  <span className={`cph-quote${o.replyTo.mine ? " mine" : ""}`}>
-                    <b>{o.replyTo.mine ? "You" : first}</b>
-                    <span>{quoteOf(o.replyTo)}</span>
+              <button type="button" className={`cph-bubble out${o.failed ? " failed" : ""}`} disabled={!o.failed} onClick={() => retry(o.key)}>
+                {o.quote && (
+                  <span className={`cph-quote${o.quote.mine ? " mine" : ""}`}>
+                    <b>{o.quote.mine ? "You" : first}</b>
+                    <span>{quoteOf(o.quote)}</span>
                   </span>
                 )}
                 <span className="cph-text">{o.text}</span>
-                <span className="cph-meta">{o.failed ? "Not sent · Tap to retry" : "Sending…"}</span>
+                <span className="cph-meta">{o.failed ? "Not sent. Tap to try again" : "Sending…"}</span>
               </button>
             </div>
           ))}
@@ -646,7 +628,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
             placeholder={`Message ${first}…`}
             aria-label={`Message ${first}`}
             onChange={(e) => {
-              setText(e.target.value);
+              setText(e.target.value, !editing);
               grow();
               if (e.target.value.trim() && !editing) typed();
             }}

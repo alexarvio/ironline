@@ -1,6 +1,6 @@
 "use server";
 
-import { chatChanged, chatCurrent, chatRev, chatTyping, timedChatRead } from "./chatBus";
+import { chatChanged, chatCurrent, chatRev, chatTyping, firstSend, timedChatRead } from "./chatBus";
 import { isMeetingTypeId } from "./meetingTypes";
 import { isClientCall, takesClient } from "./calendarKinds";
 import { noteFocus, setFocusOnComplete } from "./focus";
@@ -2364,6 +2364,9 @@ export async function sendChatMessageAction(formData: FormData) {
   const text = String(formData.get("text") || "").trim();
   const file = formData.get("file") as File | null;
   if (!clientId) return;
+  // A retry of a send that already arrived (its answer lost on the way): taken once (27 Oct, the outbox).
+  const nonce = String(formData.get("nonce") || "").slice(0, 80);
+  if (nonce && !firstSend(`${clientId}:${nonce}`)) return;
 
   let media: ChatMedia | undefined;
   if (file && file.size > 0) {
