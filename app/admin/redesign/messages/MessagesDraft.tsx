@@ -116,7 +116,6 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   const fileInput = useRef<HTMLInputElement>(null);
   const ready = text.trim().length > 0 && !pending;
   const t = plan.targets;
-  const nothingToLink = t.training.length === 0 && !t.nutrition && t.foodDays.length === 0 && t.checkins.length === 0 && !t.photos;
 
   // Opening reads what the client wrote (the rail's dot clears); then the
   // thread asks for anything new every so often. Every action refreshes.
@@ -645,10 +644,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
                   </svg>
                   File
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={nothingToLink} onSelect={() => setLinking(true)}>
-                  <LinkGlyph />
-                  {nothingToLink ? `Nothing in ${firstName}'s app to link yet` : `Link to something in ${firstName}'s app`}
-                </DropdownMenuItem>
+                {/* Link to something in their app is off for now (27 Oct, Alex: "could be interesting in the future"); a
+                    message's own Link to… in its menu, and links made before, stay. */}
               </DropdownMenuContent>
             </DropdownMenu>
             <input ref={photoInput} type="file" accept="image/*,video/*" hidden onChange={pickFile} />
