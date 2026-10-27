@@ -140,6 +140,9 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
   const justDragged = useRef(false);
   // The log folds away under the grid; open, it is ten to a page.
   const [logOpen, setLogOpen] = useState(false);
+  // Drawn once opened and kept, so it can ease shut (27 Oct, Alex: "it should drop down and collapse smoothly").
+  const [logMounted, setLogMounted] = useState(false);
+  if (logOpen && !logMounted) setLogMounted(true);
   const [page, setPage] = useState(1);
   const first = weeks[0];
   const totalDays = count * 7;
@@ -295,7 +298,9 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
             <Fold open={logOpen} />
           </button>
         </div>
-        {!logOpen ? null : listed.length === 0 ? (
+        <div className={`rq-evlog-fold${logOpen ? " open" : ""}`} aria-hidden={!logOpen} inert={!logOpen}>
+        <div className="rq-evlog-clip">
+        {!logMounted ? null : listed.length === 0 ? (
           <p className="rq-evlog-empty">None yet</p>
         ) : (
           // With more than a page, the rows keep a full page's height (21 Oct, Alex: the last page made the screen jump;
@@ -347,6 +352,8 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
             })}
           </div>
         )}
+        </div>
+        </div>
       </div>
       </div>
       {/* The log's pager floats under the card, not in it (21 Oct, Alex). */}

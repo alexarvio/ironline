@@ -262,3 +262,9 @@
 .rd.pln .rd-title .pln-allsaved::before { content: "✓ "; }
 .rd.pln .rd-title .pln-allsaved.saving { color: #8b93a1; }
 .rd.pln .rd-title .pln-allsaved.saving::before { content: none; }
+/* The Events log eases open and shut (27 Oct, Alex: "drop down and collapse smoothly"): its rows 0fr → 1fr on the soft
+   ease-out the client app's folds use, fading in. */
+.rq-evlog-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; }
+.rq-evlog-fold.open { grid-template-rows: 1fr; opacity: 1; }
+.rq-evlog-clip { min-height: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .rq-evlog-fold { transition: none; } }
