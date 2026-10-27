@@ -339,3 +339,10 @@
 .rd.rh .rh-titled [data-slot="help-tip"]:hover, .rd.rh .rh-titled [data-slot="help-tip"][data-state="open"] { box-shadow: inset 0 0 0 1px #141a24; color: #141a24; }
 /* Done in part (27 Oct, Alex): a session started and not finished, a check-in not all filled; the colour at less strength. */
 .rd.rh .rh-day.on.part { background: var(--rh-pt, #f5f6f8); box-shadow: inset 0 0 0 1.5px var(--rh-pc, #c9cfd8); }
+/* The face beside both lines (27 Oct, Alex: "align the picture and the name better"): the eyebrow and the name in a
+   column, the face to their left centred on the two together, 56px. */
+.rd.rh .trn-head > .trn-head-main { display: grid; grid-template-columns: 56px auto; grid-template-rows: auto auto; column-gap: 14px; row-gap: 2px; align-items: center; }
+.rd.rh .trn-head-main > .trn-eyebrow { grid-column: 2; grid-row: 1; padding-left: 0; }
+.rd.rh .trn-name-row.rh-name-row { display: contents; }
+.rd.rh .trn-name-row.rh-name-row > .rh-avatar { grid-column: 1; grid-row: 1 / span 2; width: 56px; height: 56px; margin-block: 0; font-size: 20px; }
+.rd.rh .trn-name-row.rh-name-row > .rh-name { grid-column: 2; grid-row: 2; }
