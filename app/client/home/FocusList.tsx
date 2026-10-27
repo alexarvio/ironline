@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { HomeFocus } from "../../lib/focus";
+import { FOCUS_COOKIE, focusStamp } from "../../lib/focusStamp";
 import { ChevronDownIcon } from "../../components/icons";
 import { pic } from "../../lib/pic";
 import "./focus.css";
@@ -12,50 +13,31 @@ import "./focus.css";
 // nothing here once the call went), the coach's face and how many; a tap drops the goals out under it, flat on the page, each a small ink ring
 // on a thin line down the left from the pill's mark. Still bullet points: nothing to tick. No call at the end (27 Oct,
 // Alex: the next meeting is on Home already) and no "until" line. New goals arrive open once; after that the pill
-// stays as the client left it (kept on the phone).
+// stays as the client left it (kept in a cookie, so the page is drawn that way: focusStamp.ts).
 
-const KEY = "norcoach.focus";
-
-export default function FocusList({ focus, coach }: { focus: HomeFocus; coach: { firstName: string; photoPath: string | null }; today?: string }) {
+export default function FocusList({ focus, coach, initialOpen = true }: { focus: HomeFocus; coach: { firstName: string; photoPath: string | null }; today?: string; /** As the client left it, from the cookie the page reads (focusStamp.ts); new goals open. */ initialOpen?: boolean }) {
   const initial = (coach.firstName || "C").trim().charAt(0).toUpperCase();
   const goals = focus.goals;
-  // What the goals are, to tell a new list from the one already seen.
-  const stamp = goals.map((g) => `${g.id}:${g.text}`).join("|");
-  const [open, setOpen] = useState(false);
-  // The open look (the pill as the header, the list flat under it) stays on while the list folds away.
-  const [dressed, setDressed] = useState(false);
-  // Drawn as it was left before anything eases: only a tap animates (27 Oct, Alex: it opened on every load, jumpy).
-  const [still, setStill] = useState(true);
-
-  // After mount (the server render has no storage): a list not seen yet opens; else as it was left.
+  const stamp = focusStamp(goals);
+  // Drawn as it was left from the first frame (27 Oct, Alex: it snapped open after loading): the page reads the
+  // cookie, so nothing moves on load and only a tap eases.
+  const [open, setOpen] = useState(initialOpen);
+  // The open look stays on while the list folds away.
+  const [dressed, setDressed] = useState(initialOpen);
+  const remember = (next: boolean) => {
+    document.cookie = `${FOCUS_COOKIE}=${stamp}:${next ? 1 : 0}; path=/; max-age=31536000; samesite=lax`;
+  };
+  // Seen: these goals stay as they are now on the next visit (new ones arrive open once).
   useEffect(() => {
-    const t = setTimeout(() => {
-      let was: { stamp?: string; open?: boolean } = {};
-      try {
-        was = JSON.parse(window.localStorage.getItem(KEY) ?? "{}");
-      } catch {}
-      const next = was.stamp !== stamp ? true : !!was.open;
-      setOpen(next);
-      setDressed(next);
-      try {
-        window.localStorage.setItem(KEY, JSON.stringify({ stamp, open: next }));
-      } catch {}
-      // Two frames on, once that state is painted, taps ease again.
-      requestAnimationFrame(() => requestAnimationFrame(() => setStill(false)));
-    }, 0);
-    return () => clearTimeout(t);
-  }, [stamp]);
+    document.cookie = `${FOCUS_COOKIE}=${stamp}:${initialOpen ? 1 : 0}; path=/; max-age=31536000; samesite=lax`;
+  }, [stamp, initialOpen]);
 
   const flip = () => {
     const next = !open;
-    // A tap always eases, even before the frames above have run.
-    setStill(false);
     if (next) setDressed(true);
     else if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setDressed(false);
     setOpen(next);
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify({ stamp, open: next }));
-    } catch {}
+    remember(next);
   };
 
   if (goals.length === 0) return null;
@@ -82,7 +64,7 @@ export default function FocusList({ focus, coach }: { focus: HomeFocus; coach: {
         </span>
       </button>
       <div
-        className={`hm-focus-fold${open ? " open" : ""}${still ? " still" : ""}`}
+        className={`hm-focus-fold${open ? " open" : ""}`}
         aria-hidden={!open}
         inert={!open}
         onTransitionEnd={(e) => {

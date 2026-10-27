@@ -20861,3 +20861,15 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
 /* Media and files' Open on a file or voice message (27 Oct, Alex): the word alone, a text action. */
 .cmg-act { flex: none; padding: 8px 2px 8px 10px; font-size: 13px; font-weight: 600; color: #141a24; text-decoration: none; }
 .cmg-act:hover { color: #3a4250; }
+
+/* Every chat on paper, as Home (27 Oct, Alex: "the logo like we have in the home screen, in the background"): the
+   star huge and very faint (4.5%), cropped off the top right, still while the messages scroll over it. Drawn as the
+   page colour at 95.5% over the star, so it needs no copy of the logo. */
+.cm-body.cm-body { background: linear-gradient(rgba(245, 246, 248, 0.955), rgba(245, 246, 248, 0.955)), url("/brand/mark.svg") right -120px top 6px / 448px 430px no-repeat, #F5F6F8; }
+.cph-thread.cph-thread { background: linear-gradient(rgba(245, 246, 248, 0.955), rgba(245, 246, 248, 0.955)), url("/brand/mark.svg") right -120px top 60px / 448px 430px no-repeat, #F5F6F8; }
+.rm-thread.rm-thread { background: linear-gradient(rgba(255, 255, 255, 0.955), rgba(255, 255, 255, 0.955)), url("/brand/mark.svg") right -120px top 6px / 448px 430px no-repeat, #fff; }
+
+/* The laptop chat's row, every part one height (27 Oct, Alex: the box stood taller than the buttons): the box one line
+   at 40px, + / the mic / Send round 40px, on one line along their foot. */
+.rm .rm-bar .rm-box.rm-box { box-sizing: border-box; min-height: 40px; padding: 9px 14px; line-height: 20px; }
+.rm .rm-bar .rm-send.rm-send, .rm .rm-bar .rm-linkbtn.rm-linkbtn:not(.recording) { box-sizing: border-box; width: 40px; height: 40px; min-height: 40px; padding: 0; border-radius: 999px; }

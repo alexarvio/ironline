@@ -1,4 +1,5 @@
 import { isEventTypeId } from "../lib/eventTypes";
+import { FOCUS_COOKIE, focusOpenFrom, focusStamp } from "../lib/focusStamp";
 import { coachQuietHours } from "../lib/coachPush";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "../lib/auth";
@@ -324,7 +325,7 @@ function homeEvents(clientId: number): HomeEvents {
   };
 }
 
-function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday; phoneTz: string | null }) {
+function HomeTab({ CLIENT_ID, photos, food, phoneTz, focusCookie }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday; phoneTz: string | null; /** To focus on as the client left it (focusStamp.ts). */ focusCookie: string | null }) {
   const client = getClient(CLIENT_ID);
   const today = localDateStr();
 
@@ -439,6 +440,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
       checkInForm={{ date: today, sections: sections.sections, weeklyOpen, monthlyOpen }}
       // To focus on (23 Oct, Alex; lib/focus.ts): the coach's goals until the next call, at the top of Home.
       focus={homeFocus(CLIENT_ID, today, phoneTz)}
+      focusOpen={focusOpenFrom(focusCookie, focusStamp(homeFocus(CLIENT_ID, today, phoneTz)?.goals ?? []))}
     />
   );
 }
@@ -1524,7 +1526,7 @@ export default async function ClientPage({
 
   const tabs: AppTab[] = [
     // Draws its own light banner (name and main goal); the top bar floats over it.
-    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} phoneTz={phoneTz} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null, mealsLogged: foodDiary.meals.filter((m) => m.entries.length > 0).length, mealsTotal: foodDiary.meals.length }} /> },
+    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} phoneTz={phoneTz} focusCookie={jar.get(FOCUS_COOKIE)?.value ?? null} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null, mealsLogged: foodDiary.meals.filter((m) => m.entries.length > 0).length, mealsTotal: foodDiary.meals.length }} /> },
     {
       id: "training",
       label: "Training",

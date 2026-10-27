@@ -121,9 +121,12 @@ export default function HomeHub({
   clientId = 0,
   cardCovers = {},
   focus = null,
+  focusOpen = true,
 }: {
   /** To focus on (23 Oct, Alex): the coach's goals until the next call, first under the greeting; null, none. */
   focus?: HomeFocus | null;
+  /** To focus on open or folded, as the client left it (the cookie, focusStamp.ts). */
+  focusOpen?: boolean;
   /** Whose Home this is; the redesign mock-ups pass none. */
   clientId?: number;
   /** The client's own card pictures (12 Oct), a track at a time. */
@@ -189,7 +192,7 @@ export default function HomeHub({
       <div className="hm-body">
         {/* To focus on (23 Oct, Alex): the first thing they see, above Today and the cards, whenever the coach has set goals:
             they stay until changed, or replaced by the next call's (24 Oct, Alex). The call line under them only while one is booked. */}
-        {focus && focus.goals.length > 0 && <FocusList focus={focus} coach={coach} today={today} />}
+        {focus && focus.goals.length > 0 && <FocusList focus={focus} coach={coach} today={today} initialOpen={focusOpen} />}
         {/* The spine (8 Oct): Today, Your plan, then the coach, so Home is never
             empty. The cards below say what is due; Today speaks only when
             nothing is, so the top of the page still says something true. */}
