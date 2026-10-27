@@ -27,10 +27,11 @@ const readingNow = (coachId: number, clientId: number) => Date.now() - (reading.
 
 /** What the coach asked for in Settings, Notifications (27 Oct): the kind on (unless switched off), and not in quiet
  *  hours, read in the coach's own time zone (else the server's). */
-function coachWants(coachId: number, kind: "chat" | "video"): boolean {
+function coachWants(coachId: number, kind: "chat" | "video" | "news"): boolean {
   const settings = getData().users.find((u) => u.id === coachId && u.role === "coach")?.coach_settings;
   const n = settings?.notify;
-  if (n?.[kind] === false) return false;
+  // "news" (an event added, a call asked for) has no switch of its own: only the quiet hours hold it.
+  if (kind !== "news" && n?.[kind] === false) return false;
   if (!n?.quiet) return true;
   const from = n.quietFrom ?? "22:00";
   const to = n.quietTo ?? "07:00";
@@ -65,6 +66,15 @@ export function pushCoachMessage(clientId: number, message: { text: string; medi
   if (!body) return;
   // One notification a chat on the lock screen, the newest words in it.
   sendPushInBackground(coachId, { title: name, body, url: `/coach?c=${clientId}`, tag: `chat:${clientId}` });
+}
+
+/** Something the client did that the coach should know of, not owe (27 Oct, Alex: "adding an event is more like a
+    notification"): an event added, a call asked for. A push to the coach's phone, held in quiet hours; the Activity
+    lists it too. */
+export function pushCoachNews(clientId: number, news: { title: string; body: string; url: string; tag: string }) {
+  const coachId = coachIdOfClient(clientId);
+  if (coachId == null || !coachWants(coachId, "news")) return;
+  sendPushInBackground(coachId, news);
 }
 
 /** A client's photo or video of an exercise came in: "Video of Squat", and a tap opens it to review. */

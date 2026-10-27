@@ -13,7 +13,7 @@ import { listClientGyms } from "./queries";
 import { createCoachAccount, invoiceCheckout, onboardingLink, stripeConfigured } from "./stripe";
 import { canPayOnline } from "./payments";
 import { sendPushInBackground } from "./push";
-import { pushCoachMessage, pushCoachVideo } from "./coachPush";
+import { pushCoachMessage, pushCoachNews, pushCoachVideo } from "./coachPush";
 import { coachIdOfClient as coachUserIdOf } from "./tenancy";
 import { appUrl } from "./passwordReset";
 import { lookupOpenFoodFacts, searchOpenFoodFacts } from "./foods/openfoodfacts";
@@ -2196,7 +2196,8 @@ export async function requestMeetingAction(clientId: number, about: string, when
   requestMeeting(Number(clientId), topic, whenSuits.trim().slice(0, 140) || null);
   const client = getClient(Number(clientId));
   const coachId = coachUserIdOf(Number(clientId));
-  if (coachId) sendPushInBackground(coachId, { title: `${(client?.name ?? "A client").trim().split(/\s+/)[0]} asked for a call`, body: topic, url: `/admin/redesign/meetings?client=${clientId}`, tag: `meeting-request:${clientId}` });
+  // Held in the coach's quiet hours, as every push to them (27 Oct).
+  if (coachId) pushCoachNews(Number(clientId), { title: `${(client?.name ?? "A client").trim().split(/\s+/)[0]} asked for a call`, body: topic, url: `/admin/redesign/meetings?client=${clientId}`, tag: `meeting-request:${clientId}` });
   revalidatePath("/admin");
   revalidatePath("/client");
   return null;
@@ -2508,6 +2509,13 @@ export async function deleteClientEventAction(clientId: number, eventId: number)
 export async function clientAddEventAction(clientId: number, v: EventInput) {
   if (!(await canAccessClient(Number(clientId)))) return null;
   const row = addClientEvent(Number(clientId), v, "client");
+  // The coach hears of it (27 Oct, Alex: "more like a notification", not something owed): a push, and Activity lists
+  // it. Not when a coach previews the app.
+  if (row && (await getSessionUser())?.role === "client") {
+    const first = (getClient(Number(clientId))?.name ?? "A client").trim().split(/\s+/)[0];
+    const when = !v.end || v.start === v.end ? dayMonth(v.start) : `${dayMonth(v.start)} – ${dayMonth(v.end)}`;
+    pushCoachNews(Number(clientId), { title: `${first} added an event`, body: `${v.title} | ${when}`, url: `/admin/redesign/plan?client=${clientId}`, tag: `event:${row.id}` });
+  }
   revalidatePath("/admin");
   revalidatePath("/client");
   return row?.id ?? null;
