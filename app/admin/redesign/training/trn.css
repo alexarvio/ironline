@@ -490,3 +490,5 @@ html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { box-shadow: in
 .trn-legend-bar.part { background: rgba(47, 122, 63, 0.38); }
 .trn-legend-bar.skipped { background: #b8471f; }
 .trn-legend-bar.none { background: rgba(184, 71, 31, 0.35); }
+/* The week on screen is its ink edge alone, no shadow under it (27 Oct, Alex). */
+html .rd.trn .trn-rail .trn-week.on.on, html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { box-shadow: inset 0 0 0 1.5px var(--trn-ink); }
