@@ -99,7 +99,7 @@
 .rd.rfd .rfd-need { grid-template-columns: 200px minmax(0, 1fr) 96px 104px 30px; }
 .rd.rfd .rfd-need > .rfd-wait { text-align: center; }
 .rd.rfd .rfd-act { justify-content: center; }
-.rd.rfd .rfd-actword { display: inline-flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #141a24; text-decoration: none; white-space: nowrap; }
+.rd.rfd .rfd-actword { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #141a24; text-decoration: none; white-space: nowrap; }
 .rd.rfd .rfd-actword svg { width: 14px; height: 14px; translate: 0 -0.5px; }
 .rd.rfd .rfd-actword:hover { background: #f5f6f8; }
 @container rh (max-width: 860px) { .rd.rfd .rfd-need { grid-template-columns: 168px minmax(0, 1fr) 84px 96px 30px; } }
