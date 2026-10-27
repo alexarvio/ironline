@@ -1,5 +1,6 @@
 "use client";
 
+import { usePicsAhead } from "../../../components/picsAhead";
 import { pic } from "../../../lib/pic";
 import { useEffect, useRef, useState } from "react";
 import type React from "react";
@@ -62,6 +63,9 @@ export default function CompareDialog({ clientId, sheets, initial, onOpenPhoto }
       return { ...s, [side]: period };
     });
   const cellOf = (sh: Sheet | null) => (sh && state.slot != null ? (sh.cells.find((c) => c.slotId === state.slot) ?? null) : null);
+  // Every angle of the two weeks fetched ahead (27 Oct, Alex: "loading a bit slowly"), the one on screen first, so
+  // switching the angle or swapping the weeks shows at once.
+  usePicsAhead([cellOf(left)?.src, cellOf(right)?.src, ...(left?.cells ?? []).map((c) => c.src), ...(right?.cells ?? []).map((c) => c.src)], 1080, 0);
   const change = left?.weight != null && right?.weight != null ? Math.round((right.weight - left.weight) * 10) / 10 : null;
 
   return (

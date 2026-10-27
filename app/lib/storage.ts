@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { DeleteObjectCommand, DeleteObjectsCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { DATA_DIR } from "./db";
+import { DATA_DIR, getData } from "./db";
 
 // Uploaded files (progress photos, avatars, chat media, demo videos) in the
 // Railway storage bucket, off the server's disk.
@@ -361,6 +361,39 @@ export async function warmSmallCopies(publicPath: string, original: Buffer, widt
       console.error(`[uploads] no small copy of ${key} at ${w}:`, error instanceof Error ? error.message : error);
     }
   }
+}
+
+/**
+ * Every shape update photo of a client with its small copies, made now where one is missing (27 Oct, Alex: Compare
+ * "loading a bit slowly"): photos from before copies were made at the upload had theirs made on the first look, which
+ * waited. Called as the coach or the client opens Shape update; once per client while the server runs, one photo after
+ * another, behind the page. Never throws.
+ */
+const warmedClients = new Set<number>();
+export function warmClientPhotos(clientId: number): void {
+  if (warmedClients.has(clientId)) return;
+  warmedClients.add(clientId);
+  void (async () => {
+    try {
+      const data = getData();
+      const slots = new Set(data.photo_slots.filter((s) => s.client_id === clientId).map((s) => s.id));
+      const paths = data.photo_uploads.filter((u) => slots.has(u.slot_id) && u.file_path).map((u) => u.file_path);
+      const b = bucket();
+      for (const p of paths) {
+        const key = keyOf(p);
+        if (!key) continue;
+        for (const w of [480, 1080]) {
+          const small = smallKey(key, w, versionOf(p));
+          if (!small || memo.map.has(small)) continue;
+          const there = b ? await exists(b, small) : fs.existsSync(path.join(DATA_DIR, "uploads", small));
+          if (there) continue;
+          await once(small, () => makeSmall(key, small, w)).catch(() => null);
+        }
+      }
+    } catch (error) {
+      console.error(`[uploads] warming client ${clientId}'s photos:`, error instanceof Error ? error.message : error);
+    }
+  })();
 }
 
 /**

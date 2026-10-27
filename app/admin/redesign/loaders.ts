@@ -1,7 +1,7 @@
 import { GYM_COLORS, isGymColor } from "../../lib/gymColors";
 import { chatRev } from "../../lib/chatBus";
 import { redirect } from "next/navigation";
-import { fillChatLooks } from "../../lib/storage";
+import { fillChatLooks, warmClientPhotos } from "../../lib/storage";
 import { getData, type InvoiceTemplate } from "../../lib/db";
 import { meetingRemindersOn } from "../../lib/meetingReminders";
 import type { DotTab, DotTrail } from "./dots";
@@ -830,6 +830,8 @@ const stampDay = (iso: string) => dayMonth(localDateStr(new Date(iso)));
 const stampDayTime = dayMonthTime;
 
 export function loadPictures(clientId: number): DraftPictures {
+  // Their photos' small copies made behind the page where missing (27 Oct, Alex: Compare loading slowly).
+  warmClientPhotos(clientId);
   const cadence = getPhotoCadence(clientId);
   const startDate = getPhotoStartDate(clientId);
   const slots = listPhotoSlots(clientId);

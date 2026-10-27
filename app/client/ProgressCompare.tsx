@@ -1,5 +1,6 @@
 "use client";
 
+import { usePicsAhead } from "../components/picsAhead";
 import { pic } from "../lib/pic";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDownIcon } from "../components/icons";
@@ -68,6 +69,9 @@ export default function ProgressCompare({ sheets }: { sheets: CompareSheet[] }) 
   }, [view]);
   // A photo tapped: full screen, swiping between the two.
   const [viewing, setViewing] = useState<number | null>(null);
+  // Every angle of the two sheets fetched ahead (27 Oct, Alex: "loading a bit slowly"), so switching the angle or a
+  // sheet shows at once; the sheets on screen first.
+  usePicsAhead(withPics.filter((s) => s.period === pair.a || s.period === pair.b).flatMap((s) => s.cells.map((c) => c.src)), 1080, 0);
 
   if (withPics.length < 2) return <p className="pc-cmp-empty">Nothing to compare yet</p>;
 

@@ -19,33 +19,45 @@ export async function GET(request: Request) {
   const hears = user.role === "coach" ? (clientId: number) => coachOwnsClient(user.id, clientId) : (clientId: number) => clientId === user.client_id;
 
   const encoder = new TextEncoder();
-  let stop = () => {};
+  // Closed once (the screen left, the line dropped): nothing is written after, and the listener and the beat go at
+  // once (27 Oct: writing to a line already closed threw outside the request).
+  let closed = false;
+  let off = () => {};
+  let beat: ReturnType<typeof setInterval> | null = null;
+  const end = () => {
+    if (closed) return;
+    closed = true;
+    off();
+    if (beat) clearInterval(beat);
+  };
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       const say = (text: string) => {
+        if (closed) return;
         try {
           controller.enqueue(encoder.encode(text));
         } catch {
-          stop();
+          end();
         }
       };
       // Open: the screen reads its thread once, in case something came in while it was away.
       say(`retry: 3000\nevent: hello\ndata: {}\n\n`);
-      const off = onChatChange((clientId, rev, typing) => {
+      off = onChatChange((clientId, rev, typing) => {
         if (hears(clientId)) say(`data: ${JSON.stringify(typing ? { c: clientId, r: rev, t: typing } : { c: clientId, r: rev })}\n\n`);
       });
-      const beat = setInterval(() => say(`: beat\n\n`), BEAT_MS);
-      stop = () => {
-        off();
-        clearInterval(beat);
-        try {
-          controller.close();
-        } catch {}
-      };
-      request.signal.addEventListener("abort", () => stop());
+      beat = setInterval(() => say(`: beat\n\n`), BEAT_MS);
+      request.signal.addEventListener("abort", () => {
+        const was = closed;
+        end();
+        if (!was) {
+          try {
+            controller.close();
+          } catch {}
+        }
+      });
     },
     cancel() {
-      stop();
+      end();
     },
   });
   return new Response(stream, {

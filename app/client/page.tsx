@@ -1,4 +1,5 @@
 import { isEventTypeId } from "../lib/eventTypes";
+import { warmClientPhotos } from "../lib/storage";
 import { FOCUS_COOKIE, focusOpenFrom, focusStamp } from "../lib/focusStamp";
 import { coachQuietHours } from "../lib/coachPush";
 import { redirect } from "next/navigation";
@@ -1270,6 +1271,8 @@ function sheetTitle(period: string, cadence: ReturnType<typeof getPhotoCadence>)
 }
 
 function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
+  // Their photos' small copies made behind the page where missing (27 Oct, Alex: Compare loading slowly).
+  warmClientPhotos(CLIENT_ID);
   const cadence = getPhotoCadence(CLIENT_ID);
   const today = localDateStr();
   const slots = listPhotoSlots(CLIENT_ID);
