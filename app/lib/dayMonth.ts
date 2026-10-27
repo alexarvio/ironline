@@ -38,3 +38,23 @@ export function logDateWidth(dates: (string | Date)[]): number {
   const year = new Date().getFullYear();
   return dates.some((d) => (typeof d === "string" ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T00:00:00` : d) : d).getFullYear() !== year) ? 116 : 84;
 }
+
+/**
+ * A span of days in a log (27 Oct, Alex: no arrow between two dates): one short span, `4–28 Nov`, `28 Oct – 4 Nov`,
+ * the year only when it isn't this one (`28 Dec 2026 – 4 Jan 2027`). Shown with `spanLength` after it in grey.
+ */
+export function logRange(start: string, end: string): string {
+  const a = new Date(`${start}T00:00:00`);
+  const b = new Date(`${end}T00:00:00`);
+  const thisYear = new Date().getFullYear();
+  const year = (x: Date) => (x.getFullYear() !== thisYear ? ` ${x.getFullYear()}` : "");
+  if (a.getFullYear() !== b.getFullYear()) return `${a.getDate()} ${MONTHS[a.getMonth()]}${year(a) || ` ${a.getFullYear()}`} – ${b.getDate()} ${MONTHS[b.getMonth()]}${year(b) || ` ${b.getFullYear()}`}`;
+  if (a.getMonth() !== b.getMonth()) return `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]}${year(b)}`;
+  return `${a.getDate()}–${b.getDate()} ${MONTHS[b.getMonth()]}${year(b)}`;
+}
+
+/** How many days a span covers, both ends in: `25 days`, `1 day`. */
+export function spanLength(start: string, end: string): string {
+  const days = Math.round((new Date(`${end}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / 86400000) + 1;
+  return `${days} ${days === 1 ? "day" : "days"}`;
+}

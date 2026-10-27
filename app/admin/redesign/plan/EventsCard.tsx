@@ -13,7 +13,7 @@ import { MonthRange } from "../MonthRange";
 import { AddCells, chromeOf, EmptyLane, eventIsPast, eventLanes, EventMark, eventPlace, eventState, gridFor, LANE, LaneRow, rgbOf, standingParts, Timeline, type Category, type PlanEvent } from "./timelineParts";
 import { STATE_LABEL, stateTagStyle } from "../../phaseChrome";
 import DateText from "../DateText";
-import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
+import { dayMonth, logDate, logDateWidth, logRange, spanLength } from "../../../lib/dayMonth";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
 import { SepJoin } from "../Sep";
 import { Fold } from "../Fold";
@@ -316,16 +316,21 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
                 <div key={e.id} className="rd-row">
                   <button type="button" className="rd-row-main rq-evrow" onClick={() => setDlg({ event: e })}>
                     <span className="rq-evrow-when">
-                      {/* The date first, as every log (21 Oct, Alex: logDate); two get room between them (20 Oct): a faint arrow with air either side. */}
+                      {/* The date first, as every log (21 Oct, Alex: logDate); a span is one short span with its length after it in
+                          grey (27 Oct, Alex: no arrow between two dates; logRange). */}
                       <b>
-                        <span className="rd-logdate">{logDate(e.start)}</span>
-                        {(e.repeat || e.start !== e.end) && (
+                        {e.repeat && !e.repeat.until ? (
                           <>
-                            <i aria-hidden="true">
-                              <RangeArrow />
-                            </i>
-                            <span className="rd-logdate">{e.repeat && !e.repeat.until ? "no end" : logDate(e.end)}</span>
+                            <span className="rd-logdate">From {logDate(e.start)}</span>
+                            <span className="rq-evrow-len">no end</span>
                           </>
+                        ) : e.start !== e.end || e.repeat ? (
+                          <>
+                            <span className="rd-logdate">{logRange(e.start, e.repeat?.until ?? e.end)}</span>
+                            <span className="rq-evrow-len">{spanLength(e.start, e.repeat?.until ?? e.end)}</span>
+                          </>
+                        ) : (
+                          <span className="rd-logdate">{logDate(e.start)}</span>
                         )}
                       </b>
                     </span>
