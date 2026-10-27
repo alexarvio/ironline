@@ -199,7 +199,11 @@ function compare(clientId: number, gone: Set<number>) {
       const name = p.src.exercise_name ?? "Exercise";
       if (!p.dest) items.push({ name, change: "added", figs: [] });
       else {
-        const figs = rowFigs(p.dest, landed(p.src, dest));
+        // A weight differs only where the coach's own numbers do (27 Oct, Alex: the client lifting heavier this week made
+        // the copy land higher than the later weeks, which the coach typed after, and the confirm read that as a change of
+        // theirs). The client's lifts moving a weight is the progression's doing, never a difference to apply.
+        const coachKg = rowFigs(p.dest, p.src).filter((x) => x.kg);
+        const figs = rowFigs(p.dest, landed(p.src, dest)).filter((x) => !x.kg || coachKg.some((k) => k.gym === x.gym));
         // An ask is the row's (videoRequestsFor), so it goes with the row the copy replaces, unless a recurring one makes it again.
         const ask = askOf.get(p.dest.id);
         if (ask) push(figs, "Video", ask.file_path ? "Sent" : "Asked", askRemade(p.src, dest, src.label) ? "Asked" : null);
