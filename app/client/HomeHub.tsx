@@ -554,21 +554,25 @@ function NoMeetingsCard({ coachFirstName }: { coachFirstName: string }) {
 
 function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<MeetingRecap>; coachFirstName: string }) {
   const openMeetings = useOpenMeetings();
-  // A heading above, like "Latest from": the card holds the date and the notes.
+  // Nothing booked (27 Oct, Alex: "always like when there is a next meeting booked… cleaner"): the same section as
+  // with a call booked, Meetings and All meetings over it, the last call's label and its summary, only the next
+  // call's row left out.
   return (
-    <section className="hm-last-meeting" aria-label={`Notes from your last meeting with ${coachFirstName}`}>
+    <section className="hm-meeting" aria-label={`Notes from your last meeting with ${coachFirstName}`}>
       <div className="hm-tasks-head">
-        <span className="hm-eyebrow">Last meeting with {coachFirstName}</span>
+        <span className="hm-eyebrow">Meetings</span>
         {openMeetings && (
           <button type="button" className="hm-mt-all-link" onClick={() => openMeetings?.()}>
             All meetings
           </button>
         )}
       </div>
-      <div className="hm-mt hm-mt-last">
+      <div className="hm-mt">
         <span className="hm-mt-glow" aria-hidden="true" />
-        {/* The date sits on the title's line, by the chevron, not on a line of its own (6 Oct). */}
-        <RecapFold recap={recap} date={recap.dateLabel} />
+        <div className="hm-mt-recap">
+          <span className="hm-mt-recap-label"><Bars parts={["Last meeting", recap.dateLabel]} /></span>
+          <RecapFold recap={recap} />
+        </div>
       </div>
     </section>
   );
