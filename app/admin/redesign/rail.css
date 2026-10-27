@@ -151,3 +151,8 @@
 .rtour-actions { display: flex; align-items: center; justify-content: space-between; }
 .rtour-go { display: flex; gap: 6px; }
 @media (prefers-reduced-motion: reduce) { .rtour-lit, .rtour-card { transition: none; } }
+/* Every admin screen on paper, as Home and the chats (27 Oct, Alex: "the logo in the background on every screen"): the
+   star huge and very faint (4.5%), cropped off the top right of the window and still while the page scrolls, behind
+   everything on it. Cropped by its box, so it never widens the page. */
+.rd-frame > .rd-page { position: relative; isolation: isolate; }
+.rd-frame > .rd-page::before { content: ""; position: fixed; top: 6px; right: 0; z-index: -1; width: 328px; height: 430px; background: url("/brand/mark.svg") no-repeat left top / 448px 430px; opacity: 0.045; pointer-events: none; }
