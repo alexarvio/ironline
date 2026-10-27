@@ -16,6 +16,7 @@ import {
   getWeightSeriesAll,
   bodyWeightOn,
   bodyWeightReadings,
+  dailyAskedOn,
   invoiceRepeatViews,
   listMeetings,
   localDateStr,
@@ -766,9 +767,23 @@ function weightOf(ctx: Ctx): HomeBoard["weight"] {
     (ended there, done in full, or kept from before a coach's edit). Checked in: anything but what the workout answers. */
 function daysOf(ctx: Ctx, dates: string[] = lastDays(ctx.today)): HomeBoard["days"] {
   const setDays = new Set(ctx.sets.filter((s) => s.counts).map((s) => s.day));
+  const asked = dailyAskedOn(ctx.clientId);
   return dates.map((date) => {
     const d = ctx.calendar.get(date);
-    return { date, trained: !!d?.sessions.length || setDays.has(date), food: !!d?.food, checkIn: !!d?.checkIns.some((n) => !ctx.fedNames.has(n)) };
+    const trained = !!d?.sessions.length || setDays.has(date);
+    const checked = (d?.checkIns ?? []).filter((n) => !ctx.fedNames.has(n));
+    // Done in part (27 Oct, Alex): trained with no session finished in full; checked in with a daily metric asked that
+    // day left empty while others were filled (a weekly or monthly send alone, or a day with no daily ask, is whole).
+    const askedToday = asked(date).filter((n) => !ctx.fedNames.has(n));
+    const short = askedToday.some((n) => checked.includes(n)) && askedToday.some((n) => !checked.includes(n));
+    return {
+      date,
+      trained,
+      trainedPart: trained && !d?.sessions.some((s) => s.finished),
+      food: !!d?.food,
+      checkIn: checked.length > 0,
+      checkInPart: short,
+    };
   });
 }
 

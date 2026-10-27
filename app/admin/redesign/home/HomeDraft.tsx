@@ -1088,9 +1088,11 @@ function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]
 // lengths differ), a square a day per behaviour. A day done wears its track as a phase does (21 Oct, Alex): the colour
 // soft inside, its full strength on the edge; a day not done is grey. The rows in the tracks' order (21 Oct, Alex):
 // Check-in, Trained, Food, each named by its track's icon alone.
-const CONS: { key: "trained" | "food" | "checkIn"; label: string; track: PhaseTrack; yes: string; no: string }[] = [
-  { key: "checkIn", label: "Check-in", track: "lifestyle", yes: "checked in", no: "no check-in" },
-  { key: "trained", label: "Trained", track: "training", yes: "trained", no: "no session" },
+// Done in part (27 Oct, Alex): a session started and not finished, a check-in not all filled, the square in its colour
+// at less strength (a fainter fill and edge).
+const CONS: { key: "trained" | "food" | "checkIn"; part?: "trainedPart" | "checkInPart"; label: string; track: PhaseTrack; yes: string; some?: string; no: string }[] = [
+  { key: "checkIn", part: "checkInPart", label: "Check-in", track: "lifestyle", yes: "checked in", some: "checked in, not all filled", no: "no check-in" },
+  { key: "trained", part: "trainedPart", label: "Trained", track: "training", yes: "trained", some: "a session not finished", no: "no session" },
   { key: "food", label: "Food", track: "nutrition", yes: "food logged", no: "no food logged" },
 ];
 function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
@@ -1108,14 +1110,15 @@ function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
             const past = days.filter((d) => !d.future);
             const said = `${c.label}: ${past.filter((d) => d[c.key]).length} of ${past.length} days`;
             return (
-              <div key={c.key} className="rh-cons-row" style={{ "--rh-c": color, "--rh-t": tintOf(color, 0.18) } as CSSProperties}>
+              <div key={c.key} className="rh-cons-row" style={{ "--rh-c": color, "--rh-t": tintOf(color, 0.18), "--rh-pc": tintOf(color, 0.45), "--rh-pt": tintOf(color, 0.07) } as CSSProperties}>
                 <span className="rh-cons-label" title={c.label} aria-hidden="true">
                   <TrackIcon track={c.track} size={16} />
                 </span>
                 <span className="rh-cons-days" role="img" aria-label={said}>
-                  {days.map((d) => (
-                    <span key={d.date} className={`rh-day${d[c.key] ? " on" : ""}${d.future ? " ahead" : ""}`} title={d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? c.yes : c.no}`} />
-                  ))}
+                  {days.map((d) => {
+                    const part = !!(c.part && d[c.part]);
+                    return <span key={d.date} className={`rh-day${d[c.key] ? (part ? " on part" : " on") : ""}${d.future ? " ahead" : ""}`} title={d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? (part ? c.some : c.yes) : c.no}`} />;
+                  })}
                 </span>
               </div>
             );

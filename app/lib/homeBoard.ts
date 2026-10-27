@@ -17,7 +17,7 @@ export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 export type PerGroup = Record<MuscleGroup, number>;
 
 /** One day of the consistency strip. */
-export type ConsistencyDay = { date: string; trained: boolean; food: boolean; checkIn: boolean; /** A day still to come: a young phase shows 30 days all the same, filling in as they pass (21 Oct, Alex). */ future?: boolean };
+export type ConsistencyDay = { date: string; trained: boolean; food: boolean; checkIn: boolean; /** Done in part (27 Oct, Alex): a session started and not finished, a day's check-in not all filled. */ trainedPart?: boolean; checkInPart?: boolean; /** A day still to come: a young phase shows 30 days all the same, filling in as they pass (21 Oct, Alex). */ future?: boolean };
 
 /** A week of the consistency strip, for a long phase (over 8 weeks, 21 Oct, Alex): of its days in the phase so far
     (`days`; the current week up to today), how many had each. A week still to come is `future`, its counts 0. */

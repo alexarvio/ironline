@@ -13816,6 +13816,34 @@ export function getActivityCalendar(clientId: number): ActivityDay[] {
   return [...days.values()].filter((d) => d.sessions.length || d.food || d.checkIns.length).sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
+/**
+ * The daily metrics a client was asked on a day (27 Oct, Alex: Home's Consistency shows a check-in partly filled): each
+ * daily metric not taken off by then, in its lifestyle phase when it has one, from the first day it was ever filled in
+ * (a metric has no date of its own, so one never filled is not counted, and a new one never makes older days look
+ * short). Names, as the calendar's check-ins are.
+ */
+export function dailyAskedOn(clientId: number): (date: string) => string[] {
+  const data = getData();
+  const phases = listClientPhases(clientId).filter((p) => p.track === "lifestyle" && !p.draft);
+  const defs = data.metric_definitions.filter((m) => m.client_id === clientId && m.frequency === "daily");
+  const first = new Map<number, string>();
+  const ids = new Set(defs.map((m) => m.id));
+  for (const e of data.metric_entries) {
+    if (!ids.has(e.metric_definition_id) || e.value == null) continue;
+    const had = first.get(e.metric_definition_id);
+    if (!had || e.period < had) first.set(e.metric_definition_id, e.period);
+  }
+  return (date) =>
+    defs
+      .filter((m) => {
+        const from = first.get(m.id);
+        if (!from || from > date) return false;
+        if (m.retired_at && m.retired_at.slice(0, 10) <= date) return false;
+        return m.phase_id == null || phases.some((p) => p.id === m.phase_id && phaseCovers(p.start_week, p.end_week, date));
+      })
+      .map((m) => m.name);
+}
+
 // ---- Kept activity (28 Sep) -------------------------------------------------
 // What a client did is never lost to a coach's edit: removing a session, an
 // exercise, a week, a programme, a metric or a measurement first keeps a
