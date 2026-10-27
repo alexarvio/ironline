@@ -19,7 +19,7 @@ import { LOCK_MS, type LockScope } from "./loginLockout";
 import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 import { metricAskAt, metricFromWorkout } from "./metricAskAt";
 import { metricSummary, type MetricSummary } from "./metricSummary";
-import { DEFAULT_WORKOUT_QUESTIONS, MAX_QUESTION_LENGTH, MAX_WORKOUT_QUESTIONS } from "./workoutQuestions";
+import { DEFAULT_WORKOUT_QUESTIONS, EARLIER_DEFAULT_QUESTIONS, MAX_QUESTION_LENGTH, MAX_WORKOUT_QUESTIONS } from "./workoutQuestions";
 import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 import { cleanRepeat, openEnd, type EventRepeat } from "./eventRepeat";
@@ -9854,7 +9854,18 @@ export function getWorkoutQuestions(clientId: number, programId?: number | null)
     programId != null
       ? data.training_programs.find((p) => p.id === programId && p.client_id === clientId) ?? null
       : getProgramForWeek(clientId, getCurrentWeekNumber(clientId));
-  return program?.workout_questions ?? getClientProfile(clientId).workout_questions ?? DEFAULT_WORKOUT_QUESTIONS;
+  const own = program?.workout_questions ?? getClientProfile(clientId).workout_questions;
+  if (own) return own;
+  // Nothing set: none (27 Oct, Alex). A programme whose client already answered the two it was asked before keeps them,
+  // so a running programme's questions don't vanish under the client.
+  if (program) {
+    const last = program.start_week + program.total_weeks - 1;
+    const answered = data.program_days.some(
+      (d) => d.client_id === clientId && d.week_number >= program.start_week && d.week_number <= last && (d.session_answers?.length || d.session_enjoyment != null || d.session_adherence != null)
+    );
+    if (answered) return EARLIER_DEFAULT_QUESTIONS;
+  }
+  return DEFAULT_WORKOUT_QUESTIONS;
 }
 
 /** The questions a session is asked: those of the programme its week belongs to. */

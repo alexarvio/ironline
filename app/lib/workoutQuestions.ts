@@ -17,7 +17,10 @@ export const WORKOUT_QUESTION_PRESETS: WorkoutQuestion[] = [
   { id: "soreness", label: "Soreness" },
 ];
 
-export const DEFAULT_WORKOUT_QUESTIONS: WorkoutQuestion[] = WORKOUT_QUESTION_PRESETS.slice(0, 2);
+/** None by default (27 Oct, Alex: "I want this empty"): the coach adds what they want asked. */
+export const DEFAULT_WORKOUT_QUESTIONS: WorkoutQuestion[] = [];
+/** The two every programme was asked before then: a programme whose client already answered them keeps them. */
+export const EARLIER_DEFAULT_QUESTIONS: WorkoutQuestion[] = WORKOUT_QUESTION_PRESETS.slice(0, 2);
 
 /** More than this and the end of a workout turns into a form. */
 export const MAX_WORKOUT_QUESTIONS = 6;
