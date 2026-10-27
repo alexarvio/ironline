@@ -3436,10 +3436,10 @@ function WeeksLegend() {
   return (
     <div className="rd-legend">
       <div className="rd-legend-head">Sessions</div>
-      {row("on", <><b>Done</b>.</>)}
+      {row("on", <><b>Completed</b>.</>)}
       {row("part", <><b>Started</b>, not finished.</>)}
       {row("skipped", <><b>Skipped</b>: they said they couldn&rsquo;t do it.</>)}
-      {row("none", <><b>Not done</b>: never started, and the week is over.</>)}
+      {row("none", <><b>Not completed</b>: never started, and the week is over.</>)}
       {row("", <><b>To do</b>: not started yet, the week still on or to come.</>)}
     </div>
   );

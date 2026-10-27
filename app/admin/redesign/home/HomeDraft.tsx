@@ -133,7 +133,6 @@ const signed1 = (n: number) => {
 const kg1 = (n: number) => `${(Math.round(n * 10) / 10).toFixed(1)} kg`;
 const money = (n: number, currency: string) => new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(n || 0);
 /** "2 sessions", "1 check-in"; nothing for none, so the part drops out. */
-const count = (n: number, one: string, many: string) => (n > 0 ? `${n} ${n === 1 ? one : many}` : null);
 const setsOf = (v: number) => String(Math.round(v));
 /** Strength's Overall: one decimal under 10%, whole above; a real minus. */
 const pctOf = (p: number) => (Math.abs(p) < 10 ? Math.round(p * 10) / 10 : Math.round(p));
@@ -274,7 +273,7 @@ export default function HomeDraft({
         </div>
       </header>
 
-      <SinceLine since={board.since} />
+      {/* Nothing under the name (27 Oct, Alex: the Since line taken out, "we do not need anything there"). */}
 
       {/* ---- The three tracks, in their order: the phase, its week, the one figure. A tile opens its tab (Plan when none). */}
       <section className="rh-tiles" aria-label="Phases">
@@ -455,32 +454,6 @@ export default function HomeDraft({
         )}
       </Dialog>
     </div>
-  );
-}
-
-// ---- Since the coach last looked: one quiet line, the date in ink, each count only when there is one.
-function SinceLine({ since }: { since: HomeBoard["since"] }) {
-  if (!since) return null;
-  const w = since.weightChange == null || Math.round(since.weightChange * 10) === 0 ? null : `${signed1(since.weightChange)} kg`;
-  const facts = [
-    count(since.sessions, "session", "sessions"),
-    count(since.checkIns, "check-in", "check-ins"),
-    count(since.foodDays, "food day", "food days"),
-    w,
-    count(since.messages, "message", "messages"),
-  ];
-  if (facts.every((f) => f == null)) return null;
-  return (
-    <p className="rh-sinceline">
-      <SepJoin
-        parts={[
-          <span key="from">
-            Since <b>{dayMonth(since.from)}</b>
-          </span>,
-          ...facts,
-        ]}
-      />
-    </p>
   );
 }
 

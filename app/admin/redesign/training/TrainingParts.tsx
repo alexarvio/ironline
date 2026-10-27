@@ -239,7 +239,7 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
             key={w.index}
             role="tab"
             aria-selected={on}
-            aria-label={`Week ${w.index}${now ? ", current week" : ""}, ${done} of ${total} sessions done${w.missed?.some(Boolean) ? `, ${w.missed.filter(Boolean).length} unfinished` : ""}${w.skipped?.some(Boolean) ? `, ${w.skipped.filter(Boolean).length} skipped` : ""}${w.state === "past" && w.trained.some((t, i) => !t && !w.skipped?.[i] && !w.missed?.[i]) ? `, ${w.trained.filter((t, i) => !t && !w.skipped?.[i] && !w.missed?.[i]).length} not done` : ""}${owed ? ", needs you" : ""}`}
+            aria-label={`Week ${w.index}${now ? ", current week" : ""}, ${done} of ${total} sessions done${w.missed?.some(Boolean) ? `, ${w.missed.filter(Boolean).length} unfinished` : ""}${w.skipped?.some(Boolean) ? `, ${w.skipped.filter(Boolean).length} skipped` : ""}${w.state === "past" && w.trained.some((t, i) => !t && !w.skipped?.[i] && !w.missed?.[i]) ? `, ${w.trained.filter((t, i) => !t && !w.skipped?.[i] && !w.missed?.[i]).length} not completed` : ""}${owed ? ", needs you" : ""}`}
             href={hrefFor(w.index)}
             scroll={false}
             className={`trn-week${on ? " on" : ""}`}
