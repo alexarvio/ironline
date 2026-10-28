@@ -61,7 +61,10 @@
           </div>
         </fieldset>
         <label class="field"><span class="label">The hardest part of your week</span><textarea class="textarea" name="hardest"></textarea></label>
+        <!-- Left empty by people, filled by bots: the server drops anything with it. -->
+        <input class="trap" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
         <button class="btn btn-ink btn-lg" type="submit">Send application</button>
+        <p class="form-error" id="error" role="alert" hidden></p>
       </form>
 
       <div class="thanks" id="thanks" hidden>
@@ -84,19 +87,42 @@
 </footer>
 
 <script>
-// Draft: the application has nowhere to go yet (a form service or an app
-// endpoint is still to be picked), so for now it only checks the two fields
-// and shows the thanks.
+// The application goes to the app (app/api/apply), which emails it to Alex;
+// on localhost, to the app's dev server.
 (function () {
+  var local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  var ENDPOINT = local ? "http://localhost:3000/api/apply" : "https://app.norcoachapp.com/api/apply";
   var form = document.getElementById("apply");
+  var button = form.querySelector("button[type=submit]");
+  var error = document.getElementById("error");
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     var name = form.elements.name, email = form.elements.email;
     if (!name.value.trim()) { name.focus(); return; }
     if (!/^\S+@\S+\.\S+$/.test(email.value.trim())) { email.focus(); return; }
-    document.getElementById("first").textContent = name.value.trim().split(/\s+/)[0];
-    form.hidden = true;
-    document.getElementById("thanks").hidden = false;
+    var picked = form.querySelector("input[name=clients]:checked");
+    var data = {
+      name: name.value, email: email.value, business: form.elements.business.value,
+      clients: picked ? picked.value : "",
+      uses: Array.prototype.map.call(form.querySelectorAll("input[name=uses]:checked"), function (i) { return i.value; }),
+      hardest: form.elements.hardest.value, website: form.elements.website.value
+    };
+    button.disabled = true;
+    button.textContent = "Sending…";
+    error.hidden = true;
+    fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+      .then(function (res) { if (!res.ok) throw new Error(res.status); })
+      .then(function () {
+        document.getElementById("first").textContent = name.value.trim().split(/\s+/)[0];
+        form.hidden = true;
+        document.getElementById("thanks").hidden = false;
+      })
+      .catch(function () {
+        error.textContent = "Not sent. Please try again in a moment.";
+        error.hidden = false;
+        button.disabled = false;
+        button.textContent = "Send application";
+      });
   });
 })();
 </script>

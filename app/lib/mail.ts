@@ -89,6 +89,32 @@ export async function sendInviteEmail({ coachEmail, ...details }: { to: string; 
   return send(details.to, subject, text, html, "invite", { fromName: details.coachName, replyTo: coachEmail });
 }
 
+/** Where the website's applications go (28 Oct, Alex: "email me"): APPLY_TO_EMAIL, else the owner's. */
+export function applyInbox(): string | null {
+  return process.env.APPLY_TO_EMAIL?.trim() || process.env.OWNER_EMAIL?.trim() || null;
+}
+
+export type Application = { name: string; email: string; business: string; clients: string; uses: string[]; hardest: string };
+
+/** One founding-coach application from norcoachapp.com, to the inbox above, a reply going to the coach. False rather than throwing. */
+export async function sendApplicationEmail(a: Application): Promise<boolean> {
+  const to = applyInbox();
+  if (!mailConfigured() || !to) return false;
+  const rows: [string, string][] = [
+    ["Name", a.name],
+    ["Email", a.email],
+    ["Business", a.business || "–"],
+    ["Clients", a.clients || "–"],
+    ["Uses today", a.uses.join(", ") || "–"],
+    ["Hardest part of the week", a.hardest || "–"],
+  ];
+  const text = rows.map(([k, v]) => `${k}: ${v}`).join("\n") + "\n\nReply to this email to answer them.";
+  const html = `<table style="border-collapse:collapse;font:15px/1.5 system-ui,sans-serif">${rows
+    .map(([k, v]) => `<tr><td style="padding:4px 16px 4px 0;color:#5b6474;vertical-align:top">${escape(k)}</td><td style="padding:4px 0;white-space:pre-wrap">${escape(v)}</td></tr>`)
+    .join("")}</table><p style="font:14px system-ui,sans-serif;color:#5b6474">Reply to this email to answer them.</p>`;
+  return send(to, `Founding coach application: ${a.name}${a.clients ? ` (${a.clients} clients)` : ""}`, text, html, "application", { fromName: "NorCoach website", replyTo: a.email });
+}
+
 /** A coach who signed up is let in by the owner. Resolves false rather than throwing: they are in either way. */
 export async function sendCoachApprovedEmail({ to, name, signInUrl }: { to: string; name: string; signInUrl: string }): Promise<boolean> {
   if (!mailConfigured()) return false;
