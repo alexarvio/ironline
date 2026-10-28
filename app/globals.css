@@ -20911,3 +20911,12 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
 [data-pill] > [data-pill-on] { background: transparent !important; box-shadow: none !important; }
 [data-pill="slide"] > * { transition: color 0.25s ease; }
 @media (prefers-reduced-motion: reduce) { [data-pill="slide"]::before, [data-pill="slide"] > * { transition: none; } }
+
+/* ---- Nutrition's water goal (28 Oct, Alex: the coach sets it, the client never saw it): a flat row on the calories
+   card over Supplements, in line with its pill's inside: the drop in the nutrition teal (stroke 1.6, no tile),
+   Water, and the litres on the right. The same on both days, so it sits outside the swipe. */
+.nd .nd-water { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-top: 12px; padding: 0 16px; }
+.nd .nd-water svg { flex: none; width: 20px; height: 20px; fill: none; stroke: #1d7a70; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.nd .nd-water-title { flex: 1; font-size: 15px; font-weight: 600; color: #141a24; }
+.nd .nd-water-goal { font-size: 15px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; }
+.nd .nd-water + .nd-supps { margin-top: 8px; }

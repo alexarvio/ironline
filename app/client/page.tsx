@@ -1006,6 +1006,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         hasTargets={hasTargets}
         phase={phaseSlot}
         eatenKcal={listFoodEntries(CLIENT_ID, today).reduce((s, e) => s + e.kcal, 0)}
+        waterL={storedPlan.water_l ?? null}
         footer={supplements.length > 0 ? <SupplementsCard date={today} rows={supplements} /> : undefined}
       />
 

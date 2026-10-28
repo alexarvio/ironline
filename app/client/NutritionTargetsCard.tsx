@@ -58,6 +58,7 @@ export default function NutritionTargetsCard({
   footer,
   eatenKcal = 0,
   pictures,
+  waterL = null,
 }: {
   training: NutritionTargetSet;
   rest: NutritionTargetSet;
@@ -71,6 +72,8 @@ export default function NutritionTargetsCard({
   pictures?: string[];
   /** Calories logged in the food diary today; the ring's centre counts down from the target. */
   eatenKcal?: number;
+  /** The coach's water goal in litres, the same every day; none, no row. */
+  waterL?: number | null;
 }) {
   const openFood = useOpenFood();
   const [isTraining, setIsTraining] = useState(initialIsTraining);
@@ -196,6 +199,17 @@ export default function NutritionTargetsCard({
             </div>
           ) : (
             <p className="nd-empty">Your coach hasn&rsquo;t set your nutrition targets yet.</p>
+          )}
+
+          {/* The coach's water goal (28 Oct, Alex: set on Nutrition, never shown): the same on both days, so outside the swipe. */}
+          {waterL != null && waterL > 0 && (
+            <div className="nd-water">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3.5c3.2 3.9 6 7.4 6 10.7a6 6 0 0 1-12 0c0-3.3 2.8-6.8 6-10.7z" />
+              </svg>
+              <span className="nd-water-title">Water</span>
+              <span className="nd-water-goal">{waterL.toLocaleString("en-US", { maximumFractionDigits: 2 })} L</span>
+            </div>
           )}
 
           {footer}
