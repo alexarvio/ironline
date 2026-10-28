@@ -37,7 +37,7 @@ The product is **NorCoach**; these are names for the offer and for the parts the
 
 The research's emotional core: coaches don't buy software to save time; they buy it so no client ever feels unseen, without giving up their evenings. The big idea makes the outcome the client's experience of the coach, not the coach's admin.
 
-It is "scale on quality" said from the client's side: the fortieth client gets what the fifth did. The pieces sit together as category line ("The personal coaching app"), stance ("Scale on quality") and promise ("Coach every client like they're your only one"). [Decision] Which of the three leads the hero; the draft site leads with the stance.
+It is "scale on quality" said from the client's side: the fortieth client gets what the fifth did. The pieces sit together as category line ("The personal coaching app"), stance ("Scale on quality") and promise ("Coach every client like they're your only one"). The hero (28 Oct, Alex: the page must also say it brings more clients, not quality instead of quantity): **"Coach better. Then coach more."** Quality first, quantity as what follows from it; the line under it: every client gets more of you, and you get the room to take on more clients.
 
 Alternatives to test:
 - "Scale on quality."
@@ -97,6 +97,8 @@ Alex was Finlay's client. Finlay is a good coach, but he ran everything in Excel
 What it deliberately is not: no AI between coach and client, nothing written or decided in the coach's name (the market now spots and resents it, and Finlay left Trainerize over it); not built to "scale" a coach into a template factory; no add-on paywalls for core features [Decision, see pricing]. What it does work out is arithmetic from what the client logged (PBs, trends, the next weight), shown to the coach to decide on.
 
 ## Potential headline / subheadline ideas
+Chosen (28 Oct): **Coach better. Then coach more.** Others in the same spirit: "Better coaching. More clients.", "Raise your coaching. Then your roster.", "More clients. Not less of you."
+
 New lead options with the positioning (27 Oct):
 - **Scale on quality.** / The personal coaching app. Every set, check-in and video comes to you, and every client sees you, not a bot.
 - **You, in every client's pocket.** / Your face on every note, message and goal in their app. No AI in between.
