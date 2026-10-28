@@ -18,6 +18,7 @@ Read this before touching any coach (admin) screen or pop-up. It is the admin ha
 - Every screen on paper (27 Oct, Alex): the logo's star huge and whole (up to 760px) and very faint (4.5% ink), set in from the top right of the window, still while the page scrolls, behind everything (`.rd-page::before`, rail.css), as the client's Home and every chat.
 - Page `#F5F6F8` · surface `#fff` · ink `#141a24` · body `#3a4250` · secondary `#5b6474` · muted `#8b93a1` · faint `#98A2B3`.
 - Hairline `#E1E5EB` · button hairline `#DCE1E8` · divider `#EEF0F3`.
+- No line under a header, a title or anything that stays on screen as the page scrolls (28 Oct, Alex; docs/DESIGN-RULES.md §2): space parts things from a heading; a line is only for what space can't part (rows in a table, a card's edge).
 - Success green `#2f7a3f` · danger red `#b42318`.
 - Archivo, weights 500 and 600 only. Small caps labels: 10.5px, 600, letter-spacing .16em, uppercase, `#5b6474`.
 - **Never navy** (`#1d3466`, `#1e3a6e`, `#2f5d8f`) for an action, a selection or a toggle. Actions and selections are ink `#141a24`.
