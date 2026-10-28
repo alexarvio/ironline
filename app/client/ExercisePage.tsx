@@ -190,7 +190,8 @@ export default function ExercisePage({
   // ---- Warm-ups: rows of the same kind above set 1, the client's own, never
   // counted. This week's saved ones are in; last time's come back as the
   // plan (1 Oct) so a warm-up done once is a tap away the next week.
-  type Warm = { plan: Vals; entered: Vals; saved: boolean };
+  // `own`: added from the menu this visit, so it stays even once the exercise is done.
+  type Warm = { plan: Vals; entered: Vals; saved: boolean; own?: boolean };
   const warmFrom = (w: { weight: number | null; reps: number | null }, saved: boolean): Warm =>
     saved ? { plan: EMPTY, entered: { weightKg: w.weight, reps: w.reps, rpe: null }, saved: true } : { plan: { weightKg: w.weight, reps: w.reps, rpe: null }, entered: EMPTY, saved: false };
   const [warm, setWarm] = useState<Warm[]>(() => (exercise.warmups.length ? exercise.warmups.map((w) => warmFrom(w, true)) : exercise.lastWarmups.slice(0, MAX_WARMUPS).map((w) => warmFrom(w, false))));
@@ -214,7 +215,7 @@ export default function ExercisePage({
   const addWarm = () => {
     if (warm.length >= MAX_WARMUPS) return;
     const hint = exercise.lastWarmups[warm.length];
-    const row: Warm = { plan: { weightKg: hint?.weight ?? planOf(1).weightKg, reps: hint?.reps ?? null, rpe: null }, entered: EMPTY, saved: false };
+    const row: Warm = { plan: { weightKg: hint?.weight ?? planOf(1).weightKg, reps: hint?.reps ?? null, rpe: null }, entered: EMPTY, saved: false, own: true };
     setWarm([...warm, row]);
     setCurrent(`w${warm.length}`);
   };
@@ -226,17 +227,20 @@ export default function ExercisePage({
   };
 
   // ---- The rows, in order: warm-ups, then the working sets.
-  const rows: Row[] = [
-    ...warm.map((w, i): Row => ({ id: `w${i}`, kind: "warm", n: i + 1, label: `W${i + 1}`, plan: w.plan, entered: w.entered, saved: w.saved, extra: true })),
-    ...Array.from({ length: workCount }, (_, i) => i + 1).map((n): Row => {
-      const entered = enteredOf(n);
-      // A set held on a question is not done (27 Oct, Alex: it read Saved and the exercise moved on).
-      return { id: `s${n}`, kind: "work", n, label: String(n), plan: planOf(n), entered, saved: isSaved(entered) && doubt?.n !== n, extra: n > exercise.sets };
-    }),
-  ];
-  const workRows = rows.filter((r) => r.kind === "work");
+  const workRows = Array.from({ length: workCount }, (_, i) => i + 1).map((n): Row => {
+    const entered = enteredOf(n);
+    // A set held on a question is not done (27 Oct, Alex: it read Saved and the exercise moved on).
+    return { id: `s${n}`, kind: "work", n, label: String(n), plan: planOf(n), entered, saved: isSaved(entered) && doubt?.n !== n, extra: n > exercise.sets };
+  });
   const doneCount = workRows.filter((r) => r.saved).length;
   const allDone = workRows.length > 0 && doneCount === workRows.length;
+  // A warm-up left untouched goes once every set is in (28 Oct, Alex): it read as not finished, and came back open.
+  // One logged stays, done in amber.
+  const warmShown = (w: Warm) => !allDone || w.saved || w.own || w.entered.weightKg != null || w.entered.reps != null;
+  const rows: Row[] = [
+    ...warm.flatMap((w, i): Row[] => (warmShown(w) ? [{ id: `w${i}`, kind: "warm", n: i + 1, label: `W${i + 1}`, plan: w.plan, entered: w.entered, saved: w.saved, extra: true }] : [])),
+    ...workRows,
+  ];
   const firstUnsaved = (after: RowId | null = null) => {
     const from = after ? rows.findIndex((r) => r.id === after) + 1 : 0;
     return rows.slice(from).find((r) => !r.saved)?.id ?? rows.slice(0, from).find((r) => !r.saved)?.id ?? null;
@@ -654,7 +658,9 @@ export default function ExercisePage({
           </span>
           {/* KG / LBS on the card's row (13 Oct, back where it was): the exercise's unit, every set of it. */}
           {askWeight && (
-            <div className="lw-unit" role="radiogroup" aria-label="Weight unit for this exercise">
+            <div className={`lw-unit${unit === "lb" ? " lb" : ""}`} role="radiogroup" aria-label="Weight unit for this exercise">
+              {/* The ink pill slides to the unit picked (28 Oct, Alex). */}
+              <span className="lw-unit-pill" aria-hidden="true" />
               {(["kg", "lb"] as Unit[]).map((u) => (
                 <button key={u} type="button" role="radio" aria-checked={unit === u} className={`lw-unit-btn${unit === u ? " on" : ""}`} onClick={() => setUnit(u)}>
                   {u === "kg" ? "KG" : "LBS"}
@@ -854,17 +860,21 @@ function Fold({ state, children }: { state: string; children: React.ReactNode })
     if (!el) return;
     el.style.transition = "none";
     el.style.height = "";
+    // Clipped only while the height eases (28 Oct, Alex): at rest the open set's pulse spreads past the box.
+    el.style.overflow = "";
     const next = el.offsetHeight;
     const from = last.current;
     last.current = next;
     if (from == null || from === next || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     el.style.height = `${from}px`;
+    el.style.overflow = "hidden";
     void el.offsetHeight;
     el.style.transition = "height 0.64s cubic-bezier(0.2, 0.8, 0.2, 1)";
     el.style.height = `${next}px`;
     const done = () => {
       el.style.height = "";
       el.style.transition = "";
+      el.style.overflow = "";
       last.current = el.offsetHeight;
     };
     el.addEventListener("transitionend", done, { once: true });

@@ -18747,7 +18747,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 @media (prefers-reduced-motion: reduce) { .lw-row, .lw-open, .wo-toast, .wo-rest-menu { animation: none; } }
 
 /* Sets fold and unfold (13 Oct): the box's height eases between states; the green row's numbers sit in columns, the weight right-aligned so "kg ×" lines up. */
-.lw-fold { overflow: hidden; will-change: height; }
+.lw-fold { will-change: height; }
 .lw-row, .lw-open { animation: none; }
 .lw-row-sum { display: flex; align-items: baseline; gap: 7px; }
 .lw-row-w { min-width: 4.5ch; text-align: right; font-variant-numeric: tabular-nums; }
@@ -19504,6 +19504,12 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-unit { padding: 2px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
 .lw-unit-btn { height: 26px; padding: 0 11px; font-size: 11.5px; font-weight: 600; color: #5b6474; }
 .lw-unit-btn.on { background: #141a24; color: #fff; box-shadow: none; }
+/* KG / LBS slides (28 Oct, Alex: it jumped): two equal halves, one ink pill under them moving to the one picked. */
+.lw-unit { position: relative; display: grid; grid-template-columns: 1fr 1fr; isolation: isolate; }
+.lw-unit-pill { position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: #141a24; transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+.lw-unit.lb .lw-unit-pill { transform: translateX(100%); }
+.lw-unit-btn, .lw-unit-btn.on { position: relative; background: transparent; transition: color 0.25s ease; }
+@media (prefers-reduced-motion: reduce) { .lw-unit-pill { transition: none; } }
 .lw-rows { position: relative; gap: 0; }
 .lw-rows::before { content: ""; position: absolute; left: 20px; top: 0; bottom: 0; border-left: 1px solid #E1E5EB; pointer-events: none; }
 .lw-fold { position: relative; }

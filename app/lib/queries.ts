@@ -9668,7 +9668,8 @@ export function pickGymForDay(programDayId: number, gymId: number) {
 /**
  * The warm-up the client did the last time they had this exercise: the
  * latest earlier session of theirs with warm-up sets on it. What this
- * week's warm-up starts from.
+ * week's warm-up starts from. Only where the same lift was done (28 Oct, Alex: a 10 kg warm-up came back on a 130 kg
+ * press): a session where it was swapped holds the substitute's warm-up, and another variation is another lift.
  */
 export function getLastWarmupSets(assignmentId: number): { weight_kg: number | null; reps: number | null }[] {
   const data = getData();
@@ -9679,7 +9680,7 @@ export function getLastWarmupSets(assignmentId: number): { weight_kg: number | n
   const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
   let best: { when: number; sets: { weight_kg: number | null; reps: number | null }[] } | null = null;
   for (const other of data.workout_assignments) {
-    if (other.exercise_id !== wa.exercise_id || !other.warmup_sets?.length) continue;
+    if (other.exercise_id !== wa.exercise_id || !other.warmup_sets?.length || other.swap || (other.variation_id ?? null) !== (wa.variation_id ?? null)) continue;
     const pd = days.get(other.program_day_id);
     if (!pd || at(pd) >= at(day)) continue;
     if (!best || at(pd) > best.when) best = { when: at(pd), sets: other.warmup_sets };
