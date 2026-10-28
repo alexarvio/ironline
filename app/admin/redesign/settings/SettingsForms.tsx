@@ -18,6 +18,7 @@ import { Dialog } from "../../../components/ui/dialog";
 import { ConfirmDialog } from "../training/TrainingDraft";
 import type { AccountSecurity } from "../../../lib/accountSecurity";
 import ClerkAccount from "./ClerkAccount";
+import HelpTip from "../HelpTip";
 
 // Settings' sections on the admin rules (22 Oct; docs/DESIGN-RULES-ADMIN.md), each a folding section of the one
 // Settings page (23 Oct, Alex; SettingsBoard.tsx): its parts as small caps labels over one white hairline card each,
@@ -230,7 +231,15 @@ export function LogoSettings({ mark }: { mark: string | null }) {
   };
   return (
     <Section
-      title="Logo"
+      title={
+        <span className="rst-titled">
+          Logo
+          {/* The tip behind a ? (28 Oct, Alex asked for it): the rules keep explanations off the page. */}
+          <HelpTip title="Logo">
+            <p>For the best result, upload your logo with a transparent background (a PNG or SVG).</p>
+          </HelpTip>
+        </span>
+      }
       fact={mark ? "Behind every screen" : "NorCoach's star for now"}
       actions={
         <>
