@@ -387,6 +387,7 @@ import {
 import { writeReportNarrative } from "./reportAi";
 import { COACH_PROFILE_LIMITS } from "./coachProfileView";
 import { deleteUpload, keyOf, posterFromDevice, prepareChatMedia, putUpload, warmSmallCopies, webChatVideo } from "./storage";
+import { logoAsPng, makeLogoMark, removeCoachLogo, saveCoachLogo } from "./brandMark";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
 import { FEATURES } from "./features";
@@ -4198,6 +4199,34 @@ export async function uploadCoachPhotoAction(formData: FormData) {
   if (previous && keyOf(previous) !== keyOf(saved)) await deleteUpload(previous);
   await putUpload(saved, body, file.type);
   revalidateCoachProfile();
+}
+
+/** The coach's logo (Settings, Business details, 28 Oct; lib/brandMark.ts): made into the faint mark behind every
+ *  screen of theirs and their clients'. Saved at once; ok, or why not. */
+export async function uploadCoachLogoAction(formData: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
+  const coach = await requireCoach();
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return { ok: false, error: "Pick a picture first." };
+  if (file.size > 10 * 1024 * 1024) return { ok: false, error: `${Math.round(file.size / 1024 / 1024)} MB is over 10 MB.` };
+  if (!file.type.startsWith("image/")) return { ok: false, error: "That file isn't a picture." };
+  const body = Buffer.from(await file.arrayBuffer());
+  const mark = await makeLogoMark(body);
+  if (!mark.ok) return mark;
+  const original = await logoAsPng(body);
+  const saved = saveCoachLogo(coach.id, original, mark.png);
+  if (!saved) return { ok: false, error: "Not saved. Try again." };
+  for (const old of saved.previous) if (old) await deleteUpload(old);
+  await putUpload(saved.mark, mark.png, "image/png");
+  await putUpload(saved.logo, original, "image/png");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Back to the NorCoach star. */
+export async function removeCoachLogoAction(): Promise<void> {
+  const coach = await requireCoach();
+  for (const old of removeCoachLogo(coach.id)) await deleteUpload(old);
+  revalidatePath("/", "layout");
 }
 
 export async function removeCoachPhotoAction(formData: FormData) {

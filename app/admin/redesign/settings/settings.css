@@ -126,3 +126,12 @@ body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font-
 .rd.rst .rst-quiet { align-items: center; }
 .rd.rst .rst-time.dlh-line { width: 56px; flex: none; padding: 4px 0; text-align: center; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .rd.rst .rst-switch, .rd.rst .rst-switch i { transition: none; } }
+
+/* ---- Logo (28 Oct, Alex; lib/brandMark.ts): the mark as it sits behind the screens, on the page's grey in the star's
+   box, a little stronger here so it reads; Upload or Replace the white pill, Remove in red words. */
+.rd.rst .rst-logo { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.rd.rst .rst-logo-mark { display: block; width: 224px; max-width: 100%; aspect-ratio: 448 / 430; padding: 18px; border-radius: 12px; background: #F5F6F8; object-fit: contain; opacity: 0.32; box-sizing: border-box; }
+.rd.rst label.trn-pill { cursor: pointer; }
+.rd.rst label.trn-pill.busy { cursor: progress; opacity: 0.6; }
+.rd.rst .rst-remove { height: 36px; padding: 0 6px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #b42318; cursor: pointer; }
+.rd.rst .rst-remove:disabled { opacity: 0.5; cursor: default; }

@@ -4,7 +4,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { connectStripeAction, disconnectStripeAction, saveCoachBusinessAction, saveCoachInvoicingAction } from "../../../lib/actions";
+import { connectStripeAction, disconnectStripeAction, removeCoachLogoAction, saveCoachBusinessAction, saveCoachInvoicingAction, uploadCoachLogoAction } from "../../../lib/actions";
 import type { PaymentsState } from "../../../lib/payments";
 import { changeOwnEmailAction, changeOwnPasswordAction, logoutAction } from "../../../lib/auth-actions";
 import type { CoachBusiness, CoachInvoicing } from "../../../lib/db";
@@ -205,6 +205,72 @@ function AccountPassword({ email }: { email: string }) {
         }
       />
     </>
+  );
+}
+
+// ---- The coach's logo (28 Oct, Alex; lib/brandMark.ts): made into the faint mark behind every screen, theirs and
+// their clients', in place of the NorCoach star. Saved at once, not on the page's bar (a file, as Account's actions):
+// the card shows the mark as it will sit, Upload (Replace) as a white pill, Remove in words, asking first.
+export function LogoSettings({ mark }: { mark: string | null }) {
+  const router = useRouter();
+  const [busy, start] = useTransition();
+  const [error, setError] = useState("");
+  const [asking, setAsking] = useState(false);
+  const pick = (file: File | undefined) => {
+    if (!file) return;
+    const f = new FormData();
+    f.set("file", file);
+    start(async () => {
+      const r = await uploadCoachLogoAction(f).catch(() => ({ ok: false as const, error: "Not saved. Try again." }));
+      if (!r.ok) return setError(r.error);
+      setError("");
+      router.refresh();
+      toast.success("Logo saved");
+    });
+  };
+  return (
+    <Section
+      title="Logo"
+      fact={mark ? "Behind every screen" : "NorCoach's star for now"}
+      actions={
+        <>
+          <label className={`trn-pill rst-pill${busy ? " busy" : ""}`}>
+            {busy ? "Saving…" : mark ? "Replace" : "Upload"}
+            <input type="file" accept="image/*" hidden disabled={busy} onChange={(e) => (pick(e.target.files?.[0]), (e.target.value = ""))} />
+          </label>
+          {mark && (
+            <button type="button" className="rst-remove" onClick={() => setAsking(true)} disabled={busy}>
+              Remove
+            </button>
+          )}
+        </>
+      }
+    >
+      <div className="rls-card rst-card rst-logo">
+        {/* The mark on the page's grey, a little stronger than on the screens so it reads here. */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- the coach's own upload */}
+        <img className={`rst-logo-mark${mark ? "" : " star"}`} src={mark ?? "/brand/mark.svg"} alt={mark ? "Your logo as the mark behind your screens" : "The NorCoach star"} />
+        {error && <small className="rst-err">{error}</small>}
+      </div>
+      <Dialog open={asking} onOpenChange={setAsking}>
+        {asking && (
+          <ConfirmDialog
+            title="Remove your logo?"
+            description="The NorCoach star comes back behind your screens and your clients'."
+            confirm="Remove"
+            danger
+            onConfirm={() => {
+              setAsking(false);
+              start(async () => {
+                await removeCoachLogoAction();
+                router.refresh();
+                toast.success("Logo removed");
+              });
+            }}
+          />
+        )}
+      </Dialog>
+    </Section>
   );
 }
 

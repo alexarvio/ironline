@@ -10,7 +10,7 @@ import { loadSupportSection } from "../../../lib/support";
 import { startTiming } from "../../../lib/timing";
 import { loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
-import { AccountSettings, BusinessSettings, InvoicingSettings, PrivacySettings } from "./SettingsForms";
+import { AccountSettings, BusinessSettings, InvoicingSettings, LogoSettings, PrivacySettings } from "./SettingsForms";
 import SupportSection from "./SupportSection";
 import { DataSettings, NotificationsSettings, PreferencesSettings } from "./MoreSettings";
 import { loadAccountSecurity } from "../../../lib/accountSecurity";
@@ -118,7 +118,16 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       body: profile ? <ProfileEditor key={coachId} profile={profile} coaches={coaches} details={details} countries={countries} /> : <p className="rpf-empty">No coach profile</p>,
     },
     { key: "account", fact: facts.account, body: <AccountSettings email={coach.email} passwordless={clerkOn()} security={security} /> },
-    { key: "business", fact: facts.business, body: <BusinessSettings key={JSON.stringify(business)} initial={business} /> },
+    {
+      key: "business",
+      fact: facts.business,
+      body: (
+        <>
+          <LogoSettings mark={settings.brand?.mark ?? null} />
+          <BusinessSettings key={JSON.stringify(business)} initial={business} />
+        </>
+      ),
+    },
     // Keyed on the business's country too: a new one there brings its own defaults here.
     { key: "invoicing", fact: facts.invoicing, body: <InvoicingSettings key={JSON.stringify([invoicing, business.country_code ?? null, business.country ?? null])} initial={invoicing} business={business} payments={payments} /> },
     { key: "notifications", fact: facts.notifications, body: <NotificationsSettings key={JSON.stringify(notify)} initial={notify} /> },

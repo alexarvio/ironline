@@ -157,4 +157,4 @@
 .rd-frame > .rd-page { position: relative; isolation: isolate; }
 /* Bigger and whole (27 Oct, Alex: "so much bigger… centre it a bit more so we see the totality of it"): the whole star, up to
    760px wide, set in from the top right of the page's room. */
-.rd-frame > .rd-page::before { content: ""; position: fixed; top: 70px; right: 5vw; z-index: -1; width: min(760px, 48vw); aspect-ratio: 448 / 430; background: url("/brand/mark.svg") no-repeat center / contain; opacity: 0.045; pointer-events: none; }
+.rd-frame > .rd-page::before { content: ""; position: fixed; top: 70px; right: 5vw; z-index: -1; width: min(760px, 48vw); aspect-ratio: 448 / 430; background: var(--bg-mark, url("/brand/mark.svg")) no-repeat center / contain; opacity: 0.045; pointer-events: none; }

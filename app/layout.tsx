@@ -7,6 +7,8 @@ import { startTiming } from "./lib/timing";
 import { ClerkProvider } from "@clerk/nextjs";
 import { clerkOn } from "./lib/clerk";
 import SlidePills from "./components/SlidePills";
+import { getSessionUser } from "./lib/auth";
+import { markFor } from "./lib/brandMark";
 
 export const metadata: Metadata = {
   title: "NORCOACH", // the tab's name in capitals, as the wordmark (24 Oct, Alex)
@@ -68,7 +70,18 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/** The faint mark behind every screen (28 Oct, Alex; lib/brandMark.ts): the signed-in coach's logo, or their coach's
+ *  for a client; none (or no one signed in), the star the CSS falls back to. */
+async function bgMark(): Promise<React.CSSProperties | undefined> {
+  try {
+    const mark = markFor(await getSessionUser());
+    return mark ? ({ "--bg-mark": `url("${mark}")` } as React.CSSProperties) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // No background job runner in this app — a plan the coach scheduled for
   // e.g. Monday 6am goes live the moment anyone next loads any page after
   // that time, checked here since every route passes through this layout.
@@ -86,7 +99,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${libreBaskerville.variable} ${archivo.variable} ${kirana.variable} ${bricolage.variable}`}>
       {/* Sign-in through Clerk, when it is switched on (lib/clerk.ts). */}
-      <body>
+      <body style={await bgMark()}>
         {clerkOn() ? <ClerkProvider signInUrl="/login" signUpUrl="/signup" signInFallbackRedirectUrl="/auth/continue" signUpFallbackRedirectUrl="/auth/continue" afterSignOutUrl="/login">{children}</ClerkProvider> : children}
         {/* Every capsule's pill slides (28 Oct, Alex). */}
         <SlidePills />

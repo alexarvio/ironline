@@ -12993,7 +12993,7 @@ body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5
 .hm { position: relative; isolation: isolate; overflow-x: clip; }
 .hm > .hm-banner:not(.st-banner) { background: none; overflow: visible; }
 .hm > .hm-banner:not(.st-banner)::after { content: none; }
-.hm > .hm-banner:not(.st-banner)::before { z-index: -1; right: -120px; top: 6px; width: 448px; height: 430px; border: 0; border-radius: 0; -webkit-mask-image: none; mask-image: none; background: url("/brand/mark.svg") no-repeat center / contain; opacity: 0.045; }
+.hm > .hm-banner:not(.st-banner)::before { z-index: -1; right: -120px; top: 6px; width: 448px; height: 430px; border: 0; border-radius: 0; -webkit-mask-image: none; mask-image: none; background: var(--bg-mark, url("/brand/mark.svg")) no-repeat center / contain; opacity: 0.045; }
 .hm-body { display: flex; flex-direction: column; gap: 16px; padding: 0 16px; }
 /* The first card overlaps the banner, like Days trained on Training. */
 .hm-body > :first-child { position: relative; z-index: 2; margin-top: -36px; }
@@ -20876,9 +20876,9 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
 /* Every chat on paper, as Home (27 Oct, Alex: "the logo like we have in the home screen, in the background"): the
    star huge and very faint (4.5%), cropped off the top right, still while the messages scroll over it. Drawn as the
    page colour at 95.5% over the star, so it needs no copy of the logo. */
-.cm-body.cm-body { background: linear-gradient(rgba(245, 246, 248, 0.955), rgba(245, 246, 248, 0.955)), url("/brand/mark.svg") right -120px top 6px / 448px 430px no-repeat, #F5F6F8; }
-.cph-thread.cph-thread { background: linear-gradient(rgba(245, 246, 248, 0.955), rgba(245, 246, 248, 0.955)), url("/brand/mark.svg") right -120px top 60px / 448px 430px no-repeat, #F5F6F8; }
-.rm-thread.rm-thread { background: linear-gradient(rgba(255, 255, 255, 0.955), rgba(255, 255, 255, 0.955)), url("/brand/mark.svg") right -120px top 6px / 448px 430px no-repeat, #fff; }
+.cm-body.cm-body { background: linear-gradient(rgba(245, 246, 248, 0.955), rgba(245, 246, 248, 0.955)), var(--bg-mark, url("/brand/mark.svg")) right -120px top 6px / 448px 430px no-repeat, #F5F6F8; }
+.cph-thread.cph-thread { background: linear-gradient(rgba(245, 246, 248, 0.955), rgba(245, 246, 248, 0.955)), var(--bg-mark, url("/brand/mark.svg")) right -120px top 60px / 448px 430px no-repeat, #F5F6F8; }
+.rm-thread.rm-thread { background: linear-gradient(rgba(255, 255, 255, 0.955), rgba(255, 255, 255, 0.955)), var(--bg-mark, url("/brand/mark.svg")) right -120px top 6px / 448px 430px no-repeat, #fff; }
 
 /* The laptop chat's row, every part one height (27 Oct, Alex: the box stood taller than the buttons): the box one line
    at 40px, + / the mic / Send round 40px, on one line along their foot. */
