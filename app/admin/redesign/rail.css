@@ -158,3 +158,10 @@
 /* Bigger and whole (27 Oct, Alex: "so much bigger… centre it a bit more so we see the totality of it"): the whole star, up to
    760px wide, set in from the top right of the page's room. */
 .rd-frame > .rd-page::before { content: ""; position: fixed; top: 70px; right: 5vw; z-index: -1; width: min(760px, 48vw); aspect-ratio: 448 / 430; background: var(--bg-mark, url("/brand/mark.svg")) no-repeat center / contain; opacity: 0.045; pointer-events: none; }
+
+/* What the coach pays NorCoach (28 Oct, Alex; lib/billing.ts): a payment that failed, then read-only, under the
+   brand: the fact in rust at 600, the date or the way to fix it grey under it, the whole row the link to Billing. */
+.rr-billing { flex: none; display: flex; flex-direction: column; gap: 1px; margin: 0 10px 8px; padding: 9px 12px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px rgba(179, 71, 29, 0.35); text-decoration: none; }
+.rr-billing b { font-size: 13px; font-weight: 600; color: #b3471d; }
+.rr-billing small { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.rr-billing:hover { background: #fafbfd; }

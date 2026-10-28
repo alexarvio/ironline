@@ -1,6 +1,6 @@
 "use server";
 
-import { isOwner, requireCoach } from "./auth";
+import { isOwner, requireCoach, requireCoachAccount } from "./auth";
 import { putUpload } from "./storage";
 import {
   addSupportMessage,
@@ -25,7 +25,8 @@ export type SupportSent = { ok: true; thread: SupportLine[] } | { ok: false; err
 /** A coach writes: a message, or (kind=problem) a problem with where it happened and a screenshot. FormData: kind,
     text, where, file. Answers with the thread as it now stands. */
 export async function sendSupportAction(formData: FormData): Promise<SupportSent> {
-  const coach = await requireCoach();
+  // Open while read-only (28 Oct, Alex): the place to sort a billing problem out.
+  const coach = await requireCoachAccount();
   if (isOwner(coach) || !isSupportCoach(coach.id)) return { ok: false, error: "Not from this account." };
   const kind = formData.get("kind") === "problem" ? "problem" : "message";
   const text = String(formData.get("text") ?? "").trim();
@@ -46,14 +47,16 @@ export async function sendSupportAction(formData: FormData): Promise<SupportSent
 
 /** The coach's own thread, as it stands (the section reads it again every so often). */
 export async function loadSupportThreadAction(): Promise<SupportLine[]> {
-  const coach = await requireCoach();
+  // Open while read-only (28 Oct, Alex): the place to sort a billing problem out.
+  const coach = await requireCoachAccount();
   if (isOwner(coach)) return [];
   return supportThreadView(coach.id, "coach");
 }
 
 /** The coach has read the company's lines (their Support part came into view). */
 export async function markSupportSeenAction(): Promise<void> {
-  const coach = await requireCoach();
+  // Open while read-only (28 Oct, Alex): the place to sort a billing problem out.
+  const coach = await requireCoachAccount();
   if (isOwner(coach)) return;
   markSupportSeen(coach.id, "coach");
 }

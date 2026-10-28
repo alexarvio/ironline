@@ -12,6 +12,8 @@ export const SETTINGS = [
   // The coaching plans the coach offers (28 Oct, Alex; PlansSettings.tsx).
   { key: "plans", label: "Plans", href: `${SETTINGS_PATH}#plans`, Icon: BookmarkIcon },
   { key: "invoicing", label: "Invoicing & payments", href: `${SETTINGS_PATH}#invoicing`, Icon: ReceiptIcon },
+  // What the coach pays NorCoach (28 Oct, Alex; lib/billing.ts): not the owner's.
+  { key: "billing", label: "Billing", href: `${SETTINGS_PATH}#billing`, Icon: ReceiptIcon },
   { key: "notifications", label: "Notifications", href: `${SETTINGS_PATH}#notifications`, Icon: BellIcon },
   { key: "preferences", label: "Preferences", href: `${SETTINGS_PATH}#preferences`, Icon: GearIcon },
   { key: "data", label: "Your data", href: `${SETTINGS_PATH}#data`, Icon: ReportIcon },
@@ -21,8 +23,9 @@ export const SETTINGS = [
 ] as const;
 export type SettingsKey = (typeof SETTINGS)[number]["key"];
 
-/** The rows an account sees: the owner answers Support from Coaches, so has no Support row (nor section). */
-export const settingsFor = (owner: boolean) => SETTINGS.filter((s) => !(owner && s.key === "support"));
+/** The rows an account sees: the owner answers Support from Coaches, so has no Support row (nor section), and pays
+ *  NorCoach nothing, so has no Billing either; nor does anyone while subscriptions are off (lib/billing.ts). */
+export const settingsFor = (owner: boolean, billing = false) => SETTINGS.filter((s) => !(owner && s.key === "support") && !(s.key === "billing" && (owner || !billing)));
 
 export const isSettingsKey = (k: string): k is SettingsKey => SETTINGS.some((s) => s.key === k);
 

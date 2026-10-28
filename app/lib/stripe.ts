@@ -105,21 +105,107 @@ export async function invoiceCheckout(account: string, v: { invoiceId: number; n
   return { id: s.id, url: s.url };
 }
 
+// ---- What coaches pay NorCoach (28 Oct, Alex; lib/billing.ts): a subscription on the platform's own account, so
+// these calls carry no Stripe-Account. The prices live in Stripe (STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY), so a new
+// price needs no deploy.
+
+/** A Stripe subscription as the app reads it; current_period_end moved onto its items in newer API versions. */
+export type StripeSubscription = {
+  id: string;
+  customer: string;
+  status: string;
+  trial_end?: number | null;
+  current_period_end?: number;
+  cancel_at_period_end?: boolean;
+  metadata?: Record<string, string>;
+  items?: { data?: { current_period_end?: number; price?: { recurring?: { interval?: string } } }[] };
+};
+
+/** A coach's checkout for NorCoach: the price, a trial when they have not had one, the card asked for upfront. */
+export async function subscriptionCheckout(v: { price: string; coachId: number; email: string; customer?: string; trialDays: number; successUrl: string; cancelUrl: string }): Promise<{ id: string; url: string }> {
+  const meta = { coach_id: String(v.coachId) };
+  const s = await call<{ id: string; url: string }>("POST", "/checkout/sessions", {
+    mode: "subscription",
+    line_items: [{ price: v.price, quantity: 1 }],
+    ...(v.customer ? { customer: v.customer } : { customer_email: v.email }),
+    client_reference_id: String(v.coachId),
+    metadata: meta,
+    subscription_data: { metadata: meta, ...(v.trialDays > 0 ? { trial_period_days: v.trialDays } : {}) },
+    payment_method_collection: "always",
+    allow_promotion_codes: true,
+    success_url: v.successUrl,
+    cancel_url: v.cancelUrl,
+  });
+  return { id: s.id, url: s.url };
+}
+
+/** A finished checkout, with its subscription: read on the way back, so the coach is in before the webhook lands. */
+export async function readCheckout(id: string): Promise<{ customer: string | null; metadata?: Record<string, string>; subscription: StripeSubscription | null }> {
+  const s = await call<{ customer?: string | null; metadata?: Record<string, string>; subscription?: StripeSubscription | string | null }>("GET", `/checkout/sessions/${encodeURIComponent(id)}`, { expand: ["subscription"] });
+  return { customer: s.customer ?? null, metadata: s.metadata, subscription: s.subscription && typeof s.subscription === "object" ? s.subscription : null };
+}
+
+/** A subscription as Stripe has it now: the webhook applies this, never the event's copy, which can arrive late. */
+export async function readSubscription(id: string): Promise<StripeSubscription> {
+  return call<StripeSubscription>("GET", `/subscriptions/${encodeURIComponent(id)}`);
+}
+
+/** The customer's subscriptions, any state: one already live is never doubled, and one trial a customer. */
+export async function customerSubscriptions(customer: string): Promise<StripeSubscription[]> {
+  const r = await call<{ data: StripeSubscription[] }>("GET", "/subscriptions", { customer, status: "all", limit: 20 });
+  return r.data ?? [];
+}
+
+/** Ends a subscription now (the owner made the coach free). */
+export async function cancelSubscription(id: string): Promise<void> {
+  await call("DELETE", `/subscriptions/${encodeURIComponent(id)}`);
+}
+
+/** Closes a checkout left open, so an earlier tab can't start a second subscription. */
+export async function expireCheckout(id: string): Promise<void> {
+  await call("POST", `/checkout/sessions/${encodeURIComponent(id)}/expire`);
+}
+
+/** Stripe's own billing page for the coach: card, plan, receipts, cancel. */
+export async function billingPortal(customer: string, returnUrl: string): Promise<string> {
+  const p = await call<{ url: string }>("POST", "/billing_portal/sessions", { customer, return_url: returnUrl });
+  return p.url;
+}
+
+/** A price as the subscribe screen shows it; kept ten minutes. */
+const priceCache = new Map<string, { at: number; v: { amount: number; currency: string; interval: string } }>();
+export async function readPrice(id: string): Promise<{ amount: number; currency: string; interval: string } | null> {
+  const hit = priceCache.get(id);
+  if (hit && Date.now() - hit.at < 600_000) return hit.v;
+  try {
+    const p = await call<{ unit_amount?: number | null; currency: string; recurring?: { interval?: string } | null }>("GET", `/prices/${encodeURIComponent(id)}`);
+    const v = { amount: ZERO_DECIMAL.has(p.currency.toUpperCase()) ? (p.unit_amount ?? 0) : (p.unit_amount ?? 0) / 100, currency: p.currency.toUpperCase(), interval: p.recurring?.interval ?? "month" };
+    priceCache.set(id, { at: Date.now(), v });
+    return v;
+  } catch {
+    return null;
+  }
+}
+
 export type StripeEvent = { id: string; type: string; account?: string; data: { object: Record<string, unknown> } };
 
-/** The event, if the Stripe-Signature header proves Stripe sent this body in the last five minutes; else null. */
+/** The event, if the Stripe-Signature header proves Stripe sent this body in the last five minutes; else null. Two
+ *  endpoints can point here, each with its own secret (28 Oct): the coaches' accounts (STRIPE_WEBHOOK_SECRET) and the
+ *  platform's own, for subscriptions (STRIPE_BILLING_WEBHOOK_SECRET). */
 export function verifyWebhook(body: string, header: string | null): StripeEvent | null {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
-  if (!secret || !header) return null;
+  const secrets = [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_BILLING_WEBHOOK_SECRET].map((s) => s?.trim()).filter((s): s is string => !!s);
+  if (!secrets.length || !header) return null;
   const parts = Object.fromEntries(header.split(",").map((p) => p.split("=", 2) as [string, string]));
   const t = Number(parts.t);
   if (!Number.isFinite(t) || Math.abs(Date.now() / 1000 - t) > 300) return null;
-  const expected = crypto.createHmac("sha256", secret).update(`${t}.${body}`).digest("hex");
   const given = header
     .split(",")
     .filter((p) => p.startsWith("v1="))
     .map((p) => p.slice(3));
-  const ok = given.some((g) => g.length === expected.length && crypto.timingSafeEqual(Buffer.from(g), Buffer.from(expected)));
+  const ok = secrets.some((secret) => {
+    const expected = crypto.createHmac("sha256", secret).update(`${t}.${body}`).digest("hex");
+    return given.some((g) => g.length === expected.length && crypto.timingSafeEqual(Buffer.from(g), Buffer.from(expected)));
+  });
   if (!ok) return null;
   try {
     return JSON.parse(body) as StripeEvent;

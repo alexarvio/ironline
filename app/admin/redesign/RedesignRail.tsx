@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { dayMonth } from "../../lib/dayMonth";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import RailTour from "./RailTour";
 import { AccountIcon, BusinessIcon, CalendarIcon, ChevronDownIcon, DumbbellIcon, FeedIcon, PhasesIcon, PlusIcon, SearchIcon } from "../../components/icons";
@@ -90,6 +91,14 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
           <small>Coach workstation</small>
         </span>
       </div>
+      {/* What they pay NorCoach (28 Oct, Alex; lib/billing.ts): a payment that failed, then read-only, as a fact and its
+          way to the fix (Settings, Billing). Nothing while it is paid. */}
+      {(rail.billing.state === "grace" || rail.billing.state === "readonly") && (
+        <Link href="/admin/redesign/settings#billing" className="rr-billing">
+          <b>{rail.billing.state === "readonly" ? "Read-only" : "Payment failed"}</b>
+          <small>{rail.billing.state === "grace" && rail.billing.until ? `Read-only from ${dayMonth(rail.billing.until)}` : "Renew in Billing"}</small>
+        </Link>
+      )}
 
       <nav className="rr-nav" aria-label="Views">
         {/* The cross-client views are not redrawn yet: they open where they always were. */}
@@ -197,7 +206,7 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
       <div className={`rr-settings${settingsOpen ? " open" : ""}`} aria-hidden={!settingsOpen} inert={!settingsOpen}>
         <span className="rr-label">Settings</span>
         <nav className="rr-settings-list" aria-label="Settings">
-          {settingsFor(rail.isOwner).map(({ key, label, href, Icon }) => (
+          {settingsFor(rail.isOwner, rail.billingOn).map(({ key, label, href, Icon }) => (
             <Link
               key={key}
               href={href}

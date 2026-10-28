@@ -20920,3 +20920,16 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
 .nd .nd-water-title { flex: 1; font-size: 15px; font-weight: 600; color: #141a24; }
 .nd .nd-water-goal { font-size: 15px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; }
 .nd .nd-water + .nd-supps { margin-top: 8px; }
+
+/* ---- The subscribe screen (28 Oct, Alex; app/auth/subscribe): Monthly | Yearly as the capsule (white, hairline, the
+   picked one ink, its pill sliding), the price big at 600 with what it is per in grey, the trial a grey line. */
+.au-card .au-plan { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 4px 0 20px; }
+.au-card .au-plan-cap { display: inline-flex; gap: 2px; height: 36px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE1E8; box-sizing: border-box; }
+.au-card .au-plan-cap button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 500; color: #5b6474; cursor: pointer; }
+.au-card .au-plan-cap button.on { background: #141a24; color: #fff; font-weight: 600; }
+.au-card .au-plan-cap small { font-size: 11px; font-weight: 600; color: #2f7a3f; }
+.au-card .au-plan-cap button.on small { color: #9fd3a9; }
+.au-card .au-plan-price { display: flex; align-items: baseline; gap: 6px; color: #141a24; }
+.au-card .au-plan-price b { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.au-card .au-plan-price span { font-size: 14px; font-weight: 500; color: #8b93a1; }
+.au-card .au-plan-trial { margin: 0; font-size: 13px; font-weight: 500; color: #8b93a1; text-align: center; }

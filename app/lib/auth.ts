@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { touchPresence } from "./presence";
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { allocId, claimUnownedRows, getData, persist } from "./db";
 import { clearLockoutsFor } from "./loginLockout";
@@ -10,6 +10,7 @@ import { clerkOn, clerkUserIdFromRequest, clerkUserRow, deleteClerkUser } from "
 import { isTimezone } from "./timezones";
 import { setViewZone } from "./viewZone";
 import { deleteUploadFolder } from "./storage";
+import { billingAccess, billingOn, requireBilling } from "./billing";
 
 // Authentication and authorization for NorCoach.
 //
@@ -184,11 +185,39 @@ export async function requireCoach(): Promise<SessionUser> {
   if (user.must_change_password) redirect("/login/change-password");
   // Signed up, not yet let in by the owner.
   if (user.pending) redirect("/auth/waiting");
+  // What they pay NorCoach (28 Oct, Alex; billing.ts): let in but not subscribed, the subscribe screen; a week unpaid,
+  // read-only: every screen still reads, and a change (a server action's own body, or a form posted without one) takes
+  // them to Billing instead of saving; a redirect, so no screen breaks over it. A page drawn again after an action is a
+  // render, never refused. What stays open (chat, Support, read marks, billing) uses requireCoachAccount instead.
+  const access = billingAccess(user.id, isOwner(user));
+  if (access.state === "subscribe") redirect("/auth/subscribe");
+  if (access.state === "readonly" && !rendering() && (await isChange())) redirect("/admin/redesign/settings?readonly=1#billing");
   // Where the coach is looking from: meetings read in that timezone (viewZone.ts).
   try {
     const zone = decodeURIComponent((await cookies()).get("ironline_tz")?.value ?? "");
     setViewZone(zone && isTimezone(zone) ? zone : null);
   } catch {}
+  return user;
+}
+
+/** Drawing a page, not running an action's body: React's cache holds one object through a render and none inside an
+ *  action (tried 28 Oct, Next 16), so two calls give the same object only while rendering. */
+const probe = cache(() => ({}));
+const rendering = () => probe() === probe();
+/** A server action, or a form posted without one (Next runs those from the body too); a page being read has neither. */
+async function isChange(): Promise<boolean> {
+  const h = await headers();
+  const type = h.get("content-type") ?? "";
+  return !!h.get("next-action") || type.startsWith("multipart/form-data") || type.startsWith("application/x-www-form-urlencoded");
+}
+
+/** A coach, let in, whatever they pay: for the subscribe screen, billing, Support, the chat's read marks, which must
+ *  open while nothing else does (28 Oct, Alex; requireCoach). */
+export async function requireCoachAccount(): Promise<SessionUser> {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  if (user.role !== "coach") redirect("/login/switch?to=coach");
+  if (user.pending) redirect("/auth/waiting");
   return user;
 }
 
@@ -278,6 +307,12 @@ export function deleteCoachAccount(coachId: number): boolean {
  * touches a client's data resolves the client from the row it acts on and
  * passes it here. Non-coaches are redirected, as with requireCoach.
  */
+/** coachForClient for what stays open while read-only (the chat's read marks and typing; requireCoach). */
+export async function coachForClientOpen(clientId: number | null | undefined): Promise<SessionUser | null> {
+  const coach = await requireCoachAccount();
+  return coachOwnsClient(coach.id, clientId) ? coach : null;
+}
+
 export async function coachForClient(clientId: number | null | undefined): Promise<SessionUser | null> {
   const coach = await requireCoach();
   return coachOwnsClient(coach.id, clientId) ? coach : null;
@@ -518,6 +553,9 @@ export function approveCoach(coachId: number): boolean {
   user.onboarding = true;
   persist();
   seedCoachLibrary(user.id);
+  // They pay NorCoach from here (28 Oct, Alex; billing.ts): the subscribe screen comes first, the trial with it. Not
+  // while subscriptions are off: a coach let in then counts as one from before, free until the owner asks.
+  if (billingOn()) requireBilling(user.id, true);
   return true;
 }
 

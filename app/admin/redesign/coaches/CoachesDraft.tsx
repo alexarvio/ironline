@@ -10,6 +10,7 @@ import { SepJoin } from "../Sep";
 import { dayMonth } from "../../../lib/dayMonth";
 import { ConfirmDialog } from "../training/TrainingDraft";
 import { addCoach, approveSignUp, declineSignUp, removeCoach, resetCoachPassword, type CoachOutcome } from "./actions";
+import { setCoachPaysAction } from "../../../lib/billingActions";
 import type { SupportInboxRow } from "../../../lib/support";
 import SupportInbox from "./SupportInbox";
 
@@ -20,7 +21,7 @@ import SupportInbox from "./SupportInbox";
 // password as a state pill, and the owner's actions in words on hover (Remove and Decline ask first). Add coach and
 // Reset password are .dlh pop-ups on clean lines. Never any client's name or data. Ink, never navy; 500 and 600.
 
-export type CoachRow = { id: number; email: string; name: string; clients: number; lastActivity: string | null; mustChangePassword: boolean; owner: boolean };
+export type CoachRow = { id: number; email: string; name: string; clients: number; lastActivity: string | null; mustChangePassword: boolean; owner: boolean; /** What they pay NorCoach (28 Oct; lib/billing.ts): whether they pay, and the state as its pill. */ pays: boolean; billing: { word: string; tone: string } };
 export type SignUpRow = { id: number; email: string; name: string; business: string | null; at: string };
 
 // The server's own check (createCoachAction), so Add waits for what it would accept.
@@ -44,10 +45,10 @@ async function settle(p: Promise<CoachOutcome>): Promise<CoachOutcome> {
   }
 }
 
-const accountGrid = { gridTemplateColumns: "minmax(0, 1fr) 64px 132px 104px 196px", columnGap: 16 } as const;
+const accountGrid = { gridTemplateColumns: "minmax(0, 1fr) 64px 132px 104px 124px 300px", columnGap: 16 } as const;
 const waitGrid = { gridTemplateColumns: "minmax(0, 1fr) 196px", columnGap: 16 } as const;
 
-export default function CoachesDraft({ accounts, waiting, support }: { accounts: CoachRow[]; waiting: SignUpRow[]; /** The coaches' Support threads, newest first (SupportInbox). */ support: SupportInboxRow[] }) {
+export default function CoachesDraft({ accounts, waiting, support, billingOn = false }: { accounts: CoachRow[]; waiting: SignUpRow[]; /** The coaches' Support threads, newest first (SupportInbox). */ support: SupportInboxRow[]; /** Subscriptions set up on the server (lib/billing.ts): the owner can switch who pays. */ billingOn?: boolean }) {
   const router = useRouter();
   const [, start] = useTransition();
   const [busy, setBusy] = useState<number | null>(null);
@@ -138,6 +139,7 @@ export default function CoachesDraft({ accounts, waiting, support }: { accounts:
                 <span>Clients</span>
                 <span>Client activity</span>
                 <span>Password</span>
+                <span>NorCoach</span>
                 <span />
               </div>
               {accounts.map((c) => {
@@ -160,10 +162,19 @@ export default function CoachesDraft({ accounts, waiting, support }: { accounts:
                       <span>
                         <span className={`trn-state rco-state${c.mustChangePassword ? "" : " good"}`}>{c.mustChangePassword ? "Temporary" : "Set"}</span>
                       </span>
+                      <span>
+                        <span className={`trn-state rco-state${c.billing.tone ? ` ${c.billing.tone}` : ""}`}>{c.billing.word}</span>
+                      </span>
                       <span className="rco-acts">
                         {/* The owner's own account isn't changed here. */}
                         {!c.owner && (
                           <>
+                            {/* Who pays NorCoach (28 Oct, Alex): a coach let in from now on pays; one from before, once asked. */}
+                            {billingOn && (
+                              <button type="button" className="rco-act" disabled={busy === c.id} onClick={() => act(c.id, () => setCoachPaysAction(c.id, !c.pays).then((r): CoachOutcome => (r.ok ? { ok: "done", error: null } : { ok: null, error: r.error ?? "Not saved. Try again." })), c.pays ? `${c.name} uses NorCoach free` : `${c.name} pays from their next sign-in`)}>
+                                {c.pays ? "Make it free" : "Make them pay"}
+                              </button>
+                            )}
                             <button type="button" className="rco-act" disabled={busy === c.id} onClick={() => setResetting(c)}>
                               Reset password
                             </button>

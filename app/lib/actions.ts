@@ -36,7 +36,7 @@ import { phaseDays, phaseLastDay } from "./phases";
 import { sendInviteEmail } from "./mail";
 import { clerkOn, sendClerkInvite } from "./clerk";
 import { inviteToken } from "./inviteToken";
-import { createPasswordlessUser } from "./auth";
+import { coachForClientOpen, createPasswordlessUser } from "./auth";
 import { parseMessageLink, type MessageLink } from "./messageLinks";
 import { headers } from "next/headers";
 import {
@@ -2443,7 +2443,8 @@ export async function chatThreadAction(clientId: number, known?: string | null):
 export async function chatTypingAction(clientId: number) {
   const user = await getSessionUser();
   if (!user) return;
-  const id = user.role === "coach" ? ((await coachForClient(Number(clientId))) ? Number(clientId) : null) : user.client_id;
+  // The chat stays open while read-only (28 Oct, Alex): coachForClientOpen.
+  const id = user.role === "coach" ? ((await coachForClientOpen(Number(clientId))) ? Number(clientId) : null) : user.client_id;
   if (id == null) return;
   chatTyping(id, user.role === "coach" ? "coach" : "client");
 }
@@ -3785,7 +3786,8 @@ export async function saveCoachNoteAction(clientId: number, text: string) {
 
 // The coach has looked at something on a client's Home: it stops being new.
 export async function markSeenAction(clientId: number, which: { all: true } | { dayId: number } | { ids: string[] } | { tab: string }) {
-  if (!(await coachForClient(Number(clientId)))) return;
+  // Read marks are no change to the plan: open while read-only (28 Oct, Alex).
+  if (!(await coachForClientOpen(Number(clientId)))) return;
   markClientEventsSeen(Number(clientId), which);
   // The chat read: its unread mark goes on every open screen of it (27 Oct).
   if ("tab" in which && which.tab === "messages") chatChanged(Number(clientId));

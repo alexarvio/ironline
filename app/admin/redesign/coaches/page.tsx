@@ -3,6 +3,7 @@ import { isOwner, requireCoach } from "../../../lib/auth";
 import { getData } from "../../../lib/db";
 import { getCoachProfileView, listCoachAccounts } from "../../../lib/queries";
 import { listSupportThreads } from "../../../lib/support";
+import { billingOn, billingView } from "../../../lib/billing";
 import { startTiming } from "../../../lib/timing";
 import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
@@ -38,14 +39,17 @@ export default async function CoachesPage() {
   const accounts: CoachRow[] = t.time("coachAccounts", () =>
     listCoachAccounts()
       .filter((c) => !wait.has(c.id))
-      .map((c) => ({ ...c, name: getCoachProfileView(c.id)?.displayName ?? c.email, owner: c.id === coach.id })),
+      .map((c) => {
+        const b = billingView(c.id, c.id === coach.id);
+        return { ...c, name: getCoachProfileView(c.id)?.displayName ?? c.email, owner: c.id === coach.id, pays: b.required, billing: b.pill };
+      }),
   );
   return t.end(
     <div className="rd-frame">
       <RedesignRail rail={t.time("rail", () => loadRail(coach))} clientId={0} />
       <ChatDock chats={t.time("chatDock", () => loadChatDock(coach))} />
       <div className="rd-page">
-        <CoachesDraft accounts={accounts} waiting={waiting} support={t.time("supportThreads", () => listSupportThreads())} />
+        <CoachesDraft accounts={accounts} waiting={waiting} support={t.time("supportThreads", () => listSupportThreads())} billingOn={billingOn()} />
       </div>
     </div>
   );

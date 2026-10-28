@@ -12,6 +12,8 @@ import { loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import { AccountSettings, BusinessSettings, InvoicingSettings, LogoSettings, PrivacySettings } from "./SettingsForms";
 import SupportSection from "./SupportSection";
+import BillingSettings from "./BillingSettings";
+import { billingView } from "../../../lib/billing";
 import PlansSettings from "./PlansSettings";
 import { listCoachPlans, planClientCounts } from "../../../lib/coachPlans";
 import { DataSettings, NotificationsSettings, PreferencesSettings } from "./MoreSettings";
@@ -101,6 +103,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const livePlans = plans.filter((p) => !p.archived).length;
 
   // The list's quiet fact under each name (27 Oct, Alex: mockup B), parts joined by the drawn bar's words.
+  const billing = t.time("billing", () => billingView(coach.id, owner));
   const join = (parts: (string | null | undefined | false)[]) => parts.filter(Boolean).join(" | ") || null;
   const land = business.country_code ? countryOf(business.country_code) : null;
   const facts = {
@@ -113,6 +116,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     notifications: join([notify.chat === false && notify.video === false ? "Phone off" : "Phone on", notify.quiet ? `quiet ${notify.quietFrom ?? "22:00"}–${notify.quietTo ?? "07:00"}` : null]),
     preferences: join([units, timezone]),
     data: "Export",
+    // What they pay NorCoach (28 Oct): the plan and its state in a word.
+    billing: billing.status === "free" ? "Free" : join([billing.interval === "year" ? "Yearly" : billing.interval ? "Monthly" : null, billing.access.state === "readonly" ? "Read-only" : billing.status === "trialing" ? "Trial" : billing.status === "active" ? "Active" : billing.access.state === "grace" ? "Payment failed" : "Not started"]),
   };
 
   // In the rail's order, a section a line (its label from settingsNav's SETTINGS unless given; no body, left out).
@@ -139,6 +144,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     { key: "plans", fact: facts.plans, body: <PlansSettings plans={plans} currency={eff.currency} vatFact={eff.rate > 0 ? `Prices ${eff.pricesIncludeVat ? "include" : "exclude"} ${eff.rate}% ${eff.taxLabel}` : null} /> },
     // Keyed on the business's country too: a new one there brings its own defaults here.
     { key: "invoicing", fact: facts.invoicing, body: <InvoicingSettings key={JSON.stringify([invoicing, business.country_code ?? null, business.country ?? null])} initial={invoicing} business={business} payments={payments} /> },
+    // Off until subscriptions are set up on the server; the owner has none (settingsFor).
+    { key: "billing", fact: facts.billing, body: billing.on && !owner ? <BillingSettings view={billing} /> : null },
     { key: "notifications", fact: facts.notifications, body: <NotificationsSettings key={JSON.stringify(notify)} initial={notify} /> },
     { key: "preferences", fact: facts.preferences, body: <PreferencesSettings key={`${units}|${timezone}`} units={units} timezone={timezone} /> },
     { key: "data", fact: facts.data, body: <DataSettings clients={clientCount} /> },

@@ -1266,7 +1266,25 @@ export type CoachPayments = { stripe_account_id?: string; stripe_status?: "pendi
     price in the coach's currency (VAT as Invoicing says) and how often it bills. Never deleted while a client is on it:
     archived, the clients on it staying and billed, out of the picker. */
 export type CoachPlan = { id: string; name: string; price?: number | null; every?: InvoiceEvery | null; archived?: boolean; created_at: string };
-export type CoachSettings = { /** The plans the coach offers (coachPlans.ts). */ plans?: CoachPlan[]; business?: CoachBusiness; invoicing?: CoachInvoicing; payments?: CoachPayments; /** The coach's own time zone (IANA): new meetings start in it. Set at onboarding. */ timezone?: string; /** The coach's own contact details (Your profile, Your details): not the business on invoices. */ contact?: CoachContact; /** What reaches the coach's phone (Settings, Notifications, 27 Oct): each kind on unless false; quiet hours hold them. */ notify?: CoachNotify; /** Weights shown in, by default (Settings, Preferences, 27 Oct). */ units?: "kg" | "lbs"; /** The coach's logo (Settings, Business details, 28 Oct; lib/brandMark.ts): `logo` the upload as a PNG, `mark` its one-colour silhouette drawn faint behind every screen in place of the star. */ brand?: { logo?: string; mark?: string } };
+export type CoachSettings = { /** The plans the coach offers (coachPlans.ts). */ plans?: CoachPlan[]; business?: CoachBusiness; invoicing?: CoachInvoicing; payments?: CoachPayments; /** The coach's own time zone (IANA): new meetings start in it. Set at onboarding. */ timezone?: string; /** The coach's own contact details (Your profile, Your details): not the business on invoices. */ contact?: CoachContact; /** What reaches the coach's phone (Settings, Notifications, 27 Oct): each kind on unless false; quiet hours hold them. */ notify?: CoachNotify; /** Weights shown in, by default (Settings, Preferences, 27 Oct). */ units?: "kg" | "lbs"; /** The coach's logo (Settings, Business details, 28 Oct; lib/brandMark.ts): `logo` the upload as a PNG, `mark` its one-colour silhouette drawn faint behind every screen in place of the star. */ brand?: { logo?: string; mark?: string }; /** What the coach pays NorCoach (28 Oct, Alex; lib/billing.ts). */ billing?: CoachBilling };
+/** The coach's NorCoach subscription, as Stripe last told it (lib/billing.ts). `required` is set when the owner lets a
+ *  coach in, or by the owner on Coaches; without it the coach uses NorCoach free (the owner, the coaches from before). */
+export type CoachBilling = {
+  required?: boolean;
+  status?: "needed" | "trialing" | "active" | "past_due" | "unpaid" | "canceled" | "incomplete" | "incomplete_expired" | "paused";
+  customer?: string;
+  subscription?: string;
+  interval?: "month" | "year";
+  trial_end?: string | null;
+  period_end?: string | null;
+  cancel_at_period_end?: boolean;
+  /** When it stopped being paid; read-only from a week after. Cleared once it is paid again. */
+  lapsed_at?: string | null;
+  /** A coach has one trial. */
+  trial_used?: boolean;
+  /** The checkout they were last sent to; a new one closes it. */
+  checkout?: string | null;
+};
 /** The coach's phone notifications (27 Oct): messages and videos, each on unless false; quiet hours (HH:MM, the coach's time zone) hold them. */
 export type CoachNotify = { chat?: boolean; video?: boolean; quiet?: boolean; quietFrom?: string; quietTo?: string };
 /** A coach's phone and address, as on any account profile. Every field optional. */
