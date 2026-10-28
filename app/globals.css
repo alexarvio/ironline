@@ -16393,6 +16393,8 @@ body:has(.nc-scrim) [data-radix-popper-content-wrapper] { z-index: 110 !importan
    behind a locked week, which stays see-through. */
 .tr-weeks { --pill-bg: #fff; --pill-r: 12px; }
 .tr-weeks[data-pill]:has(> .tr-wk.locked.on)::before { opacity: 0; }
+/* The picked chip's white edge is the pill's to bring, not there before it arrives. */
+.tr-weeks[data-pill] > .tr-wk.on[data-pill-on]:not(.locked) { border-color: transparent; }
 .tr-wk.locked .tr-wk-lock { color: rgba(255, 255, 255, 0.65); }
 /* Training and Nutrition banners line up exactly, so switching tabs doesn't
    jump: a one-line title (FitTitle shrinks a long one), the same foot line
@@ -19509,6 +19511,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-unit { padding: 2px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
 .lw-unit-btn { height: 26px; padding: 0 11px; font-size: 11.5px; font-weight: 600; color: #5b6474; }
 .lw-unit-btn.on { background: #141a24; color: #fff; box-shadow: none; }
+/* Two equal halves (28 Oct, Alex): the pill keeps one width as it slides (SlidePills). */
+.lw-unit { display: grid; grid-template-columns: 1fr 1fr; }
 .lw-rows { position: relative; gap: 0; }
 .lw-rows::before { content: ""; position: absolute; left: 20px; top: 0; bottom: 0; border-left: 1px solid #E1E5EB; pointer-events: none; }
 .lw-fold { position: relative; }

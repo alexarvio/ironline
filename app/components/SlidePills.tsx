@@ -59,15 +59,15 @@ function place(row: HTMLElement) {
     return;
   }
   if (getComputedStyle(row).position === "static") row.style.position = "relative";
-  // offsetLeft counts from the row once it is positioned; a picked option inside a wrapper is measured from the row.
+  // To the fraction of a pixel (halves of a 1fr 1fr row are often 165.5px), in the row's own pixels: `k` undoes a
+  // transform or CSS zoom above it (the Phases screen's 86%), and a row that scrolls counts its scroll.
   const r = row.getBoundingClientRect();
   const o = on.getBoundingClientRect();
-  const x = on.offsetParent === row ? on.offsetLeft : o.left - r.left - row.clientLeft;
-  const y = on.offsetParent === row ? on.offsetTop : o.top - r.top - row.clientTop;
-  row.style.setProperty("--pill-x", `${x}px`);
-  row.style.setProperty("--pill-y", `${y}px`);
-  row.style.setProperty("--pill-w", `${on.offsetWidth}px`);
-  row.style.setProperty("--pill-h", `${on.offsetHeight}px`);
+  const k = r.width / row.offsetWidth || 1;
+  row.style.setProperty("--pill-x", `${(o.left - r.left) / k - row.clientLeft + row.scrollLeft}px`);
+  row.style.setProperty("--pill-y", `${(o.top - r.top) / k - row.clientTop + row.scrollTop}px`);
+  row.style.setProperty("--pill-w", `${o.width / k}px`);
+  row.style.setProperty("--pill-h", `${o.height / k}px`);
   if (was !== on) {
     was?.removeAttribute("data-pill-on");
     on.setAttribute("data-pill-on", "");
