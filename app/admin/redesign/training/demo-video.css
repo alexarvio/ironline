@@ -41,6 +41,8 @@
 .dmvh-seg button:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
 .dmvh-seg button.on { background: #141a24; color: #fff; }
 .dmvh-seg button.on:focus-visible { background: #2a3242; }
+/* Its pill slides (28 Oct, Alex; SlidePills); keyboard focus on the picked one still lifts it. */
+.dmvh-seg:has(> button.on:focus-visible) { --pill-bg: #2a3242; }
 /* One height for the three tabs (23 Oct, Alex: switching made the pop-up jump): the drop zone fills it, Your videos scrolls in it. */
 .dmvh-panel { display: flex; flex-direction: column; gap: 8px; height: 176px; }
 .dmvh-panel .dmvh-drop { flex: 1 1 auto; height: auto; min-height: 112px; }

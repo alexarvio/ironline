@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check-in progress mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#fff;font-family:Archivo,system-ui,sans-serif;color:#141a24}
+.wrap{display:flex;justify-content:center;padding:24px 16px 40px}
+.phone{width:375px;height:780px;border-radius:44px;background:#F5F6F8;box-shadow:0 0 0 10px #141a24,0 30px 60px -20px rgba(0,0,0,.35);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.scroll{flex:1;overflow-y:auto;padding-bottom:40px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.tabs{display:flex;gap:6px;padding:56px 16px 6px}
+.tabs span{height:34px;padding:0 14px;border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:#5b6474;box-shadow:inset 0 0 0 1px #E1E5EB;background:#fff}
+.tabs span.on{background:#141a24;color:#fff;font-weight:600;box-shadow:none}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:14px 16px 4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:34px;padding:0 14px;border:0;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px #E1E5EB;font:500 13px Archivo,system-ui,sans-serif;color:#3a4250;cursor:pointer}
+.chip.on{background:#141a24;color:#fff;font-weight:600;box-shadow:none}
+.metric{padding:22px 28px 0}
+.eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#a08a5c}
+.row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:4px}
+.now{display:flex;align-items:baseline;gap:8px}
+.now b{font-size:34px;font-weight:300;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.now small{font-size:13px;font-weight:500;color:#8b93a1}
+.delta{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.delta.down{color:#2f7a3f}.delta.up{color:#b42318}
+.name{margin-top:2px;font-size:15px;font-weight:500;color:#3a4250}
+.range{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px #E1E5EB}
+.range button{height:26px;padding:0 9px;border:0;border-radius:999px;background:none;font:500 11.5px Archivo,system-ui,sans-serif;color:#5b6474;cursor:pointer}
+.range button.on{background:#141a24;color:#fff;font-weight:600}
+.chart{position:relative;margin:18px 16px 0;height:180px;touch-action:none;cursor:crosshair}
+.chart svg{position:absolute;inset:0;overflow:visible}
+.axis{display:flex;justify-content:space-between;margin:6px 16px 0;padding-right:30px;font-size:11px;font-weight:500;color:#98a2b3;font-variant-numeric:tabular-nums}
+.tip{position:absolute;top:-30px;transform:translateX(-50%);height:24px;padding:0 9px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px #E1E5EB;display:none;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tip span{font-weight:500;color:#8b93a1}
+.label{margin:34px 16px 0;padding:14px 12px 0;border-top:1px solid #E1E5EB;display:flex;justify-content:space-between;align-items:baseline}
+.label b{font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase}
+.label small{font-size:12px;font-weight:500;color:#8b93a1}
+.hist{list-style:none;margin:6px 16px 0;padding:0}
+.hist li{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;font-variant-numeric:tabular-nums}
+.hist .d{font-size:13.5px;font-weight:500;color:#3a4250}
+.hist .v{font-size:15px;font-weight:500}
+.hist .v small{margin-left:8px;font-size:12px;font-weight:500;color:#8b93a1}
+.pager{display:flex;align-items:center;justify-content:center;gap:4px;margin:10px 0 0}
+.pager span{min-width:28px;height:28px;border-radius:999px;display:inline-grid;place-items:center;font-size:12.5px;font-weight:500;color:#5b6474}
+.pager span.on{background:#141a24;color:#fff;font-weight:600}
+.cap{margin-top:14px;text-align:center;font-size:12px;color:#8b93a1}
+</style></head><body>
+<div class="wrap"><div class="phone"><div class="scroll">
+  <div class="tabs"><span>Entries</span><span class="on">Progress</span><span>Calendar</span></div>
+  <div class="chips"><button class="chip on" type="button">Weight</button><button class="chip" type="button">Sleep</button><button class="chip" type="button">Steps</button><button class="chip" type="button">Energy</button><button class="chip" type="button">Waist</button></div>
+  <div class="metric">
+    <div class="eyebrow">Body</div>
+    <div class="row">
+      <div>
+        <div class="now"><b id="nowv">81.4</b><small>kg</small><span class="delta down" id="delta">−1.8 kg</span></div>
+        <div class="name">Weight</div>
+      </div>
+      <div class="range" id="range"><button type="button">1W</button><button type="button" class="on">1M</button><button type="button">3M</button><button type="button">All</button></div>
+    </div>
+  </div>
+  <div class="chart" id="chart"><svg id="svg"></svg><div class="tip" id="tip"></div></div>
+  <div class="axis" id="axis"></div>
+  <div class="label"><b>History</b><small>23 entries</small></div>
+  <ul class="hist" id="hist"></ul>
+  <div class="pager"><span>‹</span><span class="on">1</span><span>2</span><span>›</span></div>
+  <div class="cap">1–20 of 23</div>
+</div></div></div>
+<script>
+(function(){
+var pts=[83.2,83.0,83.1,82.8,82.9,82.6,82.7,82.5,82.4,82.6,82.2,82.3,82.1,82.0,82.2,81.9,81.8,81.9,81.7,81.6,81.8,81.5,81.4];
+var start=new Date(2026,8,30);
+var days=pts.map(function(_,i){var d=new Date(start);d.setDate(d.getDate()+i+1);return d});
+var target=80.5,C="#a08a5c";
+var el=document.getElementById("chart"),svg=document.getElementById("svg"),tip=document.getElementById("tip");
+function draw(){
+ var W=el.clientWidth,H=el.clientHeight,pad=30;var lo=Math.min.apply(null,pts.concat([target]))-.5,hi=Math.max.apply(null,pts)+.5;
+ var x=function(i){return (i/(pts.length-1))*(W-pad)},y=function(v){return H-((v-lo)/(hi-lo))*H};
+ var g="";[lo+ (hi-lo)*.25,lo+(hi-lo)*.5,lo+(hi-lo)*.75].forEach(function(v){g+='<line x1="0" x2="'+(W-pad)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#E1E5EB" stroke-width="1"/><text x="'+(W-pad+6)+'" y="'+(y(v)+4)+'" font-size="11" font-weight="500" fill="#98a2b3" font-family="Archivo">'+v.toFixed(1)+'</text>'});
+ g+='<line x1="0" x2="'+(W-pad)+'" y1="'+y(target)+'" y2="'+y(target)+'" stroke="'+C+'" stroke-width="1.2" stroke-dasharray="4 4" opacity=".7"/><text x="0" y="'+(y(target)-6)+'" font-size="11" font-weight="600" fill="'+C+'" font-family="Archivo">Goal 80.5</text>';
+ var d=pts.map(function(v,i){return (i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)}).join("");
+ g+='<path d="'+d+'" fill="none" stroke="'+C+'" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>';
+ var lx=x(pts.length-1),ly=y(pts[pts.length-1]);
+ g+='<circle cx="'+lx+'" cy="'+ly+'" r="4.5" fill="#F5F6F8" stroke="'+C+'" stroke-width="1.6"/>';
+ g+='<line id="guide" x1="0" x2="0" y1="0" y2="'+H+'" stroke="#141a24" stroke-width="1" opacity="0"/><circle id="knob" r="4.5" fill="#F5F6F8" stroke="#141a24" stroke-width="1.6" opacity="0"/>';
+ svg.innerHTML=g;
+ el.onpointermove=function(e){var r=el.getBoundingClientRect();var i=Math.round(Math.max(0,Math.min(1,(e.clientX-r.left)/(W-pad)))*(pts.length-1));var gx=x(i),gy=y(pts[i]);var gl=svg.querySelector("#guide"),kn=svg.querySelector("#knob");gl.setAttribute("x1",gx);gl.setAttribute("x2",gx);gl.setAttribute("opacity",".25");kn.setAttribute("cx",gx);kn.setAttribute("cy",gy);kn.setAttribute("opacity","1");tip.style.display="inline-flex";tip.style.left=gx+"px";tip.innerHTML=pts[i].toFixed(1)+' kg <span>'+days[i].toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})+'</span>'};
+ el.onpointerleave=function(){svg.querySelector("#guide").setAttribute("opacity","0");svg.querySelector("#knob").setAttribute("opacity","0");tip.style.display="none"};
+ var ax=document.getElementById("axis");var f=function(d){return d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})};ax.innerHTML='<span>'+f(days[0])+'</span><span>'+f(days[Math.floor(days.length/2)])+'</span><span>'+f(days[days.length-1])+'</span>';
+}
+draw();
+var h=document.getElementById("hist");var rows="";for(var i=pts.length-1;i>=Math.max(0,pts.length-20);i--){var ch=i>0?pts[i]-pts[i-1]:0;rows+='<li><span class="d">'+days[i].toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})+'</span><span class="v">'+pts[i].toFixed(1)+' kg<small>'+(i>0?(ch>0?"+":ch<0?"−":"")+Math.abs(ch).toFixed(1):"")+'</small></span></li>'}h.innerHTML=rows;
+document.querySelectorAll(".chip").forEach(function(c){c.addEventListener("click",function(){document.querySelectorAll(".chip").forEach(function(x){x.classList.toggle("on",x===c)})})});
+document.querySelectorAll("#range button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("#range button").forEach(function(x){x.classList.toggle("on",x===b)})})});
+})();
+</script>
+</body></html>

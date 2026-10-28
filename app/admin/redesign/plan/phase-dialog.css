@@ -41,6 +41,8 @@
 .npd.npd .npd-seg button:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
 .npd.npd .npd-seg button.on { background: #141a24; color: #fff; }
 .npd.npd .npd-seg button.on:focus-visible { background: #2a3242; }
+/* Its pill slides (28 Oct, Alex; SlidePills); keyboard focus on the picked one still lifts it. */
+.npd.npd .npd-seg:has(> button.on:focus-visible) { --pill-bg: #2a3242; }
 
 /* The calendar beside the dates. */
 /* The calendar's key keeps two rows of room whatever the track (25 Oct, Alex: switching Training, Nutrition and Lifestyle

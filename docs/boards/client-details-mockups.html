@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Client details mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#fff;font-family:Archivo,system-ui,sans-serif;color:#141a24}
+.wrap{max-width:700px;margin:0 auto;padding:20px 16px 40px}
+.pick{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
+.pick button{font:500 13px Archivo,system-ui,sans-serif;height:34px;padding:0 14px;border-radius:999px;border:0;background:#fff;box-shadow:inset 0 0 0 1px #DCE1E8;color:#141a24;cursor:pointer}
+.pick button.on{background:#141a24;color:#fff;box-shadow:none}
+.stage{background:rgba(16,24,40,.32);border-radius:12px;padding:28px 20px;display:flex;justify-content:center}
+.card{width:100%;max-width:560px;background:#fff;border-radius:20px;padding:20px 20px 16px;box-shadow:0 30px 60px -24px rgba(16,24,40,.35),0 0 0 1px #E1E5EB}
+.head{display:flex;align-items:center;gap:12px}
+.face{flex:none;width:48px;height:48px;border-radius:999px;display:grid;place-items:center;background:#EEF0F3;font-weight:600;font-size:18px;color:#5b6474}
+.head h2{margin:0;font-size:18px;font-weight:600}
+.head .fact{margin-top:2px;font-size:13px;font-weight:500;color:#5b6474;font-variant-numeric:tabular-nums}
+.x{margin-left:auto;align-self:flex-start;width:28px;height:28px;border-radius:999px;display:grid;place-items:center;color:#8b93a1}
+.sep{display:inline-block;width:1px;height:11px;margin:0 8px;background:#c9cfd8;vertical-align:-1px}
+.sec{margin-top:20px}
+.sechead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.label{font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#5b6474}
+.edit{font-size:13px;font-weight:600;color:#5b6474}
+.add{color:#98a2b3;font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px}
+.cell small{display:block;font-size:12px;font-weight:500;color:#8b93a1;margin-bottom:3px}
+.cell b{display:block;font-size:14.5px;font-weight:600;color:#141a24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.cell b.add,.kv b.add,.line span.add{font-weight:500;color:#98a2b3}
+.wide{grid-column:span 2}
+.full{grid-column:1/-1}
+.note{margin-top:20px}
+.note p{margin:6px 0 0;font-size:14px;font-weight:500;color:#98a2b3}
+.foot{display:flex;align-items:center;margin-top:20px}
+.del{font-size:13.5px;font-weight:600;color:#b42318}
+.figs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:18px;border-radius:14px;box-shadow:inset 0 0 0 1px #E1E5EB}
+.figs > div{padding:12px 14px}
+.figs > div + div{box-shadow:inset 1px 0 0 #EEF0F3}
+.figs small{display:block;font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#5b6474}
+.figs b{display:block;margin-top:4px;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.figs em{font-style:normal;font-size:12px;font-weight:500;color:#8b93a1}
+.lines{display:flex;flex-direction:column;gap:10px}
+.line{display:flex;align-items:center;gap:10px;font-size:14.5px;font-weight:500;color:#141a24;min-width:0}
+.line svg{flex:none;color:#8b93a1}
+.line span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 24px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:14px;font-weight:500}
+.kv small{font-size:13.5px;color:#5b6474;font-weight:500}
+.kv b{font-weight:600;font-variant-numeric:tabular-nums}
+</style></head><body><div class="wrap">
+<div class="pick" role="group" aria-label="Mockup">
+<button type="button" data-k="A" class="on">A · Facts in a grid</button>
+<button type="button" data-k="B">B · Figures, then contact</button>
+</div>
+
+<section data-v="A">
+<div class="stage"><div class="card">
+  <div class="head">
+    <span class="face">A</span>
+    <div><h2>Alex Lucini</h2><div class="fact">Male<span class="sep"></span>155 cm<span class="sep"></span>Week 1 of Minas Tirith</div></div>
+    <span class="x">✕</span>
+  </div>
+
+  <div class="sec">
+    <div class="sechead"><span class="label">Contact</span><span class="edit">Edit</span></div>
+    <div class="grid">
+      <div class="cell wide"><small>Email</small><b>abdulahiomarlucini@gmail.com</b></div>
+      <div class="cell"><small>Phone</small><b class="add">Add</b></div>
+      <div class="cell wide"><small>Address</small><b>Gerard Doustraat 186</b></div>
+      <div class="cell"><small>Birthday</small><b class="add">Add</b></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sechead"><span class="label">Coaching</span><span class="edit">Edit</span></div>
+    <div class="grid">
+      <div class="cell"><small>Started</small><b class="add">Add</b></div>
+      <div class="cell"><small>Goal date</small><b class="add">Add</b></div>
+      <div class="cell"><small>Check-in day</small><b class="add">Add</b></div>
+      <div class="cell"><small>Starting weight</small><b>88 kg</b></div>
+      <div class="cell"><small>Now</small><b class="add">–</b></div>
+      <div class="cell"><small>Change</small><b class="add">–</b></div>
+    </div>
+  </div>
+
+  <div class="note"><span class="label">Your note</span><p>A note only you see</p></div>
+  <div class="foot"><span class="del">Delete Alex</span></div>
+</div></div>
+</section>
+
+<section data-v="B" hidden>
+<div class="stage"><div class="card">
+  <div class="head">
+    <span class="face">A</span>
+    <div><h2>Alex Lucini</h2><div class="fact">Male<span class="sep"></span>155 cm</div></div>
+    <span class="x">✕</span>
+  </div>
+
+  <div class="figs">
+    <div><small>Week</small><b>1</b><em>Minas Tirith</em></div>
+    <div><small>Weight</small><b>88 kg</b><em>at the start</em></div>
+    <div><small>Change</small><b style="color:#98a2b3">–</b><em>no reading yet</em></div>
+  </div>
+
+  <div class="sec">
+    <div class="sechead"><span class="label">Contact</span><span class="edit">Edit</span></div>
+    <div class="lines">
+      <div class="line"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><span>abdulahiomarlucini@gmail.com</span></div>
+      <div class="line"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><span class="add">Add phone</span></div>
+      <div class="line"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Gerard Doustraat 186</span></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sechead"><span class="label">Coaching</span><span class="edit">Edit</span></div>
+    <div class="two">
+      <div class="kv"><small>Started</small><b class="add">Add</b></div>
+      <div class="kv"><small>Check-in day</small><b class="add">Add</b></div>
+      <div class="kv"><small>Goal date</small><b class="add">Add</b></div>
+      <div class="kv"><small>Birthday</small><b class="add">Add</b></div>
+    </div>
+  </div>
+
+  <div class="note"><span class="label">Your note</span><p>A note only you see</p></div>
+  <div class="foot"><span class="del">Delete Alex</span></div>
+</div></div>
+</section>
+</div>
+<script>(function(){var bs=document.querySelectorAll('.pick button'),ss=document.querySelectorAll('section[data-v]');bs.forEach(function(b){b.addEventListener('click',function(){ss.forEach(function(s){s.hidden=s.dataset.v!==b.dataset.k});bs.forEach(function(x){x.classList.toggle('on',x===b)})})})})();</script>
+</body></html>

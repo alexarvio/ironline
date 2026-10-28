@@ -658,9 +658,7 @@ export default function ExercisePage({
           </span>
           {/* KG / LBS on the card's row (13 Oct, back where it was): the exercise's unit, every set of it. */}
           {askWeight && (
-            <div className={`lw-unit${unit === "lb" ? " lb" : ""}`} role="radiogroup" aria-label="Weight unit for this exercise">
-              {/* The ink pill slides to the unit picked (28 Oct, Alex). */}
-              <span className="lw-unit-pill" aria-hidden="true" />
+            <div className="lw-unit" role="radiogroup" aria-label="Weight unit for this exercise">
               {(["kg", "lb"] as Unit[]).map((u) => (
                 <button key={u} type="button" role="radio" aria-checked={unit === u} className={`lw-unit-btn${unit === u ? " on" : ""}`} onClick={() => setUnit(u)}>
                   {u === "kg" ? "KG" : "LBS"}

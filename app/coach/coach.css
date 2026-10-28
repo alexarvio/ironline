@@ -215,6 +215,7 @@ html.cph-locked .cph-stage { touch-action: none; }
 .cph-rate { display: flex; flex: none; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(255, 255, 255, 0.12); }
 .cph-play .cph-rate button { justify-content: center; align-items: center; min-width: 38px; height: 30px; padding: 0 6px; border-radius: 7px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: rgba(255, 255, 255, 0.8); }
 .cph-play .cph-rate button.on { background: #fff; color: #141a24; }
+.cph-rate { --pill-bg: #fff; --pill-r: 7px; } /* its pill slides, white (28 Oct, Alex; SlidePills) */
 .cph-review-body { flex: none; max-height: 34vh; padding: 14px 20px 2px; overflow-y: auto; }
 .cph-review-body h1 { margin: 0; font-size: 19px; font-weight: 600; }
 .cph-review-body p { margin: 0; }

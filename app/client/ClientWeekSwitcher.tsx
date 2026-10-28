@@ -85,7 +85,8 @@ export default function ClientWeekSwitcher({
 
   const strip =
     weeks.length > 1 ? (
-      <div className={`tr-weeks${scrolls ? " scroll" : ""}`} ref={stripRef}>
+      // data-slide: the picked week's pill slides to the next (28 Oct, Alex; SlidePills).
+      <div className={`tr-weeks${scrolls ? " scroll" : ""}`} ref={stripRef} data-slide="">
         {weeks.map((w) => {
           const done = completedWeeks.includes(w);
           const locked = isLocked(w);

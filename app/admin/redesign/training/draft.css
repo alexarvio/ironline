@@ -16,6 +16,8 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-switch .rd-switch-due, .rd-switch-states .rd-switch-due { margin-left: 4px; }
 .rd-switch-menu .rd-switch-name + .rd-due { margin-left: 6px; }
 .rd-nav button.on { background: #fff; color: #141a24; font-weight: 600; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.08); }
+/* Its pill slides as every capsule's (28 Oct, Alex; SlidePills), white with the tab's own shadow. */
+.rd-nav { --pill-bg: #fff; --pill-shadow: 0 1px 2px rgba(20, 26, 36, 0.08); }
 .rd-banner { margin: 0 0 22px; font-size: 12.5px; line-height: 1.6; color: #5b6474; }
 .rd-banner a { color: #2f5d8f; }
 .rd-empty { color: #5b6474; }
@@ -647,7 +649,9 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-pbdot { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 4px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.45); color: #2f7a3f; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; box-sizing: border-box; cursor: default; }
 .rd-set.rd-set-pb { box-shadow: inset 0 0 0 1.5px #2f7a3f; }
 .rd-flag { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px #dce1e8; color: #5b6474; cursor: pointer; text-decoration: none; }
-.rd-flag svg { width: 13px; height: 13px; }
+/* An icon in a mark sits on whole pixels (28 Oct, Alex: the camera sat off-centre): a 22px ring holds a 12px icon, 5px
+   either side. A 13px one sat 4.5px in, so it rounded half a pixel off the ring. */
+.rd-flag svg, .rd-swapdot svg { flex: none; width: 12px; height: 12px; }
 /* Rings, not filled discs (24 Oct, Alex): the state's colour on the edge and the icon. In, waiting for you: rust. Replied: green. */
 .rd-flag.video.in { box-shadow: inset 0 0 0 1.5px #b3471d; color: #b3471d; }
 .rd-flag.video.replied { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.45); color: #2f7a3f; }
@@ -1258,6 +1262,8 @@ span.rd-demo { cursor: default; }
 .vrp-seg { display: flex; padding: 3px; border-radius: 999px; background: #F2F4F7; }
 .vrp-seg button { flex: 1; height: 32px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12.5px; font-weight: 800; color: #667085; white-space: nowrap; cursor: pointer; }
 .vrp-seg button.on { background: #fff; color: #1d3466; box-shadow: 0 2px 6px -2px rgba(16, 24, 40, 0.25); }
+/* Its pill slides, white with that shadow (28 Oct, Alex; SlidePills). */
+.vrp-seg { --pill-bg: #fff; --pill-shadow: 0 2px 6px -2px rgba(16, 24, 40, 0.25); }
 .vrp-info { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #F4F6FA; font-size: 12.5px; font-weight: 600; line-height: 1.45; color: #3a4250; }
 .vrp-info svg { flex: none; margin-top: 1px; color: #5b6474; }
 .vrp-error { margin: -6px 0 0; font-size: 12.5px; font-weight: 700; color: #B42318; }

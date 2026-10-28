@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strength hexagon mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#F5F6F8;font-family:Archivo,system-ui,sans-serif;color:#141a24}
+.wrap{max-width:900px;margin:0 auto;padding:24px 16px 40px}
+.card{background:#fff;border-radius:18px;box-shadow:inset 0 0 0 1px #E1E5EB;padding:16px 18px 18px}
+.head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:36px}
+.head h2{margin:0;font-size:15px;font-weight:600}
+.cap{display:inline-flex;gap:2px;height:36px;padding:4px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px #DCE1E8}
+.cap button{height:28px;padding:0 13px;border:0;border-radius:999px;background:none;font:500 13px Archivo,system-ui,sans-serif;color:#5b6474;cursor:pointer}
+.cap button.on{background:#141a24;color:#fff;font-weight:600}
+.sub{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.under{font-size:12.5px;font-weight:500;color:#8b93a1;font-variant-numeric:tabular-nums}
+.under b{font-weight:600;color:#2f7a3f}
+.sep{display:inline-block;width:1px;height:10px;margin:0 8px;background:#c9cfd8;vertical-align:-1px}
+svg{display:block;margin:6px auto 0}
+.legend{display:flex;gap:18px;align-items:center;font-size:12px;font-weight:500;color:#8b93a1;margin-top:8px}
+.legend i{display:inline-block;width:16px;height:0;border-top:2px solid #3a3390;vertical-align:middle;margin-right:6px}
+.legend i.dash{border-top:2px dashed #98a2b3}
+.note{max-width:900px;margin:14px auto 0;font-size:12.5px;color:#8b93a1;line-height:1.5}
+</style></head><body><div class="wrap">
+<div class="card">
+  <div class="head">
+    <h2>Muscle balance</h2>
+    <div class="cap" id="mode"><button data-m="sets" type="button">Sets</button><button data-m="strength" type="button" class="on">Strength</button></div>
+  </div>
+  <div class="sub">
+    <div class="cap" id="win"><button data-w="d7" type="button" class="on">7d</button><button data-w="d30" type="button">30d</button><button data-w="phase" type="button">Phase</button></div>
+    <span class="under" id="under"></span>
+  </div>
+  <svg id="radar" width="560" height="420" viewBox="0 0 560 420" role="img" aria-label="Muscle balance"></svg>
+  <div class="legend" id="legend"></div>
+</div>
+<p class="note">Mockup data. Strength: each group's best estimated one-rep max over its exercises, against the window before (7d, 30d) or the phase's start (Phase). 100 is no change. Sets: as today.</p>
+</div>
+<script>
+(function(){
+var G=["Back","Chest","Core","Legs","Shoulders","Arms"];
+var STR={d7:{Back:106,Chest:98,Core:null,Legs:104,Shoulders:102,Arms:95},d30:{Back:108,Chest:103,Core:null,Legs:111,Shoulders:99,Arms:101},phase:{Back:114,Chest:106,Core:null,Legs:118,Shoulders:105,Arms:103}};
+var SETS={d7:{Back:12,Chest:9,Core:4,Legs:14,Shoulders:6,Arms:8},d30:{Back:46,Chest:38,Core:15,Legs:52,Shoulders:24,Arms:31},phase:{Back:70,Chest:58,Core:22,Legs:80,Shoulders:36,Arms:47}};
+var PREV={d7:{Back:10,Chest:10,Core:5,Legs:12,Shoulders:6,Arms:9},d30:{Back:40,Chest:36,Core:18,Legs:48,Shoulders:22,Arms:30},phase:null};
+var OVER={d7:'Overall <b>+2%</b><span class="sep"></span>3 of 9 at a new best',d30:'Overall <b>+4%</b><span class="sep"></span>5 of 11 at a new best',phase:'Overall <b>+9%</b><span class="sep"></span>8 of 11 at a new best'};
+var COL={d7:"#3a3390",d30:"#c2417a",phase:"#141a24"};
+var mode="strength",on={d7:true,d30:false,phase:false};
+var cx=280,cy=210,R=150;
+function ang(i){return -Math.PI/2+i*Math.PI/3}
+function pt(i,f){return [cx+Math.cos(ang(i))*R*f,cy+Math.sin(ang(i))*R*f]}
+function path(fs){var p=fs.map(function(f,i){return pt(i,f)});var d="";for(var i=0;i<6;i++){var a=p[i],b=p[(i+1)%6],c=p[(i+5)%6];var m1=[(c[0]+a[0])/2,(c[1]+a[1])/2],m2=[(a[0]+b[0])/2,(a[1]+b[1])/2];var s1=[a[0]+(m1[0]-a[0])*0.25,a[1]+(m1[1]-a[1])*0.25],s2=[a[0]+(m2[0]-a[0])*0.25,a[1]+(m2[1]-a[1])*0.25];d+=(i?"L":"M")+s1[0].toFixed(1)+" "+s1[1].toFixed(1)+"Q"+a[0].toFixed(1)+" "+a[1].toFixed(1)+" "+s2[0].toFixed(1)+" "+s2[1].toFixed(1)}return d+"Z"}
+function el(t,a,txt){var e=document.createElementNS("http://www.w3.org/2000/svg",t);for(var k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e}
+function draw(){
+ var s=document.getElementById("radar");s.innerHTML="";
+ var wins=["d7","d30","phase"].filter(function(w){return on[w]});
+ [0.5,1].forEach(function(f){s.appendChild(el("path",{d:path([f,f,f,f,f,f]),fill:"none",stroke:"#EEF0F3","stroke-width":1}))});
+ for(var i=0;i<6;i++){var p=pt(i,1);s.appendChild(el("line",{x1:cx,y1:cy,x2:p[0],y2:p[1],stroke:"#EEF0F3"}))}
+ var maxSets=1;
+ if(mode==="strength"){
+  s.appendChild(el("path",{d:path([.5,.5,.5,.5,.5,.5]),fill:"none",stroke:"#98a2b3","stroke-width":1.5,"stroke-dasharray":"4 4"}));
+ } else {
+  wins.forEach(function(w){G.forEach(function(g){maxSets=Math.max(maxSets,SETS[w][g],(PREV[w]||{})[g]||0)})});
+  if(wins.length===1&&PREV[wins[0]]){var pw=PREV[wins[0]];s.appendChild(el("path",{d:path(G.map(function(g){return Math.max(.04,pw[g]/maxSets)})),fill:"none",stroke:"#98a2b3","stroke-width":1.5,"stroke-dasharray":"4 4"}))}
+ }
+ wins.forEach(function(w){
+  var fs=G.map(function(g){if(mode==="strength"){var v=STR[w][g];return v==null?.5:Math.max(.05,Math.min(1,(v-80)/40))}return Math.max(.04,SETS[w][g]/maxSets)});
+  s.appendChild(el("path",{d:path(fs),fill:COL[w],"fill-opacity":wins.length>1?0.08:0.12,stroke:COL[w],"stroke-width":1.6}));
+ });
+ G.forEach(function(g,i){
+  var p=pt(i,1.18);var anchor=Math.abs(p[0]-cx)<5?"middle":p[0]<cx?"end":"start";
+  s.appendChild(el("text",{x:p[0],y:p[1]-6,"text-anchor":anchor,"font-size":12.5,"font-weight":500,fill:"#8b93a1","font-family":"Archivo"},g));
+  var x=p[0];var parts=wins.map(function(w){var v=mode==="strength"?STR[w][g]:SETS[w][g];var txt=v==null?"–":String(v);var col=mode==="strength"?(v==null?"#98a2b3":v>100?"#2f7a3f":v<100?"#b42318":"#141a24"):COL[w];return {txt:txt,col:wins.length>1?COL[w]:col}});
+  var tx=el("text",{x:x,y:p[1]+12,"text-anchor":anchor,"font-size":13.5,"font-weight":600,"font-family":"Archivo"});
+  parts.forEach(function(pp,k){var ts=el("tspan",{fill:pp.col},(k?"  ":"")+pp.txt);tx.appendChild(ts)});
+  s.appendChild(tx);
+ });
+ document.getElementById("under").innerHTML=mode==="strength"&&wins.length===1?OVER[wins[0]]:"";
+ var lg=document.getElementById("legend");
+ if(mode==="strength"){lg.innerHTML=wins.map(function(w){return '<span><i style="border-top-color:'+COL[w]+'"></i>'+(w==="d7"?"Last 7d":w==="d30"?"Last 30d":"Phase")+'</span>'}).join("")+'<span><i class="dash"></i>100, no change</span>'}
+ else{lg.innerHTML=wins.map(function(w){return '<span><i style="border-top-color:'+COL[w]+'"></i>'+(w==="d7"?"Last 7d":w==="d30"?"Last 30d":"Phase")+'</span>'}).join("")+(wins.length===1&&PREV[wins[0]]?'<span><i class="dash"></i>'+(wins[0]==="d7"?"7d":"30d")+' before</span>':"")}
+}
+document.querySelectorAll("#mode button").forEach(function(b){b.addEventListener("click",function(){mode=b.dataset.m;document.querySelectorAll("#mode button").forEach(function(x){x.classList.toggle("on",x===b)});draw()})});
+document.querySelectorAll("#win button").forEach(function(b){b.addEventListener("click",function(){var w=b.dataset.w;on[w]=!on[w];b.classList.toggle("on",on[w]);draw()})});
+draw();
+})();
+</script>
+</body></html>

@@ -184,7 +184,7 @@
 .rd.trn .trn-row-flags { display: inline-flex; align-items: center; gap: 6px; }
 .rd.trn .trn-row-flags > * { margin: 0; }
 .rd.trn .trn-row-flags .rd-tag.note { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px var(--trn-line); color: var(--trn-sec); }
-.rd.trn .trn-row-flags .rd-tag.note svg { width: 13px; height: 13px; }
+.rd.trn .trn-row-flags .rd-tag.note svg { width: 12px; height: 12px; }
 /* .trn-row-more, the ⋯ of every row and card, is one admin-wide rule in draft.css (25 Oct, Alex). */
 .rd.trn .trn-row-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; }
 .rd.trn .trn-row-toggle:hover .trn-chev { color: var(--trn-ink); }

@@ -11,14 +11,17 @@ import { ArrowRightIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon }
 import { setExerciseDemoLinkAction } from "../../../lib/actions";
 import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem } from "./load";
-import { Fold } from "../Fold";
 import Picker from "../Picker";
 import DemoVideoDialog from "../training/DemoVideoDialog";
 import { ConfirmDialog } from "../training/TrainingDraft";
 
 // The coach's Library (21 Oct, Alex: "just the library for now"): every exercise of theirs and its demo, nothing else.
-// Training's header (Library, + Exercise, ⋯), one search bar, then each muscle group in the coach's order (Cardio
-// among them, Other last): its title with the count and the fold, then a grid of cards, an exercise a card A–Z
+// Training's header (Library, + Exercise, + Group), one search bar, then laid out as Settings (28 Oct, Alex: "on the
+// left the sections and then on the right they open up"): the muscle groups in the coach's order (Cardio among them,
+// Other last) as a list on the left, each its name over its count, and the one picked on the right, its title (a click
+// renames it) and a grid of cards, an exercise a card A–Z. The first group shows when the page opens, never the one
+// left open last time (28 Oct, Alex: Legs came up open). A search shows every match on the right, under its group's
+// title, and a group picked in the list clears it.
 // (23 Oct, Alex: the rows' thumbs were way too small). A card: the demo big on top at 3:4 (a click plays it in a
 // player floating by the card, or opens the link; Add video on a dashed stage when there is none), the
 // name under it, Replace / Remove on hover, and ⋯ over the poster's corner (Move to, Take out; the name renames on a click); + Exercise
@@ -30,8 +33,6 @@ type Patch = Partial<Pick<LibraryItem, "name" | "group" | "video" | "archived">>
 type Row = { key: string; id: number; name: string; group: string; video: string | null; archived: boolean; pending: boolean };
 type Dlg = { kind: "demo"; id: number; tab?: "link" | "file" } | { kind: "remove"; id: number } | { kind: "takeout"; id: number } | null;
 
-/** The groups the coach opened in this browser; every other one is folded (23 Oct, Alex: folded by default). */
-const OPEN_KEY = "norcoach:library-open";
 // What uploadLibraryVideoAction takes (serverActions.bodySizeLimit).
 const MAX_UPLOAD = 128 * 1024 * 1024;
 const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
@@ -39,20 +40,6 @@ const isUpload = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v
 /** A clip of the coach's, a YouTube video (both play by the card), or another link (opens in a new tab). */
 const demoKind = (url: string): "upload" | "youtube" | "link" => (isUpload(url) ? "upload" : ytId(url) ? "youtube" : "link");
 const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-
-const readOpened = (): string[] => {
-  try {
-    const v: unknown = JSON.parse(window.localStorage.getItem(OPEN_KEY) ?? "[]");
-    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
-  } catch {
-    return [];
-  }
-};
-const writeOpened = (v: string[]) => {
-  try {
-    window.localStorage.setItem(OPEN_KEY, JSON.stringify(v));
-  } catch {}
-};
 
 /** What the server now shows needs no stand-in: each patch keeps only the fields the server doesn't have yet. */
 function prune(patches: Record<number, Patch>, items: LibraryItem[]): Record<number, Patch> {
@@ -70,8 +57,9 @@ function prune(patches: Record<number, Patch>, items: LibraryItem[]): Record<num
 export default function LibraryDraft({ data }: { data: LibraryData }) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [opened, setOpened] = useState<string[]>([]);
-  // ?edit=<id> (the old drawer's link): its group open, the card scrolled to.
+  // The group on the right: the first one on arrival.
+  const [picked, setPicked] = useState<string>(data.groups[0]?.slug ?? "other");
+  // ?edit=<id> (the old drawer's link): its group picked, the card scrolled to.
   const [landing, setLanding] = useState<number | null>(null);
   const [patches, setPatches] = useState<Record<number, Patch>>({});
   const [adding, setAdding] = useState<{ key: string; name: string; group: string; id: number | null }[]>([]);
@@ -109,10 +97,9 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
     setAdding((a) => a.filter((x) => x.id == null || !data.items.some((i) => i.id === x.id)));
   }
 
-  // The folds as the coach left them in this browser, and ?edit=<id>, once the page is on screen.
+  // ?edit=<id>, once the page is on screen: its group picked.
   useEffect(() => {
     const t = setTimeout(() => {
-      setOpened(readOpened());
       const edit = Number(new URLSearchParams(window.location.search).get("edit"));
       if (edit > 0) {
         setLanding(edit);
@@ -142,17 +129,12 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   const shown = rows.filter((r) => (!r.archived || (!r.pending && r.id === landing)) && (!needle || r.name.toLowerCase().includes(needle)));
   const sections = data.groups.map((g) => ({ ...g, rows: shown.filter((r) => r.group === g.slug).sort(byName) })).filter((s) => !needle || s.rows.length > 0);
   const landingGroup = landing != null ? (rows.find((r) => !r.pending && r.id === landing)?.group ?? null) : null;
-  const isOpen = (slug: string) => !!needle || slug === landingGroup || opened.includes(slug);
-
-  const setOpens = (next: string[]) => {
-    setOpened(next);
-    writeOpened(next);
-  };
-  const toggle = (slug: string) => {
-    const open = isOpen(slug);
-    if (slug === landingGroup) setLanding(null);
-    // One group open at a time (23 Oct, Alex): opening one folds the one that was open.
-    setOpens(open ? [] : [slug]);
+  // The group showing: the one a link landed in, else the one picked (the first, if the picked one is gone).
+  const showing = landingGroup ?? (data.groups.some((g) => g.slug === picked) ? picked : (data.groups[0]?.slug ?? "other"));
+  const pick = (slug: string) => {
+    setLanding(null);
+    setQ("");
+    setPicked(slug);
   };
 
   const patch = (id: number, p: Patch) => setPatches((all) => ({ ...all, [id]: { ...all[id], ...p } }));
@@ -227,7 +209,9 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
     const key = `new-${Date.now()}`;
     setPanel(null);
     setAdding((a) => [...a, { key, name, group, id: null }]);
-    if (!opened.includes(group)) setOpens([group]);
+    // Shown where it went.
+    setLanding(null);
+    setPicked(group);
     void (async () => {
       const id = await createLibraryExerciseAction(name, group, "").catch(() => null);
       if (id == null) {
@@ -246,6 +230,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
       return;
     }
     setPanel(null);
+    pick(slug);
     router.refresh();
   };
 
@@ -382,70 +367,79 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
             aria-label="Search the library"
           />
         </label>
-        {needle && sections.length === 0 && <p className="lbx-none">None</p>}
       </div>
 
-      {/* ---- A muscle group: its title, the count and the fold; a grid of cards, A–Z; + Exercise the last tile. */}
-      {sections.map((s) => {
-        const open = isOpen(s.slug);
-        const count = s.rows.filter((r) => !r.archived).length;
-        const label = groupNames[s.slug] ?? s.label;
-        const fold = (
-          <>
-            <small>{count}</small>
-            <Fold open={open} />
-          </>
-        );
-        return (
-          <section key={s.slug} className="rls-section lbx-group" aria-label={label}>
-            <h2 className="lbx-gtitle">
-              {renamingGroup === s.slug ? (
-                <input
-                  className="lbx-grename"
-                  defaultValue={label}
-                  autoFocus
-                  maxLength={40}
-                  aria-label={`Rename ${label}`}
-                  onFocus={(e) => e.currentTarget.select()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") renameGroup(s.slug, label, e.currentTarget.value);
-                    if (e.key === "Escape") setRenamingGroup(null);
-                  }}
-                  onBlur={(e) => renameGroup(s.slug, label, e.currentTarget.value)}
-                />
-              ) : (
-                // A click on the name types a new one (23 Oct, Alex: no Rename word beside it).
-                <button type="button" className="lbx-glabel lbx-glabel-btn" title="Rename" aria-label={`${label}: rename`} onClick={() => setRenamingGroup(s.slug)}>
-                  {label}
-                </button>
-              )}
-              {needle ? (
-                <span className="lbx-gbtn">{fold}</span>
-              ) : (
-                <button type="button" className="lbx-gbtn" aria-expanded={open} aria-label={open ? `Fold ${label}` : `Open ${label}`} onClick={() => toggle(s.slug)}>
-                  {fold}
-                </button>
-              )}
-            </h2>
-            {open && (
-              <div className="lbx-grid">
-                {s.rows.map(tileView)}
-                {!needle && (
-                  <Popover open={panel === s.slug} onOpenChange={(o) => setPanel(o ? s.slug : null)}>
-                    <PopoverTrigger asChild>
-                      <button type="button" className="lbx-addtile">
-                        <PlusIcon />
-                        <span>Exercise</span>
+      <div className="lbx-split">
+        {/* ---- The groups, as Settings' sections: the name over its count, the one showing a white hairline card. */}
+        <nav className="lbx-list" aria-label="Muscle groups">
+          {data.groups.map((g) => {
+            const on = !needle && g.slug === showing;
+            const count = rows.filter((r) => r.group === g.slug && !r.archived).length;
+            return (
+              <button key={g.slug} type="button" className={`lbx-item${on ? " on" : ""}`} aria-current={on ? "page" : undefined} onClick={() => pick(g.slug)}>
+                <span className="lbx-item-name">{groupNames[g.slug] ?? g.label}</span>
+                <span className="lbx-item-fact">
+                  {count} {count === 1 ? "exercise" : "exercises"}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="lbx-shown">
+          {needle && sections.length === 0 && <p className="lbx-none">None</p>}
+          {/* ---- The group showing (or, searching, every group with a match): its title and count; a grid of cards, A–Z; + Exercise the last tile. */}
+          {sections
+            .filter((s) => needle || s.slug === showing)
+            .map((s) => {
+              const count = s.rows.filter((r) => !r.archived).length;
+              const label = groupNames[s.slug] ?? s.label;
+              return (
+                <section key={s.slug} className="rls-section lbx-group" aria-label={label}>
+                  <h2 className="lbx-gtitle">
+                    {renamingGroup === s.slug ? (
+                      <input
+                        className="lbx-grename"
+                        defaultValue={label}
+                        autoFocus
+                        maxLength={40}
+                        aria-label={`Rename ${label}`}
+                        onFocus={(e) => e.currentTarget.select()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") renameGroup(s.slug, label, e.currentTarget.value);
+                          if (e.key === "Escape") setRenamingGroup(null);
+                        }}
+                        onBlur={(e) => renameGroup(s.slug, label, e.currentTarget.value)}
+                      />
+                    ) : (
+                      // A click on the name types a new one (23 Oct, Alex: no Rename word beside it).
+                      <button type="button" className="lbx-glabel lbx-glabel-btn" title="Rename" aria-label={`${label}: rename`} onClick={() => setRenamingGroup(s.slug)}>
+                        {label}
                       </button>
-                    </PopoverTrigger>
-                    {panel === s.slug && <CreatePanel label="New exercise" side="right" align="start" group={s.slug} taken={exerciseTaken} onAdd={addExercise} onCancel={() => setPanel(null)} />}
-                  </Popover>
-                )}
-              </div>
-            )}
-          </section>
-        );
-      })}
+                    )}
+                    <span className="lbx-gbtn">
+                      <small>{count}</small>
+                    </span>
+                  </h2>
+                  <div className="lbx-grid">
+                    {s.rows.map(tileView)}
+                    {!needle && (
+                      <Popover open={panel === s.slug} onOpenChange={(o) => setPanel(o ? s.slug : null)}>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="lbx-addtile">
+                            <PlusIcon />
+                            <span>Exercise</span>
+                          </button>
+                        </PopoverTrigger>
+                        {panel === s.slug && <CreatePanel label="New exercise" side="right" align="start" group={s.slug} taken={exerciseTaken} onAdd={addExercise} onCancel={() => setPanel(null)} />}
+                      </Popover>
+                    )}
+                  </div>
+                </section>
+              );
+            })}
+        </div>
+      </div>
 
       <Dialog open={dlg != null && dlgItem != null} onOpenChange={(o) => !o && setDlg(null)}>
         {dlg?.kind === "demo" && dlgItem && (

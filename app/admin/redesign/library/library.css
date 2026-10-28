@@ -118,3 +118,19 @@
   .rd.lbx .lbx-stage-hit, .rd.lbx .lbx-play, .rd.lbx .lbx-stage.none::before, .rd.lbx .lbx-stage-plus, .rd.lbx .lbx-stage-add, .rd.lbx .lbx-tile-more, .rd.lbx .lbx-act, .rd.lbx .lbx-addtile { transition: none; }
   .rd.lbx .lbx-stage-hit:hover .lbx-play, .rd.lbx .lbx-stage-hit[data-state="open"] .lbx-play { transform: none; }
 }
+
+/* ---- Laid out as Settings (28 Oct, Alex: "on the left the sections and then on the right they open up"): the groups
+   a list on the left (230px, sticky), each its name (15px/600) over its count in grey, the one showing a white
+   hairline card; on the right its title and grid. On a narrow page the list sits over the group. As settings.css's
+   rst-split, rst-list, rst-item. */
+.rd.lbx .lbx-split { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 32px; }
+.rd.lbx .lbx-list { position: sticky; top: 24px; flex: 0 1 230px; min-width: 200px; max-width: 260px; display: flex; flex-direction: column; gap: 2px; }
+.rd.lbx .lbx-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 12px 14px; border: 0; border-radius: 12px; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; transition: background 0.15s ease; }
+.rd.lbx .lbx-item:hover { background: #fafbfd; }
+.rd.lbx .lbx-item.on { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.rd.lbx .lbx-item:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
+.rd.lbx .lbx-item-name { max-width: 100%; overflow: hidden; font-size: 15px; font-weight: 600; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.rd.lbx .lbx-item-fact { font-size: 12.5px; font-weight: 500; line-height: 1.4; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rd.lbx .lbx-shown { flex: 999 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 28px; }
+.rd.lbx .lbx-shown .lbx-gtitle { min-height: 40px; }
+@media (max-width: 900px) { .rd.lbx .lbx-list { position: static; max-width: none; } }

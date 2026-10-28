@@ -6,6 +6,7 @@ import { applyDueProgramDeploymentsSometimes } from "./lib/dueJobs";
 import { startTiming } from "./lib/timing";
 import { ClerkProvider } from "@clerk/nextjs";
 import { clerkOn } from "./lib/clerk";
+import SlidePills from "./components/SlidePills";
 
 export const metadata: Metadata = {
   title: "NORCOACH", // the tab's name in capitals, as the wordmark (24 Oct, Alex)
@@ -85,7 +86,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${libreBaskerville.variable} ${archivo.variable} ${kirana.variable} ${bricolage.variable}`}>
       {/* Sign-in through Clerk, when it is switched on (lib/clerk.ts). */}
-      <body>{clerkOn() ? <ClerkProvider signInUrl="/login" signUpUrl="/signup" signInFallbackRedirectUrl="/auth/continue" signUpFallbackRedirectUrl="/auth/continue" afterSignOutUrl="/login">{children}</ClerkProvider> : children}</body>
+      <body>
+        {clerkOn() ? <ClerkProvider signInUrl="/login" signUpUrl="/signup" signInFallbackRedirectUrl="/auth/continue" signUpFallbackRedirectUrl="/auth/continue" afterSignOutUrl="/login">{children}</ClerkProvider> : children}
+        {/* Every capsule's pill slides (28 Oct, Alex). */}
+        <SlidePills />
+      </body>
     </html>
   );
 }
