@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NorCoach · The personal coaching app</title>
+<meta name="description" content="The personal coaching app for one-on-one coaches. Every set, check-in and video comes to you, and every client sees you, not a bot. Scale on quality.">
+<link rel="icon" href="img/mark.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Icons drawn once, at stroke 1.6, round caps and joins, no fills (as the app's). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-mark" viewBox="197.07 200.13 640.9 614.88"><path fill="currentColor" d="M829.97,514.19L593.43,553.12L561.88,484.19Z"/><path fill="currentColor" d="M447.37,447.42L407.36,208.13L523.47,456.35Z"/><path fill="currentColor" d="M205.07,514.47L475.5,554.53A11.63,11.63 0 0 1 484.17,560.78L609.01,807.01L533.83,482.9Z"/></symbol>
+    <symbol id="i-word" viewBox="0 0 98.6 8.53"><g fill="currentColor"><path d="M0,8.39V.14h1.48l4.86,4.81c.1.09.21.2.34.34s.27.28.41.43c.14.14.26.27.35.38h.1c0-.16-.02-.36-.02-.6,0-.24-.01-.44-.01-.61V.14h1.49v8.24h-1.43L2.69,3.53c-.2-.2-.41-.42-.62-.65-.22-.23-.39-.42-.52-.55h-.08c0,.12.01.31.02.56,0,.26,0,.53,0,.83v4.67H0Z"/><path d="M17.8,8.53c-1.08,0-2.01-.16-2.8-.49-.78-.33-1.39-.81-1.81-1.45-.42-.64-.64-1.41-.64-2.32s.21-1.71.64-2.33c.42-.63,1.03-1.11,1.81-1.44.78-.33,1.72-.5,2.8-.5s2.03.17,2.81.5c.79.33,1.39.81,1.81,1.44.42.63.63,1.41.63,2.33s-.21,1.69-.63,2.32c-.42.64-1.02,1.12-1.81,1.45-.79.33-1.73.49-2.81.49ZM17.81,7.22c.52,0,1-.06,1.45-.17.44-.11.83-.28,1.16-.52.33-.23.59-.53.77-.89.18-.36.28-.78.28-1.26v-.28c0-.47-.09-.89-.28-1.24-.18-.36-.44-.65-.77-.88-.33-.23-.72-.4-1.16-.52-.44-.11-.93-.17-1.45-.17s-1.01.06-1.46.17c-.44.11-.83.28-1.16.52s-.59.53-.77.88c-.18.36-.27.77-.27,1.24v.28c0,.48.09.9.27,1.26.18.36.44.66.77.89.33.23.72.4,1.16.52.44.11.93.17,1.46.17Z"/><path d="M26.62,8.39V.14h6.35c.56,0,1.03.11,1.4.34s.65.53.83.91c.18.38.28.81.28,1.28,0,.5-.13.96-.39,1.38-.26.42-.65.74-1.17.96l1.76,3.37h-1.74l-1.57-3.08h-4.2v3.08h-1.55ZM28.16,4.01h4.4c.42,0,.74-.12.97-.37.23-.24.35-.56.35-.94,0-.26-.05-.49-.15-.67s-.25-.33-.45-.43c-.2-.1-.44-.15-.72-.15h-4.4v2.56Z"/><path d="M43.63,8.53c-1.1,0-2.02-.16-2.76-.49-.74-.32-1.3-.8-1.67-1.44-.37-.64-.56-1.42-.56-2.35,0-1.36.43-2.41,1.28-3.15.86-.74,2.08-1.11,3.68-1.11.92,0,1.73.13,2.44.38.7.25,1.25.62,1.64,1.1.39.48.59,1.08.59,1.78h-1.52c0-.45-.13-.82-.4-1.1-.26-.29-.63-.5-1.11-.64-.48-.14-1.03-.21-1.67-.21s-1.25.11-1.75.32c-.5.21-.9.53-1.18.94-.28.42-.42.93-.42,1.54v.3c0,.62.14,1.15.43,1.57.28.42.68.73,1.19.94.51.21,1.1.31,1.77.31s1.22-.07,1.69-.2c.47-.14.84-.35,1.1-.64.26-.29.39-.65.39-1.09h1.5c0,.69-.2,1.27-.59,1.76-.39.48-.94.85-1.63,1.1-.7.25-1.51.38-2.44.38Z"/><path d="M56.71,8.53c-1.08,0-2.01-.16-2.8-.49-.78-.33-1.39-.81-1.81-1.45-.42-.64-.64-1.41-.64-2.32s.21-1.71.64-2.33c.42-.63,1.03-1.11,1.81-1.44.78-.33,1.72-.5,2.8-.5s2.03.17,2.81.5c.79.33,1.39.81,1.81,1.44.42.63.63,1.41.63,2.33s-.21,1.69-.63,2.32c-.42.64-1.02,1.12-1.81,1.45-.79.33-1.73.49-2.81.49ZM56.72,7.22c.52,0,1-.06,1.45-.17.44-.11.83-.28,1.16-.52.33-.23.59-.53.77-.89.18-.36.28-.78.28-1.26v-.28c0-.47-.09-.89-.28-1.24-.18-.36-.44-.65-.77-.88-.33-.23-.72-.4-1.16-.52-.44-.11-.93-.17-1.45-.17s-1.01.06-1.46.17c-.44.11-.83.28-1.16.52s-.59.53-.77.88c-.18.36-.27.77-.27,1.24v.28c0,.48.09.9.27,1.26.18.36.44.66.77.89.33.23.72.4,1.16.52.44.11.93.17,1.46.17Z"/><path d="M64.15,8.39L68.32.14h1.76l4.16,8.24h-1.7l-.89-1.78h-5.02l-.89,1.78h-1.6ZM67.26,5.34h3.77l-1.09-2.24c-.04-.09-.1-.21-.17-.38-.08-.16-.15-.33-.23-.51-.08-.18-.15-.33-.21-.47s-.11-.22-.13-.25h-.1c-.07.16-.16.35-.25.56-.1.21-.19.41-.28.61-.09.19-.16.34-.22.46l-1.09,2.23Z"/><path d="M81.42,8.53c-1.1,0-2.02-.16-2.76-.49-.74-.32-1.3-.8-1.67-1.44-.37-.64-.56-1.42-.56-2.35,0-1.36.43-2.41,1.28-3.15.86-.74,2.08-1.11,3.68-1.11.92,0,1.73.13,2.44.38.7.25,1.25.62,1.64,1.1.39.48.59,1.08.59,1.78h-1.52c0-.45-.13-.82-.4-1.1-.26-.29-.63-.5-1.11-.64-.48-.14-1.03-.21-1.67-.21s-1.25.11-1.75.32c-.5.21-.9.53-1.18.94-.28.42-.42.93-.42,1.54v.3c0,.62.14,1.15.43,1.57.28.42.68.73,1.19.94.51.21,1.1.31,1.77.31s1.22-.07,1.69-.2c.47-.14.84-.35,1.1-.64.26-.29.39-.65.39-1.09h1.5c0,.69-.2,1.27-.59,1.76-.39.48-.94.85-1.63,1.1-.7.25-1.51.38-2.44.38Z"/><path d="M89.62,8.39V.14h1.55v3.36h5.89V.14h1.55v8.24h-1.55v-3.52h-5.89v3.52h-1.55Z"/></g></symbol>
+    <symbol id="i-reply" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v11H9l-5 4z"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 20l1-4L16 5l3 3L8 19zM14 7l3 3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-chev-down" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-dumbbell" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></symbol>
+    <symbol id="i-bars" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 20h16M7 16v-4M12 16V8M17 16V5"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 13l2.5-7h11L20 13v6H4zM4 13h5l1 2h4l1-2h5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-face" viewBox="0 0 24 24"><circle cx="12" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M4.5 20a7.5 7.5 0 0 1 15 0"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M7 4.5v15l12-7.5z"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 60 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2 12h52M46 4l8 8-8 8"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ Hero ============ -->
+<div class="on-dark hero">
+  <header class="top">
+    <div class="wrap top-in">
+      <a class="logo" href="./" aria-label="NorCoach home">
+        <svg class="logo-mark" viewBox="197.07 200.13 640.9 614.88" aria-hidden="true"><use href="#i-mark"/></svg>
+        <svg class="logo-word" viewBox="0 0 98.6 8.53" aria-hidden="true"><use href="#i-word"/></svg>
+      </a>
+      <nav class="top-links" aria-label="Main">
+        <a class="hide-sm" href="#how">How it works</a>
+        <a class="hide-sm" href="#story">Our story</a>
+        <a class="hide-sm" href="#faq">FAQ</a>
+        <a class="signin" href="https://app.norcoachapp.com">Sign in</a>
+        <a class="btn btn-white" href="apply.html">Apply</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap hero-in">
+    <div class="hero-head">
+      <p class="eyebrow">The personal coaching app</p>
+      <h1 style="margin-top: 18px">Scale on quality.<br><span class="grey">Not on quantity.</span></h1>
+    </div>
+    <div>
+      <p class="lede">Everyone else sells you more clients and more AI. NorCoach brings every set, check-in and video to you, and puts your face, not a bot, on everything your clients see. Coach forty clients the way you coached five.</p>
+      <div class="hero-cta">
+        <a class="btn btn-white btn-lg" href="apply.html">Apply to be a founding coach</a>
+        <a class="text-link" href="#how">See how it works</a>
+      </div>
+      <p class="hero-note">Built with a coach and his clients. Not in a boardroom.</p>
+    </div>
+
+    <div class="pair" role="img" aria-label="The coach's Needs you list on a laptop, beside a client's phone showing To focus on and the latest from their coach, Finlay, with his face on both.">
+      <div class="desk" aria-hidden="true">
+        <div class="desk-bar"><i></i><i></i><i></i></div>
+        <div class="desk-body">
+          <div class="desk-title">Needs you <span class="num">4</span></div>
+          <div class="needs">
+            <div class="need"><span class="face">S</span><span class="what"><b>Sara</b>Message <q>knee hurt again on the lunges</q></span><span class="act"><span class="wait late num">2 days</span><svg aria-hidden="true"><use href="#i-reply"/></svg>Reply</span></div>
+            <div class="need"><span class="face">J</span><span class="what"><b>James</b>Video of Deadlift</span><span class="act"><span class="wait num">5 h</span><svg aria-hidden="true"><use href="#i-pen"/></svg>Review</span></div>
+            <div class="need"><span class="face">E</span><span class="what"><b>Emma</b>Note on Upper strength <q>felt strong</q></span><span class="act"><span class="wait num">1 h</span><svg aria-hidden="true"><use href="#i-eye"/></svg>Read</span></div>
+            <div class="need"><span class="face">T</span><span class="what"><b>Tom</b>Week 4 is empty</span><span class="act"><span class="wait">this week</span><svg aria-hidden="true"><use href="#i-plus"/></svg>Add</span></div>
+          </div>
+          <div class="pb-row"><span class="pb">PB</span><span><b>Emma</b> Bench press <span class="num">62.5 kg × 8</span></span></div>
+        </div>
+      </div>
+
+      <div class="phone" aria-hidden="true">
+        <div class="ph-top"><svg viewBox="0 0 98.6 8.53"><use href="#i-word"/></svg></div>
+        <div class="ph-hi"><span>Wednesday</span>Good morning, Emma</div>
+        <div class="focus-pill">
+          <svg class="lst"><use href="#i-list"/></svg>To focus on
+          <span class="face coach">F</span><span class="n num">3</span>
+          <svg class="chev"><use href="#i-chev-down"/></svg>
+        </div>
+        <div class="goals">
+          <div class="goal">Film your top set of squats</div>
+          <div class="goal">8k steps on rest days</div>
+          <div class="goal">Protein at breakfast</div>
+        </div>
+        <div class="ph-eyebrow">Latest from Finlay</div>
+        <div class="latest">
+          <span class="face coach">F<span class="badge"><svg><use href="#i-dumbbell"/></svg></span></span>
+          <div>
+            <div class="latest-meta"><b>Finlay</b>2h ago</div>
+            <div class="latest-title">Reviewed your squat</div>
+            <div class="latest-desc">Hips rise first. Brace before you drop, then watch the video.</div>
+          </div>
+        </div>
+        <div class="ph-card">
+          <img src="img/phase.jpg" alt="">
+          <div><small>TRAINING | WEEK 3 OF 6</small><strong>Upper strength</strong></div>
+        </div>
+      </div>
+
+      <p class="pair-cap"><b>You, in every client's pocket.</b> Your face on everything you did.</p>
+    </div>
+  </div>
+</div>
+
+<main>
+
+<!-- ============ The stakes ============ -->
+<section class="sec">
+  <div class="wrap stakes">
+    <div class="sec-head">
+      <p class="eyebrow">Why clients leave</p>
+      <h2 class="h2">Clients don't leave because the programme was wrong. They leave because they felt unseen.</h2>
+      <p class="money">You know that's not you. But past a certain number of clients, it's how it can feel from their side. And it's expensive: keep one client a year longer at €180 a month and that's <b>over €2,000</b> you didn't have to find again.</p>
+    </div>
+    <div class="quotes">
+      <p class="quote">"Feels like they say the same thing every week."<small>A client, on their online coach</small></p>
+      <p class="quote">"No one there even knows who I am."<small>A client, on their online coach</small></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Recognition ============ -->
+<section class="sec">
+  <div class="wrap sunday">
+    <div class="sec-head">
+      <p class="eyebrow">Sound familiar</p>
+      <h2 class="h2">It worked at ten clients. Then it didn't.</h2>
+    </div>
+    <div class="body">
+      <p>At five clients you saw everything. Every set, every check-in, every message. You noticed the knee, the stall, the bad week before they told you.</p>
+      <p>Then you got good at this, and more people wanted you.</p>
+      <p>Now Sunday evening is check-ins. You open a sheet, scroll to this week, read the weights and the RPE, row by row, then the next client's sheet, then the next. You scroll WhatsApp for the form video from Tuesday.</p>
+      <p class="last">You're not a worse coach than you were at five clients. You're one person, reading spreadsheets.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ The real reason ============ -->
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">The real reason</p>
+      <h2 class="h2">The signs a client needs you are all there. They're just scattered.</h2>
+    </div>
+
+    <div class="week" role="img" aria-label="One ordinary week: Tom's stalled squat in row 41 of a sheet, Sara's sore knee in WhatsApp, James's deadlift video somewhere in a chat, Emma's missing check-in. In NorCoach they come to one place.">
+      <div class="scraps" aria-hidden="true">
+        <div class="scrap">
+          <div class="scrap-src">Google Sheets | Tom</div>
+          <div class="sheet num"><span>Wk 4</span><span>80 kg</span><span>8</span><span>Wk 5</span><span>80 kg</span><span>8</span><span>Wk 6</span><span>80 kg</span><span>8</span></div>
+          <div class="scrap-foot">row 41</div>
+        </div>
+        <div class="scrap">
+          <div class="scrap-src">WhatsApp | Sara</div>
+          <div class="bubble">knee hurt again on the lunges</div>
+          <div class="scrap-foot">under 30 other messages</div>
+        </div>
+        <div class="scrap">
+          <div class="scrap-src">Chat | James</div>
+          <div class="vid"><span><svg><use href="#i-play"/></svg></span></div>
+          <div class="scrap-foot">deadlift, sent Tuesday</div>
+        </div>
+        <div class="scrap">
+          <div class="scrap-src">Google Form | Check-in</div>
+          <div class="bubble num">14 responses</div>
+          <div class="scrap-foot">Emma's isn't one of them. The form doesn't know.</div>
+        </div>
+      </div>
+
+      <svg class="arrow" viewBox="0 0 60 24" aria-hidden="true"><use href="#i-arrow"/></svg>
+
+      <div class="board" aria-hidden="true">
+        <div class="desk-title">Needs you <span class="num">2</span></div>
+        <div class="needs">
+          <div class="need"><span class="face">S</span><span class="what"><b>Sara</b><q>knee hurt again…</q></span><span class="act"><svg><use href="#i-reply"/></svg>Reply</span></div>
+          <div class="need"><span class="face">J</span><span class="what"><b>James</b>Video of Deadlift</span><span class="act"><svg><use href="#i-pen"/></svg>Review</span></div>
+        </div>
+        <div class="board-sub">On their screens</div>
+        <div class="needs">
+          <div class="need"><span class="face">T</span><span class="what"><b>Tom</b>Back squat</span><span class="state rust">Stalling</span></div>
+          <div class="need"><span class="face">E</span><span class="what"><b>Emma</b>Checked in <span class="num">3 of 7</span> days</span><span class="state grey">Missed</span></div>
+        </div>
+        <p class="week-foot">Worked out for you, the moment it happens.</p>
+      </div>
+    </div>
+
+    <p class="reason">Every one of those is a client who needs you this week. You'll find them if you go looking, client by client. At forty clients, there's no time to look. That's the problem: not your effort. <b>The signal is scattered, and nothing brings it to you.</b></p>
+  </div>
+</section>
+
+<!-- ============ Why switching didn't fix it ============ -->
+<section class="sec">
+  <div class="wrap switch">
+    <div class="sec-head">
+      <p class="eyebrow">Why switching didn't fix it</p>
+      <h2 class="h2">Most coaching apps moved your sheets behind one login. The new ones put AI between you and your clients.</h2>
+    </div>
+    <div class="body">
+      <p>Maybe you tried one. Programmes in one place, a client app, a chat. Better than the sheet, at first.</p>
+      <p>But you still open each client, one by one, check each log and build the picture yourself. More screens, the same Sunday. And now the answer on offer is to let a bot talk to your clients for you.</p>
+      <p class="last">You don't need more screens, and you don't need a stand-in. You need the signs to come to you, so you can be the coach.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ How it works ============ -->
+<section class="sec" id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">How NorCoach works</p>
+      <h2 class="h2">Every signal comes to you, already worked out.</h2>
+    </div>
+    <div class="six">
+      <article class="tile">
+        <span class="tile-icon" style="color: var(--indigo)"><svg aria-hidden="true"><use href="#i-bars"/></svg></span>
+        <h3>Every set, counted</h3>
+        <p>Clients log each set in a few taps. Their bests, their strength trend on every lift and muscle group, and next week's weights are worked out from what they actually lifted. You read one line, not forty rows.</p>
+      </article>
+      <article class="tile">
+        <span class="tile-icon" style="color: var(--rust)"><svg aria-hidden="true"><use href="#i-inbox"/></svg></span>
+        <h3>Needs you</h3>
+        <p>One list of what you owe, in order: a reply, a video to review, a note to read, an empty week. It clears itself as you go. When it's empty, you're done. Close the laptop.</p>
+      </article>
+      <article class="tile">
+        <span class="tile-icon" style="color: var(--blue)"><svg aria-hidden="true"><use href="#i-link"/></svg></span>
+        <h3>Links that land</h3>
+        <p>Every message, notification and row opens the exact thing: the set, the meal, the check-in day, the photo. Not a screen to search. They can point at the squat they mean, and so can you.</p>
+      </article>
+      <article class="tile">
+        <span class="tile-icon" style="color: var(--teal)"><svg aria-hidden="true"><use href="#i-pen"/></svg></span>
+        <h3>Draw &amp; Talk</h3>
+        <p>They send a lift. You slow it down, draw on it and talk them through it, on the laptop or your phone. The recording goes straight back to them. Like having them in front of you.</p>
+      </article>
+      <article class="tile">
+        <span class="tile-icon" style="color: var(--ink)"><svg aria-hidden="true"><use href="#i-list"/></svg></span>
+        <h3>To focus on</h3>
+        <p>After each call, up to three things go to the top of their home screen until the next one. Every day they open the app, they see what you asked of them.</p>
+      </article>
+      <article class="tile">
+        <span class="tile-icon" style="color: var(--beige)"><svg aria-hidden="true"><use href="#i-face"/></svg></span>
+        <h3>Your face on it</h3>
+        <p>Wherever you did something in their app, a note on their phase, a message, their goals, it carries your face and your name. They see their coach, not a platform.</p>
+      </article>
+    </div>
+    <p class="rest"><b>And the rest you'd expect, in the same place:</b> phases on one timeline, check-ins with graphs, a food diary with a clean food list, shape updates with side-by-side compare, calls, chat, invoices and plans, your logo behind every screen, and an app on your phone for chats, videos and your calendar.</p>
+  </div>
+</section>
+
+<!-- ============ No AI ============ -->
+<section class="on-dark noai" aria-labelledby="noai-h">
+  <div class="wrap noai-grid">
+    <div>
+      <p class="eyebrow">What we will never build</p>
+      <h2 class="h2" id="noai-h">No AI between you and your clients.</h2>
+      <div class="noai-points">
+        <div>
+          <h3>Nothing talks to them in your name.</h3>
+          <p>No bot replies, no ghost-written check-in feedback. Every message, review and goal your client gets is yours.</p>
+        </div>
+        <div>
+          <h3>Your face on everything you did.</h3>
+          <p>A note on their phase, a reply, their three goals, the latest on their home screen: each one wears your face, so they always know a person is behind it.</p>
+        </div>
+        <div>
+          <h3>The arithmetic is ours. The coaching is yours.</h3>
+          <p>Bests, trends and next week's weights are plain sums from what they logged, shown to you to decide on. NorCoach takes the reading of spreadsheets off you, not the coaching.</p>
+        </div>
+      </div>
+      <p class="noai-said">Clients now notice when feedback <q>felt automated and AI-generated</q>, and they leave. In one-on-one coaching, the personal touch is the product.</p>
+    </div>
+    <div class="faces" role="img" aria-label="A client's app: a phase note, a reply, To focus on and a video review, each with their coach Finlay's face.">
+      <p class="faces-head" aria-hidden="true">In Emma's app this week</p>
+      <div aria-hidden="true">
+        <div class="fitem"><span class="face coach">F</span><div><div class="fitem-k">Finlay | note on your training phase</div><div class="fitem-t">Three weeks of building. Keep the last rep honest.</div></div></div>
+        <div class="fitem"><span class="face coach">F</span><div><div class="fitem-k">Finlay | reviewed your squat</div><div class="fitem-t">Hips rise first. Brace before you drop.</div></div></div>
+        <div class="fitem"><span class="face coach">F</span><div><div class="fitem-k">Finlay | to focus on</div><div class="fitem-t">Film your top set of squats</div></div></div>
+        <div class="fitem"><span class="face coach">F</span><div><div class="fitem-k">Finlay | message</div><div class="fitem-t">Great week. Same again Thursday?</div></div></div>
+      </div>
+      <p class="faces-cap" aria-hidden="true">Every line from a person.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Story ============ -->
+<section class="sec" id="story">
+  <div class="wrap story">
+    <div class="duo">
+      <span class="face" role="img" aria-label="Alex">A</span>
+      <span class="face" role="img" aria-label="Finlay">F</span>
+    </div>
+    <div>
+      <p class="eyebrow">Our story</p>
+      <h2 class="h2" style="margin-top: 14px">Built by a client who could feel his coach drowning in spreadsheets.</h2>
+      <div class="letter" style="margin-top: 28px">
+        <p>I was Finlay's client before I built anything. Finlay is a great coach, but he ran everything in Google Sheets: sheet by sheet, client by client, checking every set's weight and RPE by hand. He'd tried the coaching apps and left them: too much AI, too little of him. Some weeks I could feel he wasn't quite on top of me. Not because he didn't care. Because one person reading spreadsheets can't keep up with every client.</p>
+        <p>One day we got talking about it. He said he was looking for "a CRM situation". I said, let me try and build it for you.</p>
+        <p>NorCoach is what we built, together, with his clients using it every day.</p>
+        <p class="sig">Alex <span>| founder</span></p>
+      </div>
+      <div class="todo"><b>To come</b>Finlay's own words on what changed for him and his clients, his numbers, two or three of his clients' quotes, and photos of Alex and Finlay.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Founding coaches ============ -->
+<section class="sec" id="founding">
+  <div class="wrap founding">
+    <div class="sec-head">
+      <p class="eyebrow">Founding coaches</p>
+      <h2 class="h2">We're opening NorCoach to a small group of founding coaches.</h2>
+      <p class="lede">We'd rather have twenty coaches we know by name than two thousand we don't.</p>
+      <a class="btn btn-ink btn-lg" href="apply.html">Apply to be a founding coach</a>
+      <p class="small-note">Takes two minutes. We reply within a day.</p>
+    </div>
+    <ul class="perks">
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg><div><b>We move your clients in with you.</b><span>Programmes, clients, the lot. You don't start from scratch.</span></div></li>
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg><div><b>You talk to the people who build it.</b><span>Write to us in the app and a person answers, usually the same day.</span></div></li>
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg><div><b>Your price stays yours.</b><span>The founding price never goes up for you.</span></div></li>
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg><div><b>Your data stays yours.</b><span>Export every client's data as one file, whenever you like.</span></div></li>
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg><div><b>No paid add-ons.</b><span>Video review, food diary, invoices, your logo: all of it, one price.</span></div></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="sec" id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Questions</p>
+      <h2 class="h2">What coaches ask us.</h2>
+    </div>
+    <div class="faq">
+      <details><summary><svg aria-hidden="true"><use href="#i-chev"/></svg>My clients won't download another app.</summary><p class="a">It replaces the sheet, the WhatsApp thread, the Drive folder and the food tracker for them. One app on iPhone or Android, and logging a set takes a few taps.</p></details>
+      <details><summary><svg aria-hidden="true"><use href="#i-chev"/></svg>Spreadsheets are free.</summary><p class="a">They are, until a client leaves because they felt unseen. One client kept a year longer pays for NorCoach many times over. And a spreadsheet can't tell you who needs you.</p></details>
+      <details><summary><svg aria-hidden="true"><use href="#i-chev"/></svg>Everyone has AI now. Isn't no AI behind the times?</summary><p class="a">Your clients pay for you, not a model. NorCoach does the arithmetic (bests, trends, next week's weights) and leaves the coaching to you. That's the point of one-on-one.</p></details>
+      <details><summary><svg aria-hidden="true"><use href="#i-chev"/></svg>I've switched apps before. Moving everyone was a nightmare.</summary><p class="a">That's why we move your clients in with you, as a founding coach.</p></details>
+      <details><summary><svg aria-hidden="true"><use href="#i-chev"/></svg>What if it breaks mid-workout?</summary><p class="a">Every set saves the moment it's entered, one by one. Nothing waits for the end of the session.</p></details>
+      <details><summary><svg aria-hidden="true"><use href="#i-chev"/></svg>Will anyone answer if something's wrong?</summary><p class="a">Yes. You write to us inside NorCoach and a person who builds it answers.</p></details>
+      <details><summary><svg aria-hidden="true"><use href="#i-chev"/></svg>Do my clients need MyFitnessPal?</summary><p class="a">No. NorCoach has its own food diary, with everyday foods by the gram, at no extra cost.</p></details>
+      <details><summary><svg aria-hidden="true"><use href="#i-chev"/></svg>What does it cost?</summary><p class="a">Founding coaches start with a 14-day free trial, then a founding price that never goes up for them. No paid add-ons. We'll share the price on your call.</p></details>
+      <details><summary><svg aria-hidden="true"><use href="#i-chev"/></svg>Is my clients' data safe?</summary><p class="a">Your clients' data is yours: only you and your clients see it, and you can export all of it whenever you like. Payments go through Stripe and card details are never stored by us.</p></details>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ Closing ============ -->
+<section class="on-dark closing">
+  <div class="wrap" style="position: relative">
+    <h2>Your clients should never wonder if you're looking.</h2>
+    <p class="lede">Founding coaches get their clients moved in with them and a direct line to the people who build it.</p>
+    <a class="btn btn-white btn-lg" href="apply.html">Apply to be a founding coach</a>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <a class="logo" href="./" aria-label="NorCoach home">
+      <svg class="logo-mark" viewBox="197.07 200.13 640.9 614.88" aria-hidden="true" style="width: 22px"><use href="#i-mark"/></svg>
+      <svg class="logo-word" viewBox="0 0 98.6 8.53" aria-hidden="true"><use href="#i-word"/></svg>
+    </a>
+    <nav aria-label="Footer">
+      <a href="https://app.norcoachapp.com/privacy">Privacy</a>
+      <a href="https://app.norcoachapp.com/support">Support</a>
+      <a href="https://app.norcoachapp.com">Sign in</a>
+      <span>© 2026 Arvio Enterprises LLC</span>
+    </nav>
+  </div>
+</footer>
+
+</body>
+</html>
