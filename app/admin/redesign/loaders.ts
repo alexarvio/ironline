@@ -3,6 +3,7 @@ import { chatRev } from "../../lib/chatBus";
 import { redirect } from "next/navigation";
 import { fillChatLooks, warmClientPhotos } from "../../lib/storage";
 import { getData, type InvoiceTemplate } from "../../lib/db";
+import type { PlanChoice } from "../../lib/planText";
 import { meetingRemindersOn } from "../../lib/meetingReminders";
 import type { DotTab, DotTrail } from "./dots";
 import { getUserForClient, isOwner } from "../../lib/auth";
@@ -103,7 +104,7 @@ import type { DraftMessages } from "./messages/MessagesDraft";
 import type { MessageLink } from "../../lib/messageLinks";
 import { dayMonth, dayMonthTime } from "../../lib/dayMonth";
 import { metricSummary } from "../../lib/metricSummary";
-import { clientPlanId, listCoachPlans } from "../../lib/coachPlans";
+import { clientPlanBilling, clientPlanId, clientPlanNext, clientPlanSeries, listCoachPlans } from "../../lib/coachPlans";
 import { coachIdOfClient } from "../../lib/tenancy";
 import { getCoachFocus } from "../../lib/focus";
 import { supportUnreadForCoach, supportUnreadForOwner } from "../../lib/support";
@@ -1205,12 +1206,15 @@ export function loadHome(clientId: number): DraftHome {
   };
 }
 
-/** The plans the client's coach offers (an archived one only while this client is on it), and the client's (23 Oct). */
-function planOf(clientId: number): { plans: { id: string; name: string }[]; planId: string | null } {
+/** The plans the client's coach offers (an archived one only while this client is on it), the client's (23 Oct), the
+    coach's currency, and the day a series billing their plan next bills (28 Oct: the picker says billing moves then). */
+function planOf(clientId: number): { plans: PlanChoice[]; planId: string | null; planCurrency: string; billedNext: string | null } {
   const coachId = coachIdOfClient(clientId);
   const planId = clientPlanId(clientId);
   const plans = coachId == null ? [] : listCoachPlans(coachId, true).filter((p) => !p.archived || p.id === planId);
-  return { plans: plans.map((p) => ({ id: p.id, name: p.name })), planId };
+  const s = coachId == null ? {} : getCoachSettings(coachId);
+  const planCurrency = invoicingFor(s.business ?? {}, s.invoicing ?? {}).currency;
+  return { plans: plans.map((p) => ({ id: p.id, name: p.name, price: p.price ?? null, every: p.every ?? null })), planId, planCurrency, billedNext: clientPlanSeries(clientId) ? clientPlanNext(clientId) : null };
 }
 
 // ---- Messages --------------------------------------------------------------------
@@ -1287,6 +1291,8 @@ export type DraftInvoices = {
   templates: InvoiceTemplate[];
   /** This client's recurring invoices (21 Oct). */
   repeats: ReturnType<typeof invoiceRepeatViews>;
+  /** The plan they are on, and whether billing it can start (28 Oct: Start billing). */
+  billing: ReturnType<typeof clientPlanBilling>;
 };
 
 export function loadInvoices(coachId: number, clientId: number): DraftInvoices {
@@ -1318,6 +1324,7 @@ export function loadInvoices(coachId: number, clientId: number): DraftInvoices {
     missing,
     templates: listInvoiceTemplates(coachId),
     repeats: invoiceRepeatViews(clientId),
+    billing: clientPlanBilling(coachId, clientId),
   };
 }
 

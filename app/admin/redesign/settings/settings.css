@@ -135,3 +135,21 @@ body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font-
 .rd.rst label.trn-pill.busy { cursor: progress; opacity: 0.6; }
 .rd.rst .rst-remove { height: 36px; padding: 0 6px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #b42318; cursor: pointer; }
 .rd.rst .rst-remove:disabled { opacity: 0.5; cursor: default; }
+
+/* Plans (28 Oct, Alex: PlansSettings.tsx): a row a plan, the name semi-bold, its price and rhythm, how many clients on it
+   grey, ⋯ on hover; a click types the row in place, the name, the price and how often on one line, the foot under it. */
+.rd.rst .rst-plan { display: grid; grid-template-columns: minmax(0, 1fr) 150px 100px 30px; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px 0 18px; font-size: 14px; font-weight: 500; color: #3a4250; cursor: pointer; transition: background-color 0.15s; }
+.rd.rst .rst-plans > * + * { border-top: 1px solid #eef0f3; }
+.rd.rst .rst-plan:hover { background: #fafbfd; }
+.rd.rst .rst-plan b { min-width: 0; overflow: hidden; font-size: 15px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
+.rd.rst .rst-plan-facts { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rd.rst .rst-plan-facts .faint, .rd.rst .rst-plan-n { color: #8b93a1; }
+.rd.rst .rst-plan-n { text-align: right; font-variant-numeric: tabular-nums; }
+.rd.rst .rst-plan.archived > :not(.trn-row-more) { opacity: 0.45; }
+.rd.rst .rst-plan .trn-row-more { opacity: 0; }
+.rd.rst .rst-plan:hover .trn-row-more, .rd.rst .rst-plan .trn-row-more[data-state="open"], .rd.rst .rst-plan .trn-row-more:focus-visible { opacity: 1; }
+.rd.rst .rst-plan-form { display: grid; grid-template-columns: minmax(0, 1fr) 120px auto; align-items: end; gap: 10px 16px; padding: 14px 18px; }
+.rd.rst .rst-plan-form .dlh-line.bad { border-bottom-color: #b8471f; }
+.rd.rst .rst-plan-every { margin-bottom: 2px; }
+.rd.rst .rst-plan-foot { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+.rd.rst .rst-plans .rls-none { padding: 16px 18px; }

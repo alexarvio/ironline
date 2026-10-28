@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation";
 import { renameClientAction, saveClientCardAction } from "../lib/actions";
 import { addClientPlanAction, setClientPlanAction } from "../lib/planActions";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
-import { CheckIcon, ChevronDownIcon } from "../components/icons";
+import { ChevronDownIcon } from "../components/icons";
+import type { InvoiceEvery } from "../lib/db";
+import { dayMonth } from "../lib/dayMonth";
+import { PLAN_EVERY, planFacts, type PlanChoice } from "../lib/planText";
+import { SepJoin } from "./redesign/Sep";
 import type { OverviewInfoRow, OverviewPanel } from "../lib/queries";
 import PanelSection from "./PanelSection";
 import { ageFrom, DEFAULT_DIAL, GenderPills, InfoRow, PhoneInput, Suffixed } from "./InfoRow";
@@ -70,6 +74,8 @@ export default function ClientCardEditor({
   look,
   plans = [],
   planId = null,
+  planCurrency = "EUR",
+  billedNext = null,
   onClose,
   footStart,
 }: {
@@ -85,9 +91,12 @@ export default function ClientCardEditor({
   /** "hairline": the redesign's look, on Home's Details: Contact and Coaching as grids of facts (23 Oct, Alex: mockup A
       with B's icons), the edit pop-up in ink and hairlines. */
   look?: "hairline";
-  /** The plans the client's coach offers, and the one the client is on (23 Oct, Alex): the hairline look's Plan. */
-  plans?: { id: string; name: string }[];
+  /** The plans the client's coach offers, and the one the client is on (23 Oct, Alex): the hairline look's Plan. Their
+      prices in the coach's currency, and the day billing their plan next goes, when a series bills it (28 Oct). */
+  plans?: PlanChoice[];
   planId?: string | null;
+  planCurrency?: string;
+  billedNext?: string | null;
   /** Details' own close: Cancel, and after a save. */
   onClose?: () => void;
   /** On the left of Details' foot (Delete {First}). */
@@ -178,7 +187,7 @@ export default function ClientCardEditor({
               <span className="dlh-label">Coaching</span>
               <div className="nc-grid">
                 <InfoRow label="Plan" as="div">
-                  <PlanPicker clientId={clientId} plans={plans} planId={planId} />
+                  <PlanPicker clientId={clientId} plans={plans} planId={planId} currency={planCurrency} billedNext={billedNext} />
                 </InfoRow>
                 <Field label="Started" name="coaching_start_date" value={card.coaching_start_date} type="date" focus={null} />
               </div>
@@ -335,28 +344,43 @@ function InfoRows({ rows, onAdd }: { rows: OverviewInfoRow[]; onAdd: (field: str
 
 // ---- The hairline look (Home's Details; 23 Oct, Alex: mockup A with B's icons). Styles: `.cc-` in home/home.css.
 
-// The plan a client is on (23 Oct, Alex): one of the coach's, picked from the floating list (design rules 6), None to
-// take it off; + New plan pinned at its foot opens a name line in the same panel, Cancel in words and an ink Add, and
-// puts the client on the new plan. Shown at once; the page re-reads after the save.
-function PlanPicker({ clientId, plans, planId }: { clientId: number; plans: { id: string; name: string }[]; planId: string | null }) {
+// The plan a client is on (23 Oct, Alex; 28 Oct: prices): one of the coach's, picked from the floating list (design
+// rules 6), each with its price and rhythm grey on its right, None to take it off; + New plan pinned at its foot opens
+// the name, the price and how often in the same panel, Cancel in words and an ink Add, and puts the client on the new
+// plan. While a series bills their plan, a pick that changes it asks in the panel first: billing moves to the new plan
+// from its next day, or stops (none, or a plan with no price). Shown at once; the page re-reads after the save.
+function PlanPicker({ clientId, plans, planId, currency, billedNext }: { clientId: number; plans: PlanChoice[]; planId: string | null; currency: string; billedNext: string | null }) {
   const router = useRouter();
   const [, startSaving] = useTransition();
   const [open, setOpen] = useState(false);
   const [making, setMaking] = useState(false);
   const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [every, setEvery] = useState<InvoiceEvery>("month");
+  // A pick waiting on the billing question: a plan's id, or null for None.
+  const [asking, setAsking] = useState<{ id: string | null } | null>(null);
   // What is shown follows a pick at once, and the server's value whenever that changes (by content, not identity).
   const [picked, setPicked] = useState<{ value: string | null; base: string | null } | null>(null);
   const shown = picked && picked.base === planId ? picked.value : planId;
   const setShown = (value: string | null) => setPicked({ value, base: planId });
-  const [added, setAdded] = useState<{ id: string; name: string }[]>([]);
+  const [added, setAdded] = useState<PlanChoice[]>([]);
   const list = [...plans, ...added.filter((a) => !plans.some((p) => p.id === a.id))];
   const current = list.find((p) => p.id === shown) ?? null;
+  const priceNum = price.trim() === "" ? null : Number(price.replace(",", "."));
+  const priceBad = priceNum != null && !(Number.isFinite(priceNum) && priceNum >= 0);
+  const bills = (p: Pick<PlanChoice, "price" | "every"> | null) => !!p && p.price != null && p.price > 0 && !!p.every;
+  const billed = billedNext != null && shown === planId;
+  // What a change does to billing, said before it is made.
+  const moveWords = (to: Pick<PlanChoice, "name" | "price" | "every"> | null) => (to && bills(to) ? `Billing moves to ${to.name} from ${dayMonth(billedNext ?? "")}.` : "Billing stops.");
   const close = () => {
     setOpen(false);
     setMaking(false);
+    setAsking(null);
     setName("");
+    setPrice("");
+    setEvery("month");
   };
-  const pick = (id: string | null) => {
+  const save = (id: string | null) => {
     close();
     setShown(id);
     startSaving(async () => {
@@ -364,12 +388,18 @@ function PlanPicker({ clientId, plans, planId }: { clientId: number; plans: { id
       router.refresh();
     });
   };
+  const pick = (id: string | null) => {
+    if (id === shown) return close();
+    if (billed) return setAsking({ id });
+    save(id);
+  };
   const create = () => {
     const clean = name.trim();
-    if (!clean) return;
+    if (!clean || priceBad) return;
+    const v = { name: clean, price: priceNum, every };
     close();
     startSaving(async () => {
-      const made = await addClientPlanAction(clientId, clean);
+      const made = await addClientPlanAction(clientId, v);
       if (made) {
         setAdded((a) => [...a, made]);
         setShown(made.id);
@@ -377,6 +407,8 @@ function PlanPicker({ clientId, plans, planId }: { clientId: number; plans: { id
       router.refresh();
     });
   };
+  const asked = asking ? (asking.id == null ? null : (list.find((p) => p.id === asking.id) ?? null)) : null;
+  const lit = asking ? asking.id : shown;
   return (
     <Popover open={open} onOpenChange={(o) => (o ? setOpen(true) : close())}>
       <PopoverTrigger asChild>
@@ -397,11 +429,20 @@ function PlanPicker({ clientId, plans, planId }: { clientId: number; plans: { id
           >
             <span className="dlh-label">New plan</span>
             <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Name" aria-label="Name of the new plan" />
+            <input className={priceBad ? "bad" : ""} inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value.replace(/[^\d.,]/g, ""))} placeholder={`Price in ${currency}`} aria-label="Price" />
+            <div className="rd-btn-group cc-plan-every" role="radiogroup" aria-label="How often">
+              {PLAN_EVERY.map((e) => (
+                <button key={e.value} type="button" role="radio" aria-checked={every === e.value} className={every === e.value ? "on" : ""} onClick={() => setEvery(e.value)}>
+                  {e.label}
+                </button>
+              ))}
+            </div>
+            {billed && <span className="cc-plan-ask-words">{moveWords({ name: name.trim() || "it", price: priceNum, every })}</span>}
             <span className="cc-plan-new-foot">
               <button type="button" className="cc-plan-cancel" onClick={() => setMaking(false)}>
                 Cancel
               </button>
-              <button type="submit" className="cc-plan-add" disabled={!name.trim()}>
+              <button type="submit" className="cc-plan-add" disabled={!name.trim() || priceBad}>
                 Add
               </button>
             </span>
@@ -411,20 +452,43 @@ function PlanPicker({ clientId, plans, planId }: { clientId: number; plans: { id
             <div className="cc-plan-list" role="listbox" aria-label="Plans">
               {list.length === 0 && <p className="cc-plan-empty">No plans yet</p>}
               {list.map((p) => (
-                <button key={p.id} type="button" role="option" aria-selected={p.id === shown} className={`cc-plan-row${p.id === shown ? " on" : ""}`} onClick={() => pick(p.id)}>
+                <button key={p.id} type="button" role="option" aria-selected={p.id === lit} className={`cc-plan-row${p.id === lit ? " on" : ""}`} onClick={() => pick(p.id)}>
                   <span>{p.name}</span>
-                  {p.id === shown && <CheckIcon />}
+                  <small>
+                    <SepJoin parts={planFacts(p, currency)} />
+                  </small>
                 </button>
               ))}
               {current && (
-                <button type="button" role="option" aria-selected={false} className="cc-plan-row none" onClick={() => pick(null)}>
+                <button type="button" role="option" aria-selected={!!asking && asking.id == null} className={`cc-plan-row none${asking && asking.id == null ? " on" : ""}`} onClick={() => pick(null)}>
                   <span>None</span>
                 </button>
               )}
             </div>
-            <button type="button" className="cc-plan-make" onClick={() => setMaking(true)}>
-              + New plan
-            </button>
+            {asking ? (
+              // The billing question, in the panel itself (design rules 4: nothing destructive on one click).
+              <div className="cc-plan-ask">
+                <span className="cc-plan-ask-words">{moveWords(asked)}</span>
+                <span className="cc-plan-new-foot">
+                  <button type="button" className="cc-plan-cancel" onClick={() => setAsking(null)}>
+                    Cancel
+                  </button>
+                  {bills(asked) ? (
+                    <button type="button" className="cc-plan-add" onClick={() => save(asking.id)}>
+                      Move
+                    </button>
+                  ) : (
+                    <button type="button" className="cc-plan-stop" onClick={() => save(asking.id)}>
+                      Stop
+                    </button>
+                  )}
+                </span>
+              </div>
+            ) : (
+              <button type="button" className="cc-plan-make" onClick={() => setMaking(true)}>
+                + New plan
+              </button>
+            )}
           </>
         )}
       </PopoverContent>

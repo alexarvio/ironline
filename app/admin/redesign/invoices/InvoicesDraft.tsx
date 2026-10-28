@@ -16,12 +16,15 @@ import type { DraftInvoices } from "../loaders";
 import { dayMonth } from "../../../lib/dayMonth";
 import { SepJoin } from "../Sep";
 import { ConfirmDialog } from "../training/TrainingDraft";
+import { planPerPeriod } from "../../../lib/planText";
 
 // A client's invoices (21 Oct, Alex: built as the track tabs are, root "rd trn rls riv"): Training's header with
 // New invoice as a white pill, the figures in one hairline card, what Settings still lacks as a fact and its fix,
 // the recurring invoices, and every invoice a row in one hairline card: the number, what for, the dates, the total
 // and its state, the state pill itself the menu that changes it. A row opens the invoice as it prints, in a new tab.
-// New invoice starts from a template when there is one, and can repeat (21 Oct, Alex).
+// New invoice starts from a template when there is one, and can repeat (21 Oct, Alex). A client on a priced plan that
+// nothing bills yet gets the fact and its fix, Start billing (28 Oct, Alex): New invoice filled from the plan, repeating
+// on its rhythm, the series it makes tied to the plan (coachPlans.ts), its name on the series' grey line.
 
 type Status = InvoiceView["status"];
 const STATUS: { value: Status; label: string; cls: string }[] = [
@@ -99,6 +102,9 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
   const router = useRouter();
   const [, start] = useTransition();
   const [adding, setAdding] = useState(false);
+  // New invoice opened by Start billing: filled from the client's plan.
+  const [fromPlan, setFromPlan] = useState(false);
+  const bill = plan.billing.canStart ? plan.billing.plan : null;
   const [removing, setRemoving] = useState<InvoiceView | null>(null);
   const [stopping, setStopping] = useState<DraftInvoices["repeats"][number] | null>(null);
   const act = (fn: () => Promise<unknown>, said: string) =>
@@ -136,7 +142,7 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
           </div>
         </div>
         <div className="trn-head-actions">
-          <button type="button" className="trn-pill" onClick={() => setAdding(true)}>
+          <button type="button" className="trn-pill" onClick={() => (setFromPlan(false), setAdding(true))}>
             <PlusIcon /> New invoice
           </button>
         </div>
@@ -149,6 +155,18 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
           <Link className="trn-pill" href={plan.missing.includes("bank details") && plan.missing.length === 1 ? "/admin/redesign/settings#invoicing" : "/admin/redesign/settings#business"}>
             Add them
           </Link>
+        </section>
+      )}
+
+      {/* ---- On a plan nothing bills yet (28 Oct, Alex): the fact and its fix. */}
+      {bill && (
+        <section className="riv-fix" aria-label="Plan not billed">
+          <span>
+            On {bill.name}, {planPerPeriod(bill, cur)}, not billed.
+          </span>
+          <button type="button" className="trn-pill" onClick={() => (setFromPlan(true), setAdding(true))}>
+            Start billing
+          </button>
         </section>
       )}
 
@@ -201,7 +219,7 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
                   <span className="riv-what">
                     <span className="riv-what-main">{fill(r.lines[0]?.description ?? "Invoice", r.next)}</span>
                     <small>
-                      <SepJoin parts={[r.lines.length > 1 ? `+ ${r.lines.length - 1} more` : null, r.send ? `Sent to ${firstName}` : "Drafts"]} />
+                      <SepJoin parts={[r.plan, r.lines.length > 1 ? `+ ${r.lines.length - 1} more` : null, r.send ? `Sent to ${firstName}` : "Drafts"]} />
                     </small>
                   </span>
                   <span className="riv-date">{r.paused ? "–" : dayMonth(r.next)}</span>
@@ -323,10 +341,11 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
             clientName={clientName}
             firstName={firstName}
             plan={plan}
+            from={fromPlan && bill ? { lines: bill.lines, every: bill.every } : null}
             onCreate={(v) => {
               setAdding(false);
               start(async () => {
-                const id = await createInvoiceAction(clientId, v);
+                const id = await createInvoiceAction(clientId, { ...v, planId: fromPlan && bill ? bill.id : null });
                 router.refresh();
                 const every = EVERY.find((e) => e.value === v.repeat);
                 if (id) toast.success(`${plan.defaults.nextNumber} created`, { description: v.repeat ? `${every?.long}, next ${dayMonth(firstNext(v.issueDate, v.repeat, plan.today))}` : undefined, action: { label: "Open", onClick: () => window.open(sheetHref(id), "_blank", "noopener") } });
@@ -379,13 +398,14 @@ const blankLine = (): Draft => ({ description: "", quantity: "1", unit_price: ""
 const draftOf = (l: InvoiceLine): Draft => ({ description: l.description, quantity: String(l.quantity), unit_price: String(l.unit_price) });
 type NewInvoice = { issueDate: string; lines: InvoiceLine[]; note: string; sent: boolean; repeat: InvoiceEvery | null; template: string | null };
 
-function NewInvoiceDialog({ clientName, firstName, plan, onCreate }: { clientName: string; firstName: string; plan: DraftInvoices; onCreate: (v: NewInvoice) => void }) {
+/** `from`: the client's plan, for Start billing (28 Oct): its line, repeating on its rhythm. */
+function NewInvoiceDialog({ clientName, firstName, plan, from, onCreate }: { clientName: string; firstName: string; plan: DraftInvoices; from: { lines: InvoiceLine[]; every: InvoiceEvery | null } | null; onCreate: (v: NewInvoice) => void }) {
   const d = plan.defaults;
   const [issue, setIssue] = useState(plan.today);
-  const [lines, setLines] = useState<Draft[]>([blankLine()]);
+  const [lines, setLines] = useState<Draft[]>(from ? from.lines.map(draftOf) : [blankLine()]);
   const [note, setNote] = useState("");
   const [sent, setSent] = useState(false);
-  const [repeat, setRepeat] = useState<InvoiceEvery | null>(null);
+  const [repeat, setRepeat] = useState<InvoiceEvery | null>(from?.every ?? null);
   const [templates, setTemplates] = useState<InvoiceTemplate[]>(plan.templates);
   const [tpl, setTpl] = useState<string | null>(null);
   const clean = lines.map((l) => ({ description: l.description.trim(), quantity: num(l.quantity), unit_price: num(l.unit_price) }));

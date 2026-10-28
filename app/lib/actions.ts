@@ -396,6 +396,7 @@ import { dayMonth } from "./dayMonth";
 import { isTimezone, SERVER_TZ, tzShort, zonedToUtc } from "./timezones";
 import { inZone } from "./viewZone";
 import type { ReportSectionType } from "./reportSectionTypes";
+import { clientPlanId, clientPlanSeries } from "./coachPlans";
 
 // OWNERSHIP RULE for every coach action below: a coach may only touch their
 // own clients (and their own library). Each action works out the client from
@@ -4539,13 +4540,15 @@ export async function saveCoachPreferencesAction(p: { units?: string; timezone?:
 
 // ---- Invoices in the redesign (the client's Invoices tab) ----
 
-export async function createInvoiceAction(clientId: number, v: NewInvoice & { repeat?: InvoiceEvery | null; template?: string | null }) {
+export async function createInvoiceAction(clientId: number, v: NewInvoice & { repeat?: InvoiceEvery | null; template?: string | null; planId?: string | null }) {
   const coach = await coachForClient(Number(clientId));
   if (!coach) return null;
   const id = createInvoice(coach.id, Number(clientId), v);
   if (id != null && v.sent) tellClientAboutInvoice(id, "unpaid");
   // Repeat (21 Oct): this one is the first; the series makes the rest on their days.
-  if (id != null && v.repeat) addInvoiceRepeat(Number(clientId), { every: v.repeat, issueDate: v.issueDate, lines: v.lines, note: v.note, send: !!v.sent, template: v.template ?? undefined, firstInvoiceId: id });
+  // Start billing (28 Oct): the series bills the client's plan, tied to it while it is still theirs and nothing bills it yet.
+  const planId = v.planId && v.planId === clientPlanId(Number(clientId)) && !clientPlanSeries(Number(clientId)) ? v.planId : undefined;
+  if (id != null && v.repeat) addInvoiceRepeat(Number(clientId), { every: v.repeat, issueDate: v.issueDate, lines: v.lines, note: v.note, send: !!v.sent, template: v.template ?? undefined, firstInvoiceId: id, planId });
   revalidatePath("/admin");
   revalidatePath("/client");
   return id;

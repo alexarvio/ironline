@@ -2,7 +2,7 @@ import { isOwner, requireCoach } from "../../../lib/auth";
 import { clerkOn } from "../../../lib/clerk";
 import { getCoachProfileView, getCoachSettings, listCoachAccounts } from "../../../lib/queries";
 import { getData } from "../../../lib/db";
-import { COUNTRIES, countryOf } from "../../../lib/countries";
+import { COUNTRIES, countryOf, invoicingFor } from "../../../lib/countries";
 import { LEGAL } from "../../../lib/legal";
 import { paymentsState, refreshCoachStripe, type PaymentsState } from "../../../lib/payments";
 import { dayMonth } from "../../../lib/dayMonth";
@@ -12,6 +12,8 @@ import { loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import { AccountSettings, BusinessSettings, InvoicingSettings, LogoSettings, PrivacySettings } from "./SettingsForms";
 import SupportSection from "./SupportSection";
+import PlansSettings from "./PlansSettings";
+import { listCoachPlans, planClientCounts } from "../../../lib/coachPlans";
 import { DataSettings, NotificationsSettings, PreferencesSettings } from "./MoreSettings";
 import { loadAccountSecurity } from "../../../lib/accountSecurity";
 import ProfileEditor from "../profile/ProfileEditor";
@@ -30,7 +32,7 @@ import "../profile/profile.css";
 // legal, and for a coach (not the owner) Support. One bar at the foot saves every section changed (SaveHost). #<key>
 // opens a section, and the rail's Settings rows open theirs. The old addresses redirect here (settings/[section],
 // /admin/redesign/profile).
-//   /admin/redesign/settings#profile | account | business | invoicing | privacy | support
+//   /admin/redesign/settings#profile | account | business | plans | invoicing | privacy | support
 export const dynamic = "force-dynamic";
 
 /** When Stripe was last asked about a coach's unfinished account (the page's own memory, per server). */
@@ -92,6 +94,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const units = settings.units === "lbs" ? "lbs" : "kg";
   const timezone = settings.timezone || process.env.TZ || "Europe/Amsterdam";
   const clientCount = getData().clients.filter((cl) => cl.coach_id === coach.id).length;
+  // Plans (28 Oct, Alex): each with how many clients are on it, priced in the coach's currency, VAT as Invoicing says.
+  const planCounts = planClientCounts(coach.id);
+  const plans = listCoachPlans(coach.id, true).map((p) => ({ id: p.id, name: p.name, price: p.price ?? null, every: p.every ?? null, archived: !!p.archived, clients: planCounts.get(p.id) ?? 0 }));
+  const eff = invoicingFor(business, invoicing);
+  const livePlans = plans.filter((p) => !p.archived).length;
 
   // The list's quiet fact under each name (27 Oct, Alex: mockup B), parts joined by the drawn bar's words.
   const join = (parts: (string | null | undefined | false)[]) => parts.filter(Boolean).join(" | ") || null;
@@ -99,6 +106,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const facts = {
     profile: profile ? (profile.published ? "Published" : "Not published") : null,
     business: join([business.business_name, land?.name ?? business.country]) ?? "Not set",
+    plans: livePlans === 0 ? "None yet" : `${livePlans} plan${livePlans === 1 ? "" : "s"}`,
     invoicing: join([invoicing.currency ?? land?.currency ?? "EUR", invoicing.vat_rate != null ? `${invoicing.vat_rate}% ${land?.tax ?? "tax"}` : null, payments.status === "active" ? "Stripe" : null]),
     privacy: `Policy updated ${legalDate(LEGAL.updated)}`,
     account: join([coach.email, security?.logins.some((l) => l.provider === "google") ? "Google" : null]),
@@ -128,6 +136,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </>
       ),
     },
+    { key: "plans", fact: facts.plans, body: <PlansSettings plans={plans} currency={eff.currency} vatFact={eff.rate > 0 ? `Prices ${eff.pricesIncludeVat ? "include" : "exclude"} ${eff.rate}% ${eff.taxLabel}` : null} /> },
     // Keyed on the business's country too: a new one there brings its own defaults here.
     { key: "invoicing", fact: facts.invoicing, body: <InvoicingSettings key={JSON.stringify([invoicing, business.country_code ?? null, business.country ?? null])} initial={invoicing} business={business} payments={payments} /> },
     { key: "notifications", fact: facts.notifications, body: <NotificationsSettings key={JSON.stringify(notify)} initial={notify} /> },

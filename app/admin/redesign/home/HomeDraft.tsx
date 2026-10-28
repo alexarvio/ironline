@@ -23,6 +23,7 @@ import { SepJoin } from "../Sep";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { TrackIcon } from "../plan/PlanDraft";
 import type { PhaseTrack } from "../../../lib/db";
+import type { PlanChoice } from "../../../lib/planText";
 import KindMark from "../KindMark";
 import HelpTip from "../HelpTip";
 import type { ActivityMark } from "../../../lib/activityMark";
@@ -54,9 +55,12 @@ export type DraftHome = {
   avatarPath: string | null;
   /** The whole client card, for the live editor in the Details dialog. */
   panel: OverviewPanel;
-  /** The plans the client's coach offers, and the one the client is on (23 Oct, Alex: Details' Plan, for invoices later). */
-  plans: { id: string; name: string }[];
+  /** The plans the client's coach offers, and the one the client is on (23 Oct, Alex: Details' Plan; 28 Oct: their prices,
+      the coach's currency, and the day billing their plan next goes, when a series bills it). */
+  plans: PlanChoice[];
   planId: string | null;
+  planCurrency: string;
+  billedNext: string | null;
   events: DraftEvent[];
   /** The client's login, for the App access button (read with the page: no second call). */
   access: ClientAccess;
@@ -400,6 +404,8 @@ export default function HomeDraft({
                 look="hairline"
                 plans={home.plans}
                 planId={home.planId}
+                planCurrency={home.planCurrency}
+                billedNext={home.billedNext}
                 onClose={() => setDetails(false)}
                 footStart={
                   <button

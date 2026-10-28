@@ -651,7 +651,9 @@ export type InvoiceEvery = "week" | "2weeks" | "month";
  * `send`: each one goes to the client as it is made (Sent); otherwise it waits as a draft (Not sent) for the coach.
  * `anchor_day`: the day of the month a monthly one keeps to (31 lands on a shorter month's last day, then back).
  */
-export type InvoiceRepeat = { id: string; every: InvoiceEvery; next: string; anchor_day: number; lines: InvoiceLine[]; note?: string; send: boolean; template?: string; paused?: boolean; created_at: string; last_invoice_id?: number };
+/** `plan_id`: the coaching plan it bills (28 Oct, Alex; coachPlans.ts). Its lines are the plan's as it was when billing
+    started, so a later price is for new clients only; a switch of plan moves it, picking none stops it. */
+export type InvoiceRepeat = { id: string; every: InvoiceEvery; next: string; anchor_day: number; lines: InvoiceLine[]; note?: string; send: boolean; template?: string; paused?: boolean; created_at: string; last_invoice_id?: number; plan_id?: string };
 export type InvoiceParty = CoachBusiness & Pick<CoachInvoicing, "iban" | "bic" | "sort_code" | "routing_number" | "bsb" | "account_number" | "bank_details" | "account_holder" | "tax_note" | "footer">;
 
 type MealMacros = { protein: number | null; fats: number | null; carbs: number | null };
@@ -1260,8 +1262,9 @@ export type CoachInvoicing = {
 };
 /** The coach's own Stripe account (lib/stripe.ts), once they start connecting it. */
 export type CoachPayments = { stripe_account_id?: string; stripe_status?: "pending" | "active"; stripe_checked_at?: string };
-/** A plan the coach offers (23 Oct, Alex: picked on a client's Details, for invoices later). A skeleton: the name now;
-    a price and how often are kept when given, for the invoices to use. Never deleted while a client is on it: archived. */
+/** A plan the coach offers (23 Oct, Alex: picked on a client's Details; 28 Oct: made in Settings, Plans): a name, a
+    price in the coach's currency (VAT as Invoicing says) and how often it bills. Never deleted while a client is on it:
+    archived, the clients on it staying and billed, out of the picker. */
 export type CoachPlan = { id: string; name: string; price?: number | null; every?: InvoiceEvery | null; archived?: boolean; created_at: string };
 export type CoachSettings = { /** The plans the coach offers (coachPlans.ts). */ plans?: CoachPlan[]; business?: CoachBusiness; invoicing?: CoachInvoicing; payments?: CoachPayments; /** The coach's own time zone (IANA): new meetings start in it. Set at onboarding. */ timezone?: string; /** The coach's own contact details (Your profile, Your details): not the business on invoices. */ contact?: CoachContact; /** What reaches the coach's phone (Settings, Notifications, 27 Oct): each kind on unless false; quiet hours hold them. */ notify?: CoachNotify; /** Weights shown in, by default (Settings, Preferences, 27 Oct). */ units?: "kg" | "lbs"; /** The coach's logo (Settings, Business details, 28 Oct; lib/brandMark.ts): `logo` the upload as a PNG, `mark` its one-colour silhouette drawn faint behind every screen in place of the star. */ brand?: { logo?: string; mark?: string } };
 /** The coach's phone notifications (27 Oct): messages and videos, each on unless false; quiet hours (HH:MM, the coach's time zone) hold them. */

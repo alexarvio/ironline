@@ -13499,7 +13499,7 @@ export function nextInvoiceDate(iso: string, every: InvoiceEvery, anchorDay: num
 }
 
 /** Starts a series whose first invoice was issued on `issueDate`: the next one is a period on. */
-export function addInvoiceRepeat(clientId: number, v: { every: InvoiceEvery; issueDate: string; lines: InvoiceLine[]; note?: string; send: boolean; template?: string; firstInvoiceId?: number }): string | null {
+export function addInvoiceRepeat(clientId: number, v: { every: InvoiceEvery; issueDate: string; lines: InvoiceLine[]; note?: string; send: boolean; template?: string; firstInvoiceId?: number; planId?: string }): string | null {
   const client = getData().clients.find((c) => c.id === clientId);
   const lines = cleanLines(v.lines);
   if (!client || lines.length === 0 || !["week", "2weeks", "month"].includes(v.every) || !/^\d{4}-\d{2}-\d{2}$/.test(v.issueDate)) return null;
@@ -13511,7 +13511,7 @@ export function addInvoiceRepeat(clientId: number, v: { every: InvoiceEvery; iss
   const id = newKey();
   const note = String(v.note ?? "").trim().slice(0, 600) || undefined;
   const template = String(v.template ?? "").trim().slice(0, 60) || undefined;
-  const r: InvoiceRepeat = { id, every: v.every, next, anchor_day: anchor, lines, send: !!v.send, created_at: new Date().toISOString(), ...(note ? { note } : {}), ...(template ? { template } : {}), ...(v.firstInvoiceId != null ? { last_invoice_id: v.firstInvoiceId } : {}) };
+  const r: InvoiceRepeat = { id, every: v.every, next, anchor_day: anchor, lines, send: !!v.send, created_at: new Date().toISOString(), ...(note ? { note } : {}), ...(template ? { template } : {}), ...(v.firstInvoiceId != null ? { last_invoice_id: v.firstInvoiceId } : {}), ...(v.planId ? { plan_id: v.planId } : {}) };
   client.invoice_repeats = [...(client.invoice_repeats ?? []), r];
   persist();
   return id;
@@ -13573,6 +13573,7 @@ export function invoiceRepeatViews(clientId: number) {
   const client = data.clients.find((c) => c.id === clientId);
   const coach = client?.coach_id != null ? data.users.find((u) => u.id === client.coach_id) : undefined;
   const eff = invoicingFor(coach?.coach_settings?.business ?? {}, coach?.coach_settings?.invoicing ?? {});
+  const plans = coach?.coach_settings?.plans ?? [];
   return (client?.invoice_repeats ?? []).map((r) => ({
     id: r.id,
     every: r.every,
@@ -13582,6 +13583,8 @@ export function invoiceRepeatViews(clientId: number) {
     send: r.send,
     paused: !!r.paused,
     template: r.template ?? null,
+    /** The coaching plan it bills (28 Oct), by name. */
+    plan: (r.plan_id && plans.find((p) => p.id === r.plan_id)?.name) || null,
     total: invoiceTotals(r.lines, eff.rate, eff.pricesIncludeVat).total,
     currency: eff.currency,
   }));
