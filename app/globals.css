@@ -16008,7 +16008,7 @@ body:has(.nc-scrim) [data-radix-popper-content-wrapper] { z-index: 110 !importan
 .wo-menu-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: none; font: inherit; font-size: 15px; font-weight: 600; color: #333333; text-align: left; cursor: pointer; }
 .wo-menu-row:hover { background: #F5F5F5; }
 .wo-menu-row.danger { color: #b3302b; }
-.wo-menu-row.danger:hover { background: #FDF1F0; }
+.wo-menu-row.danger:hover { background: #F5F6F8; }
 .wo-menu-divider { height: 1px; margin: 4px 8px; background: #EEEEEE; }
 .wo-switch { position: relative; flex: none; width: 38px; height: 22px; border-radius: 999px; background: #E0E0E0; transition: background 0.15s ease; }
 .wo-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.2); transition: transform 0.15s ease; }
@@ -19935,7 +19935,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-menu-ico svg, svg.wo-menu-ico { stroke-width: 1.6; }
 .wo-menu-row.danger, .wo-menu-row.danger .wo-menu-ico { color: #b8471f; }
 .so-menu-ico { stroke: #b8471f; stroke-width: 1.6; }
-.wo-menu-row.danger:hover { background: rgba(184, 71, 31, 0.06); }
+.wo-menu-row.danger:hover { background: #F5F6F8; } /* the neutral hover, the words rust (29 Oct, Alex) */
 .wo-menu-divider { background: #E1E5EB; }
 .wo-menu-row:disabled, .wo-menu-row:disabled .wo-menu-ico { color: #C9CFD8; }
 /* The side menu in the shared voice (17 Oct, Alex): the page grey, items at 500 in ink with ink icons, hairlines between them, Log out a white hairline pill at 600, the footnote in the palette grey. */
@@ -20037,11 +20037,13 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evs-save:disabled { background: #C9CFD8; }
 .evs-error { font-weight: 600; color: #b8471f; }
 .evs-delete { font-weight: 600; color: #b8471f; }
-.evs-delete.sure { border-radius: 999px; background: rgba(184, 71, 31, 0.06); }
-.evs-discard { border-radius: 14px; background: #F5F6F8; font-weight: 500; color: #141a24; }
-.evs-discard button { font-weight: 600; }
-.evs-discard-yes { background: rgba(184, 71, 31, 0.08); color: #b8471f; }
-.evs-discard-no { background: #141a24; }
+/* "Yes, delete it" stays rust words, no tint behind (29 Oct, Alex). */
+.evs-delete.sure { border-radius: 0; background: none; }
+/* The discard question as the check-in's (.cki-confirm): no box, a white hairline pill and the rust one (29 Oct, Alex). */
+.evs-discard { border-radius: 14px; padding: 0; background: none; font-weight: 500; color: #141a24; }
+.evs-discard button { height: 40px; padding: 0 14px; font-size: 13px; font-weight: 600; }
+.evs-discard-yes { background: #b8471f; color: #fff; }
+.evs-discard-no { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
 .mt-ask-err { font-weight: 600; color: #b8471f; }
 /* ---- The check-in pop-up and the gym picker in the shared voice (17 Oct, Alex): like Add an event. Still pop-ups with real fields, but plain white (no wash or glow), titles at 600, small grey labels, rows white with a hairline, the colour of the thing on its ring, icon or edge only, inputs white with a hairline (ink while typing), choices ink when chosen, one ink pill to save or start. */
 .cki-wash, .cki-glow, .gpk-wash, .gpk-glow { display: none; }

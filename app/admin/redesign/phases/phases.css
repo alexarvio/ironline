@@ -39,6 +39,10 @@
 .rd.pov .pov-prog { display: block; height: 4px; border-radius: 999px; background: #eef0f3; overflow: hidden; }
 .rd.pov .pov-prog i { display: block; height: 100%; border-radius: 999px; background: var(--c); }
 .rd.pov .pov-actions { display: flex; justify-content: flex-end; gap: 8px; }
+/* An action inside a row is its words alone (29 Oct, Alex): Plan next and Extend no pill, the neutral grey on hover
+   and while Extend's list is open; the icons and Extend's chevron stay. */
+.rd.pov .pov-actions .rd-btn { height: 32px; padding: 0 10px; background: none; box-shadow: none; font-size: 13px; font-weight: 600; color: #141a24; }
+.rd.pov .pov-actions .rd-btn:hover, .rd.pov .pov-actions .rd-btn[data-state="open"] { background: #f5f6f8; box-shadow: none; }
 /* Two lines when the list itself is narrow (the rail and the chat's tabs take from the window, so not the window's
    width): the name keeps its room, days left and the line under it. */
 .rd.pov .pov-soon-list { container: pov-soon / inline-size; }

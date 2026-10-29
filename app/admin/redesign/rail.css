@@ -51,7 +51,7 @@
 .rr-settings-list { display: flex; flex-direction: column; gap: 2px; }
 /* Sign out: its words in red, no line over it; the space parts it from the pages. */
 .rr-navrow.rr-signout { margin-top: 6px; color: #b42318; }
-.rr-navrow.rr-signout:hover { background: #fdf1ef; color: #b42318; }
+.rr-navrow.rr-signout:hover { background: #f5f6f8; color: #b42318; } /* the neutral hover, the words red (29 Oct, Alex) */
 @media (prefers-reduced-motion: reduce) { .rr-clients, .rr-settings, .rr-navrow, .rr-navrow svg, .rr-row, .rr-avatar, .rr-search, .rr .rr-filter button, .rr-new, .rr-coach, .rr-clients-head { transition: none; } }
 
 /* Small caps, as every label in the admin. */
@@ -103,7 +103,7 @@
 .rr-head { position: relative; }
 .rr-head .rr-row { padding-right: 40px; }
 .rr-need { position: absolute; top: 50%; right: 6px; translate: 0 -50%; min-width: 24px; height: 24px; padding: 0 7px; border: 0; border-radius: 999px; background: none; box-sizing: border-box; font: inherit; font-size: 12.5px; font-weight: 600; color: #b3471d; font-variant-numeric: tabular-nums; cursor: pointer; transition: background-color 0.2s ease; }
-.rr-need:hover, .rr-item.open .rr-need { background: rgba(179, 71, 29, 0.1); }
+.rr-need:hover, .rr-item.open .rr-need { background: #eef0f3; } /* a neutral grey, the number rust (29 Oct, Alex) */
 .rr-need:focus-visible { outline: 2px solid #141a24; outline-offset: 1px; }
 .rr-spots { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.24s ease; }
 .rr-item.open .rr-spots { grid-template-rows: 1fr; }

@@ -158,12 +158,11 @@
 .rd.rnt .rn-stats b.warn { color: #b42318; }
 .rd.rnt .rls-log .rd-rows { padding-bottom: 6px; }
 .rd.rnt .rls-log .rd-cols { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
-/* A day's row: training or rest in grey, how it went as a hairline capsule (green on target, red off). */
-.rd.rnt .rn-day .rd-pill { background: #f5f6f8; color: #3a4250; font-weight: 600; }
-/* Training or Rest: one width down the column, the word centred, the head over it centred too (21 Oct, Alex). */
+/* A day's row. Training or Rest: the one state pill (29 Oct, Alex: .trn-state, Training ink, Rest grey), one width down the column,
+   the word centred, the head over it centred too (21 Oct, Alex). */
 .rd.rnt .rn-day .rnt-daypill { display: inline-flex; align-items: center; justify-content: center; justify-self: stretch; box-sizing: border-box; padding-left: 0; padding-right: 0; }
 .rd.rnt .rls-log .rd-cols .rnt-daycol { text-align: center; }
-.rd.rnt .rn-day .rd-pill.quiet { color: #8b93a1; }
+/* How it went as a hairline capsule (green on target, red off). */
 .rd.rnt .rn-vs { padding: 3px 10px; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px #e1e5eb; font-weight: 600; color: #5b6474; }
 .rd.rnt .rn-vs.up { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.35); color: #2f7a3f; }
 .rd.rnt .rn-vs.down { box-shadow: inset 0 0 0 1px rgba(180, 35, 24, 0.3); color: #b42318; }

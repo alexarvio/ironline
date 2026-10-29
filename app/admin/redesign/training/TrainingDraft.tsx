@@ -1092,8 +1092,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                   )}
             </DropdownMenuContent>
           </DropdownMenu>
-          {/* KG / LBS beside the sessions it changes (20 Oct, Alex: it was in the programme's header). */}
-          <div className="trn-unit" role="radiogroup" aria-label="Unit">
+          {/* KG / LBS beside the sessions it changes (20 Oct, Alex: it was in the programme's header); the shared
+              capsule, .rd-btn-group (29 Oct, Alex). */}
+          <div className="rd-btn-group" role="radiogroup" aria-label="Unit">
             {(["kg", "lbs"] as const).map((u) => (
               <button key={u} type="button" role="radio" aria-checked={unit === u} className={unit === u ? "on" : ""} onClick={() => setLbs(u === "lbs")}>
                 {u.toUpperCase()}

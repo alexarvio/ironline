@@ -34,10 +34,10 @@ export const SLIDE_ROWS = [
   // The coach's phone: the calendar entry's Timed | All day and Length, the review's speed.
   ".cph-seg",
   ".cph-rate",
-  // The admin's other capsules: the client tabs, Training's KG | LBS and Columns, the pop-ups' (.npd, .dlh, the demo
-  // video's, a variation's Apply to), the phase switcher's states and the review's speed.
+  // The admin's other capsules: the client tabs, Training's Columns, the pop-ups' (.npd, .dlh, the demo video's, a
+  // variation's Apply to), the phase switcher's states and the review's speed. (Training's KG | LBS is .rd-btn-group
+  // since 29 Oct.)
   ".rd-nav",
-  ".trn-unit",
   ".rd-coltabs",
   ".npd-seg",
   ".dlh-seg",

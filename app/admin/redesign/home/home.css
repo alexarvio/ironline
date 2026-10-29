@@ -18,6 +18,8 @@
 /* Locked out of signing in (the dot trail, dots.ts, 22 Oct, Alex): App access carries the rust dot right after its
    words. The dot comes a little closer than the pill's gap and the pill's right end gives up most of the dot's room,
    so it grows only 5px, to the left (the header's actions sit right): Details and Message stay put. */
+/* The header's pills white (29 Oct, Alex): App access, Details and Message the same white hairline pill as everywhere else. */
+.rd.trn.rh .trn-head-actions .trn-pill { background: #fff; }
 .rd.trn.rh .trn-pill.rh-due { padding-right: 8px; }
 .rd.trn.rh .trn-pill.rh-due > .rd-due { margin-left: -2px; }
 

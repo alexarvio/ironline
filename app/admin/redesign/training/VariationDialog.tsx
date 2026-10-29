@@ -228,10 +228,11 @@ export default function VariationDialog({
                       <span>
                         Delete {o.name} from {exerciseName} in your library? Rows on it go back to Standard; logged sets stay.
                       </span>
-                      <button type="button" className="vrp-keep" onClick={() => setConfirm(null)}>
+                      {/* Keep in words, Delete as red words, no pills (29 Oct, Alex). */}
+                      <button type="button" className="dlh-cancel" onClick={() => setConfirm(null)}>
                         Keep
                       </button>
-                      <button type="button" className="vrp-danger" onClick={() => void remove(o.variationId!)}>
+                      <button type="button" className="dlh-delete" onClick={() => void remove(o.variationId!)}>
                         Delete
                       </button>
                     </div>

@@ -124,7 +124,7 @@ export function DataSettings({ clients }: { clients: number }) {
                 {clients} {clients === 1 ? "client" : "clients"} | programmes, logs, check-ins, food, calls, invoices | one file
               </small>
             </span>
-            <a className="trn-pill rst-pill" href="/api/export" download>
+            <a className="rst-act" href="/api/export" download>
               Export
             </a>
           </div>

@@ -104,7 +104,7 @@
 .riv-tpl-act { height: 30px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; }
 .riv-tpl-act:hover { color: #141a24; }
 .riv-tpl-act.danger { color: #b42318; }
-.riv-tpl-act.danger:hover { background: #fdf1ef; }
+.riv-tpl-act.danger:hover { background: #f5f6f8; } /* the neutral hover, the words red (29 Oct, Alex) */
 .riv-tpl-none { margin: 0; padding: 10px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 .riv-tpl-save { display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 4px; padding: 10px; border: 0; border-top: 1px solid #eef0f3; border-radius: 0 0 10px 10px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
 .riv-tpl-save svg { width: 14px; height: 14px; translate: 0 -0.5px; }

@@ -33,9 +33,10 @@
 .rd.trn .trn-btn:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
 .rd.trn .trn-btn.ghost { background: transparent; box-shadow: none; color: var(--trn-sec); }
 .rd.trn .trn-btn.ghost:hover { color: var(--trn-ink); }
-/* An icon alone (Remove week, 23 Oct, Alex): a round 36px target, the icon centred, red on hover as a destructive act. */
+/* An icon alone (Remove week, 23 Oct, Alex): a round 36px target, the icon centred, red on hover as a destructive act;
+   the neutral grey behind it, never pink (29 Oct, Alex). */
 .rd.trn .trn-btn.trn-iconbtn { justify-content: center; width: 36px; padding: 0; border-radius: 999px; }
-.rd.trn .trn-btn.ghost.trn-iconbtn:hover { background: #fdf1ef; color: #b42318; }
+.rd.trn .trn-btn.ghost.trn-iconbtn:hover { background: #f5f6f8; color: #b42318; }
 .rd.trn .trn-btn.primary { background: var(--trn-navy); box-shadow: none; color: #fff; }
 .rd.trn .trn-btn.primary:disabled { opacity: 0.4; cursor: default; }
 .rd.trn .trn-chev { display: inline-flex; color: var(--trn-faint); transition: transform 0.15s; }
@@ -47,6 +48,8 @@
 .rd.trn .trn-state.warn { box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.35); color: #b8471f; }
 /* Urgent (Home's Needs you): the danger red, at its siblings' strength. */
 .rd.trn .trn-state.bad { box-shadow: inset 0 0 0 1px rgba(180, 35, 24, 0.3); color: #b42318; }
+/* Down a column one width, the word centred (29 Oct, Alex): the week's session cards and the Rogue sessions rows. */
+.rd.trn .rd-session-head .trn-state, .rd.trn .trn-rg-row .trn-state { justify-content: center; min-width: 96px; box-sizing: border-box; }
 
 /* ---- Header */
 .rd.trn .trn-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; min-height: 76px; }
@@ -79,9 +82,6 @@
 .rd.trn .trn-meta-part::before { content: ""; display: inline-block; width: 1.5px; height: 12px; margin: 0 10px; border-radius: 1px; background: #b0b7c3; vertical-align: -1px; }
 .rd.trn .trn-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rd.trn .trn-head-actions .rd-btn { height: 36px; border-radius: 999px; }
-.rd.trn .trn-unit { display: inline-flex; height: 36px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); box-sizing: border-box; }
-.rd.trn .trn-unit button { min-width: 44px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--trn-sec); cursor: pointer; }
-.rd.trn .trn-unit button.on { background: var(--trn-navy); color: #fff; }
 .rd.trn .trn-more { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); color: var(--trn-ink); cursor: pointer; }
 .rd.trn .trn-more svg { width: 16px; height: 16px; }
 
@@ -189,6 +189,8 @@
 .rd.trn .trn-row-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; }
 .rd.trn .trn-row-toggle:hover .trn-chev { color: var(--trn-ink); }
 .rd.trn .trn-list .rd-session.open > .rd-rows { border-top: 0; }
+/* An opened session's own actions (+ Exercise, + Cardio…) as the other text actions: 13px at 600 (29 Oct, Alex). */
+.rd.trn .rd-add .rd-btn.ghost { font-size: 13px; font-weight: 600; }
 /* A session table's fields as clean lines (21 Oct, Alex: no box): the text where it stands, as wide as what is
    typed (or its placeholder), a line under it on hover, ink while typing. */
 .rd.trn .trn-list .rd-row .rd-cell-box { align-self: flex-start; width: auto; min-width: 3ch; max-width: 100%; height: 30px; margin-left: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; box-shadow: none; field-sizing: content; }
@@ -285,9 +287,9 @@ body:has(.rd-addpop) .rd-picker-menu [data-slot="dropdown-menu-item"].on { backg
 .dlh-cancel:hover { color: #141a24; }
 /* Focus as a soft tint, not a ring (Cancel takes the focus as the pop-up opens). */
 .dlh-cancel:focus-visible, .dlh-delete:focus-visible { outline: none; background: #f5f6f8; }
-/* Delete as red words, no pill (20 Oct, Alex). */
+/* Delete as red words, no pill (20 Oct, Alex); its hover the neutral grey, the words staying red (29 Oct, Alex: never pink). */
 .dlh-delete { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #b42318; cursor: pointer; }
-.dlh-delete:hover { background: #fdf1ef; }
+.dlh-delete:hover { background: #f5f6f8; color: #b42318; }
 .dlh-seg { display: flex; gap: 2px; height: 36px; margin-top: 6px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
 .dlh-seg > button { flex: 1; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; white-space: nowrap; }
 .dlh-seg > button small { font-size: 12px; font-weight: 500; opacity: 0.75; }

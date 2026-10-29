@@ -1368,7 +1368,7 @@ function DayRow({ day, open, due, grid, mealGrid, commentsOn, onToggle, onShot, 
           </span>
         </span>
         <span className="rd-num">{n(day.kcal)}</span>
-        <span className={`rd-pill rnt-daypill${day.isTraining ? "" : " quiet"}`}>{day.isTraining ? "Training" : "Rest"}</span>
+        <span className={`trn-state rnt-daypill${day.isTraining ? " live" : ""}`}>{day.isTraining ? "Training" : "Rest"}</span>
         <span className="rn-macros" title={`${day.protein} g protein · ${day.carbs} g carbs · ${day.fat} g fat`}>
           <Split p={day.protein * 4} c={day.carbs * 4} f={day.fat * 9} />
         </span>

@@ -74,7 +74,7 @@ export default function ClerkAccount({ email, security }: { email: string; secur
           </button>
         </>
       ) : can ? (
-        <button type="button" className="trn-pill rst-pill" disabled={busy || !user} onClick={() => connect(strategy)}>
+        <button type="button" className="rst-act" disabled={busy || !user} onClick={() => connect(strategy)}>
           Connect
         </button>
       ) : (
@@ -92,12 +92,12 @@ export default function ClerkAccount({ email, security }: { email: string; secur
       {d.current ? (
         <>
           <span className="trn-state good rst-state">This device</span>
-          <button type="button" className="trn-pill rst-pill" onClick={() => logoutAction()}>
+          <button type="button" className="rst-act" onClick={() => logoutAction()}>
             Sign out
           </button>
         </>
       ) : (
-        <button type="button" className="trn-pill rst-pill" disabled={busy} onClick={() => act(() => signOutDeviceAction(d.id), "Signed out", () => setGone((g) => [...g, d.id]))}>
+        <button type="button" className="rst-act" disabled={busy} onClick={() => act(() => signOutDeviceAction(d.id), "Signed out", () => setGone((g) => [...g, d.id]))}>
           Sign out
         </button>
       )}

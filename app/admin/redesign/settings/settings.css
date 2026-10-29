@@ -97,9 +97,13 @@ body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font-
 .rd.rst .rst-open svg { width: 14px; height: 14px; translate: 0 -0.5px; }
 .rd.rst a.rst-row.opens:hover .rst-open, .rd.rst a.rst-row.opens:focus-visible .rst-open { opacity: 1; }
 /* Words that undo something (Disconnect, Remove): red, no pill; a row's action shows on hover only. */
-.rd.rst .rst-danger { flex: none; height: 32px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #b42318; cursor: pointer; }
-.rd.rst .rst-danger:hover { background: #fdf1ef; }
+/* A row's other actions are words too (29 Oct, Alex: a 36px Sign out pill beside the 24px state pill read as two
+   sizes): Sign out, Connect in ink. One hover for both, the neutral grey, never a red tint (design rules 8). */
+.rd.rst .rst-danger, .rd.rst .rst-act { flex: none; display: inline-flex; align-items: center; height: 32px; text-decoration: none; padding: 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #b42318; cursor: pointer; }
+.rd.rst .rst-act { color: #141a24; }
+.rd.rst .rst-danger:hover, .rd.rst .rst-act:hover { background: #f5f6f8; }
 .rd.rst .rst-danger:disabled { color: rgba(180, 35, 24, 0.35); cursor: default; }
+.rd.rst .rst-act:disabled { color: #98a2b3; cursor: default; }
 .rd.rst .rst-hover { opacity: 0; transition: opacity 0.12s; }
 .rd.rst .rst-row:hover .rst-hover, .rd.rst .rst-row:focus-within .rst-hover { opacity: 1; }
 @media (hover: none) { .rd.rst .rst-hover, .rd.rst .rst-open { opacity: 1; } }

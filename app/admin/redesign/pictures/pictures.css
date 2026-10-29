@@ -8,7 +8,8 @@
 .rd.rp .rp-tag { background: transparent; white-space: nowrap; }
 .rd.rp .rp-tag.open { color: #b8471f; box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.35); }
 .rd.rp .rp-tag.next { color: #8b93a1; box-shadow: inset 0 0 0 1px #e1e5eb; }
-.rd.rp .rp-setup-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px 0 10px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13px; font-weight: 500; color: #141a24; white-space: nowrap; cursor: pointer; }
+/* Its words at 600 as Training's pills, its facts staying 500 grey (29 Oct, Alex). */
+.rd.rp .rp-setup-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px 0 10px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
 .rd.rp .rp-setup-btn:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
 .rd.rp .rp-setup-btn svg { flex: none; width: 15px; height: 15px; translate: 0 -0.5px; }
 .rd.rp .rp-setup-btn small { font-size: 12px; font-weight: 500; color: #8b93a1; }
@@ -60,7 +61,8 @@
 .rd.rp .rp-div { width: 1px; height: 16px; background: #e1e5eb; }
 .rd.rp .rp-foot .rp-phases { flex: 1; min-width: 0; }
 .rd.rp .rp-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.rd.rp .rp-pill { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
+/* Training's trn-pill: 36px, 13px at 600 (29 Oct, Alex). */
+.rd.rp .rp-pill { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
 .rd.rp .rp-pill:hover:not([aria-disabled="true"]) { box-shadow: inset 0 0 0 1px #c5ccd8; }
 .rd.rp .rp-pill[aria-disabled="true"] { color: #8b93a1; cursor: default; }
 .rd.rp .rp-pill:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
@@ -168,9 +170,9 @@
 .cmp-week svg { flex: none; width: 11px; height: 11px; color: #8b93a1; }
 .cmp-vs { font-size: 12.5px; font-weight: 500; color: #98a2b3; }
 .cmp-menu { max-height: 280px; overflow-y: auto; scrollbar-width: thin; }
-/* Every angle an equal share of the row, never a short group. */
-.rd-btn-group.cmp-angles { display: grid; grid-template-columns: repeat(var(--cmp-n, 4), minmax(0, 1fr)); width: 100%; height: 40px; }
-.rd-btn-group.cmp-angles button { height: 32px; padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Every angle an equal share of the row, never a short group; the shared 36px capsule (29 Oct, Alex: it was 40). */
+.rd-btn-group.cmp-angles { display: grid; grid-template-columns: repeat(var(--cmp-n, 4), minmax(0, 1fr)); width: 100%; }
+.rd-btn-group.cmp-angles button { padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Side by side: each photo 3:4 at the column's width, never taller than the screen allows; its week and weigh-in under it. */
 .cmp-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; container-type: inline-size; }
 .cmp-col { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; margin: 0; }
@@ -209,7 +211,7 @@
 .rp-arrow:hover { background: #fff; }
 .rp-arrow:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .rp-photodlg-foot { display: flex; justify-content: flex-end; }
-.rp-full { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font-size: 12.5px; font-weight: 600; color: #141a24; text-decoration: none; white-space: nowrap; }
+.rp-full { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font-size: 13px; font-weight: 600; color: #141a24; text-decoration: none; white-space: nowrap; }
 .rp-full:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
 .rp-strip { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
 .rp-mini { display: flex; flex: none; flex-direction: column; gap: 3px; width: 64px; padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }

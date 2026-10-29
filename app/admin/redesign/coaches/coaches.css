@@ -27,7 +27,7 @@
 .rd.rco .rco-act:hover { color: #141a24; }
 .rd.rco .rco-act.ink { color: #141a24; }
 .rd.rco .rco-act.danger { color: #b42318; }
-.rd.rco .rco-act.danger:hover { background: #fdf1ef; }
+.rd.rco .rco-act.danger:hover { background: #f5f6f8; } /* the neutral hover, the words red (29 Oct, Alex) */
 .rd.rco .rco-act.off { color: #98a2b3; cursor: default; }
 .rd.rco .rco-act:disabled { cursor: default; }
 .rd.rco .rco-act:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }

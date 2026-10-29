@@ -29,10 +29,11 @@
 .cgh-text small { font-size: 12px; font-weight: 500; line-height: 1.35; color: #98a2b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .cgh-actions { grid-column: 3; grid-row: 1; display: flex; align-items: center; gap: 4px; }
-.cgh-makehome { height: 28px; padding: 0 11px; border: 0; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 12px; font-weight: 600; color: #5b6474; white-space: nowrap; cursor: pointer; transition: background 0.15s, color 0.15s; }
+/* Make home: a row's action is its words alone, no pill (29 Oct, Alex). */
+.cgh-makehome { height: 28px; padding: 0 8px; border: 0; border-radius: 999px; background: none; box-shadow: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .cgh-makehome:hover, .cgh-makehome:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
 .cgh-remove { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: none; color: #98a2b3; cursor: pointer; transition: background 0.15s, color 0.15s; }
-.cgh-remove:hover, .cgh-remove:focus-visible, .cgh-remove.on { outline: none; background: #fdf1ef; color: #b42318; }
+.cgh-remove:hover, .cgh-remove:focus-visible, .cgh-remove.on { outline: none; background: #f5f6f8; color: #b42318; } /* the neutral hover, the icon red (29 Oct, Alex) */
 
 /* Its share of the last eight weeks: a 3px ink bar, the figure in grey. */
 .cgh-usage { grid-column: 2 / -1; grid-row: 2; display: flex; align-items: center; gap: 10px; }
@@ -48,7 +49,7 @@
 .cgh-keep:hover { color: #141a24; }
 .cgh-keep:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
 .cgh-danger { color: #b42318; }
-.cgh-danger:hover, .cgh-danger:focus-visible { outline: none; background: #fdf1ef; }
+.cgh-danger:hover, .cgh-danger:focus-visible { outline: none; background: #f5f6f8; }
 
 /* Add a gym: a clean line with Add at its end. */
 .cgh-add { flex: none; display: flex; align-items: center; gap: 8px; margin-top: 12px; border-bottom: 1px solid #e1e5eb; transition: border-color 0.15s; }

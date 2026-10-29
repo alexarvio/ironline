@@ -139,7 +139,7 @@ body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font
 /* Footer: Delete as red words on the left; Cancel as words and the black pill on the right. */
 .npd.npd .npd-foot { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 20px; }
 .npd.npd .npd-delete { margin-right: auto; margin-left: -14px; height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #b42318; cursor: pointer; }
-.npd.npd .npd-delete:hover, .npd.npd .npd-delete:focus-visible { outline: none; background: #fdf1ef; }
+.npd.npd .npd-delete:hover, .npd.npd .npd-delete:focus-visible { outline: none; background: #f5f6f8; } /* the neutral hover, the words red (29 Oct, Alex) */
 .npd.npd .npd-cancel { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
 .npd.npd .npd-cancel:hover { color: #141a24; }
 .npd.npd .npd-cancel:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }

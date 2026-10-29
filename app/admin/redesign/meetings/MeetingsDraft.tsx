@@ -951,7 +951,7 @@ function PastBody({ m, firstName, onSend, auto, bare, onAddEvent, focus }: { m: 
           {agreedPoints(m.summary).points.map((line, i) => (
             <li key={i} className="dlh-line">
               <span>{line}</span>
-              <button type="button" className="rd-chip" onClick={() => onAddEvent(line)}>
+              <button type="button" className="rt-addev" onClick={() => onAddEvent(line)}>
                 <PlusIcon /> Add as event
               </button>
             </li>

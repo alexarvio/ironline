@@ -398,7 +398,7 @@ function OnlinePayments({ state }: { state: PaymentsState }) {
           )}
           {pill}
           {state.status !== "off" && state.status !== "active" && (
-            <button type="button" className="trn-pill rst-pill" onClick={go} disabled={busy}>
+            <button type="button" className="rst-act" onClick={go} disabled={busy}>
               {busy ? "Opening Stripe…" : state.status === "pending" ? "Finish on Stripe" : "Connect Stripe"}
             </button>
           )}
