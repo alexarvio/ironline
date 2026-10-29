@@ -36,6 +36,7 @@ import BarcodeScanner from "./BarcodeScanner";
 import PictureCycle from "./PictureCycle";
 import { landOn } from "../lib/landOn";
 import { Bars } from "./Bars";
+import CoachSays from "./CoachSays";
 
 // The client's food diary, opened from the ring on Nutrition. On the client
 // page model: the top bar (a back arrow in place of the burger) floating
@@ -1108,13 +1109,14 @@ export default function FoodDiaryScreen({
                     )}
                     {meal.comments.length > 0 && (
                       <div className="fdi-coach-said">
-                        <span className="fdi-eyebrow">From your coach</span>
-                        {meal.comments.map((c) => (
-                          <p key={c.id}>
-                            {c.text}
-                            <small>{c.when}</small>
-                          </p>
-                        ))}
+                        <CoachSays label="From your coach">
+                          {meal.comments.map((c) => (
+                            <p key={c.id}>
+                              {c.text}
+                              <small>{c.when}</small>
+                            </p>
+                          ))}
+                        </CoachSays>
                       </div>
                     )}
                     {savingMeal === meal.id && (

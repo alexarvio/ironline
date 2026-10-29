@@ -7,7 +7,7 @@ import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel 
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
 import { CoachNote, shownName, type SessionExercise } from "./workoutShared";
-import CoachMark from "./CoachMark";
+import CoachSays from "./CoachSays";
 import { Bars } from "./Bars";
 import RingEdge from "../components/RingEdge";
 
@@ -585,13 +585,7 @@ export default function ExercisePage({
       {/* …but the coach's own note on the substitute they suggested does show (17 Oct, Alex). */}
       {swapNote && (
         <div className="ts-coachnote">
-          <div className="ts-coachnote-top">
-            <span className="ts-coachnote-label coach-eyebrow">
-              <CoachMark />
-              From your coach
-            </span>
-          </div>
-          <p className="ts-coachnote-text">{swapNote}</p>
+          <CoachSays label="From your coach">{swapNote}</CoachSays>
         </div>
       )}
 

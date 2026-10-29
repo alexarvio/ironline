@@ -20942,3 +20942,18 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
 .au-card .au-plan-price b { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .au-card .au-plan-price span { font-size: 14px; font-weight: 500; color: #8b93a1; }
 .au-card .au-plan-trial { margin: 0; font-size: 13px; font-weight: 500; color: #8b93a1; text-align: center; }
+
+/* A coach's note, one way wherever it shows (29 Oct, Alex: option A, docs/boards/coach-note-mockup.html; CoachSays.tsx,
+   docs/DESIGN-RULES.md §9): the face 36px, the same everywhere, as tall as the label (15px) and the words' first line
+   (21px) together, so it sits centred on them; a longer note runs on under the words. Doubled, so it wins over each
+   screen's older lines wherever the dev server puts this file's parts. */
+.coach-says.coach-says { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; align-items: start; }
+.coach-says.coach-says > .coach-mark { grid-row: 1 / span 2; width: 36px; height: 36px; margin: 0; background: #141a24; font-size: 14px; font-weight: 600; }
+.coach-says-label.coach-says-label { display: flex; align-items: baseline; gap: 8px; min-width: 0; height: 15px; font-size: 10.5px; font-weight: 600; line-height: 15px; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coach-says-date.coach-says-date { line-height: 15px; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.coach-says-words.coach-says-words { min-width: 0; font-size: 15px; font-weight: 500; line-height: 21px; color: #141a24; white-space: pre-wrap; overflow-wrap: anywhere; }
+.coach-says-words p { margin: 0; }
+.coach-says-words p + p { margin-top: 6px; }
+.coach-says-words small { display: block; font-size: 12px; font-weight: 500; line-height: 16px; color: #8b93a1; }
+/* The food diary's comments sat in a teal box: flat on the page now, as every note. */
+.fdi-coach-said.fdi-coach-said { display: block; padding: 0; border-radius: 0; background: none; }

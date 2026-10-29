@@ -8,8 +8,9 @@ import { pic } from "../lib/pic";
 // exercise, the instructions on a progress sheet. Their initial until they
 // have set a picture. Reads the coach from context so the server component
 // in between needs no prop.
-export default function CoachMark({ size = "sm" }: { size?: "sm" | "lg" }) {
-  const coach = useCoachIdentity();
+export default function CoachMark({ size = "sm", coach: given }: { size?: "sm" | "lg" | "note"; /** Who, where the page knows it. */ coach?: { name: string; photoPath: string | null } }) {
+  const known = useCoachIdentity();
+  const coach = given ?? known;
   const initial = (coach?.name ?? "C").trim().charAt(0).toUpperCase() || "C";
   return (
     <span className={`coach-mark ${size}`} aria-hidden="true">

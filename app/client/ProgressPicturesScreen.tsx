@@ -5,7 +5,7 @@ import { removeProgressPhotoAction, uploadProgressPhotoAction } from "../lib/act
 import { fitJpeg } from "../lib/coverJpeg";
 import { ArrowRightIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenPhotos } from "./CheckInContext";
-import CoachMark from "./CoachMark";
+import CoachSays from "./CoachSays";
 import FitTitle from "./FitTitle";
 import ProgressCompare from "./ProgressCompare";
 import PhotoDeck from "./PhotoDeck";
@@ -337,11 +337,7 @@ function OpenSheet({
           {/* How to take them, first (17 Oct, Alex): the coach's general instructions sit above the cards, read before the camera comes out. */}
           {sheet.instructions && (
             <div className="pp-todo-coach first">
-              <span className="pp-app-coach-label coach-eyebrow">
-                <CoachMark />
-                How to take them
-              </span>
-              <p className="pp-app-coach-text">{sheet.instructions}</p>
+              <CoachSays label="How to take them">{sheet.instructions}</CoachSays>
             </div>
           )}
 
