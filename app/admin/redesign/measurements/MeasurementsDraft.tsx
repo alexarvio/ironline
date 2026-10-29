@@ -113,6 +113,14 @@ const tailOf = (unit: string) => {
   return u.startsWith("/") ? u : ` ${u}`;
 };
 const withUnit = (v: number, unit: string) => `${n(v)}${tailOf(unit)}`;
+/** A change as Home's Weight writes it (29 Oct, Alex): the amount, then its share of where the range began, parted by the
+    drawn bar, `+2.7 kg | +3.1%`. No share for a metric that is a percentage already, or one that began at nothing. */
+const changeParts = (delta: number, from: number, unit: string): string[] => {
+  const amount = `${delta > 0 ? "+" : "−"}${n(Math.abs(delta))}${tailOf(unit)}`;
+  if (unit.trim() === "%" || from === 0) return [amount];
+  const p = Math.round((delta / from) * 1000) / 10;
+  return [amount, `${p > 0 ? "+" : p < 0 ? "−" : ""}${Math.abs(p).toFixed(1)}%`];
+};
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 // Each rhythm in words: the toggle, the card, the stats.
 const CAD = {
@@ -1247,7 +1255,6 @@ function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Ca
       <nav className="rm-graph-list" aria-label="Metric on the graph">
         {view.metrics.map((m) => {
           const s = seriesOf(m, periods, valueFor);
-          const tail = tailOf(m.unit);
           return (
             <button key={m.id} type="button" className={`rm-graph-pick${m.id === metric.id ? " on" : ""}`} aria-pressed={m.id === metric.id} onClick={() => setPicked(m.id)}>
               <span className="rm-graph-cat" style={{ color: m.colour }}>
@@ -1259,7 +1266,7 @@ function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Ca
               </span>
               <Spark points={s.points} colour={m.colour} />
               <span className={`rm-graph-pick-delta${s.tone ? ` ${s.tone}` : ""}`}>
-                {s.delta == null ? (s.last ? "One reading" : "Nothing logged") : s.delta === 0 ? "No change" : `${s.delta > 0 ? "+" : "−"}${n(Math.abs(s.delta))}${tail}`}
+                {s.delta == null ? (s.last ? "One reading" : "Nothing logged") : s.delta === 0 ? "No change" : <SepJoin parts={changeParts(s.delta, s.first!.value, m.unit)} />}
               </span>
             </button>
           );
@@ -1387,7 +1394,7 @@ function MetricGraph({ metric: m, series, rangeSwitch = null }: { metric: Logged
         </span>
         {delta != null && (
           <span className={`rm-graph-delta${tone ? ` ${tone}` : ""}`}>
-            {delta === 0 ? "No change" : `${delta > 0 ? "+" : "−"}${n(Math.abs(delta))}${tail}`}
+            {delta === 0 ? "No change" : <SepJoin parts={changeParts(delta, first.value, unit)} />}
           </span>
         )}
       </div>
