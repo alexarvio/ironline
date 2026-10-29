@@ -10276,6 +10276,8 @@ function exerciseHistoryFor(assignmentId: number): { day: ProgramDay; logs: SetL
   for (const other of data.workout_assignments) {
     if (other.id === wa.id || other.swap) continue;
     if (other.exercise_id !== exerciseId) continue;
+    // The same lift (29 Oct, Alex: last time's weights on every set): another variation's weights are not its last time.
+    if ((other.variation_id ?? null) !== (wa.variation_id ?? null)) continue;
     const pd = days.get(other.program_day_id);
     if (!pd || !inPhase(pd) || at(pd) >= at(day)) continue;
     const logs = data.set_logs.filter((sl) => sl.workout_assignment_id === other.id).sort((a, b) => a.set_number - b.set_number);

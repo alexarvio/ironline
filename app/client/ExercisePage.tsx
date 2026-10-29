@@ -140,7 +140,8 @@ export default function ExercisePage({
   }, [unit]);
   // RPE is off the set rows (14 Oct, Alex, after Strava): weight and reps only, side by side, typed (the − and + went the same day; the arrow keys still step). A figure logged before stays in the data.
   const askRpe = false;
-  const last = exercise.lastSets;
+  // Swapped for the day, last time was another lift.
+  const last = swapped ? null : exercise.lastSets;
   const lastOf = (n: number) => last?.sets.find((s) => s.setNumber === n) ?? null;
   // "8-10" → 8, "12" → 12: the reps the plan asks for.
   const repLow = (() => {
@@ -171,20 +172,21 @@ export default function ExercisePage({
     return { ...(log ? { weightKg: log.weight, reps: log.reps, rpe: log.rpe } : EMPTY), ...(from[n] ?? {}) };
   };
   const isSaved = (v: Vals) => (!askWeight || v.weightKg != null) && v.reps != null;
-  // A set's plan: the weight the set before it was just done at, this session (25 Oct, Alex: "for the next one it is
-  // always the defaulted value"; a client who went up on set 1 saw set 2 back at the coach's figure); for the first
-  // set, the coach's weight (one source of truth, 15 Oct). Reps and RPE from what this set was last session, else the
-  // coach's figures; an extra set with no last-time twin follows the set before it.
+  // A set's plan (29 Oct, Alex: "it should always show the weight and reps done last time"): the weight and reps this
+  // set was done at last time, met or missed; the coach's weight is in the targets over the sets. A set with no
+  // last-time twin follows the latest set done before it this session (25 Oct, Alex: "for the next one it is always the
+  // defaulted value"), else the coach's figures.
   const planOf = (n: number): Vals => {
-    const before = n > exercise.sets ? logOf(n - 1) : null;
-    const prev = lastOf(n) ?? before;
-    // The latest set done before it, so a set two ahead follows it too.
-    let carried: number | null = null;
+    const then = lastOf(n);
+    // The latest set done before it this session, so a set two ahead follows it too.
+    let carried: Vals | null = null;
     for (let m = n - 1; m >= 1 && carried == null; m--) {
       const v = enteredOf(m);
-      if (isSaved(v)) carried = v.weightKg;
+      if (isSaved(v)) carried = v;
     }
-    return { weightKg: carried ?? planWeight ?? prev?.weight ?? null, reps: prev?.reps ?? repLow, rpe: prev?.rpe ?? targetRpe };
+    const weightKg = then?.weight ?? carried?.weightKg ?? planWeight;
+    const reps = then?.reps ?? (n > exercise.sets ? carried?.reps : null) ?? repLow;
+    return { weightKg: weightKg ?? null, reps, rpe: then?.rpe ?? targetRpe };
   };
 
   // ---- Warm-ups: rows of the same kind above set 1, the client's own, never
