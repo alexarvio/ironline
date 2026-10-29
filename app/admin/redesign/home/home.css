@@ -329,8 +329,11 @@
 .cc-hl .ad-card-form-foot { display: flex; align-items: center; }
 .cc-hl .cc-foot-start { margin-right: auto; }
 .cc-hl .cc-plan { height: 40px; }
-/* The Plan as a field among the others: its name (or Pick in grey) on the clean line, the chevron after it. */
-.cc-hl .cc-plan { margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; text-align: left; }
+/* The Plan as a field among the others: its name (or Pick in grey) on the clean line, the chevron at the line's end,
+   centred on the words, as Country's (29 Oct, Alex: it sat low, on the text's baseline). */
+.cc-hl .cc-plan { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
+.cc-hl .cc-plan > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-hl .cc-plan svg { flex: none; width: 14px; height: 14px; color: #8b93a1; }
 .cc-hl .cc-plan.add { color: #98a2b3; }
 .cc-hl .cc-plan.add:hover { color: #141a24; }
 
