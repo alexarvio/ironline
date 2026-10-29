@@ -20147,11 +20147,18 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* Its air as margins, so the folded list is truly 0 high. */
 .nd .nd-supps-list > :first-child { margin-top: 4px; }
 .nd .nd-supps-list > :last-child { margin-bottom: 2px; }
-/* The list eases open and shut (24 Oct, Alex), as the food diary's folds. */
-.nd-supps-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1); }
-.nd-supps-fold.open { grid-template-rows: 1fr; }
+/* The list takes its room at once and what is under it slides by a transform (29 Oct, Alex: "still slow to open… laggy";
+   SupplementsCard.tsx, slideBelow), as Home's To focus on: only its rows fade in and settle 4px down, so no frame lays
+   out the page. */
+.nd-supps-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: opacity 0.22s ease; }
+.nd-supps-fold.open { grid-template-rows: 1fr; opacity: 1; }
 .nd-supps-fold > .nd-supps-list { min-height: 0; overflow: hidden; }
-@media (prefers-reduced-motion: reduce) { .nd-supps-fold { transition: none; } }
+.nd-supps-fold .nd-supp { transform: translateY(-4px); transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+.nd-supps-fold.open .nd-supp { transform: none; }
+/* All of today's ticked (29 Oct, Alex): the list folds away and the pill's count is a check in the supplement green. */
+.nd-supps-done { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px #1f7a4d; color: #1f7a4d; }
+.nd-supps-done svg { width: 13px; height: 13px; }
+@media (prefers-reduced-motion: reduce) { .nd-supps-fold, .nd-supps-fold .nd-supp { transition: none; } }
 .nd .nd-supps-list::before { content: ""; position: absolute; left: 26px; top: 0; bottom: 18px; border-left: 1px solid #E1E5EB; pointer-events: none; z-index: 0; }
 .nd .nd-supp { position: relative; z-index: 1; padding: 11px 4px 11px 48px; border-top: 0; }
 .nd .nd-check { background: #F5F6F8; }
@@ -20822,7 +20829,8 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
    dropdown to work as smoothly as the meeting summary"; docs/DESIGN-RULES.md §7): its rows over 340ms on the soft
    ease-out, what fades in over 220ms, the chevron turning on the same curve. Doubled, so it wins over each fold's own
    line wherever the dev server puts this file's parts. */
-.hm-phases-fold.hm-phases-fold, .ts-fold.ts-fold, .fdi-fold.fdi-fold, .pc-sbody-wrap.pc-sbody-wrap, .ci-day-body.ci-day-body, .hl-fold.hl-fold, .cv-fold-wrap.cv-fold-wrap, .nd-supps-fold.nd-supps-fold { transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+.hm-phases-fold.hm-phases-fold, .ts-fold.ts-fold, .fdi-fold.fdi-fold, .pc-sbody-wrap.pc-sbody-wrap, .ci-day-body.ci-day-body, .hl-fold.hl-fold, .cv-fold-wrap.cv-fold-wrap { transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+.nd-supps-fold.nd-supps-fold { transition: opacity 0.22s ease; }
 .tr-session-fold.tr-session-fold { transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.34s; }
 .pc-obj-body.pc-obj-body, .po-body.po-body, .mts-body.mts-body, .ev-x.ev-x, .mt-body.mt-body, .pp-app-past-fold.pp-app-past-fold { transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; }
 .cv-fold-chev.cv-fold-chev, .hm-focus-chev.hm-focus-chev { transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }

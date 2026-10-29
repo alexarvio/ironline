@@ -6,6 +6,7 @@ import type { HomeFocus } from "../../lib/focus";
 import { FOCUS_COOKIE, focusStamp } from "../../lib/focusStamp";
 import { ChevronDownIcon } from "../../components/icons";
 import { pic } from "../../lib/pic";
+import { slideBelow } from "../../lib/slideBelow";
 import "./focus.css";
 
 // To focus on (23 Oct, Alex): the coach's goals until the next call, the first thing on Home under the greeting.
@@ -40,36 +41,13 @@ export default function FocusList({ focus, coach, initialOpen = true }: { focus:
   const flip = () => {
     const next = !open;
     const sec = ref.current;
-    const still = !sec || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const before = sec?.getBoundingClientRect().height ?? 0;
     flushSync(() => {
       setOpen(next);
       setDressed(next);
     });
     remember(next);
-    if (still || !sec) return;
-    const shift = before - sec.getBoundingClientRect().height;
-    if (!shift) return;
-    const below: HTMLElement[] = [];
-    for (let n = sec.nextElementSibling; n; n = n.nextElementSibling) if (n instanceof HTMLElement) below.push(n);
-    for (const n of below) {
-      n.style.transition = "none";
-      // translate, not transform: a card that has a transform of its own keeps it.
-      n.style.translate = `0 ${shift}px`;
-      n.style.willChange = "translate";
-    }
-    // Read once so the start is drawn, then let go: it eases back to its own place (no frame callback to wait on).
-    void sec.offsetHeight;
-    for (const n of below) {
-      n.style.transition = "translate 0.34s cubic-bezier(0.22, 1, 0.36, 1)";
-      n.style.translate = "";
-    }
-    setTimeout(() => {
-      for (const n of below) {
-        n.style.transition = "";
-        n.style.willChange = "";
-      }
-    }, 400);
+    if (sec) slideBelow(sec, before);
   };
 
   if (goals.length === 0) return null;

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import { slideBelow } from "../lib/slideBelow";
 import { CheckIcon, ChevronDownIcon } from "../components/icons";
 import RingEdge from "../components/RingEdge";
 
@@ -29,14 +31,18 @@ export default function SupplementsCard({ date, rows }: { date: string; rows: Su
   // The open look (the pill as the header, the list flat under it) stays on while the list folds away, and goes once
   // it has (24 Oct, Alex: the list eases open and shut).
   const [dressed, setDressed] = useState(false);
-  const flip = () => {
-    if (!open) {
-      setDressed(true);
-      setOpen(true);
-      return;
-    }
-    setOpen(false);
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setDressed(false);
+  // As Home's To focus on (29 Oct, Alex: "still slow to open… laggy"): the list takes its room at once and the coach's
+  // note and the days under it slide by a transform (slideBelow), so no frame lays out the page.
+  const ref = useRef<HTMLDivElement>(null);
+  const flip = () => turn(!open);
+  const turn = (next: boolean) => {
+    const el = ref.current;
+    const before = el?.getBoundingClientRect().height ?? 0;
+    flushSync(() => {
+      setOpen(next);
+      setDressed(next);
+    });
+    if (el) slideBelow(el, before, el.closest<HTMLElement>(".nd"));
   };
   const [taken, setTaken] = useState<string[]>([]);
   // The phone's day, now and whenever the app is back in front.
@@ -69,23 +75,40 @@ export default function SupplementsCard({ date, rows }: { date: string; rows: Su
     return () => clearTimeout(t);
   }, [storageKey]);
 
-  const toggle = (name: string) =>
-    setTaken((prev) => {
-      const next = prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name];
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
+  const allOf = (list: string[]) => rows.length > 0 && rows.every((r) => list.includes(r.name));
+  const done = allOf(taken);
+  // The last one ticked (29 Oct, Alex): a moment to see its tick, then the list folds away and the pill shows the check.
+  const folding = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => void (folding.current && clearTimeout(folding.current)), []);
+  // The latest ticks, so two quick taps never work from the same old list.
+  const latest = useRef(taken);
+  latest.current = taken;
+  const toggle = (name: string) => {
+    const was = latest.current;
+    const next = was.includes(name) ? was.filter((x) => x !== name) : [...was, name];
+    latest.current = next;
+    setTaken(next);
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+    } catch {}
+    if (folding.current) clearTimeout(folding.current);
+    folding.current = allOf(next) ? setTimeout(() => turn(false), 700) : null;
+  };
 
   return (
-    <div className={`nd-supps${dressed ? " dressed" : ""}`}>
+    <div ref={ref} className={`nd-supps${dressed ? " dressed" : ""}`}>
       <button type="button" className="nd-supps-toggle" aria-expanded={open} onClick={flip}>
         <span className="nd-supps-title">Supplements</span>
-        {/* How many the coach has set; the ticks inside are optional. */}
-        <span className="nd-supps-count" aria-label={`${rows.length} supplement${rows.length === 1 ? "" : "s"}`}>
-          {rows.length}
-        </span>
+        {/* How many the coach has set; the ticks inside are optional. All ticked today, a check instead. */}
+        {done ? (
+          <span className="nd-supps-done" aria-label="All taken today">
+            <CheckIcon />
+          </span>
+        ) : (
+          <span className="nd-supps-count" aria-label={`${rows.length} supplement${rows.length === 1 ? "" : "s"}`}>
+            {rows.length}
+          </span>
+        )}
         <span className="nd-supps-chev" aria-hidden="true">
           <ChevronDownIcon />
         </span>
@@ -94,9 +117,6 @@ export default function SupplementsCard({ date, rows }: { date: string; rows: Su
         className={`nd-supps-fold${open ? " open" : ""}`}
         aria-hidden={!open}
         inert={!open}
-        onTransitionEnd={(e) => {
-          if (e.target === e.currentTarget && !open) setDressed(false);
-        }}
       >
         <div className="nd-supps-list">
           {rows.map((r, i) => {
