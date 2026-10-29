@@ -12993,7 +12993,11 @@ body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5
 .hm { position: relative; isolation: isolate; overflow-x: clip; }
 .hm > .hm-banner:not(.st-banner) { background: none; overflow: visible; }
 .hm > .hm-banner:not(.st-banner)::after { content: none; }
-.hm > .hm-banner:not(.st-banner)::before { z-index: -1; right: -120px; top: 6px; width: 448px; height: 430px; border: 0; border-radius: 0; -webkit-mask-image: none; mask-image: none; background: var(--bg-mark, url("/brand/mark.svg")) no-repeat center / contain; opacity: 0.045; }
+/* The star stays where it is while Home scrolls (29 Oct, Alex: it scrolled away with the page): drawn on Home's scroll
+   box, as the chats draw it, never on the banner. The page colour over it at 95.5% leaves the star at 4.5%. */
+.hm > .hm-banner:not(.st-banner)::before { content: none; }
+.app-content > .hm { background: none; }
+.app-content:has(> .hm) { background: linear-gradient(rgba(245, 245, 245, 0.955), rgba(245, 245, 245, 0.955)), var(--bg-mark, url("/brand/mark.svg")) right -120px top 6px / 448px 430px no-repeat, #F5F5F5; }
 .hm-body { display: flex; flex-direction: column; gap: 16px; padding: 0 16px; }
 /* The first card overlaps the banner, like Days trained on Training. */
 .hm-body > :first-child { position: relative; z-index: 2; margin-top: -36px; }
