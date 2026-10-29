@@ -503,6 +503,7 @@ function endingOf(ctx: Ctx): EndingRow[] {
       objectives: p.objectives ?? [],
       programId: program?.id ?? null,
       gap: null,
+      openEnded: !!p.open_ended,
     };
     const list = phasesBy.get(p.client_id);
     if (list) list.push(row);

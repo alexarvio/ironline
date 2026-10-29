@@ -64,8 +64,10 @@ export const daysLeft = (p: OverviewPhase, today: string) => daysBetween(today, 
 /** Something on the same track planned after it, drafts included. */
 export const followed = (p: OverviewPhase, all: OverviewPhase[]) => all.some((q) => q.track === p.track && q.id !== p.id && q.end > p.end);
 
-/** Running today, its last day within 14 days, nothing planned after it on the track. */
+/** Running today, its last day within 14 days, nothing planned after it on the track. Never an indefinite one (29 Oct,
+    Alex): its stored end is only this week's Sunday, and Monday takes on the next week, so it isn't ending. */
 export function endingSoon(p: OverviewPhase, all: OverviewPhase[], today: string): boolean {
+  if (p.openEnded) return false;
   if (phaseStatus(p, today) !== "running") return false;
   const left = daysLeft(p, today);
   return left >= 0 && left <= SOON_DAYS && !followed(p, all);

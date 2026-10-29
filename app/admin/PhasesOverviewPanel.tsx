@@ -78,7 +78,8 @@ export default function PhasesOverviewPanel({ coachId, win }: { coachId: number;
         isDraft: !!p.draft || (p.program_id != null && draftPrograms.has(p.program_id)),
         running,
         weeksLeft,
-        soon: running && weeksLeft != null && weeksLeft <= SOON_WEEKS && !followed,
+        // An indefinite phase runs on a week at a time, so it is never ending (29 Oct, Alex).
+        soon: running && !p.open_ended && weeksLeft != null && weeksLeft <= SOON_WEEKS && !followed,
       };
     });
     return { id: c.id, name: c.name, phases };
