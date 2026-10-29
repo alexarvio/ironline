@@ -19,10 +19,11 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 // /signup, /invite, /sso-callback and /auth/* are Clerk's way in (26 Sep).
 // /api/dev: local-only tools that refuse to run on a server (and are never deployed).
 // /api/apply: the website's Apply form, posted by visitors with no account (28 Oct).
+// /api/version: the build the server runs, so a page left open across a deploy reloads (FreshBuild, 30 Oct).
 // /uploads authorizes every file itself (canAccessClient); it passes through
 // here so Clerk's middleware has run and auth() works in it (30 Sep: photos
 // and videos failed to load for a Clerk sign-in while it was left out).
-const PUBLIC_PATHS = ["/login", "/privacy", "/support", "/signup", "/invite", "/sso-callback", "/auth", "/api/dev", "/api/apply", "/uploads"];
+const PUBLIC_PATHS = ["/login", "/privacy", "/support", "/signup", "/invite", "/sso-callback", "/auth", "/api/dev", "/api/apply", "/api/version", "/uploads"];
 
 // With sign-in through Clerk (lib/clerk.ts: AUTH_PROVIDER=clerk), Clerk's
 // middleware runs instead: it reads the session so auth() works on the

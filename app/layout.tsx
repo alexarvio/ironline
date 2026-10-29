@@ -7,6 +7,8 @@ import { startTiming } from "./lib/timing";
 import { ClerkProvider } from "@clerk/nextjs";
 import { clerkOn } from "./lib/clerk";
 import SlidePills from "./components/SlidePills";
+import FreshBuild from "./components/FreshBuild";
+import { buildId } from "./lib/buildId";
 import { getSessionUser } from "./lib/auth";
 import { markFor } from "./lib/brandMark";
 
@@ -103,6 +105,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {clerkOn() ? <ClerkProvider signInUrl="/login" signUpUrl="/signup" signInFallbackRedirectUrl="/auth/continue" signUpFallbackRedirectUrl="/auth/continue" afterSignOutUrl="/login">{children}</ClerkProvider> : children}
         {/* Every capsule's pill slides (28 Oct, Alex). */}
         <SlidePills />
+        {/* A page left open across a deploy reloads onto the new build (30 Oct). */}
+        <FreshBuild build={buildId()} />
       </body>
     </html>
   );
