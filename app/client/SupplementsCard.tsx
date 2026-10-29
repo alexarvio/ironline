@@ -103,6 +103,7 @@ export default function SupplementsCard({ date, rows }: { date: string; rows: Su
         {done ? (
           <span className="nd-supps-done" aria-label="All taken today">
             <CheckIcon />
+            <RingEdge size={22} stroke={1.5} />
           </span>
         ) : (
           <span className="nd-supps-count" aria-label={`${rows.length} supplement${rows.length === 1 ? "" : "s"}`}>

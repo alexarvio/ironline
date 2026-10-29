@@ -20155,9 +20155,10 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .nd-supps-fold > .nd-supps-list { min-height: 0; overflow: hidden; }
 .nd-supps-fold .nd-supp { transform: translateY(-4px); transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
 .nd-supps-fold.open .nd-supp { transform: none; }
-/* All of today's ticked (29 Oct, Alex): the list folds away and the pill's count is a check in the supplement green. */
-.nd-supps-done { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px #1f7a4d; color: #1f7a4d; }
-.nd-supps-done svg { width: 13px; height: 13px; }
+/* All of today's ticked (29 Oct, Alex): the list folds away and the pill's count is the done check, as a ticked
+   supplement and the workout's done set: the green ring drawn as a vector (RingEdge), a 12px check in its 22px. */
+.nd-supps-done { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; --ring: #2f7a3f; color: #2f7a3f; }
+.nd-supps-done > svg:not(.ring-edge) { width: 12px; height: 12px; }
 @media (prefers-reduced-motion: reduce) { .nd-supps-fold, .nd-supps-fold .nd-supp { transition: none; } }
 .nd .nd-supps-list::before { content: ""; position: absolute; left: 26px; top: 0; bottom: 18px; border-left: 1px solid #E1E5EB; pointer-events: none; z-index: 0; }
 .nd .nd-supp { position: relative; z-index: 1; padding: 11px 4px 11px 48px; border-top: 0; }
