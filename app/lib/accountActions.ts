@@ -12,10 +12,10 @@ import { clerkOn } from "./clerk";
 type Done = { ok: boolean; error?: string };
 
 async function who() {
-  await requireCoach();
+  const coach = await requireCoach();
   if (!clerkOn()) return null;
   const { userId, sessionId } = await auth();
-  return userId ? { userId, sessionId } : null;
+  return userId ? { userId, sessionId, email: String(coach.email ?? "").trim().toLowerCase() } : null;
 }
 
 /** One device signed out (never this one: Sign out on the page does that). */
@@ -50,15 +50,28 @@ export async function signOutOtherDevicesAction(): Promise<Done> {
   return { ok: true };
 }
 
-/** A linked login (Google) taken off the account. */
+/** A linked login (Google) taken off the account, and the address it brought with it (1 Nov, Alex: a coach's Google
+ *  was their own client login's address; left on the account, that address kept signing them in as the coach). The one
+ *  the coach signs in with here stays, and becomes the primary when the Google one was. */
 export async function disconnectLoginAction(externalAccountId: string): Promise<Done> {
   const me = await who();
   if (!me) return { ok: false, error: "Signed out. Sign in again." };
   try {
     const clerk = await clerkClient();
     const user = await clerk.users.getUser(me.userId);
-    if (!user.externalAccounts.some((a) => a.id === externalAccountId)) return { ok: false, error: "Not on your account." };
+    const account = user.externalAccounts.find((a) => a.id === externalAccountId);
+    if (!account) return { ok: false, error: "Not on your account." };
     await clerk.users.deleteUserExternalAccount({ userId: me.userId, externalAccountId });
+    const brought = String(account.emailAddress ?? "").trim().toLowerCase();
+    const address = user.emailAddresses.find((e) => e.emailAddress.trim().toLowerCase() === brought);
+    if (address && brought !== me.email) {
+      try {
+        // The primary moves first to another verified address the account keeps (the one it signs in with here).
+        const keep = user.emailAddresses.find((e) => e.id !== address.id && e.verification?.status === "verified" && e.emailAddress.trim().toLowerCase() === me.email) ?? user.emailAddresses.find((e) => e.id !== address.id && e.verification?.status === "verified");
+        if (address.id === user.primaryEmailAddressId && keep) await clerk.users.updateUser(me.userId, { primaryEmailAddressID: keep.id });
+        if (address.id !== user.primaryEmailAddressId || keep) await clerk.emailAddresses.deleteEmailAddress(address.id);
+      } catch {}
+    }
   } catch {
     return { ok: false, error: "Couldn't disconnect it. Try again." };
   }
