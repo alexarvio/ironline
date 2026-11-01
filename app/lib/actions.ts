@@ -157,6 +157,7 @@ import {
   setPhaseOpenEnded,
   retireMetricDefinition,
   unretireMetricDefinition,
+  metricOnPhase,
   togglePinMetric,
   togglePinMeasurementField,
   removeMetricTemplateCategory,
@@ -1070,8 +1071,9 @@ export async function applyMetricChangesAction(input: {
   const adds = (Array.isArray(input.adds) ? input.adds : [])
     .map((a) => ({ name: String(a.name ?? "").trim().slice(0, 60), unit: String(a.unit ?? "").trim().slice(0, 20), group: String(a.group ?? "other"), cadence: a.cadence === "weekly" ? ("weekly" as const) : a.cadence === "monthly" ? ("monthly" as const) : ("daily" as const), source: a.source }))
     .filter((a) => a.name)
-    // Already asked for on this phase (or in the standing set): not added twice, as when a save is retried (21 Oct).
-    .filter((a) => !getData().metric_definitions.some((m) => m.client_id === clientId && !m.retired_at && (m.phase_id == null || m.phase_id === phaseId) && m.name.trim().toLowerCase() === a.name.toLowerCase()))
+    // Already on this phase's list: not added twice, as when a save is retried (21 Oct). Only its own list (metricOnPhase):
+    // the standing set held a draft's adds back as twins (1 Nov, Alex).
+    .filter((a) => !getData().metric_definitions.some((m) => m.client_id === clientId && !m.retired_at && metricOnPhase(m, phaseId) && m.name.trim().toLowerCase() === a.name.toLowerCase()))
     // One taken off with its data kept comes back, its history with it (25 Oct, Alex), instead of a new one.
     .filter((a) => {
       const id = unretireMetricDefinition(clientId, a.name, phaseId);

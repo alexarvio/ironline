@@ -4363,11 +4363,20 @@ export function retireMetricDefinition(id: number) {
   persist();
 }
 
+/** Whether a metric is on a phase's own list (its Lifestyle tab's rows): the phase's own, and the standing set only on the
+ *  standing list (no phase) or the phase running now, which takes it over (listMetricsForPhase). Never the standing set on a
+ *  draft or a phase to come (1 Nov, Alex: adding Weight to a draft was skipped as a twin of the standing Weight, so the
+ *  draft stayed empty and couldn't go live). */
+export function metricOnPhase(m: MetricDefinition, phaseId: number | null): boolean {
+  if (m.phase_id != null) return m.phase_id === phaseId;
+  return phaseId == null || phaseId === runningLifestylePhaseId(m.client_id);
+}
+
 /** A retired metric of this name brought back for the phase (or the standing set), history and all; its id, or null. */
 export function unretireMetricDefinition(clientId: number, name: string, phaseId: number | null): number | null {
   const key = name.trim().toLowerCase();
   const def = getData()
-    .metric_definitions.filter((m) => m.client_id === clientId && !!m.retired_at && m.name.trim().toLowerCase() === key && (m.phase_id == null || m.phase_id === phaseId))
+    .metric_definitions.filter((m) => m.client_id === clientId && !!m.retired_at && m.name.trim().toLowerCase() === key && metricOnPhase(m, phaseId))
     .sort((a, b) => (b.retired_at ?? "").localeCompare(a.retired_at ?? ""))[0];
   if (!def) return null;
   def.retired_at = null;
@@ -9440,7 +9449,8 @@ export function phaseContentGap(phaseId: number): string | null {
     const plan = getNutritionGoalsSummary(phase.client_id);
     return own || (plan.trainingKcal ?? 0) > 0 || (plan.restKcal ?? 0) > 0 ? null : "Nothing in it yet: set its targets on the Nutrition tab first.";
   }
-  const asks = data.metric_definitions.some((m) => m.client_id === phase.client_id && m.phase_id === phase.id && !m.retired_at);
+  // What its Lifestyle tab lists (metricOnPhase), so the tab and this never disagree (1 Nov, Alex).
+  const asks = data.metric_definitions.some((m) => m.client_id === phase.client_id && !m.retired_at && metricOnPhase(m, phase.id));
   return asks ? null : "Nothing in it yet: add the metrics it asks for on the Lifestyle tab first.";
 }
 
