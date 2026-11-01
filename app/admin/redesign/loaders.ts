@@ -416,6 +416,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         variationLast: sub("history", () => variationLastFor(a.exercise_id, dayGymOf(d.id))),
         d7: trend?.d7 ?? null,
         d30: trend?.d30 ?? null,
+        d7Since: trend?.d7Since ?? null,
+        d30Since: trend?.d30Since ?? null,
       };
     });
     const cardio = cardioOf(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: ticked(c.id), swap: c.swap?.name ?? null, alternatives: (c.alternatives ?? []).map((a) => ({ name: a.name, note: a.note ?? "" })) }));

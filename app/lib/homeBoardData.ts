@@ -851,7 +851,7 @@ export type ExerciseSession = {
   bodyKg: number | null;
   sets: { weight: number; reps: number; rpe: number | null }[];
 };
-export function exerciseTrends(clientId: number, today: string = localDateStr()): Map<string, { d7: number | null; d30: number | null; sessions: ExerciseSession[] }> {
+export function exerciseTrends(clientId: number, today: string = localDateStr()): Map<string, { d7: number | null; d30: number | null; d7Since: string | null; d30Since: string | null; sessions: ExerciseSession[] }> {
   // The sets alone: the calendar is the board's, and the costliest part of the read.
   const ctx = context(clientId, today, false);
   const byKey = new Map<string, Map<string, number>>();
@@ -884,24 +884,33 @@ export function exerciseTrends(clientId: number, today: string = localDateStr())
     if (!days) byKey.set(s.exerciseKey, (days = new Map()));
     if (e1rm > (days.get(s.day) ?? 0)) days.set(s.day, e1rm);
   }
-  const change = (days: Map<string, number>, n: number): number | null => {
+  // An exercise newer than the window before (30 Oct, Alex: three weeks of a lift read as no data at all): from its
+  // first day, when that day is in the window and another day came after it; `since` says so.
+  const change = (days: Map<string, number>, n: number): { pct: number | null; since: string | null } => {
     const from = addDays(today, -(n - 1));
     const prevFrom = addDays(from, -n);
     let cur = 0;
     let prev = 0;
+    let first: string | null = null;
     for (const [day, v] of days) {
       if (day >= from) cur = Math.max(cur, v);
       else if (day >= prevFrom) prev = Math.max(prev, v);
+      if (!first || day < first) first = day;
     }
-    return cur > 0 && prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : null;
+    const pct = (a: number, b: number) => Math.round(((a - b) / b) * 1000) / 10;
+    if (cur > 0 && prev > 0) return { pct: pct(cur, prev), since: null };
+    if (cur > 0 && first && first >= from && [...days.keys()].some((d) => d > first! && d <= today)) return { pct: pct(cur, days.get(first)!), since: first };
+    return { pct: null, since: null };
   };
-  const out = new Map<string, { d7: number | null; d30: number | null; sessions: ExerciseSession[] }>();
+  const out = new Map<string, { d7: number | null; d30: number | null; d7Since: string | null; d30Since: string | null; sessions: ExerciseSession[] }>();
   for (const key of new Set([...byKey.keys(), ...sessionsByKey.keys()])) {
     const days = byKey.get(key);
     const sessions = [...(sessionsByKey.get(key)?.values() ?? [])]
       .map(({ numbered, ...one }) => ({ ...one, sets: numbered.sort((p, q) => p.n - q.n).map((x) => x.set) }))
       .sort((p, q) => ((p.date ?? "") < (q.date ?? "") ? -1 : (p.date ?? "") > (q.date ?? "") ? 1 : 0));
-    out.set(key, { d7: days ? change(days, 7) : null, d30: days ? change(days, 30) : null, sessions });
+    const w7 = days ? change(days, 7) : null;
+    const w30 = days ? change(days, 30) : null;
+    out.set(key, { d7: w7?.pct ?? null, d30: w30?.pct ?? null, d7Since: w7?.since ?? null, d30Since: w30?.since ?? null, sessions });
   }
   return out;
 }

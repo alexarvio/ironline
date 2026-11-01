@@ -112,6 +112,9 @@ export type DraftRow = {
   variationLast: { variationId: number | null; weight: number; reps: number; date: string }[];
   d7: number | null;
   d30: number | null;
+  /** A lift newer than the window before: its change counts from its first day, this one (30 Oct, Alex). */
+  d7Since: string | null;
+  d30Since: string | null;
 };
 /** swap: what the client did instead; alternatives: what the coach offers (names, with a note). */
 export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean; swap?: string | null; alternatives?: { name: string; note: string }[] };
@@ -451,7 +454,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: Number(a.rpe) || null, tempo: a.tempo?.trim() || null, rest: restSeconds(a.rest ?? ""), note: a.note?.trim() || null, logged: [], video: null, demo: null, demoHidden: false, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], librarySubstitutes: [], libraryOff: false, libraryHidden: [], variationLast: [], d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: Number(a.rpe) || null, tempo: a.tempo?.trim() || null, rest: restSeconds(a.rest ?? ""), note: a.note?.trim() || null, logged: [], video: null, demo: null, demoHidden: false, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], librarySubstitutes: [], libraryOff: false, libraryHidden: [], variationLast: [], d7: null, d30: null, d7Since: null, d30Since: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -1432,8 +1435,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                             )}
                           </span>
                           {[r.d7, r.d30].map((dv, i) => (
-                            <button key={i} type="button" className={`rd-trendcell rd-keep${dv == null ? " none" : dv > 0 ? " up" : dv < 0 ? " down" : " same"}`} title={`${r.name}: every set ${firstName} logged`} onClick={() => setDlg({ kind: "progress", rowId: r.id, window: i === 0 ? "7" : "30" })}>
-                              {dv == null ? "—" : dv === 0 ? "=" : `${dv > 0 ? "+" : "−"}${Math.abs(dv).toFixed(1)}%`}
+                            <button key={i} type="button" className={`rd-trendcell rd-keep${dv == null ? " none" : dv > 0 ? " up" : dv < 0 ? " down" : " same"}`} title={(i === 0 ? r.d7Since : r.d30Since) ? `${r.name}: since ${dayMonth((i === 0 ? r.d7Since : r.d30Since)!)}, the first time` : `${r.name}: every set ${firstName} logged`} onClick={() => setDlg({ kind: "progress", rowId: r.id, window: i === 0 ? "7" : "30" })}>
+                              {dv == null ? "—" : dv === 0 ? "0.0%" : `${dv > 0 ? "+" : "−"}${Math.abs(dv).toFixed(1)}%`}
                             </button>
                           ))}
                           <span className="rd-row-more">
@@ -1917,7 +1920,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                 // The server's day, as the cells count it; the cell clicked and its figures.
                 today={program.planCtx.today}
                 window={dlg.window}
-                trend={{ d7: row.d7, d30: row.d30 }}
+                trend={{ d7: row.d7, d30: row.d30, d7Since: row.d7Since, d30Since: row.d30Since }}
                 lbs={lbs}
                 assisted={row.assisted}
                 bodyKg={program.bodyKg}

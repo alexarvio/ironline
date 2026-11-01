@@ -42,7 +42,7 @@ export type ProgressSession = Session & { gym: string | null; assisted?: boolean
 type Win = "7" | "30" | "all";
 const WIN_LABEL: Record<Win, string> = { "7": "7 days", "30": "30 days", all: "All time" };
 /** A change as the cell writes it: one decimal, "=" for none, a dash with nothing to compare. */
-const cellText = (dv: number | null) => (dv == null ? "—" : dv === 0 ? "=" : `${dv > 0 ? "+" : "−"}${Math.abs(dv).toFixed(1)}%`);
+const cellText = (dv: number | null) => (dv == null ? "—" : dv === 0 ? "0.0%" : `${dv > 0 ? "+" : "−"}${Math.abs(dv).toFixed(1)}%`);
 
 export default function ExerciseProgressDialog({
   exerciseName,
@@ -72,7 +72,7 @@ export default function ExerciseProgressDialog({
   /** The cell clicked (7 days or 30 days): the window it opens on, always offered. */
   window?: "7" | "30";
   /** The cells' own figures, the change shown in their windows on All gyms, so the two never disagree. */
-  trend?: { d7: number | null; d30: number | null };
+  trend?: { d7: number | null; d30: number | null; d7Since?: string | null; d30Since?: string | null };
   /** The coach reads weights in pounds. */
   lbs: boolean;
   /** An assisted lift, as the loader knows it (the exercise's name or its variation's); else by the name here. */
@@ -120,22 +120,32 @@ export default function ExerciseProgressDialog({
   const view: Win = offered.includes(rangeKey) ? rangeKey : "all";
   const judged = js[view];
   // The change in a window: the best e1RM in it against the best in the window before, as the cell (exerciseTrends);
-  // on All gyms the cell's own figure, a gym's own sessions worked the same way.
-  const windowChange = (() => {
-    if (view === "all") return null;
-    if (!gym && trend) return view === "7" ? trend.d7 : trend.d30;
+  // on All gyms the cell's own figure, a gym's own sessions worked the same way. A lift newer than the window before
+  // counts from its first day, and says since when (30 Oct, Alex).
+  const { pct: windowChange, since: windowSince } = ((): { pct: number | null; since: string | null } => {
+    if (view === "all") return { pct: null, since: null };
+    if (!gym && trend) return view === "7" ? { pct: trend.d7, since: trend.d7Since ?? null } : { pct: trend.d30, since: trend.d30Since ?? null };
     const days = view === "7" ? 7 : 30;
     const from = daysBefore(today, days - 1);
     const prevFrom = daysBefore(today, 2 * days - 1);
     let cur = 0;
     let prev = 0;
+    let first: string | null = null;
+    let firstBest = 0;
+    let later = false;
     for (const s of js.all.sessions) {
       const d = (s.date ?? "").slice(0, 10);
       if (!d || d > today) continue;
       if (d >= from) cur = Math.max(cur, s.best.e1rm);
       else if (d >= prevFrom) prev = Math.max(prev, s.best.e1rm);
+      if (!first || d < first) [first, firstBest, later] = [d, s.best.e1rm, later || !!first];
+      else if (d === first) firstBest = Math.max(firstBest, s.best.e1rm);
+      else later = true;
     }
-    return cur > 0 && prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : null;
+    const pct = (a: number, b: number) => Math.round(((a - b) / b) * 1000) / 10;
+    if (cur > 0 && prev > 0) return { pct: pct(cur, prev), since: null };
+    if (cur > 0 && first && first >= from && later && firstBest > 0) return { pct: pct(cur, firstBest), since: first };
+    return { pct: null, since: null };
   })();
   const v = VERDICT[judged.verdict];
   const ss = judged.sessions;
@@ -411,7 +421,7 @@ export default function ExerciseProgressDialog({
                   // The cell's own figure and comparison: the best in the window against the best in the one before.
                   <>
                     <span className={`exp-chg${windowChange != null && windowChange > 0 ? " up" : windowChange != null && windowChange < 0 ? " down" : ""}`}>{cellText(windowChange)}</span>
-                    <small>on the {WIN_LABEL[view]} before</small>
+                    <small>{windowSince ? `since ${dayMonth(windowSince)}` : `on the ${WIN_LABEL[view]} before`}</small>
                     {heaviest && <Sep />}
                   </>
                 ) : (
