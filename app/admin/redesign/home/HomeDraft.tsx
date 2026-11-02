@@ -836,11 +836,14 @@ const axisDay = (ms: number) => {
   return `${x.getDate()} ${AXIS_MONTHS[x.getMonth()]}${x.getFullYear() !== new Date().getFullYear() ? ` ${x.getFullYear()}` : ""}`;
 };
 const DAY_MS = 86_400_000;
-/** The steps Weight's grid may take, in tenths of a kg: 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50. */
-const WEIGHT_STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500];
+/** The steps Weight's grid may take, in tenths of a kg: 0.1, 0.2, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 10, 20, 50. The in-between
+    steps (2 Nov, Alex: "a 3.3 kg difference… but it's quite flat… show a little bit of drama") let the frame hug the
+    readings: 5 kg straight after 2 kg left a month's 4 kg in the middle 40% of the chart. */
+const WEIGHT_STEPS = [1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 100, 200, 500];
 /** Weight's scale: three lines a round step apart that frame the readings, the lowest at or under the lightest and the
-    highest at or over the heaviest; the smallest step that does it. Tenths only when the step is under a kg, which takes
-    readings within 2 kg of each other. A near-flat run is framed around its middle. Worked in tenths, so 84.3 stays 84.3. */
+    highest at or over the heaviest; the smallest step that does it, so the line fills the chart's height. The lines sit on
+    whole steps under a kg, on any half kg above (86.5 | 89 | 91.5), never further out than they need. Tenths when a line
+    is not a whole kg. A near-flat run is framed around its middle. Worked in tenths, so 84.3 stays 84.3. */
 function weightGrid(vs: number[]): { lines: [number, number, number]; decimals: number } {
   let min = Math.min(...vs);
   let max = Math.max(...vs);
@@ -854,14 +857,16 @@ function weightGrid(vs: number[]): { lines: [number, number, number]; decimals: 
   let s = WEIGHT_STEPS[WEIGHT_STEPS.length - 1];
   let base = Math.floor(minT / s) * s;
   for (const step of WEIGHT_STEPS) {
-    const b = Math.floor(minT / step) * step;
+    const align = step < 10 ? step : 5;
+    const b = Math.floor(minT / align) * align;
     if (b + 2 * step >= maxT) {
       s = step;
       base = b;
       break;
     }
   }
-  return { lines: [base / 10, (base + s) / 10, (base + 2 * s) / 10], decimals: s < 10 ? 1 : 0 };
+  const lines: [number, number, number] = [base / 10, (base + s) / 10, (base + 2 * s) / 10];
+  return { lines, decimals: lines.every((v) => Number.isInteger(v)) ? 0 : 1 };
 }
 
 type WeightPoint = NonNullable<HomeBoard["weight"]>["points"][number];
