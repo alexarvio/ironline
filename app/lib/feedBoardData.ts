@@ -336,6 +336,10 @@ function needFrom(ctx: Ctx, c: ClientData, a: HomeAction): NeedRow | null {
   if (/^complete-\d+$/.test(a.id)) {
     return { ...base, kind: "complete-call", what: a.detail ? `${a.detail} to complete` : "Call to complete", words: null, since: iso(a.at), action: "Complete", href: open };
   }
+  // A track with nothing live, or a live phase with nothing in it (2 Nov, Alex): standing, so no wait.
+  if (/^(track|empty)-/.test(a.id)) {
+    return { ...base, kind: "phase", what: a.title, words: null, since: null, action: a.id.startsWith("track-") ? "Open" : "Fill in", href: open };
+  }
   if (a.id.startsWith("read-")) {
     // The thing in the store's words, its first part: "Couldn't do Session 3", "Wrote a note on Hypertrophy".
     const what = (parts(a.title)[0] ?? a.title).replace(/\s*\(Week \d+\)$/, "");

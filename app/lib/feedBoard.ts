@@ -16,7 +16,7 @@ export type NeedRow = {
   avatarPath: string | null;
   /** What it is: an empty week in the live programme, a locked-out login, messages or a video waiting for a reply, a
       call they asked for, a call today, a call over and not marked completed, a note of theirs to read (a session they couldn't do). */
-  kind: "week" | "locked" | "reply" | "video" | "ask-call" | "call" | "complete-call" | "read";
+  kind: "week" | "locked" | "reply" | "video" | "ask-call" | "call" | "complete-call" | "phase" | "read";
   /** "Week 8 has no sessions", "2 messages", "Video of Back Squat", "Check-in call", "Couldn't do Session 3". */
   what: string;
   /** The client's own words, shown in quotes after it, when there are some. */

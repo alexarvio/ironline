@@ -1430,3 +1430,9 @@ span.rd-demo { cursor: default; }
    moves. */
 .rd-nav button { display: inline-flex; flex-direction: column; align-items: center; }
 .rd-nav button::after { content: attr(data-label); height: 0; overflow: hidden; visibility: hidden; font-weight: 600; pointer-events: none; user-select: none; }
+/* An empty card says so in its middle (2 Nov, Alex: Invoices' None yet sat on the left, Meetings' in the middle; "make it
+   a rule… always centered"): wherever a card or list holds nothing but its empty word. Home's panels keep it under their
+   title, where it reads with it. */
+.rd .rls-none, .rd.rt .rt-none, .rd.rp .rp-table .rp-tnone, .rq-evlog-empty, .rd.lbx .lbx-none, .rd.trn .trn-none { text-align: center; }
+.rd.rh.rls .rh-panel .rls-none { text-align: left; }
+.rd.rls .rls-none, .rd.rt .rt-none { padding-top: 16px; padding-bottom: 16px; }

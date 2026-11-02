@@ -53,6 +53,8 @@ export type TodoItem = {
   ref: number | null;
   /** A note of theirs to read: its feed event, marked read the moment Read is clicked, on any tab. */
   eventId?: string | null;
+  /** A track with nothing live (`track-…`): the track New phase opens on. */
+  track?: "lifestyle" | "training" | "nutrition" | null;
 };
 
 export const NO_DOTS: DotTrail = { tabs: [], training: { weeks: {}, days: [], exercises: [] }, food: {}, meetings: false, unlock: false, todo: [] };

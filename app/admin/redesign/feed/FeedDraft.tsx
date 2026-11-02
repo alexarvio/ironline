@@ -102,6 +102,8 @@ function needIcon(kind: NeedRow["kind"]) {
       return <CalendarIcon />;
     case "complete-call":
       return <CheckIcon />;
+    case "phase":
+      return <PlusIcon />;
     case "read":
       return <EyeIcon />;
   }

@@ -656,7 +656,8 @@ export default function NutritionDraft({
       <TodoStrip tab="nutrition" />
 
       {/* ---- Daily targets: the kcal as a ring on the left, split by the macros typed in on the right. */}
-      <section className="rls-section">
+      {/* Where the strip's Set targets lands (2 Nov: a live phase with no targets). */}
+      <section className="rls-section" id="targets">
         <div className="trn-weekhead">
           <div>
             <h2>Daily targets</h2>

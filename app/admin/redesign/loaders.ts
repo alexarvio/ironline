@@ -3,7 +3,7 @@ import { billingAccess, billingOn, type BillingAccess } from "../../lib/billing"
 import { chatRev } from "../../lib/chatBus";
 import { redirect } from "next/navigation";
 import { fillChatLooks, warmClientPhotos } from "../../lib/storage";
-import { getData, type InvoiceTemplate } from "../../lib/db";
+import { getData, type InvoiceTemplate, type PhaseTrack } from "../../lib/db";
 import type { PlanChoice } from "../../lib/planText";
 import { meetingRemindersOn } from "../../lib/meetingReminders";
 import type { DotTab, DotTrail, TodoItem } from "./dots";
@@ -94,7 +94,7 @@ import {
   getPlanPhases,
 } from "../../lib/queries";
 import { isAssisted } from "../../lib/progressRules";
-import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
+import { phaseCovers, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
 import type { CardioMove, DraftProgram, Library } from "./training/TrainingDraft";
 import type { DraftNutrition } from "./nutrition/NutritionDraft";
 import type { DraftMeasurements } from "./measurements/MeasurementsDraft";
@@ -147,12 +147,18 @@ export function pickClient(coachId: number, asked: string | undefined) {
 export function loadTraining(coachId: number, clientId: number, params: { week?: string; program?: string }): { draft: DraftProgram | null; library: Library; cardioMoves: CardioMove[]; videos: { id: number; path: string; name: string; at: string; bytes: number | null }[] } {
   // Every programme the client has had, is on, or has waiting: the switch in
   // the header. The one shown is the one asked for, else the live one.
-  const live = sub("programme", () => getDeployedProgram(clientId));
+  const deployed = sub("programme", () => getDeployedProgram(clientId));
+  // Live only while its weeks run (2 Nov, Alex: a programme that ended in September still read LIVE on Training while the
+  // Plan showed the draft over today): one whose weeks have run out is past.
+  const live = deployed && programWeekNow(deployed) <= deployed.total_weeks ? deployed : null;
   const all = sub("programme", () => listPrograms(clientId));
   const askedProgram = Number(params.program);
-  const program = all.find((p) => p.id === askedProgram) ?? live ?? all[0] ?? null;
+  // Nothing running: the programme of the training phase over today (a draft or scheduled one), as the Plan shows it.
+  const today = localDateStr();
+  const phaseNow = live ? null : getData().client_phases.find((p) => p.client_id === clientId && p.track === "training" && p.program_id && phaseCovers(p.start_week, p.end_week, today));
+  const program = all.find((p) => p.id === askedProgram) ?? live ?? all.find((p) => p.id === phaseNow?.program_id) ?? deployed ?? all[0] ?? null;
   const stateOf = (p: (typeof all)[number]) =>
-    (p.id === live?.id ? "live" : p.status === "deployed" && live && p.start_week < live.start_week ? "past" : p.status === "deployed" || p.scheduled_at ? "scheduled" : "draft") as "live" | "past" | "scheduled" | "draft";
+    (p.id === live?.id ? "live" : p.status === "deployed" && (p.id === deployed?.id || (deployed && p.start_week < deployed.start_week)) ? "past" : p.status === "deployed" || p.scheduled_at ? "scheduled" : "draft") as "live" | "past" | "scheduled" | "draft";
   const programs = all.map((p) => ({ id: p.id, name: p.name ?? "Programme", weeks: p.total_weeks, state: stateOf(p) }));
 
   // The client's training rows, read once (23 Oct, speed: every row, session and week scanned the whole store), and
@@ -601,7 +607,7 @@ export type RailSpot = { screen: string; href: string; count: number };
 export type RailClient = { id: number; name: string; avatarPath: string | null; spots: RailSpot[]; total: number; /** total without a new client's set-up: what the Feed's Needs you lists for them. */ owed: number; notSignedIn: boolean };
 
 // What the coach owes, as the Feed's Needs you has it (needFrom in feedBoardData.ts); statuses are the Feed's alone.
-const OWED = [/^week$/, /^locked$/, /^reply-\d+$/, /^reply-video-\d+$/, /^call-\d+$/, /^complete-\d+$/, /^read-/];
+const OWED = [/^week$/, /^locked$/, /^reply-\d+$/, /^reply-video-\d+$/, /^call-\d+$/, /^complete-\d+$/, /^track-/, /^empty-/, /^read-/];
 const SCREEN_OF: Record<string, string> = { home: "Home", plan: "Plan", measurements: "Lifestyle", training: "Training", nutrition: "Nutrition", pictures: "Shape update", meetings: "Meetings", invoices: "Invoices" };
 /** The screen a link opens: the chat when it carries one, else its tab. */
 const screenOf = (href: string) => (/[?&]chat=/.test(href) ? "Chat" : SCREEN_OF[/^\/admin\/redesign\/([a-z]+)/.exec(href)?.[1] ?? ""] ?? "Home");
@@ -690,6 +696,23 @@ export function loadDots(clientId: number): DotTrail {
       // Its day where the coach is looking from, as Meetings dates it (2 Nov, Alex: a call on 2/11 in Bangkok read 1/11).
       const m = listMeetings(clientId).find((x) => x.id === id);
       todo("meetings", { key: a.id, kind: "complete-call", what: `${a.detail}${m ? `, ${dayMonth(m.date)}` : ""}, to complete`, words: null, since, action: "Mark completed", href: route("meetings", `#call-${id}`), ref: id });
+    } else if (/^track-(lifestyle|training|nutrition)$/.test(a.id)) {
+      // A track with nothing live now (2 Nov, Alex): on the Plan, its draft over today opened, else New phase on the track.
+      const track = a.id.slice("track-".length) as PhaseTrack;
+      const today = localDateStr();
+      const mine = listClientPhases(clientId).filter((p) => p.track === track);
+      // Its draft over today, else the next one scheduled: opened. Neither: New phase on the track.
+      const open = mine.find((p) => p.draft && phaseCovers(p.start_week, p.end_week, today)) ?? mine.filter((p) => !p.draft && p.start_week > today).sort((x, y) => (x.start_week < y.start_week ? -1 : 1))[0];
+      todo("plan", { key: a.id, kind: "setup", what: a.title, words: null, since: null, action: open ? "Open" : "New phase", href: route("plan"), ref: open?.id ?? null, track });
+    } else if (/^empty-\d+$/.test(a.id)) {
+      // A live phase with nothing in it: on its own tab, at what it lacks.
+      const t = (a.tab ?? "plan") as DotTab;
+      const at = t === "training" ? "sessions" : t === "nutrition" ? "targets" : "metrics";
+      // Training: its programme and week named, so the click lands there whatever Training is showing.
+      const ph = getData().client_phases.find((p) => p.id === Number(a.id.slice("empty-".length)));
+      const pr = t === "training" && ph?.program_id ? programs.find((p) => p.id === ph.program_id) : undefined;
+      const rest = pr ? `&program=${pr.id}&week=${Math.min(Math.max(getProgramCurrentWeekIndex(pr), 1), pr.total_weeks)}` : "";
+      todo(t, { key: a.id, kind: "setup", what: a.title, words: null, since: null, action: t === "training" ? "Add sessions" : t === "nutrition" ? "Set targets" : "Add metrics", href: route(t, `${rest}#${at}`), ref: null });
     } else if (a.id.startsWith("read-")) {
       const t = a.eventId ? byId.get(a.eventId)?.target : undefined;
       // The thing in the store's words, its first part: "Couldn't do Session 3", "Wrote a note on Hypertrophy".
@@ -1085,7 +1108,7 @@ const NO_REPLY = new Set(["no-phase", "week", "program-ending", "locked"]);
 export function needView(clientId: number, a: HomeAction, byId: Map<string, FeedEvent>): NeedView {
   const ev = a.eventId ? byId.get(a.eventId) : undefined;
   const open = a.href ?? (ev ? feedHref(ev) : null) ?? `/admin/redesign/${a.tab ? NEED_TAB_ROUTE[a.tab] ?? a.tab : "home"}?client=${clientId}`;
-  if (NO_REPLY.has(a.id) || a.id.startsWith("complete-")) return { ...a, open, reply: null };
+  if (NO_REPLY.has(a.id) || /^(complete|track|empty)-/.test(a.id)) return { ...a, open, reply: null };
   const area = NEED_AREA[a.tab ?? ""] ?? "Chat";
   // An unanswered message: the chat, at it.
   const msg = /^reply-(\d+)$/.exec(a.id);

@@ -7103,6 +7103,38 @@ export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: Trainin
   if (!getCurrentPhase(clientId, "training") && !getCurrentPhase(clientId, "nutrition")) {
     actions.push({ id: "no-phase", tone: "due", group: "setup", title: "No phase running", detail: "Their Home says so until a training or nutrition phase is live. Create or schedule one on Plan.", tab: "plan" });
   }
+  // Each track, once the client has anything set up (2 Nov, Alex: a client with no lifestyle phase, a live nutrition phase
+  // with no targets and a training phase still a draft showed nothing owed): a track with no live phase now (`track-…`;
+  // its draft over today named), and a live phase with nothing in it (`empty-…`, the Plan's warning sign). Standing: let go,
+  // they keep away a fortnight. A client with nothing set up yet is the Plan's own row (loadDots), not three of these.
+  // Only for a client still being coached: a phase live, ended in the last four weeks or scheduled ahead (a former client
+  // whose phases all ended long ago owes nothing).
+  const phasesNow = listClientPhases(clientId);
+  const todayNow = localDateStr();
+  const monthBack = (() => {
+    const d = new Date(`${todayNow}T00:00:00`);
+    d.setDate(d.getDate() - 28);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
+  const coached = phasesNow.some((p) => !p.draft && (phaseCovers(p.start_week, p.end_week, todayNow) || p.start_week > todayNow || (p.end_week ?? "") >= monthBack));
+  if (coached) {
+    for (const track of ["lifestyle", "training", "nutrition"] as const) {
+      const live = getCurrentPhase(clientId, track);
+      if (!live) {
+        // Eating to targets of their own with no phase behind them: nothing missing (phaseContentGap counts them too).
+        if (track === "nutrition" && ((getNutritionGoalsSummary(clientId).trainingKcal ?? 0) > 0 || (getNutritionGoalsSummary(clientId).restKcal ?? 0) > 0)) continue;
+        const draft = phasesNow.find((p) => p.draft && p.track === track && phaseCovers(p.start_week, p.end_week, todayNow));
+        // One already scheduled ahead: named, so the coach opens it rather than making another.
+        const next = draft ? null : phasesNow.filter((p) => !p.draft && p.track === track && p.start_week > todayNow).sort((a, b) => (a.start_week < b.start_week ? -1 : 1))[0];
+        actions.push({ id: `track-${track}`, tone: "due", group: "setup", title: draft ? `${draft.name || "Its phase"} is still a draft` : next ? `No ${track} phase until ${dayMonth(next.start_week)}` : `No ${track} phase`, detail: draft ? "A draft is never what the client sees." : "Nothing live on this track.", tab: "plan" });
+      } else if (track === "training" && getDeployedProgram(clientId)?.id === live.program_id) {
+        // A live programme with nothing in it: the empty week already says so ("week"), once.
+        continue;
+      } else if (phaseContentGap(live.id)) {
+        actions.push({ id: `empty-${live.id}`, tone: "due", group: "setup", title: `${live.name || "Its phase"} ${track === "training" ? "has no sessions" : track === "nutrition" ? "has no targets" : "asks no metrics"}`, detail: phaseContentGap(live.id) ?? "", tab: track === "lifestyle" ? "measurements" : track });
+      }
+    }
+  }
   // A programme whose weeks have run out has no week they are in (22 Oct: the clamped index kept its last empty week
   // asking for sessions for good); the Training tab treats it as all over too.
   const deployed = getDeployedProgram(clientId);
@@ -7194,7 +7226,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: Trainin
     const at = dismissed[a.id];
     if (at == null) return true;
     if ((a.latest ?? a.at ?? 0) > at) return true;
-    return STANDING_ACTIONS.has(a.id) && Date.now() - at > DISMISS_STANDING_MS;
+    return (STANDING_ACTIONS.has(a.id) || /^(track|empty)-/.test(a.id)) && Date.now() - at > DISMISS_STANDING_MS;
   });
 
   return {

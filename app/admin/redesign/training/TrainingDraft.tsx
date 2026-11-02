@@ -22,6 +22,7 @@ import MediaReviewModal, { reviewable, type MediaReview, type ThreadItem } from 
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
 import { goToHash, TodoStrip } from "../TodoStrip";
+import { landOnSoon } from "../../../lib/landOn";
 import { AfterWorkoutCheck, GoalsNotePills, GripIcon, WeekRail } from "./TrainingParts";
 import "./trn.css";
 import { SortableItem, SortableList } from "../Sortable";
@@ -663,6 +664,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     if (!hash || window.location.hash !== hash) return;
     landAfterWeek.current = null;
     window.dispatchEvent(new HashChangeEvent("hashchange"));
+    // What no listener opens (#sessions, the Add session button) is landed on all the same.
+    landOnSoon(() => document.getElementById(hash.slice(1)), "center", 240);
   }, [program.weekIdx]);
   // Arriving from a link in a message (#session-ID, or #session-ID-ex-ROW for
   // an exercise): that session unfolds and comes into view; an exercise's row
@@ -977,7 +980,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         tab="training"
         onAct={(item) => {
           const to = new URL(item.href, window.location.origin);
-          if (!/^#session-\d+/.test(to.hash)) return false;
+          // A session (Review, Read), or the week's Add session (a live phase with no sessions).
+          if (!/^#session(-\d+|s$)/.test(to.hash)) return false;
           if (Number(to.searchParams.get("program")) === program.id && Number(to.searchParams.get("week")) === viewIdx) goToHash(to.hash);
           else {
             landAfterWeek.current = to.hash;
@@ -1889,6 +1893,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         {/* A done week with nothing in it says so in a word (23 Oct). */}
         {weekLocked ? (sessions.length === 0 ? <p className="trn-none">None</p> : null) : sessions.length + incoming < MAX_SESSIONS ? (
           <button
+            // Where the strip's Add sessions lands (2 Nov: a live phase with no sessions).
+            id="sessions"
             type="button"
             className="trn-add"
             onClick={() => {

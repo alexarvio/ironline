@@ -73,7 +73,7 @@ export function TodoStrip({ tab, onAct }: { tab: DotTab; onAct?: (item: TodoItem
   if (!items.length) return null;
   /** The rows the coach can let go: what the Feed's round check clears (not a sign-in lock, which ends by itself, nor a
    *  new client's first phase, which is no Needs-you item). */
-  const canDone = (i: TodoItem) => i.kind !== "locked" && i.kind !== "setup";
+  const canDone = (i: TodoItem) => i.kind !== "locked" && i.key !== "setup";
   const markDone = (list: TodoItem[]) => {
     setAsking(null);
     setGone((g) => new Set([...g, ...list.map((i) => i.key)]));

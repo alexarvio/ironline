@@ -309,8 +309,17 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           </h1>
         </div>
       </header>
-      {/* What the coach owes here (2 Nov, Alex): a new client's first phase, New phase opening its pop-up. */}
-      <TodoStrip tab="plan" onAct={(item) => item.kind === "setup" && (setDlg({ kind: "phase", phase: null }), true)} />
+      {/* What the coach owes here (2 Nov, Alex): a new client's first phase, or a track with nothing live: its draft over
+          today opens (to make it live), else New phase on that track. */}
+      <TodoStrip
+        tab="plan"
+        onAct={(item) => {
+          if (item.kind !== "setup") return false;
+          const draft = item.ref != null ? phases.find((p) => p.id === item.ref) : undefined;
+          setDlg(draft ? { kind: "phase", phase: draft } : { kind: "phase", phase: null, ...(item.track ? { track: item.track } : {}) });
+          return true;
+        }}
+      />
 
       {/* ---- Phases. */}
       {/* As Training's weeks (20 Oct, Alex): the heading and its controls on the page, the timeline in a white card under them. */}

@@ -538,7 +538,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       <TodoStrip tab="measurements" />
 
       {/* ---- Tracked metrics: what the client is asked for, one rhythm at a time. */}
-      <section className="rls-section">
+      {/* Where the strip's Add metrics lands (2 Nov: a live phase asking no metrics). */}
+      <section className="rls-section" id="metrics">
         <div className="trn-weekhead">
           <div>
             <h2>Tracked metrics</h2>
