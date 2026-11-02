@@ -9,7 +9,7 @@ import type React from "react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, ChatIcon, CheckIcon, MoreIcon, PencilIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, CheckIcon, MoreIcon, LinkIcon, PencilIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
@@ -310,12 +310,12 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
   const [openAlso, setOpenAlso] = useState<number | null>(null);
   // The tile, the title (its time after it), the link, ⋯ (23 Oct, Alex: no length or how soon on the right).
   const aGrid = { gridTemplateColumns: "44px minmax(200px, 1fr) auto 32px", columnGap: 24 } as const;
-  /** The call's link on its row: the Join call pill alone (25 Oct, Alex: no URL on the page); none yet, nothing, Add a link
-   *  being in ⋯ with Edit link (2 Nov, Alex: a pill on every row was too much). */
+  /** The call's link on its row: the link's mark, which joins the call (2 Nov, Alex: it shows there is a link; no URL on
+   *  the page, 25 Oct); none yet, nothing, Add a link being in ⋯ with Edit link (2 Nov, Alex: a pill on every row was too much). */
   const linkControl = (m: DraftMeeting) =>
     m.link ? (
-      <a className="trn-pill" href={m.link} target="_blank" rel="noopener noreferrer">
-        <PlayIcon /> Join call
+      <a className="rt-linkmark" href={m.link} target="_blank" rel="noopener noreferrer" title="Join call" aria-label="Join call">
+        <LinkIcon />
       </a>
     ) : null;
   const callBody = (m: DraftMeeting) => {

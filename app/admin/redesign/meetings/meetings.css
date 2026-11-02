@@ -153,6 +153,12 @@
 .rd.rt .rt-linkslot { display: flex; justify-content: flex-end; }
 .rd.rt .rt-linkslot .trn-pill { text-decoration: none; }
 .rd.rt .rd-row-hit .rt-facts { margin-left: 2px; }
+/* A call with a link wears the link's mark there (2 Nov, Alex: "something that shows there is a link"), a round white
+   button on the hairline that joins the call; none yet, nothing (Add a link is in ⋯). 30px ring, 14px icon: whole pixels. */
+.rd.rt .rt-linkmark { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; color: #141a24; text-decoration: none; transition: background-color .2s ease; }
+.rd.rt .rt-linkmark:hover { background: #fafbfd; }
+.rd.rt .rt-linkmark:focus-visible { outline: none; box-shadow: inset 0 0 0 1px #141a24; }
+.rd.rt .rt-linkmark svg { width: 14px; height: 14px; }
 
 /* ---- To focus on (23 Oct, Alex): the client's goals until the next call (lib/focus.ts). */
 .rd.rt .rt-linkslot { align-items: center; gap: 16px; }
