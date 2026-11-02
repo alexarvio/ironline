@@ -361,3 +361,6 @@
 .rd.rh .trn-name-row.rh-name-row { display: contents; }
 .rd.rh .trn-name-row.rh-name-row > .rh-avatar { grid-column: 1; grid-row: 1 / span 2; width: 56px; height: 56px; margin-block: 0; font-size: 20px; }
 .rd.rh .trn-name-row.rh-name-row > .rh-name { grid-column: 2; grid-row: 2; }
+/* One height on every client (2 Nov, Alex: "whenever I browse from plan to plan, the spaces don't really change"): a
+   tile's full room (the track, the phase, the week and its bar, the figure and its note line) even with no phase. */
+.rd.rh .rls-card.rh-tile { min-height: 171px; }

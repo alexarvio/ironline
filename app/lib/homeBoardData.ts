@@ -760,7 +760,10 @@ function weightOf(ctx: Ctx): HomeBoard["weight"] {
       if (Number.isFinite(value)) projection = { date: lastDay, value: r1(value) };
     }
   }
-  return { points, now, rhythm, windows: { "7d": rolling(from7), "30d": rolling(from30), phase: { from: since, change, since } }, projection };
+  // No reading within a month of the phase's first day (2 Nov, Alex: Phase showed no change): from its first reading in
+  // the phase instead, as 7d and 30d count, so the change and its % are always there with two readings in it.
+  const inPhase = rolling(since);
+  return { points, now, rhythm, windows: { "7d": rolling(from7), "30d": rolling(from30), phase: change != null ? { from: since, change, since } : { from: since, change: inPhase.change, since: inPhase.since } }, projection };
 }
 
 // ---- Consistency ------------------------------------------------------------------------------------

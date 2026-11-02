@@ -508,7 +508,11 @@ function PhaseTile({ tile, onOpen }: { tile: HomeBoard["tracks"][number]; onOpen
           {tile.figure.suffix && <small>{tileLine(tile.figure.suffix)}</small>}
         </span>
       )}
-      {tile.note && <span className="rh-tile-note">{tileLine(tile.note)}</span>}
+      {/* Its room kept when there is none (2 Nov, Alex: Nutrition's logged average made the tiles taller on some clients
+          than others): every client's tiles one height, so moving between them nothing shifts. */}
+      <span className="rh-tile-note" aria-hidden={tile.note ? undefined : true}>
+        {tile.note ? tileLine(tile.note) : " "}
+      </span>
     </button>
   );
 }

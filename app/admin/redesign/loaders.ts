@@ -687,7 +687,8 @@ export function loadDots(clientId: number): DotTrail {
     } else if (/^complete-\d+$/.test(a.id)) {
       dots.meetings = true;
       const id = Number(a.id.slice("complete-".length));
-      const m = data.meetings.find((x) => x.id === id);
+      // Its day where the coach is looking from, as Meetings dates it (2 Nov, Alex: a call on 2/11 in Bangkok read 1/11).
+      const m = listMeetings(clientId).find((x) => x.id === id);
       todo("meetings", { key: a.id, kind: "complete-call", what: `${a.detail}${m ? `, ${dayMonth(m.date)}` : ""}, to complete`, words: null, since, action: "Mark completed", href: route("meetings", `#call-${id}`), ref: id });
     } else if (a.id.startsWith("read-")) {
       const t = a.eventId ? byId.get(a.eventId)?.target : undefined;
