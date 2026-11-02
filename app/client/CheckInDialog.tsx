@@ -96,8 +96,9 @@ const buzz = (ms = 5) => {
   } catch {}
 };
 
-/** "Fri 55 kg", "Yesterday 7.5 h", "Fri 8 of 10", "Last month 7 of 10", or "First time". */
-function lastLine(m: CheckInMetric, source: RowSource, date: string): string {
+/** "Last 55 kg | Fri", "Last 7.5 h | Yesterday", "Last 7 of 10 | Last month", or "First time": the reading first and
+ *  when after it, said to be the last (2 Nov, Alex: "21 Oct 87.3 kg" read as the check-in's own day). */
+function lastLine(m: CheckInMetric, source: RowSource, date: string): React.ReactNode {
   if (!m.last) return "First time";
   const v = m.last.value;
   const n = isWholeMetric(m) ? Math.round(v).toLocaleString("en-US") : String(v);
@@ -115,8 +116,14 @@ function lastLine(m: CheckInMetric, source: RowSource, date: string): string {
           : d > 1 && d < 7
             ? DAYS[new Date(`${m.last.period}T12:00:00Z`).getUTCDay()]
             : `${Number(m.last.period.slice(8, 10))} ${MONTHS[Number(m.last.period.slice(5, 7)) - 1]}`;
-  return `${when} ${reading}`;
+  return <Bars parts={[`Last ${reading}`, when]} />;
 }
+
+/** The day a check-in is for, as its line says it: "Mon 2 Nov". */
+const shortDay = (date: string) => {
+  const d = new Date(`${date}T12:00:00Z`);
+  return `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+};
 // Filled is green, whatever the metric (13 Oct, Alex: no colour coding for now).
 const GREEN = { hex: "#2E7D32", rgb: "46,125,50" };
 const colourOf = () => GREEN;
@@ -362,10 +369,9 @@ export default function CheckInDialog({
                     <CheckIcon />
                     Saved
                   </>
-                ) : allIn ? (
-                  "All filled"
                 ) : (
-                  `${total - filled.length} of ${total} still to fill`
+                  // Today's day on it, always (2 Nov, Alex: "always have it on the day that we are").
+                  <Bars parts={[isToday ? shortDay(form.date) : null, allIn ? "All filled" : `${total - filled.length} of ${total} still to fill`]} />
                 )}
               </p>
             </div>
