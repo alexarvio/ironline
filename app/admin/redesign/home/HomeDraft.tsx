@@ -26,6 +26,7 @@ import type { PhaseTrack } from "../../../lib/db";
 import type { PlanChoice } from "../../../lib/planText";
 import KindMark from "../KindMark";
 import HelpTip from "../HelpTip";
+import { TodoStrip } from "../TodoStrip";
 import type { ActivityMark } from "../../../lib/activityMark";
 import { monotoneSegments } from "../../../lib/monotoneCurve";
 
@@ -276,6 +277,8 @@ export default function HomeDraft({
           </DropdownMenu>
         </div>
       </header>
+      {/* What the coach owes here (2 Nov, Alex): a sign-in lock, Unlock opening App access. */}
+      <TodoStrip tab="home" onAct={(item) => item.kind === "locked" && (document.querySelector<HTMLButtonElement>(".trn-pill.rh-due")?.click(), true)} />
 
       {/* Nothing under the name (27 Oct, Alex: the Since line taken out, "we do not need anything there"). */}
 

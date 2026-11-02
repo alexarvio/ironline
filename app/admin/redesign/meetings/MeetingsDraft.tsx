@@ -20,6 +20,8 @@ import { useOpenChat } from "../ChatPanel";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { Sep, SepJoin } from "../Sep";
 import { Fold } from "../Fold";
+import { landOnSoon } from "../../../lib/landOn";
+import { TodoStrip } from "../TodoStrip";
 import { saveFocusAction, saveFocusDraftAction } from "../../../lib/focusActions";
 import type { CoachFocus, FocusGoalView } from "../../../lib/focus";
 import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
@@ -70,6 +72,10 @@ export type DraftMeeting = {
   focusDraft: string[];
   /** A completed call: the list it set, with the client's ticks as they ended; null, none. */
   focusSet: FocusSet | null;
+  /** Over and never marked (2 Nov, Alex; callOver): no longer to come. Absent on a call made here, which is to come. */
+  over?: boolean;
+  /** Over within the week it stays owed (callToComplete): `To complete` in rust in Past calls, its Mark completed on the strip. */
+  toComplete?: boolean;
 };
 type FocusSet = { text: string; done: boolean }[];
 export type DraftDot = { date: string; time: string; durationMinutes: number; name: string; topic: string; mine: boolean; completed: boolean };
@@ -128,6 +134,9 @@ const tidyTime = (raw: string) => {
   return h > 23 || m > 59 ? raw : fromMin(h * 60 + m);
 };
 const endTime = (time: string, dur: number) => (time ? fromMin(toMin(time) + dur) : "");
+/** A call over and never marked (2 Nov, Alex): owed for a week (rust, the to-do strip carries it), then let go (grey). */
+const TO_COMPLETE = { text: "To complete", cls: "due" };
+const NOT_COMPLETED = { text: "Not completed", cls: "" };
 const STATUS: Record<DraftMeeting["status"], { text: string; cls: string }> = { scheduled: { text: "Scheduled", cls: "" }, completed: { text: "Completed", cls: "up" }, "no-show": { text: "No-show", cls: "down" }, cancelled: { text: "Cancelled", cls: "" } };
 /** A call's title (21 Oct, Alex): the recap's title once written, else the topic, else its kind ("Review call"). */
 const titleOf = (m: { summaryTitle: string; topic: string; kind: MeetingTypeId }) => m.summaryTitle.trim() || m.topic.trim() || `${meetingTypeOf(m.kind).label} call`;
@@ -281,15 +290,21 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
     return meetings.filter((x) => x.seriesId === m.seriesId && x.id !== id && x.status === "scheduled" && (x.date > m.date || (x.date === m.date && x.time > m.time))).map((x) => x.id);
   };
 
-  const scheduled = meetings.filter((m) => m.status === "scheduled" && m.date >= today).sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
+  // To come is what hasn't ended yet (2 Nov, Alex): a call that is over and never marked goes to Past calls, `To complete`
+  // in rust for a week (the to-do strip at the top carries its Mark completed), then `Not completed`.
+  const toCome = (m: DraftMeeting) => m.status === "scheduled" && !(m.over ?? m.date < today);
+  const scheduled = meetings.filter(toCome).sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
   const upcoming = scheduled[0] ?? null;
   const also = scheduled.slice(1);
-  const past = meetings.filter((m) => !(m.status === "scheduled" && m.date >= today)).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const past = meetings.filter((m) => !toCome(m)).sort((a, b) => (a.date !== b.date ? (a.date < b.date ? 1 : -1) : a.time < b.time ? 1 : -1));
   // To focus on (23 Oct, Alex: "deployed the moment I mark as completed this meeting, and then I can still edit it once it
   // goes down to past calls until I set a new sheet of to focus on on the next call"): the completed call the live list
   // came from, else the latest completed call, holds it (focusHolder, lib/focus.ts); its open row is where it is edited.
   const completedCalls = meetings.filter((m) => m.status === "completed").sort((a, b) => (a.date !== b.date ? (a.date < b.date ? 1 : -1) : a.time !== b.time ? (a.time < b.time ? 1 : -1) : b.id - a.id));
   const holder = completedCalls.find((m) => m.id === focusFrom) ?? completedCalls[0] ?? null;
+  /** A call completed after this one: completing this one late leaves To focus on alone (newerCallDone in lib/focus.ts). */
+  const startsAt = (m: DraftMeeting) => zonedToUtc(m.date, m.time, m.tz || SERVER_TZ).getTime();
+  const supersededBy = (m: DraftMeeting) => completedCalls.some((c) => c.id !== m.id && (startsAt(c) !== startsAt(m) ? startsAt(c) > startsAt(m) : c.id > m.id));
   /** A call still to come: the next list as drafted on its To focus on tab, kept with the call and never sent. */
   const saveDraft = (id: number, lines: string[]) => {
     patchMeeting(id, { focusDraft: lines });
@@ -342,7 +357,32 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
             </div>
           </div>
           {tab === "focus" ? (
-            <FocusLines key={`f${m.id}`} goals={m.focusDraft.map((text, i) => ({ id: -(i + 1), text, done: false }))} onSave={(lines) => saveDraft(m.id, lines)} auto={auto} name={`draft${m.id}`} />
+            // What was set last time beside it, greyed as the past is (2 Nov, Alex: "I want to be able to see what we wrote
+            // down last time"): the client's live list, dated by the call that set it. None yet: the lines alone.
+            <div className={`rt-focus-split${focusGoals.length ? "" : " alone"}`}>
+              <FocusLines key={`f${m.id}`} goals={m.focusDraft.map((text, i) => ({ id: -(i + 1), text, done: false }))} onSave={(lines) => saveDraft(m.id, lines)} auto={auto} name={`draft${m.id}`} samples={!focusGoals.length} />
+              {focusGoals.length > 0 && (
+                <div className="rt-focus-last" aria-label="To focus on, last time">
+                  <span className="rt-focus-last-head">
+                    Last time
+                    {holder && (
+                      <>
+                        <Sep />
+                        {dayMonth(holder.date)}
+                      </>
+                    )}
+                  </span>
+                  <ul>
+                    {focusGoals.map((g) => (
+                      <li key={g.id}>
+                        <i aria-hidden="true" />
+                        {g.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           ) : tab === "prep" ? (
             <PrepNotes
               key={`p${m.id}`}
@@ -389,7 +429,7 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
   // link on the right (23 Oct, Alex: where its length and how soon were), ⋯; open, the call's body under it. The next call and Also scheduled are both this.
   const [nextOpen, setNextOpen] = useState(true);
   const callRow = (m: DraftMeeting, isOpen: boolean, toggle: () => void) => (
-    <div key={m.id} className={`rd-row rt-arow${isOpen ? " open" : ""}`}>
+    <div key={m.id} id={`call-${m.id}`} className={`rd-row rt-arow${isOpen ? " open" : ""}`}>
       {/* A click anywhere opens it; for the keyboard the title is the button, ⋯ its sibling (no controls nested in a button). */}
       <div className="rd-row-main" style={aGrid} onClick={toggle}>
         <span className="rt-tile">
@@ -438,6 +478,31 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
       {isOpen && <div className="rt-rowbody">{callBody(m)}</div>}
     </div>
   );
+  // A link lands on its call (#call-<id>: the Feed's and the rail's Complete, 2 Nov): the row opens, comes to the middle
+  // and is lit; on arrival and on a new # only (design rules 8, 9).
+  const listsRef = useRef({ upcoming, past });
+  useEffect(() => {
+    listsRef.current = { upcoming, past };
+  });
+  useEffect(() => {
+    let cancel: (() => void) | null = null;
+    const arrive = () => {
+      const id = Number(/^#call-(\d+)$/.exec(window.location.hash)?.[1]);
+      if (!id) return;
+      const l = listsRef.current;
+      if (l.upcoming?.id === id) setNextOpen(true);
+      else if (l.past.some((m) => m.id === id)) setOpenPast(id);
+      else setOpenAlso(id);
+      cancel?.();
+      cancel = landOnSoon(() => document.getElementById(`call-${id}`));
+    };
+    arrive();
+    window.addEventListener("hashchange", arrive);
+    return () => {
+      window.removeEventListener("hashchange", arrive);
+      cancel?.();
+    };
+  }, []);
   // The kind of call in a column of its own by Status (21 Oct, Alex: so it always lines up), its tag the column's width.
   // Past calls are a log (27 Oct, Alex): the kind is its icon before the call, no Type column.
   const pGrid = { gridTemplateColumns: "150px minmax(200px, 1fr) 130px 32px", columnGap: 24 } as const;
@@ -487,20 +552,24 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
         </div>
       </header>
 
-      {/* ---- A call the client asked for (9 Oct): on top until a call is booked, which answers it. A hairline row, no blue box. */}
-      {plan.request && (
-        <section className="rt-ask" aria-label="Call requested">
-          <span className="rt-ask-text">
-            <b>{firstName} asked for a call</b>
-            <span>
-              <SepJoin parts={[`“${plan.request.about}”`, plan.request.whenSuits]} />
-            </span>
-          </span>
-          <button type="button" className="trn-pill" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null, topic: plan.request!.about })}>
-            <CalendarIcon /> Schedule a call
-          </button>
-        </section>
-      )}
+      {/* ---- What the coach owes here (2 Nov, Alex: the rail said Meetings and nothing here said what): a call they asked
+          for (Book opens Schedule with their words as its topic; it was a bar of its own, 9 Oct), a call over and not marked
+          completed (Mark completed opens How did the call go?). */}
+      <TodoStrip
+        tab="meetings"
+        onAct={(item) => {
+          if (item.kind === "complete-call" && item.ref != null && byId(item.ref)) {
+            setDlg({ kind: "complete", meetingId: item.ref });
+            return true;
+          }
+          if (item.kind === "ask-call") {
+            setDlg({ kind: "schedule", date: selectedDay, reschedule: null, topic: plan.request?.about });
+            return true;
+          }
+          return false;
+        }}
+      />
+
       {/* ---- The next call. Nothing booked: no card (Schedule a meeting is where one gets booked). */}
       {upcoming && (
         <section className="rls-section">
@@ -567,9 +636,10 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
               </div>
               {past.map((m) => {
                 const isOpen = openPast === m.id;
-                const st = STATUS[m.status];
+                // A call over, never marked and let go (a week on): Not completed, never "Scheduled" in the past.
+                const st = m.status === "scheduled" ? (m.toComplete ? TO_COMPLETE : NOT_COMPLETED) : STATUS[m.status];
                 return (
-                  <div key={m.id} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
+                  <div key={m.id} id={`call-${m.id}`} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
                     {/* A click anywhere opens it; for the keyboard the date is the button, ⋯ its sibling. */}
                     <div className="rd-row-main" style={pGrid} onClick={() => setOpenPast((x) => (x === m.id ? null : m.id))}>
                       <span className="rd-ex">
@@ -595,6 +665,11 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
                             <MoreIcon />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="pb-menu">
+                            {m.status === "scheduled" && (
+                              <DropdownMenuItem onSelect={() => setDlg({ kind: "complete", meetingId: m.id })}>
+                                <CheckIcon /> Mark completed
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onSelect={() => (openChat ? openChat() : setDlg({ kind: "message", label: `${m.topic || "Check-in call"} · ${dayMonth(m.date)}` }))}>
                               <ChatIcon /> Message about this call
                             </DropdownMenuItem>
@@ -660,7 +735,8 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
             today={today}
             onSave={(v) => {
               if (dlg.reschedule) {
-                patchMeeting(dlg.reschedule.id, { ...v, kind: v.meetingType, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" });
+                // Moved: whether it is over is worked out afresh from its new day (the server's flags were for the old one).
+                patchMeeting(dlg.reschedule.id, { ...v, over: undefined, toComplete: false, kind: v.meetingType, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" });
                 act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", meetingType: v.meetingType })), `Moved to ${dayMonth(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
               } else {
                 act(
@@ -693,8 +769,17 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
             title={byId(dlg.meetingId)!.summaryTitle}
             // The call's own draft (its To focus on tab), else the live list as it is.
             goals={byId(dlg.meetingId)!.focusDraft.length ? byId(dlg.meetingId)!.focusDraft : focusGoals.map((g) => g.text)}
+            focus={!supersededBy(byId(dlg.meetingId)!)}
             onComplete={(summary, summaryTitle, lines) => {
               const id = dlg.meetingId;
+              // Completed late, after a newer call (2 Nov): the call alone, To focus on as the newer call left it.
+              if (supersededBy(byId(id)!)) {
+                patchMeeting(id, { status: "completed", summary, summaryTitle, focusDraft: [] });
+                setOpenPast(id);
+                close();
+                act(() => completeMeetingAction(fd({ id, summary, summaryTitle, withFocus: 1 })), summary || summaryTitle ? `Completed, recap sent to ${firstName}'s Home` : "Completed");
+                return;
+              }
               // To focus on goes with the call, at once (23 Oct, Alex: "every time this is set on a new call the old ones
               // get overridden"): the lines replace the whole list, every tick reset, the same words too. The call holds
               // it from now; the call that held it keeps it as it ended, ticks and all.
@@ -835,7 +920,7 @@ function PrepNotes({ value, onSave, auto, name, label = "Prep notes" }: { value:
 /** To focus on (23 Oct, Alex), three lines, Phase goals' look: a dot and a clean line each (bullet points, nothing for the
  *  client to tick); typed in place, saved by itself as the list is left. The live list on the past call that holds it: it
  *  is news on the client's Home and phone, and half a goal shouldn't be. A call still to come drafts the next list with it. */
-function FocusLines({ goals, onSave, auto: { hold, onWaiting }, name }: { goals: FocusGoalView[]; onSave: (lines: string[]) => void; auto: Autosave; name: string }) {
+function FocusLines({ goals, onSave, auto: { hold, onWaiting }, name, samples = true }: { goals: FocusGoalView[]; onSave: (lines: string[]) => void; auto: Autosave; name: string; /** Sample goals in the empty lines; off beside last time's list, which is the grey one (2 Nov). */ samples?: boolean }) {
   const saved = goals.map((g) => g.text);
   const savedKey = saved.join("\n");
   const [rows, setRows] = useState(() => fillFocus(saved));
@@ -911,7 +996,7 @@ function FocusLines({ goals, onSave, auto: { hold, onWaiting }, name }: { goals:
                   else flush();
                 }}
                 className={typed ? "typed" : undefined}
-                placeholder={FOCUS_SAMPLES[i]}
+                placeholder={samples ? FOCUS_SAMPLES[i] : undefined}
                 aria-label={`Goal ${i + 1}`}
               />
             </li>
@@ -1212,7 +1297,7 @@ function LinkDialog({ value, onSave }: { value: string; onSave: (link: string) =
 }
 
 /** Marking a call completed: the last chance to tell the client what came out of it, and what to focus on until the next. */
-function CompleteDialog({ firstName, value, title: initialTitle, goals, onComplete }: { firstName: string; value: string; title: string; /** The lines' first words: the call's draft, else the client's live list. */ goals: string[]; onComplete: (summary: string, title: string, focus: string[]) => void }) {
+function CompleteDialog({ firstName, value, title: initialTitle, goals, focus = true, onComplete }: { firstName: string; value: string; title: string; /** The lines' first words: the call's draft, else the client's live list. */ goals: string[]; /** False for a call completed after a newer one: no To focus on (it stays as the newer call set it). */ focus?: boolean; onComplete: (summary: string, title: string, focus: string[]) => void }) {
   const [recap, setRecap] = useState(value);
   const [title, setTitle] = useState(initialTitle);
   const [rows, setRows] = useState(() => fillFocus(goals));
@@ -1236,6 +1321,7 @@ function CompleteDialog({ firstName, value, title: initialTitle, goals, onComple
         <textarea className="dlh-line" rows={4} value={recap} onChange={(e) => setRecap(e.target.value)} placeholder="What you covered and what you agreed…" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && recap.trim() && onComplete(recap.trim(), title.trim(), lines)} />
       </label>
       {/* To focus on (23 Oct, Alex): up to three goals until the next call, Phase goals' look (a dot and a clean line each). */}
+      {focus && (
       <div className="rt-field">
         <span className="dlh-label" id="rt-focus-label">
           To focus on
@@ -1260,6 +1346,7 @@ function CompleteDialog({ firstName, value, title: initialTitle, goals, onComple
           ))}
         </ul>
       </div>
+      )}
       <div className="dlh-foot">
         {/* Without a summary: the goals typed still go with it. */}
         <button type="button" className="dlh-cancel" onClick={() => onComplete("", "", lines)}>

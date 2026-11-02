@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { coachForClient, getSessionUser } from "./auth";
 import { getData } from "./db";
-import { focusHolder, noteFocus, setFocus, setFocusDraft, setFocusFromCall, setFocusOnHolder, tickFocusGoal } from "./focus";
+import { focusHolder, newerCallDone, noteFocus, setFocus, setFocusDraft, setFocusFromCall, setFocusOnHolder, tickFocusGoal } from "./focus";
 
 // To focus on (23 Oct, Alex; lib/focus.ts): the coach sets the list from Meetings, the client ticks it on Home.
 
@@ -37,6 +37,8 @@ export async function saveFocusAction(formData: FormData) {
   // An edit from a page that hasn't seen the list move on (a call completed in another window since) changes nothing:
   // the call it was typed on no longer holds the list.
   if (!fromCall && holderId !== (focusHolder(clientId)?.id ?? null)) return;
+  // A call completed late, after a newer one: the newer one's list stands (newerCallDone).
+  if (fromCall && meetingId && newerCallDone(clientId, meetingId)) return;
   const r = fromCall && meetingId ? setFocusFromCall(clientId, meetingId, lines) : holderId ? setFocusOnHolder(clientId, holderId, lines) : setFocus(clientId, lines);
   noteFocus(clientId, r, fromCall ? meetingId : null);
   revalidatePath("/admin");

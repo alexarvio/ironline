@@ -16,6 +16,7 @@ import { stateTagStyle } from "../../phaseChrome";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
 import PhaseSwitcher from "../PhaseSwitcher";
+import { TodoStrip } from "../TodoStrip";
 import { useOpenChat } from "../ChatPanel";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
@@ -533,6 +534,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           </DropdownMenu>
         </div>
       </header>
+      {/* What the coach owes here (2 Nov, Alex): a note on a check-in to read. */}
+      <TodoStrip tab="measurements" />
 
       {/* ---- Tracked metrics: what the client is asked for, one rhythm at a time. */}
       <section className="rls-section">

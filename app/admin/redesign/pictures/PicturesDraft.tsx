@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { SepJoin } from "../Sep";
 import CompareDialog from "./CompareDialog";
 import { Fold } from "../Fold";
+import { TodoStrip } from "../TodoStrip";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
 import { CameraIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
@@ -266,6 +267,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
           {/* No ⋯ (23 Oct, Alex): it held Message alone; the chat panel is a tab away. */}
         </div>
       </header>
+      {/* What the coach owes here (2 Nov, Alex): a note on a shape update to read. */}
+      <TodoStrip tab="pictures" />
 
       {!top ? (
         sheets.length === 0 && <div className="rp-card rp-empty">No sheets yet</div>

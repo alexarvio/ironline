@@ -1,6 +1,6 @@
 import { allocId, getData, persist, type ClientFocus, type Data } from "./db";
 import { isClientCall } from "./calendarKinds";
-import { SERVER_TZ } from "./timezones";
+import { SERVER_TZ, zonedToUtc } from "./timezones";
 import { inZone } from "./viewZone";
 import { localDateStr, logCoachActivity } from "./queries";
 
@@ -69,6 +69,17 @@ export function focusHolder(clientId: number, except?: number): Call | null {
   const done = callsOf(clientId).filter((m) => m.status === "completed" && m.id !== except);
   const from = rowOf(clientId)?.meeting_id;
   return done.find((m) => m.id === from) ?? done.sort(latestFirst)[0] ?? null;
+}
+
+/** A call completed after this one (2 Nov): completing this one late (a call to complete, or one in Past calls) leaves To
+ *  focus on alone, so an older call never replaces the list a newer one set, nor tells the client again. */
+export function newerCallDone(clientId: number, meetingId: number): boolean {
+  const me = callsOf(clientId).find((m) => m.id === meetingId);
+  if (!me) return false;
+  // By the moment each starts in its own zone, as the Meetings tab compares them (calls set in different zones).
+  const at = (m: Call) => zonedToUtc(m.date, m.all_day ? "" : m.time, m.tz || SERVER_TZ).getTime();
+  const mine = at(me);
+  return callsOf(clientId).some((m) => m.id !== meetingId && m.status === "completed" && (at(m) !== mine ? at(m) > mine : m.id > meetingId));
 }
 
 /** The live list onto a call, as it keeps it: the words and the client's ticks. */

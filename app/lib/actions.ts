@@ -3,7 +3,7 @@
 import { chatChanged, chatCurrent, chatRev, chatTyping, firstSend, timedChatRead } from "./chatBus";
 import { isMeetingTypeId } from "./meetingTypes";
 import { isClientCall, takesClient } from "./calendarKinds";
-import { noteFocus, setFocusOnComplete } from "./focus";
+import { newerCallDone, noteFocus, setFocusOnComplete } from "./focus";
 
 import { redirect } from "next/navigation";
 import { getData, isStepsMetric, MAX_DAY_STEPS, persist, type CoachBusiness, type CoachInvoicing, type CoachNotify, type InvoiceEvery, type InvoiceLine, type MetricAskAt, type PhaseTrack } from "./db";
@@ -2294,7 +2294,8 @@ export async function completeMeetingAction(formData: FormData) {
   // anywhere else (the old admin's Complete) the call's draft goes, else the live list, so no draft is left on it.
   if (!wasDone && !formData.has("withFocus")) {
     const focusClient = getClientIdForMeeting(id);
-    const r = focusClient != null ? setFocusOnComplete(focusClient, id) : null;
+    // Completed late, after a newer call: that call's list stands (newerCallDone, 2 Nov).
+    const r = focusClient != null && !newerCallDone(focusClient, id) ? setFocusOnComplete(focusClient, id) : null;
     if (r && focusClient != null) noteFocus(focusClient, r, id);
   }
   // The recap is what the client takes away: tell them it is there.

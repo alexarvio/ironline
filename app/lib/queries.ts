@@ -9,8 +9,9 @@ import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog
 import type { OffProduct } from "./foods/openfoodfacts";
 import type { LinkView, MessageLink } from "./messageLinks";
 import { coachIdOfClient } from "./tenancy";
-import { inViewZone } from "./viewZone";
-import { isTimezone } from "./timezones";
+import { inViewZone, viewZone } from "./viewZone";
+import { isTimezone, SERVER_TZ, zonedToUtc } from "./timezones";
+import { meetingTypeOf } from "./meetingTypes";
 import { callLink, isClientCall, takesClient } from "./calendarKinds";
 import { dayMonth } from "./dayMonth";
 import { countryOf, invoicingFor } from "./countries";
@@ -5849,6 +5850,34 @@ export function listMeetings(clientId: number): Meeting[] {
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? 1 : -1) : a.date < b.date ? 1 : -1));
 }
 
+/** How long a call that is over stays owed until it is marked completed (2 Nov, Alex: the rail said Meetings and
+ *  nothing there said what): a week, then it is let go and sits in Past calls as Not completed. */
+const CALL_DUE_MS = 7 * 86400000;
+/** When a call ends: its time plus its length in its own zone; one with no time (or all day) at its day's end where the
+ *  coach is looking from (an all-day entry is kept with no zone), else the server's. */
+export function callEndsAt(m: Pick<Meeting, "date" | "time" | "tz" | "all_day" | "duration_minutes">): number {
+  const time = m.all_day ? "" : (m.time ?? "").trim();
+  const tz = (time ? m.tz : null) || (time ? null : viewZone()) || m.tz || SERVER_TZ;
+  if (!time) {
+    const [y, mo, d] = m.date.split("-").map(Number);
+    const next = new Date(Date.UTC(y, mo - 1, d + 1)).toISOString().slice(0, 10);
+    return zonedToUtc(next, "00:00", tz).getTime();
+  }
+  return zonedToUtc(m.date, time, tz).getTime() + (m.duration_minutes || DEFAULT_MEETING_DURATION) * 60000;
+}
+/** A call that is over and still waits to be marked completed, for a week after it ends (CALL_DUE_MS). */
+export function callToComplete(m: Pick<Meeting, "status" | "date" | "time" | "tz" | "all_day" | "duration_minutes">, now = Date.now()): boolean {
+  if (m.status !== "scheduled") return false;
+  const end = callEndsAt(m);
+  return Number.isFinite(end) && end <= now && now - end < CALL_DUE_MS;
+}
+/** A call that is over and was never marked: completed, missed or let go, it is no longer to come. */
+export function callOver(m: Pick<Meeting, "status" | "date" | "time" | "tz" | "all_day" | "duration_minutes">, now = Date.now()): boolean {
+  if (m.status !== "scheduled") return false;
+  const end = callEndsAt(m);
+  return Number.isFinite(end) && end <= now;
+}
+
 export function addMeeting(
   clientId: number | null,
   date: string,
@@ -7040,6 +7069,13 @@ export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: Trainin
   for (const r of data.meeting_requests ?? []) {
     if (r.client_id !== clientId || r.status !== "open") continue;
     actions.push({ id: `call-${r.id}`, tone: "due", group: "reply", title: "Asked for a call", detail: `“${r.about}”${r.when_suits ? ` · ${r.when_suits}` : ""}`, tab: "meetings", at: stampMs(r.created_at), eventId: `meeting-request-${r.id}` });
+  }
+  // A call that is over and not marked completed (2 Nov, Alex): owed until it is, for a week after it ends. A call still
+  // to come is no task ("this is not the calendar", 25 Oct).
+  for (const m of listMeetings(clientId)) {
+    if (!callToComplete(m)) continue;
+    const name = (m.summary_title ?? "").trim() || m.topic.trim() || `${meetingTypeOf(m.meeting_type ?? "checkin").label} call`;
+    actions.push({ id: `complete-${m.id}`, tone: "due", group: "reply", title: "Call to complete", detail: name, tab: "meetings", at: callEndsAt(m), href: `/admin/redesign/meetings?client=${clientId}#call-${m.id}` });
   }
   // An invoice past its due date, still unpaid.
   const today = localDateStr();

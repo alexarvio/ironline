@@ -19,6 +19,7 @@ import {
   dailyAskedOn,
   invoiceRepeatViews,
   listMeetings,
+  callOver,
   localDateStr,
   sessionNews,
   weekStart,
@@ -429,7 +430,8 @@ const callTitle = (m: CallRow) =>
 
 function nextCallOf(ctx: Ctx): HomeBoard["nextCall"] {
   const next = listMeetings(ctx.clientId)
-    .filter((m) => m.status === "scheduled" && m.date >= ctx.today)
+    // Still to come: a call that is over and never marked is the Meetings tab's To complete, not the next call (2 Nov).
+    .filter((m) => m.status === "scheduled" && m.date >= ctx.today && !callOver(m))
     .sort((a, b) => (a.date === b.date ? (a.time ?? "").localeCompare(b.time ?? "") : a.date < b.date ? -1 : 1))[0];
   if (!next) return null;
   return { date: next.date, time: next.all_day ? null : (next.time ?? "").trim() || null, title: callTitle(next) };

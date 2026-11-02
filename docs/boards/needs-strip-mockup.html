@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>To-do strip options</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --faint:#8b93a1; --label:#5b6474; --line:#E1E5EB; --page:#F5F6F8; --rust:#b8471f; --rust-rgb:184,71,31; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 56px; background: #e9ebef; font-family: Archivo, system-ui, sans-serif; color: var(--ink); }
+  h1 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+  .lead { margin: 0 0 22px; font-size: 13px; font-weight: 500; color: var(--label); max-width: 760px; line-height: 1.45; }
+  .opt { max-width: 900px; margin: 0 0 34px; }
+  .opt > h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  .opt > p.how { margin: 0 0 10px; font-size: 12.5px; font-weight: 500; color: var(--label); line-height: 1.4; }
+  .screens { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .screens { grid-template-columns: 1fr; } }
+
+  /* A client tab, as the admin draws it. */
+  .tab { background: var(--page); border-radius: 18px; padding: 18px 18px 20px; box-shadow: inset 0 0 0 1px var(--line); min-width: 0; }
+  .tabs { display: flex; gap: 2px; background: #eceef2; border-radius: 999px; padding: 4px; width: max-content; max-width: 100%; overflow: hidden; margin-bottom: 16px; }
+  .tabs span { position: relative; font-size: 12px; font-weight: 500; color: var(--label); padding: 6px 11px; border-radius: 999px; white-space: nowrap; }
+  .tabs span.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(16,24,40,.06); }
+  .tabs span.due::after { content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 999px; background: var(--rust); }
+  .eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--label); }
+  .name { margin: 2px 0 16px; font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+  .sec { margin: 18px 0 8px; font-size: 17px; font-weight: 600; }
+  .card { background: #fff; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); }
+  .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; font-size: 13.5px; font-weight: 500; color: var(--body); }
+  .row + .row { border-top: 1px solid #eef0f3; }
+  .row b { color: var(--ink); font-weight: 600; }
+  .tile { width: 30px; text-align: center; line-height: 1.05; }
+  .tile small { display: block; font-size: 9.5px; font-weight: 600; letter-spacing: .12em; color: var(--faint); }
+  .tile b { font-size: 16px; font-weight: 500; }
+  .pill { margin-left: auto; height: 22px; padding: 0 10px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); font-size: 11px; font-weight: 600; color: var(--faint); display: inline-flex; align-items: center; }
+  .pill.rust { color: var(--rust); box-shadow: inset 0 0 0 1px rgba(var(--rust-rgb), .35); }
+  .wk { display: flex; gap: 8px; }
+  .wk div { flex: 1; height: 54px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); padding: 8px 10px; font-size: 11.5px; font-weight: 600; position: relative; }
+  .wk div span { display: block; margin-top: 3px; font-size: 11px; font-weight: 500; color: var(--faint); }
+  .wk div.due::after { content: ""; position: absolute; top: 9px; right: 9px; width: 6px; height: 6px; border-radius: 999px; background: var(--rust); }
+  svg.i { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---- The strip: one row a thing, the fact, how long it waited, the action in words. */
+  .todo { margin: 0 0 18px; }
+  .todo .t { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; font-size: 13.5px; font-weight: 500; color: var(--body); }
+  .todo .t .what { color: var(--ink); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .todo .t .wait { color: var(--c, var(--rust)); font-weight: 500; white-space: nowrap; }
+  .todo .t .act { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .todo .t .mark { color: var(--c, var(--rust)); display: inline-flex; }
+
+  /* A: a soft tint of the colour, its edge solid on the left. */
+  .a .todo { border-radius: 14px; background: rgba(var(--c-rgb, var(--rust-rgb)), .08); box-shadow: inset 0 0 0 1.5px var(--c, var(--rust)); overflow: hidden; }
+  .a .todo .t + .t { border-top: 1px solid rgba(var(--c-rgb, var(--rust-rgb)), .14); }
+
+  /* B: a white hairline card, a small caps head in the colour, the rows under it. */
+  .b .todo { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); padding-top: 10px; }
+  .b .todo .head { padding: 0 14px 2px; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--c, var(--rust)); }
+  .b .todo .t + .t { border-top: 1px solid #eef0f3; }
+
+  /* C: no fill, the colour's hairline round it, a dot before each thing. */
+  .c .todo { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px rgba(var(--c-rgb, var(--rust-rgb)), .45); }
+  .c .todo .t::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--c, var(--rust)); flex: none; }
+  .c .todo .t .mark { display: none; }
+  .c .todo .t + .t { border-top: 1px solid rgba(var(--c-rgb, var(--rust-rgb)), .18); }
+
+  .shades { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 760px) { .shades { grid-template-columns: 1fr; } }
+  .shade h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+  .shade h3 span { font-weight: 500; color: var(--faint); }
+  .done { font-size: 12.5px; font-weight: 500; color: var(--label); margin: 8px 0 0; }
+</style>
+</head>
+<body>
+  <h1>A to-do strip at the top of a tab</h1>
+  <p class="lead">The rail's number and the tab's dot lead here. At the top of the tab, before anything else, is one row per thing to do on that tab: what it is, how long it has waited, and the action. Tapping the action does it, or opens the exact spot. When nothing is left, the strip is gone and the dots go with it. The colour is the rust the dots already use (between amber and red); shades are compared at the bottom.</p>
+
+  <!-- ===================== A ===================== -->
+  <section class="opt a">
+    <h2>A · Soft tint, the whole container outlined (picked, 2 Nov)</h2>
+    <p class="how">Reads as a warning without being loud: a soft tint, its edge all round in the colour, the rows inside, the action in ink words.</p>
+    <div class="screens">
+      <div class="tab">
+        <div class="tabs"><span>Home</span><span>Plan</span><span>Lifestyle</span><span class="on due">Training</span><span>Nutrition</span><span>Meetings</span></div>
+        <div class="eyebrow">Training</div>
+        <div class="name">Hypertrophy block</div>
+        <div class="todo">
+          <div class="t"><span class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="what">Week 5 has no sessions</span><span class="wait">this week</span><span class="act"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add sessions</span></div>
+          <div class="t"><span class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></span><span class="what">Video of Back Squat</span><span class="wait">2 days</span><span class="act"><svg class="i" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>Review</span></div>
+        </div>
+        <div class="wk"><div>Week 3<span>4 of 4</span></div><div class="due">Week 4<span>2 of 4</span></div><div class="due">Week 5<span>0 sessions</span></div></div>
+      </div>
+      <div class="tab">
+        <div class="tabs"><span>Home</span><span>Plan</span><span>Training</span><span>Nutrition</span><span class="on due">Meetings</span><span>Invoices</span></div>
+        <div class="eyebrow">Meetings</div>
+        <div class="name">Adonis's calls</div>
+        <div class="todo">
+          <div class="t"><span class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="what">Check-In, 2/11, to complete</span><span class="wait">6 hours</span><span class="act"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Mark completed</span></div>
+        </div>
+        <div class="sec">Next call</div>
+        <div class="card"><div class="row"><span class="tile"><small>NOV</small><b>9</b></span><b>Check-In</b><span style="color:#8b93a1">02:30 – 03:00</span></div></div>
+        <div class="sec">Past calls</div>
+        <div class="card"><div class="row">Mon, 2 Nov <b>Check-In</b><span class="pill rust">To complete</span></div><div class="row">Mon, 26 Oct <b>Check-In</b><span class="pill">Not completed</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== B ===================== -->
+  <section class="opt b">
+    <h2>B · White card, "To do" head in the colour</h2>
+    <p class="how">Matches the app's hairline cards. The colour is only on the head and the waits, so it's calmer than A.</p>
+    <div class="screens">
+      <div class="tab">
+        <div class="tabs"><span>Home</span><span>Plan</span><span>Lifestyle</span><span class="on due">Training</span><span>Nutrition</span><span>Meetings</span></div>
+        <div class="eyebrow">Training</div>
+        <div class="name">Hypertrophy block</div>
+        <div class="todo">
+          <div class="head">To do · 2</div>
+          <div class="t"><span class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="what">Week 5 has no sessions</span><span class="wait">this week</span><span class="act"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add sessions</span></div>
+          <div class="t"><span class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></span><span class="what">Video of Back Squat</span><span class="wait">2 days</span><span class="act"><svg class="i" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>Review</span></div>
+        </div>
+        <div class="wk"><div>Week 3<span>4 of 4</span></div><div class="due">Week 4<span>2 of 4</span></div><div class="due">Week 5<span>0 sessions</span></div></div>
+      </div>
+      <div class="tab">
+        <div class="tabs"><span>Home</span><span>Plan</span><span>Training</span><span>Nutrition</span><span class="on due">Meetings</span><span>Invoices</span></div>
+        <div class="eyebrow">Meetings</div>
+        <div class="name">Adonis's calls</div>
+        <div class="todo">
+          <div class="head">To do · 1</div>
+          <div class="t"><span class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="what">Check-In, 2/11, to complete</span><span class="wait">6 hours</span><span class="act"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Mark completed</span></div>
+        </div>
+        <div class="sec">Next call</div>
+        <div class="card"><div class="row"><span class="tile"><small>NOV</small><b>9</b></span><b>Check-In</b><span style="color:#8b93a1">02:30 – 03:00</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== C ===================== -->
+  <section class="opt c">
+    <h2>C · White, outlined in the colour, a dot per thing</h2>
+    <p class="how">The dot from the tab carries on into each row, so it reads as "this is the dot".</p>
+    <div class="screens">
+      <div class="tab">
+        <div class="tabs"><span>Home</span><span>Plan</span><span>Lifestyle</span><span class="on due">Training</span><span>Nutrition</span><span>Meetings</span></div>
+        <div class="eyebrow">Training</div>
+        <div class="name">Hypertrophy block</div>
+        <div class="todo">
+          <div class="t"><span class="what">Week 5 has no sessions</span><span class="wait">this week</span><span class="act"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add sessions</span></div>
+          <div class="t"><span class="what">Video of Back Squat</span><span class="wait">2 days</span><span class="act"><svg class="i" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>Review</span></div>
+        </div>
+        <div class="wk"><div>Week 3<span>4 of 4</span></div><div class="due">Week 4<span>2 of 4</span></div><div class="due">Week 5<span>0 sessions</span></div></div>
+      </div>
+      <div class="tab">
+        <div class="tabs"><span>Home</span><span>Plan</span><span>Training</span><span>Nutrition</span><span class="on due">Meetings</span><span>Invoices</span></div>
+        <div class="eyebrow">Meetings</div>
+        <div class="name">Adonis's calls</div>
+        <div class="todo">
+          <div class="t"><span class="what">Check-In, 2/11, to complete</span><span class="wait">6 hours</span><span class="act"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Mark completed</span></div>
+        </div>
+        <div class="sec">Next call</div>
+        <div class="card"><div class="row"><span class="tile"><small>NOV</small><b>9</b></span><b>Check-In</b><span style="color:#8b93a1">02:30 – 03:00</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Shades ===================== -->
+  <section class="opt a">
+    <h2>Shades, between amber and red (on A)</h2>
+    <p class="how">The middle one is the rust the dots, overdue invoices and late waits use today. Whichever is picked, the dots change to it too, so it means one thing.</p>
+    <div class="shades">
+      <div class="shade" style="--c:#c2611c;--c-rgb:194,97,28">
+        <h3>Burnt orange <span>#c2611c</span></h3>
+        <div class="todo"><div class="t"><span class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="what">Week 5 has no sessions</span><span class="act">Add sessions</span></div></div>
+      </div>
+      <div class="shade" style="--c:#b8471f;--c-rgb:184,71,31">
+        <h3>Rust <span>#b8471f · today's</span></h3>
+        <div class="todo"><div class="t"><span class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="what">Week 5 has no sessions</span><span class="act">Add sessions</span></div></div>
+      </div>
+      <div class="shade" style="--c:#a83424;--c-rgb:168,52,36">
+        <h3>Brick <span>#a83424</span></h3>
+        <div class="todo"><div class="t"><span class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="what">Week 5 has no sessions</span><span class="act">Add sessions</span></div></div>
+      </div>
+    </div>
+    <p class="done">Nothing to do on a tab: no strip at all, the tab starts as it does now.</p>
+  </section>
+</body>
+</html>

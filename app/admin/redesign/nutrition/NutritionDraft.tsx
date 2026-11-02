@@ -19,6 +19,7 @@ import { stateTagStyle } from "../../phaseChrome";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
 import PhaseSwitcher from "../PhaseSwitcher";
+import { TodoStrip } from "../TodoStrip";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
@@ -651,6 +652,8 @@ export default function NutritionDraft({
           </DropdownMenu>
         </div>
       </header>
+      {/* What the coach owes here (2 Nov, Alex): a note on a food day to read. */}
+      <TodoStrip tab="nutrition" />
 
       {/* ---- Daily targets: the kcal as a ring on the left, split by the macros typed in on the right. */}
       <section className="rls-section">

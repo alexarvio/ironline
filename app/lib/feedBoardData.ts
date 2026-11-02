@@ -19,6 +19,7 @@ import {
 } from "./queries";
 import { activityMarkOf } from "./activityMark";
 import { SERVER_TZ, zonedToUtc } from "./timezones";
+import { titleParts } from "./titleParts";
 import { feedHref, needView } from "../admin/redesign/loaders";
 
 type UserRow = Data["users"][number];
@@ -60,23 +61,7 @@ const iso = (ms: number | null | undefined) => (ms != null && Number.isFinite(ms
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** A line the store writes with "a · b": its parts (a Needs-you item's title). Never cut inside “…”: the client's own words stay whole. */
-function parts(s: string): string[] {
-  const out: string[] = [];
-  let depth = 0;
-  let from = 0;
-  for (let i = 0; i < s.length; i++) {
-    if (s[i] === "“") depth++;
-    else if (s[i] === "”") depth = Math.max(0, depth - 1);
-    else if (depth === 0 && s.startsWith(" · ", i)) {
-      out.push(s.slice(from, i));
-      from = i + 3;
-      i += 2;
-    }
-  }
-  out.push(s.slice(from));
-  return out.map((p) => p.trim()).filter(Boolean);
-}
+const parts = titleParts;
 
 // ---- One read of the store --------------------------------------------------------
 
@@ -346,6 +331,10 @@ function needFrom(ctx: Ctx, c: ClientData, a: HomeAction): NeedRow | null {
   if (ask) {
     const r = (ctx.data.meeting_requests ?? []).find((x) => x.id === Number(ask[1]));
     return { ...base, kind: "ask-call", what: "Asked for a call", words: r?.about?.trim() || null, since: iso(a.at), action: "Book", href: open };
+  }
+  // A call over and not marked completed (2 Nov, Alex): its title, then Complete, landing on the call.
+  if (/^complete-\d+$/.test(a.id)) {
+    return { ...base, kind: "complete-call", what: a.detail ? `${a.detail} to complete` : "Call to complete", words: null, since: iso(a.at), action: "Complete", href: open };
   }
   if (a.id.startsWith("read-")) {
     // The thing in the store's words, its first part: "Couldn't do Session 3", "Wrote a note on Hypertrophy".

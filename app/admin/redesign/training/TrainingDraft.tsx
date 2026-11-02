@@ -21,6 +21,7 @@ import { changedWeeks } from "./applyShape";
 import MediaReviewModal, { reviewable, type MediaReview, type ThreadItem } from "../media-review/MediaReviewModal";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
+import { goToHash, TodoStrip } from "../TodoStrip";
 import { AfterWorkoutCheck, GoalsNotePills, GripIcon, WeekRail } from "./TrainingParts";
 import "./trn.css";
 import { SortableItem, SortableList } from "../Sortable";
@@ -655,6 +656,14 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
       return next;
     });
   }
+  // The strip's Review or Read for a session on another week (2 Nov): once that week is here, its # is arrived at.
+  const landAfterWeek = useRef<string | null>(null);
+  useEffect(() => {
+    const hash = landAfterWeek.current;
+    if (!hash || window.location.hash !== hash) return;
+    landAfterWeek.current = null;
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  }, [program.weekIdx]);
   // Arriving from a link in a message (#session-ID, or #session-ID-ex-ROW for
   // an exercise): that session unfolds and comes into view; an exercise's row
   // is scrolled to and marked for a moment. After the first paint, so the
@@ -962,6 +971,21 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
           </DropdownMenu>
         </div>
       </header>
+      {/* What the coach owes here (2 Nov, Alex): an empty week, a video to review, a note to read. A session's on the week
+          showing opens in place; on another week, that week comes and the session opens once it is here. */}
+      <TodoStrip
+        tab="training"
+        onAct={(item) => {
+          const to = new URL(item.href, window.location.origin);
+          if (!/^#session-\d+/.test(to.hash)) return false;
+          if (Number(to.searchParams.get("program")) === program.id && Number(to.searchParams.get("week")) === viewIdx) goToHash(to.hash);
+          else {
+            landAfterWeek.current = to.hash;
+            router.push(item.href);
+          }
+          return true;
+        }}
+      />
 
       {/* ---- The weeks: a card each, one bar a session, NOW on this calendar week. Its ? (27 Oct, Alex) at the top right,
           on the fact line's level, says what the bars mean. */}

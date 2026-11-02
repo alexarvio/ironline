@@ -22,6 +22,7 @@ import Picker from "../Picker";
 import DateText from "../DateText";
 import DatePick from "../DatePick";
 import { MonthRange } from "../MonthRange";
+import { TodoStrip } from "../TodoStrip";
 import { dayMonth } from "../../../lib/dayMonth";
 import { phaseDays, phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import { SortableItem, SortableList } from "../Sortable";
@@ -308,6 +309,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           </h1>
         </div>
       </header>
+      {/* What the coach owes here (2 Nov, Alex): a new client's first phase, New phase opening its pop-up. */}
+      <TodoStrip tab="plan" onAct={(item) => item.kind === "setup" && (setDlg({ kind: "phase", phase: null }), true)} />
 
       {/* ---- Phases. */}
       {/* As Training's weeks (20 Oct, Alex): the heading and its controls on the page, the timeline in a white card under them. */}

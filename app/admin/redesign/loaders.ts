@@ -6,11 +6,12 @@ import { fillChatLooks, warmClientPhotos } from "../../lib/storage";
 import { getData, type InvoiceTemplate } from "../../lib/db";
 import type { PlanChoice } from "../../lib/planText";
 import { meetingRemindersOn } from "../../lib/meetingReminders";
-import type { DotTab, DotTrail } from "./dots";
+import type { DotTab, DotTrail, TodoItem } from "./dots";
+import { titleParts } from "../../lib/titleParts";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { clerkOn } from "../../lib/clerk";
-import { getCoachSettings, getInvoiceView, listInvoices, listInvoiceTemplates, invoiceRepeatViews, runRecurringInvoices, type FeedEvent, type HomeAction, type InvoiceView, type TrainingIndex, listCoachVideos, exerciseClientCounts, listMeetings, activityWords, callThing } from "../../lib/queries";
+import { getCoachSettings, getInvoiceView, listInvoices, listInvoiceTemplates, invoiceRepeatViews, runRecurringInvoices, type FeedEvent, type HomeAction, type InvoiceView, type TrainingIndex, listCoachVideos, exerciseClientCounts, listMeetings, activityWords, callThing, callOver, callToComplete } from "../../lib/queries";
 import { getHomeBoard, noteHomeLooked } from "../../lib/homeBoard";
 import { activityMarkOf } from "../../lib/activityMark";
 import { SERVER_TZ, zonedToUtc } from "../../lib/timezones";
@@ -600,23 +601,20 @@ export type RailSpot = { screen: string; href: string; count: number };
 export type RailClient = { id: number; name: string; avatarPath: string | null; spots: RailSpot[]; total: number; /** total without a new client's set-up: what the Feed's Needs you lists for them. */ owed: number; notSignedIn: boolean };
 
 // What the coach owes, as the Feed's Needs you has it (needFrom in feedBoardData.ts); statuses are the Feed's alone.
-const OWED = [/^week$/, /^locked$/, /^reply-\d+$/, /^reply-video-\d+$/, /^call-\d+$/, /^read-/];
+const OWED = [/^week$/, /^locked$/, /^reply-\d+$/, /^reply-video-\d+$/, /^call-\d+$/, /^complete-\d+$/, /^read-/];
 const SCREEN_OF: Record<string, string> = { home: "Home", plan: "Plan", measurements: "Lifestyle", training: "Training", nutrition: "Nutrition", pictures: "Shape update", meetings: "Meetings", invoices: "Invoices" };
 /** The screen a link opens: the chat when it carries one, else its tab. */
 const screenOf = (href: string) => (/[?&]chat=/.test(href) ? "Chat" : SCREEN_OF[/^\/admin\/redesign\/([a-z]+)/.exec(href)?.[1] ?? ""] ?? "Home");
 /** In the Feed's order (needsOf in feedBoardData.ts): a new client's set-up, the blockers (an empty live week, then a
- *  sign-in lock), today's calls by time, then the rest oldest first; a screen sits where its first thing does. */
-function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEvent>, today: string, isNew: boolean, ix?: TrainingIndex): { spots: RailSpot[]; total: number; owed: number } {
+ *  sign-in lock), then the rest oldest first; a screen sits where its first thing does. A call today is no task (2 Nov,
+ *  Alex: the rail said Meetings and nothing there said what; the Feed dropped it 25 Oct); a call over and not marked
+ *  completed is (complete-<id>). */
+function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEvent>, isNew: boolean, ix?: TrainingIndex): { spots: RailSpot[]; total: number; owed: number } {
   const ranked: { href: string; rank: number; ms: number }[] = [];
   if (isNew) ranked.push({ href: `/admin/redesign/plan?client=${clientId}`, rank: -1, ms: 0 });
   for (const a of getClientHome(clientId, feed, ix).actions) {
     if (!OWED.some((re) => re.test(a.id))) continue;
     ranked.push({ href: needView(clientId, a, byId).open, rank: a.id === "week" ? 0 : a.id === "locked" ? 1 : 3, ms: a.at ?? Infinity });
-  }
-  for (const m of listMeetings(clientId)) {
-    if (m.status !== "scheduled" || m.date !== today) continue;
-    const time = m.all_day ? null : (m.time ?? "").trim() || null;
-    ranked.push({ href: `/admin/redesign/meetings?client=${clientId}`, rank: 2, ms: time ? Number(time.replace(":", "")) || 0 : Infinity });
   }
   ranked.sort((x, y) => x.rank - y.rank || (x.ms === y.ms ? 0 : x.ms < y.ms ? -1 : 1));
   const spots: RailSpot[] = [];
@@ -634,7 +632,7 @@ export type RailData = { clients: RailClient[]; coach: { name: string; photoPath
 export function loadDots(clientId: number): DotTrail {
   const data = getData();
   const client = data.clients.find((c) => c.id === clientId);
-  const dots: DotTrail = { tabs: [], training: { weeks: {}, days: [], exercises: [] }, food: {}, meetings: false, unlock: false };
+  const dots: DotTrail = { tabs: [], training: { weeks: {}, days: [], exercises: [] }, food: {}, meetings: false, unlock: false, todo: [] };
   if (!client) return dots;
   const tab = (t: DotTab) => {
     if (!dots.tabs.includes(t)) dots.tabs.push(t);
@@ -642,6 +640,12 @@ export function loadDots(clientId: number): DotTrail {
   const once = <T,>(list: T[], v: T) => {
     if (!list.includes(v)) list.push(v);
   };
+  /** A row of the tab's to-do strip (2 Nov, Alex): what it is, since when, and the action that does it. */
+  const todo = (t: DotTab, item: Omit<TodoItem, "tab">) => {
+    tab(t);
+    dots.todo.push({ ...item, tab: t });
+  };
+  const route = (name: string, rest = "") => `/admin/redesign/${name}?client=${clientId}${rest}`;
   // A server week (week_number) to its programme's screen week.
   const programs = listPrograms(clientId);
   const placeWeek = (week: number) => {
@@ -649,46 +653,61 @@ export function loadDots(clientId: number): DotTrail {
     if (p) once((dots.training.weeks[p.id] ??= []), week - p.start_week + 1);
   };
   // A client with no phase or programme yet: their Plan, as the rail counts them.
-  if (listClientPhases(clientId).length === 0 && !data.training_programs.some((p) => p.client_id === clientId)) tab("plan");
+  if (listClientPhases(clientId).length === 0 && !data.training_programs.some((p) => p.client_id === clientId)) {
+    todo("plan", { key: "setup", kind: "setup", what: "No phase yet", words: null, since: null, action: "New phase", href: route("plan"), ref: null });
+  }
   const feed = getActivityFeed(client.coach_id ?? 0);
   const byId = new Map(feed.map((e) => [e.id, e]));
   for (const a of getClientHome(clientId, feed).actions) {
+    const open = needView(clientId, a, byId).open;
+    const since = a.at != null && Number.isFinite(a.at) ? a.at : null;
     if (a.id === "week") {
       const p = getDeployedProgram(clientId);
-      tab("training");
-      if (p) once((dots.training.weeks[p.id] ??= []), getProgramCurrentWeekIndex(p));
+      const index = p ? getProgramCurrentWeekIndex(p) : null;
+      if (p && index != null) once((dots.training.weeks[p.id] ??= []), index);
+      todo("training", { key: a.id, kind: "week", what: a.title, words: null, since: null, action: "Add sessions", href: p && index != null ? route("training", `&program=${p.id}&week=${index}`) : route("training"), ref: null });
     } else if (a.id === "locked") {
-      tab("home");
       dots.unlock = true;
+      todo("home", { key: a.id, kind: "locked", what: a.title, words: null, since, action: "Unlock", href: route("home"), ref: null });
     } else if (/^reply-video-\d+$/.test(a.id)) {
       const v = data.video_requests.find((x) => x.id === Number(a.id.slice("reply-video-".length)));
       const wa = v ? data.workout_assignments.find((w) => w.id === v.assignment_id) : undefined;
       const day = wa ? data.program_days.find((d) => d.id === wa.program_day_id) : undefined;
-      tab("training");
       if (wa) once(dots.training.exercises, wa.id);
       if (day) {
         once(dots.training.days, day.id);
         placeWeek(day.week_number);
       }
+      todo("training", { key: a.id, kind: "video", what: a.title.replace(/ waiting for your reply$/, ""), words: null, since, action: "Review", href: open, ref: null });
     } else if (/^call-\d+$/.test(a.id)) {
-      tab("meetings");
       dots.meetings = true;
+      const r = (data.meeting_requests ?? []).find((x) => x.id === Number(a.id.slice("call-".length)));
+      // When suits them after it, as the bar it replaces had it (9 Oct).
+      todo("meetings", { key: a.id, kind: "ask-call", what: r?.when_suits?.trim() ? `Asked for a call, ${r.when_suits.trim()}` : "Asked for a call", words: r?.about?.trim() || null, since, action: "Book", href: route("meetings"), ref: r?.id ?? null });
+    } else if (/^complete-\d+$/.test(a.id)) {
+      dots.meetings = true;
+      const id = Number(a.id.slice("complete-".length));
+      const m = data.meetings.find((x) => x.id === id);
+      todo("meetings", { key: a.id, kind: "complete-call", what: `${a.detail}${m ? `, ${dayMonth(m.date)}` : ""}, to complete`, words: null, since, action: "Mark completed", href: route("meetings", `#call-${id}`), ref: id });
     } else if (a.id.startsWith("read-")) {
       const t = a.eventId ? byId.get(a.eventId)?.target : undefined;
+      // The thing in the store's words, its first part: "Couldn't do Session 3", "Wrote a note on Hypertrophy".
+      const what = (titleParts(a.title)[0] ?? a.title).replace(/\s*\(Week \d+\)$/, "");
+      const words = a.detail?.trim() || null;
       if (t?.kind === "session") {
-        tab("training");
         once(dots.training.days, t.dayId);
         placeWeek(t.week);
+        todo("training", { key: a.id, kind: "read", what, words, since, action: "Read", href: open, ref: null, eventId: a.eventId ?? null });
       } else if (t?.kind === "food") {
-        tab("nutrition");
         if (a.eventId) once((dots.food[t.date] ??= []), a.eventId);
+        todo("nutrition", { key: a.id, kind: "read", what, words, since, action: "Read", href: open, ref: null, eventId: a.eventId ?? null });
       } else if (a.tab && a.tab !== "messages") {
-        tab((NEED_TAB_ROUTE[a.tab] ?? a.tab) as DotTab);
+        todo((NEED_TAB_ROUTE[a.tab] ?? a.tab) as DotTab, { key: a.id, kind: "read", what, words, since, action: "Read", href: open, ref: null, eventId: a.eventId ?? null });
       }
     }
     // reply-<id>, a message: the chat tab's own dot.
   }
-  // A call today is no dot (25 Oct, Alex: "this is not the calendar"): nothing is owed for it.
+  // A call today is no dot (25 Oct, Alex: "this is not the calendar"): nothing is owed for it until it is over.
   return dots;
 }
 
@@ -699,7 +718,6 @@ export function loadRail(coach: { id: number; email: string; role: "coach" | "cl
   const feed = sub("feed", () => getActivityFeed(coach.id));
   const byId = new Map(feed.map((e) => [e.id, e]));
   const data = getData();
-  const today = localDateStr();
   const clients = sub("needsYou", () => {
     const list = listClients(coach.id);
     // Each client's own events and every client's training rows, read once for the whole rail (23 Oct, speed: every
@@ -710,7 +728,7 @@ export function loadRail(coach: { id: number; email: string; role: "coach" | "cl
     return list.map((c) => {
       const user = getUserForClient(c.id);
       const isNew = listClientPhases(c.id).length === 0 && !data.training_programs.some((p) => p.client_id === c.id);
-      return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, ...railSpots(c.id, feedOf.get(c.id) ?? [], byId, today, isNew, ix), notSignedIn: !user || (!user.clerk_user_id && (user.must_change_password || !user.password_hash)) };
+      return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, ...railSpots(c.id, feedOf.get(c.id) ?? [], byId, isNew, ix), notSignedIn: !user || (!user.clerk_user_id && (user.must_change_password || !user.password_hash)) };
     });
   });
   return sub("coach", () => {
@@ -984,7 +1002,15 @@ export function loadMeetings(clientId: number): DraftMeetings {
     else status = goal.done ? "done" : "";
     return { id: goal.id, text: goal.text, tone: view.tone, status, def: tracking, done: goal.done, meetingId: goal.meeting_id ?? null };
   });
-  const withGoals = (m: (typeof data.past)[number]): DraftMeeting => ({ ...m, goals: goals.filter((g) => g.meetingId === m.id) });
+  // A call over and not marked completed (2 Nov, Alex): to complete for a week after it ends, then let go (callToComplete).
+  const raw = new Map(listMeetings(clientId).map((m) => [m.id, m] as const));
+  const now = Date.now();
+  const dismissed = getData().clients.find((c) => c.id === clientId)?.coach_dismissed ?? {};
+  const withGoals = (m: (typeof data.past)[number]): DraftMeeting => {
+    const r = raw.get(m.id);
+    // Let go in the Feed (its round check): no longer owed here either.
+    return { ...m, goals: goals.filter((g) => g.meetingId === m.id), over: !!r && callOver(r, now), toComplete: !!r && callToComplete(r, now) && !dismissed[`complete-${m.id}`] };
+  };
   return {
     today,
     request: data.request,
@@ -1058,7 +1084,7 @@ const NO_REPLY = new Set(["no-phase", "week", "program-ending", "locked"]);
 export function needView(clientId: number, a: HomeAction, byId: Map<string, FeedEvent>): NeedView {
   const ev = a.eventId ? byId.get(a.eventId) : undefined;
   const open = a.href ?? (ev ? feedHref(ev) : null) ?? `/admin/redesign/${a.tab ? NEED_TAB_ROUTE[a.tab] ?? a.tab : "home"}?client=${clientId}`;
-  if (NO_REPLY.has(a.id)) return { ...a, open, reply: null };
+  if (NO_REPLY.has(a.id) || a.id.startsWith("complete-")) return { ...a, open, reply: null };
   const area = NEED_AREA[a.tab ?? ""] ?? "Chat";
   // An unanswered message: the chat, at it.
   const msg = /^reply-(\d+)$/.exec(a.id);

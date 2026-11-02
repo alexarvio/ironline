@@ -24,6 +24,7 @@ import PhonePreview, { SCREEN_FOR_TAB } from "./PhonePreview";
 import type { PhoneScreen } from "../../client/AppShell";
 import type { DraftInvoices, RailData } from "./loaders";
 import type { DotTab, DotTrail } from "./dots";
+import { TodoContext } from "./TodoStrip";
 import { useCloseOnEmptyClick } from "./useCloseOnEmptyClick";
 
 // The redesign drafts on one page: the rail on the left, and Training,
@@ -306,9 +307,12 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   const noMacros = (m: { protein: number | null; carbs: number | null; fats: number | null }) => m.protein == null && m.carbs == null && m.fats == null;
   const nutritionBlank = !hasPhase("nutrition") && noMacros(nutrition.training) && noMacros(nutrition.rest) && nutrition.waterL == null && !nutrition.note.trim() && nutrition.supplements.length === 0 && nutrition.logged.days.length === 0;
   // A metric line with no phase and nothing logged is no lifestyle set up (22 Oct, Alex: "has to be completely empty").
-  const measurementsBlank = !hasPhase("lifestyle") && measurements.daily.periods.length === 0 && measurements.weekly.periods.length === 0 && (measurements.monthly?.periods.length ?? 0) === 0 && measurements.notes.length === 0;
+  // The to-do strip's rows (2 Nov, TodoStrip.tsx), one object per read of the page.
+  const todoValue = useMemo(() => ({ clientId, items: dots.todo ?? [] }), [clientId, dots.todo]);
+  const measurementsBlank =!hasPhase("lifestyle") && measurements.daily.periods.length === 0 && measurements.weekly.periods.length === 0 && (measurements.monthly?.periods.length ?? 0) === 0 && measurements.notes.length === 0;
   return (
     <OpenChatContext.Provider value={openChat}>
+    <TodoContext.Provider value={todoValue}>
     <div className="rd-frame" data-chat={chat.open ? "open" : undefined}>
       <RedesignRail rail={rail} clientId={clientId} />
       <div className="rd-page">
@@ -408,6 +412,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
       )}
       <Toaster />
     </div>
+    </TodoContext.Provider>
     </OpenChatContext.Provider>
   );
 }
