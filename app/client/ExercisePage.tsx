@@ -7,6 +7,7 @@ import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel 
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
 import { CoachNote, shownName, type SessionExercise } from "./workoutShared";
+import { isAssisted } from "../lib/progressRules";
 import CoachSays from "./CoachSays";
 import { Bars } from "./Bars";
 import RingEdge from "../components/RingEdge";
@@ -397,7 +398,7 @@ export default function ExercisePage({
     const plan = row.plan[field === "weight" ? "weightKg" : field];
     if (field === "weight") {
       const baseKg = have ?? plan ?? 0;
-      const shown = have != null ? kgToDisplay(baseKg, unit) : plan != null ? planToDisplay(baseKg, unit) : 0;
+      const shown = have != null ? kgToDisplay(baseKg, unit) : plan != null ? planShown(row, baseKg) : 0;
       const next = Math.max(0, Math.min(9999, shown + dir * stepFor(unit)));
       applyRow(row, { weightKg: displayToKg(next, unit) });
     } else if (field === "reps") {
@@ -512,13 +513,17 @@ export default function ExercisePage({
     else fieldRefs.current[`${row.id}:${field}`]?.blur();
   };
 
+  // A plan's weight as shown (2 Nov): one that was lifted (last time's, a warm-up's, a set before it) shows as it
+  // was logged; only the coach's own target is the clean lbs figure. So taking it, or stepping from it, starts from
+  // the figure last time really was, and the change on last time reads true.
+  const planShown = (row: Row, kg: number) => (row.kind === "work" && lastOf(row.n)?.weight == null && kg === planWeight ? planToDisplay(kg, unit) : kgToDisplay(kg, unit));
   // ---- What a row shows: entered in ink, else the plan in grey.
-  const shownOf = (row: Row, field: Field): { text: string; ghost: boolean; value: number | null } => {
+  const shownOf =(row: Row, field: Field): { text: string; ghost: boolean; value: number | null } => {
     const key = field === "weight" ? "weightKg" : field;
     const have = row.entered[key];
     const plan = row.plan[key];
     if (have != null) return { text: field === "weight" ? fmtWeight(kgToDisplay(have, unit)) : String(have), ghost: false, value: have };
-    if (plan != null) return { text: field === "weight" ? fmtWeight(planToDisplay(plan, unit)) : String(plan), ghost: true, value: plan };
+    if (plan != null) return { text: field === "weight" ? fmtWeight(planShown(row, plan)) : String(plan), ghost: true, value: plan };
     return { text: "–", ghost: true, value: null };
   };
   const summary = (row: Row) => {
@@ -526,6 +531,22 @@ export default function ExercisePage({
     const r = shownOf(row, "reps");
     return askWeight || row.kind === "warm" ? `${w.text} ${uLabel} × ${r.text}` : `${r.text} reps`;
   };
+  // Against last time (2 Nov, Alex: "if I add 80 kg and I had 75 in the previous session… +5 kg"): a work set's
+  // weight and reps as typed, less the same set last time (the same lift), in the exercise's unit; nothing the same.
+  const deltaOf = (row: Row): { weight: number | null; reps: number | null } => {
+    // A set held on the far-off question shows no change until it is answered: it may be a slip.
+    const then = row.kind === "work" && doubt?.n !== row.n ? lastOf(row.n) : null;
+    if (!then) return { weight: null, reps: null };
+    const w = row.entered.weightKg;
+    const r = row.entered.reps;
+    const dw = askWeight && w != null && then.weight != null ? Math.round((kgToDisplay(w, unit) - kgToDisplay(then.weight, unit)) * 100) / 100 : null;
+    const dr = r != null && then.reps != null ? r - then.reps : null;
+    return { weight: dw ? dw : null, reps: dr ? dr : null };
+  };
+  // An assisted lift reads the other way (more weight is more help): its weight going up is rust.
+  const assisted = exercise.assisted ?? isAssisted(shownName(exercise));
+  const weightTone = (d: number) => ((d > 0) !== assisted ? "up" : "down");
+  const signed = (d: number) => `${d > 0 ? "+" : "−"}${fmtWeight(Math.abs(d))}`;
   // The same, laid out (13 Oct): the weight in a right-aligned column, so "kg ×" lines up down the card.
   const summaryCells = (row: Row) => {
     const w = shownOf(row, "weight");
@@ -538,6 +559,18 @@ export default function ExercisePage({
         <span className="lw-row-x">×</span>
         <span className="lw-row-r">{r.text}</span>
       </>
+    );
+  };
+  // A done set's change on last time, beside its figures (never inside them, so it is never cut off): the weight
+  // over the reps when both changed.
+  const rowDelta = (row: Row) => {
+    const d = row.saved ? deltaOf(row) : { weight: null, reps: null };
+    if (d.weight == null && d.reps == null) return null;
+    return (
+      <span className="lw-row-delta">
+        {d.weight != null && <span className={weightTone(d.weight)}>{signed(d.weight)} {uLabel}</span>}
+        {d.reps != null && <span className={d.reps > 0 ? "up" : "down"}>{signed(d.reps)} {Math.abs(d.reps) === 1 ? "rep" : "reps"}</span>}
+      </span>
     );
   };
 
@@ -684,6 +717,7 @@ export default function ExercisePage({
                     <RingEdge size={36} stroke={row.saved ? 1.5 : 1} />
                   </span>
                   <span className="lw-row-sum">{summaryCells(row)}</span>
+                  {rowDelta(row)}
                   {/* The RPE slot is always there, empty on a warm-up, so the numbers line up down the card. */}
                   {askRpe && <span className="lw-row-rpe">{row.kind === "work" && rpe.value != null && (!rpe.ghost || !row.saved) ? `RPE ${rpe.text}` : ""}</span>}
                 </button>
@@ -725,8 +759,8 @@ export default function ExercisePage({
                 </div>
                 {/* Weight and reps side by side (14 Oct): the figure big, its label under it, − and + below. */}
                 <div className="lw-fields">
-                {(askWeight || row.kind === "warm") && <Stepper row={row} field="weight" label={uLabel.toUpperCase()} shown={shownOf(row, "weight")} onStep={(d) => step(row, "weight", d)} onTyped={(t) => typed(row, "weight", t)} ariaUnit={unit === "kg" ? "kilograms" : "pounds"} inputRef={(el) => (fieldRefs.current[`${row.id}:weight`] = el)} hasNext={nextField(row, "weight") != null} onNext={() => focusNext(row, "weight")} />}
-                <Stepper row={row} field="reps" label="REPS" shown={shownOf(row, "reps")} onStep={(d) => step(row, "reps", d)} onTyped={(t) => typed(row, "reps", t)} ariaUnit="reps" inputRef={(el) => (fieldRefs.current[`${row.id}:reps`] = el)} hasNext={nextField(row, "reps") != null} onNext={() => focusNext(row, "reps")} />
+                {(askWeight || row.kind === "warm") && <Stepper row={row} field="weight" label={uLabel.toUpperCase()} shown={shownOf(row, "weight")} delta={deltaOf(row).weight} tone={weightTone} onStep={(d) => step(row, "weight", d)} onTyped={(t) => typed(row, "weight", t)} ariaUnit={unit === "kg" ? "kilograms" : "pounds"} inputRef={(el) => (fieldRefs.current[`${row.id}:weight`] = el)} hasNext={nextField(row, "weight") != null} onNext={() => focusNext(row, "weight")} />}
+                <Stepper row={row} field="reps" label="REPS" shown={shownOf(row, "reps")} delta={deltaOf(row).reps} onStep={(d) => step(row, "reps", d)} onTyped={(t) => typed(row, "reps", t)} ariaUnit="reps" inputRef={(el) => (fieldRefs.current[`${row.id}:reps`] = el)} hasNext={nextField(row, "reps") != null} onNext={() => focusNext(row, "reps")} />
                 </div>
                 {/* Far off what this exercise is (27 Oct, Alex): asked here, the set saved only once answered. */}
                 {doubt?.n === row.n && row.kind === "work" && (() => {
@@ -895,6 +929,8 @@ function Stepper({
   field,
   label,
   shown,
+  delta = null,
+  tone = (d: number) => (d > 0 ? "up" : "down"),
   small = false,
   onStep,
   onTyped,
@@ -907,6 +943,9 @@ function Stepper({
   field: Field;
   label: string;
   shown: { text: string; ghost: boolean; value: number | null };
+  /** The change on last time's same set, shown at the figure's top right while it holds what was typed. */
+  delta?: number | null;
+  tone?: (d: number) => "up" | "down";
   small?: boolean;
   onStep: (dir: 1 | -1) => void;
   onTyped: (text: string) => void;
@@ -968,6 +1007,16 @@ function Stepper({
         <span className="lw-num-label" aria-hidden="true">
           {label}
         </span>
+        {/* At the figure's own top right, not the box's: an unseen copy of the figure sets where it ends. */}
+        {delta != null && draft == null && !shown.ghost && (
+          <span className={`lw-num lw-num-mirror${size}`} aria-hidden="true">
+            {text}
+            <span className={`lw-num-delta ${tone(delta)}`}>
+              {delta > 0 ? "+" : "−"}
+              {fmtWeight(Math.abs(delta))}
+            </span>
+          </span>
+        )}
       </label>
     </div>
   );

@@ -58,6 +58,8 @@ export type SessionExercise = {
   gymNotes?: Record<number, string>;
   /** The sets from the last time the client did this exercise. */
   lastSets: { date: string; sets: LastSet[] } | null;
+  /** An assisted lift (its library exercise or variation says so): more weight is more help. */
+  assisted?: boolean;
   /** The last few sessions of it, most recent first. */
   history: HistoryEntry[];
 };

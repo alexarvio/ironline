@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workout targets options</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --faint:#8b93a1; --label:#5b6474; --line:#E1E5EB; --page:#F5F6F8; --green:#2f7a3f; --rust:#b8471f; --indigo:#3a3390; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: #e9ebef; font-family: Archivo, system-ui, sans-serif; color: var(--ink); }
+  h1 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+  .lead { margin: 0 0 20px; font-size: 13px; font-weight: 500; color: var(--label); }
+  .opts { display: flex; flex-wrap: wrap; gap: 20px; }
+  .opt { width: 360px; max-width: 100%; }
+  .opt h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  .opt p.how { margin: 0 0 10px; font-size: 12.5px; font-weight: 500; color: var(--label); line-height: 1.4; min-height: 52px; }
+  .phone { background: var(--page); border-radius: 28px; padding: 22px 20px 24px; box-shadow: inset 0 0 0 1px var(--line); }
+  .bar { display: flex; gap: 6px; margin-bottom: 18px; }
+  .bar i { flex: 1; height: 2px; border-radius: 2px; background: var(--line); }
+  .bar i:first-child { background: var(--indigo); }
+  .eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--label); }
+  .eyebrow b { color: var(--indigo); font-weight: 600; }
+  .sep { display: inline-block; width: 1px; height: .8em; margin: 0 9px; background: #C9CFD8; vertical-align: -1px; }
+  .title { font-size: 26px; font-weight: 600; letter-spacing: -.01em; margin: 6px 0 4px; }
+  .next { font-size: 13px; font-weight: 500; color: var(--faint); margin-bottom: 22px; }
+
+  /* The sets under each option, the same in all four, so only the targets differ. */
+  .sets-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 6px; }
+  .cap { display: inline-flex; padding: 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); font-size: 12px; font-weight: 600; }
+  .cap span { padding: 6px 14px; border-radius: 999px; color: var(--label); }
+  .cap span.on { background: var(--ink); color: #fff; }
+  .sets { position: relative; }
+  .sets::before { content: ""; position: absolute; left: 20px; top: 0; bottom: 0; border-left: 1px solid var(--line); }
+  .set { position: relative; display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 6px; }
+  .ring { width: 28px; height: 28px; border-radius: 50%; background: var(--page); box-shadow: inset 0 0 0 1.5px var(--green); display: flex; align-items: center; justify-content: center; }
+  .ring svg { width: 14px; height: 14px; stroke: var(--green); stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .ring.todo { box-shadow: inset 0 0 0 1px #C9CFD8; font-size: 12px; font-weight: 500; color: var(--faint); }
+  .sum { display: flex; align-items: baseline; gap: 7px; font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .sum .dim { opacity: .6; }
+  .sum .u { font-size: 12px; color: var(--faint); }
+  .sum .r { min-width: 3ch; }
+  .d { align-self: flex-start; margin-top: 9px; display: inline-flex; gap: 8px; font-size: 11px; font-weight: 600; line-height: 1; }
+  .up { color: var(--green); } .down { color: var(--rust); }
+  .set.todo .sum { color: var(--faint); }
+
+  /* A: label over figure, three columns parted by the drawn bar. */
+  .a { display: flex; margin: 0 0 24px; }
+  .a > div { flex: 1; padding-left: 14px; border-left: 1px solid var(--line); }
+  .a > div:first-child { padding-left: 0; border-left: 0; }
+  .a .k { font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+  .a .v { margin-top: 6px; font-size: 30px; font-weight: 300; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .a .v small { font-size: 13px; font-weight: 500; color: var(--faint); letter-spacing: 0; margin-left: 3px; }
+
+  /* B: Alex's words: Targets, a line under it, then every target on its own row. */
+  .b { margin: 0 0 24px; }
+  .b .eyebrow { display: block; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .b .row { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0 0; font-size: 15px; font-weight: 500; }
+  .b .row span:first-child { color: var(--label); }
+  .b .row span:last-child { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* C: the set's own language: big light numerals with their label under, as the open set types them. */
+  .c { margin: 0 0 24px; }
+  .c .figs { display: flex; align-items: flex-end; gap: 22px; margin-top: 10px; }
+  .c .fig .v { font-size: 40px; font-weight: 300; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .c .fig .k { margin-top: 6px; font-size: 9.5px; font-weight: 600; letter-spacing: .14em; color: #98A2B3; }
+  .c .x { font-size: 20px; font-weight: 300; color: var(--faint); padding-bottom: 20px; margin: 0 -10px; }
+
+  /* D: target and last time side by side, so the deltas under have their reference above. */
+  .dd { margin: 0 0 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .dd > div { padding-left: 14px; border-left: 1px solid var(--line); }
+  .dd > div:first-child { padding-left: 0; border-left: 0; }
+  .dd .v { margin-top: 8px; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .dd .v small { font-size: 13px; font-weight: 500; color: var(--faint); }
+  .dd .s { margin-top: 4px; font-size: 12px; font-weight: 500; color: var(--faint); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<h1>Workout targets</h1>
+<p class="lead">Four ways to show the coach's targets over the sets. The sets under each are the same, with the new change on last time at their top right (built on your localhost).</p>
+
+<div class="opts">
+
+  <div class="opt">
+    <h2>A · Spec columns</h2>
+    <p class="how">Each target its own column: the label small over a big light figure, parted by thin uprights. Reads at a glance mid-set.</p>
+    <div class="phone">
+      <div class="bar"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="eyebrow"><b>Push 1</b><span class="sep"></span>Exercise 1 of 5</div>
+      <div class="title">Cable Side Raise</div>
+      <div class="next">Next up<span class="sep"></span>Barbell Bench Press</div>
+      <div class="a">
+        <div><div class="k">Sets</div><div class="v">3</div></div>
+        <div><div class="k">Reps</div><div class="v">6–8</div></div>
+        <div><div class="k">Weight</div><div class="v">12.5<small>kg</small></div></div>
+      </div>
+      <!--SETS-->
+    </div>
+  </div>
+
+  <div class="opt">
+    <h2>B · Targets, a line, each on a row</h2>
+    <p class="how">As you described it. Note: the rules say no line under a heading (28 Oct); here the line parts the label from a list, so it may earn its place.</p>
+    <div class="phone">
+      <div class="bar"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="eyebrow"><b>Push 1</b><span class="sep"></span>Exercise 1 of 5</div>
+      <div class="title">Cable Side Raise</div>
+      <div class="next">Next up<span class="sep"></span>Barbell Bench Press</div>
+      <div class="b">
+        <span class="eyebrow">Targets</span>
+        <div class="row"><span>Sets</span><span>3</span></div>
+        <div class="row"><span>Reps</span><span>6–8</span></div>
+        <div class="row"><span>Weight</span><span>12.5 kg</span></div>
+        <div class="row"><span>Rest</span><span>90 s</span></div>
+      </div>
+      <!--SETS-->
+    </div>
+  </div>
+
+  <div class="opt">
+    <h2>C · The set's own numerals</h2>
+    <p class="how">Big light figures with their label under, the way the open set is typed, so target and set speak one language.</p>
+    <div class="phone">
+      <div class="bar"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="eyebrow"><b>Push 1</b><span class="sep"></span>Exercise 1 of 5</div>
+      <div class="title">Cable Side Raise</div>
+      <div class="next">Next up<span class="sep"></span>Barbell Bench Press</div>
+      <div class="c">
+        <span class="eyebrow">Target</span>
+        <div class="figs">
+          <div class="fig"><div class="v">3</div><div class="k">SETS</div></div>
+          <div class="x">×</div>
+          <div class="fig"><div class="v">6–8</div><div class="k">REPS</div></div>
+          <div class="fig"><div class="v">12.5</div><div class="k">KG</div></div>
+        </div>
+      </div>
+      <!--SETS-->
+    </div>
+  </div>
+
+  <div class="opt">
+    <h2>D · Target beside last time</h2>
+    <p class="how">The coach's target on the left, what you did last time on the right, so the +/− on the sets has its reference right above.</p>
+    <div class="phone">
+      <div class="bar"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="eyebrow"><b>Push 1</b><span class="sep"></span>Exercise 1 of 5</div>
+      <div class="title">Cable Side Raise</div>
+      <div class="next">Next up<span class="sep"></span>Barbell Bench Press</div>
+      <div class="dd">
+        <div><span class="eyebrow">Target</span><div class="v">3 × 6–8</div><div class="s">12.5 kg</div></div>
+        <div><span class="eyebrow">Last time</span><div class="v">9.5 <small>kg</small></div><div class="s">9<span class="sep"></span>8<span class="sep"></span>7 reps</div></div>
+      </div>
+      <!--SETS-->
+    </div>
+  </div>
+
+</div>
+
+<template id="sets">
+  <div class="sets-head"><span class="eyebrow">Sets 2/3</span><span class="cap"><span class="on">KG</span><span>LBS</span></span></div>
+  <div class="sets">
+    <div class="set"><span class="ring"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span class="sum"><span class="dim">10.5</span><span class="u">kg</span><span class="dim">×</span><span class="r dim">9</span><span class="d"><span class="up">+1 kg</span></span></span></div>
+    <div class="set"><span class="ring"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span class="sum"><span class="dim">10.5</span><span class="u">kg</span><span class="dim">×</span><span class="r dim">6</span><span class="d"><span class="up">+1 kg</span><span class="down">−2 reps</span></span></span></div>
+    <div class="set todo"><span class="ring todo">3</span><span class="sum"><span>9.5</span><span class="u">kg</span><span>×</span><span class="r">7</span></span></div>
+  </div>
+</template>
+<script>
+  const t = document.getElementById("sets").innerHTML;
+  document.querySelectorAll(".phone").forEach((p) => (p.innerHTML = p.innerHTML.replace("<!--SETS-->", t)));
+</script>
+</body>
+</html>
