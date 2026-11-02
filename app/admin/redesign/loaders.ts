@@ -8,6 +8,7 @@ import type { PlanChoice } from "../../lib/planText";
 import { meetingRemindersOn } from "../../lib/meetingReminders";
 import type { DotTab, DotTrail, TodoItem } from "./dots";
 import { titleParts } from "../../lib/titleParts";
+import { muscleMapFor } from "../../lib/muscleMap";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { clerkOn } from "../../lib/clerk";
@@ -517,6 +518,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     bodyKg,
     gyms,
     note: noteMeta ? { seen: noteMeta.seen, text: noteMeta.text, when: dayMonth(noteMeta.updatedAt) } : null,
+    muscleMap: sub("muscleMap", () => muscleMapFor(clientId, program.id)),
   };
   return { draft, library, cardioMoves, videos };
 }

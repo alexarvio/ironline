@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
 import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, deletePhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
+import type { MuscleMapData } from "../../../lib/muscles";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
@@ -15,6 +16,7 @@ import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
 import HelpTip from "../HelpTip";
 import RogueSessions from "./RogueSessions";
 import ClientNote from "./ClientNote";
+import MuscleMap from "./MuscleMap";
 import ApplyChangesDialog from "./ApplyChanges";
 import { previewApplySessionAction, previewApplyWeekAction } from "./applyPreview";
 import { changedWeeks } from "./applyShape";
@@ -136,6 +138,8 @@ export type DraftRogue = {
 
 export type DraftProgram = {
   id: number;
+  /** The muscle map (2 Nov, Alex; lib/muscleMap.ts): per muscle, its sets and the exercises behind them, this phase and this week's split. */
+  muscleMap?: MuscleMapData | null;
   /** The plan behind the tab (10 Oct): today, this week, every phase and programme, for the New phase dialog the Plan tab has. */
   planCtx: Pick<DraftPlan, "today" | "thisWeek" | "phases" | "programs">;
   /** Every workout ended in this programme, newest first, with its answers. */
@@ -1015,6 +1019,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         due={(index) => weekDue(dots, program.id, index)}
       />
       </div>
+
+      {/* ---- The muscle map (2 Nov, Alex): what each muscle got this phase and in this week's split, a row that opens. */}
+      {program.muscleMap && <MuscleMap data={program.muscleMap} />}
 
       {/* ---- The week's sessions. */}
       <div className="trn-weekhead">
