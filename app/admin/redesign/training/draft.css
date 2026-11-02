@@ -1435,3 +1435,15 @@ span.rd-demo { cursor: default; }
 .rd.rls .rls-none, .rd.rt .rt-none { padding-top: 16px; padding-bottom: 16px; }
 /* The card's own foot room (6px under its last row) goes when the empty word is all it holds, so the word sits midway. */
 .rd.rd .rls-card.rls-card:has(> .rls-none:only-child), .rd.rd .rls-card.rls-card:has(> .rt-none:only-child), .rd.rd .rls-card.rls-card:has(> .rp-tnone:only-child) { padding-top: 0; padding-bottom: 0; }
+/* Every row's words and marks on its true middle (2 Nov, Alex: "not centered… it makes us feel cheap"): the outline is a
+   real border, so it takes its own room rather than lying over the first row's top and the last row's foot, and the line
+   between rows is the row's own top edge, outside the room the row centres in. */
+.rd-todo { box-shadow: none; border: 1.5px solid #b8471f; }
+.rd-todo-row { box-sizing: content-box; min-height: 46px; }
+/* Measured on Archivo (2 Nov): the middle between the capitals and the small letters, which the eye reads as a line's
+   middle, sat 0.4px high in the words and 0.75px in the action; the marks need no half-pixel lift here, they meet that
+   middle as they are. Each brought onto the row's middle, within a quarter pixel. */
+.rd-todo-what, .rd-todo-words, .rd-todo-wait { translate: 0 0.4px; }
+.rd-todo-act { translate: 0 0.5px; }
+.rd-todo-mark svg, .rd-todo-act svg { translate: none; }
+.rd-todo-act svg { translate: 0 -0.25px; }
