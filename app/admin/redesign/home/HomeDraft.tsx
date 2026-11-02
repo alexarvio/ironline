@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import ClientCardEditor from "../../ClientCardEditor";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { AccountIcon, ChatIcon, MoreIcon, TrashIcon } from "../../../components/icons";
+import { AccountIcon, ChatIcon, MoreIcon, TrashIcon, WeightGoalIcon } from "../../../components/icons";
 import type { OverviewInfoRow, OverviewPanel } from "../../../lib/queries";
 // Types only: homeBoard.ts re-exports the server's reader, which must never reach the browser.
 import type { HomeBoard, MuscleGroup, MuscleWindow, PerGroup } from "../../../lib/homeBoard";
@@ -29,6 +29,9 @@ import HelpTip from "../HelpTip";
 import { TodoStrip } from "../TodoStrip";
 import type { ActivityMark } from "../../../lib/activityMark";
 import { monotoneSegments } from "../../../lib/monotoneCurve";
+// Values from weightGoal.ts are safe here: it is pure (no store, no queries).
+import { addDaysIso, currentGoal, daysBetween, GOAL_COLOR, kgIn, planKgAt, VERDICT_TONE, VERDICT_WORD, type WeightGoalView } from "../../../lib/weightGoal";
+import WeightGoalDialog from "../WeightGoalDialog";
 
 // The client's Home (21 Oct, Alex: built from the Home mockup, root "rd trn rls rh"): Training's header, then the board.
 //
@@ -297,7 +300,7 @@ export default function HomeDraft({
         <MuscleCard muscles={board.muscles} strength={board.strength} />
         <div className="rh-stack">
           <StrengthCard strength={board.strength} hasPhase={board.tracks.some((t) => t.track === "training" && t.phase != null)} />
-          <WeightCard weight={board.weight} />
+          <WeightCard weight={board.weight} goals={board.weightGoals ?? []} clientId={clientId} />
         </div>
       </div>
 
@@ -868,26 +871,101 @@ type WeightPoint = NonNullable<HomeBoard["weight"]>["points"][number];
 // and only with a phase (else 30d). The chart, its dates, scale and dots follow the window; no prediction (23 Oct,
 // Alex). A window with under two readings draws no chart, but keeps its room while another window has one, so
 // switching never moves the card.
-function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
-  const [picked, setSpan] = useState<StrengthSpan>("phase");
+function WeightCard({
+  weight,
+  goals,
+  clientId,
+}: {
+  weight: HomeBoard["weight"];
+  /** The client's weight goals by date (2 Nov, Alex): the current one in the head, all of them on the chart. */
+  goals: WeightGoalView[];
+  clientId: number;
+}) {
+  // The Goal view first while a goal runs (2 Nov, Alex: "a toggle that switches to the graph where we see the weight goal
+  // and the progress… and the line that we are tracing"): its start to its date, whatever the other windows hold.
+  const [picked, setSpan] = useState<StrengthSpan | "goal">(() => (goals.some((g) => g.active) ? "goal" : "phase"));
+  // The goal pop-up: a goal to change, or none for a new one.
+  const [goalDlg, setGoalDlg] = useState<{ goal: WeightGoalView | null } | null>(null);
   const all = weight ? [...weight.points].sort((a, b) => timeOf(a.date) - timeOf(b.date)) : [];
   const latest = weight ? (weight.now ?? all.at(-1)?.value ?? null) : null;
+  // Where a new goal starts: the last 7 days' average (as every goal reads it), else the latest reading.
+  const nowKg = (() => {
+    const known = goals.find((g) => g.nowKg != null)?.nowKg;
+    if (known != null) return known;
+    const last = all.at(-1);
+    if (!last) return latest;
+    const from = addDaysIso(last.date.slice(0, 10), -6);
+    const week = all.filter((p) => p.date.slice(0, 10) >= from);
+    return week.reduce((s, p) => s + p.value, 0) / week.length;
+  })();
+  // The head (2 Nov, Alex): the current goal's verdict as the one state pill after the title, its facts after the change
+  // under it (`82 kg by 20/12 | 5.6 kg to go`; settled, `Reached 14/12` or `Missed by 1.2 kg`), and + Goal always in the
+  // tools, so the card never changes height between windows, readings or none.
+  const cur = currentGoal(goals);
+  const verdict = cur?.verdict ? <span className={`trn-state ${VERDICT_TONE[cur.verdict]}`}>{VERDICT_WORD[cur.verdict]}</span> : null;
+  const goalParts: ReactNode[] = !cur
+    ? []
+    : cur.settled
+      ? [cur.reachedOn ? `Reached ${dayMonth(cur.reachedOn)}` : cur.missedByKg != null ? `Missed by ${kgIn(cur.missedByKg, "kg")} kg` : null]
+      : [`${kgIn(cur.targetKg, "kg")} kg by ${dayMonth(cur.byDate)}`, cur.toGoKg != null ? `${kgIn(cur.toGoKg, "kg")} kg to go` : null];
+  // One goal at a time (2 Nov, Alex: "once there is a goal take out the option of adding another one, but give the
+  // option of editing"): while one runs the pill is `Goal`, opening it; + Goal once it is reached or missed.
+  const running = cur && !cur.settled ? cur : null;
+  const addGoal = (
+    <button type="button" className="trn-pill rh-wgoal-add" onClick={() => setGoalDlg({ goal: running })}>
+      <WeightGoalIcon size={14} />
+      {running ? "Goal" : "+ Goal"}
+    </button>
+  );
+  const dialog = (
+    <Dialog open={goalDlg != null} onOpenChange={(o) => !o && setGoalDlg(null)}>
+      {goalDlg && (
+        <WeightGoalDialog
+          key={goalDlg.goal?.id ?? "new"}
+          clientId={clientId}
+          goal={goalDlg.goal}
+          unit="kg"
+          nowKg={nowKg}
+          onDone={() => setGoalDlg(null)}
+        />
+      )}
+    </Dialog>
+  );
   if (!weight || latest == null)
     return (
       <section className="rls-card rh-panel rh-weight" aria-label="Weight">
-        <div className="rh-panel-head">
+        <div className="rh-panel-head tall">
           <h2 className="rh-panel-title">Weight</h2>
+          {verdict}
+          <span className="rh-panel-tools">{addGoal}</span>
         </div>
+        {goalParts.some(Boolean) && (
+          <span className="rh-under">
+            <SepJoin parts={goalParts} />
+          </span>
+        )}
         <p className="rls-none">None yet</p>
+        {dialog}
       </section>
     );
   const hasPhase = weight.windows.phase != null;
-  const span: StrengthSpan = picked === "phase" && !hasPhase ? "30d" : picked;
-  const w = (span === "phase" ? weight.windows.phase : weight.windows[span]) ?? weight.windows["30d"];
+  const active = goals.find((g) => g.active) ?? null;
+  const span: StrengthSpan | "goal" = picked === "goal" ? (active ? "goal" : "phase") : picked === "phase" && !hasPhase ? "30d" : picked;
+  const winSpan: StrengthSpan = span === "goal" ? "30d" : span;
+  const w = (winSpan === "phase" ? weight.windows.phase : weight.windows[winSpan]) ?? weight.windows["30d"];
   const inWindow = (from: string) => all.filter((p) => p.date >= from);
-  const points = inWindow(w.from);
+  // The Goal view: the readings since the goal was set, on an axis from its start to its date.
+  const goalFrom = span === "goal" && active ? active.startDate : null;
+  const points = goalFrom ? inWindow(goalFrom) : inWindow(w.from);
   const charted = [weight.windows["7d"], weight.windows["30d"], weight.windows.phase].some((x) => x != null && inWindow(x.from).length >= 2);
-  const grid = points.length >= 2 ? weightGrid(points.map((p) => p.value)) : null;
+  // The goals over the window (2 Nov, Alex): the scale holds their weights and the plan where the chart begins, so the
+  // dashed path and every ring sit inside the frame.
+  const plan = goalFrom
+    ? goalLayout(goalFrom, all.at(-1)?.date ?? null, goals, isoToday(), true)
+    : points.length >= 2
+      ? goalLayout(points[0].date.slice(0, 10), points[points.length - 1].date, goals, isoToday())
+      : null;
+  const grid = goalFrom || points.length >= 2 ? weightGrid([...points.map((p) => p.value), ...(plan ? [...plan.segs.flatMap((s) => [s.kgA, s.kgB]), ...plan.marks.map((m) => m.kg)] : [])]) : null;
   const gridText = grid ? grid.lines.map((v) => v.toFixed(grid.decimals)) : [];
   // The gutter on the right holds the longest of the grid's kg (11px numerals, about 6.3px a character, 8px from the lines).
   const gutter = grid ? Math.max(28, Math.ceil(8 + Math.max(...gridText.map((t) => t.length)) * 6.3)) : null;
@@ -898,9 +976,11 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
         <h2 className="rh-panel-title">
           Weight <span className="rh-wnow">{kg1(latest)}</span>
         </h2>
+        {verdict}
         <span className="rh-panel-tools">
+          {addGoal}
           <span className="rd-btn-group" role="group" aria-label="Window">
-            {STRENGTH_SPANS.filter((s) => s.id !== "phase" || hasPhase).map((s) => (
+            {[...(active ? [{ id: "goal" as const, label: "Goal" }] : []), ...STRENGTH_SPANS.filter((s) => s.id !== "phase" || hasPhase)].map((s) => (
               <button key={s.id} type="button" className={span === s.id ? "on" : ""} aria-pressed={span === s.id} onClick={() => setSpan(s.id)}>
                 {s.label}
               </button>
@@ -910,21 +990,82 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
       </div>
       <span className="rh-under">
         <SepJoin
-          parts={
-            w.change != null && w.since
+          parts={[
+            // In the Goal view, the change since the goal was set (from its start, the 7-day average then).
+            ...(goalFrom && active
+              ? points.length > 0
+                ? [<b key="kg">{signed1(latest - active.startKg)} kg</b>]
+                : []
+              : w.change != null && w.since
               ? [
                   <b key="kg">{signed1(w.change)} kg</b>,
                   // The change on where the window began: the latest less the change.
                   latest - w.change !== 0 ? <b key="pct">{signed1((w.change / (latest - w.change)) * 100)}%</b> : null,
                 ]
-              : []
-          }
+              : []),
+            ...goalParts,
+          ]}
         />
       </span>
       {/* No "On pace for…" under it (23 Oct, Alex: take the prediction out). */}
-      {grid ? <WeightChart key={span} points={points} grid={grid} gridText={gridText} rhythm={weight.rhythm} /> : charted ? <div className="rh-wempty" aria-hidden="true" /> : null}
+      {grid ? (
+        <WeightChart key={span} points={points} grid={grid} gridText={gridText} rhythm={weight.rhythm} plan={plan} from={goalFrom ?? undefined} onGoal={(g) => setGoalDlg({ goal: g })} />
+      ) : charted ? (
+        <div className="rh-wempty" aria-hidden="true" />
+      ) : null}
+      {dialog}
     </section>
   );
+}
+
+/** Today in the browser, yyyy-mm-dd. */
+const isoToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+/** The goals on the Weight chart (2 Nov, Alex; option B of docs/boards/weight-goal-mockup.html), in whole days from the
+    window's first reading. Only with a goal being worked on (else the chart is as it was). The axis runs on past the last
+    reading to the active goal's date, but never further ahead of today than twice the days shown behind it: a goal
+    further out is pinned at that edge (`capped`). The dashed plan runs from the active goal's start (cut at the chart's
+    left edge) to its date, then on through each later milestone, each from its start to its date; a settled goal in
+    the window is a grey ring alone. */
+type GoalLayout = {
+  /** The chart's last day (the goal's, the cap's, or today's), and today's. */
+  endN: number;
+  todayN: number;
+  capped: boolean;
+  segs: { a: number; kgA: number; b: number; kgB: number }[];
+  marks: { goal: WeightGoalView; n: number; kg: number; kind: "active" | "later" | "settled"; pinned: boolean }[];
+};
+function goalLayout(first: string, lastReading: string | null, goals: WeightGoalView[], today: string, whole = false): GoalLayout | null {
+  const active = goals.find((g) => g.active);
+  if (!active) return null;
+  const nOf = (iso: string) => daysBetween(first, iso.slice(0, 10));
+  const todayN = Math.max(lastReading ? nOf(lastReading) : 0, nOf(today));
+  const goalN = nOf(active.byDate);
+  // The Goal view (2 Nov, Alex) shows the whole goal, start to date; the other windows cap the days ahead.
+  const cap = whole ? Infinity : todayN + 2 * Math.max(1, todayN);
+  const endN = goalN > todayN ? Math.min(goalN, cap) : todayN;
+  const capped = goalN > cap;
+  const segs: GoalLayout["segs"] = [];
+  const marks: GoalLayout["marks"] = [];
+  for (const g of goals) {
+    const gN = nOf(g.byDate);
+    if (g.settled) {
+      if (gN >= 0 && gN <= endN) marks.push({ goal: g, n: gN, kg: g.targetKg, kind: "settled", pinned: false });
+      continue;
+    }
+    const a = Math.max(0, nOf(g.startDate));
+    const b = Math.min(endN, gN);
+    if (b > a) segs.push({ a, kgA: planKgAt(g, addDaysIso(first, a)), b, kgB: planKgAt(g, addDaysIso(first, b)) });
+    if (g.active) {
+      // Pinned at the edge, the ring sits where the dashed path ends there (its pill still says the goal), so the scale
+      // never stretches to a goal months out and squashes the readings flat.
+      if (gN >= 0) marks.push({ goal: g, n: capped ? endN : gN, kg: capped ? planKgAt(g, addDaysIso(first, endN)) : g.targetKg, kind: "active", pinned: capped });
+    } else if (gN >= 0 && gN <= endN) marks.push({ goal: g, n: gN, kg: g.targetKg, kind: "later", pinned: false });
+  }
+  return { endN, todayN, capped, segs, marks };
 }
 
 /** Weight's chart, from two readings: the grid's three lines (top, middle, bottom of the plot) with their kg on the right,
@@ -933,22 +1074,44 @@ function WeightCard({ weight }: { weight: HomeBoard["weight"] }) {
     "connect the dots anyway but have a dashed line"; `missed`, by the client's rhythm). Hovering reads the nearest
     reading by its date, never a point on the line between; with focus, ← → step the readings, Home and End the ends.
     The axis runs from the window's first reading to its last, across the whole width (23 Oct, Alex). */
-function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]; grid: { lines: [number, number, number] }; gridText: string[]; rhythm: "daily" | "weekly" | "monthly" }) {
+function WeightChart({
+  points,
+  grid,
+  gridText,
+  rhythm,
+  plan,
+  from,
+  onGoal,
+}: {
+  points: WeightPoint[];
+  grid: { lines: [number, number, number] };
+  gridText: string[];
+  rhythm: "daily" | "weekly" | "monthly";
+  /** The goals over the window (goalLayout); none draws the chart as it was. */
+  plan: GoalLayout | null;
+  /** The chart's first day when it is not the first reading's: the Goal view starts on the goal's start (yyyy-mm-dd). */
+  from?: string;
+  onGoal: (goal: WeightGoalView) => void;
+}) {
   const plot = useRef<HTMLDivElement>(null);
   // The reading being read; none while the chart is only looked at.
   const [sel, setSel] = useState<number | null>(null);
   const last = points.length - 1;
   const ts = points.map((p) => timeOf(p.date));
   // From the first reading in the window (23 Oct, Alex: "20 days of 30 logged, show the full axis as 20 days"): a newer
-  // client's chart fills out day by day until it holds the window, never empty room on the left.
-  const t0 = ts[0];
+  // client's chart fills out day by day until it holds the window, never empty room on the left. The Goal view from the
+  // goal's start, readings there or not.
+  const t0 = from ? timeOf(from) : ts[0];
   // Whole days from the chart's first day: a clock change between two readings must not move anything, since the server and
   // the coach's browser can sit in different time zones (one with the change, one without) and both draw the chart.
   const dayAt = ts.map((t) => Math.round((t - t0) / DAY_MS));
-  const days = dayAt[last];
+  // With a goal being worked on (2 Nov, Alex) the chart runs on past the last reading to its date (or the cap).
+  const days = plan ? plan.endN : dayAt[last];
   const [lo, , hi] = grid.lines;
-  const xs = dayAt.map((n) => (days > 0 ? (n / days) * 100 : 0));
-  const ys = points.map((p) => ((hi - p.value) / (hi - lo)) * 100);
+  const xOf = (n: number) => (days > 0 ? (n / days) * 100 : 0);
+  const yOf = (kg: number) => ((hi - kg) / (hi - lo)) * 100;
+  const xs = dayAt.map(xOf);
+  const ys = points.map((p) => yOf(p.value));
   // The line in runs, each reading joined to the one before: solid where it came on time, dashed where weigh-ins were
   // missed between the two. A run goes on while the style does, so its corners stay joined.
   // Smooth through every reading, never past one (25 Oct, Alex: option B of the weight-line mockup; the rounded
@@ -956,10 +1119,13 @@ function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]
   // chart's too. Each stretch is drawn in its own style, a run going on while the style does.
   // One solid line all the way (25 Oct, Alex: the dashes over missed weigh-ins "look drawn… not high definition"; option C
   // of docs/boards/weight-missed-mockup.html): the missed ones are the strip under it instead.
-  const path = `M${xs[0].toFixed(2)} ${ys[0].toFixed(2)} ${monotoneSegments(xs.map((x, i) => ({ x, y: ys[i] }))).join(" ")}`;
+  // No reading yet in the Goal view: no line, the plan alone.
+  const path = xs.length ? `M${xs[0].toFixed(2)} ${ys[0].toFixed(2)} ${monotoneSegments(xs.map((x, i) => ({ x, y: ys[i] }))).join(" ")}` : "";
   const anyMissed = points.some((p) => p.missed);
   // The strip: a mark a day (a week, a month, as the client is asked to weigh in), ink when a reading came in it, pale
-  // when none did, across the chart's own days.
+  // when none did, across the chart's own days. It stops at today (2 Nov, Alex): the days to a goal are not missed, an
+  // empty room under them instead.
+  const stripEnd = plan ? plan.todayN : days;
   const strip = (() => {
     const out: { from: number; to: number; on: boolean }[] = [];
     const logged = new Set(dayAt);
@@ -969,10 +1135,10 @@ function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]
       if (rhythm === "monthly") return n - (d.getDate() - 1);
       return n;
     };
-    for (let n = 0; n <= days; ) {
+    for (let n = 0; n <= stripEnd; ) {
       const from = n;
       let to = n;
-      while (to + 1 <= days && startOf(to + 1) === startOf(from)) to++;
+      while (to + 1 <= stripEnd && startOf(to + 1) === startOf(from)) to++;
       let on = false;
       for (let k = from; k <= to; k++) if (logged.has(k)) on = true;
       out.push({ from, to, on });
@@ -982,13 +1148,19 @@ function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]
   })();
   // The dates under it: the chart's first day, the day halfway (rounded down), the last reading's (none twice).
   const midT = t0 + Math.floor(days / 2) * DAY_MS;
-  const showMid = days >= 2;
+  // With a goal: the first day, `Today` in ink at today, the goal's date (or the cap's day) at the right; no middle day.
+  // Today at the right end says so there; one too near an end to fit beside its date is left out.
+  const todayAtEnd = !!plan && plan.todayN >= days;
+  const todayX = plan ? xOf(plan.todayN) : 0;
+  const showToday = !!plan && !todayAtEnd && todayX >= 14 && todayX <= 86;
+  const showMid = !plan && days >= 2;
   const showEnd = days > 0;
+  const endT = t0 + days * DAY_MS;
 
   /** The reading whose date sits nearest the pointer. */
   const nearest = (clientX: number) => {
     const el = plot.current;
-    if (!el) return last;
+    if (!el || last < 0) return null;
     const r = el.getBoundingClientRect();
     const at = ((clientX - r.left) / Math.max(1, r.width)) * 100;
     let best = 0;
@@ -999,10 +1171,11 @@ function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]
   };
   const read = sel == null ? null : points[sel];
   const readText = read ? `${kg1(read.value)}, ${dayMonth(read.date)}` : "";
-  const label = `Weight, ${axisDay(t0)} to ${axisDay(ts[last])}: ${kg1(points[0].value)} to ${kg1(points[last].value)}, ${points.length} readings${anyMissed ? `, ${strip.filter((p) => !p.on).length} ${rhythm === "daily" ? "days" : rhythm === "weekly" ? "weeks" : "months"} without one` : ""}`;
+  const label = last < 0 ? "Weight goal, no reading since it was set" : `Weight, ${axisDay(t0)} to ${axisDay(ts[last])}: ${kg1(points[0].value)} to ${kg1(points[last].value)}, ${points.length} readings${anyMissed ? `, ${strip.filter((p) => !p.on).length} ${rhythm === "daily" ? "days" : rhythm === "weekly" ? "weeks" : "months"} without one` : ""}`;
 
   return (
     <div className="rh-wbox">
+      <div className="rh-wstage">
       <div
         className="rh-wchart"
         role="img"
@@ -1011,9 +1184,10 @@ function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]
         onPointerMove={(e) => setSel(nearest(e.clientX))}
         onPointerDown={(e) => setSel(nearest(e.clientX))}
         onPointerLeave={() => setSel(null)}
-        onFocus={() => setSel((s) => s ?? last)}
+        onFocus={() => setSel((s) => s ?? (last >= 0 ? last : null))}
         onBlur={() => setSel(null)}
         onKeyDown={(e) => {
+          if (last < 0) return;
           const at = sel ?? last;
           if (e.key === "ArrowLeft") setSel(Math.max(0, at - 1));
           else if (e.key === "ArrowRight") setSel(Math.min(last, at + 1));
@@ -1029,8 +1203,25 @@ function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]
               const y = ((hi - v) / (hi - lo)) * 100;
               return <line key={v} x1={0} x2={100} y1={y} y2={y} stroke="#e1e5eb" strokeWidth={1} vectorEffect="non-scaling-stroke" shapeRendering="crispEdges" />;
             })}
-            <path d={path} fill="none" stroke="#141a24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {/* The planned path to the goals (2 Nov, Alex), dashed in the goal's beige, under the readings. */}
+            {plan && plan.segs.length > 0 && (
+              <path
+                d={plan.segs.map((s) => `M${xOf(s.a).toFixed(2)} ${yOf(s.kgA).toFixed(2)} L${xOf(s.b).toFixed(2)} ${yOf(s.kgB).toFixed(2)}`).join(" ")}
+                fill="none"
+                stroke={GOAL_COLOR}
+                strokeOpacity={0.55}
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                vectorEffect="non-scaling-stroke"
+              />
+            )}
+            {/* With a goal the weight line is the goal's gold too (2 Nov, Alex: "have this line that represents the movement of
+                the weight also in the same color"); else ink, as it was. */}
+            <path d={path} fill="none" stroke={plan ? GOAL_COLOR : "#141a24"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>
+          {plan && !todayAtEnd && <span className="rh-wtoday" style={{ left: `${todayX}%` }} aria-hidden="true" />}
+          {/* Where they stand (2 Nov, Alex): the latest weigh-in a gold dot, pulsing, on the line. */}
+          {plan && last >= 0 && sel == null && <span className="rh-wnowdot" style={{ left: `${xs[last]}%`, top: `${ys[last]}%` }} aria-hidden="true" />}
           {grid.lines.map((v, i) => (
             <span key={v} className="rh-wgrid" style={{ top: `${((hi - v) / (hi - lo)) * 100}%` }} aria-hidden="true">
               {gridText[i]}
@@ -1050,17 +1241,59 @@ function WeightChart({ points, grid, gridText, rhythm }: { points: WeightPoint[]
           )}
         </div>
       </div>
+      {/* The goals' rings (2 Nov, Alex), over the chart and outside its role="img" box so they can be clicked and reached:
+          placed spans, never svg circles (the plot stretches). The goal being worked on in beige with its weight beside
+          it, later milestones the same fainter, settled ones grey; pinned at the right edge when its date is past the
+          cap, its weight and date in a white pill. A click opens the goal. */}
+      {plan && plan.marks.length > 0 && (
+        <div className="rh-wgoals">
+          {plan.marks.map((m) => {
+            const x = xOf(m.n);
+            const y = yOf(m.kg);
+            const what = `${kgIn(m.goal.targetKg, "kg")} kg`;
+            const side = `${x < 30 ? "right" : ""} ${y < 30 ? "below" : ""}`;
+            return (
+              <span key={m.goal.id}>
+                <button
+                  type="button"
+                  className={`rh-wgoal ${m.kind}`}
+                  style={{ left: `${x}%`, top: `${y}%` }}
+                  aria-label={`Weight goal ${what} by ${dayMonth(m.goal.byDate)}${m.goal.verdict ? `, ${VERDICT_WORD[m.goal.verdict]}` : ""}`}
+                  onClick={() => onGoal(m.goal)}
+                />
+                {m.pinned ? (
+                  <span className={`rh-wgoal-pill ${side}`} style={{ left: `${x}%`, top: `${y}%` }} aria-hidden="true">
+                    <SepJoin parts={[what, <span key="d" className="rh-wtip-day">{dayMonth(m.goal.byDate)}</span>]} />
+                  </span>
+                ) : m.kind !== "settled" ? (
+                  <span className={`rh-wgoal-lbl ${m.kind} ${side}`} style={{ left: `${x}%`, top: `${y}%` }} aria-hidden="true">
+                    {what}
+                  </span>
+                ) : null}
+              </span>
+            );
+          })}
+        </div>
+      )}
+      </div>
       <div className="rh-wstrip" aria-hidden="true">
         {strip.map((p) => (
           // Each mark centred on its days (25 Oct, Alex: "the dot always centred" with the bar): half a day either side of
           // them, so the first and last are half as wide and a reading's dot sits over the middle of its mark.
           <i key={p.from} className={p.on ? "" : "miss"} style={{ flexGrow: Math.min(days, p.to + 0.5) - Math.max(0, p.from - 0.5) }} />
         ))}
+        {/* The days ahead to a goal: room, not marks. */}
+        {stripEnd + 0.5 < days && <b className="rh-wstrip-ahead" style={{ flexGrow: days - (stripEnd + 0.5) }} />}
       </div>
       <div className="rh-waxis" aria-hidden="true">
         <span>{axisDay(t0)}</span>
         {showMid && <span className="mid">{axisDay(midT)}</span>}
-        {showEnd && <span className="end">{axisDay(ts[last])}</span>}
+        {showToday && (
+          <span className="today" style={{ left: `${todayX}%` }}>
+            Today
+          </span>
+        )}
+        {showEnd && <span className={`end${todayAtEnd ? " today" : ""}`}>{todayAtEnd ? "Today" : axisDay(plan ? endT : ts[last])}</span>}
       </div>
       {/* Outside the role="img" box, whose children a screen reader skips. */}
       <span className="sr-only" aria-live="polite">

@@ -332,14 +332,12 @@ function needFrom(ctx: Ctx, c: ClientData, a: HomeAction): NeedRow | null {
     const r = (ctx.data.meeting_requests ?? []).find((x) => x.id === Number(ask[1]));
     return { ...base, kind: "ask-call", what: "Asked for a call", words: r?.about?.trim() || null, since: iso(a.at), action: "Book", href: open };
   }
-  // A call over and not marked completed (2 Nov, Alex): its title, then Complete, landing on the call.
-  if (/^complete-\d+$/.test(a.id)) {
-    return { ...base, kind: "complete-call", what: a.detail ? `${a.detail} to complete` : "Call to complete", words: null, since: iso(a.at), action: "Complete", href: open };
-  }
-  // A track with nothing live, or a live phase with nothing in it (2 Nov, Alex): standing, so no wait.
-  if (/^(track|empty)-/.test(a.id)) {
-    return { ...base, kind: "phase", what: a.title, words: null, since: null, action: a.id.startsWith("track-") ? "Open" : "Fill in", href: open };
-  }
+  // A call over and not marked completed is not on the Feed (2 Nov, Alex: "unnecessary and bulky"): it stays on the
+  // client's Meetings tab, its strip and its dot.
+  if (/^complete-\d+$/.test(a.id)) return null;
+  // A phase missing, still a draft, or live with nothing in it is not the Feed's (2 Nov, Alex: "anything phases related out
+  // of the feed… keep it in phases"): the Phases screen lists them (loadPhaseNeeds), the rail counts them on its Phases row.
+  if (/^(track|empty)-/.test(a.id)) return null;
   if (a.id.startsWith("read-")) {
     // The thing in the store's words, its first part: "Couldn't do Session 3", "Wrote a note on Hypertrophy".
     const what = (parts(a.title)[0] ?? a.title).replace(/\s*\(Week \d+\)$/, "");

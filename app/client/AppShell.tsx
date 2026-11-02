@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransi
 import { useRouter } from "next/navigation";
 import { markCoachNotesReadAction, markNotificationReadAction } from "../lib/actions";
 import type { NotificationCategory } from "../lib/notificationTypes";
+import { goalItemId } from "../lib/weightGoal";
 import { logoutAction } from "../lib/auth-actions";
 import { NorCoachLogo } from "../components/NorCoachLogo";
 import { BellIcon, CalendarIcon, CameraIcon, ChevronLeftIcon, GearIcon, MenuIcon, ChatIcon, ReceiptIcon } from "../components/icons";
@@ -405,6 +406,8 @@ export default function AppShell({
       if (link && !link.gone) openLink(link);
       else if (actionTab === "chat" || actionTab === "video") openMessages();
       else if (category === "event_added" || category === "event_changed") openEventsAt?.(actionRef ?? undefined);
+      // A weight goal (2 Nov, Alex): the Events screen on the goal's row, as a tap in the list does.
+      else if (category === "weight_goal") openEventsAt?.(actionRef != null ? goalItemId(actionRef) : undefined);
       else if (category === "meeting_booked" || category === "meeting_changed" || category === "meeting_notes") openMeetingsAt?.(actionRef ?? undefined);
       else if (category === "checkin_comment") openCheckIn("daily");
       else if (actionTab) goToTab(actionTab, actionTab === "training" ? undefined : actionRef ?? undefined);

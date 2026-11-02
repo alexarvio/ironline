@@ -395,6 +395,8 @@ import { FEATURES } from "./features";
 import { clearPhotoOpenSheet, getPhotoCadence, getPhotoOpenPeriod, getPhotoInstructions, getPhotoStartDate, listActivePhotoSlots, listPhotoSlots, listPhotoUploads, photoSheetFor, photoSheetForClient, resetPhotoOpenSheet } from "./queries";
 import { dayMonth } from "./dayMonth";
 import { isTimezone, SERVER_TZ, tzShort, zonedToUtc } from "./timezones";
+import { askedWeightUnit, removeWeightGoal, saveWeightGoal, type WeightGoalFields, type WeightGoalRefusal } from "./queries";
+import { goalWeightText } from "./weightGoal";
 import { inZone } from "./viewZone";
 import type { ReportSectionType } from "./reportSectionTypes";
 import { clientPlanId, clientPlanSeries } from "./coachPlans";
@@ -2505,6 +2507,35 @@ export async function deleteClientEventAction(clientId: number, eventId: number)
   deleteClientEvent(Number(clientId), Number(eventId));
   revalidatePath("/admin");
 }
+
+// ---- Weight goals (2 Nov, Alex): a weight by a date; the coach sets any, the client their own. A save answers with
+// the goal's id, or why it could not be saved, for the screen to say.
+export type WeightGoalSaved = { id: number } | { error: WeightGoalRefusal };
+// The client reads dates as words, `20 Sep` as everywhere in their app (never the locale's `Sept`).
+const GOAL_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const goalWords = (clientId: number, kg: number, byDate: string) => `${goalWeightText(kg, askedWeightUnit(clientId))} by ${Number(byDate.slice(8, 10))} ${GOAL_MONTHS[Number(byDate.slice(5, 7)) - 1]}`;
+
+export async function saveWeightGoalAction(clientId: number, v: WeightGoalFields, goalId?: number): Promise<WeightGoalSaved | null> {
+  const coach = await coachForClient(Number(clientId));
+  if (!coach) return null;
+  const row = saveWeightGoal(Number(clientId), v, { who: "coach", userId: coach.id }, goalId == null ? undefined : Number(goalId));
+  if (typeof row === "string") return { error: row };
+  // The client hears of it, landing on the goal (a new one rings; a change rewrites today's note).
+  noteChange(Number(clientId), `${goalId == null ? "Set a weight goal" : "Changed your weight goal"}: ${goalWords(Number(clientId), row.target_kg, row.by_date)}`, { tab: "home", label: "See it", key: `weight-goal:${row.id}`, ref: row.id, push: goalId == null, replace: true });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return { id: row.id };
+}
+
+export async function deleteWeightGoalAction(clientId: number, goalId: number) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  removeWeightGoal(Number(clientId), Number(goalId));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// The client sees their goals and where they stand, and sets none (2 Nov, Alex: "only coaches are able to add, edit
+// and delete weight goals"): there is no client action for them.
 
 /** A category of the coach's own; answers with its id as the events store it ("c12"). */
 // The client's own events, from their Home (7 Oct): added as theirs, and only

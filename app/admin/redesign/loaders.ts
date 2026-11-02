@@ -7,6 +7,7 @@ import { getData, type InvoiceTemplate, type PhaseTrack } from "../../lib/db";
 import type { PlanChoice } from "../../lib/planText";
 import { meetingRemindersOn } from "../../lib/meetingReminders";
 import type { DotTab, DotTrail, TodoItem } from "./dots";
+import type { NeedRow } from "../../lib/feedBoard";
 import { titleParts } from "../../lib/titleParts";
 import { muscleMapFor } from "../../lib/muscleMap";
 import { getUserForClient, isOwner } from "../../lib/auth";
@@ -93,6 +94,8 @@ import {
   freeSessionsIn,
   laterSameSlotSessionsIn,
   getPlanPhases,
+  getWeightGoalViews,
+  goalStartKg,
 } from "../../lib/queries";
 import { isAssisted } from "../../lib/progressRules";
 import { phaseCovers, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
@@ -606,10 +609,14 @@ export type RailSpot = { screen: string; href: string; count: number };
 /** spots: the screens needing the coach, in the Feed's order; total: how many things across them, the rail's number
  *  (22 Oct, Alex: a number by the name, its screens in a list under it, nothing more said in the rail). A client with no
  *  phase or programme set yet, any state, counts one on Plan. */
-export type RailClient = { id: number; name: string; avatarPath: string | null; spots: RailSpot[]; total: number; /** total without a new client's set-up: what the Feed's Needs you lists for them. */ owed: number; notSignedIn: boolean };
+export type RailClient = { id: number; name: string; avatarPath: string | null; spots: RailSpot[]; total: number; /** total without a new client's set-up: what the Feed's Needs you lists for them. */ owed: number; /** What the Phases screen lists for them (2 Nov): a phase missing, a draft, an empty live phase, or no phase yet. */ phases: number; notSignedIn: boolean };
 
 // What the coach owes, as the Feed's Needs you has it (needFrom in feedBoardData.ts); statuses are the Feed's alone.
-const OWED = [/^week$/, /^locked$/, /^reply-\d+$/, /^reply-video-\d+$/, /^call-\d+$/, /^complete-\d+$/, /^track-/, /^empty-/, /^read-/];
+// A call to complete is the Meetings tab's alone (2 Nov, Alex: off the Feed, "unnecessary and bulky"): its strip and its
+// dot, never the rail's count.
+// A phase missing or empty is the Phases screen's (2 Nov, Alex: "anything phases related out of the feed"): counted apart.
+const OWED = [/^week$/, /^locked$/, /^reply-\d+$/, /^reply-video-\d+$/, /^call-\d+$/, /^read-/];
+const PHASE_OWED = /^(track|empty)-/;
 const SCREEN_OF: Record<string, string> = { home: "Home", plan: "Plan", measurements: "Lifestyle", training: "Training", nutrition: "Nutrition", pictures: "Shape update", meetings: "Meetings", invoices: "Invoices" };
 /** The screen a link opens: the chat when it carries one, else its tab. */
 const screenOf = (href: string) => (/[?&]chat=/.test(href) ? "Chat" : SCREEN_OF[/^\/admin\/redesign\/([a-z]+)/.exec(href)?.[1] ?? ""] ?? "Home");
@@ -617,10 +624,12 @@ const screenOf = (href: string) => (/[?&]chat=/.test(href) ? "Chat" : SCREEN_OF[
  *  sign-in lock), then the rest oldest first; a screen sits where its first thing does. A call today is no task (2 Nov,
  *  Alex: the rail said Meetings and nothing there said what; the Feed dropped it 25 Oct); a call over and not marked
  *  completed is (complete-<id>). */
-function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEvent>, isNew: boolean, ix?: TrainingIndex): { spots: RailSpot[]; total: number; owed: number } {
+function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEvent>, isNew: boolean, ix?: TrainingIndex): { spots: RailSpot[]; total: number; owed: number; phases: number } {
   const ranked: { href: string; rank: number; ms: number }[] = [];
   if (isNew) ranked.push({ href: `/admin/redesign/plan?client=${clientId}`, rank: -1, ms: 0 });
-  for (const a of getClientHome(clientId, feed, ix).actions) {
+  const actions = getClientHome(clientId, feed, ix).actions;
+  const phases = (isNew ? 1 : 0) + actions.filter((a) => PHASE_OWED.test(a.id)).length;
+  for (const a of actions) {
     if (!OWED.some((re) => re.test(a.id))) continue;
     ranked.push({ href: needView(clientId, a, byId).open, rank: a.id === "week" ? 0 : a.id === "locked" ? 1 : 3, ms: a.at ?? Infinity });
   }
@@ -632,7 +641,29 @@ function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEv
     if (at) at.count++;
     else spots.push({ screen, href: r.href, count: 1 });
   }
-  return { spots, total: ranked.length, owed: ranked.filter((r) => r.rank !== -1).length };
+  return { spots, total: ranked.length, owed: ranked.filter((r) => r.rank !== -1).length, phases };
+}
+
+/** The Phases screen's Needs you (2 Nov, Alex: "if anyone is missing a phase have the notification appear there just like
+ *  in feed"): a new client with no phase yet, a track with no live phase (or its draft over today), a live phase with
+ *  nothing in it; the Feed's rows, the Plan their way in. */
+export function loadPhaseNeeds(coachId: number): NeedRow[] {
+  const feed = getActivityFeed(coachId);
+  const byId = new Map(feed.map((e) => [e.id, e]));
+  const data = getData();
+  const rows: NeedRow[] = [];
+  for (const c of listClients(coachId)) {
+    const base = { clientId: c.id, client: c.name ?? "Client", avatarPath: c.avatar_path ?? null, time: null, words: null, since: null };
+    if (listClientPhases(c.id).length === 0 && !data.training_programs.some((p) => p.client_id === c.id)) {
+      rows.push({ ...base, key: `${c.id}:setup`, kind: "phase", what: "No phase yet", action: "New phase", href: `/admin/redesign/plan?client=${c.id}`, dismissId: null });
+      continue;
+    }
+    for (const a of getClientHome(c.id, feed).actions) {
+      if (!PHASE_OWED.test(a.id)) continue;
+      rows.push({ ...base, key: `${c.id}:${a.id}`, kind: "phase", what: a.title, action: a.id.startsWith("track-") ? "Open" : "Fill in", href: needView(c.id, a, byId).open, dismissId: a.id });
+    }
+  }
+  return rows;
 }
 export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null; /** Weights shown in by default (Settings, Preferences, 27 Oct). */ units: "kg" | "lbs" }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean; /** Support lines not read: the company's to a coach (the Support row), every coach's to the owner (Coaches). */ supportUnread: number; /** What the coach pays NorCoach (28 Oct; lib/billing.ts): a failed payment or read-only says so in the rail. */ billing: BillingAccess; /** Subscriptions set up on the server: the Billing row shows. */ billingOn: boolean };
 
@@ -1083,6 +1114,10 @@ export function loadPlan(clientId: number): DraftPlan {
     mainGoalSavedAt: d.mainGoalSavedAt ? dayMonth(d.mainGoalSavedAt) : null,
     events: listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, byClient: e.added_by === "client", repeat: e.repeat ?? null })),
     eventCategories: listEventCategories(getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0),
+    // The weight goals, a lane of their own on the Events card (2 Nov, Alex: "as soon as we add a goal… on the plan tab as well").
+    weightGoals: getWeightGoalViews(clientId, d.today),
+    // Where a new goal starts (the last 7 days' average), for its pop-up's live fact.
+    weightNowKg: goalStartKg(clientId),
     faces: (() => {
       const coach = getCoachProfile(getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0);
       return { client: getClient(clientId)?.avatar_path ?? null, coach: coach?.avatar_path ?? null, coachName: coach?.display_name?.trim() || "" };

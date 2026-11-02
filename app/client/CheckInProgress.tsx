@@ -4,6 +4,9 @@ import { monotonePath } from "../lib/monotoneCurve";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "../components/icons";
 import type { CheckInSection } from "./CheckInScreen";
+import { GOAL_COLOR, VERDICT_TONE, VERDICT_WORD, type WeightGoalVerdict } from "../lib/weightGoal";
+import { Bars } from "./Bars";
+import { pic } from "../lib/pic";
 // The check-in's Progress view (23 Oct, Alex: built from the approved mockup,
 // docs/boards/checkin-progress-mockup.html; hairline, flat on the page): a
 // row of metric chips, then the chosen metric with no card round it, its
@@ -33,6 +36,25 @@ export type CheckInSeries = {
   /** Decimals to show: 0, 1 or 2. */
   precision: number;
   points: { date: string; value: number; at: string | null }[];
+  /** The Weight chart's alone (empty with none): the weight goals, by date, in the series' unit (2 Nov, Alex). */
+  goals?: ClientGoalLine[];
+};
+/** A weight goal on the Weight chart: weights in the series' unit; setBy the coach's first name or "you". */
+export type ClientGoalLine = {
+  id: number;
+  target: number;
+  byDate: string;
+  start: number;
+  startDate: string;
+  mine: boolean;
+  setBy: string;
+  byPhoto: string | null;
+  active: boolean;
+  settled: boolean;
+  verdict: WeightGoalVerdict | null;
+  toGo: number | null;
+  reachedOn: string | null;
+  missedBy: number | null;
 };
 export type CheckInFeedDay = {
   date: string;
@@ -45,12 +67,14 @@ export type CheckInFeedDay = {
 };
 export type CheckInHistory = { series: CheckInSeries[]; days: CheckInFeedDay[] };
 
-type Range = "7D" | "1M" | "3M" | "All";
-const RANGE_DAYS: Record<Range, number | null> = { "7D": 7, "1M": 30, "3M": 90, All: null };
-const RANGE_WORD: Record<Range, string> = { "7D": "7 days", "1M": "month", "3M": "3 months", All: "" };
+// Goal (2 Nov, Alex: a toggle to the goal's own graph, the line traced and where they stand): from the goal's start to its
+// day, offered on Weight while a goal runs.
+type Range = "Goal" | "7D" | "1M" | "3M" | "All";
+const RANGE_DAYS: Record<Range, number | null> = { Goal: null, "7D": 7, "1M": 30, "3M": 90, All: null };
+const RANGE_WORD: Record<Range, string> = { Goal: "goal", "7D": "7 days", "1M": "month", "3M": "3 months", All: "" };
 // What the capsule says (the stored key stays 7D).
-const RANGE_LABEL: Record<Range, string> = { "7D": "1W", "1M": "1M", "3M": "3M", All: "All" };
-const RANGES: Range[] = ["7D", "1M", "3M", "All"];
+const RANGE_LABEL: Record<Range, string> = { Goal: "Goal", "7D": "1W", "1M": "1M", "3M": "3M", All: "All" };
+const RANGES: Range[] = ["Goal", "7D", "1M", "3M", "All"];
 const RANGE_KEY = "ironline:progress-range";
 const PAGE = 20;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -58,6 +82,10 @@ const DAY = 86400000;
 const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
 const dm = (s: string) => `${Number(s.slice(8, 10))} ${MONTHS[Number(s.slice(5, 7)) - 1]}`;
 const fmt = (v: number, p: number) => v.toLocaleString("en-GB", { minimumFractionDigits: p, maximumFractionDigits: p });
+/** A goal's weight: "82", "87.6". */
+const one = (v: number) => v.toLocaleString("en-GB", { maximumFractionDigits: 1 });
+/** "20 Dec", the year after it when it isn't this one. */
+const dmy = (s: string, today: string) => `${dm(s)}${s.slice(0, 4) === today.slice(0, 4) ? "" : ` ${s.slice(0, 4)}`}`;
 const unitOf = (s: CheckInSeries) => (s.scaleMax ? `/ ${s.scaleMax}` : s.unit);
 /** A change rounded to the metric's decimals: +0.4, −1.8, or 0.0 with no sign. */
 const signed = (v: number, p: number) => {
@@ -98,7 +126,8 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
   const [index, setIndex] = useState(0);
   const [range, setRange] = useState<Range>(() => {
     const r = readStore("session", RANGE_KEY) as Range | null;
-    return r && RANGES.includes(r) ? r : "1M";
+    // Goal first (2 Nov, Alex): Weight opens on it while a goal runs; any other metric falls to 1M.
+    return r && RANGES.includes(r) ? r : "Goal";
   });
   const [page, setPage] = useState(0);
   const series = tracked[Math.min(index, tracked.length - 1)];
@@ -178,10 +207,20 @@ function MetricPanel({
   const firstDay = dayNum(series.points[0].date);
   // Days of history, first reading to today: a range longer than that is hidden.
   const span = end - firstDay + 1;
-  const ranges = RANGES.filter((r) => RANGE_DAYS[r] == null || span > RANGE_DAYS[r]!);
-  const shown: Range = ranges.includes(range) ? range : "All";
+  const runningGoal = series.goals?.find((g) => g.active) ?? null;
+  const ranges = RANGES.filter((r) => (r === "Goal" ? !!runningGoal : RANGE_DAYS[r] == null || span > RANGE_DAYS[r]!));
+  const shown: Range = ranges.includes(range) ? range : ranges.includes("1M") ? "1M" : "All";
   const days = RANGE_DAYS[shown];
-  const start = days ? end - (days - 1) : firstDay;
+  // The Goal range from the goal's start; with nothing weighed since, from the last reading before it, so the line has
+  // where it came from.
+  const goalStart = runningGoal ? dayNum(runningGoal.startDate) : end;
+  const before = series.points.filter((q) => dayNum(q.date) < goalStart).at(-1);
+  const start =
+    shown === "Goal" && runningGoal
+      ? series.points.some((q) => dayNum(q.date) >= goalStart) || !before ? goalStart : dayNum(before.date)
+      : days
+        ? end - (days - 1)
+        : firstDay;
   const points = useMemo(() => series.points.filter((p) => dayNum(p.date) >= start), [series.points, start]);
 
   const rangeWord = RANGE_WORD[shown];
@@ -201,8 +240,36 @@ function MetricPanel({
     tone = now < before ? " good" : now > before ? " bad" : "";
   }
   const moveUnit = series.scaleMax ? "" : series.unit;
+  // The weight goal (2 Nov, Alex: "great to see the goal as a line traced and where we stand in that line"; mockup B):
+  // the one being worked on, else the last one settled, as a grey line under the value; the plot runs on past today to
+  // its day, the days to come at most twice the days shown, else it stops there and the goal is pinned at its edge.
+  const goals = series.goals ?? null;
+  const activeGoal = goals?.find((g) => g.active) ?? null;
+  const shownGoal = activeGoal ?? goals?.filter((g) => g.settled).at(-1) ?? null;
+  const goalDay = activeGoal ? dayNum(activeGoal.byDate) : null;
+  const plotEnd = goalDay != null && goalDay > end ? (shown === "Goal" ? goalDay : Math.min(goalDay, end + 2 * Math.max(7, end - start))) : end;
+  const goalFacts = (() => {
+    if (!shownGoal) return [];
+    const g = shownGoal;
+    const head = `${one(g.target)} ${unit} by ${dmy(g.byDate, today)}`;
+    if (g.settled) {
+      return [
+        head,
+        g.verdict === "reached" ? (
+          <span className="pg-goal-v good">Reached {dmy(g.reachedOn ?? g.byDate, today)}</span>
+        ) : (
+          <span className="pg-goal-v">Missed{g.missedBy != null && g.missedBy > 0 ? ` by ${one(g.missedBy)} ${unit}` : ""}</span>
+        ),
+      ];
+    }
+    return [
+      head,
+      g.toGo != null && g.toGo > 0 && `${one(g.toGo)} ${unit} to go`,
+      g.verdict && <span className={`pg-goal-v ${VERDICT_TONE[g.verdict]}`}>{VERDICT_WORD[g.verdict]}</span>,
+    ];
+  })();
   return (
-    <section className="pg-metric" role="tabpanel" aria-label={series.name} style={{ "--cat": series.colour } as React.CSSProperties}>
+    <section className="pg-metric" role="tabpanel" aria-label={series.name} style={{ "--cat": series.colour, "--goal": GOAL_COLOR } as React.CSSProperties}>
       <div className="pg-head">
         <span className="pg-eyebrow">{series.category}</span>
         <div className="pg-row">
@@ -228,6 +295,23 @@ function MetricPanel({
             ))}
           </div>
         </div>
+        {/* The goal is the coach's to set (2 Nov, Alex): the client reads it, with no action, the coach's face first as on an
+            event they added. */}
+        {shownGoal && (
+          <div className="pg-goal">
+            <span className="evp-by pg-goal-by" role="img" aria-label={`Set by ${shownGoal.setBy}`}>
+              {shownGoal.byPhoto ? (
+                // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
+                <img src={pic(shownGoal.byPhoto, 96)} alt="" />
+              ) : (
+                (shownGoal.setBy || "?").trim().charAt(0).toUpperCase()
+              )}
+            </span>
+            <span className="pg-goal-facts">
+              <Bars parts={goalFacts} />
+            </span>
+          </div>
+        )}
       </div>
       {points.length === 0 ? (
         <div className="pg-chart-empty">
@@ -237,7 +321,7 @@ function MetricPanel({
           </button>
         </div>
       ) : (
-        <Chart key={shown} series={series} points={points} start={start} end={end} today={today} range={shown} onSwipe={onSwipe} />
+        <Chart key={shown} series={series} points={points} start={start} end={end} plotEnd={plotEnd} today={today} range={shown} onSwipe={onSwipe} />
       )}
     </section>
   );
@@ -248,6 +332,7 @@ function Chart({
   points,
   start,
   end,
+  plotEnd,
   today,
   range,
   onSwipe,
@@ -255,7 +340,10 @@ function Chart({
   series: CheckInSeries;
   points: CheckInSeries["points"];
   start: number;
+  /** Today. */
   end: number;
+  /** Where the plot ends: today, or on to the weight goal's day. */
+  plotEnd: number;
   today: string;
   range: Range;
   onSwipe: (dir: 1 | -1) => void;
@@ -275,13 +363,42 @@ function Chart({
   const p = series.precision;
   const unit = unitOf(series);
   const vals = points.map((q) => q.value);
+  // The weight goal's planned path (2 Nov, Alex; mockup B): a straight dashed line from where they were when it was
+  // set to the goal, then on through the milestones after it, clipped to the days shown; a ring on each goal. The
+  // later milestones fainter. A goal past the plot's end is pinned at its right edge with its weight and day.
+  const plan = (() => {
+    const gs = series.goals ?? [];
+    const at = gs.findIndex((g) => g.active);
+    if (at < 0) return null;
+    const path = gs.slice(at).filter((g, i) => i === 0 || !g.settled);
+    const segs: { n0: number; v0: number; n1: number; v1: number; later: boolean }[] = [];
+    const rings: { n: number; v: number; target: number; later: boolean; pinned: boolean; byDate: string }[] = [];
+    for (const [i, g] of path.entries()) {
+      const a = dayNum(g.startDate);
+      const b = dayNum(g.byDate);
+      const valueAt = (n: number) => (b <= a ? g.target : g.start + (g.target - g.start) * Math.min(1, Math.max(0, (n - a) / (b - a))));
+      const n0 = Math.max(start, a);
+      const n1 = Math.min(plotEnd, b);
+      if (n1 > n0) segs.push({ n0, v0: valueAt(n0), n1, v1: valueAt(n1), later: i > 0 });
+      if (b <= plotEnd) {
+        if (b >= start) rings.push({ n: b, v: g.target, target: g.target, later: i > 0, pinned: false, byDate: g.byDate });
+      } else {
+        // Pinned at the edge, on the dashed line's end there (its pill says the goal), so the scale never stretches to a
+        // goal months out and flattens the readings.
+        if (i === 0) rings.push({ n: plotEnd, v: valueAt(plotEnd), target: g.target, later: false, pinned: true, byDate: g.byDate });
+        break;
+      }
+    }
+    return { segs, rings };
+  })();
   let lo: number;
   let hi: number;
   if (series.scaleMax) {
     lo = 0.5;
     hi = series.scaleMax + 0.5;
   } else {
-    const all = series.target != null ? [...vals, series.target] : vals;
+    const planVals = plan ? [...plan.segs.flatMap((s) => [s.v0, s.v1]), ...plan.rings.map((r) => r.v)] : [];
+    const all = [...vals, ...(series.target != null ? [series.target] : []), ...planVals];
     lo = Math.min(...all);
     hi = Math.max(...all);
     const pad = (hi - lo || 1) * 0.15;
@@ -302,7 +419,10 @@ function Chart({
   const right = Math.max(30, Math.ceil(6 + Math.max(...gridAt.map((v) => fmt(v, p).length)) * 6.2));
   const plotW = width - right;
   const plotH = H - TOP - BOTTOM;
-  const x = (date: string) => ((dayNum(date) - start) / Math.max(1, end - start)) * plotW;
+  // Days to x: the first day shown to the plot's end (today, or on to a weight goal's day).
+  const xd = (n: number) => ((n - start) / Math.max(1, plotEnd - start)) * plotW;
+  const x = (date: string) => xd(dayNum(date));
+  const xToday = xd(end);
   const y = (v: number) => TOP + (1 - (v - lo) / (hi - lo)) * plotH;
   const crisp = (v: number) => Math.round(v) + 0.5;
   const xy = points.map((q) => ({ x: x(q.date), y: y(q.value) }));
@@ -454,7 +574,7 @@ function Chart({
   const tipX = Math.min(width - 60, Math.max(48, selXY.x));
   const first = points[0];
   const last = points[latest];
-  const label = `${series.name}, ${range === "All" ? "all time" : `last ${RANGE_WORD[range]}`}: from ${fmt(first.value, p)} to ${fmt(last.value, p)} ${unit}. Latest ${fmt(last.value, p)} on ${dateWord(last.date)}.`;
+  const label = `${series.name}, ${range === "All" ? "all time" : `last ${RANGE_WORD[range]}`}: from ${fmt(first.value, p)} to ${fmt(last.value, p)} ${unit}. Latest ${fmt(last.value, p)} on ${dateWord(last.date)}.${plan?.rings[0] ? ` Goal ${one(plan.rings[0].target)} ${unit} by ${dmy(plan.rings[0].byDate, today)}.` : ""}`;
 
   return (
     <>
@@ -492,9 +612,17 @@ function Chart({
             <line key={v} className="pg-grid" x1={0} x2={plotW} y1={crisp(y(v))} y2={crisp(y(v))} />
           ))}
           {series.target != null && <line className="pg-target" x1={0} x2={plotW} y1={y(series.target)} y2={y(series.target)} />}
-          <g className="pg-chart-fade">
+          {/* With a goal (2 Nov, Alex): the weight line in the goal's gold and the latest a gold dot, pulsing, where they stand. */}
+          <g className={`pg-chart-fade${plan ? " goaled" : ""}`}>
+            {plan?.segs.map((s) => (
+              <line key={`s${s.n0}`} className={`pg-plan${s.later ? " later" : ""}`} x1={xd(s.n0)} y1={y(s.v0)} x2={xd(s.n1)} y2={y(s.v1)} />
+            ))}
             {xy.length > 1 && <path className="pg-line" d={line} />}
+            {plan && <circle className="pg-nowpulse" cx={xy[latest].x} cy={xy[latest].y} r={4.5} />}
             <circle className="pg-last" cx={xy[latest].x} cy={xy[latest].y} r={4.5} />
+            {plan?.rings.map((r) => (
+              <circle key={`r${r.n}`} className={`pg-goalring${r.later ? " later" : ""}`} cx={xd(r.n)} cy={y(r.v)} r={5} />
+            ))}
           </g>
           {reading && (
             <>
@@ -513,6 +641,17 @@ function Chart({
             Goal {fmt(series.target, p)}
           </span>
         )}
+        {plan?.rings.map((r) =>
+          r.pinned ? (
+            <span key={`l${r.n}`} className="pg-goal-pin" style={{ top: y(r.v), left: xd(r.n) }}>
+              <Bars parts={[`${one(r.target)} ${unit}`, dmy(r.byDate, today)]} />
+            </span>
+          ) : (
+            <span key={`l${r.n}`} className={`pg-goal-label${r.later ? " later" : ""}${xd(r.n) < 56 ? " after" : ""}`} style={{ top: y(r.v), left: xd(r.n) }}>
+              {one(r.v)} {unit}
+            </span>
+          )
+        )}
         {reading && (
           <div className="pg-tip" style={{ left: tipX }}>
             {tipText}
@@ -524,17 +663,31 @@ function Chart({
       <span className="pg-live" aria-live="polite">
         {tipText}, {dateWord(selP.date)}
       </span>
-      <div className="pg-strip" style={{ marginRight: right }} aria-hidden="true">
+      {/* The strip stops at today, its marks still under their days, when the plot runs on to a goal (2 Nov, Alex). */}
+      <div className="pg-strip" style={{ marginRight: right + Math.max(0, plotW - xToday) }} aria-hidden="true">
         {strip.map((q) => (
           // Centred on its days, the ends half as wide, so a reading's ring sits over the middle of its mark (25 Oct, Alex).
           <i key={q.from} className={q.on ? "on" : ""} style={{ flexGrow: Math.min(end, q.to + 0.5) - Math.max(start, q.from - 0.5) }} />
         ))}
       </div>
-      <div className="pg-axis" style={{ paddingRight: right }}>
-        <span>{dm(dayStr(start))}</span>
-        {end - start >= 2 && <span>{dm(dayStr(Math.round((start + end) / 2)))}</span>}
-        <span>Today</span>
-      </div>
+      {plotEnd > end ? (
+        // Run on to a goal: the first day, Today where today is, and the plot's last day on the right (2 Nov, Alex).
+        <div className="pg-axis pg-axis-goal" style={{ marginRight: 16 + right }}>
+          <span>{dm(dayStr(start))}</span>
+          {xToday > 44 && plotW - xToday > 52 && (
+            <span className="now" style={{ left: xToday }}>
+              Today
+            </span>
+          )}
+          <span>{dmy(dayStr(plotEnd), today)}</span>
+        </div>
+      ) : (
+        <div className="pg-axis" style={{ paddingRight: right }}>
+          <span>{dm(dayStr(start))}</span>
+          {end - start >= 2 && <span>{dm(dayStr(Math.round((start + end) / 2)))}</span>}
+          <span>Today</span>
+        </div>
+      )}
     </>
   );
 }

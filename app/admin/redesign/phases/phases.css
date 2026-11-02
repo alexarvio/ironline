@@ -137,3 +137,4 @@
 @media (prefers-reduced-motion: reduce) {
   .rd.pov .pov-soon-row.leaving { animation: none; opacity: 0; }
 }
+.pov .pov-needs { margin: 0 0 28px; }

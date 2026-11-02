@@ -535,6 +535,18 @@ export function LinkIcon() {
   );
 }
 
+/** A weight goal (2 Nov, Alex: "I like this color for the weight and also the icon"): two rings and a dot, at stroke
+    1.6. Even sizes, so it sits on whole pixels in an even ring. */
+export function WeightGoalIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 /** A phase (2 Nov, Alex: "if it's a phase… it's a flag like we have in the events"): the Events screen's waving flag. */
 export function PhaseFlagIcon() {
   return (

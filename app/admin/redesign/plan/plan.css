@@ -216,6 +216,27 @@
 .rq-pin-text b { font-size: 12.5px; font-weight: 600; color: #141a24; }
 .rq-pin-text small { font-size: 10.5px; font-weight: 500; color: #8b93a1; }
 .rq-pin:hover .rq-pin-text b { text-decoration: underline; text-decoration-color: #c9cfd8; text-underline-offset: 3px; }
+/* Weight goals (2 Nov, Alex; mockup C, WeightGoalMark): their own lane first in Events. The planned path dashed in
+   lifestyle beige at half strength along the lane's middle, a dot where a route begins; a pin on each goal's date is a
+   22px white ring with the 12px target (both even, so it sits on whole pixels), centred on its day as an event's dot,
+   then its words on the card's white so the path runs on behind them. A settled one greys as a past pin; a milestone
+   after the one being worked on is fainter. */
+.rq-goal-path { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+.rq-goal-path line { stroke: rgba(160, 138, 92, 0.5); stroke-width: 1.5; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.rq-goal-path circle { fill: rgba(160, 138, 92, 0.5); }
+.rq-goal-path .past { opacity: 0.55; }
+.rq-goal { gap: 6px; }
+.rq-goal-ring { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-left: -11px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1.5px currentColor; }
+.rq-goal-ring svg { display: block; }
+.rq-goal-text { padding: 2px 6px 2px 2px; border-radius: 6px; background: #fff; font-variant-numeric: tabular-nums; }
+.rq-goal.later { opacity: 0.6; }
+/* Near the window's right edge the words sit on the ring's left, the ring still on its day. */
+.rq-goal.flip { flex-direction: row-reverse; padding: 0 0 0 8px; translate: -100% 0; }
+.rq-goal.flip .rq-goal-ring { margin: 0 -11px 0 0; }
+.rq-goal.flip .rq-goal-text { align-items: flex-end; padding: 2px 2px 2px 6px; }
+.rq-goal:focus-visible { outline: none; }
+.rq-goal:focus-visible .rq-pin-text b { text-decoration: underline; text-decoration-color: #c9cfd8; text-underline-offset: 3px; }
+/* Who set it, in its pop-up's foot (a portal, so not under .rd.pln): their face as an event's. */
 .rq-evlog { padding: 4px 10px 8px; border-top: 1px solid #eceff3; }
 .rq-evlog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px 10px 14px; }
 .rq-evlog-empty { margin: 0; padding: 8px 14px 12px; font-size: 13px; color: #8b93a1; }

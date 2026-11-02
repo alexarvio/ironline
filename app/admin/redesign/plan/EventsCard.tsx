@@ -8,9 +8,12 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { addClientEventAction, deleteClientEventAction, updateClientEventAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../../components/icons";
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, WeightGoalIcon } from "../../../components/icons";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { MonthRange } from "../MonthRange";
-import { AddCells, chromeOf, EmptyLane, eventIsPast, eventLanes, EventMark, eventPlace, eventState, gridFor, LANE, LaneRow, rgbOf, standingParts, Timeline, type Category, type PlanEvent } from "./timelineParts";
+import { AddCells, chromeOf, dayPercent, EmptyLane, eventIsPast, eventLanes, EventMark, eventPlace, eventState, gridFor, LANE, LaneRow, rgbOf, standingParts, Timeline, WeightGoalMark, type Category, type PlanEvent } from "./timelineParts";
+import { GOAL_COLOR, type WeightGoalView } from "../../../lib/weightGoal";
+import WeightGoalDialog from "../WeightGoalDialog";
 import { STATE_LABEL, stateTagStyle } from "../../phaseChrome";
 import DateText from "../DateText";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
@@ -80,11 +83,26 @@ export type EventsCardProps = {
   firstName?: string;
   /** The faces for an event's "Added by" in its pop-up (24 Oct, Alex): the client's, and the coach's for "you". */
   faces?: { client: string | null; coach: string | null; coachName: string };
+  /** The client's dated weight goals (2 Nov, Alex): a Weight lane of their own, first, while one is on the window. */
+  weightGoals?: WeightGoalView[];
+  /** Where a new weight goal starts, kg. */
+  weightNowKg?: number | null;
 };
 const EV_WIN_KEY = "rq-events-window";
 
-export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, onSaving, firstName, faces }: EventsCardProps) {
+export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, onSaving, firstName, faces, weightGoals: serverGoals = [], weightNowKg = null }: EventsCardProps) {
   const router = useRouter();
+  // The weight goals, copied by content as the events are, so a re-read with the same goals resets nothing.
+  const goalsKey = JSON.stringify(serverGoals);
+  const [goals, setGoals] = useState(serverGoals);
+  const [seenGoalsKey, setSeenGoalsKey] = useState(goalsKey);
+  if (seenGoalsKey !== goalsKey) {
+    setSeenGoalsKey(goalsKey);
+    setGoals(serverGoals);
+  }
+  // A goal's pop-up (WeightGoalDialog, which saves and re-reads itself): the goal clicked, or a new one from a week
+  // clicked on the Weight lane (its Sunday) or from + Add. Its own state, so a goal's id never meets an event's.
+  const [goalDlg, setGoalDlg] = useState<{ goal: WeightGoalView | null; by?: string } | null>(null);
   // What is on screen lives here, so a move or an edit shows the moment it is saved (20 Oct, Alex: a dragged trip
   // jumped back to its old length until the save came back). The page's re-read replaces it whenever its content changes.
   const serverKey = JSON.stringify(serverEvents);
@@ -214,7 +232,28 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
   }, []);
   const dayPx = gridPx > 0 ? gridPx / totalDays : 9;
   const { groups, laneOf } = eventLanes(onGrid, cats, dayPx);
-
+  // The Weight lane (2 Nov, Alex; mockup C): only while a goal or its dashed path is on the window, never an empty
+  // lane. The planned path runs from each goal's start to its date, so milestones chain into one route; a dot marks
+  // where a route begins (a goal that doesn't start on another's date).
+  const goalsOnGrid = goals.filter((g) => eventPlace({ start: g.startDate, end: g.byDate }, first, totalDays).visible);
+  const goalRoute = goalsOnGrid.map((g) => ({
+    id: g.id,
+    x1: dayPercent(g.startDate, first, totalDays),
+    x2: dayPercent(g.byDate, first, totalDays),
+    settled: g.settled,
+    fresh: !goals.some((o) => o.id !== g.id && o.byDate === g.startDate),
+  }));
+  const goalPins = goalsOnGrid.filter((g) => g.byDate >= first && daysBetween(first, g.byDate) < totalDays);
+  // Where a new goal starts: the client's last 7 days' average, from the server.
+  const goalNowKg = weightNowKg;
+  // One goal at a time (2 Nov, Alex): while one runs, the way in opens it to edit; no second one.
+  const runningGoal = goals.find((g) => !g.settled) ?? null;
+  const addGoalAt = (week: string) => {
+    if (justDragged.current || drag) return;
+    // That week's Sunday when it is a week or more away (a goal needs one); else no day yet.
+    const sunday = addDays(week, 6);
+    setGoalDlg({ goal: null, by: daysBetween(today, sunday) >= 7 ? sunday : undefined });
+  };
   // The log keeps only what is over (21 Oct, Alex): what is on or coming is on the grid above.
   // The latest ended first, so a supplement stopped last week sits above a trip that ended a month ago.
   const listed = events
@@ -251,15 +290,41 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
               </button>
             ))}
           </div>
-          <button type="button" className="rd-btn" onClick={() => setDlg({ event: null })}>
-            <PlusIcon /> Add
-          </button>
+          {/* + Add is the choice (20 Oct, Alex: a choice that is the action itself is a menu): an event, or a weight goal
+              (2 Nov, Alex), whose lane only shows once there is one. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="rd-btn">
+              <PlusIcon /> Add
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="pb-menu">
+              <DropdownMenuItem onSelect={() => setDlg({ event: null })}>Event</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setGoalDlg({ goal: runningGoal })}>Weight goal</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       <div className="pln-card">
       {/* The same grid as the phases (timelineParts.tsx): months, the Mondays, and a row of lanes an event kind. */}
       <Timeline grid={grid} minWidth={Math.round(win * 63)} weekNumbers={false} onStep={(n) => setBack((b) => Math.max(0, b - n))}>
+        {/* Weight goals first, a lane of their own (2 Nov, Alex): the target in lifestyle beige, the planned path dashed
+            along its middle, a pin on each goal's date. Never the events' lanesRef: the events keep their own. */}
+        {goalsOnGrid.length > 0 && (
+          <LaneRow grid={grid} lanes={1} events icon={<WeightGoalIcon size={16} />} color={GOAL_COLOR} label="Weight">
+            {!runningGoal && <AddCells grid={grid} lanes={1} label={(w) => `New weight goal in the week of ${dayMonth(w)}`} onAdd={(w) => addGoalAt(w)} />}
+            <svg className="rq-goal-path" aria-hidden="true">
+              {goalRoute.map((s) => (
+                <g key={s.id} className={s.settled ? "past" : undefined}>
+                  <line x1={`${s.x1}%`} y1="50%" x2={`${s.x2}%`} y2="50%" />
+                  {s.fresh && <circle cx={`${s.x1}%`} cy="50%" r="3" />}
+                </g>
+              ))}
+            </svg>
+            {goalPins.map((g) => (
+              <WeightGoalMark key={g.id} goal={g} left={dayPercent(g.byDate, first, totalDays)} flip={dayPercent(g.byDate, first, totalDays) > ((grid.shift + win * 0.82) / grid.count) * 100} onOpen={() => setGoalDlg({ goal: g })} />
+            ))}
+          </LaneRow>
+        )}
         {groups.length === 0 && (
           <LaneRow grid={grid} lanes={1} events gridRef={lanesRef}>
             <AddCells grid={grid} lanes={1} label={(w) => `New event in the week of ${dayMonth(w)}`} onAdd={(w, ev) => addAt(w, ev)} />
@@ -411,6 +476,12 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
               act(() => deleteClientEventAction(clientId, was.id), "Event removed");
             }}
           />
+        )}
+      </Dialog>
+
+      <Dialog open={!!goalDlg} onOpenChange={(o) => !o && setGoalDlg(null)}>
+        {goalDlg && (
+          <WeightGoalDialog clientId={clientId} goal={goalDlg.goal} unit="kg" nowKg={goalNowKg} initialBy={goalDlg.by} onDone={() => setGoalDlg(null)} />
         )}
       </Dialog>
     </section>

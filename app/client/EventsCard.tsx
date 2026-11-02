@@ -12,6 +12,7 @@ import { eventTypeOf } from "../lib/eventTypes";
 import { dayOf } from "../lib/eventDates";
 import { TypeIcon } from "./events/AddEventSheet";
 import { Bars } from "./Bars";
+import type { WeightGoalVerdict } from "../lib/weightGoal";
 
 // Home's "Events" card (7 Oct): what is coming up in the client's life that
 // the plan should know about: a trip, an injury, the day they started a
@@ -20,7 +21,35 @@ import { Bars } from "./Bars";
 // coach's activity). The client can change or remove only what they added;
 // the coach's events are listed read-only, so both see the same calendar.
 
-export type HomeEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it. */ mine: boolean; /** A phase of the plan, on the timeline as an event (9 Oct); its track colours it. */ phase?: "training" | "nutrition" | "lifestyle" | null; /** Comes back on these weekdays (19 Oct), lib/eventRepeat.ts. */ repeat?: EventRepeat | null };
+export type HomeEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it. */ mine: boolean; /** A phase of the plan, on the timeline as an event (9 Oct); its track colours it. */ phase?: "training" | "nutrition" | "lifestyle" | null; /** Comes back on these weekdays (19 Oct), lib/eventRepeat.ts. */ repeat?: EventRepeat | null; /** A weight goal on its date (2 Nov, Alex), lib/weightGoal.ts. */ goal?: GoalItem | null };
+/** A weight goal as the client's timelines draw it (2 Nov, Alex): every weight in the unit they are asked in. */
+export type GoalItem = {
+  id: number;
+  unit: "kg" | "lbs";
+  target: number;
+  byDate: string;
+  start: number;
+  startDate: string;
+  /** The last 7 days' average. */
+  nowKg: number | null;
+  /** Where the planned line is on that average's day. */
+  planNow: number | null;
+  /** The client set it. */
+  mine: boolean;
+  /** The coach's first name, or "you". */
+  setBy: string;
+  active: boolean;
+  settled: boolean;
+  verdict: WeightGoalVerdict | null;
+  verdictWord: string | null;
+  toGo: number | null;
+  /** Share of start → goal covered, 0..1. */
+  done: number;
+  /** Share of its days gone by, 0..1: where the plan says they should be today. */
+  elapsed: number;
+  reachedOn: string | null;
+  missedBy: number | null;
+};
 export type HomeEventCategory = { id: string; label: string; color: string };
 export type HomeEvents = { list: HomeEvent[]; categories: HomeEventCategory[] };
 

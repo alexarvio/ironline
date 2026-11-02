@@ -6,6 +6,7 @@ import { markAllNotificationsReadAction, markNotificationReadAction } from "../.
 import { ChevronLeftIcon } from "../../components/icons";
 import { notificationTypeOf, type NotificationCategory } from "../../lib/notificationTypes";
 import type { EventTypeId } from "../../lib/eventTypes";
+import { goalItemId } from "../../lib/weightGoal";
 import { dayLabel, localDayKey, timeLabel } from "../../lib/notificationDates";
 import { pic } from "../../lib/pic";
 import { useBack, useCoachIdentity, useNavigateTab, useOpenCheckIn, useOpenEvents, useOpenLink, useOpenMeetings, useOpenMessages } from "../CheckInContext";
@@ -82,6 +83,8 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
     else if (n.actionTab === "video") {
       if (n.videoReply) setWatching(n.videoReply);
     } else if (n.category === "event_added" || n.category === "event_changed") openEvents?.(n.actionRef ?? undefined);
+    // A weight goal (2 Nov, Alex): the Events screen on the goal's row; the same in AppShell's push arrival.
+    else if (n.category === "weight_goal") openEvents?.(n.actionRef != null ? goalItemId(n.actionRef) : undefined);
     else if (n.category === "meeting_booked" || n.category === "meeting_changed" || n.category === "meeting_notes") openMeetings?.(n.actionRef ?? undefined);
     else if (n.category === "checkin_comment") openCheckIn?.("daily");
     // A training note with no session of its own (a new plan, a week added): the tab, never its ref as a session

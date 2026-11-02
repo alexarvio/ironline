@@ -992,6 +992,25 @@ type MeetingNote = {
 };
 /** What the client is to focus on until their next call (23 Oct, Alex; lib/focus.ts): one list a client, up to three
     goals the coach sets (completing a call, or Meetings' To focus on) and the client ticks on Home. */
+/** A weight goal (2 Nov, Alex): a weight by a date, from where the client was when it was set; several make
+ *  milestones. Stored in kg; `unit` is how it was typed, to show it back as typed. */
+export type WeightGoal = {
+  id: number;
+  client_id: number;
+  target_kg: number;
+  unit: "kg" | "lbs";
+  by_date: string;
+  /** Where the planned line starts: the weight and day it was set from (a milestone after another: that one's goal and date). */
+  start_kg: number;
+  start_date: string;
+  added_by: "coach" | "client";
+  /** The coach's or the client's user id, for the face. */
+  added_by_id: number | null;
+  note: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ClientFocus = {
   id: number;
   client_id: number;
@@ -1330,6 +1349,8 @@ export type Data = {
   meeting_requests?: MeetingRequest[];
   // To focus on (23 Oct, lib/focus.ts): a client's goals until their next call. Not a Postgres table of its own: kept in `kv`.
   client_focus?: ClientFocus[];
+  // Weight goals (2 Nov, lib/weightGoal.ts): a weight on a date the coach or client set. Not a Postgres table of its own: kept in `kv`.
+  weight_goals?: WeightGoal[];
   event_categories: EventCategory[];
   calorie_logs: CalorieLog[];
   food_entries: FoodEntry[];
@@ -1381,6 +1402,7 @@ function emptyData(): Data {
     client_phases: [],
     client_events: [],
     meeting_requests: [],
+    weight_goals: [],
     event_categories: [],
     calorie_logs: [],
     food_entries: [],

@@ -6,6 +6,7 @@
 // on Home and go out as pushes, never into this list.
 
 import { eventTypeOf, TRAINING_ICON, type EventTypeId } from "./eventTypes";
+import { GOAL_CHROME } from "./eventTimeline";
 
 export type NotificationCategory =
   | "meeting_booked"
@@ -20,6 +21,7 @@ export type NotificationCategory =
   | "event_added"
   | "event_changed"
   | "pics_reviewed"
+  | "weight_goal"
   | "nutrition_phase"
   | "nutrition_changed"
   | "message"
@@ -71,6 +73,8 @@ export const NOTIFICATION_TYPES: Record<NotificationCategory, NotificationType> 
   event_added: { label: "Event", ...AMBER, icon: eventTypeOf("other").icon, action: "View event" },
   event_changed: { label: "Event", ...AMBER, icon: eventTypeOf("other").icon, action: "View event" },
   pics_reviewed: { label: "Shape update", ...ORANGE, icon: ICON.camera, action: "Open shape update" },
+  // A weight goal set or changed (2 Nov, Alex): its beige target, as the Events row draws it; a tap opens that row.
+  weight_goal: { label: GOAL_CHROME.label, color: GOAL_CHROME.color, rgb: GOAL_CHROME.rgb, icon: GOAL_CHROME.icon, action: "See it" },
   nutrition_phase: { label: "Nutrition", ...TEAL, icon: ICON.apple, action: "See targets" },
   nutrition_changed: { label: "Nutrition", ...TEAL, icon: ICON.apple, action: "See targets" },
   message: { label: "Message", ...NAVY, icon: ICON.chat, action: "Reply" },
@@ -117,6 +121,7 @@ export function categorize(n: StoredNotification): NotificationCategory {
   if (starts(m, "Changed your shape update", "Left instructions for your shape update", "Changed your progress pictures", "Left instructions for your progress pictures")) return "pics_reviewed";
   if (starts(m, "Changed what you check in", "Moved your weekly check-in day", "Moved your monthly check-in day", "Left a note on your check-in")) return "checkin_comment";
   if (starts(m, "Sent you invoice", "Sent a new invoice", "Marked invoice")) return "invoice";
+  if (starts(m, "Set a weight goal", "Changed your weight goal")) return "weight_goal";
   if (n.action_tab === "invoices") return "invoice";
   if (n.action_tab === "nutrition") return "nutrition_changed";
   if (n.action_tab === "training") return "training_changed";

@@ -1538,3 +1538,15 @@ span.rd-demo { cursor: default; }
 .mm-nm { translate: 0 -0.4px; }
 .mm-pop-ex, .mm-pop-sets { translate: 0 -0.25px; }
 .mm-pop-fact { translate: 0 0.33px; }
+
+/* ---- Weight goal pop-up (2 Nov, Alex; WeightGoalDialog): the .dlh card, the goal's beige tag with its target, the
+   verdict as the one state pill, one live fact, Now | Plan | To go in the shared hairline figures. It renders in a
+   portal, outside .rd.trn, so the pill is drawn here too. */
+.dlh.wgd .wgd-tags { display: flex; align-items: center; gap: 6px; margin: -4px 0 4px; }
+.dlh.wgd .wgd-tag { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px; background: #efede6; color: #a08a5c; font-size: 11.5px; font-weight: 600; }
+.dlh.wgd .wgd-tag svg { translate: 0 -0.5px; }
+.dlh.wgd .trn-state { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 11.5px; font-weight: 600; color: #8b93a1; white-space: nowrap; }
+.dlh.wgd .trn-state.good { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.35); color: #2f7a3f; }
+.dlh.wgd .trn-state.warn { box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.4); color: #b8471f; }
+.dlh.wgd .wgd-fact { margin: 0; min-height: 18px; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.dlh.wgd .dlh-foot .wgd-del { margin-right: auto; }
