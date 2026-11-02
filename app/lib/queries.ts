@@ -4226,14 +4226,14 @@ export function listMetricDefinitions(
   clientId: number,
   frequency: MetricCadence
 ): MetricDefinition[] {
-  adoptStandingMetrics(clientId);
   const running = runningLifestylePhaseId(clientId);
-  // Phase by phase (2 Nov, Alex: "of course not, it should be phase by phase"): only the live lifestyle phase's
-  // metrics are asked. With none live, nothing is (no check-in, nothing due, nothing saved outside a phase); the
-  // standing list from before phases is taken over by the next phase that goes live (adoptStandingMetrics).
+  // Phase by phase (2 Nov, Alex: "of course not, it should be phase by phase"): only the live lifestyle phase's own
+  // metrics are asked. With none live, nothing is (no check-in, nothing due, nothing saved outside a phase). A metric
+  // with no phase (a list from before phases) is no standard (2 Nov, Alex: "get rid of those 4 metrics to be the
+  // standard"): never asked, never carried into a phase; its readings stay, body weight still reads them.
   if (running == null) return [];
   return getData()
-    .metric_definitions.filter((m) => m.client_id === clientId && !m.retired_at && m.frequency === frequency && (m.phase_id == null || m.phase_id === running))
+    .metric_definitions.filter((m) => m.client_id === clientId && !m.retired_at && m.frequency === frequency && m.phase_id === running)
     .sort((a, b) => a.order_index - b.order_index);
 }
 
@@ -4244,24 +4244,9 @@ function runningLifestylePhaseId(clientId: number): number | null {
   );
 }
 
-// Metrics from before phases owned them (no phase_id) belong to the phase
-// that is running, so the next phase starts as a blank canvas instead of
-// inheriting them. With no phase running they stay standing.
-function adoptStandingMetrics(clientId: number) {
-  const running = runningLifestylePhaseId(clientId);
-  if (running == null) return;
-  let moved = false;
-  for (const m of getData().metric_definitions) {
-    if (m.client_id !== clientId || m.phase_id != null) continue;
-    m.phase_id = running;
-    moved = true;
-  }
-  // A standing metric the phase already copied is now in there twice: one.
-  if (moved) {
-    mergeDuplicateMetricDefinitions(getData());
-    persist();
-  }
-}
+// Metrics from before phases owned them (no phase_id) used to be carried into the phase that went live, which made an
+// old list the standard for every new phase (2 Nov, Alex: "get rid of those 4 metrics to be the standard"). No more:
+// a phase starts with only what the coach adds to it; a metric with no phase is neither asked nor shown.
 
 export function addMetricDefinition(
   clientId: number,
@@ -4284,27 +4269,20 @@ export function addMetricDefinition(
     name,
     unit,
     frequency,
-    ...(phaseId != null ? { phase_id: phaseId } : {}),
+    // No phase named (an older path, a template): the live phase's, so it is asked; none live, it waits with no phase.
+    ...((phaseId ?? runningLifestylePhaseId(clientId)) != null ? { phase_id: (phaseId ?? runningLifestylePhaseId(clientId))! } : {}),
     order_index: count,
   });
   persist();
 }
 
 /**
- * The metrics a phase asks for: its own, plus the client's standing set —
- * everything from before phases owned metrics — which is asked for whatever
- * is running. A draft phase has none of its own, so it starts blank; the
- * standing set only shows on the phase the client is actually in, so a new
- * draft is not quietly pre-filled by it.
+ * The metrics a phase asks for: its own alone (2 Nov, Alex: no standing list carried in from before phases, which made
+ * an old list the standard). A new phase starts blank. `isLive` is kept for the callers; it no longer changes the list.
  */
-export function listMetricsForPhase(clientId: number, phaseId: number | null, isLive: boolean): MetricDefinition[] {
-  adoptStandingMetrics(clientId);
-  return listAllMetrics(clientId).filter((m) => {
-    if (m.phase_id != null) return m.phase_id === phaseId;
-    // The standing set: shown while the running phase is on screen, and when
-    // the client has no lifestyle phases at all.
-    return isLive;
-  });
+export function listMetricsForPhase(clientId: number, phaseId: number | null, _isLive: boolean): MetricDefinition[] {
+  if (phaseId == null) return [];
+  return listAllMetrics(clientId).filter((m) => m.phase_id === phaseId);
 }
 
 /**
