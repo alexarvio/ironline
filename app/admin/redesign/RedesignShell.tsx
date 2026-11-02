@@ -318,7 +318,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
       <div className="rd-page">
         <nav className="rd-nav" aria-label="Redesign drafts">
           {TABS.map((t) => (
-            <button key={t.key} type="button" className={t.key === tab ? "on" : ""} aria-current={t.key === tab ? "page" : undefined} onClick={() => show(t.key)}>
+            <button key={t.key} type="button" className={t.key === tab ? "on" : ""} data-label={t.label} aria-current={t.key === tab ? "page" : undefined} onClick={() => show(t.key)}>
               {t.label}
               {/* Something owed on this tab (22 Oct, Alex: the dot trail from the rail's number down to the thing). */}
               {dots.tabs.includes(t.key as DotTab) && <i className="rd-due rd-nav-due" role="img" aria-label="needs you" />}

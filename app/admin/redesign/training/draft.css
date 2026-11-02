@@ -1425,3 +1425,8 @@ span.rd-demo { cursor: default; }
 .rd-todo-done { display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 999px; background: none; color: #8b93a1; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
 .rd-todo-done svg { width: 14px; height: 14px; }
 .rd-todo-done:hover, .rd-todo-done:focus-visible { outline: none; background: rgba(47, 122, 63, 0.12); color: #2f7a3f; }
+/* One width whichever tab is on (2 Nov, Alex: "the tiniest change in the size of the nav bar when I toggle"): the tab on
+   screen is set at 600, so every tab holds its word's 600 width (an unseen copy of it under the word), and the bar never
+   moves. */
+.rd-nav button { display: inline-flex; flex-direction: column; align-items: center; }
+.rd-nav button::after { content: attr(data-label); height: 0; overflow: hidden; visibility: hidden; font-weight: 600; pointer-events: none; user-select: none; }
