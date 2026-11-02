@@ -411,6 +411,12 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
         </span>
         <span className="rt-linkslot" onClick={(e) => e.stopPropagation()}>
           {linkControl(m)}
+          {/* The next call's one button that commits sits on its own row (2 Nov, Alex: over the card it read as the page's). */}
+          {m.id === upcoming?.id && (
+            <button type="button" className="trn-pill" onClick={() => setDlg({ kind: "complete", meetingId: m.id })}>
+              <CheckIcon /> Mark completed
+            </button>
+          )}
         </span>
         <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu modal={false}>
@@ -506,12 +512,6 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
           <div className="trn-weekhead">
             <div>
               <h2>Next call</h2>
-            </div>
-            <div className="trn-weekhead-actions">
-              {/* The one button that commits; Reschedule and Delete are the row's ⋯, as on every call. */}
-              <button type="button" className="trn-pill" onClick={() => setDlg({ kind: "complete", meetingId: upcoming.id })}>
-                <CheckIcon /> Mark completed
-              </button>
             </div>
           </div>
           {/* The same row as Also scheduled (21 Oct, Alex: the two exactly alike), open at first. */}

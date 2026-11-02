@@ -40,6 +40,8 @@
    the words and nothing else moves. */
 .rd.rt .rt-note { display: flex; flex-direction: column; }
 .rd.rt .rt-note-text { display: block; width: 100%; height: 132px; margin: 0; padding: 6px 0 8px; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; box-shadow: none; outline: none; resize: none; box-sizing: border-box; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.5; color: #3a4250; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+/* A call still to come gives its notes half as much room again (2 Nov, Alex: a few bullets and it scrolled). */
+.rd.rt .rt-rowbody .rt-note-text:not(.short) { height: 198px; }
 .rd.rt .rt-note-text.short { height: 96px; }
 .rd.rt .rt-note-text::placeholder { color: #98a2b3; }
 .rd.rt .rt-note-text.typed { border-bottom-color: #e1e5eb; }
