@@ -4,6 +4,8 @@ import { createContext, useContext, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarIcon, CheckIcon, EyeIcon, LockIcon, PlayIcon, PlusIcon } from "../../components/icons";
 import { dismissHomeActionAction, markSeenAction } from "../../lib/actions";
+import { Dialog } from "../../components/ui/dialog";
+import { ConfirmDialog } from "./training/TrainingDraft";
 import { landOnSoon } from "../../lib/landOn";
 import type { DotTab, TodoItem } from "./dots";
 
@@ -64,8 +66,22 @@ export function TodoStrip({ tab, onAct }: { tab: DotTab; onAct?: (item: TodoItem
   const router = useRouter();
   const [now] = useState(() => Date.now());
   const [, start] = useTransition();
-  const items = (all ?? []).filter((i) => i.tab === tab);
+  // Marked done by hand (2 Nov, Alex: "a button to override this"): gone at once, while the server lets them go.
+  const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
+  const [asking, setAsking] = useState<TodoItem | null>(null);
+  const items = (all ?? []).filter((i) => i.tab === tab && !gone.has(i.key));
   if (!items.length) return null;
+  /** The rows the coach can let go: what the Feed's round check clears (not a sign-in lock, which ends by itself, nor a
+   *  new client's first phase, which is no Needs-you item). */
+  const canDone = (i: TodoItem) => i.kind !== "locked" && i.kind !== "setup";
+  const markDone = (list: TodoItem[]) => {
+    setAsking(null);
+    setGone((g) => new Set([...g, ...list.map((i) => i.key)]));
+    start(async () => {
+      await dismissHomeActionAction(clientId, list.map((i) => i.key));
+      router.refresh();
+    });
+  };
   const go = (item: TodoItem) => {
     // Read is reading it (2 Nov): the note is marked read now, whichever tab it is on, so its row, the tab's dot and the
     // rail's count go with it even where opening it marks nothing.
@@ -103,9 +119,29 @@ export function TodoStrip({ tab, onAct }: { tab: DotTab; onAct?: (item: TodoItem
               {iconOf(item.kind)}
               {item.action}
             </button>
+            {/* Done without doing it: asks first (the pop-up), as the Feed's round check, green under the pointer. */}
+            {canDone(item) ? (
+              <button type="button" className="rd-todo-done" title="Mark done" aria-label={`Mark done: ${item.what}`} onClick={() => setAsking(item)}>
+                <CheckIcon />
+              </button>
+            ) : (
+              <span className="rd-todo-done-room" aria-hidden="true" />
+            )}
           </div>
         );
       })}
+      <Dialog open={asking != null} onOpenChange={(o) => !o && setAsking(null)}>
+        {asking && (
+          <ConfirmDialog
+            title="Mark as done?"
+            description={`${asking.what} leaves the list. Nothing is sent.`}
+            confirm="Mark done"
+            // Several waiting on this tab: all of them at once, ticked first.
+            tick={items.filter(canDone).length > 1 ? `The other ${items.filter(canDone).length - 1} here too` : null}
+            onConfirm={(all) => markDone(all ? items.filter(canDone) : [asking])}
+          />
+        )}
+      </Dialog>
     </section>
   );
 }

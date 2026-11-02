@@ -6973,14 +6973,17 @@ const STANDING_ACTIONS = new Set(["no-phase", "week", "program-ending", "quiet",
 const DISMISS_STANDING_MS = 14 * 86400000;
 
 /** The coach marked a Needs-you item as read (12 Oct): it leaves Home, the Feed and the rail's dot. */
-export function dismissHomeAction(clientId: number, actionId: string) {
+export function dismissHomeAction(clientId: number, actionId: string | string[]) {
   const client = getData().clients.find((c) => c.id === clientId);
-  if (!client || !actionId) return;
-  // Kept small: only the items still open stay recorded.
-  const open = new Set(getClientHome(clientId).actions.map((a) => a.id));
+  const ids = (Array.isArray(actionId) ? actionId : [actionId]).filter(Boolean);
+  if (!client || !ids.length) return;
+  // Kept small: only the items that still stand stay recorded. Every item, let go or not (2 Nov: the list after the
+  // filter left out what was let go before, so each Done brought the one before it back).
+  const standing = new Set(getClientHome(clientId).allActionIds);
   const next: Record<string, number> = {};
-  for (const [id, at] of Object.entries(client.coach_dismissed ?? {})) if (open.has(id)) next[id] = at;
-  next[actionId] = Date.now();
+  for (const [id, at] of Object.entries(client.coach_dismissed ?? {})) if (standing.has(id)) next[id] = at;
+  const now = Date.now();
+  for (const id of ids) next[id] = now;
   client.coach_dismissed = next;
   persist();
 }
@@ -6997,6 +7000,8 @@ export type ClientHome = {
   unseenTabs: string[];
   /** Training sessions with something new on them. */
   unseenDayIds: number[];
+  /** Every Needs-you item that stands, the ones the coach let go too (dismissHomeAction keeps its record to these). */
+  allActionIds: string[];
 };
 
 const isUnseen = (seen: Record<string, number> | undefined, e: FeedEvent, since: number) =>
@@ -7194,6 +7199,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: Trainin
 
   return {
     actions: open,
+    allActionIds: actions.map((a) => a.id),
     events,
     eventTotal: all.length,
     unseenCount: unseen.length,

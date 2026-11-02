@@ -3056,9 +3056,9 @@ export async function deleteClientAction(formData: FormData) {
 }
 
 // Needs you → Mark as read (12 Oct): the item leaves Home, the Feed and the rail.
-export async function dismissHomeActionAction(clientId: number, actionId: string) {
+export async function dismissHomeActionAction(clientId: number, actionId: string | string[]) {
   if (!(await coachForClient(Number(clientId)))) return;
-  dismissHomeAction(Number(clientId), String(actionId));
+  dismissHomeAction(Number(clientId), Array.isArray(actionId) ? actionId.map(String) : String(actionId));
   revalidatePath("/admin");
 }
 
