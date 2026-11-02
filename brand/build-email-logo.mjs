@@ -5,11 +5,11 @@ import fs from "node:fs";
 import sharp from "sharp";
 
 const src = fs.readFileSync("app/components/NorCoachLogo.tsx", "utf8");
-const svgs = [...src.matchAll(/<svg[^>]*viewBox="([^"]+)"[^>]*>([\s\S]*?)<\/svg>/g)].map((m) => ({ box: m[1].split(" ").map(Number), body: m[2] }));
+const svgs = [...src.replace(/fillRule=/g, "fill-rule=").matchAll(/<svg[^>]*viewBox="([^"]+)"[^>]*>([\s\S]*?)<\/svg>/g)].map((m) => ({ box: m[1].split(" ").map(Number), body: m[2] }));
 const [mark, word] = svgs;
 const H = 120; // mark height
 const mw = (mark.box[2] / mark.box[3]) * H;
-const wh = H * 0.42;
+const wh = H / 1.35; // the word at 1em beside the star at 1.35em, as the app draws it (2 Nov)
 const ww = (word.box[2] / word.box[3]) * wh;
 const gap = 34, pad = 30;
 const W = Math.round(pad * 2 + mw + gap + ww), T = Math.round(pad * 2 + H);
