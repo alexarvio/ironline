@@ -2,6 +2,7 @@ import { isEventTypeId } from "../lib/eventTypes";
 import { warmClientPhotos } from "../lib/storage";
 import { FOCUS_COOKIE, focusOpenFrom, focusStamp } from "../lib/focusStamp";
 import { coachQuietHours } from "../lib/coachPush";
+import { assistedRow } from "../lib/targetRule";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "../lib/auth";
 import { touchPresence } from "../lib/presence";
@@ -769,6 +770,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   group: library.has(a.exercise_id) ? exerciseGroup(library.get(a.exercise_id)!) : "other",
                   sets: a.sets,
                   reps: a.reps,
+                  // Assisted by the library's exercise or variation, as the weight rule reads it, whatever the row is called.
+                  assisted: assistedRow(library.get(a.exercise_id), a.variation_id),
                   targetWeight: day.free ? null : a.target_weight_kg,
                   unit: getExerciseUnit(a.id),
                   targetRpe: a.rpe_target,
