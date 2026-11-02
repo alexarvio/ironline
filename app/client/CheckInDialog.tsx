@@ -84,8 +84,6 @@ export type CheckInForm = {
   monthLabel?: string;
 };
 
-const DAY = 86400000;
-const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // Lifestyle's beige, the one it wears everywhere (DESIGN-RULES §4).
@@ -96,27 +94,14 @@ const buzz = (ms = 5) => {
   } catch {}
 };
 
-/** "Last 55 kg | Fri", "Last 7.5 h | Yesterday", "Last 7 of 10 | Last month", or "First time": the reading first and
- *  when after it, said to be the last (2 Nov, Alex: "21 Oct 87.3 kg" read as the check-in's own day). */
-function lastLine(m: CheckInMetric, source: RowSource, date: string): React.ReactNode {
+/** "Last logged 55 kg", "Last logged 7 of 10", or "First time": the reading alone, no day (2 Nov, Alex: "take out the
+ *  date and just say last logged"; a date read as the check-in's own day). */
+function lastLine(m: CheckInMetric): string {
   if (!m.last) return "First time";
   const v = m.last.value;
   const n = isWholeMetric(m) ? Math.round(v).toLocaleString("en-US") : String(v);
   const reading = m.scaleMax ? `${Math.round(v)} of ${m.scaleMax}` : `${n}${m.unit ? ` ${m.unit}` : ""}`;
-  const d = dayNum(date) - dayNum(m.last.period);
-  const when =
-    source === "monthly"
-      ? "Last month"
-      : source === "weekly" || source === "measurements"
-        ? d <= 7
-          ? "Last week"
-          : `${Number(m.last.period.slice(8, 10))} ${MONTHS[Number(m.last.period.slice(5, 7)) - 1]}`
-        : d === 1
-          ? "Yesterday"
-          : d > 1 && d < 7
-            ? DAYS[new Date(`${m.last.period}T12:00:00Z`).getUTCDay()]
-            : `${Number(m.last.period.slice(8, 10))} ${MONTHS[Number(m.last.period.slice(5, 7)) - 1]}`;
-  return <Bars parts={[`Last ${reading}`, when]} />;
+  return `Last logged ${reading}`;
 }
 
 /** The day a check-in is for, as its line says it: "Mon 2 Nov". */
@@ -450,11 +435,11 @@ export default function CheckInDialog({
 // ---- One metric: the name and the last reading on the left; a number box
 // on the right, or a scale bar underneath that fills as a gradient. The row
 // tints and outlines in its group's colour once it is filled.
-function MetricRow({ row, date, value, problem, filled, inputRef, onChange, onNext }: { row: Row; date: string; value: string; problem: string | null; filled: boolean; inputRef: (el: HTMLInputElement | null) => void; onChange: (v: string) => void; onNext: () => void }) {
+function MetricRow({ row, value, problem, filled, inputRef, onChange, onNext }: { row: Row; date: string; value: string; problem: string | null; filled: boolean; inputRef: (el: HTMLInputElement | null) => void; onChange: (v: string) => void; onNext: () => void }) {
   const m = row.metric;
   const c = colourOf();
   const whole = isWholeMetric(m);
-  const last = lastLine(m, row.source, date);
+  const last = lastLine(m);
   const placeholder = m.last ? (whole ? String(Math.round(m.last.value)) : String(m.last.value)) : "—";
   const unit = m.scaleMax ? "" : m.unit;
   const style = { "--c": c.hex, "--c-rgb": c.rgb } as React.CSSProperties;
