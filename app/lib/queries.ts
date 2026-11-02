@@ -7107,8 +7107,8 @@ export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: Trainin
   // with no targets and a training phase still a draft showed nothing owed): a track with no live phase now (`track-…`;
   // its draft over today named), and a live phase with nothing in it (`empty-…`, the Plan's warning sign). Standing: let go,
   // they keep away a fortnight. A client with nothing set up yet is the Plan's own row (loadDots), not three of these.
-  // Only for a client still being coached: a phase live, ended in the last four weeks or scheduled ahead (a former client
-  // whose phases all ended long ago owes nothing).
+  // Only for a client still being coached: a phase over today, ended in the last four weeks or ahead, a draft too (2 Nov,
+  // Alex: a client with only a draft over today showed nothing; a former client whose phases all ended long ago owes nothing).
   const phasesNow = listClientPhases(clientId);
   const todayNow = localDateStr();
   const monthBack = (() => {
@@ -7116,7 +7116,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: Trainin
     d.setDate(d.getDate() - 28);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   })();
-  const coached = phasesNow.some((p) => !p.draft && (phaseCovers(p.start_week, p.end_week, todayNow) || p.start_week > todayNow || (p.end_week ?? "") >= monthBack));
+  const coached = phasesNow.some((p) => phaseCovers(p.start_week, p.end_week, todayNow) || p.start_week > todayNow || (p.end_week ?? "") >= monthBack);
   if (coached) {
     for (const track of ["lifestyle", "training", "nutrition"] as const) {
       const live = getCurrentPhase(clientId, track);

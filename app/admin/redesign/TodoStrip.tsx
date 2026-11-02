@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarIcon, CheckIcon, EyeIcon, LockIcon, PlayIcon, PlusIcon } from "../../components/icons";
+import { CalendarIcon, CheckIcon, EyeIcon, LockIcon, PhaseFlagIcon, PlayIcon, PlusIcon } from "../../components/icons";
+import { TrackIcon } from "./plan/PlanDraft";
 import { dismissHomeActionAction, markSeenAction } from "../../lib/actions";
 import { Dialog } from "../../components/ui/dialog";
 import { ConfirmDialog } from "./training/TrainingDraft";
@@ -59,6 +60,16 @@ function iconOf(kind: TodoItem["kind"]) {
   }
 }
 
+/** What a row is about, before its words (2 Nov, Alex: "can we use the correct icons… always use the same thing"): a phase
+ *  missing or still a draft, a new client's first phase, the flag the Events screen gives a phase; something missing in a
+ *  track, that track's own icon (training the dumbbell, nutrition the apple, lifestyle the heart); the rest, as the action. */
+function markOf(item: TodoItem) {
+  if (item.key === "setup" || item.key.startsWith("track-")) return <PhaseFlagIcon />;
+  if (item.key === "week") return <TrackIcon track="training" size={16} />;
+  if (item.key.startsWith("empty-")) return <TrackIcon track={item.tab === "measurements" ? "lifestyle" : item.tab === "nutrition" ? "nutrition" : "training"} size={16} />;
+  return iconOf(item.kind);
+}
+
 /** The tab's strip. `onAct` does a row's action in place (Meetings' Mark completed and Book, Plan's New phase) and says
  *  so; anything it leaves goes to the row's place: on this tab its # (the tab opens the thing and lands on it), else there. */
 export function TodoStrip({ tab, onAct }: { tab: DotTab; onAct?: (item: TodoItem) => boolean }) {
@@ -105,7 +116,7 @@ export function TodoStrip({ tab, onAct }: { tab: DotTab; onAct?: (item: TodoItem
         return (
           <div key={item.key} className="rd-todo-row">
             <span className="rd-todo-mark" aria-hidden="true">
-              {iconOf(item.kind)}
+              {markOf(item)}
             </span>
             <span className="rd-todo-what">{item.what}</span>
             {item.words && <span className="rd-todo-words">&ldquo;{item.words}&rdquo;</span>}

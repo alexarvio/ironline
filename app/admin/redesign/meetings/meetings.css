@@ -202,3 +202,6 @@
 .rd.rt .rt-focus-last li { display: flex; align-items: center; gap: 10px; min-height: 32px; font-size: 14px; font-weight: 500; color: #8b93a1; }
 .rd.rt .rt-focus-last li i { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #c9cfd8; }
 @media (max-width: 900px) { .rd.rt .rt-focus-split { grid-template-columns: minmax(0, 1fr); row-gap: 16px; } }
+/* Every notes tab of a call one height (2 Nov, Alex: To focus on was the smallest, so the card shrank on it): as tall as
+   the notes' box. */
+.rd.rt .rt-rowbody .rt-focus-split { min-height: 198px; }
