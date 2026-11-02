@@ -4228,10 +4228,12 @@ export function listMetricDefinitions(
 ): MetricDefinition[] {
   adoptStandingMetrics(clientId);
   const running = runningLifestylePhaseId(clientId);
+  // Phase by phase (2 Nov, Alex: "of course not, it should be phase by phase"): only the live lifestyle phase's
+  // metrics are asked. With none live, nothing is (no check-in, nothing due, nothing saved outside a phase); the
+  // standing list from before phases is taken over by the next phase that goes live (adoptStandingMetrics).
+  if (running == null) return [];
   return getData()
-    .metric_definitions.filter(
-      (m) => m.client_id === clientId && !m.retired_at && m.frequency === frequency && (m.phase_id == null || m.phase_id === running)
-    )
+    .metric_definitions.filter((m) => m.client_id === clientId && !m.retired_at && m.frequency === frequency && (m.phase_id == null || m.phase_id === running))
     .sort((a, b) => a.order_index - b.order_index);
 }
 
