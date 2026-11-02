@@ -20963,3 +20963,9 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
 .coach-says-words small { display: block; font-size: 12px; font-weight: 500; line-height: 16px; color: #8b93a1; }
 /* The food diary's comments sat in a teal box: flat on the page now, as every note. */
 .fdi-coach-said.fdi-coach-said { display: block; padding: 0; border-radius: 0; background: none; }
+
+/* ---- Zoomed in (2 Nov, Alex: a pinch-zoom left a client's phone blank; ZoomCalm.tsx): the heaviest layers rest while
+   the page is zoomed, so the phone isn't redrawing moving blurs at the zoomed size. The glows go, every animation holds
+   still and nothing is blurred through; at 1× everything comes back as it was. */
+html.zoomed .pc-aura, html.zoomed .ev-aura, html.zoomed .hm-gap.charging::before, html.zoomed .hm-gap.charging::after { display: none; }
+html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-state: paused !important; will-change: auto !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }

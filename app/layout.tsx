@@ -8,6 +8,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { clerkOn } from "./lib/clerk";
 import SlidePills from "./components/SlidePills";
 import FreshBuild from "./components/FreshBuild";
+import ZoomCalm from "./components/ZoomCalm";
 import { buildId } from "./lib/buildId";
 import { getSessionUser } from "./lib/auth";
 import { markFor } from "./lib/brandMark";
@@ -107,6 +108,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SlidePills />
         {/* A page left open across a deploy reloads onto the new build (30 Oct). */}
         <FreshBuild build={buildId()} />
+        <ZoomCalm />
       </body>
     </html>
   );
