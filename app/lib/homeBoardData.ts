@@ -14,6 +14,7 @@ import {
   getProgramCurrentWeekIndex,
   getWeek,
   getWeightSeriesAll,
+  getWeightGoalViews,
   bodyWeightOn,
   bodyWeightReadings,
   dailyAskedOn,
@@ -308,6 +309,7 @@ export function getHomeBoard(clientId: number): HomeBoard {
     muscles: part("muscles", () => musclesOf(ctx), empty.muscles),
     strength: part("strength", () => strengthOf(ctx), empty.strength),
     weight: part("weight", () => weightOf(ctx), null),
+    weightGoals: part("weightGoals", () => getWeightGoalViews(clientId, today), []),
     days: part("days", () => thirtyDaysOf(ctx), empty.days),
     // The phase span is gone from Consistency (25 Oct, Alex): the last 30 days alone.
     phaseDays: null,
@@ -330,6 +332,7 @@ function emptyBoard(today: string): HomeBoard {
     muscles: { "7d": emptyWindow(addDays(today, -6), today), "30d": emptyWindow(addDays(today, -29), today), phase: null },
     strength: { "7d": null, "30d": null, phase: null },
     weight: null,
+    weightGoals: [],
     days: lastDays(today).map((date) => ({ date, trained: false, food: false, checkIn: false })),
     phaseDays: null,
   };

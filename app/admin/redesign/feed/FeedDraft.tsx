@@ -123,7 +123,7 @@ function waitOf(n: NeedRow, now: number): { text: string; late: boolean } {
   return { text: `${d} ${d === 1 ? "day" : "days"}`, late: true };
 }
 
-function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
+export function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
   const router = useRouter();
   const open = useRowOpen();
   const [, start] = useTransition();

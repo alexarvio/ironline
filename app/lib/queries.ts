@@ -26,6 +26,8 @@ import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 import { cleanRepeat, openEnd, type EventRepeat } from "./eventRepeat";
 import { assistedRow, beforeStop, copiedWeights, isReset, laneKg, laneOfGym, laneTypedAt, laterSlot, liftOf, raisedTo, setsSinceReset, stopAfter, writeLane, type Lane } from "./targetRule";
 import { FEATURES } from "./features";
+import { addDaysIso as goalAddDays, daysBetween, weightGoalViews, type WeightGoalView } from "./weightGoal";
+import type { WeightGoal } from "./db";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -6748,6 +6750,98 @@ export function measureFieldsAskedOf(clientId: number): MeasurementFieldDef[] {
   return weightAsked ? fields.filter((f) => !WEIGHT_NAME.test(f.name.trim())) : fields;
 }
 
+// ---- Weight goals (2 Nov, Alex: a weight by a date, set by the coach or the client; the rule is lib/weightGoal.ts).
+const goalRows = (): WeightGoal[] => {
+  const d = getData();
+  if (!d.weight_goals) d.weight_goals = [];
+  return d.weight_goals;
+};
+
+export function listWeightGoals(clientId: number): WeightGoal[] {
+  return goalRows()
+    .filter((g) => g.client_id === clientId)
+    .sort((a, b) => (a.by_date < b.by_date ? -1 : a.by_date > b.by_date ? 1 : a.id - b.id));
+}
+
+/** The unit the client is asked their weight in: the Weight metric they are asked, else the old Weight field's, else the
+    newest Weight metric's, else kg: as their check-in's Weight chart reads it (getCheckInHistory), so a goal reads one
+    unit everywhere. */
+export function askedWeightUnit(clientId: number): "kg" | "lbs" {
+  for (const c of ["daily", "weekly", "monthly"] as const) {
+    const m = metricsAsked(clientId, c).find((d) => WEIGHT_NAME.test(d.name.trim()));
+    if (m) return LB_UNIT.test((m.unit ?? "").trim()) ? "lbs" : "kg";
+  }
+  const f = listMeasurementFields(clientId).find((x) => WEIGHT_NAME.test(x.name.trim()));
+  if (f) return LB_UNIT.test((f.unit ?? "").trim()) ? "lbs" : "kg";
+  const newest = listAllMetrics(clientId)
+    .filter((m) => WEIGHT_NAME.test(m.name.trim()))
+    .sort((a, b) => b.id - a.id)[0];
+  return newest && LB_UNIT.test((newest.unit ?? "").trim()) ? "lbs" : "kg";
+}
+
+/** Every goal of the client, read against every weigh-in they logged. */
+export function getWeightGoalViews(clientId: number, today: string = localDateStr()): WeightGoalView[] {
+  return weightGoalViews(listWeightGoals(clientId), bodyWeightReadings(clientId).filter((r) => r.kg > 0).map((r) => ({ date: r.date, kg: r.kg })), today);
+}
+
+/** Where a new goal starts: the client's last 7 days' average (to the latest reading), else the latest reading, else the
+    starting weight on their card; null with none. */
+export function goalStartKg(clientId: number): number | null {
+  const readings = bodyWeightReadings(clientId).filter((r) => r.kg > 0);
+  const last = readings.at(-1);
+  if (last) {
+    const win = readings.filter((r) => r.date >= goalAddDays(last.date, -6));
+    return Math.round((win.reduce((s, r) => s + r.kg, 0) / win.length) * 100) / 100;
+  }
+  const s = getData().client_profiles.find((p) => p.client_id === clientId)?.starting_weight_kg;
+  return typeof s === "number" && s > 0 ? s : null;
+}
+
+export type WeightGoalFields = { targetKg: number; unit: "kg" | "lbs"; byDate: string; note?: string | null };
+/** Why a goal could not be saved, said by the screen. `running`: one goal at a time (2 Nov, Alex). */
+export type WeightGoalRefusal = "no-weight" | "too-soon" | "taken" | "invalid" | "running";
+
+/** Adds a goal, or changes one. One at a time (2 Nov, Alex: "once there is a goal take out the option of adding another
+    one, but give the option of editing"): a new one only once the last is reached or missed. It starts where the client
+    is now (their last 7 days' average); its start never moves after. */
+export function saveWeightGoal(clientId: number, v: WeightGoalFields, by: { who: "coach" | "client"; userId: number | null }, goalId?: number): WeightGoal | WeightGoalRefusal {
+  const target = Number(v.targetKg);
+  const byDate = String(v.byDate ?? "").slice(0, 10);
+  const unit = v.unit === "lbs" ? "lbs" : "kg";
+  if (!Number.isFinite(target) || target < 20 || target > 400 || !DAY_ISO.test(byDate)) return "invalid";
+  const today = localDateStr();
+  const mine = listWeightGoals(clientId);
+  if (mine.some((g) => g.by_date === byDate && g.id !== goalId)) return "taken";
+  const note = (v.note ?? "").trim().slice(0, 500);
+  const now = new Date().toISOString();
+  if (goalId != null) {
+    const row = goalRows().find((g) => g.id === goalId && g.client_id === clientId);
+    if (!row) return "invalid";
+    if (daysBetween(row.start_date, byDate) < 7) return "too-soon";
+    Object.assign(row, { target_kg: target, unit, by_date: byDate, note, updated_at: now });
+    persist();
+    return row;
+  }
+  if (getWeightGoalViews(clientId, today).some((g) => !g.settled)) return "running";
+  const startKg = goalStartKg(clientId);
+  const startDate = today;
+  if (startKg == null) return "no-weight";
+  if (daysBetween(startDate, byDate) < 7) return "too-soon";
+  const row: WeightGoal = { id: allocId("weight_goals"), client_id: clientId, target_kg: target, unit, by_date: byDate, start_kg: startKg, start_date: startDate, added_by: by.who, added_by_id: by.userId, note, created_at: now, updated_at: now };
+  goalRows().push(row);
+  persist();
+  return row;
+}
+
+export function removeWeightGoal(clientId: number, goalId: number): WeightGoal | null {
+  const d = getData();
+  const row = goalRows().find((g) => g.id === goalId && g.client_id === clientId) ?? null;
+  if (!row) return null;
+  d.weight_goals = goalRows().filter((g) => g !== row);
+  persist();
+  return row;
+}
+
 /** Something on the Measure form is in for the day: a reading of a field the client is asked for. */
 function measuredOn(fields: MeasurementFieldDef[], date: string): boolean {
   return getMeasurementValues(fields.map((f) => f.id)).some((v) => v.date === date);
@@ -7772,6 +7866,28 @@ export type CheckInSeries = {
   precision: number;
   /** Oldest first: the day it is for (a weekly one's Monday), and when it was saved. */
   points: { date: string; value: number; at: string | null }[];
+  /** The Weight chart's alone (empty with none): the client's weight goals, by date, every weight in the series' unit (2 Nov, Alex). */
+  goals?: ClientGoalLine[];
+};
+
+/** A weight goal as the client's Weight chart draws it (2 Nov, Alex: the planned line from where they were to the goal,
+    and where they stand on it). Weights in the chart's unit, to one decimal; setBy the coach's first name or "you". */
+export type ClientGoalLine = {
+  id: number;
+  target: number;
+  byDate: string;
+  start: number;
+  startDate: string;
+  mine: boolean;
+  setBy: string;
+  /** The coach's picture, for their face on the goal as on an event they added. */
+  byPhoto: string | null;
+  active: boolean;
+  settled: boolean;
+  verdict: WeightGoalView["verdict"];
+  toGo: number | null;
+  reachedOn: string | null;
+  missedBy: number | null;
 };
 
 function readingPrecision(values: number[]): number {
@@ -7903,6 +8019,36 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
       precision: readingPrecision(points.map((p) => p.value)),
       points,
     });
+  }
+  // The weight goals ride on the Weight chart, wherever its readings came from (2 Nov, Alex), in its unit; an empty list
+  // when there are none, so the chart knows it is the Weight one and offers Set a goal. Never as `target`, which would
+  // draw the flat Goal line beside the plan.
+  const weightSeries = weightKey ? series.find((s) => s.key === weightKey) : undefined;
+  if (weightSeries) {
+    const goals = getWeightGoalViews(clientId, today);
+    weightSeries.goals = [];
+    if (goals.length) {
+      const u = weightSeries.unit || "kg";
+      const inU = (kg: number) => Math.round(weightInUnit(kg, "kg", u) * 10) / 10;
+      const coachFirst = getCoachFirstName(clientId);
+      const coachPhoto = getCoachProfile(coachIdOfClient(clientId) ?? 0)?.avatar_path ?? null;
+      weightSeries.goals = goals.map((g) => ({
+        id: g.id,
+        target: inU(g.targetKg),
+        byDate: g.byDate,
+        start: inU(g.startKg),
+        startDate: g.startDate,
+        mine: g.addedBy === "client",
+        setBy: g.addedBy === "client" ? "you" : coachFirst,
+        byPhoto: coachPhoto,
+        active: g.active,
+        settled: g.settled,
+        verdict: g.verdict,
+        toGo: g.toGoKg == null ? null : inU(g.toGoKg),
+        reachedOn: g.reachedOn,
+        missedBy: g.missedByKg == null ? null : inU(g.missedByKg),
+      }));
+    }
   }
 
   // The seven days before today, newest first: what was logged on each (a

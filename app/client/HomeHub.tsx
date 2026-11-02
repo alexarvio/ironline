@@ -16,7 +16,8 @@ import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
 import { pic } from "../lib/pic";
 import type { LinkView } from "../lib/messageLinks";
-import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenEvents, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
+import { goalItemId } from "../lib/weightGoal";
 import FocusList from "./home/FocusList";
 import { Bars } from "./Bars";
 import type { HomeFocus } from "../lib/focus";
@@ -74,7 +75,8 @@ export type MeetingRecap = { dateLabel: string; title: string; text: string } | 
 
 export type LatestActivity = {
   /** "focus": the coach set what to focus on (23 Oct); it opens Home at its top, where the list is. */
-  kind: "message" | "comment" | "video" | "deploy" | "goal" | "meeting" | "report" | "welcome" | "invoice" | "focus";
+  /** "weightGoal": the coach set or changed a weight goal (2 Nov); it opens Events on the goal's row (actionRef its id). */
+  kind: "message" | "comment" | "video" | "deploy" | "goal" | "weightGoal" | "meeting" | "report" | "welcome" | "invoice" | "focus";
   track?: "training" | "nutrition" | "lifestyle";
   /** For a comment: what it was on. */
   context?: "training" | "nutrition" | "checkin" | "photos";
@@ -306,6 +308,8 @@ function areaOf(a: LatestActivity): NotificationCategory {
     case "message":
     case "goal":
       return "message";
+    case "weightGoal":
+      return "weight_goal";
     case "comment":
       return a.context === "training" ? "training_changed" : a.context === "nutrition" ? "nutrition_changed" : a.context === "checkin" ? "checkin_comment" : a.context === "photos" ? "pics_reviewed" : "message";
     case "video":
@@ -330,6 +334,7 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
   const openCheckIn = useOpenCheckIn();
   const openPhotos = useOpenPhotos();
   const openMeetings = useOpenMeetings();
+  const openEvents = useOpenEvents();
   const goToTab = useNavigateTab();
   const [watching, setWatching] = useState(false);
   const [, startTransition] = useTransition();
@@ -354,6 +359,10 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
       case "goal":
         // Goals are no longer on Home: the coach's message about it is in the chat.
         openMessages?.();
+        return;
+      case "weightGoal":
+        // A weight goal lands on its row on Events, as its notification does.
+        openEvents?.(a.actionRef != null ? goalItemId(a.actionRef) : undefined);
         return;
       case "meeting":
         // The Meetings screen: the next call, and what was agreed on the last.

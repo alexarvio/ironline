@@ -24,6 +24,8 @@ import { Fold } from "../Fold";
 import PhaseDetailDialog from "./PhaseDetailDialog";
 import EventDetailDialog from "./EventDetailDialog";
 import type { OverviewClient, PhasesOverviewData } from "./load";
+import type { NeedRow } from "../../../lib/feedBoard";
+import { NeedsYou } from "../feed/FeedDraft";
 import { addDays, clientStatus, daysBetween, daysLeft, endingSoon, leftLabel, mondayOf, needsAttention, progressOf, soonPhases, TRACKS, weekIndexOf, weeksOf, type OverviewEvent, type OverviewPhase } from "./timeline";
 
 // The Phases overview (14 Oct; drawn as the Plan since 21 Oct): Ending soon
@@ -53,7 +55,7 @@ type Picked = { client: OverviewClient; phase: OverviewPhase } | { client: Overv
 
 const NONE_LEAVING = new Set<number>();
 
-export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
+export default function PhasesOverview({ data, needs = [], now }: { data: PhasesOverviewData; /** The phases owed (2 Nov, Alex): the Feed's rows for them, here instead. */ needs?: NeedRow[]; /** The server's clock (ms). */ now: number }) {
   const router = useRouter();
   const [, start] = useTransition();
   const { today, thisWeek, intoWeek, coachId, coach, clients, categories } = data;
@@ -154,6 +156,15 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
           <h1 className="rd-title">Phases</h1>
         </div>
       </header>
+
+      {/* ---- Needs you (2 Nov, Alex: "anything phases related out of the feed… keep it in phases"): a phase missing, still a
+          draft over today, or live with nothing in it, as the Feed lists what is owed (its count on the rail's Phases row).
+          The Feed's own list, in its classes. Nothing owed: no section. */}
+      {needs.length > 0 && (
+        <div className="rd trn rls rh rfd pov-needs">
+          <NeedsYou needs={needs} now={now} />
+        </div>
+      )}
 
       {/* ---- Ending soon: a row a phase, soonest first. Hidden when there is nothing to act on. */}
       {soonRows.length > 0 && (

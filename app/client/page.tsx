@@ -91,6 +91,8 @@ import {
   photoSheetFor,
   nextPhotoSheet,
   photoSheetForClient,
+  getWeightGoalViews,
+  askedWeightUnit,
   programWeekLabel,
   slugify,
   SUPPLEMENT_ITEMS,
@@ -101,7 +103,8 @@ import TrainingDayList from "./TrainingDayList";
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
 import { FOCUS_NOTE, homeFocus } from "../lib/focus";
-import type { HomeEvents } from "./EventsCard";
+import type { HomeEvent, HomeEvents } from "./EventsCard";
+import { VERDICT_WORD, goalItemId, kgIn } from "../lib/weightGoal";
 import type { ClientMeetingView } from "./meetings/MeetingsScreen";
 import { isMeetingTypeId } from "../lib/meetingTypes";
 import type { ProgressPics } from "./ProgressPicsCard";
@@ -321,8 +324,43 @@ function homeEvents(clientId: number): HomeEvents {
   const phases = listClientPhases(clientId)
     .filter((p) => !p.draft)
     .map((p) => ({ id: -p.id, kind: null, title: `${p.name} starts`, start: p.start_week, end: p.start_week, note: FEATURES.phaseGoals ? (p.objectives ?? []).join(String.fromCharCode(10)) : "", mine: false, phase: p.track }));
+  // Weight goals on their date (2 Nov, Alex): one day, the beige target, its weight as the title; every weight in the
+  // unit the client is asked in.
+  const unit = askedWeightUnit(clientId);
+  const coachFirst = getCoachFirstName(clientId);
+  const w = (kg: number | null) => (kg == null ? null : kgIn(kg, unit));
+  const goals: HomeEvent[] = getWeightGoalViews(clientId).map((g) => ({
+    id: goalItemId(g.id),
+    kind: null,
+    title: `${kgIn(g.targetKg, unit)} ${unit}`,
+    start: g.byDate,
+    end: g.byDate,
+    note: g.note,
+    mine: g.addedBy === "client",
+    goal: {
+      id: g.id,
+      unit,
+      target: kgIn(g.targetKg, unit),
+      byDate: g.byDate,
+      start: kgIn(g.startKg, unit),
+      startDate: g.startDate,
+      nowKg: w(g.nowKg),
+      planNow: w(g.planNowKg),
+      mine: g.addedBy === "client",
+      setBy: g.addedBy === "client" ? "you" : coachFirst,
+      active: g.active,
+      settled: g.settled,
+      verdict: g.verdict,
+      verdictWord: g.verdict ? VERDICT_WORD[g.verdict] : null,
+      toGo: w(g.toGoKg),
+      done: g.done,
+      elapsed: g.elapsed,
+      reachedOn: g.reachedOn,
+      missedBy: w(g.missedByKg),
+    },
+  }));
   return {
-    list: [...listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, mine: e.added_by === "client", repeat: e.repeat ?? null })), ...phases],
+    list: [...listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, mine: e.added_by === "client", repeat: e.repeat ?? null })), ...phases, ...goals],
     categories: listEventCategories(getClient(clientId)?.coach_id ?? 0).map(({ id, label, color }) => ({ id, label, color })),
   };
 }
@@ -538,6 +576,8 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     if (latestNote.kind === "general") {
       const lower = latestNote.message.toLowerCase();
       if (latestNote.action_tab === "training") return { kind: "deploy", track: "training", title, body: detail, cta: lower.includes("video") ? "View exercise" : "View training", ...base, focusWeek, link: noteLink && !noteLink.gone ? noteLink : null };
+      // A weight goal (2 Nov): to its row on Events, as its notification lands.
+      if (/^(Set a weight goal|Changed your weight goal)/.test(latestNote.message)) return { kind: "weightGoal", title, body: detail, cta: "See it", ...base, actionRef: latestNote.action_ref ?? null };
       if (lower.includes("goal")) return { kind: "goal", title, body: detail, cta: "Open chat", ...base };
       if (lower.includes("call") || lower.includes("meeting")) return { kind: "meeting", title, body: detail, cta: "View meeting", ...base };
       // "progress pictures" is the feature's old name (21 Oct), still in notes written before.

@@ -11,6 +11,7 @@
 // workoutFed) is not one, on the Lifestyle tile, in Since and in Consistency alike.
 
 import type { InvoiceEvery, PhaseTrack } from "./db";
+import type { WeightGoalView } from "./weightGoal";
 
 export const MUSCLE_GROUPS = ["Back", "Chest", "Shoulders", "Arms", "Legs", "Core"] as const;
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
@@ -108,6 +109,10 @@ export type HomeBoard = {
         Null without a phase, under 4 readings across 2 weeks, or when the phase's end is further ahead than twice the span read. */
     projection: { date: string; value: number } | null;
   } | null;
+  /** The client's weight goals by date (2 Nov, Alex: a weight by a date, a planned line from where they were to it),
+      each read against the last 7 days' average; the card shows the current one (weightGoal.ts currentGoal). Here even
+      with no reading, so the card still offers + Goal. */
+  weightGoals: WeightGoalView[];
   /** The last 30 days, oldest first (21 Oct, Alex: 30, not four weeks): trained (a set logged that day, or a session ended or done in full on it), food
       logged, checked in. */
   days: ConsistencyDay[];

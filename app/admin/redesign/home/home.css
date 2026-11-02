@@ -148,6 +148,41 @@
 .rd.rh .rh-wstrip i.miss { background: #EEF0F3; }
 .rd.rh .rh-waxis span.mid { left: 50%; transform: translateX(-50%); }
 .rd.rh .rh-waxis span.end { left: auto; right: 0; }
+
+/* The weight goals on the chart (2 Nov, Alex; option B of docs/boards/weight-goal-mockup.html), in the goal's beige
+   (#a08a5c): the dashed planned path is in the svg; here the stage that holds the chart and the goals' layer over its
+   plot (the same box as .rh-wplot), so the rings are buttons outside the chart's role="img". A ring a goal, 12px, white
+   inside with a 2px edge: the one being worked on beige with its weight beside it (12px/600), later milestones the same
+   at 55%, settled ones grey; a click opens it (a 28px reach round the ring). One past the cap sits on the right edge
+   with its weight and date in a white hairline pill. Today a faint upright line, `Today` in ink on the axis. The strip
+   stops at today, the days ahead empty room. The head keeps + Goal beside the capsule in every window, so the card
+   never jumps. */
+.rd.rh .rh-wstage { position: relative; flex: 1; display: flex; flex-direction: column; min-height: 120px; }
+.rd.rh .rh-wgoals { position: absolute; top: 26px; bottom: 6px; left: 0; right: var(--rh-wgut, 32px); pointer-events: none; }
+.rd.rh .rh-wgoal { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; padding: 0; box-sizing: border-box; border: 2px solid #a08a5c; border-radius: 999px; background: #fff; cursor: pointer; pointer-events: auto; }
+.rd.rh .rh-wgoal::before { content: ""; position: absolute; inset: -9px; border-radius: 999px; }
+.rd.rh .rh-wgoal.later { opacity: 0.55; }
+.rd.rh .rh-wgoal.settled { border-color: #c9cfd8; }
+.rd.rh .rh-wgoal:hover { box-shadow: 0 0 0 3px rgba(160, 138, 92, 0.18); }
+.rd.rh .rh-wgoal:focus-visible { outline: 1px solid #141a24; outline-offset: 3px; }
+.rd.rh .rh-wgoal-lbl, .rd.rh .rh-wgoal-pill { position: absolute; font-size: 12px; font-weight: 600; line-height: 1; color: #a08a5c; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+/* Above the ring on its left; on its right near the chart's left edge, under it near the top. */
+.rd.rh .rh-wgoal-lbl { transform: translate(calc(-100% - 8px), calc(-100% - 5px)); }
+.rd.rh .rh-wgoal-lbl.right { transform: translate(8px, calc(-100% - 5px)); }
+.rd.rh .rh-wgoal-lbl.below { transform: translate(calc(-100% - 8px), 5px); }
+.rd.rh .rh-wgoal-lbl.right.below { transform: translate(8px, 5px); }
+.rd.rh .rh-wgoal-lbl.later { opacity: 0.55; }
+.rd.rh .rh-wgoal-pill { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; box-sizing: border-box; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; transform: translate(calc(-100% + 6px), calc(-100% - 10px)); }
+.rd.rh .rh-wgoal-pill.below { transform: translate(calc(-100% + 6px), 10px); }
+.rd.rh .rh-wgoal-pill .rh-wtip-day { font-weight: 500; color: #8b93a1; }
+.rd.rh .rh-wtoday { position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: #141a24; opacity: 0.14; pointer-events: none; }
+.rd.rh .rh-waxis span.today { color: #141a24; }
+.rd.rh .rh-waxis span.today:not(.end) { transform: translateX(-50%); }
+.rd.rh .rh-wstrip b.rh-wstrip-ahead { flex-basis: 0; min-width: 0; }
+.rd.rh .rh-weight .rh-under { min-height: 18px; }
+/* + Goal: Training's white pill, its target at 14px. */
+.rd.trn.rh .trn-pill.rh-wgoal-add svg { width: 14px; height: 14px; }
+/* The goal pop-up renders in a portal: the client's face beside "Added by" there. */
 .rd.rh .rh-pace { margin: 0; font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 
 /* ---- Consistency with Meetings and Invoices beside it, the three one height. When the page is narrow the two cards
@@ -364,3 +399,9 @@
 /* One height on every client (2 Nov, Alex: "whenever I browse from plan to plan, the spaces don't really change"): a
    tile's full room (the track, the phase, the week and its bar, the figure and its note line) even with no phase. */
 .rd.rh .rls-card.rh-tile { min-height: 171px; }
+/* Where the client stands on a goal's chart (2 Nov, Alex: "the dot… where is the current weight with this golden color and
+   pulsating"): the latest weigh-in a gold dot with a soft gold pulse round it; still for reduced motion and while zoomed. */
+.rd.rh .rh-wnowdot { position: absolute; z-index: 1; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; background: #a08a5c; pointer-events: none; }
+.rd.rh .rh-wnowdot::after { content: ""; position: absolute; inset: 0; border-radius: 999px; background: rgba(160, 138, 92, 0.45); animation: rh-wnowpulse 1.8s ease-out infinite; }
+@keyframes rh-wnowpulse { from { transform: scale(1); opacity: 0.9; } to { transform: scale(2.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .rd.rh .rh-wnowdot::after { animation: none; opacity: 0; } }

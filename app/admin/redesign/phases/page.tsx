@@ -1,6 +1,6 @@
 import { requireCoach } from "../../../lib/auth";
 import { startTiming } from "../../../lib/timing";
-import { loadChatDock, loadRail } from "../loaders";
+import { loadChatDock, loadPhaseNeeds, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import ChatDock from "../ChatDock";
 import "../messages/messages.css";
@@ -8,6 +8,9 @@ import PhasesOverview from "./PhasesOverview";
 import { loadPhasesOverview } from "./load";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
+import "../training/trn.css";
+import "../home/home.css";
+import "../feed/feed.css";
 import "../nutrition/nutrition.css";
 import "../measurements/measurements.css";
 import "../plan/plan.css";
@@ -30,7 +33,7 @@ export default async function PhasesPage() {
       <RedesignRail rail={t.time("rail", () => loadRail(coach))} clientId={0} />
       <ChatDock chats={t.time("chatDock", () => loadChatDock(coach))} />
       <div className="rd-page">
-        <PhasesOverview data={t.time("phasesOverview", () => loadPhasesOverview(coach.id))} />
+        <PhasesOverview data={t.time("phasesOverview", () => loadPhasesOverview(coach.id))} needs={t.time("phaseNeeds", () => loadPhaseNeeds(coach.id))} now={Date.now()} />
       </div>
     </div>
   );

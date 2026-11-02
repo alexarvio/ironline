@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { eventTypeOf } from "../../lib/eventTypes";
-import { buildTimeline, ITEM_WIDTH, STRIDE, type TimelineItem } from "../../lib/eventTimeline";
+import { buildTimeline, GOAL_CHROME, ITEM_WIDTH, STRIDE, type TimelineEvent, type TimelineItem } from "../../lib/eventTimeline";
 import { useOpenEvents, useTabActive } from "../CheckInContext";
 import type { HomeEvents } from "../EventsCard";
 import RingEdge from "../../components/RingEdge";
+import { Bars } from "../Bars";
 
 // Home's events as a hairline timeline (15 Oct, restyled the same evening):
 // every event a thin ring with a fine-line icon in its colour, strung along
@@ -25,7 +26,9 @@ const PHASES = {
   lifestyle: { color: "#a08a5c", rgb: "160,138,92", icon: FLAG },
 };
 type Chrome = { color: string; rgb: string; icon: string };
-const chromeOf = (e: { kind: string | null; phase?: "training" | "nutrition" | "lifestyle" | null }): Chrome => {
+const chromeOf = (e: TimelineEvent): Chrome => {
+  // A weight goal (2 Nov, Alex): the beige target, one source with the Events screen and its notification.
+  if (e.goal) return GOAL_CHROME;
   if (e.phase) return PHASES[e.phase];
   const t = eventTypeOf(e.kind);
   return { color: t.color, rgb: t.rgb, icon: t.icon };
@@ -43,7 +46,7 @@ function LineIcon({ path, size = 20 }: { path: string; size?: number }) {
 export default function EventsTimelineCard({ events, today }: { events: HomeEvents; today: string }) {
   const openEvents = useOpenEvents();
   const { items, todayIndex } = useMemo(
-    () => buildTimeline(events.list.map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start, end: e.end, phase: e.phase ?? null, repeat: e.repeat ?? null })), today),
+    () => buildTimeline(events.list.map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start, end: e.end, phase: e.phase ?? null, repeat: e.repeat ?? null, goal: e.goal ? { unit: e.goal.unit, toGo: e.goal.toGo, settled: e.goal.settled, verdictWord: e.goal.verdictWord } : null })), today),
     [events.list, today],
   );
   const wrapRef = useRef<HTMLElement>(null);
@@ -136,11 +139,13 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
 function Item({ item, focused, onPick }: { item: TimelineItem; focused: boolean; onPick: () => void }) {
   const c: Chrome = item.event ? chromeOf(item.event) : NEUTRAL;
   const icon = item.slot === "more" ? "M5 12h14M13 6l6 6-6 6" : c.icon;
-  // Today always pulses (17 Oct, Alex): a live event in its colour, an empty day in ink.
-  const live = item.slot === "today";
+  // Today always pulses (17 Oct, Alex): a live event in its colour, an empty day in ink. A weight goal on its day is a
+  // date, not something going on, so it never pulses (2 Nov, Alex).
+  const goal = !!item.event?.goal;
+  const live = item.slot === "today" && !goal;
   const ink = item.slot === "today" && !item.event;
-  const cls = `evt-item ${item.slot}${focused ? " on" : ""}${live ? " live" : ""}`;
-  const spoken = item.slot === "more" ? "See all events" : item.event ? `${item.label}: ${item.event.title}, ${item.when}${item.slot === "past" ? ", done" : ""}` : "Today: nothing on";
+  const cls = `evt-item ${item.slot}${focused ? " on" : ""}${live ? " live" : ""}${goal ? " goal" : ""}`;
+  const spoken = item.slot === "more" ? "See all events" : item.event ? `${item.label}: ${item.event.title}, ${item.when.join(", ")}${item.slot === "past" ? ", done" : ""}` : "Today: nothing on";
   return (
     <button type="button" role="option" aria-selected={focused} aria-label={spoken} className={cls} style={{ "--c": ink ? "#141a24" : c.color, "--rgb": ink ? "20,26,36" : c.rgb } as React.CSSProperties} onClick={onPick}>
       <span className="evt-ring">
@@ -150,7 +155,7 @@ function Item({ item, focused, onPick }: { item: TimelineItem; focused: boolean;
       <span className="evt-text">
         <span className="evt-label">{item.slot === "more" ? "All" : item.label}</span>
         <span className="evt-title">{item.slot === "more" ? "See all events" : item.event ? item.event.title : "Nothing on"}</span>
-        <span className="evt-when">{item.slot === "more" ? "Past and coming" : item.when}</span>
+        <span className="evt-when">{item.slot === "more" ? "Past and coming" : <Bars parts={item.when} />}</span>
       </span>
     </button>
   );

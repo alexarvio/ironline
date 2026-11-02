@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction } from "../../lib/actions";
+import { GOAL_CHROME } from "../../lib/eventTimeline";
 import { eventTypeOf, EVENT_TYPES, type EventTypeId } from "../../lib/eventTypes";
 import { dayOf, daysBetween, shortDay } from "../../lib/eventDates";
 import { isoWeekday, nextOccurrence, repeatWords } from "../../lib/eventRepeat";
@@ -42,13 +43,15 @@ const PHASES = {
 };
 type Chrome = { label: string; color: string; rgb: string; icon: string };
 const chromeOf = (e: HomeEvent): Chrome => {
+  // A weight goal (2 Nov, Alex): the beige target, one source with Home's row and its notification.
+  if (e.goal) return GOAL_CHROME;
   if (e.phase) return PHASES[e.phase];
   const t = eventTypeOf(e.kind);
   return { label: t.label, color: t.color, rgb: t.rgb, icon: t.icon };
 };
 /** Which filter chip an event belongs to. */
-const groupOf = (e: HomeEvent): string => (e.phase ? "phase" : eventTypeOf(e.kind).id);
-const GROUP_LABELS: Record<string, string> = { trip: "Trips", supplement: "Supplements", health: "Health", training: "Training", sports: "Sports", family: "Family", work: "Work", other: "Other", phase: "Phases" };
+const groupOf = (e: HomeEvent): string => (e.goal ? "goal" : e.phase ? "phase" : eventTypeOf(e.kind).id);
+const GROUP_LABELS: Record<string, string> = { trip: "Trips", supplement: "Supplements", health: "Health", training: "Training", sports: "Sports", family: "Family", work: "Work", other: "Other", phase: "Phases", goal: "Goals" };
 
 // A free day (16 Oct): today still gets its row, in ink, so the list always
 // shows where today is. Id 0 is never an event's (saved ones are positive,
@@ -57,13 +60,24 @@ const TODAY_ROW = 0;
 
 // Every event opens, the coach's too, with Edit and Delete (10 Oct); a phase only when it has objectives to show.
 // A past event opens only for its note (17 Oct, Alex): it can no longer be edited or deleted, like a phase.
-const hasMore = (e: HomeEvent, status?: Status) => (e.phase || status === "past" ? !!e.note : true);
+// A weight goal always opens (2 Nov, Alex): where they are against the plan.
+const hasMore = (e: HomeEvent, status?: Status) => (e.goal ? true : e.phase || status === "past" ? !!e.note : true);
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const monthOf = (iso: string) => MONTHS[Number(iso.slice(5, 7)) - 1];
 
 /** The row's "when" line, as its facts: drawn parted by Bars, read out with commas. */
 function whenOf(e: HomeEvent, status: Status, today: string): string[] {
+  // A weight goal (2 Nov, Alex): `In 48 days | 5.6 kg to go`; once settled `Reached | 16 Oct` or `Missed | 1.2 kg off`.
+  const g = e.goal;
+  if (g) {
+    if (g.verdict === "reached") return ["Reached", shortDay(g.reachedOn ?? e.end, today)];
+    if (g.verdict === "missed") return ["Missed", g.missedBy != null ? `${g.missedBy} ${g.unit} off` : ""].filter(Boolean);
+    const toGo = g.toGo != null && g.toGo > 0 ? `${g.toGo} ${g.unit} to go` : "";
+    if (status === "past") return [shortDay(e.end, today), g.verdictWord ?? ""].filter(Boolean);
+    const n = daysBetween(today, e.start);
+    return [n <= 0 ? "Today" : n === 1 ? "Tomorrow" : `In ${n} days`, toGo].filter(Boolean);
+  }
   // Repeating (19 Oct): the days, then when it comes next, and its end if it has one.
   if (e.repeat && status !== "past") {
     const every = repeatWords(e.repeat, { until: false });
@@ -118,7 +132,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
   // ---- The filter: All, or one group the client has events in. It keeps for the session.
   const groups = useMemo(() => {
     const have = new Set(list.map(groupOf));
-    return [...EVENT_TYPES.map((t) => t.id as string), "phase"].filter((g) => have.has(g));
+    return [...EVENT_TYPES.map((t) => t.id as string), "phase", "goal"].filter((g) => have.has(g));
   }, [list]);
   // Landed on from a notification: that event, centred at the spot, open and lit (16 Oct).
   const focused = focusId != null ? (events.list.find((e) => e.id === focusId) ?? null) : null;
@@ -367,7 +381,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
                 All
               </button>
               {groups.map((g) => {
-                const t = g === "phase" ? PHASES.training : eventTypeOf(g);
+                const t = g === "goal" ? GOAL_CHROME : g === "phase" ? PHASES.training : eventTypeOf(g);
                 return (
                   <button key={g} type="button" role="radio" aria-checked={filter === g} className={`evp-chip${filter === g ? " on" : ""}`} style={{ "--c": t.color } as React.CSSProperties} onClick={() => pickFilter(g)}>
                     <LineIcon path={g === "phase" ? FLAG : t.icon} size={13} />
@@ -440,7 +454,13 @@ function EventRow(p: RowProps) {
   const who = e.mine ? me?.name || "You" : coachName;
   const photo = e.mine ? (me?.photoPath ?? null) : coachPhoto;
   const spoken = `${label ? `${label} ` : ""}${e.title}, ${c.label}, ${when.join(", ")}, added by ${who}${status === "past" ? ", past" : ""}`;
-  const progress = isNow && e.start !== e.end && !e.repeat ? dayOf(e, today) : null;
+  const progress = isNow && e.start !== e.end && !e.repeat && !e.goal ? dayOf(e, today) : null;
+  // A weight goal (2 Nov, Alex): `Weight goal` over its weight, never pulsing (a date, not something going on), and
+  // for the one being worked on a track from start to goal, a tick where the plan says they should be today.
+  const g = e.goal ?? null;
+  const ringNow = isNow && !g;
+  const goalTrack = g && g.active && status !== "past" ? g : null;
+  const tone = g?.verdict === "on" || g?.verdict === "ahead" || g?.verdict === "reached" ? " good" : g?.verdict === "behind" ? " warn" : "";
   // A title cut short (16 Oct) gets the chevron too: open, the row shows it in full.
   const titleRef = useRef<HTMLSpanElement>(null);
   const [clipped, setClipped] = useState(false);
@@ -456,8 +476,8 @@ function EventRow(p: RowProps) {
   const more = hasMore(e, status) || clipped;
   const left = progress ? progress.total - progress.day : 0;
   return (
-    <div ref={refFn} className={`evp-r ${status}${lit ? " lit" : ""}${focus ? " focus" : ""}${open ? " open" : ""}`} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties}>
-      <button type="button" className={`evp-row${label ? " labelled" : ""}`} onClick={() => onToggle(more)} aria-expanded={more ? open : undefined} aria-label={spoken}>
+    <div ref={refFn} className={`evp-r ${status}${g ? " goal" : ""}${lit ? " lit" : ""}${focus ? " focus" : ""}${open ? " open" : ""}`} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties}>
+      <button type="button" className={`evp-row${label || g ? " labelled" : ""}`} onClick={() => onToggle(more)} aria-expanded={more ? open : undefined} aria-label={spoken}>
         <span className="evp-date" aria-hidden="true">
           {showDate && (
             <>
@@ -467,16 +487,16 @@ function EventRow(p: RowProps) {
           )}
         </span>
         <span className="evp-node" aria-hidden="true">
-          <span className={`evp-ring${isNow ? " now" : ""}`}>
-            <LineIcon path={c.icon} size={isNow ? 19 : 18} />
-            <RingEdge size={focus ? (isNow ? 56 : 46) : isNow ? 44 : 36} />
+          <span className={`evp-ring${ringNow ? " now" : ""}`}>
+            <LineIcon path={c.icon} size={ringNow ? 19 : 18} />
+            <RingEdge size={focus ? (ringNow ? 56 : 46) : ringNow ? 44 : 36} />
           </span>
         </span>
         <span className="evp-text">
-          {label && <span className="evp-label">{label}</span>}
+          {g ? <span className="evp-label">{c.label}</span> : label && <span className="evp-label">{label}</span>}
           <span className="evp-title-row">
             <span ref={titleRef} className="evp-title">{e.title}</span>
-            {(e.note || clipped) && (
+            {(e.note || clipped || e.goal) && (
               <svg className="evp-chev" viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M9 6l6 6-6 6" />
               </svg>
@@ -494,6 +514,15 @@ function EventRow(p: RowProps) {
                 </i>
               </span>
               <small>{left === 0 ? "Last day" : `${left} day${left === 1 ? "" : "s"} left`}</small>
+            </span>
+          )}
+          {goalTrack && (
+            <span className="evp-progress wg-progress" role="progressbar" aria-valuenow={Math.round(goalTrack.done * 100)} aria-valuemin={0} aria-valuemax={100} aria-label={`${Math.round(goalTrack.done * 100)}% of the way${goalTrack.verdictWord ? `, ${goalTrack.verdictWord}` : ""}`}>
+              <span className="evp-track">
+                <i className="evp-fill" style={{ width: `${goalTrack.done * 100}%` }} />
+                <i className="wg-plan" style={{ left: `${goalTrack.elapsed * 100}%` }} />
+              </span>
+              {goalTrack.verdictWord && <small className={`wg-verdict${tone}`}>{goalTrack.verdictWord}</small>}
             </span>
           )}
         </span>
@@ -536,9 +565,15 @@ function RowMore({ e, status, open, coachName, pending, clipped, onEdit, onDelet
       <div className="ev-x-clip">
         <div className="ev-x-in">
           {clipped && <p className="evp-x-title">{e.title}</p>}
+          {e.goal && (e.goal.nowKg != null || e.goal.planNow != null) && (
+            <p className="wg-x-facts">
+              <Bars parts={[e.goal.nowKg != null && `Now ${e.goal.nowKg} ${e.goal.unit}`, !e.goal.settled && e.goal.planNow != null && `Plan ${e.goal.planNow} ${e.goal.unit}`]} />
+            </p>
+          )}
           {e.note && <p className="ev-x-note">{e.note}</p>}
           {/* No "Added by you · Finlay can see it" line (17 Oct, Alex): the avatar on the row already says whose it is. */}
-          {!e.phase && status !== "past" && (
+          {/* A weight goal is the coach's to set and change (2 Nov, Alex): no Edit or Delete on it. */}
+          {!e.phase && !e.goal && status !== "past" && (
             <div className="ev-x-actions">
               <button type="button" className="ev-btn" onClick={onEdit} disabled={pending || !open} tabIndex={open ? 0 : -1}>
                 Edit

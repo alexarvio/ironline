@@ -9,6 +9,8 @@ import { Sep, SepJoin } from "../Sep";
 import { dayMonth } from "../../../lib/dayMonth";
 import { repeatWords, type EventRepeat } from "../../../lib/eventRepeat";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
+import { WeightGoalIcon } from "../../../components/icons";
+import { GOAL_COLOR, goalWeightText, VERDICT_WORD, type WeightGoalView } from "../../../lib/weightGoal";
 
 // The Plan's timeline, in one place (21 Oct): the week grid's maths, the
 // months and weeks over it with the NOW line, a row of lanes, its empty
@@ -541,6 +543,43 @@ export function EventMark({ e, at, place, lane, today, cats, onOpen, drag }: {
         <span className="rq-bar-meta">{e.repeat ? repeatWords(e.repeat, { until: false }) : `${daysBetween(shown.start, shown.end) + 1} days`}</span>
       </span>
       {word && <span className="rq-bar-pill">{word}</span>}
+    </button>
+  );
+}
+
+// ---- Weight goals.
+
+/** Where a day sits along the grid, as a percentage of its width (a day's left edge, as a pin's). Not clamped: the
+    goals' dashed path runs on past the window's edges and the lane clips it. */
+export const dayPercent = (day: string, first: string, totalDays: number) => (daysBetween(first, day) / totalDays) * 100;
+
+/**
+ * A weight goal on the Events card's Weight lane (2 Nov, Alex: "as soon as we add a goal… on the plan tab as well
+ * with those colors and those icons"; mockup C): a pin on its date, a 22px white ring with the target in lifestyle
+ * beige, then the goal over its date and, while it has one, its verdict. Not an event: never in EVENT_TYPES or
+ * chromeOf, and click-only (its id is a goal's, never a dragged event's). A settled one greys as a past pin; a
+ * milestone after the one being worked on is fainter.
+ */
+export function WeightGoalMark({ goal, left, flip = false, onOpen }: { goal: WeightGoalView; /** Its date's place on the grid, %. */ left: number; /** Near the window's right edge: the words go on the ring's left, never cut off. */ flip?: boolean; onOpen: () => void }) {
+  const weight = goalWeightText(goal.targetKg, "kg");
+  const verdict = goal.verdict ? VERDICT_WORD[goal.verdict] : null;
+  return (
+    <button
+      type="button"
+      className={`rq-pin rq-goal${goal.settled ? " past" : goal.active ? "" : " later"}${flip ? " flip" : ""}`}
+      style={{ left: `${left}%`, top: evTop(0), color: GOAL_COLOR }}
+      onClick={onOpen}
+      title={`Weight goal · ${weight} · ${dayMonth(goal.byDate)}${verdict ? ` · ${verdict}` : ""}`}
+    >
+      <span className="rq-goal-ring" aria-hidden="true">
+        <WeightGoalIcon size={12} />
+      </span>
+      <span className="rq-pin-text rq-goal-text">
+        <b>{weight}</b>
+        <small>
+          <SepJoin parts={[dayMonth(goal.byDate), verdict]} />
+        </small>
+      </span>
     </button>
   );
 }
