@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useTransition } from "react";
+import { createContext, useContext, useState, useTransition, type CSSProperties } from "react";
+import { logDate, logDateWidth } from "../../lib/dayMonth";
 import { useRouter } from "next/navigation";
 import { CalendarIcon, CheckIcon, EyeIcon, LockIcon, PhaseFlagIcon, PlayIcon, PlusIcon } from "../../components/icons";
 import { TrackIcon } from "./plan/PlanDraft";
@@ -109,26 +110,31 @@ export function TodoStrip({ tab, onAct }: { tab: DotTab; onAct?: (item: TodoItem
     if (!asks.length && to.hash) goToHash(to.hash);
     else if (item.kind !== "read" || asks.length || to.pathname !== `/admin/redesign/${tab}`) router.push(item.href);
   };
+  // The needs-you rows' structure (3 Nov, Alex: "similar to the ones we just did… the buttons should be icons without
+  // words"; NeedGroups): the date it came in, its mark, the thing and their words, the wait, the action as its icon alone
+  // (its word the tooltip), the round check. One client's tab, so no face or name. A strip with no dates drops the column.
+  const dated = items.some((i) => i.since != null);
+  const dateW = logDateWidth(items.filter((i) => i.since != null).map((i) => new Date(i.since!)));
   return (
-    <section className="rd-todo" aria-label="To do">
+    <section className={`rd-todo${dated ? "" : " nodate"}`} aria-label="To do" style={{ "--todo-date": `${dateW}px` } as CSSProperties}>
       {items.map((item) => {
         const wait = waitOf(item, now);
         return (
           <div key={item.key} className="rd-todo-row">
+            {dated && <span className="rd-logdate rd-todo-date">{item.since != null ? logDate(new Date(item.since)) : ""}</span>}
             <span className="rd-todo-mark" aria-hidden="true">
               {markOf(item)}
             </span>
-            <span className="rd-todo-what">{item.what}</span>
-            {item.words && <span className="rd-todo-words">&ldquo;{item.words}&rdquo;</span>}
+            <span className="rd-todo-thing">
+              <span className="rd-todo-what">{item.what}</span>
+              {item.words && <span className="rd-todo-words">&ldquo;{item.words}&rdquo;</span>}
+            </span>
             {/* Worked out on the server and again in the browser: an hour may tick over between them. */}
-            {wait && (
-              <span className="rd-todo-wait" suppressHydrationWarning>
-                {wait}
-              </span>
-            )}
-            <button type="button" className="rd-todo-act" onClick={() => go(item)}>
+            <span className="rd-todo-wait" suppressHydrationWarning>
+              {wait}
+            </span>
+            <button type="button" className="rd-todo-act" title={item.action} aria-label={`${item.action}: ${item.what}`} onClick={() => go(item)}>
               {iconOf(item.kind)}
-              {item.action}
             </button>
             {/* Done without doing it: asks first (the pop-up), as the Feed's round check, green under the pointer. */}
             {canDone(item) ? (

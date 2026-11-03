@@ -1409,19 +1409,29 @@ span.rd-demo { cursor: default; }
    header, a row for each thing the rail counts there. A soft rust tint, the rust edge all round, what it is in ink,
    their words grey, the wait rust, the action ink words with its icon. */
 .rd-todo { margin: 0 0 24px; border-radius: 14px; background: rgba(184, 71, 31, 0.08); box-shadow: inset 0 0 0 1.5px #b8471f; overflow: hidden; }
-.rd-todo-row { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 16px; font-size: 13.5px; font-weight: 500; color: #3a4250; }
+/* Since 3 Nov (Alex: "similar to the ones we just did… the buttons should be icons without words"): the needs-you rows'
+   columns (NeedGroups, .nd- in feed/feed.css) with no face or name, it being one client's tab: the date it came in
+   (logDate; none, the column goes), the mark, the thing and their words, the wait centred, the action as its icon alone
+   in a round 30px button, the round check. */
+.rd-todo-row { display: grid; grid-template-columns: var(--todo-date, 84px) 16px minmax(0, 1fr) 96px 30px 28px; align-items: center; column-gap: 12px; min-height: 46px; padding: 0 12px 0 16px; font-size: 13.5px; font-weight: 500; color: #3a4250; }
+.rd-todo.nodate .rd-todo-row { grid-template-columns: 16px minmax(0, 1fr) 96px 30px 28px; }
 .rd-todo-row + .rd-todo-row { border-top: 1px solid rgba(184, 71, 31, 0.16); }
 .rd-todo-mark { display: inline-flex; flex: none; color: #b8471f; }
-.rd-todo-mark svg, .rd-todo-act svg { width: 14px; height: 14px; translate: 0 -0.5px; }
-.rd-todo-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #141a24; font-weight: 600; }
-.rd-todo-words { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b93a1; }
-.rd-todo-wait { flex: none; white-space: nowrap; color: #b8471f; font-variant-numeric: tabular-nums; }
-.rd-todo-act { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 0 6px 12px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
-.rd-todo-act:hover { color: #3a4250; }
-.rd-todo-act:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 3px; }
+.rd-todo-mark svg { width: 14px; height: 14px; translate: 0 -0.5px; }
+.rd-todo-thing { display: flex; align-items: baseline; gap: 10px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.rd-todo-what { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #141a24; font-weight: 600; }
+.rd-todo-words { min-width: 0; flex: 1 1 6em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b93a1; }
+.rd-todo-wait { white-space: nowrap; color: #b8471f; font-variant-numeric: tabular-nums; text-align: center; }
+.rd-todo-act { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 999px; background: none; color: #141a24; cursor: pointer; }
+.rd-todo-act svg { width: 16px; height: 16px; }
+.rd-todo-act:hover { background: rgba(184, 71, 31, 0.1); }
+.rd-todo-act:focus-visible { outline: 1px solid #141a24; outline-offset: 1px; }
+/* The round icon button centres itself: none of the words' half-pixel lifts further down. */
+.rd-todo .rd-todo-act, .rd-todo .rd-todo-act svg { translate: none; }
+.rd-todo .rd-todo-date { translate: 0 0.4px; }
 /* Mark done without doing it (2 Nov, Alex): a round check at the row's end, quiet grey, green under the pointer as the
    Feed's; asks first. A row that can't be let go keeps the room, so every action lines up. */
-.rd-todo-done, .rd-todo-done-room { flex: none; width: 28px; height: 28px; margin-left: 4px; }
+.rd-todo-done, .rd-todo-done-room { flex: none; width: 28px; height: 28px; }
 .rd-todo-done { display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 999px; background: none; color: #8b93a1; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
 .rd-todo-done svg { width: 14px; height: 14px; }
 .rd-todo-done:hover, .rd-todo-done:focus-visible { outline: none; background: rgba(47, 122, 63, 0.12); color: #2f7a3f; }
