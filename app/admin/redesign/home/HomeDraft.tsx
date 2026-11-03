@@ -1214,9 +1214,9 @@ function WeightChart({
                 vectorEffect="non-scaling-stroke"
               />
             )}
-            {/* With a goal the weight line is the weight's own Body blue over the beige plan (3 Nov, Alex: option B of
-                docs/boards/weight-goal-colours-mockup.html); else ink, as it was. */}
-            <path d={path} fill="none" stroke={plan ? WEIGHT_BLUE : "#141a24"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {/* The weight's own Body blue in every window (3 Nov, Alex: "have the graph always this blue color"), over the
+                beige plan in the Goal view (option B of docs/boards/weight-goal-colours-mockup.html). */}
+            <path d={path} fill="none" stroke={WEIGHT_BLUE} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>
           {plan && !todayAtEnd && <span className="rh-wtoday" style={{ left: `${todayX}%` }} aria-hidden="true" />}
           {/* Where they stand (2 Nov, Alex): the latest weigh-in a gold dot, pulsing, on the line. */}
