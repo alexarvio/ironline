@@ -523,8 +523,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
       trainedToday={trainedToday}
       today={today}
       food={food}
-      // The spine (8 Oct): with nothing to do, the next thing; with no phase live, what is next.
-      todayNext={session ? null : weekDone ? `Next week starts ${weekDone.nextWeekLabel}` : null}
+      // With no phase live, what is next (the empty phase cards name it).
       planGap={(() => {
         if (phases.some((p) => p.track !== "lifestyle")) return null;
         const next = listClientPhases(CLIENT_ID)
