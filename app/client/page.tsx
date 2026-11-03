@@ -1,6 +1,5 @@
 import { isEventTypeId } from "../lib/eventTypes";
 import { warmClientPhotos } from "../lib/storage";
-import { FOCUS_COOKIE, focusOpenFrom, focusStamp } from "../lib/focusStamp";
 import { coachQuietHours } from "../lib/coachPush";
 import { assistedRow } from "../lib/targetRule";
 import { redirect } from "next/navigation";
@@ -93,6 +92,7 @@ import {
   photoSheetForClient,
   getWeightGoalViews,
   askedWeightUnit,
+  bodyWeightReadings,
   programWeekLabel,
   slugify,
   SUPPLEMENT_ITEMS,
@@ -104,7 +104,8 @@ import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPictu
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
 import { FOCUS_NOTE, homeFocus } from "../lib/focus";
 import type { HomeEvent, HomeEvents } from "./EventsCard";
-import { VERDICT_WORD, goalItemId, kgIn } from "../lib/weightGoal";
+import { VERDICT_TONE, VERDICT_WORD, goalItemId, kgIn } from "../lib/weightGoal";
+import type { HomeWeight } from "./home/weightData";
 import type { ClientMeetingView } from "./meetings/MeetingsScreen";
 import { isMeetingTypeId } from "../lib/meetingTypes";
 import type { ProgressPics } from "./ProgressPicsCard";
@@ -365,7 +366,62 @@ function homeEvents(clientId: number): HomeEvents {
   };
 }
 
-function HomeTab({ CLIENT_ID, photos, food, phoneTz, focusCookie }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday; phoneTz: string | null; /** To focus on as the client left it (focusStamp.ts). */ focusCookie: string | null }) {
+/** Home's Weight (3 Nov, Alex): the readings and windows the row draws, as the coach's Weight card reads them; null with no
+    weigh-in. */
+function homeWeight(clientId: number, today: string): HomeWeight | null {
+  const unit = askedWeightUnit(clientId);
+  const readings = bodyWeightReadings(clientId).filter((r) => r.kg > 0 && r.date <= today);
+  if (!readings.length) return null;
+  const v = (kg: number) => Math.round(kgIn(kg, unit) * 10) / 10;
+  const r1 = (n: number) => Math.round(n * 10) / 10;
+  const goal = getWeightGoalViews(clientId, today).find((g) => g.active) ?? null;
+  const phase = getCurrentPhase(clientId, "nutrition") ?? getCurrentPhase(clientId, "training") ?? getCurrentPhase(clientId, "lifestyle");
+  const since = phase && phase.start_week <= today ? phase.start_week : null;
+  const from7 = isoPlusDays(today, -6);
+  const from30 = isoPlusDays(today, -29);
+  const first = [from30, since, goal?.startDate].filter((d): d is string => !!d).sort()[0];
+  const points = readings.filter((r) => r.date >= first).map((r) => ({ date: r.date, value: v(r.kg) }));
+  const latest = readings[readings.length - 1];
+  const now = v(latest.kg);
+  /** The latest reading in the window against its first. */
+  const rolling = (from: string) => {
+    const inIt = points.filter((p) => p.date >= from);
+    return { from, change: inIt.length >= 2 ? r1(inIt[inIt.length - 1].value - inIt[0].value) : null };
+  };
+  // Phase: against the reading nearest its first day, either side, within a month; else from its first reading in it.
+  const phaseWindow = (() => {
+    if (!since) return null;
+    const startMs = Date.parse(`${since}T00:00:00`);
+    const near = readings.reduce((b, r) => (Math.abs(Date.parse(`${r.date}T00:00:00`) - startMs) < Math.abs(Date.parse(`${b.date}T00:00:00`) - startMs) ? r : b));
+    const ok = Math.abs(Date.parse(`${near.date}T00:00:00`) - startMs) <= 31 * 86400000 && near.date !== latest.date;
+    return ok ? { from: since, change: r1(now - v(near.kg)) } : rolling(since);
+  })();
+  return {
+    unit,
+    now,
+    points,
+    windows: { "7d": rolling(from7), "30d": rolling(from30), phase: phaseWindow },
+    goal: goal
+      ? {
+          start: v(goal.startKg),
+          startDate: goal.startDate,
+          target: v(goal.targetKg),
+          byDate: goal.byDate,
+          toGo: goal.toGoKg == null ? null : v(goal.toGoKg),
+          verdictWord: goal.verdict ? VERDICT_WORD[goal.verdict] : null,
+          tone: goal.verdict ? VERDICT_TONE[goal.verdict] : "",
+        }
+      : null,
+  };
+}
+
+function isoPlusDays(iso: string, n: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday; phoneTz: string | null }) {
   const client = getClient(CLIENT_ID);
   const today = localDateStr();
 
@@ -480,7 +536,8 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz, focusCookie }: { CLIENT_ID:
       checkInForm={{ date: today, sections: sections.sections, weeklyOpen, monthlyOpen }}
       // To focus on (23 Oct, Alex; lib/focus.ts): the coach's goals until the next call, at the top of Home.
       focus={homeFocus(CLIENT_ID, today, phoneTz)}
-      focusOpen={focusOpenFrom(focusCookie, focusStamp(homeFocus(CLIENT_ID, today, phoneTz)?.goals ?? []))}
+      // The weight row (3 Nov, Alex): always, with Goal | 7d | 30d | Phase.
+      weight={homeWeight(CLIENT_ID, today)}
     />
   );
 }
@@ -1573,7 +1630,7 @@ export default async function ClientPage({
 
   const tabs: AppTab[] = [
     // Draws its own light banner (name and main goal); the top bar floats over it.
-    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} phoneTz={phoneTz} focusCookie={jar.get(FOCUS_COOKIE)?.value ?? null} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null, mealsLogged: foodDiary.meals.filter((m) => m.entries.length > 0).length, mealsTotal: foodDiary.meals.length }} /> },
+    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} phoneTz={phoneTz} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null, mealsLogged: foodDiary.meals.filter((m) => m.entries.length > 0).length, mealsTotal: foodDiary.meals.length }} /> },
     {
       id: "training",
       label: "Training",

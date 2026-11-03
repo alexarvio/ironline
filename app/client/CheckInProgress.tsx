@@ -122,8 +122,15 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
     });
   }, [history.series]);
   // Always the first metric on arrival (28 Sep: it used to remember the
-  // last one, which left it on the far chip after any trip away).
-  const [index, setIndex] = useState(0);
+  // last one, which left it on the far chip after any trip away); from Home's weight (3 Nov), Weight, once.
+  const [index, setIndex] = useState(() => {
+    const pick = readStore("session", "nc-progress-pick");
+    if (pick !== "weight") return 0;
+    try {
+      sessionStorage.removeItem("nc-progress-pick");
+    } catch {}
+    return Math.max(0, tracked.findIndex((s) => /\bweight\b/i.test(s.name)));
+  });
   const [range, setRange] = useState<Range>(() => {
     const r = readStore("session", RANGE_KEY) as Range | null;
     // Goal first (2 Nov, Alex): Weight opens on it while a goal runs; any other metric falls to 1M.
