@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Words and empty states</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --page:#F5F6F8; --green:#2f7a3f; --rust:#b8471f; --red:#b42318; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #F5F5F5; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 70px; }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 28px; max-width: 840px; line-height: 1.5; }
+  section { margin: 0 0 34px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  h2 b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .what { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 12px; max-width: 800px; line-height: 1.5; }
+  .tbl { background: #fff; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .hd, .r { display: grid; grid-template-columns: 200px 1fr 1fr; gap: 18px; padding: 11px 18px; align-items: start; }
+  .hd { padding: 12px 18px 8px; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+  .hd .n { color: var(--rust); } .hd .p { color: var(--green); } .hd .w { color: var(--sec); }
+  .r + .r { border-top: 1px solid #EEF0F3; }
+  .w { font-size: 12px; font-weight: 500; color: var(--muted); line-height: 1.4; }
+  .now, .new { font-size: 14px; font-weight: 500; line-height: 1.45; }
+  .now { color: var(--body); }
+  .now small, .new small { display: block; font-size: 12.5px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+  .gone { color: var(--faint); font-style: italic; font-size: 13px; }
+  .yc { background: rgba(184,71,31,.10); color: var(--rust); border-radius: 4px; padding: 0 3px; }
+  @media (max-width: 760px) { .hd { display: none; } .r { grid-template-columns: 1fr; gap: 4px; } .now::before { content: "Now  "; color: var(--rust); font-size: 10.5px; letter-spacing: .16em; font-weight: 600; } .new::before { content: "Proposed  "; color: var(--green); font-size: 10.5px; letter-spacing: .16em; font-weight: 600; } }
+
+  /* Home meetings mini */
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+  .panel { background: #F5F5F5; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); padding: 16px; }
+  .tag { display: inline-block; font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; margin: 0 0 12px; }
+  .tag.n { color: var(--rust); } .tag.p { color: var(--green); }
+  .sh { display: flex; justify-content: space-between; align-items: baseline; padding-top: 10px; border-top: 1px solid var(--line); }
+  .sh b { font-size: 11.5px; letter-spacing: .18em; font-weight: 600; text-transform: uppercase; }
+  .sh span { font-size: 12.5px; font-weight: 600; }
+  .empty { font-size: 14px; color: var(--muted); font-weight: 500; margin-top: 10px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 18px; }
+  .card .none { font-size: 14px; font-weight: 500; color: var(--muted); }
+  .guide { position: relative; }
+  .note { margin: 10px 0 0; font-size: 12px; color: var(--muted); font-weight: 500; line-height: 1.45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Words and empty states: now and proposed</h1>
+  <p class="sub">Every string is copied from the code. Facts only: an empty state is one or two words, no sentence explains a feature, the coach is named by their name (Finlay), and one thing has one word everywhere. "your coach" is <span class="yc">marked</span> where it shows today.</p>
+
+  <section>
+    <h2><b>1</b>Explanation sentences: client Settings</h2>
+    <p class="what">Every switch has a sentence under it. The proposal leaves the title alone; a line shows only when something is wrong.</p>
+    <div class="tbl">
+      <div class="hd"><span class="w">Where</span><span class="n">Now</span><span class="p">Proposed</span></div>
+      <div class="r"><span class="w">Phone notifications</span><span class="now">Notifications on this phone<small>On your lock screen, even with the app closed</small></span><span class="new">Notifications on this phone</span></div>
+      <div class="r"><span class="w">The same switch when it can't work</span><span class="now">Blocked for NorCoach in your phone's settings<small>Add NorCoach to your Home Screen first: Share, then Add to Home Screen</small><small>This browser can't show notifications</small></span><span class="new">Blocked in phone settings<small>Add to Home Screen first</small><small>Not available</small></span></div>
+      <div class="r"><span class="w">Messages</span><span class="now">Messages from <span class="yc">your coach</span><small>A notification when Finlay sends you one</small></span><span class="new">Messages from Finlay</span></div>
+      <div class="r"><span class="w">Reminders</span><span class="now">Check-in reminders<small>A reminder when a check-in, measurement or photo is due</small></span><span class="new">Check-in reminders</span></div>
+      <div class="r"><span class="w">Apple Health (phone app)</span><span class="now">Apple Health<small>Your steps log themselves each day</small><small>Only your daily step count is read. NorCoach never writes to Apple Health.</small></span><span class="new">Apple Health<small>Steps</small></span></div>
+      <div class="r"><span class="w">Apple Health problems</span><span class="now"><span class="yc">Your coach</span> isn't tracking steps yet. They'll sync once they do.<small>Steps weren't allowed. You can allow them in Health Connect.</small></span><span class="new">Finlay isn't tracking steps yet<small>Steps not allowed</small></span></div>
+      <div class="r"><span class="w">Connected apps (web)</span><span class="now">Apple Health · Auto-log steps, weight &amp; workouts <b>Soon</b><small>Health syncing needs the NorCoach mobile app (not available on web).</small></span><span class="new">Apple Health <b>Soon</b><small>Health Connect <b>Soon</b></small></span></div>
+      <div class="r"><span class="w">Profile photo</span><span class="now">Profile photo<small><span class="yc">Your coach</span> sees it next to your name.</small></span><span class="new">Profile photo</span></div>
+      <div class="r"><span class="w">Card pictures</span><span class="now"><small style="margin:0">Press and hold a card on Home to change its picture too.</small></span><span class="new gone">no line</span></div>
+      <div class="r"><span class="w">Data</span><span class="now"><small style="margin:0"><span class="yc">Your coach</span> sees your check-ins, photos, logs and notes. Nobody else does.</small></span><span class="new gone">no line (the Privacy policy row says it)</span></div>
+      <div class="r"><span class="w">Progress reports, none</span><span class="now">No reports sent yet.</span><span class="new">None yet</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>2</b>Explanation sentences: skipping a session, Rogue session</h2>
+    <div class="tbl">
+      <div class="hd"><span class="w">Where</span><span class="n">Now</span><span class="p">Proposed</span></div>
+      <div class="r"><span class="w">Session ⋯ menu</span><span class="now">Couldn't do this session</span><span class="new">Couldn't train</span></div>
+      <div class="r"><span class="w">The skip sheet</span><span class="now">Couldn't do this session?<small>Tell Finlay why. It shows next to the session.</small><small>[Submit] · Remove the reason</small></span><span class="new">Couldn't train<small>[Send] · Remove (red words)</small></span></div>
+      <div class="r"><span class="w">A missed session's line</span><span class="now">Not done that week.</span><span class="new gone">no line (its Missed pill says it)</span></div>
+      <div class="r"><span class="w">Training, the Rogue row</span><span class="now">Rogue session<small>Your own workout, off the plan</small></span><span class="new">Rogue session</span></div>
+      <div class="r"><span class="w">Rogue, adding exercises</span><span class="now">Rogue session | nothing yet</span><span class="new">Rogue session | None yet</span></div>
+      <div class="r"><span class="w">Finish page</span><span class="now">You have completed 2 out of 3 exercises.<small>Rogue: You logged 2 of 3 exercises. · Nothing added yet.</small></span><span class="new">2 of 3 exercises<small>Nothing added</small></span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>3</b>Empty states</h2>
+    <p class="what">One or two words. Several say "your coach" while others name the coach.</p>
+    <div class="tbl">
+      <div class="hd"><span class="w">Where</span><span class="n">Now</span><span class="p">Proposed</span></div>
+      <div class="r"><span class="w">Nutrition, no targets</span><span class="now"><span class="yc">Your coach</span> hasn't set your nutrition targets yet.</span><span class="new">No targets yet</span></div>
+      <div class="r"><span class="w">Nutrition, last 7 days</span><span class="now">Nothing logged in the last week yet.</span><span class="new">Nothing logged</span></div>
+      <div class="r"><span class="w">Food diary, an empty meal</span><span class="now">Nothing here yet. Tap + to add a food.</span><span class="new">None yet</span></div>
+      <div class="r"><span class="w">Notifications</span><span class="now">Nothing yet<small>When Finlay books a call, replies to a video or changes your plan, it shows up here.</small></span><span class="new">Nothing yet</span></div>
+      <div class="r"><span class="w">Meetings, no past calls</span><span class="now">After your first call, your past calls show here.</span><span class="new">None yet</span></div>
+      <div class="r"><span class="w">Events, nothing coming</span><span class="now">Nothing planned. Add a trip or something you're starting</span><span class="new">Nothing planned</span></div>
+      <div class="r"><span class="w">Shape update, none asked</span><span class="now"><span class="yc">Your coach</span> hasn't asked for a shape update yet.</span><span class="new">None yet</span></div>
+      <div class="r"><span class="w">Shape update, under the sheets</span><span class="now">Next sheet opens 12 Nov. Only <span class="yc">your coach</span> sees these.</span><span class="new">Next sheet | 12 Nov</span></div>
+      <div class="r"><span class="w">Shape update, add-photo sheet</span><span class="now">Only <span class="yc">your coach</span> sees this.</span><span class="new gone">no line (only Finlay's hint, when there is one)</span></div>
+      <div class="r"><span class="w">Check-in, nothing to fill</span><span class="now"><span class="yc">Your coach</span> hasn't set up any check-in metrics yet.</span><span class="new">Nothing today</span></div>
+      <div class="r"><span class="w">Check-in Progress, nothing</span><span class="now">Nothing logged yet. Your first check-in shows up here.</span><span class="new">Nothing logged</span></div>
+      <div class="r"><span class="w">Training, empty week</span><span class="now">Nothing deployed yet. <span class="yc">Your coach</span> is still building this week.</span><span class="new">No sessions yet</span></div>
+      <div class="r"><span class="w">Training, only rest days</span><span class="now"><span class="yc">Your coach</span> published this week, but hasn't added any exercises yet. It's all rest days for now.</span><span class="new">No sessions yet</span></div>
+      <div class="r"><span class="w">A coach with no name set</span><span class="now">Ask <span class="yc">your coach</span> for a call</span><span class="new">Ask Coach for a call</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>4</b>"No match" in coach search lists</h2>
+    <div class="tbl">
+      <div class="hd"><span class="w">Where</span><span class="n">Now</span><span class="p">Proposed</span></div>
+      <div class="r"><span class="w">Plan, search</span><span class="now">No matches</span><span class="new">No match</span></div>
+      <div class="r"><span class="w">Time zone picker</span><span class="now">No timezone called that.</span><span class="new">No match</span></div>
+      <div class="r"><span class="w">Library search</span><span class="now">None</span><span class="new">No match</span></div>
+      <div class="r"><span class="w">All chats, laptop and phone, no clients</span><span class="now">No clients yet</span><span class="new">None yet</span></div>
+      <div class="r"><span class="w">Rail, Feed, Calendar, chat link, substitutes</span><span class="now">No match</span><span class="new">No match (already right)</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>5</b>One thing, one word</h2>
+    <div class="tbl">
+      <div class="hd"><span class="w">Where</span><span class="n">Now</span><span class="p">Proposed</span></div>
+      <div class="r"><span class="w">Swap · workout, exercise</span><span class="now">Substitute for <b>Leg Press</b> · Undo</span><span class="new">Instead of <b>Leg Press</b> · Undo</span></div>
+      <div class="r"><span class="w">Swap · workout, cardio</span><span class="now">Instead of <b>Bike</b>, today only. Finlay will see this. · Undo</span><span class="new">Instead of <b>Bike</b> · Undo</span></div>
+      <div class="r"><span class="w">Swap · session overview</span><span class="now">Substituted with Leg Press</span><span class="new">Instead of Leg Press</span></div>
+      <div class="r"><span class="w">Swap · photo sent</span><span class="now">Photo of the substitute sent</span><span class="new">Photo sent</span></div>
+      <div class="r"><span class="w">Swap · coach's video pop-up</span><span class="now">Paula's photo of the substitute</span><span class="new">Paula's photo of Hack Squat</span></div>
+      <div class="r"><span class="w">Video ask · workout</span><span class="now">Finlay wants a video</span><span class="new">Finlay asked for a video</span></div>
+      <div class="r"><span class="w">Video ask · session overview</span><span class="now">Finlay wants a video of this one<small>Video sent to Finlay</small></span><span class="new">Finlay asked for a video<small>Video sent</small></span></div>
+      <div class="r"><span class="w">Video ask · the sheet</span><span class="now">Video for <span class="yc">your coach</span><small><span class="yc">Your coach</span> asked · Up to two minutes. Film in 1080p so it sends quickly.</small><small>[Send to <span class="yc">your coach</span>] · ✓ <span class="yc">Your coach</span> can watch it now.</small></span><span class="new">Video for Finlay<small>Finlay asked · Up to 2 min</small><small>[Send to Finlay] · then the title says Sent to Finlay</small></span></div>
+      <div class="r"><span class="w">Video ask · coach pop-up</span><span class="now">Ask Paula for a video · [Ask Paula]<small>Editing: Edit video request · [Update request]</small><small>Toast: Video asked for. Paula sees it on the exercise.</small></span><span class="new">Ask for a video · [Ask]<small>Editing: Video ask · [Save]</small><small>Toast: Video asked for</small></span></div>
+      <div class="r"><span class="w">Delete · an event</span><span class="now">Delete → Yes, remove it<small>The event sheet: Remove → Yes, remove it</small></span><span class="new">Delete → Delete event? · Cancel · <span style="color:var(--red)">Delete</span><small>Asked in place, as the chat's Delete</small></span></div>
+      <div class="r"><span class="w">Meetings · more calls</span><span class="now">+1 more booked</span><span class="new">+1 more</span></div>
+      <div class="r"><span class="w">Meetings · past label</span><span class="now">Past meetings</span><span class="new">Past</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>6</b>Home's Meetings with nothing ever booked</h2>
+    <p class="what">The section changes its heading and gains a sentence, where the rule keeps one shape: "Meetings", with All meetings on the right.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag n">Now</span>
+        <div class="sh"><b>Meetings with Finlay</b><span>Request a meeting</span></div>
+        <div class="empty">No meetings yet.</div>
+      </div>
+      <div class="panel"><span class="tag p">Proposed</span>
+        <div class="sh"><b>Meetings</b><span>All meetings</span></div>
+        <div class="empty">None yet</div>
+        <p class="note">The same head as always. Requesting a meeting stays on the Meetings screen, one tap away.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>7</b>Coach: Training's eyebrow, and empty words sitting high</h2>
+    <div class="pair">
+      <div class="panel"><span class="tag n">Now</span>
+        <div style="font-size:10.5px;letter-spacing:.16em;font-weight:600;color:var(--sec)">PROGRAMME</div>
+        <div style="font-size:22px;font-weight:600;margin-bottom:14px">Hypertrophy</div>
+        <div class="card" style="padding:16px 18px 10px"><span class="none">None yet</span></div>
+        <p class="note">Coaches and Support's empty word: 16px over it, 10px under it.</p>
+      </div>
+      <div class="panel"><span class="tag p">Proposed</span>
+        <div style="font-size:10.5px;letter-spacing:.16em;font-weight:600;color:var(--sec)">TRAINING</div>
+        <div style="font-size:22px;font-weight:600;margin-bottom:14px">Hypertrophy</div>
+        <div class="card" style="padding:16px 18px"><span class="none">None yet</span></div>
+        <p class="note">The track's name, as Lifestyle and Nutrition. The empty word midway down, as every other card.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
