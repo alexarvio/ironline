@@ -21126,3 +21126,19 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 .fdi-banner .fdi-day.fdi-day.on .fdi-day-num { box-shadow: inset 0 0 0 1.5px #fff; }
 .fdi-banner .fdi-day.fdi-day.today .fdi-day-num { background: #fff; color: #141a24; box-shadow: none; }
 .fdi-banner .fdi-day.fdi-day.off .fdi-day-num, .fdi-banner .fdi-day.fdi-day.off .fdi-day-letter { color: rgba(255, 255, 255, 0.4); }
+
+/* ---- Rows parted by space alone (3 Nov, Alex: option A of docs/boards/row-lines-mockup.html; the rule since 17 Oct):
+   no hairline between the food diary's meals, Settings' sections and rows, the burger menu's items, the invoices, or the
+   check-in's last seven days. The check-in's and Shape update's top bar, once it sticks, is the page's own tone with no
+   line under it; Settings' bar the page's tone too, so one tone a screen. */
+.fdi-meals.fdi-meals { border-bottom: 0; }
+.fdi-meal.fdi-meal.fdi-meal { border-top: 0; }
+.settings-dark .home-dark-section.home-dark-section { border-top: 0; padding-top: 26px; }
+.settings-dark .settings-toggle-row.settings-toggle-row, .settings-dark .settings-units-row.settings-units-row, .settings-dark .settings-app-row.settings-app-row,
+.settings-dark .settings-data-row.settings-data-row, .settings-dark .settings-report-row.settings-report-row, .settings-dark .home-dark-row.home-dark-row,
+.settings-dark .st-delete-row.st-delete-row, .st-details-row.st-details-row { border-top: 0; }
+.app-menu-item.app-menu-item, .app-menu-head.app-menu-head { border-bottom: 0; }
+.mts-list.mts-list > li + li { border-top: 0; }
+.ci-day.ci-day + .ci-day::after { content: none; }
+.ci-one .ci-bar.stuck.stuck { background: rgba(245, 246, 248, 0.94); box-shadow: none; }
+.cn-screen:has(.st-body) .cn-header { background: #F5F6F8; }
