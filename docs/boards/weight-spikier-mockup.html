@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Weight line, spikier</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --div:#EEF0F3; --page:#F5F6F8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 60px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 auto 6px; max-width: 1080px; }
+  .sub { max-width: 1080px; margin: 0 auto 24px; color: var(--muted); font-size: 13px; font-weight: 500; }
+  .grid2 { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 18px; }
+  .grid2 > div { min-width: 0; }
+  .pillb { white-space: nowrap; }
+  .label { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin: 0 0 8px 4px; }
+  .label b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; }
+  .label span { font-size: 15px; font-weight: 600; }
+  .label i { font-style: normal; font-size: 13px; color: var(--muted); font-weight: 500; }
+  .card { background: #fff; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); padding: 22px 26px 18px; }
+  .card.ref { opacity: .55; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .ttl { font-size: 19px; font-weight: 600; }
+  .ttl span { font-weight: 500; margin-left: 8px; }
+  .chg { margin-top: 8px; font-size: 14px; font-weight: 600; }
+  .chg em { font-style: normal; display: inline-block; width: 1px; height: 11px; background: #C9CFD8; margin: 0 8px; vertical-align: -1px; }
+  .ctl { display: flex; flex-wrap: wrap; gap: 10px; }
+  .pillb { height: 40px; padding: 0 16px; border-radius: 999px; box-shadow: inset 0 0 0 1px #DCE1E8; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+  .cap { display: flex; height: 40px; padding: 4px; border-radius: 999px; box-shadow: inset 0 0 0 1px #DCE1E8; font-size: 14px; font-weight: 500; color: var(--body); }
+  .cap span { padding: 0 16px; display: flex; align-items: center; border-radius: 999px; }
+  .cap span.on { background: var(--ink); color: #fff; font-weight: 600; }
+  .plot { position: relative; height: 210px; margin: 26px 46px 0 0; }
+  svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .gl { stroke: var(--div); }
+  .yl { position: absolute; left: calc(100% + 10px); transform: translateY(-50%); font-size: 12px; color: var(--faint); font-weight: 500; }
+  .strip { display: flex; gap: 4px; margin: 10px 46px 0 0; }
+  .strip i { flex: 1; height: 7px; border-radius: 3px; background: var(--ink); }
+  .strip i.off { background: var(--div); }
+  .xl { display: flex; justify-content: space-between; margin: 8px 46px 0 0; font-size: 12px; color: var(--faint); font-weight: 500; }
+  .pill { position: absolute; transform: translate(-50%, -160%); background: #fff; box-shadow: inset 0 0 0 1px var(--line); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; }
+  .pill i { font-style: normal; color: var(--muted); font-weight: 500; }
+  .ring { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; background: #fff; border: 2px solid var(--ink); pointer-events: none; }
+  .guide { stroke: var(--ink); stroke-opacity: .5; }
+  @media (max-width: 640px) { .head { flex-direction: column; gap: 12px; } .card { padding: 18px 16px 14px; } }
+</style>
+</head>
+<body>
+<h1>Weight line: spikier, three ways</h1>
+<div class="sub">The readings from your screenshot (5 Oct – 3 Nov, a few days missed). Today's line is at the bottom, faint, to compare. Hover any chart to read a day: the ring sits on the line in all of them.</div>
+
+<div class="grid2">
+  <div><div class="label"><b>A</b><span>Straight between readings</span><i>every weigh-in a sharp corner</i></div><div class="card" data-k="0"></div></div>
+  <div><div class="label"><b>B</b><span>Straight, the corners just softened</span><i>reads as straight, no needle points</i></div><div class="card" data-k="0.3"></div></div>
+  <div><div class="label"><b>C</b><span>Half as smooth as now</span><i>still a curve, the ups and downs sharper</i></div><div class="card" data-k="0.55"></div></div>
+  <div><div class="label"><b>Now</b><span>Today's curve</span></div><div class="card ref" data-k="1"></div></div>
+</div>
+
+<script>
+// 5 Oct .. 3 Nov, 30 days; null = no weigh-in that day (the pale marks in the strip).
+const R = [
+  87.0, 87.8, null, 87.6, 87.4, 87.2, 86.8, null, 87.1, 87.3,  // 5–14 Oct
+  87.2, 88.0, 88.6, 88.7, null, 88.85, 88.9, 89.0, null, 89.8, // 15–24 Oct
+  89.0, 89.8, 89.8, 89.4, 89.4, 89.9, 90.2, 91.1, 90.6, 90.1,  // 25 Oct – 3 Nov
+];
+const days = R.map((_, i) => { const d = new Date(2026, 9, 5 + i); return d.getDate() + " " + d.toLocaleString("en-GB", { month: "short" }); });
+const pts0 = R.map((v, i) => v == null ? null : { i, v }).filter(Boolean);
+const LO = 86.5, HI = 91.5;
+
+// The monotone curve (app/lib/monotoneCurve.ts) with its handles scaled by k: 1 is today's, 0 straight lines.
+// Any k from 0 to 1 still never swings past a reading, so the hover ring stays on the line.
+function path(pts, k) {
+  const n = pts.length, dx = [], s = [], m = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = pts[i + 1].x - pts[i].x; s[i] = (pts[i + 1].y - pts[i].y) / dx[i]; }
+  m[0] = s[0]; m[n - 1] = s[n - 2];
+  for (let i = 1; i < n - 1; i++) {
+    if (s[i - 1] * s[i] <= 0) m[i] = 0;
+    else { const w1 = 2 * dx[i] + dx[i - 1], w2 = dx[i] + 2 * dx[i - 1]; m[i] = (w1 + w2) / (w1 / s[i - 1] + w2 / s[i]); }
+  }
+  let d = `M${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < n - 1; i++) {
+    if (k === 0) { d += `L${pts[i + 1].x} ${pts[i + 1].y}`; continue; }
+    const h = dx[i] / 3 * k;
+    d += `C${pts[i].x + h} ${pts[i].y + m[i] * h} ${pts[i + 1].x - h} ${pts[i + 1].y - m[i + 1] * h} ${pts[i + 1].x} ${pts[i + 1].y}`;
+  }
+  return d;
+}
+
+document.querySelectorAll(".card").forEach((card) => {
+  const k = Number(card.dataset.k);
+  card.innerHTML = `
+    <div class="head">
+      <div><div class="ttl">Weight<span>90.1 kg</span></div><div class="chg">+3.0 kg<em></em>+3.4%</div></div>
+      <div class="ctl"><div class="pillb">◎ + Goal</div><div class="cap"><span>7d</span><span class="on">30d</span><span>Phase</span></div></div>
+    </div>
+    <div class="plot"></div>
+    <div class="strip">${R.map((v) => `<i class="${v == null ? "off" : ""}"></i>`).join("")}</div>
+    <div class="xl"><span>5 Oct</span><span>19 Oct</span><span>3 Nov</span></div>`;
+  const plot = card.querySelector(".plot");
+  const draw = () => {
+    const W = plot.clientWidth, H = plot.clientHeight;
+    const X = (i) => (i / 29) * W, Y = (v) => H - ((v - LO) / (HI - LO)) * H;
+    const pts = pts0.map((p) => ({ x: X(p.i), y: Y(p.v), v: p.v, i: p.i }));
+    const grid = [86.5, 89, 91.5].map((v) => `<line class="gl" x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}"/>`).join("");
+    plot.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${grid}<path d="${path(pts, k)}" fill="none" stroke="#141a24" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><line class="guide" y1="0" y2="${H}" x1="-99" x2="-99"/></svg>`
+      + [86.5, 89, 91.5].map((v) => `<span class="yl" style="top:${Y(v)}px">${v.toFixed(1)}</span>`).join("");
+    const guide = plot.querySelector(".guide");
+    let ring, pill;
+    plot.onmousemove = (e) => {
+      const x = e.clientX - plot.getBoundingClientRect().left;
+      const p = pts.reduce((a, b) => (Math.abs(b.x - x) < Math.abs(a.x - x) ? b : a));
+      guide.setAttribute("x1", p.x); guide.setAttribute("x2", p.x);
+      ring ??= plot.appendChild(Object.assign(document.createElement("div"), { className: "ring" }));
+      pill ??= plot.appendChild(Object.assign(document.createElement("div"), { className: "pill" }));
+      ring.style.left = pill.style.left = p.x + "px"; ring.style.top = pill.style.top = p.y + "px";
+      pill.innerHTML = `${p.v.toFixed(1)} kg <i>| ${days[p.i]}</i>`;
+    };
+    plot.onmouseleave = () => { guide.setAttribute("x1", -99); guide.setAttribute("x2", -99); ring?.remove(); pill?.remove(); ring = pill = null; };
+  };
+  draw();
+  addEventListener("resize", draw);
+});
+</script>
+</body>
+</html>

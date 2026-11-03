@@ -40,7 +40,7 @@ export default function WeightGoalDialog({
   goal: WeightGoalView | null;
   /** The coach's unit. */
   unit?: "kg" | "lbs";
-  /** The client's last 7 days' average, kg: where a new goal starts. */
+  /** The client's latest weigh-in, kg: where a new goal starts (3 Nov, Alex). */
   nowKg: number | null;
   /** A new goal's date to start from (a week clicked on the Plan). */
   initialBy?: string;

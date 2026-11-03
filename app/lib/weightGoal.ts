@@ -1,6 +1,6 @@
 // Weight goals (2 Nov, Alex: "a goal for the weight… how far away are we and if we are on track"; mockup B + C,
 // docs/boards/weight-goal-mockup.html). A goal is a weight by a date. A planned straight line runs from where the
-// client was when it was set (start_kg on start_date) to the goal (target_kg on by_date); a milestone set after
+// client was when it was set (start_kg on start_date, their latest weigh-in then; 3 Nov, Alex) to the goal (target_kg on by_date); a milestone set after
 // another starts where that one ends. The client's last 7 days' average is held against where that line is today:
 // it is the plan they agreed on, not a forecast (no prediction, 23 Oct).
 //

@@ -26,7 +26,7 @@ import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 import { cleanRepeat, openEnd, type EventRepeat } from "./eventRepeat";
 import { assistedRow, beforeStop, copiedWeights, isReset, laneKg, laneOfGym, laneTypedAt, laterSlot, liftOf, raisedTo, setsSinceReset, stopAfter, writeLane, type Lane } from "./targetRule";
 import { FEATURES } from "./features";
-import { addDaysIso as goalAddDays, daysBetween, weightGoalViews, type WeightGoalView } from "./weightGoal";
+import { daysBetween, weightGoalViews, type WeightGoalView } from "./weightGoal";
 import type { WeightGoal } from "./db";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
@@ -6784,15 +6784,12 @@ export function getWeightGoalViews(clientId: number, today: string = localDateSt
   return weightGoalViews(listWeightGoals(clientId), bodyWeightReadings(clientId).filter((r) => r.kg > 0).map((r) => ({ date: r.date, kg: r.kg })), today);
 }
 
-/** Where a new goal starts: the client's last 7 days' average (to the latest reading), else the latest reading, else the
-    starting weight on their card; null with none. */
+/** Where a new goal starts (3 Nov, Alex: "from now and the current weight… this line is straight… always stay where it
+    is"): the client's latest weigh-in, else the starting weight on their card; null with none. Stored on the goal, so
+    the line never moves while it runs. */
 export function goalStartKg(clientId: number): number | null {
-  const readings = bodyWeightReadings(clientId).filter((r) => r.kg > 0);
-  const last = readings.at(-1);
-  if (last) {
-    const win = readings.filter((r) => r.date >= goalAddDays(last.date, -6));
-    return Math.round((win.reduce((s, r) => s + r.kg, 0) / win.length) * 100) / 100;
-  }
+  const last = bodyWeightReadings(clientId).filter((r) => r.kg > 0).at(-1);
+  if (last) return Math.round(last.kg * 100) / 100;
   const s = getData().client_profiles.find((p) => p.client_id === clientId)?.starting_weight_kg;
   return typeof s === "number" && s > 0 ? s : null;
 }
@@ -6803,7 +6800,7 @@ export type WeightGoalRefusal = "no-weight" | "too-soon" | "taken" | "invalid" |
 
 /** Adds a goal, or changes one. One at a time (2 Nov, Alex: "once there is a goal take out the option of adding another
     one, but give the option of editing"): a new one only once the last is reached or missed. It starts where the client
-    is now (their last 7 days' average); its start never moves after. */
+    is now (their latest weigh-in, today); its start never moves after, an edit changing only the goal and its date. */
 export function saveWeightGoal(clientId: number, v: WeightGoalFields, by: { who: "coach" | "client"; userId: number | null }, goalId?: number): WeightGoal | WeightGoalRefusal {
   const target = Number(v.targetKg);
   const byDate = String(v.byDate ?? "").slice(0, 10);
