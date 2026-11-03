@@ -1,8 +1,7 @@
 /* Home · Today (HomeHub.tsx TodayList; 3 Nov, Alex: option 3 of docs/boards/home-hierarchy-mockup.html): what today
    asks, first on Home under the greeting. `Today` as a section's head (ink 11.5px, small caps, 28px in from the screen),
    then a hairline row each, flat on the page: the thing's icon alone in its colour (20px, no ring), its title (15px/500) and
-   one grey fact, its action on the right. The session's Start the one ink pill; the rest words in ink. Rows parted by
-   space alone. */
+   one grey fact, its action on the right as one-width pills (below). Rows parted by space alone. */
 
 .hm-td { display: flex; flex-direction: column; margin: 0; font-family: var(--font-archivo), "Archivo", system-ui, sans-serif; color: #141a24; }
 .hm-td-head { display: block; padding: 0 12px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #141a24; }
@@ -16,8 +15,11 @@
 .hm-td-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hm-td-title { font-size: 15px; font-weight: 500; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hm-td-fact { font-size: 12px; font-weight: 500; line-height: 16px; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-.hm-td-act { flex: none; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; }
-.hm-td-act.ink { display: inline-flex; align-items: center; height: 36px; padding: 0 18px; border-radius: 999px; background: #141a24; color: #fff; }
+/* Every action one pill of one width, its word centred, so the three line up down the right (3 Nov, Alex: option A of
+   docs/boards/today-actions-mockup.html, Today only): the session's Start or Resume the ink one, the rest the white
+   hairline pill. */
+.hm-td-act { flex: none; display: grid; place-items: center; width: 84px; height: 36px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; }
+.hm-td-act.ink { background: #141a24; box-shadow: none; color: #fff; }
 /* Nothing left today (3 Nov, Alex): the same row, the done check in green, `All set for today`, not a button. */
 .hm-td-row.done { cursor: default; }
 .hm-td-row.done:active { background: none; }
