@@ -656,7 +656,7 @@ export default function FoodDiaryScreen({
                           <button
                             key={d}
                             type="button"
-                            className={`fdi-day${on ? " on" : ""}${future || tooFar ? " off" : ""}`}
+                            className={`fdi-day${on ? " on" : ""}${d === today ? " today" : ""}${future || tooFar ? " off" : ""}`}
                             onClick={() => {
                               if (stripDrag.current?.on) return;
                               goTo(d);
@@ -681,7 +681,7 @@ export default function FoodDiaryScreen({
               </button>
             </div>
             {/* Which targets the day counts down from. */}
-            <div className="nd-tabs fdi-tabs" role="tablist" aria-label="Day type">
+            <div className="nd-tabs fdi-tabs nd-daycap" data-slide role="tablist" aria-label="Day type">
               {(["training", "rest"] as const).map((t) => (
                 <button key={t} type="button" role="tab" aria-selected={diary.dayType === t} className={`nd-tab${diary.dayType === t ? " on" : ""}`} onClick={() => chooseDay(t)}>
                   {t === "training" ? "Training day" : "Rest day"}
@@ -1406,10 +1406,6 @@ function Targets({ target, eaten, dayType, onDayType }: { target: Macros | null;
             <MacroRow key={m} id={m} eaten={eaten[m]} goal={target?.[m] ?? null} />
           ))}
         </div>
-      </div>
-      <div className="nd-dots fdi-dots" aria-hidden="true">
-        <span className={dayType === "training" ? "on" : undefined} />
-        <span className={dayType === "rest" ? "on" : undefined} />
       </div>
     </section>
   );
