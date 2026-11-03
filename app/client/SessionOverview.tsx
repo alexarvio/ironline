@@ -361,7 +361,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
           )}
           <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
         </button>
-        {open && (
+        <SoFold open={open}>
           <div className="so-card-body">
             {exercise.logs.length > 0 ? (
               // The set on the left, its numbers to the right; an RPE column
@@ -385,7 +385,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
               <div className="so-notlogged">Not logged</div>
             )}
           </div>
-        )}
+        </SoFold>
       </div>
     );
   }
@@ -399,7 +399,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
         </span>
         <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>
-      {open && (
+      <SoFold open={open}>
         <div className="so-card-body">
           <TargetTable cells={targets} />
           {exercise.note.text && <CoachNote assignmentId={exercise.id} note={exercise.note} />}
@@ -422,7 +422,20 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
           )}
           {videoOpen && <VideoAskSheet ask={ask} assignmentId={exercise.id} exerciseName={exercise.swap?.name ?? exercise.name} onClose={() => setVideoOpen(false)} />}
         </div>
-      )}
+      </SoFold>
+    </div>
+  );
+}
+
+// A row's body opening as every client fold does (3 Nov, Alex: "the session overview as well expand in the same
+// smoothness"; the shared fold block at the end of globals.css): rows 0fr → 1fr over 340ms. What is inside is made the
+// first time it opens (a coach's note in it is read on sight) and kept after, so it can fold away smoothly too.
+function SoFold({ open, children }: { open: boolean; children: React.ReactNode }) {
+  const [ever, setEver] = useState(open);
+  if (open && !ever) setEver(true);
+  return (
+    <div className={`so-fold${open ? " open" : ""}`} aria-hidden={!open} inert={!open}>
+      <div className="so-fold-in">{ever && children}</div>
     </div>
   );
 }
@@ -450,7 +463,7 @@ function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: num
         </span>
         <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>
-      {open && (
+      <SoFold open={open}>
         <div className="so-card-body">
           {done ? (
             <div className={cardio.done ? "so-cardio-done" : "so-notlogged"}>{cardio.done ? "Done" : "Not done"}</div>
@@ -461,7 +474,7 @@ function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: num
             </>
           )}
         </div>
-      )}
+      </SoFold>
     </div>
   );
 }

@@ -21068,3 +21068,29 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
    still and nothing is blurred through; at 1× everything comes back as it was. */
 html.zoomed .pc-aura, html.zoomed .ev-aura, html.zoomed .hm-gap.charging::before, html.zoomed .hm-gap.charging::after { display: none; }
 html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-state: paused !important; will-change: auto !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* ---- Folds and chevrons, one way across the client (3 Nov, Alex: the audit; "make the session overview expand in the
+   same smoothness", "have the chevrons behave like the ones for events"). The session overview's exercise and cardio
+   rows join the shared fold (SoFold): rows 0fr → 1fr over 340ms on the soft ease-out, what is inside fading in. Every
+   chevron on a row that folds open is the Events one: pointing right at rest, turning down when open, over 280ms on the
+   same curve (a down-drawn icon turned a quarter back at rest; a drawn corner a quarter back too). A pill that drops a
+   list (Saved days, Supplements, a phase card's) keeps down and up, on the same timing. Doubled, so it wins. */
+.so-fold.so-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; }
+.so-fold.so-fold.open { grid-template-rows: 1fr; opacity: 1; }
+.so-fold-in { min-height: 0; overflow: hidden; }
+.evp-chev.evp-chev, .mtp-next-chev.mtp-next-chev, .ntf-more.ntf-more svg, .cv-fold-chev.cv-fold-chev,
+.ci-day-chev.ci-day-chev, .pp-app-past-chevron.pp-app-past-chevron, .po-chev.po-chev, .hm-recap-chev.hm-recap-chev, .fdi-meal-chev.fdi-meal-chev,
+.so-card-chev.so-card-chev, .tr-chev.tr-chev,
+.nd-supps-chev.nd-supps-chev, .fdi-copy-chev.fdi-copy-chev, .pc-chev.pc-chev { transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+/* Drawn pointing down: a quarter back at rest, so they point right; open, down. */
+.ci-day-chev.ci-day-chev, .pp-app-past-chevron.pp-app-past-chevron, .po-chev.po-chev, .hm-recap-chev.hm-recap-chev, .fdi-meal-chev.fdi-meal-chev { transform: rotate(-90deg); }
+.ci-day-chev.ci-day-chev.open, .pp-app-past-chevron.pp-app-past-chevron.open, .po-chev.po-chev.open, .hm-recap-chev.hm-recap-chev.open, .fdi-meal-chev.fdi-meal-chev.up { transform: rotate(0deg); }
+/* The drawn corners (two borders): pointing right at rest, down when open. */
+.so-card-chev.so-card-chev, .tr-chev.tr-chev { transform: rotate(-45deg); }
+.so-card-chev.so-card-chev.up, .tr-chev.tr-chev.up { transform: rotate(45deg); }
+/* Every switch's knob as a capsule's pill moves (3 Nov, Alex: "change to 250"): 250ms on the shared curve. */
+.settings-dark .settings-switch.settings-switch { transition: background-color 0.25s ease; }
+.settings-dark .settings-switch-knob.settings-switch-knob { transition: left 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .so-fold.so-fold, .evp-chev.evp-chev, .mtp-next-chev.mtp-next-chev, .ntf-more.ntf-more svg, .cv-fold-chev.cv-fold-chev, .ci-day-chev.ci-day-chev, .pp-app-past-chevron.pp-app-past-chevron, .po-chev.po-chev, .hm-recap-chev.hm-recap-chev, .fdi-meal-chev.fdi-meal-chev, .so-card-chev.so-card-chev, .tr-chev.tr-chev, .nd-supps-chev.nd-supps-chev, .fdi-copy-chev.fdi-copy-chev, .pc-chev.pc-chev, .settings-dark .settings-switch-knob.settings-switch-knob { transition: none; }
+}
