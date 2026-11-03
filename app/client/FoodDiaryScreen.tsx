@@ -1062,6 +1062,10 @@ export default function FoodDiaryScreen({
                           <span className="fdi-meal-title">{meal.label}</span>
                         )}
                       </span>
+                      {/* A meal being named is its name box alone (3 Nov, Alex: "only show the icons once the name has been
+                          saved"); left blank, it goes. */}
+                      {namingId !== meal.id && (
+                      <>
                       {(meal.entries.length > 0 || meal.own) && (
                         <button type="button" className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} onClick={() => toggleFold(meal.id)} aria-expanded={!folded.has(meal.id)} aria-label={folded.has(meal.id) ? `Open ${meal.label}` : `Fold ${meal.label}`}>
                           <ChevronDownIcon />
@@ -1126,6 +1130,8 @@ export default function FoodDiaryScreen({
                           />
                         </label>
                       )}
+                      </>
+                      )}
                     </div>
                     {photoFailed === meal.id && (
                       <p className="fdi-photo-failed" role="alert">
@@ -1181,7 +1187,7 @@ export default function FoodDiaryScreen({
                     )}
                     <div className={`fdi-fold${folded.has(meal.id) ? " folding" : ""}`}>
                     <div className="fdi-fold-inner">
-                    {meal.own && meal.entries.length === 0 && !open && (
+                    {meal.own && meal.entries.length === 0 && !open && namingId !== meal.id && (
                       <div className="fdi-meal-empty">
                         <p className="fdi-meal-empty-note">None yet</p>
                         <button
