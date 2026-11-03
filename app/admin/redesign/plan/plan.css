@@ -234,6 +234,13 @@
 .rq-goal.flip { flex-direction: row-reverse; padding: 0 0 0 8px; translate: -100% 0; }
 .rq-goal.flip .rq-goal-ring { margin: 0 -11px 0 0; }
 .rq-goal.flip .rq-goal-text { align-items: flex-end; padding: 2px 2px 2px 6px; }
+/* A pin still to come or on today pulses in its own colour, a weight goal's ring too; once over it stops (3 Nov, Alex).
+   A ring growing out of the dot and fading, transform and opacity alone so it costs no layout. */
+.rq-pin:not(.past) i, .rq-pin:not(.past) .rq-goal-ring { position: relative; }
+.rq-pin:not(.past) i::after, .rq-pin:not(.past) .rq-goal-ring::after { content: ""; position: absolute; inset: 0; border-radius: 999px; background: currentColor; opacity: 0; pointer-events: none; animation: rq-pin-pulse 2s ease-out infinite; }
+.rq-pin:not(.past) .rq-goal-ring::after { --rq-pulse-to: 1.7; background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
+@keyframes rq-pin-pulse { from { transform: scale(1); opacity: 0.5; } to { transform: scale(var(--rq-pulse-to, 2.4)); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .rq-pin i::after, .rq-goal-ring::after { animation: none; } }
 .rq-goal:focus-visible { outline: none; }
 .rq-goal:focus-visible .rq-pin-text b { text-decoration: underline; text-decoration-color: #c9cfd8; text-underline-offset: 3px; }
 /* Who set it, in its pop-up's foot (a portal, so not under .rd.pln): their face as an event's. */
