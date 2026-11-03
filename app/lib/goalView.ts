@@ -7,6 +7,8 @@
 // row the client sees. It imports nothing from the store, so the coach's
 // "Client sees" preview and the client's Home render from one function.
 
+import { dayWords, weekdayWords } from "./clientDates";
+
 export type GoalTracking =
   | { kind: "metric"; metricKey: string; op: "<=" | ">="; target: number; byDate: string }
   // gymId: the gym whose sets count, since machines differ. Missing or null
@@ -60,8 +62,8 @@ export const addDaysIso = (date: string, n: number) => {
   return iso(d);
 };
 export const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10));
-export const fmtDate = (isoDate: string) => parse(isoDate).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
-const weekday = (isoDate: string) => parse(isoDate).toLocaleDateString("en-GB", { weekday: "long" });
+export const fmtDate = (isoDate: string) => dayWords(isoDate);
+const weekday = (isoDate: string) => weekdayWords(isoDate);
 
 /** Slope per day from a least-squares fit; null with fewer than two points. */
 export function slopePerDay(points: SeriesPoint[]): number | null {
@@ -105,7 +107,7 @@ export function computeGoalView(
     segments: null,
     left: null,
     right: null,
-    sub: "Reviewed with your coach",
+    sub: "Reviewed together",
   };
   const t = goal.tracking;
   if (!t) return goal.done ? { ...base, reached: true, tone: "green" } : base;

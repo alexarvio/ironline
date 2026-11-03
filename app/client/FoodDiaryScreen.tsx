@@ -36,6 +36,7 @@ import { useTween } from "./NutritionTargetsCard";
 import BarcodeScanner from "./BarcodeScanner";
 import PictureCycle from "./PictureCycle";
 import { landOn } from "../lib/landOn";
+import { dayWords, weekdayWords } from "../lib/clientDates";
 import { Bars } from "./Bars";
 import CoachSays from "./CoachSays";
 
@@ -591,11 +592,10 @@ export default function FoodDiaryScreen({
     }, 260);
   };
   // The banner: the day in big ("Today", "Monday"), the date under it.
-  const dayDate = new Date(`${date}T00:00:00`);
-  const weekday = dayDate.toLocaleDateString("en-GB", { weekday: "long" });
+  const weekday = weekdayWords(date);
   const relative = diary.dateLabel === "Today" || diary.dateLabel === "Yesterday" ? diary.dateLabel : null;
   const dayTitle = relative ?? weekday;
-  const daySub = `${relative ? `${weekday}, ` : ""}${dayDate.toLocaleDateString("en-GB", { day: "numeric", month: "long" })}`;
+  const daySub = `${relative ? `${weekday} ` : ""}${dayWords(date, { long: true })}`;
   const dayWord = relative ? relative.toLowerCase() : weekday;
 
   return (
@@ -1183,7 +1183,7 @@ export default function FoodDiaryScreen({
                     <div className="fdi-fold-inner">
                     {meal.own && meal.entries.length === 0 && !open && (
                       <div className="fdi-meal-empty">
-                        <p className="fdi-meal-empty-note">Nothing here yet. Tap + to add a food.</p>
+                        <p className="fdi-meal-empty-note">None yet</p>
                         <button
                           type="button"
                           className="fdi-meal-remove"

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { sendExerciseMediaAction } from "../lib/actions";
 import { VideoReplyBody, type VideoReplyView } from "./VideoReplySheet";
+import { dayWords } from "../lib/clientDates";
 
 // The coach asked for a video of this exercise: a camera on the exercise
 // card, with a dot until one is sent. It opens a sheet from the bottom with
@@ -41,26 +42,28 @@ function durationOf(url: string): Promise<number | null> {
   });
 }
 
-export default function VideoAskButton({ ask, assignmentId, exerciseName }: { ask: VideoAsk; assignmentId: number; exerciseName: string }) {
+// The coach by their name, never "your coach" (3 Nov, Alex: the words audit); "Coach" with no name.
+export default function VideoAskButton({ ask, assignmentId, exerciseName, coachName = "Coach" }: { ask: VideoAsk; assignmentId: number; exerciseName: string; coachName?: string }) {
   const [open, setOpen] = useState(false);
   const sent = !!ask.src;
+  const label = ask.reply ? `${coachName} replied` : sent ? "Video sent" : `${coachName} asked for a video`;
   return (
     <>
       <button
         type="button"
         className={`ts-ask${sent ? " sent" : ""}${ask.reply && !ask.reply.seen ? " replied" : ""}`}
         onClick={() => setOpen(true)}
-        aria-label={ask.reply ? "Your coach replied to your video" : sent ? "The video you sent your coach" : "Your coach asked for a video"}
-        title={ask.reply ? "Your coach replied" : sent ? "Video sent" : "Your coach asked for a video"}
+        aria-label={label}
+        title={label}
       >
         <VideoGlyph />
       </button>
-      {open && <VideoAskSheet ask={ask} assignmentId={assignmentId} exerciseName={exerciseName} onClose={() => setOpen(false)} />}
+      {open && <VideoAskSheet ask={ask} assignmentId={assignmentId} exerciseName={exerciseName} coachName={coachName} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, onClose }: { ask: VideoAsk | null; assignmentId: number; /** Sending a picture of the swap (9 Oct). */ about?: "swap" | null; exerciseName: string; onClose: () => void }) {
+export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, coachName = "Coach", onClose }: { ask: VideoAsk | null; assignmentId: number; /** Sending a picture of the swap (9 Oct). */ about?: "swap" | null; exerciseName: string; coachName?: string; onClose: () => void }) {
   const isPhoto = (f: File | null) => !!f && f.type.startsWith("image/");
   const sentPhoto = ask?.media === "photo";
   // The coach asked for it, with or without a note (the note is optional since 15 Oct).
@@ -94,7 +97,7 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
       return;
     }
     const secs = await durationOf(u);
-    if (secs != null && secs > MAX_SECONDS + 1) setProblem(`This clip is ${Math.round(secs)} seconds. Keep it under two minutes: just the set your coach asked for.`);
+    if (secs != null && secs > MAX_SECONDS + 1) setProblem(`This clip is ${Math.round(secs)} seconds. Keep it under two minutes: just the set ${coachName} asked for.`);
   };
 
   const send = () => {
@@ -152,23 +155,22 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
     <div className="vr-sheet-scrim" role="presentation" onClick={() => !sending && onClose()}>
       <div className="pp-app-sheet vr-sheet" role="dialog" aria-modal="true" aria-label={`Video of ${exerciseName}`} onClick={(e) => e.stopPropagation()}>
         <div className="pp-app-sheet-head">
-          <span className="pp-app-sheet-title">{done ? "Sent to your coach" : ask?.src && !file ? (sentPhoto ? "Your photo" : "Your video") : asked ? "Video for your coach" : about === "swap" || ask?.about === "swap" ? "A picture of what you used" : "Photo or video for your coach"}</span>
+          <span className="pp-app-sheet-title">{done ? `Sent to ${coachName}` : ask?.src && !file ? (sentPhoto ? "Your photo" : "Your video") : asked ? `Video for ${coachName}` : about === "swap" || ask?.about === "swap" ? "A picture of what you used" : "Photo or video"}</span>
           <span className="pp-app-sheet-sub">{exerciseName}</span>
         </div>
 
         {/* The coach's reply first, when there is one: it is what is new. */}
-        {ask?.reply && !done && !file && <VideoReplyBody reply={ask.reply} />}
+        {ask?.reply && !done && !file && <VideoReplyBody reply={ask.reply} coachName={coachName} />}
 
         {ask?.note && !done && (
           <div className="vr-sheet-note">
-            <span>Your coach asked</span>
+            <span>{coachName} asked</span>
             <p>{ask.note}</p>
           </div>
         )}
 
-        {done ? (
-          <p className="vr-sheet-done">✓ Your coach can watch it now.</p>
-        ) : file && preview ? (
+        {/* Sent, the title says it alone (3 Nov, Alex: the words audit). */}
+        {done ? null : file && preview ? (
           <>
             {isPhoto(file) ? <img className="vr-sheet-video" src={preview} alt="" /> : <video className="vr-sheet-video" src={firstFrame(preview)} controls playsInline muted preload="metadata" />}
             {/* Send and Cancel are the choice here (19 Oct, Alex: four buttons was crowded); another one is a quiet line. */}
@@ -176,7 +178,7 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
             {!asked && <input className="vr-sheet-note-in" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything to say with it? (optional)" maxLength={300} />}
             {problem && <p className="vr-sheet-problem">{problem}</p>}
             <button type="button" className="vr-sheet-send" onClick={send} disabled={!!problem || sending}>
-              {sending ? "Sending… keep the app open" : ask?.src ? "Send instead" : "Send to your coach"}
+              {sending ? "Sending… keep the app open" : ask?.src ? "Send instead" : `Send to ${coachName}`}
             </button>
           </>
         ) : (
@@ -185,10 +187,11 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
               <>
                 {sentPhoto ? <img className="vr-sheet-video" src={ask.src} alt="" /> : <video className="vr-sheet-video" src={firstFrame(ask.src)} controls playsInline preload="metadata" />}
                 {ask.clientNote && <p className="vr-sheet-sent">{ask.clientNote}</p>}
-                {ask.sentAt && <p className="vr-sheet-sent">Sent {new Date(ask.sentAt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}.</p>}
+                {ask.sentAt && <p className="vr-sheet-sent">Sent {dayWords(new Date(ask.sentAt), { weekday: "short" })}.</p>}
               </>
             )}
-            {!ask?.src && <p className="vr-sheet-hint">{asked ? "Up to two minutes. Film in 1080p so it sends quickly." : "A photo of the machine, or a clip of a set, with a word if you like."}</p>}
+            {/* The limit alone, and nothing with no ask (3 Nov, Alex: the words audit). */}
+            {!ask?.src && asked && <p className="vr-sheet-hint">Up to 2 min</p>}
             {options}
           </>
         )}

@@ -8,6 +8,7 @@ import { addDays, longDay } from "../../lib/eventDates";
 import { isoWeekday, openEnd, repeatWords, WEEKDAY_LETTERS, type EventRepeat } from "../../lib/eventRepeat";
 import type { HomeEvent } from "../EventsCard";
 import RingEdge from "../../components/RingEdge";
+import { dayWords } from "../../lib/clientDates";
 
 // The "New event" sheet (9 Oct), colour-coded: the type picked colours the
 // top of the sheet (wash, glow, grabber, the pill by the title), the picker
@@ -27,14 +28,11 @@ export function TypeIcon({ path, fill, size = 14, stroke = 2 }: { path: string; 
   );
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const valid = (iso: string) => /^\d{4}-\d{2}-\d{2}$/.test(iso);
 const fmt = (iso: string, today: string) => {
   if (!valid(iso)) return null;
   if (iso === today) return "Today";
-  const d = new Date(`${iso}T00:00:00`);
-  return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return dayWords(iso, { weekday: "short" });
 };
 
 export default function AddEventSheet({

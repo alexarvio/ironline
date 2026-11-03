@@ -14,6 +14,7 @@ import { isTimezone, SERVER_TZ, zonedToUtc } from "./timezones";
 import { meetingTypeOf } from "./meetingTypes";
 import { callLink, isClientCall, takesClient } from "./calendarKinds";
 import { dayMonth } from "./dayMonth";
+import { clock, dayWords, monthWords } from "./clientDates";
 import { countryOf, invoicingFor } from "./countries";
 import { addressLine } from "./address";
 import { LOCK_MS, type LockScope } from "./loginLockout";
@@ -843,7 +844,7 @@ export function programWeekNow(program: TrainingProgram): number {
 // progress pictures.
 
 const sessionTitle = (day: ProgramDay) => day.label?.trim() || `Session ${day.day_of_week}`;
-const shortDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace("Sept", "Sep");
+const shortDay = (iso: string) => dayWords(iso, { weekday: "short" });
 
 /** The weeks of the live programme the client can open: its first up to this one. */
 function linkableWeeks(clientId: number): { program: TrainingProgram; weeks: number[] } | null {
@@ -938,7 +939,7 @@ export function describeMessageLink(clientId: number, link: MessageLink): LinkVi
     case "checkin": {
       const what = link.section === "daily" ? "Daily check-in" : link.section === "monthly" ? "Monthly check-in" : "Weekly check-in";
       if (!link.period) return view("Lifestyle", what);
-      if (link.section === "monthly") return view("Lifestyle", `${what} · ${new Date(`${link.period}T00:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`);
+      if (link.section === "monthly") return view("Lifestyle", `${what} · ${monthWords(link.period)}`);
       return view("Lifestyle", link.section === "daily" ? `${what} · ${shortDay(link.period)}` : `${what} · week of ${shortDay(link.period)}`);
     }
     case "photos":
@@ -6312,8 +6313,8 @@ export function chatThreadViews(clientId: number): ChatThreadView[] {
         edited: !!m.edited_at,
         seen: seen(m),
         dateIso: m.created_at.slice(0, 10),
-        dayLabel: d.toLocaleDateString("en-GB", { weekday: "long", month: "long", day: "numeric" }),
-        timeLabel: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+        dayLabel: dayWords(d, { weekday: "long", long: true }),
+        timeLabel: clock(d),
         link: m.link ? describeMessageLink(clientId, m.link) : null,
         replyTo: (() => {
           const q = chatQuote(clientId, m.reply_to);
@@ -8087,7 +8088,7 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
   return { series, days };
 }
 
-const checkInFmtDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
+const checkInFmtDate = (iso: string) => dayWords(iso);
 
 // A tracker metric's row: what's logged for the period, plus the most recent
 // entry from any earlier period as the hint. `only` narrows it to some of the
@@ -8402,7 +8403,9 @@ export function logCoachActivity(
         : `Update from ${coach}`;
       // Tapped, it opens where the news is: the chat for a message (21 Oct: it opened whatever tab was last), else this
       // notification's own thing, as a tap on it in the list does (24 Oct, Alex: a session, an exercise, an invoice…).
-      const lockScreen = { title, body: message, url: opts.kind === "coach_note" ? "/client?open=messages" : `/client?n=${noteId}`, tag: opts.dedupeKey };
+      // The coach by name on the lock screen too, never "Your coach" (3 Nov, Alex: as the app's list reads it).
+      const body = message.replace(/\byour coach\b/gi, () => coach.split(" ")[0]);
+      const lockScreen = { title, body, url: opts.kind === "coach_note" ? "/client?open=messages" : `/client?n=${noteId}`, tag: opts.dedupeKey };
       void import("./push").then((push) => push.sendPushInBackground(user.id, lockScreen)).catch(() => {});
     }
   }
@@ -9302,7 +9305,7 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     d.setDate(d.getDate() + 6);
     return localDateStr(d);
   };
-  const short = (s: string) => new Date(`${s}T00:00:00`).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
+  const short = (s: string) => dayWords(s);
   const addWeeks = (monday: string, n: number) => {
     const d = new Date(`${monday}T00:00:00`);
     d.setDate(d.getDate() + n * 7);
@@ -9326,7 +9329,7 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     thursday.setDate(d.getDate() + 3);
     const jan1 = new Date(thursday.getFullYear(), 0, 1);
     const num = Math.floor((thursday.getTime() - jan1.getTime()) / 86400000 / 7) + 1;
-    const month = d.toLocaleDateString("en-GB", { month: "short" }).replace("Sept", "Sep");
+    const month = monthWords(d, { short: true, year: false });
     const monthLabel = month !== lastMonth ? month : null;
     lastMonth = month;
     return { monday, num, monthLabel, now: monday === week };
@@ -11565,9 +11568,7 @@ export function getLastMeetingRecap(clientId: number): MeetingRecap | null {
     .filter((x) => (x.summary ?? "").trim() && x.status !== "cancelled" && (x.status === "completed" || x.date < today))
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? 1 : -1) : a.date < b.date ? 1 : -1))[0];
   if (!m) return null;
-  const d = new Date(`${m.date}T12:00:00`);
-  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return { dateLabel: `${d.getDate()} ${MONTHS[d.getMonth()]}`, title: (m.summary_title ?? "").trim() || m.topic || "Check-in call", text: (m.summary ?? "").trim() };
+  return { dateLabel: dayWords(m.date), title: (m.summary_title ?? "").trim() || m.topic || "Check-in call", text: (m.summary ?? "").trim() };
 }
 
 export type UpNextSession = {
@@ -13022,12 +13023,11 @@ export type FoodDiaryView = {
 };
 
 const dayLabelFor = (date: string, today: string): string => {
-  const d = new Date(`${date}T00:00:00`);
   const y = new Date(`${today}T00:00:00`);
   y.setDate(y.getDate() - 1);
   if (date === today) return "Today";
   if (date === localDateStr(y)) return "Yesterday";
-  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }).replace("Sept", "Sep");
+  return dayWords(date, { weekday: "long" });
 };
 
 /** Training or rest on a date: as set on the diary, else as logged with the calories, else by whether a set was logged. */

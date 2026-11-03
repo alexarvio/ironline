@@ -81,7 +81,7 @@ export default function TimezonePicker({ value, zones, onChange }: { value: stri
                 <em>{off(z)}</em>
               </button>
             ))}
-            {shown.length === 0 && <p className="rt-tzp-none">No timezone called that.</p>}
+            {shown.length === 0 && <p className="rt-tzp-none">No match</p>}
           </div>
         </div>
       )}

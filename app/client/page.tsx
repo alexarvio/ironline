@@ -137,6 +137,7 @@ import { CardPicturesRows } from "./CardPictureSheet";
 import { isGymColor } from "../lib/gymColors";
 import { SERVER_TZ, hourIn, isTimezone, meetingLabelsIn, zonedToUtc } from "../lib/timezones";
 import { cookies } from "next/headers";
+import { dayWords, monthWords, weekdayWords } from "../lib/clientDates";
 import type { HomePhase, PhaseFoodToday } from "./PhaseCards";
 import {
   AppleIcon,
@@ -152,16 +153,13 @@ import {
 // exists) and freezes that empty snapshot in the deployed build forever.
 export const dynamic = "force-dynamic";
 
-const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
 // A note with no kind set still needs a header — "Note" is the honest
 // fallback rather than guessing which of the three it is.
+// Dates through the one helper (3 Nov, Alex: docs/boards/dates-times-mockup.html).
 function noteDateLabel(at: string | null): string {
   if (!at) return "";
-  return new Date(at).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
+  return dayWords(new Date(at));
 }
-
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // Which client the app is showing. There's no login yet, so the admin's
 // "View client app" link carries ?client=<id> and this falls back to the
@@ -200,11 +198,7 @@ async function resolveClientId(raw: string | undefined): Promise<number | null> 
   return user.client_id;
 }
 
-const MONTH_CAP = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const fmtShortDate = (iso: string) => {
-  const d = new Date(`${iso}T12:00:00`);
-  return `${d.getDate()} ${MONTH_CAP[d.getMonth()]}`;
-};
+const fmtShortDate = (iso: string) => dayWords(iso);
 
 // Settings' progress-report list is the only place reports appear — a sent
 // report's sections_snapshot parsed, plus up to 3 stat deltas derived from
@@ -280,13 +274,13 @@ function meetingCardView(m: ReturnType<typeof listMeetings>[number], today: stri
     startingNow,
     startIso: startAt ? startAt.toISOString() : null,
     durationMinutes: m.duration_minutes,
-    monthCap: MONTH_CAP[when.getMonth()],
+    monthCap: monthWords(when, { short: true, year: false }),
     dayNumber: String(when.getDate()),
-    weekdayCap: DAY_LABELS[when.getDay()],
+    weekdayCap: weekdayWords(when, { short: true }),
     topic: m.topic || "Check-in call",
     inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
     whenLabel: [
-      when.toLocaleDateString("en-GB", { weekday: "long" }),
+      weekdayWords(when),
       m.time || null,
     ]
       .filter(Boolean)
@@ -441,11 +435,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
   const onScreen = sections.sections.filter((s) => s.id === "daily" || (s.id === "monthly" ? monthlyOpen : weeklyOpen)).flatMap((s) => s.metrics);
   const checkInCount = { done: onScreen.filter((m) => m.value !== "").length, total: onScreen.length };
 
-  const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-GB", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
+  const dateLabel = dayWords(today, { weekday: "long", long: true });
 
   // The next session, for the training card's Start.
   const session = (() => {
@@ -471,7 +461,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
     if (session || !getDeployedProgram(CLIENT_ID)) return null;
     const next = new Date(`${weekStart(today)}T00:00:00`);
     next.setDate(next.getDate() + 7);
-    return { nextWeekLabel: next.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace("Sept", "Sep") };
+    return { nextWeekLabel: dayWords(next, { weekday: "short" }) };
   })();
 
   // A session ended today: training is done for the day (Quick actions).
@@ -770,19 +760,17 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
             coachName={getCoachFirstName(CLIENT_ID)}
             photoPath={getCoachAvatarPath(CLIENT_ID)}
             note={ph?.client_note?.trim() || null}
-            noteDate={ph?.client_note_at ? new Date(ph.client_note_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep") : null}
+            noteDate={ph?.client_note_at ? dayWords(new Date(ph.client_note_at)) : null}
           />
         );
       })()}
 
       {days.length === 0 ? (
         // No programme at all (22 Oct, Alex: a new client is the start): two words, no sentence.
-        program ? <p className="empty-note">Nothing deployed yet. Your coach is still building this week.</p> : <p className="empty-note">No plan yet</p>
+        // An empty week and a week of rest days alike (3 Nov, Alex: the words audit).
+        program ? <p className="empty-note">No sessions yet</p> : <p className="empty-note">No plan yet</p>
       ) : trainingDays.length === 0 ? (
-        <p className="empty-note">
-          Your coach published this week, but hasn&rsquo;t added any exercises yet. It&rsquo;s all
-          rest days for now.
-        </p>
+        <p className="empty-note">No sessions yet</p>
       ) : (
         (() => {
           // "My notes" are private to the client: a coach previewing the app
@@ -925,7 +913,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   // logged on it (the last seven days below read their targets by it).
   const trainedOn = trainingDates(CLIENT_ID);
   const coachName = getCoachFirstName(CLIENT_ID);
-  const short = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
+  const short = (iso: string) => dayWords(iso);
   const addDays = (iso: string, days: number) => {
     const d = new Date(`${iso}T00:00:00`);
     d.setDate(d.getDate() + days);
@@ -1085,7 +1073,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           : { text: `−${Math.round(-diff).toLocaleString("en-US")}`, tone: "under" };
       return {
         date: c.date,
-        label: `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()}`,
+        label: `${weekdayWords(d, { short: true })} ${d.getDate()}`,
         type: trained ? "Training" : "Rest",
         note: c.note ?? "",
         kcal,
@@ -1125,7 +1113,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           </div>
           <div className="nd-card">
             {lastWeek.length === 0 ? (
-              <p className="nd-empty">Nothing logged in the last week yet.</p>
+              <p className="nd-empty">Nothing logged</p>
             ) : (
               lastWeek.map((d) => (
                 <div key={d.date} className="nd-day">
@@ -1182,9 +1170,10 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   // not built, and the units live on the Kg | Lbs switch in a session.
   // Push notifications, when this server has keys for them (lib/push.ts).
   const pushKey = pushPublicKey();
-  const toggleDefs: { key: "coach_notes" | "checkin_reminders"; label: string; detail: string }[] = [
-    { key: "coach_notes", label: "Messages from your coach", detail: `A notification when ${getCoachFirstName(CLIENT_ID)} sends you one` },
-    { key: "checkin_reminders", label: "Check-in reminders", detail: "A reminder when a check-in, measurement or photo is due" },
+  // The title alone, no line under it (3 Nov, Alex: the words audit).
+  const toggleDefs: { key: "coach_notes" | "checkin_reminders"; label: string }[] = [
+    { key: "coach_notes", label: `Messages from ${getCoachFirstName(CLIENT_ID)}` },
+    { key: "checkin_reminders", label: "Check-in reminders" },
   ];
 
   return (
@@ -1225,7 +1214,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           {reports.length > 0 && <span className="home-dark-section-count">{reportCountLabel}</span>}
         </div>
         {reports.length === 0 ? (
-          <p className="home-dark-empty">No reports sent yet.</p>
+          <p className="home-dark-empty">None yet</p>
         ) : (
           <ReportArchiveList reports={reports} />
         )}
@@ -1245,7 +1234,6 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
                 <button type="submit" className="settings-toggle-row">
                   <div className="home-dark-row-body">
                     <div className="home-dark-row-title">{t.label}</div>
-                    <div className="home-dark-row-detail">{t.detail}</div>
                   </div>
                   <span className={`settings-switch${on ? " on" : ""}`} aria-hidden="true">
                     <span className="settings-switch-knob" />
@@ -1273,14 +1261,12 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
             })}
           />
         </div>
-        <p className="st-note">Press and hold a card on Home to change its picture too.</p>
       </section>
 
-      <ConnectedApps />
+      <ConnectedApps coachName={getCoachFirstName(CLIENT_ID)} />
 
       <section className="home-dark-section">
         <span className="home-dark-section-title">Data</span>
-        <p className="st-note st-privacy">Your coach sees your check-ins, photos, logs and notes. Nobody else does.</p>
         <div className="home-dark-rows">
           <div className="settings-data-row">
             <div className="home-dark-row-title">Export my data</div>
@@ -1367,7 +1353,7 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
 // "September sheet" on a monthly schedule; the opening day otherwise.
 function sheetTitle(period: string, cadence: ReturnType<typeof getPhotoCadence>) {
   const d = new Date(`${period}T00:00:00`);
-  return cadence === "monthly" ? `${MONTH_LONG[d.getMonth()]} sheet` : `Sheet of ${d.getDate()} ${MONTH_CAP[d.getMonth()]}`;
+  return cadence === "monthly" ? `${monthWords(d, { year: false })} sheet` : `Sheet of ${dayWords(d)}`;
 }
 
 function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
@@ -1409,7 +1395,7 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
         }
       : null,
     earlier,
-    earlierSince: oldest ? MONTH_LONG[new Date(`${oldest.period}T00:00:00`).getMonth()] : null,
+    earlierSince: oldest ? monthWords(oldest.period, { year: false }) : null,
     nextLabel: next ? fmtShortDate(next) : null,
     hasAngles: slots.length > 0,
   };
@@ -1486,11 +1472,7 @@ export default async function ClientPage({
     ? { status: "completed", uploaded: photoCount, total: photoCount, coverUrl: null }
     : null;
   const checkIn = {
-    dateLabel: new Date(`${localDateStr()}T00:00:00`).toLocaleDateString("en-GB", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    }),
+    dateLabel: dayWords(localDateStr(), { weekday: "long", long: true }),
     today: localDateStr(),
     pictures: bannerPictures(CLIENT_ID, "lifestyle"),
     sections: checkInData.sections,
@@ -1502,7 +1484,7 @@ export default async function ClientPage({
     coachNote: (() => {
       const ph = getCurrentPhase(CLIENT_ID, "lifestyle");
       const text = ph?.client_note?.trim();
-      return text ? { text, date: ph?.client_note_at ? new Date(ph.client_note_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep") : null } : null;
+      return text ? { text, date: ph?.client_note_at ? dayWords(new Date(ph.client_note_at)) : null } : null;
     })(),
     history: getCheckInHistory(CLIENT_ID),
     // The hub's streak and month, and everything done, day by day, for its calendar (28 Sep).
@@ -1578,7 +1560,7 @@ export default async function ClientPage({
               <span style={{ width: `${elapsedPct}%` }} />
             </div>
             <div className="tr-progress-foot">
-              <span>Started {new Date(`${start}T00:00:00`).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep")}</span>
+              <span>Started {dayWords(start)}</span>
               <span>
                 Week <b>{weekIndex}</b> of {deployedProgram.total_weeks}
               </span>
@@ -1609,7 +1591,7 @@ export default async function ClientPage({
     const list = listClientInvoices(CLIENT_ID);
     // Always there (17 Oct, Alex): with none yet the menu still has Invoices, and the screen says there is nothing to pay.
     if (list.length === 0) return { invoices: [] };
-    const short = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }).replace("Sept", "Sep");
+    const short = (d: string) => dayWords(d);
     const rows = list.map((v) => {
       const when = new Date(`${v.issueDate}T12:00:00`);
       const late = v.status !== "paid" && (v.status === "due" || (!!v.dueDate && v.dueDate < today));
@@ -1617,7 +1599,7 @@ export default async function ClientPage({
         id: v.id,
         number: v.number,
         dayNumber: String(when.getDate()),
-        monthCap: MONTH_CAP[when.getMonth()],
+        monthCap: monthWords(when, { short: true, year: false }),
         what: (v.lines[0]?.description ?? "Invoice") + (v.lines.length > 1 ? ` + ${v.lines.length - 1} more` : ""),
         total: new Intl.NumberFormat("en-GB", { style: "currency", currency: v.currency }).format(v.total),
         state: v.status === "paid" ? ("paid" as const) : late ? ("late" as const) : ("pay" as const),

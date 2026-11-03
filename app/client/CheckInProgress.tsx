@@ -7,6 +7,7 @@ import type { CheckInSection } from "./CheckInScreen";
 import { GOAL_COLOR, VERDICT_TONE, VERDICT_WORD, type WeightGoalVerdict } from "../lib/weightGoal";
 import { Bars } from "./Bars";
 import { pic } from "../lib/pic";
+import { dayWords } from "../lib/clientDates";
 // The check-in's Progress view (23 Oct, Alex: built from the approved mockup,
 // docs/boards/checkin-progress-mockup.html; hairline, flat on the page): a
 // row of metric chips, then the chosen metric with no card round it, its
@@ -80,15 +81,15 @@ const RANGE_LABEL: Record<Range, string> = { Goal: "Goal", "7D": "7d", "30D": "3
 const RANGES: Range[] = ["Goal", "7D", "30D", "Phase"];
 const RANGE_KEY = "ironline:progress-range";
 const PAGE = 20;
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY = 86400000;
 const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
-const dm = (s: string) => `${Number(s.slice(8, 10))} ${MONTHS[Number(s.slice(5, 7)) - 1]}`;
+/** "2 Nov", the year after it when it isn't this one (3 Nov, Alex: dates through clientDates). */
+const dm = (s: string) => dayWords(s);
 const fmt = (v: number, p: number) => v.toLocaleString("en-GB", { minimumFractionDigits: p, maximumFractionDigits: p });
 /** A goal's weight: "82", "87.6". */
 const one = (v: number) => v.toLocaleString("en-GB", { maximumFractionDigits: 1 });
 /** "20 Dec", the year after it when it isn't this one. */
-const dmy = (s: string, today: string) => `${dm(s)}${s.slice(0, 4) === today.slice(0, 4) ? "" : ` ${s.slice(0, 4)}`}`;
+const dmy = (s: string, _today: string) => dayWords(s);
 const unitOf = (s: CheckInSeries) => (s.scaleMax ? `/ ${s.scaleMax}` : s.unit);
 /** A change rounded to the metric's decimals: +0.4, −1.8, or 0.0 with no sign. */
 const signed = (v: number, p: number) => {
@@ -156,7 +157,7 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
 
   // The chips pick a metric; so does a swipe across the chart (10 Oct): left
   // for the next, right for the one before. A hold on the chart reads values.
-  if (!series) return <p className="ci-empty">Nothing logged yet. Your first check-in shows up here.</p>;
+  if (!series) return <p className="ci-empty">Nothing logged</p>;
 
   return (
     <div className="pg-view">
@@ -731,11 +732,7 @@ function MetricHistory({ series, today, page, onPage }: { series: CheckInSeries;
   const shown = rows.slice(from, from + PAGE);
   const p = series.precision;
   const unit = unitOf(series);
-  const year = today.slice(0, 4);
-  const dateText = (d: string) => {
-    const wd = new Date(Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10)))).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
-    return `${wd} ${dm(d)}${d.slice(0, 4) === year ? "" : ` ${d.slice(0, 4)}`}`;
-  };
+  const dateText = (d: string) => dayWords(d, { weekday: "short" });
 
   const go = (to: number) => {
     const next = Math.max(0, Math.min(pages - 1, to));

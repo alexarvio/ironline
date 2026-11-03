@@ -462,8 +462,8 @@ export default function WorkoutScreen({
                   {(() => {
                     const total = day.exercises.length + day.cardio.length;
                     const done = day.exercises.filter(exDone).length + day.cardio.filter((c) => c.done).length;
-                    if (day.free) return total === 0 ? "Nothing added yet." : `You logged ${done} of ${total} exercise${total === 1 ? "" : "s"}.`;
-                    return done >= total && total > 0 ? "You have completed all exercises." : `You have completed ${done} out of ${total} exercises.`;
+                    // One wording for both kinds of session (3 Nov, Alex: the words audit).
+                    return total === 0 ? "Nothing added" : `${done} of ${total} exercise${total === 1 ? "" : "s"}`;
                   })()}
                 </p>
                 <div className="wo-checklist">

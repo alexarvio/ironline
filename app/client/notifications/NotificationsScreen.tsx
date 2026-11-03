@@ -41,7 +41,7 @@ export type NotifView = {
 const PAGE = 30;
 
 export default function NotificationsScreen({ items, clientId, coachName }: { items: NotifView[]; clientId: number; coachName: string }) {
-  const coachFirst = coachName.trim().split(/\s+/)[0] || "your coach";
+  const coachFirst = coachName.trim().split(/\s+/)[0] || "Coach";
   const coach = useCoachIdentity();
   const back = useBack();
   const navigate = useNavigateTab();
@@ -130,8 +130,8 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
               <span className="ntf-empty-bell" aria-hidden="true">
                 <TypeIcon path="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20h4" size={22} stroke={2} />
               </span>
+              {/* The two words alone (3 Nov, Alex: words mockup). */}
               <b>Nothing yet</b>
-              <small>When {coachFirst} books a call, replies to a video or changes your plan, it shows up here.</small>
             </div>
           ) : (
             days.map((d) => {
@@ -156,7 +156,7 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
           )}
         </div>
       </main>
-      {watching && <VideoReplySheet reply={watching} onClose={() => setWatching(null)} />}
+      {watching && <VideoReplySheet reply={watching} coachName={coachFirst} onClose={() => setWatching(null)} />}
     </>
   );
 }

@@ -44,7 +44,6 @@ export default function AvatarUpload({
       </form>
       <div className="av-text">
         <div className="av-title">{avatarPath ? "Profile photo" : "Add a profile photo"}</div>
-        <div className="av-sub">Your coach sees it next to your name.</div>
         {avatarPath && (
           <form action={removeClientAvatarAction}>
             <input type="hidden" name="clientId" value={clientId} />

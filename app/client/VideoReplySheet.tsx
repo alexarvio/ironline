@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { markVideoReplySeenAction } from "../lib/actions";
 import { Bars } from "./Bars";
+import { dayWords } from "../lib/clientDates";
 
 // The coach's reply to a video the client sent: their comment and their
 // video (often a screen recording of the client's, drawn over), with the
@@ -25,33 +26,33 @@ export type VideoReplyView = {
   seen: boolean;
 };
 
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+const day = (iso: string) => dayWords(new Date(iso), { weekday: "short" });
 
 /** The reply itself, for the sheet here and the exercise's own sheet. */
-export function VideoReplyBody({ reply }: { reply: VideoReplyView }) {
+export function VideoReplyBody({ reply, coachName = "Coach" }: { reply: VideoReplyView; /** The coach by first name (3 Nov, Alex: never "Your coach"). */ coachName?: string }) {
   // Opening it is seeing it: the notification's and the camera's dots go.
   useEffect(() => {
     if (!reply.seen) void markVideoReplySeenAction(reply.id);
   }, [reply.id, reply.seen]);
   return (
     <div className="vr-reply">
-      <span className="vr-reply-label"><Bars parts={["Your coach replied", day(reply.repliedAt)]} /></span>
+      <span className="vr-reply-label"><Bars parts={[`${coachName} replied`, day(reply.repliedAt)]} /></span>
       {reply.replySrc && <video className="vr-sheet-video" src={reply.replySrc} controls playsInline preload="metadata" />}
       {reply.replyNote && <p className="vr-reply-note">{reply.replyNote}</p>}
     </div>
   );
 }
 
-export default function VideoReplySheet({ reply, onClose }: { reply: VideoReplyView; onClose: () => void }) {
+export default function VideoReplySheet({ reply, onClose, coachName = "Coach" }: { reply: VideoReplyView; onClose: () => void; coachName?: string }) {
   return createPortal(
     <div className="vr-sheet-scrim" role="presentation" onClick={onClose}>
-      <div className="pp-app-sheet vr-sheet" role="dialog" aria-modal="true" aria-label={`Your coach's reply: ${reply.exerciseName}`} onClick={(e) => e.stopPropagation()}>
+      <div className="pp-app-sheet vr-sheet" role="dialog" aria-modal="true" aria-label={`${coachName}'s reply: ${reply.exerciseName}`} onClick={(e) => e.stopPropagation()}>
         <div className="pp-app-sheet-head">
           <span className="pp-app-sheet-title">{reply.exerciseName}</span>
           {reply.where && <span className="pp-app-sheet-sub">{reply.where}</span>}
         </div>
         {/* Only the coach's side: the client's own clip stays on the exercise it was filmed on. */}
-        <VideoReplyBody reply={reply} />
+        <VideoReplyBody reply={reply} coachName={coachName} />
         <button type="button" className="pp-app-sheet-cancel" onClick={onClose}>
           Close
         </button>

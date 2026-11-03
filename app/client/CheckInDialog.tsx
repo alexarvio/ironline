@@ -10,6 +10,7 @@ import { useCoachIdentity } from "./CheckInContext";
 import { cleanNumeric, isWholeMetric } from "./CheckInLine";
 import type { CheckInMetric, CheckInSection } from "./CheckInScreen";
 import { Bars } from "./Bars";
+import { dayWords } from "../lib/clientDates";
 
 // A day's check-in as a centred pop-up (13 Oct, "Rows"): the gym pop-up's
 // language, a sand glow at the top, one bordered row a metric, one navy
@@ -69,9 +70,8 @@ export function sameNumber(a: string, b: string) {
   return Number(a.replace(",", ".")) === Number(b.replace(",", "."));
 }
 
-/** "Tue, Oct 13" or "Tuesday, October 13". */
-export const dayLabel = (iso: string, long = false) =>
-  new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", long ? { weekday: "long", month: "long", day: "numeric" } : { weekday: "short", month: "short", day: "numeric" }).replace("Sept", "Sep");
+/** "Tue 13 Oct" or "Tuesday 13 October" (3 Nov, Alex: dates through clientDates). */
+export const dayLabel = (iso: string, long = false) => (long ? dayWords(iso, { weekday: "long", long: true }) : dayWords(iso, { weekday: "short" }));
 
 export type CheckInForm = {
   /** The day the lines are for (yyyy-mm-dd). */
@@ -84,8 +84,6 @@ export type CheckInForm = {
   monthLabel?: string;
 };
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // Lifestyle's beige, the one it wears everywhere (DESIGN-RULES §4).
 const SAND_RGB = "160,138,92";
 const buzz = (ms = 5) => {
@@ -105,10 +103,7 @@ function lastLine(m: CheckInMetric): string {
 }
 
 /** The day a check-in is for, as its line says it: "Mon 2 Nov". */
-const shortDay = (date: string) => {
-  const d = new Date(`${date}T12:00:00Z`);
-  return `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
-};
+const shortDay = (date: string) => dayWords(date, { weekday: "short" });
 // Filled is green, whatever the metric (13 Oct, Alex: no colour coding for now).
 const GREEN = { hex: "#2f7a3f", rgb: "47,122,63" };
 const colourOf = () => GREEN;

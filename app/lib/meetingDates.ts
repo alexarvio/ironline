@@ -3,10 +3,9 @@
 // timezone, from the phone's clock (`now`), so nothing is decided on the
 // server with the wrong clock.
 
+import { clockRange, dayWords, monthWords, weekdayWords } from "./clientDates";
+
 const DAY = 86400000;
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Whole calendar days from now to the moment, in local time. */
 export function daysUntil(startMs: number, now: number): number {
@@ -32,7 +31,7 @@ export function agoLabel(startMs: number, now: number): string {
   if (n < 14) return `${n} days ago`;
   if (n <= 60) return `${Math.round(n / 7)} weeks ago`;
   const d = new Date(startMs);
-  const m = MONTHS_LONG[d.getMonth()];
+  const m = monthWords(d, { year: false });
   return d.getFullYear() === new Date(now).getFullYear() ? `in ${m}` : `in ${m} ${d.getFullYear()}`;
 }
 
@@ -43,27 +42,23 @@ export function startingNow(startMs: number, durationMin: number, now: number): 
 
 /** "18:00 – 18:30", 24-hour on every phone (3 Nov, Alex: the audit). */
 export function timeRange(startMs: number, durationMin: number): string {
-  const f = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  return `${f(startMs)} – ${f(startMs + durationMin * 60000)}`;
+  return clockRange(new Date(startMs), new Date(startMs + durationMin * 60000));
 }
 
 /** The date tile: "TUE", "13", "OCT". */
 export function tileParts(startMs: number): { weekday: string; day: string; month: string } {
   const d = new Date(startMs);
-  return { weekday: DAYS[d.getDay()].toUpperCase(), day: String(d.getDate()), month: MONTHS[d.getMonth()].toUpperCase() };
+  return { weekday: weekdayWords(d, { short: true }).toUpperCase(), day: String(d.getDate()), month: monthWords(d, { short: true, year: false }).toUpperCase() };
 }
 
 /** "6 Oct", with the year when it isn't this one. */
-export function shortDate(startMs: number, now: number): string {
-  const d = new Date(startMs);
-  const s = `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-  return d.getFullYear() === new Date(now).getFullYear() ? s : `${s} ${d.getFullYear()}`;
+export function shortDate(startMs: number, _now: number): string {
+  return dayWords(new Date(startMs));
 }
 
-/** "TUE 13 OCT", the detail's eyebrow. */
+/** "TUE 13 OCT", the detail's eyebrow (the year after it when it isn't this one). */
 export function eyebrowDate(startMs: number): string {
-  const d = new Date(startMs);
-  return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`.toUpperCase();
+  return dayWords(new Date(startMs), { weekday: "short" }).toUpperCase();
 }
 
 /** The agreed points out of what the coach wrote: one per line, bullets

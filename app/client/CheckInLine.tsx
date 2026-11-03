@@ -2,6 +2,7 @@
 
 import { forwardRef, useRef } from "react";
 import type { CheckInMetric } from "./CheckInScreen";
+import { dayWords } from "../lib/clientDates";
 
 // One line of the check-in "ledger": no box, just the metric on the page.
 // The coach's name for it in small capitals (green once filled), the last
@@ -10,7 +11,6 @@ import type { CheckInMetric } from "./CheckInScreen";
 // 1–N scale has round buttons under the line instead of a number; tapping
 // the chosen one again clears it.
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / 86400000;
 
@@ -20,7 +20,7 @@ export const isWholeMetric = (m: CheckInMetric) => !!m.scaleMax || /step/i.test(
 // "Yesterday", "Tue", or "14 Sep": how long ago the last reading was.
 function whenLabel(period: string, today: string, weekly: boolean) {
   const d = dayNum(today) - dayNum(period);
-  const dm = `${Number(period.slice(8, 10))} ${MONTHS[Number(period.slice(5, 7)) - 1]}`;
+  const dm = dayWords(period);
   if (weekly) return dm;
   if (d === 1) return "Yesterday";
   if (d > 1 && d < 7) return DAYS[new Date(`${period}T12:00:00Z`).getUTCDay()];

@@ -10,6 +10,7 @@ import CheckInDialog, { type CheckInForm } from "./CheckInDialog";
 import { FEATURES } from "../lib/features";
 import { pic } from "../lib/pic";
 import { Bars } from "./Bars";
+import { dayWords } from "../lib/clientDates";
 
 /** The coach's goals for a phase, none while phase goals are off (23 Oct, Alex: To focus on replaces them). */
 const goalsOf = (ph: HomePhase) => (FEATURES.phaseGoals ? ph.objectives : []);
@@ -47,11 +48,9 @@ export const TRACK_LABEL = { nutrition: "Nutrition", training: "Training", lifes
 export const TRACK_ICON = { nutrition: <AppleIcon />, training: <DumbbellIcon />, lifestyle: <HeartIcon /> };
 // The tab each track opens; lifestyle has none yet.
 const TRACK_TAB = { nutrition: "nutrition", training: "training", lifestyle: null } as const;
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 const DAY = 86400000;
 const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
-export const short = (s: string) => `${Number(s.slice(8, 10))} ${MONTHS[Number(s.slice(5, 7)) - 1]}`;
+export const short = (s: string) => dayWords(s);
 const localToday = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

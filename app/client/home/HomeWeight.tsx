@@ -5,6 +5,7 @@ import { monotoneSegments } from "../../lib/monotoneCurve";
 import { GOAL_COLOR, TARGET_ICON } from "../../lib/weightGoal";
 import { useOpenCheckIn } from "../CheckInContext";
 import { Bars } from "../Bars";
+import { dayWords } from "../../lib/clientDates";
 import type { HomeWeight as HomeWeightData, HomeWeightWindow } from "./weightData";
 import "./weight.css";
 
@@ -19,9 +20,8 @@ import "./weight.css";
 export const PROGRESS_PICK_KEY = "nc-progress-pick";
 const BLUE = "#2f5d8f";
 const LABEL: Record<HomeWeightWindow, string> = { goal: "Goal", "7d": "7d", "30d": "30d", phase: "Phase" };
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const dayOf = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 86400000;
-const dm = (iso: string) => `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1]}`;
+const dm = (iso: string) => dayWords(iso);
 const one = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
 /** A weight with no ".0": "80", "82.5". */
 const trim = (v: number) => String(Math.round(v * 10) / 10);

@@ -186,7 +186,7 @@ function Lists({ tab, inbox, setInbox, cal, today, coach, push, onOpenChat, onOp
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search clients" aria-label="Search clients" enterKeyHint="search" />
           </label>
           {chats.length === 0 ? (
-            <p className="cph-empty">{needle ? "No match" : "No clients yet"}</p>
+            <p className="cph-empty">{needle ? "No match" : "None yet"}</p>
           ) : (
             <ul className="cph-rows">
               {chats.map((c) => {
@@ -250,7 +250,7 @@ function Lists({ tab, inbox, setInbox, cal, today, coach, push, onOpenChat, onOp
               <button type="button" className="cph-sheet-row cph-switch-row" onClick={p.onClick} disabled={p.disabled} aria-pressed={p.on}>
                 <span className="cph-switch-text">
                   Notifications
-                  <small>{p.detail}</small>
+                  {p.detail && <small>{p.detail}</small>}
                 </span>
                 <span className={`cph-switch${p.on ? " on" : ""}`} aria-hidden="true">
                   <i />

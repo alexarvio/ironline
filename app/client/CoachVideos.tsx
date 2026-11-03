@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDownIcon } from "../components/icons";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
+import { dayWords } from "../lib/clientDates";
 
 // Every video reply the coach has sent in the programme the client is on, in
 // one place on Training: a reply is otherwise reached from its notification
@@ -12,7 +13,7 @@ import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 // session to the video. There is nothing to answer here: a reply is the
 // coach's last word on that video.
 
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const day = (iso: string) => dayWords(new Date(iso));
 
 /** Nothing until the coach has replied to a video in this programme. */
 export default function CoachVideos({ coachName, videos }: { coachName: string; videos: VideoReplyView[] }) {
@@ -50,7 +51,7 @@ export default function CoachVideos({ coachName, videos }: { coachName: string; 
           ))}
         </div>
       </div>
-      {shown && <VideoReplySheet reply={shown} onClose={() => setShownId(null)} />}
+      {shown && <VideoReplySheet reply={shown} coachName={coachName.trim().split(/\s+/)[0] || "Coach"} onClose={() => setShownId(null)} />}
     </section>
   );
 }

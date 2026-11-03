@@ -10,6 +10,8 @@
 // last week. A nutrition or lifestyle phase can start and end on any day,
 // and the same two rules still hold, so nothing here needs to know which.
 
+import { dayWords } from "./clientDates";
+
 const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -40,9 +42,9 @@ export function phaseDays(startWeek: string, endWeek: string): number {
   return Math.max(1, daysBetween(startWeek, phaseLastDay(endWeek)) + 1);
 }
 
-/** "Aug 18 – Sep 28": the first day to the last. */
+/** "18 Aug – 28 Sep": the first day to the last. */
 export function phaseRange(startWeek: string, endWeek: string): string {
-  const fmt = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
+  const fmt = (d: string) => dayWords(d);
   return `${fmt(startWeek)} – ${fmt(phaseLastDay(endWeek))}`;
 }
 

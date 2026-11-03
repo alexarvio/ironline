@@ -4,7 +4,7 @@
    shared class carry an extra class (.rd.rls.rco), whichever file the dev server loads last. */
 
 .rd.rls.rco .rls-card.rco-card { padding: 0 0 6px; }
-.rd.rls.rco .rco-card .rls-none { padding: 16px 18px 10px; }
+.rd.rls.rco .rco-card .rls-none { padding: 16px 18px; } /* (3 Nov, Alex: midway down, as Home, Feed, Invoices) */
 .rd.rls.rco .rco-card > .rls-row:first-child, .rd.rls.rco .rco-card .rls-cols + .rls-row { border-top: 0; }
 .rd.rls.rco .rls-cols.rco-cols { padding: 6px 12px 0 18px; }
 .rd.rls.rco .rco-row .rls-row-main { min-height: 52px; padding: 0 12px 0 18px; }

@@ -21247,3 +21247,10 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
    307px): the figures at 16px and 8px apart, the table still across the width. */
 .lw-target-grid.spread.dense { column-gap: 8px; }
 .lw-target-grid.dense .lw-target-v.lw-target-v { font-size: 16px; }
+
+/* Deleting an event asks in place (3 Nov, Alex: words mockup): `Delete event?` grey at 600, Cancel grey words, Delete red
+   words; the event sheet's Delete is red words too, never the old bold white box. */
+.ev-ask { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.ev-ask-q { align-self: center; font-size: 13px; font-weight: 600; color: #5b6474; }
+.hm-ev-remove.hm-ev-remove { min-height: 40px; padding: 0; border: 0; border-radius: 0; background: none; font-size: 13.5px; font-weight: 600; color: #b42318; }
+.hm-ev-remove.hm-ev-remove.quiet, .ev-x .ev-btn.ev-btn.quiet { color: #5b6474; }
