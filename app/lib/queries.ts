@@ -7985,8 +7985,9 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
       scaleMax: null,
       cadence: "measurement",
       category: "Measurements",
-      colour: groupColour("measurements").hex,
-      colourRgb: groupColour("measurements").rgb,
+      // Weight in its own Body blue wherever it is logged (3 Nov, Alex: blue over the goal's beige).
+      colour: groupColour(isWeight ? "body" : "measurements").hex,
+      colourRgb: groupColour(isWeight ? "body" : "measurements").rgb,
       target: null,
       precision: readingPrecision(points.map((p) => p.value)),
       points,
