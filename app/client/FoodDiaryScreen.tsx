@@ -35,7 +35,6 @@ import { useTween } from "./NutritionTargetsCard";
 import BarcodeScanner from "./BarcodeScanner";
 import PictureCycle from "./PictureCycle";
 import { landOn } from "../lib/landOn";
-import { pic } from "../lib/pic";
 import { Bars } from "./Bars";
 import CoachSays from "./CoachSays";
 
@@ -1103,9 +1102,12 @@ export default function FoodDiaryScreen({
                           <CameraIcon />
                         </span>
                       ) : meal.photo ? (
-                        <button type="button" className="fdi-icon-btn fdi-photo-thumb" onClick={() => setPhotoOf(meal.id)} aria-label={`See your picture of ${meal.label}`}>
-                          {/* eslint-disable-next-line @next/next/no-img-element -- the client's own upload */}
-                          <img src={pic(meal.photo, 96)} alt="" />
+                        // A picture in: the camera turns green in its ring, filled (3 Nov, Alex: "turn the camera icon green… making it
+                        // seem there is something inside"); a tap shows the picture.
+                        <button type="button" className="fdi-icon-btn fdi-photo-in" onClick={() => setPhotoOf(meal.id)} aria-label={`See your picture of ${meal.label}`}>
+                          <span className="fdi-photo-ring">
+                            <CameraIcon />
+                          </span>
                         </button>
                       ) : (
                         <label className="fdi-icon-btn fdi-photo-pick" aria-label={`Add a picture of ${meal.label}`}>
