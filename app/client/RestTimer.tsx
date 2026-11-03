@@ -3,15 +3,15 @@
 import { useEffect, useState } from "react";
 import { clock } from "./workoutShared";
 
-// The rest timer, the only control in the workout's bottom bar (13 Oct). It
-// counts up (17 Oct, Alex): a rest can run three minutes, or far longer on a
-// heavy powerlifting day, so it never cuts anyone off. Idle it is a white
-// pill, "Rest timer"; a tap starts it and it turns ink, "Rest 0:42",
-// counting up; another tap stops it. The coach's rest for the exercise (90s
-// with none) is the mark: it buzzes once there and the time turns green. The
-// start moment lives in sessionStorage, so a swipe to the next exercise or a
-// backgrounded phone does not lose it.
+// The rest timer, the only control in the workout's bottom bar (13 Oct). A countdown (3 Nov, Alex: "everytime I press
+// it I get the option of 1 min 2 min and 3 min"; it counted up before): a tap opens the three over the bar, a pick
+// starts it and the pill turns ink, "Rest 1:42", counting down. At zero it buzzes and says "Rest done" in green for a
+// moment, then "Rest timer" again. A tap while it runs opens the three again, with Stop. The start moment lives in
+// sessionStorage, so a swipe to the next exercise or a backgrounded phone does not lose it.
 const KEY = "ironline.client.rest";
+const CHOICES = [60, 120, 180];
+/** How long "Rest done" stays before the pill is "Rest timer" again. */
+const DONE_MS = 4000;
 
 type Saved = { start: number; duration: number };
 function readSaved(): Saved | null {
@@ -39,7 +39,7 @@ export function useRestTimer() {
     if (!saved) return;
     const tick = () => setNow(Date.now());
     const first = setTimeout(tick, 0);
-    const t = setInterval(tick, 500);
+    const t = setInterval(tick, 250);
     document.addEventListener("visibilitychange", tick);
     return () => {
       clearTimeout(first);
@@ -54,49 +54,73 @@ export function useRestTimer() {
       else window.sessionStorage.setItem(KEY, JSON.stringify(v));
     } catch {}
   };
-  const elapsedMs = saved ? Math.max(0, now - saved.start) : 0;
-  /** Past the coach's rest: still counting, the time in green. */
-  const past = !!saved && elapsedMs >= saved.duration * 1000;
+  const endsAt = saved ? saved.start + saved.duration * 1000 : 0;
+  /** Time left, rounded up to the second so it reads 1:00 the moment it starts and 0:01 last. */
+  const remainingMs = saved ? Math.max(0, Math.ceil((endsAt - now) / 1000) * 1000) : 0;
+  /** Counted down to zero (and not yet cleared). */
+  const done = !!saved && now >= endsAt;
+  /** Over so long ago that "Rest done" has had its moment. */
+  const stale = !!saved && now >= endsAt + DONE_MS;
   const begin = (seconds: number) => setSaved({ start: Date.now(), duration: Math.max(5, Math.round(seconds)) });
   const stop = () => setSaved(null);
-  return { running: !!saved, past, elapsedMs, duration: saved?.duration ?? null, begin, stop };
+  useEffect(() => {
+    if (stale) setSaved(null);
+  }, [stale]);
+  return { running: !!saved && !done, done: done && !stale, remainingMs, duration: saved?.duration ?? null, begin, stop };
 }
 
-export default function RestTimerPill({
-  timer,
-  targetSeconds,
-}: {
-  timer: ReturnType<typeof useRestTimer>;
-  /** The prescribed rest for the exercise on screen, if the coach set one. */
-  targetSeconds: number | null;
-}) {
-  const duration = targetSeconds ?? 90;
-  // One buzz as the coach's rest is reached.
-  const [buzzedAt, setBuzzedAt] = useState<number | null>(null);
+export default function RestTimerPill({ timer }: { timer: ReturnType<typeof useRestTimer> }) {
+  const [open, setOpen] = useState(false);
+  // One buzz as it reaches zero.
+  const [buzzedFor, setBuzzedFor] = useState<number | null>(null);
   useEffect(() => {
-    if (!timer.past || buzzedAt === timer.duration) return;
+    if (!timer.done || buzzedFor === timer.duration) return;
     const t = setTimeout(() => {
-      setBuzzedAt(timer.duration);
+      setBuzzedFor(timer.duration);
       try {
         navigator.vibrate?.([120, 80, 120]);
       } catch {}
     }, 0);
     return () => clearTimeout(t);
-  }, [timer.past, timer.duration, buzzedAt]);
-  const tap = () => {
-    if (timer.running) timer.stop();
-    else {
-      setBuzzedAt(null);
-      timer.begin(duration);
-    }
+  }, [timer.done, timer.duration, buzzedFor]);
+  const pick = (seconds: number) => {
+    setOpen(false);
+    setBuzzedFor(null);
+    timer.begin(seconds);
   };
   return (
     <div className="wo-rest-wrap">
+      {open && (
+        <>
+          <button type="button" className="wo-rest-scrim" aria-label="Close" onClick={() => setOpen(false)} />
+          <div className="wo-rest-menu" role="menu" aria-label="Rest for">
+            {CHOICES.map((s) => (
+              <button key={s} type="button" role="menuitem" className={`wo-rest-opt${timer.running && timer.duration === s ? " on" : ""}`} onClick={() => pick(s)}>
+                {s / 60} min
+              </button>
+            ))}
+            {timer.running && (
+              <button
+                type="button"
+                role="menuitem"
+                className="wo-rest-opt stop"
+                onClick={() => {
+                  setOpen(false);
+                  timer.stop();
+                }}
+              >
+                Stop
+              </button>
+            )}
+          </div>
+        </>
+      )}
       <button
         type="button"
-        className={`wo-rest${timer.running ? " running" : ""}${timer.past ? " past" : ""}`}
-        onClick={tap}
-        aria-label={timer.running ? `Resting ${clock(timer.elapsedMs)}. Tap to stop` : "Start the rest timer"}
+        className={`wo-rest${timer.running ? " running" : ""}${timer.done ? " done" : ""}`}
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label={timer.running ? `Resting, ${clock(timer.remainingMs)} left` : "Rest timer"}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="13" r="8" />
@@ -105,8 +129,10 @@ export default function RestTimerPill({
         <span className="wo-rest-label">
           {timer.running ? (
             <>
-              Rest <b className="wo-rest-time">{clock(timer.elapsedMs)}</b>
+              Rest <b className="wo-rest-time">{clock(timer.remainingMs)}</b>
             </>
+          ) : timer.done ? (
+            "Rest done"
           ) : (
             "Rest timer"
           )}

@@ -167,7 +167,6 @@ export default function WorkoutScreen({
   // Dock: the rest timer, restarted on a ticked set when the client wants that.
   const rest = useRestTimer();
   const current = pages[Math.min(page, pages.length - 1)];
-  const currentRest = current.kind === "exercise" ? day.exercises[current.index].rest : null;
 
   // The line shown as an exercise completes, gone again after a moment.
   const [toast, setToast] = useState<string | null>(null);
@@ -550,7 +549,7 @@ export default function WorkoutScreen({
           On the wrap up (19 Oct, Alex) there is nothing to rest for: the swipe to end takes its place, or Save when editing. */}
       <div className={`wo-dock${current.kind === "wrap" ? " end" : ""}`}>
         {current.kind !== "wrap" ? (
-          <RestTimerPill timer={rest} targetSeconds={currentRest} />
+          <RestTimerPill timer={rest} />
         ) : editing ? (
           <button type="button" className="wo-save-edit" onClick={saveEdit} disabled={ending}>
             {ending ? "Saving…" : "Save changes"}
