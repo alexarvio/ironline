@@ -19,6 +19,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 
 ## 3. Type (Archivo)
 - Weights **500** and **600** only. Date numerals may be **300**. Never 700 or above on a client screen.
+- Every photo banner (3 Nov, Alex: the audit): the eyebrow at 600, the title at 600 and one size, 26px (a long one shrinks to fit). On one, a strip of facts (the session overview's Date | Gym | Time) is see-through with a soft white edge, its figures white at 600; a count pill (the check-in's 3 / 10) is the banner's glass pill at 600, its dot white until all are in, then green. Nutrition's ring and macro labels are the app's small label, 600, grey.
 - Eyebrow / label: 10–11px, 600, letter-spacing .16–.18em, uppercase, `#5b6474` or the item's colour.
 - Title: 15–17px, 500; the focused or live one 17–18px, 600. One line with an ellipsis, and a chevron when it is cut.
 - A pushed screen's own title in its top bar (24 Oct, Alex: the bold ones read too fat, and Shape update's was another size): capitals, Archivo 15px at 600, letter-spacing .16em, ink (white over a photo), centred. One look on every screen the burger and the bell open, Shape update, the check-in and the chat's Media and files (`.cn-title`, `.ci-title`, `.cmg-head`; 24 Oct, Alex: Media and files was still the old design, now the page colour, a plain back arrow, the white hairline capsule for its tabs and files as flat rows with a line icon).

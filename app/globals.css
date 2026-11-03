@@ -21145,3 +21145,27 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 /* No dot under the picked day (3 Nov, Alex: "we already have the circle indicating which day we are in"); a logged day
    keeps its small dot. */
 .fdi-day-dot.fdi-day-dot.on { background: transparent; }
+
+/* ---- Type weights on the client, 500 and 600 only (3 Nov, Alex: the audit; docs/boards/type-weights-mockup.html). */
+/* Every photo banner: the eyebrow at 600, the title at 600 and one size (26px; a long one still shrinks to fit). */
+.tr-kicker.tr-kicker, .nd-kicker.nd-kicker, .fdi-eyebrow.fdi-eyebrow, .so-kicker.so-kicker { font-weight: 600; letter-spacing: 0.16em; }
+.tr-name.tr-name, .nd-phase-name.nd-phase-name, .fdi-banner .fdi-date.fdi-date, .so-title.so-title { font-size: 26px; font-weight: 600; }
+.ci-banner .tr-weeks .tr-wk.tr-wk { font-weight: 600; }
+/* The session overview's facts strip stays (3 Nov, Alex: "leave the pill and make it transparent"): see-through on the
+   photo, a soft white edge, its figures white at 600, their names white and quieter, the dividers faint. */
+.so-screen .so-stats.so-stats { background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.so-screen .so-stat.so-stat + .so-stat { border-left-color: rgba(255, 255, 255, 0.22); }
+.so-screen .so-stat.so-stat b, .so-screen .so-stat-text.so-stat-text { font-weight: 600; color: #fff; }
+.so-screen .so-stat.so-stat small { font-weight: 600; color: rgba(255, 255, 255, 0.7); }
+/* The check-in's count: the banner's glass pill, the figure at 600 and its total at 500; the dot white until all are
+   in, then green; stuck under the bar, the white hairline pill in ink. */
+.ci-one .ci-count.ci-count { font-weight: 600; }
+.ci-one .ci-count-total.ci-count-total { font-weight: 500; }
+.ci-one .ci-count-dot.ci-count-dot { background: rgba(255, 255, 255, 0.55); }
+.ci-one .ci-count-dot.ci-count-dot.done { background: #7fd08f; }
+.ci-one .ci-bar.stuck .ci-count.ci-count { background: #fff; border-color: #E1E5EB; color: #141a24; }
+.ci-one .ci-bar.stuck .ci-count-total.ci-count-total { color: #8b93a1; }
+.ci-one .ci-bar.stuck .ci-count-dot.ci-count-dot { background: #c9cfd8; }
+.ci-one .ci-bar.stuck .ci-count-dot.ci-count-dot.done { background: #2f7a3f; }
+/* Nutrition's ring and macro labels: the app's small label, 600, wider spacing, the label grey. */
+.nd-ring-label.nd-ring-label, .nd-macro-name.nd-macro-name { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
