@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Workout saved</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --div:#EEF0F3; --page:#F5F6F8; --training:#3a3390; --green:#2f7a3f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ebef; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 60px; }
+  .intro { max-width: 1320px; margin: 0 auto 26px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .intro p { margin: 0; color: var(--sec); font-size: 13px; font-weight: 500; line-height: 1.55; max-width: 900px; }
+  .intro button { margin-top: 12px; height: 34px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--ink); color: #fff; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .phones { max-width: 1320px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+  .col { width: 300px; max-width: 100%; }
+  .lbl { display: flex; gap: 10px; align-items: baseline; margin: 0 0 4px 6px; }
+  .lbl b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; }
+  .lbl span { font-size: 15px; font-weight: 600; }
+  .why { margin: 0 6px 12px; color: var(--sec); font-size: 12.5px; font-weight: 500; line-height: 1.5; min-height: 76px; }
+  .phone { position: relative; width: 100%; height: 560px; overflow: hidden; border-radius: 30px; background: var(--page); box-shadow: 0 0 0 9px #141a24, 0 30px 60px -20px rgba(16,24,40,.45); }
+  .banner { height: 150px; background: linear-gradient(160deg, #6a6f86 0%, #2c3047 60%, #161925 100%); color: #fff; padding: 56px 18px 0; }
+  .banner small { display: block; font-size: 10px; letter-spacing: .16em; font-weight: 600; opacity: .75; }
+  .banner b { display: block; margin-top: 4px; font-size: 22px; font-weight: 600; }
+  .week { display: flex; gap: 6px; padding: 14px 16px 6px; }
+  .week i { flex: 1; height: 30px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+  .week i.on { box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .ses { margin: 10px 16px 0; padding: 12px 14px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); display: flex; align-items: center; gap: 12px; }
+  .ses.done { background: rgba(47,122,63,.08); box-shadow: inset 0 0 0 1px rgba(47,122,63,.25); }
+  .ses .n { width: 24px; height: 24px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--training); color: var(--training); font-size: 11px; font-weight: 600; display: grid; place-items: center; }
+  .ses.done .n { box-shadow: inset 0 0 0 1.5px var(--green); color: var(--green); }
+  .ses b { font-size: 15px; font-weight: 600; display: block; }
+  .ses small { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .sep { display: inline-block; width: 1px; height: 10px; background: #C9CFD8; margin: 0 7px; vertical-align: -1px; }
+  .check { flex: none; width: 22px; height: 22px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--green); display: grid; place-items: center; color: var(--green); }
+  .check svg { width: 12px; height: 12px; display: block; }
+  .toast { position: absolute; z-index: 5; }
+  .play .toast { animation: tin .3s ease both, tout .4s ease 3.4s both; }
+  @keyframes tin { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+  @keyframes tout { to { opacity: 0; transform: translateY(-8px); } }
+
+  /* Now */
+  .t0 { top: 52px; left: 14px; right: 14px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #fff; box-shadow: 0 14px 40px rgba(20,30,50,.18); }
+  .t0 .c { flex: none; width: 30px; height: 30px; border-radius: 999px; background: #66BB6A; color: #fff; display: grid; place-items: center; font-weight: 700; }
+  .t0 b { display: block; font-size: 15px; font-weight: 700; color: #333; }
+  .t0 small { font-size: 13px; color: #757575; }
+
+  /* A: the white hairline pill, one line. */
+  .ta { top: 58px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 16px 0 11px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); white-space: nowrap; font-size: 13.5px; font-weight: 600; }
+  .play .ta { animation: tinc .3s ease both, toutc .4s ease 3.4s both; }
+  @keyframes tinc { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translateX(-50%); } }
+  @keyframes toutc { to { opacity: 0; transform: translate(-50%, -8px); } }
+  .ta small { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+
+  /* B: flat on the page, in the list, over the sessions. */
+  .tb { position: static; display: flex; align-items: center; gap: 12px; margin: 12px 16px 0; padding: 4px 4px; }
+  .tb b { display: block; font-size: 15px; font-weight: 600; }
+  .tb small { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  /* C: the ink pill. */
+  .tc { bottom: 26px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 18px 0 12px; border-radius: 999px; background: var(--ink); color: #fff; white-space: nowrap; font-size: 13.5px; font-weight: 600; }
+  .play .tc { animation: tinc2 .3s ease both, toutc2 .4s ease 3.4s both; }
+  @keyframes tinc2 { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
+  @keyframes toutc2 { to { opacity: 0; transform: translate(-50%, 8px); } }
+  .tc .check { box-shadow: inset 0 0 0 1.5px #7fd08f; color: #7fd08f; }
+  .tc small { font-size: 12.5px; color: rgba(255,255,255,.65); font-weight: 500; }
+  .tc .sep { background: rgba(255,255,255,.3); }
+</style>
+</head>
+<body>
+<div class="intro">
+  <h1>"Workout saved": today's and three in the hairline language</h1>
+  <p>What a client sees on Training right after ending a session. The same facts in all four: the session, how long, how many sets, and that the coach can see it. Each shows for about four seconds, then goes.</p>
+  <button type="button" id="replay">Play them again</button>
+</div>
+<div class="phones">
+  <div class="col">
+    <div class="lbl"><b>NOW</b><span>As it is</span></div>
+    <p class="why">A white card with a shadow over the banner, a filled green disc with a typed ✓, the title at 700 and a sentence under it.</p>
+    <div class="phone" data-o="0"></div>
+  </div>
+  <div class="col">
+    <div class="lbl"><b>A</b><span>The white hairline pill</span></div>
+    <p class="why">One line in the shared white pill (no shadow): the drawn green check in its ring, the session, then the facts parted by bars. Where the card was, smaller.</p>
+    <div class="phone" data-o="A"></div>
+  </div>
+  <div class="col">
+    <div class="lbl"><b>B</b><span>Flat in the list</span></div>
+    <p class="why">No floating thing at all: a row over the sessions, the check, the session saved and its facts, gone after a few seconds. The session's own card turns green under it.</p>
+    <div class="phone" data-o="B"></div>
+  </div>
+  <div class="col">
+    <div class="lbl"><b>C</b><span>The ink pill, at the foot</span></div>
+    <p class="why">A dark pill rising from the bottom, as phones show a quick confirmation: the check, the session, the facts. The most noticed, and nothing else on Training is dark.</p>
+    <div class="phone" data-o="C"></div>
+  </div>
+</div>
+<script>
+const CHECK = `<span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>`;
+const base = (done, extra = "") => `
+  <div class="banner"><small>TRAINING</small><b>Hypertrophy</b></div>
+  <div class="week"><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+  ${extra}
+  <div class="ses${done ? " done" : ""}"><span class="n">1</span><span><b>Lower</b><small>Tue 3 Nov<span class="sep"></span>46 min</small></span></div>
+  <div class="ses"><span class="n">2</span><span><b>Upper push</b><small>4 exercises<span class="sep"></span>13 sets</small></span></div>
+  <div class="ses"><span class="n">3</span><span><b>Upper pull</b><small>4 exercises<span class="sep"></span>13 sets</small></span></div>`;
+const T = {
+  0: () => base(true) + `<div class="toast t0"><span class="c">✓</span><span><b>Lower saved</b><small>46 min, 18 sets. Finlay can see it now</small></span></div>`,
+  A: () => base(true) + `<div class="toast ta">${CHECK}Lower saved<small>46 min<span class="sep"></span>18 sets</small></div>`,
+  B: () => base(true, `<div class="toast tb">${CHECK}<span><b>Lower saved</b><small>46 min<span class="sep"></span>18 sets<span class="sep"></span>Finlay can see it</small></span></div>`),
+  C: () => base(true) + `<div class="toast tc">${CHECK}Lower saved<small>46 min<span class="sep"></span>18 sets</small></div>`,
+};
+const draw = () => document.querySelectorAll(".phone").forEach((p) => { p.classList.remove("play"); p.innerHTML = T[p.dataset.o](); void p.offsetWidth; p.classList.add("play"); });
+draw();
+document.getElementById("replay").addEventListener("click", draw);
+</script>
+</body>
+</html>
