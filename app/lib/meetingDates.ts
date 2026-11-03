@@ -41,9 +41,9 @@ export function startingNow(startMs: number, durationMin: number, now: number): 
   return now >= startMs - 10 * 60000 && now <= startMs + durationMin * 60000;
 }
 
-/** "18:00 – 18:30", in the phone's own hour style. */
+/** "18:00 – 18:30", 24-hour on every phone (3 Nov, Alex: the audit). */
 export function timeRange(startMs: number, durationMin: number): string {
-  const f = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const f = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   return `${f(startMs)} – ${f(startMs + durationMin * 60000)}`;
 }
 

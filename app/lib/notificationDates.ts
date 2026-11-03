@@ -24,7 +24,7 @@ export function dayLabel(key: string, todayKey: string): string {
   return key.slice(0, 4) === todayKey.slice(0, 4) ? dm : `${dm} ${key.slice(0, 4)}`;
 }
 
-/** "5:26 PM", the phone's own style: the day header already says the date (9 Oct). */
+/** "17:26", 24-hour on every phone (3 Nov, Alex: the audit; a 12-hour phone showed "5:26 PM" here while chat and Home said 17:26). */
 export function timeLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }

@@ -202,7 +202,7 @@ export default function CheckInScreen({
             <div className="ci-stats" role="list">
               {(() => {
                 const month = today.slice(0, 7);
-                const monthName = new Date(`${today}T12:00:00`).toLocaleDateString("en-US", { month: "long" });
+                const monthName = new Date(`${today}T12:00:00`).toLocaleDateString("en-GB", { month: "long" });
                 const active = calendar.filter((d) => d.date.startsWith(month)).length;
                 const tiles = [
                   { key: "streak", icon: <ChecklistIcon />, label: "Streak", value: String(stats.streak), unit: null, sub: stats.streak === 1 ? "day" : "days" },

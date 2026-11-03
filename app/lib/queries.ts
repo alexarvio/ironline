@@ -843,7 +843,7 @@ export function programWeekNow(program: TrainingProgram): number {
 // progress pictures.
 
 const sessionTitle = (day: ProgramDay) => day.label?.trim() || `Session ${day.day_of_week}`;
-const shortDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+const shortDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace("Sept", "Sep");
 
 /** The weeks of the live programme the client can open: its first up to this one. */
 function linkableWeeks(clientId: number): { program: TrainingProgram; weeks: number[] } | null {
@@ -2751,7 +2751,7 @@ export function getOverviewPanel(clientId: number, feedOf: () => FeedEvent[] = (
   }
 
   const fmtDate = (iso: string | null | undefined) =>
-    iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "-";
+    iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { month: "short", year: "numeric" }).replace("Sept", "Sep") : "-";
 
   return {
     name: client?.name ?? "Unknown",
@@ -4574,11 +4574,11 @@ export function getMetricHistory(clientId: number, cadence: MetricCadence): Metr
   const rows: HistoryRow[] = periods.map((period) => ({
     period,
     note: noteKind ? getCheckInNote(clientId, noteKind, period) : null,
-    label: new Date(`${period}T00:00:00`).toLocaleDateString("en-US", {
+    label: new Date(`${period}T00:00:00`).toLocaleDateString("en-GB", {
       month: "short",
       day: "numeric",
       year: cadence === "monthly" ? "numeric" : undefined,
-    }),
+    }).replace("Sept", "Sep"),
     values: defs.map(
       (d) =>
         data.metric_entries.find((e) => e.metric_definition_id === d.id && e.period === period)?.value ?? null
@@ -6152,7 +6152,7 @@ export function getCalendarMonth(coachId: number, monthStr?: string): CalendarMo
   const month = valid ? Number(monthStr!.slice(5, 7)) - 1 : now.getMonth();
 
   const first = new Date(year, month, 1);
-  const label = first.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const label = first.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 
   // Monday-start offset: getDay() is 0=Sun..6=Sat, we want 0=Mon..6=Sun.
   const firstWeekday = (first.getDay() + 6) % 7;
@@ -6312,7 +6312,7 @@ export function chatThreadViews(clientId: number): ChatThreadView[] {
         edited: !!m.edited_at,
         seen: seen(m),
         dateIso: m.created_at.slice(0, 10),
-        dayLabel: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+        dayLabel: d.toLocaleDateString("en-GB", { weekday: "long", month: "long", day: "numeric" }),
         timeLabel: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         link: m.link ? describeMessageLink(clientId, m.link) : null,
         replyTo: (() => {
@@ -8087,7 +8087,7 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
   return { series, days };
 }
 
-const checkInFmtDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const checkInFmtDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
 
 // A tracker metric's row: what's logged for the period, plus the most recent
 // entry from any earlier period as the hint. `only` narrows it to some of the
@@ -9302,7 +9302,7 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     d.setDate(d.getDate() + 6);
     return localDateStr(d);
   };
-  const short = (s: string) => new Date(`${s}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const short = (s: string) => new Date(`${s}T00:00:00`).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
   const addWeeks = (monday: string, n: number) => {
     const d = new Date(`${monday}T00:00:00`);
     d.setDate(d.getDate() + n * 7);
@@ -9326,7 +9326,7 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     thursday.setDate(d.getDate() + 3);
     const jan1 = new Date(thursday.getFullYear(), 0, 1);
     const num = Math.floor((thursday.getTime() - jan1.getTime()) / 86400000 / 7) + 1;
-    const month = d.toLocaleDateString("en-US", { month: "short" });
+    const month = d.toLocaleDateString("en-GB", { month: "short" }).replace("Sept", "Sep");
     const monthLabel = month !== lastMonth ? month : null;
     lastMonth = month;
     return { monday, num, monthLabel, now: monday === week };
@@ -13027,7 +13027,7 @@ const dayLabelFor = (date: string, today: string): string => {
   y.setDate(y.getDate() - 1);
   if (date === today) return "Today";
   if (date === localDateStr(y)) return "Yesterday";
-  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }).replace("Sept", "Sep");
 };
 
 /** Training or rest on a date: as set on the diary, else as logged with the calories, else by whether a set was logged. */
@@ -13295,12 +13295,12 @@ export function getLoggedValues(
       const d = new Date(`${today}T00:00:00`);
       d.setDate(d.getDate() - i);
       const key = localDateStr(d);
-      periods.push({ key, label: d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) });
+      periods.push({ key, label: d.toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" }).replace("Sept", "Sep") });
     } else if (cadence === "monthly") {
       const d = new Date(`${monthStart(today)}T00:00:00`);
       d.setMonth(d.getMonth() - i);
       const key = localDateStr(d);
-      periods.push({ key, label: d.toLocaleDateString("en-US", { month: "short", year: "numeric" }) });
+      periods.push({ key, label: d.toLocaleDateString("en-GB", { month: "short", year: "numeric" }).replace("Sept", "Sep") });
     } else {
       const d = new Date(`${weekStart(today)}T00:00:00`);
       d.setDate(d.getDate() - i * 7);

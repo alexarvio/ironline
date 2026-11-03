@@ -532,9 +532,9 @@ export function localMeetingLabels(m: NonNullable<UpcomingMeeting>, now: number 
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return {
     dayNumber: String(d.getDate()),
-    monthCap: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
+    monthCap: d.toLocaleDateString("en-GB", { month: "short" }).replace("Sept", "Sep").toUpperCase(),
     inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
-    whenLabel: `${d.toLocaleDateString("en-US", { weekday: "long" })} ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} ${tzShort(zone, d)} · ${m.durationMinutes} min`,
+    whenLabel: `${d.toLocaleDateString("en-GB", { weekday: "long" })} ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} ${tzShort(zone, d)} · ${m.durationMinutes} min`,
   };
 }
 
