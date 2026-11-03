@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Same thing, one drawing</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --page:#F5F6F8; --green:#2f7a3f; --rust:#b8471f; --red:#b42318; --indigo:#3a3390; --blue:#2f6fd6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #F5F5F5; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 70px; }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 28px; max-width: 820px; line-height: 1.5; }
+  section { margin: 0 0 38px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  h2 b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  h2 em { font-style: normal; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin-left: 8px; font-weight: 600; }
+  .what { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 12px; max-width: 780px; line-height: 1.5; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+  .panel { background: var(--page); border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); padding: 16px; min-width: 0; }
+  .panel.white { background: #fff; }
+  .tag { display: inline-block; font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; margin: 0 0 12px; }
+  .tag.now { color: var(--rust); } .tag.new { color: var(--green); }
+  .lbl { font-size: 11px; color: var(--muted); font-weight: 500; margin: 14px 0 6px; }
+  .lbl.first { margin-top: 0; }
+  .note { margin: 12px 0 0; font-size: 12px; color: var(--muted); font-weight: 500; line-height: 1.45; }
+  .cap { font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--sec); }
+  .sep { display: inline-block; width: 1px; height: .8em; background: #c9cfd8; margin: 0 .5em; vertical-align: -.08em; }
+  .sepc { display: inline-block; width: 1.5px; height: .85em; border-radius: 1px; background: #b0b7c3; margin: 0 .55em; vertical-align: -.1em; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  svg.i { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* 1 targets */
+  .tg-new { display: grid; grid-auto-flow: column; grid-auto-columns: max-content; column-gap: 32px; background: linear-gradient(var(--line), var(--line)) 0 20px / 100% 1px no-repeat; }
+  .tg-new.spread { justify-content: space-between; column-gap: 12px; }
+  .tg-new span { font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); line-height: 14px; padding-bottom: 6px; }
+  .tg-new b { font-size: 18px; font-weight: 600; line-height: 24px; padding-top: 8px; font-variant-numeric: tabular-nums; }
+  .tg-col { display: flex; flex-direction: column; }
+  .tg-old { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px 8px; padding: 10px 0 2px; text-align: center; }
+  .tg-old span { font-size: 9.5px; font-weight: 600; letter-spacing: .14em; color: var(--faint); }
+  .tg-old b { font-size: 16px; font-weight: 500; }
+  .tg-line { font-size: 18px; font-weight: 600; margin-top: 6px; }
+  .tg-line i { display: inline-block; width: 1px; height: .72em; background: #C9CFD8; margin: 0 12px; }
+
+  /* 2 done check */
+  .dc { display: flex; align-items: center; gap: 14px; padding: 8px 0; font-size: 15px; font-weight: 500; }
+  .dc small { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .dc .t { font-size: 16px; font-weight: 800; color: #2E7D32; }
+
+  /* 3 coach home */
+  .face { flex: none; border-radius: 999px; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 600; position: relative; }
+  .badge { position: absolute; right: -2px; bottom: -2px; width: 18px; height: 18px; border-radius: 999px; background: var(--indigo); box-shadow: 0 0 0 2px #F5F5F5; display: grid; place-items: center; }
+  .cs { display: grid; grid-template-columns: 36px 1fr; column-gap: 12px; }
+  .cs .face { width: 36px; height: 36px; grid-row: span 2; font-size: 14px; }
+  .cs .l { font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--sec); line-height: 15px; }
+  .cs .l small { letter-spacing: 0; text-transform: none; font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 6px; }
+  .cs .w { font-size: 15px; font-weight: 500; line-height: 21px; }
+  .acts { display: flex; gap: 18px; font-size: 13px; font-weight: 600; margin-top: 10px; }
+  .cnt { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 11px; margin-left: 5px; }
+
+  /* 4 meeting notes */
+  .mi { display: flex; gap: 9px; font-size: 13.5px; font-weight: 500; color: var(--body); line-height: 1.4; margin-bottom: 8px; }
+  .box { flex: none; width: 18px; height: 18px; border-radius: 6px; background: #fff; box-shadow: inset 0 0 0 1.5px rgba(47,111,214,.4); display: grid; place-items: center; color: var(--blue); }
+  .raw { font-size: 14px; font-weight: 500; line-height: 1.5; color: var(--body); white-space: pre-wrap; margin: 4px 0 0; }
+  .fold { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 500; }
+  .fold.wide { justify-content: space-between; }
+  .bl { position: relative; padding-left: 20px; }
+  .bl::before { content: ""; position: absolute; left: 3.5px; top: 10px; bottom: 10px; width: 1px; background: var(--line); }
+  .bl p { position: relative; margin: 0 0 8px; font-size: 14px; font-weight: 500; line-height: 1.5; color: var(--body); }
+  .bl p::before { content: ""; position: absolute; left: -20px; top: 7px; width: 6px; height: 6px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--ink); background: var(--page); }
+  .stitle { font-size: 13.5px; font-weight: 600; margin: 8px 0 6px; }
+
+  /* 6 time fields */
+  .dbox { height: 50px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); padding: 7px 14px 0; flex: 1; min-width: 0; }
+  .dbox.on { box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .dbox span { display: block; font-size: 10px; font-weight: 600; letter-spacing: .14em; color: var(--faint); text-transform: uppercase; }
+  .dbox b { display: block; font-size: 14.5px; font-weight: 500; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .native { display: inline-flex; align-items: center; gap: 30px; border-bottom: 1px solid var(--line); padding: 8px 0 9px; font-size: 15px; font-weight: 500; width: 140px; justify-content: space-between; font-family: system-ui; }
+  .native mark { background: #1a73e8; color: #fff; padding: 0 1px; border-radius: 2px; }
+  .flist { width: 200px; background: #fff; border-radius: 14px; padding: 6px; box-shadow: 0 24px 48px -20px rgba(16,24,40,.3), 0 0 0 1px var(--line); margin-top: 6px; font-size: 13.5px; font-weight: 500; }
+  .flist div { height: 32px; display: flex; align-items: center; padding: 0 10px; border-radius: 8px; }
+  .flist .typ { border-bottom: 1px solid var(--line); border-radius: 0; color: var(--faint); margin-bottom: 4px; }
+  .flist .on { background: var(--ink); color: #fff; font-weight: 600; }
+  .stack > * + * { margin-top: 8px; }
+
+  /* 7 save status */
+  .hdr { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .hdr h3 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+  .st { height: 22px; padding: 0 9px; border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: .12em; display: inline-flex; align-items: center; }
+  .st.live { color: var(--green); background: rgba(47,122,63,.12); }
+  .st.open { color: var(--rust); box-shadow: inset 0 0 0 1px rgba(184,71,31,.35); }
+  .ss { font-size: 13px; font-weight: 500; }
+  .ss.ok { color: var(--green); } .ss.bad { color: var(--red); }
+  .ss u { font-weight: 600; } .ss .w { font-weight: 600; }
+
+  /* 8 coach cards */
+  .card18 { background: #fff; border: 1px solid var(--line); border-radius: 18px; }
+  .card20 { background: #fff; border-radius: 20px; box-shadow: inset 0 0 0 1px #e1e5eb; padding: 14px; }
+  .figs { display: grid; grid-template-columns: repeat(5, 1fr); }
+  .figs > div { padding: 12px 12px 13px; min-width: 0; }
+  .figs.lined > div + div { border-left: 1px solid #eef0f3; }
+  .figs .cap { font-size: 9.5px; letter-spacing: .12em; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .figs b { display: block; font-size: 19px; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .figs b small { font-size: 11px; color: var(--muted); font-weight: 500; margin-left: 3px; }
+  .figs em { display: block; font-style: normal; font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+  .lrow { display: flex; gap: 14px; padding: 10px 14px; border-top: 1px solid #EEF0F3; font-size: 13px; font-weight: 500; color: var(--body); }
+  .heads { display: flex; gap: 14px; padding: 10px 14px 8px; }
+  .none { font-size: 14px; font-weight: 500; color: var(--muted); padding: 16px 18px; }
+
+  /* 9 leave confirm */
+  .sys { background: #ececec; border-radius: 12px; padding: 16px; font-family: -apple-system, system-ui, sans-serif; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+  .sys small { display: block; font-size: 12px; color: #555; margin-bottom: 8px; }
+  .sys p { margin: 0 0 14px; font-size: 14px; }
+  .sys .b { display: flex; justify-content: flex-end; gap: 8px; }
+  .sys .b span { padding: 6px 16px; border-radius: 6px; background: #fff; font-size: 13px; border: 1px solid #ccc; }
+  .sys .b span.ok { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+  .ask { display: flex; align-items: center; gap: 8px; }
+  .ask p { flex: 1; margin: 0; font-size: 13px; font-weight: 500; }
+  .pill { height: 40px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .pill.w { background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+  .pill.ink { background: var(--ink); color: #fff; }
+  .pill.r { background: var(--rust); color: #fff; }
+  .thumbs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .thumbs i { width: 54px; height: 72px; border-radius: 10px; background: linear-gradient(160deg, #c9cfd8, #8b93a1); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Same thing, one drawing: now and proposed</h1>
+  <p class="sub">The nine places where one thing is drawn several ways. The left panel shows today, read from the code; the right panel shows the proposal, which is always the version the rules already name as the model. Nothing here is built yet.</p>
+
+  <!-- 1 -->
+  <section>
+    <h2><b>1</b>The coach's targets<em>Client · workout</em></h2>
+    <p class="what">The exercise page has the new table. The session overview still draws the old centred one (no Rest, a different order, a hyphen), and the cardio page draws a single line with no column names.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="lbl first">Exercise page</div>
+        <div class="cap">Target</div>
+        <div class="tg-new spread" style="margin-top:6px">
+          <div class="tg-col"><span>Sets</span><b>3</b></div><div class="tg-col"><span>Reps</span><b>10–12</b></div><div class="tg-col"><span>Kg</span><b>55</b></div><div class="tg-col"><span>RPE</span><b>9</b></div><div class="tg-col"><span>Tempo</span><b>3-1-1-0</b></div><div class="tg-col"><span>Rest</span><b>90s</b></div>
+        </div>
+        <div class="lbl">Session overview, opened exercise</div>
+        <div class="cap" style="font-size:10px">Target</div>
+        <div class="tg-old"><span>SETS</span><span>KG</span><span>REPS</span><span>RPE</span><span>TEMPO</span><b>3</b><b>55</b><b>10-12</b><b>9</b><b>3-1-1-0</b></div>
+        <div class="lbl">Cardio page</div>
+        <div class="cap">Target</div>
+        <div class="tg-line">15 min<i></i>6 km/h<i></i>8%<i></i>1.5 km</div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="lbl first">Exercise page</div>
+        <div class="cap">Target</div>
+        <div class="tg-new spread" style="margin-top:6px">
+          <div class="tg-col"><span>Sets</span><b>3</b></div><div class="tg-col"><span>Reps</span><b>10–12</b></div><div class="tg-col"><span>Kg</span><b>55</b></div><div class="tg-col"><span>RPE</span><b>9</b></div><div class="tg-col"><span>Tempo</span><b>3-1-1-0</b></div><div class="tg-col"><span>Rest</span><b>90s</b></div>
+        </div>
+        <div class="lbl">Session overview, opened exercise</div>
+        <div class="cap">Target</div>
+        <div class="tg-new spread" style="margin-top:6px">
+          <div class="tg-col"><span>Sets</span><b>3</b></div><div class="tg-col"><span>Reps</span><b>10–12</b></div><div class="tg-col"><span>Kg</span><b>55</b></div><div class="tg-col"><span>RPE</span><b>9</b></div><div class="tg-col"><span>Tempo</span><b>3-1-1-0</b></div><div class="tg-col"><span>Rest</span><b>90s</b></div>
+        </div>
+        <div class="lbl">Cardio page</div>
+        <div class="cap">Target</div>
+        <div class="tg-new" style="margin-top:6px">
+          <div class="tg-col"><span>Time</span><b>15 min</b></div><div class="tg-col"><span>Pace</span><b>6 km/h</b></div><div class="tg-col"><span>Incline</span><b>8%</b></div><div class="tg-col"><span>Distance</span><b>1.5 km</b></div>
+        </div>
+        <p class="note">One table in three places: the same columns in the same order, and only the ones the coach filled in.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <h2><b>2</b>The done check<em>Client</em></h2>
+    <p class="what">Four sizes, two greens and three line weights. The food diary still types a heavy ✓ in the old green.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="dc"><svg width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15.5" fill="#F5F5F5" stroke="#2f7a3f" stroke-width="1"/><path d="M10.2 16.6l3.6 3.6 8-8" stroke="#2f7a3f" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Upper — push<small>Training</small></div>
+        <div class="dc"><svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="12.5" fill="none" stroke="#2f7a3f" stroke-width="1"/><path d="M8.4 13.4l3.2 3.2 6.4-6.4" stroke="#2f7a3f" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Bench Press<small>Session overview</small></div>
+        <div class="dc"><svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17.25" fill="#F5F6F8" stroke="#82ad8b" stroke-width="1.5"/><path d="M11.4 18.6l4.2 4.2 9-9" stroke="#82ad8b" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="color:#2f7a3f;opacity:.6;font-size:22px">60 kg × 10</span><small>Workout set</small></div>
+        <div class="dc"><span style="color:#2f7a3f;font-size:13px"><b style="font-weight:700">2,140 kcal</b> logged for today</span><span class="t">✓</span><small>Food diary</small></div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="dc"><svg width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15.25" fill="#F5F5F5" stroke="#2f7a3f" stroke-width="1.5"/><path d="M10 16.5l4 4 8-8" stroke="#2f7a3f" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Upper — push<small>Training</small></div>
+        <div class="dc"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10.25" fill="none" stroke="#2f7a3f" stroke-width="1.5"/><path d="M6.8 11.2l2.9 2.9 5.5-5.5" stroke="#2f7a3f" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Bench Press<small>Session overview</small></div>
+        <div class="dc"><svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17.25" fill="#F5F6F8" stroke="#2f7a3f" stroke-width="1.5"/><path d="M11 18.5l4.5 4.5 9-9" stroke="#2f7a3f" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="color:#2f7a3f;opacity:.6;font-size:22px">60 kg × 10</span><small>Workout set</small></div>
+        <div class="dc"><span style="color:#2f7a3f;font-size:13px"><b style="font-weight:600">2,140 kcal</b> logged for today</span><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10.25" fill="none" stroke="#2f7a3f" stroke-width="1.5"/><path d="M6.8 11.2l2.9 2.9 5.5-5.5" stroke="#2f7a3f" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><small>Food diary</small></div>
+        <p class="note">One check everywhere, like the Supplements check: green #2f7a3f, a 1.5px ring and a 1.6 line, sized to its place.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <h2><b>3</b>The coach's latest on Home<em>Client · Home</em></h2>
+    <p class="what">Every other coach's note uses CoachSays: a 36px face, a small-caps label, then the words in ink. Home's "Latest from" has its own look: a 40px face with a filled colour badge, a name and time line, then a title and grey words.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="cap" style="color:var(--ink);font-size:11.5px;letter-spacing:.18em;margin-bottom:10px">Latest from Finlay</div>
+        <div class="row" style="align-items:flex-start;gap:14px">
+          <div class="face" style="width:40px;height:40px;font-size:17px">F<span class="badge"><svg class="i" width="10" height="10" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.2"><path d="M6 6v12M18 6v12M3 9v6M21 9v6M6 12h12"/></svg></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span>Finlay</span><span>2h ago</span></div>
+            <div style="font-size:16px;font-weight:600">Updated your programme</div>
+            <div style="font-size:13px;color:var(--body);line-height:1.45">Added a fourth session this week. Go easy on the deadlifts on Thursday.</div>
+          </div>
+        </div>
+        <div class="acts" style="justify-content:flex-end"><span style="color:var(--sec)">Open chat<span class="cnt">2</span></span><span>View</span></div>
+        <div class="lbl">Elsewhere (CoachSays)</div>
+        <div class="cs"><div class="face">F</div><div class="l">From your coach</div><div class="w">Keep the bar path close and pause one count at the bottom.</div></div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="cap" style="color:var(--ink);font-size:11.5px;letter-spacing:.18em;margin-bottom:10px">Latest from Finlay</div>
+        <div class="cs"><div class="face">F</div><div class="l">Updated your programme<small>2h ago</small></div><div class="w">Added a fourth session this week. Go easy on the deadlifts on Thursday.</div></div>
+        <div class="acts" style="padding-left:48px"><span style="color:var(--sec)">Open chat<span class="cnt">2</span></span><span>View</span></div>
+        <p class="note">CoachSays here too: the 36px face, what happened as the small-caps label with when after it, and the words in ink. No filled badge. Open chat and View sit under the words.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <h2><b>4</b>A call's notes<em>Client · Meetings and Home</em></h2>
+    <p class="what">The same summary shows two ways. On Meetings each line gets a blue ticked square, like a to-do list. On Home it is raw text, with the coach's typed dashes, and the chevron sits at the far right.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="lbl first">Meetings, past call opened</div>
+        <div class="mi"><span class="box"><svg class="i" width="10" height="10" viewBox="0 0 24 24" stroke-width="3.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Keep protein at 160 g every day</div>
+        <div class="mi"><span class="box"><svg class="i" width="10" height="10" viewBox="0 0 24 24" stroke-width="3.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Add a 4th session on Saturday</div>
+        <div class="mi"><span class="box"><svg class="i" width="10" height="10" viewBox="0 0 24 24" stroke-width="3.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Weigh in Monday and Thursday mornings</div>
+        <div class="lbl">Home, Meeting summary opened</div>
+        <div class="cap" style="font-size:10px;color:var(--faint)">Last meeting<span class="sep"></span>30 Oct</div>
+        <div class="fold wide" style="margin-top:4px">Meeting summary<svg class="i" width="14" height="14" viewBox="0 0 24 24" stroke="#98A2B3" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></div>
+        <div class="stitle">Week 6 check-in</div>
+        <p class="raw">- Keep protein at 160 g every day
+- Add a 4th session on Saturday
+- Weigh in Monday and Thursday mornings</p>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="lbl first">Meetings, past call opened</div>
+        <div class="stitle" style="margin-top:0">Week 6 check-in</div>
+        <div class="bl"><p>Keep protein at 160 g every day</p><p>Add a 4th session on Saturday</p><p>Weigh in Monday and Thursday mornings</p></div>
+        <div class="lbl">Home, Meeting summary opened</div>
+        <div class="cap" style="font-size:10px;color:var(--faint)">Last meeting<span class="sep"></span>30 Oct</div>
+        <div class="fold" style="margin-top:4px">Meeting summary<svg class="i" width="14" height="14" viewBox="0 0 24 24" stroke="#98A2B3" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></div>
+        <div class="stitle">Week 6 check-in</div>
+        <div class="bl"><p>Keep protein at 160 g every day</p><p>Add a 4th session on Saturday</p><p>Weigh in Monday and Thursday mornings</p></div>
+        <p class="note">One way on both screens, matching To focus on: bullet points on a thin line with nothing to tick, and no blue. The chevron sits right after its title.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <h2><b>5</b>The bar between facts<em>Client and coach</em></h2>
+    <p class="what">Three client screens copy the drawn bar each at their own size and height. On the coach side, Settings types a real "|", the time zone uses a middle dot, and Shape update's failed save uses a plain space.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="lbl first">Notifications (own copy)</div><div style="font-size:13px;color:var(--body)">Week 6 check-in<i style="display:inline-block;width:1px;height:10px;background:#c9cfd8;margin:0 7px;vertical-align:-1px"></i>30 min, this time tomorrow.</div>
+        <div class="lbl">Check-in calendar (own copy, sits higher)</div><div style="font-size:12px;color:var(--muted)">7 exercises<i style="display:inline-block;width:1px;height:.72em;background:#c9cfd8;margin:0 8px"></i>Muscle Factory<i style="display:inline-block;width:1px;height:.72em;background:#c9cfd8;margin:0 8px"></i>46 min</div>
+        <div class="lbl">Coach Settings list</div><div style="font-size:12.5px;color:var(--muted)">EUR | 21% VAT | Stripe</div>
+        <div class="lbl">Coach time zone</div><div style="font-size:15px;font-weight:500">Amsterdam <span style="color:var(--sec)">· GMT+1</span></div>
+        <div class="lbl">Coach Shape update, failed save</div><div class="ss bad">Not saved <u>Retry</u></div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="lbl first">Notifications</div><div style="font-size:13px;color:var(--body)">Week 6 check-in<span class="sep"></span>30 min, this time tomorrow.</div>
+        <div class="lbl">Check-in calendar</div><div style="font-size:12px;color:var(--muted)">7 exercises<span class="sep"></span>Muscle Factory<span class="sep"></span>46 min</div>
+        <div class="lbl">Coach Settings list</div><div style="font-size:12.5px;color:var(--muted)">EUR<span class="sepc"></span>21% VAT<span class="sepc"></span>Stripe</div>
+        <div class="lbl">Coach time zone</div><div style="font-size:15px;font-weight:500">Amsterdam<span class="sepc"></span><span style="color:var(--sec)">GMT+1</span></div>
+        <div class="lbl">Coach Shape update, failed save</div><div class="ss bad">Not saved<span class="sepc"></span><span class="w">Retry</span></div>
+        <p class="note">One bar per app, from the shared parts: Bars on the client and Sep on the coach side. Retry loses its underline everywhere.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <h2><b>6</b>Picking a time<em>Coach · pop-ups</em></h2>
+    <p class="what">Three pop-ups pick a time three ways. Schedule a programme uses the browser's own time field, with its blue and its clock. Schedule a meeting is a bare typed box headed "Time | 24h". The Calendar has a box that opens a list, and that's the model.</p>
+    <div class="pair">
+      <div class="panel white"><span class="tag now">Now</span>
+        <div class="lbl first">Schedule a programme</div>
+        <div class="dbox on" style="flex:none"><span>Goes live</span><b>09/11/2026</b></div>
+        <div class="cap" style="margin-top:12px">At</div>
+        <div class="native"><span><mark>09</mark>:00</span><svg class="i" width="14" height="14" viewBox="0 0 24 24" stroke="#888" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <div class="lbl">Schedule a meeting</div>
+        <div class="row" style="gap:6px"><div class="dbox on"><span>Date</span><b>05/11/2026</b></div><div class="dbox"><span>Time<span class="sepc"></span>24h</span><b style="color:var(--faint)">14:30</b></div></div>
+        <div class="lbl">Calendar entry</div>
+        <div class="row" style="gap:6px"><div class="dbox on"><span>Starts</span><b>14:30</b></div><span style="color:var(--faint)">→</span><div class="dbox"><span>Ends</span><b>15:00</b></div></div>
+      </div>
+      <div class="panel white"><span class="tag new">Proposed</span>
+        <div class="lbl first">Schedule a programme</div>
+        <div class="row" style="gap:6px"><div class="dbox"><span>Goes live</span><b>09/11/2026</b></div><div class="dbox on"><span>At</span><b>09:00</b></div></div>
+        <div class="lbl">Schedule a meeting</div>
+        <div class="row" style="gap:6px"><div class="dbox"><span>Date</span><b>05/11/2026</b></div><div class="dbox on"><span>Time</span><b>14:30</b></div></div>
+        <div class="flist" style="margin-left:auto"><div class="typ">1530</div><div>14:00</div><div>14:15</div><div class="on">14:30</div><div>14:45</div></div>
+        <div class="lbl">Calendar entry</div>
+        <div class="row" style="gap:6px"><div class="dbox"><span>Starts</span><b>14:30</b></div><span style="color:var(--faint)">→</span><div class="dbox"><span>Ends</span><b>15:00</b></div></div>
+        <p class="note">One time box everywhere, the Calendar's: a rounded box beside the date, ringed in ink while open, with the floating list where you can type or pick. No browser field and no "24h".</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <h2><b>7</b>The save status<em>Coach · tab headers</em></h2>
+    <p class="what">Training's status (saving, saved, not saved with Retry) is the model. The Plan has no failed state, so a failed save still says "All changes saved". The Calendar's header says nothing; it shows a toast instead.</p>
+    <div class="pair">
+      <div class="panel white"><span class="tag now">Now</span>
+        <div class="lbl first">Training</div>
+        <div class="hdr"><h3>Hypertrophy</h3><span class="st live">LIVE</span><span class="ss ok">✓ All changes saved</span></div>
+        <div class="lbl">Plan, after a save that failed</div>
+        <div class="hdr"><h3>Paula's plan</h3><span class="ss ok">✓ All changes saved</span></div>
+        <div class="lbl">Calendar, after a change</div>
+        <div class="hdr"><h3>Calendar</h3></div>
+        <div style="margin-top:8px;display:inline-flex;padding:10px 14px;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(16,24,40,.12),0 0 0 1px var(--line);font-size:13px;font-weight:500">Check-in call · saved</div>
+      </div>
+      <div class="panel white"><span class="tag new">Proposed</span>
+        <div class="lbl first">Training</div>
+        <div class="hdr"><h3>Hypertrophy</h3><span class="st live">LIVE</span><span class="ss ok">✓ All changes saved</span></div>
+        <div class="lbl">Plan, after a save that failed</div>
+        <div class="hdr"><h3>Paula's plan</h3><span class="ss bad">Not saved<span class="sepc"></span><span class="w">Retry</span></span></div>
+        <div class="lbl">Calendar, after a change</div>
+        <div class="hdr"><h3>Calendar</h3><span class="ss ok">✓ All changes saved</span></div>
+        <p class="note">One status on every tab that saves itself. A failure always says so, with Retry, and the Calendar uses the header instead of a toast.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section>
+    <h2><b>8</b>Coach cards<em>Coach · Shape update and Nutrition</em></h2>
+    <p class="what">Shape update's cards have their own edge, radius and empty word ("No sheets yet" at the top, "None yet" under it). Nutrition's five figures sit inside the log card. Home and Invoices put theirs in a figures card of their own, with lines between.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="lbl first">Shape update, no sheets</div>
+        <div class="card20" style="font-size:13.5px;color:var(--muted);font-weight:500">No sheets yet</div>
+        <div class="card18" style="margin-top:10px"><div class="heads cap" style="font-size:9.5px"><span>Date</span><span>Sheet</span><span>Photos</span><span>State</span></div><div class="none" style="padding-top:4px">None yet</div></div>
+        <div class="lbl">Nutrition, Finlay's logs</div>
+        <div class="card18" style="padding:8px 4px 6px">
+          <div class="figs"><div><span class="cap">Days logged</span><b>23</b></div><div><span class="cap">Avg intake</span><b>2,956<small>kcal</small></b></div><div><span class="cap">Avg protein</span><b style="color:var(--red)">142<small>g</small></b></div><div><span class="cap">Avg carbs</span><b>310<small>g</small></b></div><div><span class="cap">Avg fat</span><b>88<small>g</small></b></div></div>
+          <div class="lrow"><span>Tue, 21 Oct</span><span>2,840 kcal</span></div>
+        </div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="lbl first">Shape update, no sheets</div>
+        <div class="card18"><div class="none">None yet</div></div>
+        <div class="card18" style="margin-top:10px"><div class="heads cap" style="font-size:9.5px"><span>Date</span><span>Sheet</span><span>Photos</span><span>State</span></div><div class="none" style="padding-top:4px">None yet</div></div>
+        <div class="lbl">Nutrition, Finlay's logs</div>
+        <div class="card18"><div class="figs lined"><div><span class="cap">Days logged</span><b>23</b><em>of 30</em></div><div><span class="cap">Avg intake</span><b>2,956<small>kcal</small></b></div><div><span class="cap">Avg protein</span><b style="color:var(--rust)">142<small>g</small></b><em>target 178</em></div><div><span class="cap">Avg carbs</span><b>310<small>g</small></b></div><div><span class="cap">Avg fat</span><b>88<small>g</small></b></div></div></div>
+        <div class="card18" style="margin-top:10px"><div class="lrow" style="border-top:0"><span>Tue, 21 Oct</span><span>2,840 kcal</span></div></div>
+        <p class="note">The shared hairline card and "None yet" everywhere. Nutrition's figures move into a figures card of their own, like Home's and Invoices', with low protein in rust instead of red.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section>
+    <h2><b>9</b>Leaving with photos not sent<em>Client · Shape update</em></h2>
+    <p class="what">Tapping back with photos still unsent opens the browser's own alert ("localhost says…", then OK and Cancel). The check-in and Add an event ask in place, in the app's own voice.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="thumbs"><i></i><i></i></div>
+        <div class="sys"><small>norcoachapp.com says</small><p>Your new pictures aren’t sent yet. Leave without sending them?</p><div class="b"><span>Cancel</span><span class="ok">OK</span></div></div>
+        <div class="lbl">The check-in already asks like this</div>
+        <div class="ask"><p>Discard changes?</p><span class="pill w">Keep editing</span><span class="pill r">Discard</span></div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="thumbs"><i></i><i></i></div>
+        <div class="ask"><p>Leave without sending 2 photos?</p><span class="pill w">Keep</span><span class="pill r">Leave</span></div>
+        <p class="note">The send row at the sheet's foot turns into the question, as on the check-in and Add an event. Keep brings back "Cancel | Send 2 photos".</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
