@@ -254,7 +254,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
         </div>
         <div className="trn-head-actions">
           {/* Sheet setup is a pop-up, as a phase's (21 Oct, Alex): the calendar, the rhythm, the instructions and the angles. */}
-          <button type="button" className="rp-setup-btn" aria-haspopup="dialog" onClick={() => setDlg({ kind: "setup" })}>
+          <button type="button" className="trn-pill rp-setup-btn" aria-haspopup="dialog" onClick={() => setDlg({ kind: "setup" })}>
             <SlidersIcon />
             Sheet setup
             {/* Its facts only once an angle is set (22 Oct, Alex: a new client has nothing set up). */}
