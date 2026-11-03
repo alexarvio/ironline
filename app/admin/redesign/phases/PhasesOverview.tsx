@@ -8,14 +8,14 @@ import { Popover as PopoverPrimitive } from "radix-ui";
 import { toast } from "sonner";
 import { addClientEventAction, addClientPhaseAction, removeClientPhaseAction, updateClientEventAction, updateClientPhaseAction } from "../../../lib/actions";
 import { Dialog } from "../../../components/ui/dialog";
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../../components/icons";
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../../components/icons";
 import { EVENT_TYPES, isEventTypeId } from "../../../lib/eventTypes";
 import { dayMonth } from "../../../lib/dayMonth";
 import { pic } from "../../../lib/pic";
 import type { PhaseTrack } from "../../../lib/db";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { gridFor, MoveDialog, PhaseDialog, phaseForm, TrackIcon, WINDOWS, type Win } from "../plan/PlanDraft";
-import { chromeOf, EV_LANE, EventDialog, KindIcon, MoveEventDialog, rgbOf, type Category } from "../plan/EventsCard";
+import { chromeOf, EV_LANE, EventDialog, KindIcon, MoveEventDialog, type Category } from "../plan/EventsCard";
 import { EventMark, eventIsPast, eventPlace, LaneLabel, MonthsRow, packLanes, PhaseBar, useSideScroll, weekSpan, weeksBetween, WeeksRow, type Grid } from "../plan/timelineParts";
 import type { PlanPhaseRow } from "../../../lib/queries";
 import DatePick from "../DatePick";
@@ -26,6 +26,8 @@ import EventDetailDialog from "./EventDetailDialog";
 import type { OverviewClient, PhasesOverviewData } from "./load";
 import type { NeedRow } from "../../../lib/feedBoard";
 import { NeedsYou } from "../feed/FeedDraft";
+import { byNeedCat, NeedAction, NeedFace, NeedGroup } from "../NeedGroups";
+import { logDate, logDateWidth } from "../../../lib/dayMonth";
 import { addDays, clientStatus, daysBetween, daysLeft, endingSoon, leftLabel, mondayOf, needsAttention, progressOf, soonPhases, TRACKS, weekIndexOf, weeksOf, type OverviewEvent, type OverviewPhase } from "./timeline";
 
 // The Phases overview (14 Oct; drawn as the Plan since 21 Oct): Ending soon
@@ -173,37 +175,39 @@ export default function PhasesOverview({ data, needs = [], now }: { data: Phases
             {/* No count after it (21 Oct, Alex): the rows say how many. */}
             <h2>Ending soon</h2>
           </div>
-          <ul className="pln-card pov-soon-list">
-            {soonRows.map(({ client, phase }) => {
-              const accent = TRACK_ACCENT[phase.track];
-              const at = `Week ${weekIndexOf(phase, today)} of ${weeksOf(phase)}`;
-              return (
-                <li key={phase.id} className={`pov-soon-row${leaving.has(phase.id) ? " leaving" : ""}`} style={{ "--c": accent, "--rgb": rgbOf(accent) } as React.CSSProperties}>
-                  <span className="pov-tag">
-                    <TrackIcon track={phase.track} size={12} />
-                    {TRACK_LABEL[phase.track]}
-                  </span>
-                  <span className="pov-who">
-                    <Link href={PLAN(client.id)} className="pov-who-name">
-                      {client.name}
-                    </Link>
-                    <Sep />
-                    <span className="pov-who-what">{phase.name}</span>
-                  </span>
-                  <span className="pov-left">{leftLabel(daysLeft(phase, today))}</span>
-                  <span className="pov-prog" role="img" title={at} aria-label={at}>
-                    <i style={{ width: `${progressOf(phase, today) * 100}%` }} />
-                  </span>
-                  <span className="pov-actions">
-                    <button type="button" className="rd-btn" onClick={() => setNewPhase({ client, track: phase.track, start: addDays(phase.end, 1), lock: true })}>
-                      <PlusIcon /> Plan next
-                    </button>
-                    <ExtendMenu phase={phase} onPick={(endWeek) => extend(phase, endWeek)} />
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          {/* The needs-you anatomy (3 Nov, Alex: option C of docs/boards/needs-rows-mockup.html): grouped by track under
+              its head, a row the day it ends, the face and name, the phase, its bar, the days left, Plan next and Extend
+              as their icons alone. */}
+          <div className="nd-groups" style={{ "--nd-date": `${logDateWidth(soonRows.map((r) => r.phase.end))}px` } as React.CSSProperties}>
+            {byNeedCat(soonRows, (r) => r.phase.track).map(([cat, group]) => (
+              <NeedGroup key={cat} cat={cat} count={group.length}>
+                {group.map(({ client, phase }) => {
+                  const at = `Week ${weekIndexOf(phase, today)} of ${weeksOf(phase)}`;
+                  return (
+                    <div key={phase.id} className={`nd-row bar still${leaving.has(phase.id) ? " out" : ""}`} style={{ "--c": TRACK_ACCENT[phase.track] } as React.CSSProperties}>
+                      <span className="rd-logdate">{logDate(phase.end)}</span>
+                      <Link href={PLAN(client.id)} className="nd-who">
+                        <NeedFace name={client.name} src={client.avatarPath} />
+                        <span className="nd-name">{client.name}</span>
+                      </Link>
+                      <span className="nd-thing">
+                        <span className="nd-what">{phase.name}</span>
+                      </span>
+                      <span className="nd-bar" role="img" title={at} aria-label={at}>
+                        <i style={{ width: `${progressOf(phase, today) * 100}%` }} />
+                      </span>
+                      <span className="nd-wait late">{leftLabel(daysLeft(phase, today))}</span>
+                      <span className="nd-acts">
+                        <NeedAction label="Plan next" icon={<PlusIcon />} onClick={() => setNewPhase({ client, track: phase.track, start: addDays(phase.end, 1), lock: true })} />
+                        <ExtendMenu phase={phase} onPick={(endWeek) => extend(phase, endWeek)} />
+                      </span>
+                      <span className="nd-more" />
+                    </div>
+                  );
+                })}
+              </NeedGroup>
+            ))}
+          </div>
         </section>
       )}
 
@@ -421,8 +425,11 @@ function ExtendMenu({ phase, onPick }: { phase: OverviewPhase; onPick: (endWeek:
         if (!o) setPicking(false);
       }}
     >
-      <PopoverPrimitive.Trigger className="rd-btn" aria-label={`Extend ${phase.name}`}>
-        Extend <ChevronDownIcon />
+      {/* Its icon alone (3 Nov, Alex): the arrow on to a bar, a phase's end pushed on. */}
+      <PopoverPrimitive.Trigger className="nd-act" title="Extend" aria-label={`Extend ${phase.name}`}>
+        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 12h13M12 7.5l4.5 4.5-4.5 4.5M20.5 5v14" />
+        </svg>
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content align="end" sideOffset={6} className="pb-menu pov-extend-menu">
