@@ -30,7 +30,7 @@
 .rr-navrow.active svg { color: #fff; }
 .rr-navrow.active:focus-visible { outline-offset: 2px; }
 /* How many clients need you, on Feed: the count in rust words, no pill. */
-.rr-badge { flex: none; font-size: 12px; font-style: normal; font-weight: 600; color: #b3471d; font-variant-numeric: tabular-nums; }
+.rr-badge { flex: none; font-size: 12px; font-style: normal; font-weight: 600; color: #b8471f; font-variant-numeric: tabular-nums; }
 .rr-navrow.active .rr-badge { color: rgba(255, 255, 255, 0.7); }
 
 /* Clients and Settings share the height between the views and the coach:
@@ -102,7 +102,7 @@
    by a hairline down its left; a screen a row, its name and a rust dot (or how many) on the right, opening that screen. */
 .rr-head { position: relative; }
 .rr-head .rr-row { padding-right: 40px; }
-.rr-need { position: absolute; top: 50%; right: 6px; translate: 0 -50%; min-width: 24px; height: 24px; padding: 0 7px; border: 0; border-radius: 999px; background: none; box-sizing: border-box; font: inherit; font-size: 12.5px; font-weight: 600; color: #b3471d; font-variant-numeric: tabular-nums; cursor: pointer; transition: background-color 0.2s ease; }
+.rr-need { position: absolute; top: 50%; right: 6px; translate: 0 -50%; min-width: 24px; height: 24px; padding: 0 7px; border: 0; border-radius: 999px; background: none; box-sizing: border-box; font: inherit; font-size: 12.5px; font-weight: 600; color: #b8471f; font-variant-numeric: tabular-nums; cursor: pointer; transition: background-color 0.2s ease; }
 .rr-need:hover, .rr-item.open .rr-need { background: #eef0f3; } /* a neutral grey, the number rust (29 Oct, Alex) */
 .rr-need:focus-visible { outline: 2px solid #141a24; outline-offset: 1px; }
 .rr-spots { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.24s ease; }
@@ -114,8 +114,8 @@
 .rr-spot:last-child { margin-bottom: 6px; }
 .rr-spot:hover { background: #f5f6f8; color: #141a24; }
 .rr-spot:focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
-.rr-spot i { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #b3471d; }
-.rr-spot small { flex: none; font-size: 12px; font-weight: 600; color: #b3471d; font-variant-numeric: tabular-nums; }
+.rr-spot i { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #b8471f; }
+.rr-spot small { flex: none; font-size: 12px; font-weight: 600; color: #b8471f; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .rr-need, .rr-spots, .rr-spots-in, .rr-spot { transition: none; } }
 .rr-empty { margin: 8px 8px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 /* New client: a white pill with its icon and a hairline (the admin's own actions, trn-pill), ink on hover. */
@@ -161,7 +161,7 @@
 
 /* What the coach pays NorCoach (28 Oct, Alex; lib/billing.ts): a payment that failed, then read-only, under the
    brand: the fact in rust at 600, the date or the way to fix it grey under it, the whole row the link to Billing. */
-.rr-billing { flex: none; display: flex; flex-direction: column; gap: 1px; margin: 0 10px 8px; padding: 9px 12px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px rgba(179, 71, 29, 0.35); text-decoration: none; }
-.rr-billing b { font-size: 13px; font-weight: 600; color: #b3471d; }
+.rr-billing { flex: none; display: flex; flex-direction: column; gap: 1px; margin: 0 10px 8px; padding: 9px 12px; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.35); text-decoration: none; }
+.rr-billing b { font-size: 13px; font-weight: 600; color: #b8471f; }
 .rr-billing small { font-size: 12px; font-weight: 500; color: #8b93a1; }
 .rr-billing:hover { background: #fafbfd; }
