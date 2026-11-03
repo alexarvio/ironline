@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Workout targets</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --div:#EEF0F3; --page:#F5F6F8; --training:#3a3390; --green:#2f7a3f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ebef; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 60px; }
+  .intro { max-width: 1240px; margin: 0 auto 26px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .intro p { margin: 0; color: var(--sec); font-size: 13px; font-weight: 500; line-height: 1.55; max-width: 900px; }
+  .phones { max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  .col { width: 375px; max-width: 100%; }
+  .lbl { display: flex; gap: 10px; align-items: baseline; margin: 0 0 4px 6px; }
+  .lbl b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; }
+  .lbl span { font-size: 15px; font-weight: 600; }
+  .why { margin: 0 6px 12px; color: var(--sec); font-size: 12.5px; font-weight: 500; line-height: 1.5; min-height: 56px; }
+  .phone { position: relative; width: 100%; height: 700px; overflow: hidden; border-radius: 34px; background: var(--page); box-shadow: 0 0 0 10px #141a24, 0 30px 60px -20px rgba(16,24,40,.45); padding: 26px 16px 0; }
+  .top { display: flex; align-items: center; justify-content: center; position: relative; height: 44px; }
+  .top .back { position: absolute; left: 4px; font-size: 22px; color: var(--ink); }
+  .pillbar { display: inline-flex; align-items: center; gap: 10px; height: 36px; padding: 0 6px 0 14px; border-radius: 999px; background: #141a24; color: #c9cfd8; font-size: 13px; font-weight: 600; }
+  .pillbar i { font-style: normal; background: #2b3140; color: #fff; border-radius: 999px; padding: 4px 10px; }
+  .seg { display: flex; gap: 4px; margin: 14px 0 18px; }
+  .seg i { flex: 1; height: 3px; border-radius: 2px; background: #dde1e8; }
+  .seg i.on { background: var(--training); }
+  .eb { font-size: 10.5px; letter-spacing: .16em; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+  .eb b { color: var(--training); font-weight: 600; }
+  .name { font-size: 24px; font-weight: 600; margin: 6px 0 4px; letter-spacing: -.01em; }
+  .next { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+  .sep { display: inline-block; width: 1px; height: 10px; background: #C9CFD8; margin: 0 7px; vertical-align: -1px; }
+  .lab { font-size: 10.5px; letter-spacing: .16em; font-weight: 600; color: var(--sec); text-transform: uppercase; }
+  .sets { display: flex; align-items: center; justify-content: space-between; margin-top: 26px; }
+  .sets b { font-size: 11px; letter-spacing: .18em; font-weight: 600; }
+  .sets b em { font-style: normal; color: var(--green); margin-left: 8px; }
+  .unit { display: flex; padding: 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); font-size: 12px; font-weight: 600; }
+  .unit span { padding: 5px 12px; border-radius: 999px; color: var(--sec); }
+  .unit span.on { background: var(--ink); color: #fff; }
+  .set { display: flex; align-items: center; gap: 16px; margin-top: 18px; padding-left: 4px; }
+  .set .ring { width: 30px; height: 30px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px rgba(47,122,63,.55); display: grid; place-items: center; color: var(--green); font-size: 12px; }
+  .set .v { font-size: 26px; font-weight: 500; color: #6d9b77; font-variant-numeric: tabular-nums; }
+  .set .v small { font-size: 14px; color: var(--faint); margin: 0 6px; }
+
+  /* A: one row of labelled columns, hairline under the labels. */
+  .ta { margin-top: 22px; }
+  .ta-grid { display: grid; grid-template-columns: repeat(var(--n), auto); justify-content: space-between; column-gap: 12px; }
+  .ta-grid .hr { grid-column: 1 / -1; height: 1px; margin-top: 6px; background: var(--line); }
+  .ta-grid .h { font-size: 10px; letter-spacing: .14em; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+  .ta-grid .c { padding-top: 8px; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ta-grid .c small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+
+  /* B: cells in a hairline grid, three across. */
+  .tb { margin-top: 22px; border-top: 1px solid var(--line); }
+  .tb-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .tb-grid > div { padding: 10px 0 10px 12px; border-bottom: 1px solid var(--line); }
+  .tb-grid > div:not(:nth-child(3n+1)) { border-left: 1px solid var(--line); }
+  .tb-grid > div:nth-child(3n+1) { padding-left: 0; }
+  .tb-grid span { display: block; font-size: 10px; letter-spacing: .14em; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+  .tb-grid b { display: block; margin-top: 4px; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tb-grid b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+
+  /* C: a list, label left and figure right, a hairline between rows. */
+  .tc { margin-top: 18px; }
+  .tc .row { display: flex; align-items: baseline; justify-content: space-between; height: 38px; border-bottom: 1px solid var(--line); }
+  .tc .row:first-of-type { border-top: 1px solid var(--line); }
+  .tc .row span { font-size: 13px; font-weight: 500; color: var(--sec); line-height: 38px; }
+  .tc .row b { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 38px; }
+  .tc .row b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+  .tc .lab { display: block; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="intro">
+  <h1>The workout's targets as a table: three ways</h1>
+  <p>Lying Leg Curl with every column the coach can switch on: Sets, Reps, kg, RPE, Tempo and Rest (today Tempo and Rest never reach the workout screen; all three below show them). A column the coach leaves empty is left out, so a plain exercise is just Sets, Reps and kg. Hairline only, no boxes.</p>
+</div>
+<div class="phones">
+  <div class="col">
+    <div class="lbl"><b>A</b><span>One row, labelled columns</span></div>
+    <p class="why">A small table row: the column names in small caps over a hairline, the figures under them. Reads like the coach's own table. Six columns fit one line on a phone.</p>
+    <div class="phone" data-o="A"></div>
+  </div>
+  <div class="col">
+    <div class="lbl"><b>B</b><span>A grid, three across</span></div>
+    <p class="why">Each target its own cell in a hairline grid, the name over the figure, three a row. Two rows with six; one row with three. Most like a spec sheet.</p>
+    <div class="phone" data-o="B"></div>
+  </div>
+  <div class="col">
+    <div class="lbl"><b>C</b><span>A list, name and figure</span></div>
+    <p class="why">One target a line, the name on the left in grey, the figure on the right, a hairline between. The most room per figure, the tallest.</p>
+    <div class="phone" data-o="C"></div>
+  </div>
+</div>
+<script>
+const T = [["Sets", "3"], ["Reps", "10–12"], ["kg", "55"], ["RPE", "9"], ["Tempo", "3-1-1-0"], ["Rest", "90<small>s</small>"]];
+const head = `
+  <div class="top"><span class="back">‹</span><span class="pillbar">Muscle Factory <i>● 0:35</i></span></div>
+  <div class="seg"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+  <div class="eb"><b>Lower</b><span class="sep"></span>Exercise 1 of 5</div>
+  <div class="name">Lying Leg Curl</div>
+  <div class="next">Next up<span class="sep"></span>Leg Extension</div>`;
+const sets = `
+  <div class="sets"><b>SETS<em>3/3</em></b><span class="unit"><span class="on">KG</span><span>LBS</span></span></div>
+  <div class="set"><span class="ring">✓</span><span class="v">60<small>kg ×</small>10</span></div>
+  <div class="set"><span class="ring">✓</span><span class="v">60<small>kg ×</small>12</span></div>`;
+const A = `<div class="ta"><span class="lab">Target</span><div class="ta-grid" style="--n:${T.length};margin-top:10px">
+  ${T.map(([h]) => `<span class="h">${h}</span>`).join("")}<span class="hr"></span>${T.map(([, v]) => `<span class="c">${v}</span>`).join("")}</div></div>`;
+const B = `<div style="margin-top:22px"><span class="lab">Target</span></div><div class="tb" style="margin-top:10px"><div class="tb-grid">
+  ${T.map(([h, v]) => `<div><span>${h}</span><b>${v}</b></div>`).join("")}</div></div>`;
+const C = `<div class="tc"><span class="lab">Target</span>${T.map(([h, v]) => `<div class="row"><span>${h}</span><b>${v}</b></div>`).join("")}</div>`;
+const parts = { A, B, C };
+document.querySelectorAll(".phone").forEach((p) => (p.innerHTML = head + parts[p.dataset.o] + sets));
+</script>
+</body>
+</html>
