@@ -100,7 +100,8 @@ export default function NutritionTargetsCard({
         {pictures && pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
         {phase}
 
-        <div className="nd-tabs" role="tablist" aria-label="Day type">
+        {/* The white capsule, sliding, as every choice (3 Nov, Alex: the audit; was underline tabs in navy). */}
+        <div className="nd-tabs nd-daycap" data-slide role="tablist" aria-label="Day type">
           {([true, false] as const).map((t) => (
             <button
               key={t ? "training" : "rest"}
@@ -191,11 +192,6 @@ export default function NutritionTargetsCard({
               </div>
               </div>
 
-              {/* Which of the two days is showing, and that the card swipes. */}
-              <div className="nd-dots" aria-hidden="true">
-                <span className={isTraining ? "on" : undefined} />
-                <span className={isTraining ? undefined : "on"} />
-              </div>
             </div>
           ) : (
             <p className="nd-empty">Your coach hasn&rsquo;t set your nutrition targets yet.</p>
