@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { NorCoachLogo } from "../components/NorCoachLogo";
 import DoneCheck from "../components/DoneCheck";
-import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
+import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
 import {
   addCustomFoodAction,
   addFoodEntryAction,
@@ -335,6 +335,33 @@ export default function FoodDiaryScreen({
       fd.set("meal", real);
       fd.set("name", clean);
       return renameFoodMealAction(fd);
+    });
+  };
+  // A meal of the client's own has a ⋯ (3 Nov, Alex: option B of docs/boards/own-meal-mockup.html): Rename, and Remove
+  // while it holds nothing. Renaming is the name box again, holding the name; left blank or unchanged, it stays.
+  const [mealMenu, setMealMenu] = useState<FoodMeal | null>(null);
+  const [renamingId, setRenamingId] = useState<FoodMeal | null>(null);
+  const finishRename = (id: FoodMeal, was: string, name: string) => {
+    setRenamingId(null);
+    const clean = name.trim();
+    if (!clean || clean === was) return;
+    setDiary((d) => ({ ...d, meals: d.meals.map((m) => (m.id === id ? { ...m, label: clean } : m)) }));
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("meal", id);
+    fd.set("name", clean);
+    void renameFoodMealAction(fd);
+  };
+  const removeMeal = (id: FoodMeal) => {
+    setMealMenu(null);
+    setDiary((d) => ({ ...d, meals: d.meals.filter((m) => m.id !== id) }));
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("meal", id);
+    startLoad(async () => {
+      await removeFoodMealAction(fd);
+      const next = await getFoodDiaryAction(clientId, date);
+      if (next) setDiary(next);
     });
   };
   // Naming the day to save it.
@@ -1032,12 +1059,12 @@ export default function FoodDiaryScreen({
                         onPointerCancel={holdEnd}
                         onContextMenu={(e) => e.preventDefault()}
                       >
-                        {namingId === meal.id ? (
+                        {namingId === meal.id || renamingId === meal.id ? (
                           <input
                             id={`fdi-meal-name-${meal.id}`}
                             className="fdi-meal-name-box"
                             type="text"
-                            defaultValue=""
+                            defaultValue={renamingId === meal.id ? meal.label : ""}
                             placeholder="Name the meal"
                             maxLength={30}
                             autoComplete="off"
@@ -1051,7 +1078,7 @@ export default function FoodDiaryScreen({
                                 e.currentTarget.blur();
                               }
                             }}
-                            onBlur={(e) => finishNaming(meal.id, e.currentTarget.value)}
+                            onBlur={(e) => (renamingId === meal.id ? finishRename(meal.id, meal.label, e.currentTarget.value) : finishNaming(meal.id, e.currentTarget.value))}
                             onFocus={(e) => {
                               const el = e.currentTarget;
                               releaseKeyboardHold();
@@ -1064,9 +1091,9 @@ export default function FoodDiaryScreen({
                       </span>
                       {/* A meal being named is its name box alone (3 Nov, Alex: "only show the icons once the name has been
                           saved"); left blank, it goes. */}
-                      {namingId !== meal.id && (
+                      {namingId !== meal.id && renamingId !== meal.id && (
                       <>
-                      {(meal.entries.length > 0 || meal.own) && (
+                      {meal.entries.length > 0 && (
                         <button type="button" className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} onClick={() => toggleFold(meal.id)} aria-expanded={!folded.has(meal.id)} aria-label={folded.has(meal.id) ? `Open ${meal.label}` : `Fold ${meal.label}`}>
                           <ChevronDownIcon />
                         </button>
@@ -1082,6 +1109,35 @@ export default function FoodDiaryScreen({
                             <BookmarkIcon />
                           </button>
                         ))}
+                      {meal.own && (
+                        <span className="fdi-meal-more-wrap">
+                          <button type="button" className="fdi-icon-btn fdi-meal-more" onClick={() => setMealMenu(mealMenu === meal.id ? null : meal.id)} aria-expanded={mealMenu === meal.id} aria-label={`More for ${meal.label}`}>
+                            <MoreIcon />
+                          </button>
+                          {mealMenu === meal.id && (
+                            <>
+                              <button type="button" className="fdi-meal-menu-scrim" aria-label="Close" onClick={() => setMealMenu(null)} />
+                              <span className="fdi-meal-menu" role="menu">
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setMealMenu(null);
+                                    setRenamingId(meal.id);
+                                  }}
+                                >
+                                  Rename
+                                </button>
+                                {meal.entries.length === 0 && (
+                                  <button type="button" role="menuitem" className="danger" onClick={() => removeMeal(meal.id)}>
+                                    Remove
+                                  </button>
+                                )}
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      )}
                       {!open && (
                         <button
                           type="button"
@@ -1187,27 +1243,6 @@ export default function FoodDiaryScreen({
                     )}
                     <div className={`fdi-fold${folded.has(meal.id) ? " folding" : ""}`}>
                     <div className="fdi-fold-inner">
-                    {meal.own && meal.entries.length === 0 && !open && namingId !== meal.id && (
-                      <div className="fdi-meal-empty">
-                        <p className="fdi-meal-empty-note">None yet</p>
-                        <button
-                          type="button"
-                          className="fdi-meal-remove"
-                          onClick={() => {
-                            const fd = new FormData();
-                            fd.set("clientId", String(clientId));
-                            fd.set("meal", meal.id);
-                            startLoad(async () => {
-                              await removeFoodMealAction(fd);
-                              const next = await getFoodDiaryAction(clientId, date);
-                              if (next) setDiary(next);
-                            });
-                          }}
-                        >
-                          Remove this meal
-                        </button>
-                      </div>
-                    )}
                     {meal.entries.map((e) => {
                       const selected = open?.kind === "amount" && open.entry?.id === e.id;
                       return (
