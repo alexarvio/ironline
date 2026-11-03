@@ -3,6 +3,7 @@
 // before this one. Never throws: a coach with no clients, no logs and no calls gets nulls, zeros and empty lists.
 
 import type { ActivityKind, ActivityRow, FeedBoard, NeedRow } from "./feedBoard";
+import { needCatOfHref } from "./needCats";
 import { getData, persist, type Data } from "./db";
 import {
   activityWords,
@@ -312,25 +313,25 @@ function needFrom(ctx: Ctx, c: ClientData, a: HomeAction): NeedRow | null {
   const open = needView(c.id, a, ctx.byEventId).open;
   if (a.id === "week") {
     const live = liveWeek(c.id);
-    return { ...base, kind: "week", what: a.title, words: null, since: null, action: "Add", href: live ? tab("training", c.id, `&program=${live.programId}&week=${live.index}`) : tab("training", c.id) };
+    return { ...base, cat: "training", kind: "week", what: a.title, words: null, since: null, action: "Add", href: live ? tab("training", c.id, `&program=${live.programId}&week=${live.index}`) : tab("training", c.id) };
   }
   if (a.id === "locked") {
     // No Done: the lock stands until it ends or is reset (Home stamps it afresh on every read, so a dismissal never holds).
-    return { ...base, kind: "locked", what: a.title, words: null, since: lockSince(ctx, c.id) ?? iso(a.at), action: "Unlock", href: open, dismissId: null };
+    return { ...base, cat: "account", kind: "locked", what: a.title, words: null, since: lockSince(ctx, c.id) ?? iso(a.at), action: "Unlock", href: open, dismissId: null };
   }
   if (/^reply-\d+$/.test(a.id)) {
     const n = Number(/^(\d+) messages/.exec(a.title)?.[1]) || 1;
     // One with no words: what it was ("A photo", "A voice message").
     const what = n > 1 ? `${n} messages` : a.quote ? "1 message" : cap(a.detail.replace(/^Sent /, "").replace(/\.$/, ""));
-    return { ...base, kind: "reply", what, words: a.quote ? a.detail : null, since: iso(a.at), action: "Reply", href: open };
+    return { ...base, cat: "messages", kind: "reply", what, words: a.quote ? a.detail : null, since: iso(a.at), action: "Reply", href: open };
   }
   if (/^reply-video-\d+$/.test(a.id)) {
-    return { ...base, kind: "video", what: a.title.replace(/ waiting for your reply$/, ""), words: null, since: iso(a.at), action: "Review", href: open };
+    return { ...base, cat: "training", kind: "video", what: a.title.replace(/ waiting for your reply$/, ""), words: null, since: iso(a.at), action: "Review", href: open };
   }
   const ask = /^call-(\d+)$/.exec(a.id);
   if (ask) {
     const r = (ctx.data.meeting_requests ?? []).find((x) => x.id === Number(ask[1]));
-    return { ...base, kind: "ask-call", what: "Asked for a call", words: r?.about?.trim() || null, since: iso(a.at), action: "Book", href: open };
+    return { ...base, cat: "meetings", kind: "ask-call", what: "Asked for a call", words: r?.about?.trim() || null, since: iso(a.at), action: "Book", href: open };
   }
   // A call over and not marked completed is not on the Feed (2 Nov, Alex: "unnecessary and bulky"): it stays on the
   // client's Meetings tab, its strip and its dot.
@@ -341,7 +342,7 @@ function needFrom(ctx: Ctx, c: ClientData, a: HomeAction): NeedRow | null {
   if (a.id.startsWith("read-")) {
     // The thing in the store's words, its first part: "Couldn't do Session 3", "Wrote a note on Hypertrophy".
     const what = (parts(a.title)[0] ?? a.title).replace(/\s*\(Week \d+\)$/, "");
-    return { ...base, kind: "read", what, words: a.detail?.trim() || null, since: iso(a.at), action: "Read", href: open };
+    return { ...base, cat: needCatOfHref(open), kind: "read", what, words: a.detail?.trim() || null, since: iso(a.at), action: "Read", href: open };
   }
   return null;
 }

@@ -655,12 +655,15 @@ export function loadPhaseNeeds(coachId: number): NeedRow[] {
   for (const c of listClients(coachId)) {
     const base = { clientId: c.id, client: c.name ?? "Client", avatarPath: c.avatar_path ?? null, time: null, words: null, since: null };
     if (listClientPhases(c.id).length === 0 && !data.training_programs.some((p) => p.client_id === c.id)) {
-      rows.push({ ...base, key: `${c.id}:setup`, kind: "phase", what: "No phase yet", action: "New phase", href: `/admin/redesign/plan?client=${c.id}`, dismissId: null });
+      rows.push({ ...base, key: `${c.id}:setup`, cat: "plan", kind: "phase", what: "No phase yet", action: "New phase", href: `/admin/redesign/plan?client=${c.id}`, dismissId: null });
       continue;
     }
     for (const a of getClientHome(c.id, feed).actions) {
       if (!PHASE_OWED.test(a.id)) continue;
-      rows.push({ ...base, key: `${c.id}:${a.id}`, kind: "phase", what: a.title, action: a.id.startsWith("track-") ? "Open" : "Fill in", href: needView(c.id, a, byId).open, dismissId: a.id });
+      // Its track's group: `track-training` names it, `empty-…` by the tab it opens (Lifestyle's is measurements).
+      const track = /^track-(lifestyle|training|nutrition)$/.exec(a.id)?.[1] ?? (a.tab === "measurements" ? "lifestyle" : a.tab);
+      const cat = track === "lifestyle" || track === "training" || track === "nutrition" ? track : "plan";
+      rows.push({ ...base, key: `${c.id}:${a.id}`, cat, kind: "phase", what: a.title, action: a.id.startsWith("track-") ? "Open" : "Fill in", href: needView(c.id, a, byId).open, dismissId: a.id });
     }
   }
   return rows;

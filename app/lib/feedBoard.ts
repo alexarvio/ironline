@@ -6,8 +6,12 @@
 
 import type { ActivityMark } from "./activityMark";
 
+import type { NeedCat } from "./needCats";
+
 /** A task for the coach, one a row (not one a client). */
 export type NeedRow = {
+  /** Its group. */
+  cat: NeedCat;
   /** Stable and unique across clients: "<clientId>:<HomeAction id>", or "<clientId>:meeting-<meetingId>" for a call today
       (a HomeAction id like "week" repeats from client to client, and "call-<id>" is already a call they asked for). */
   key: string;

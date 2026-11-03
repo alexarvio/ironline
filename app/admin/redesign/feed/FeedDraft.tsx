@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { dismissHomeActionAction } from "../../../lib/actions";
 import { Toaster } from "../../../components/ui/toast";
-import { CalendarIcon, ChatIcon, CheckIcon, EyeIcon, LockIcon, PlayIcon, PlusIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, CheckIcon, EyeIcon, LockIcon, PencilIcon, PhaseFlagIcon, PlayIcon, PlusIcon } from "../../../components/icons";
+import { byNeedCat, NeedAction, NeedFace, NeedGroup } from "../NeedGroups";
 import Pager from "../Pager";
 import KindMark from "../KindMark";
 import { logDate, logDateWidth } from "../../../lib/dayMonth";
@@ -84,11 +85,13 @@ function Titled({ title, children }: { title: string; children?: ReactNode }) {
   );
 }
 
-// ---- Needs you: a task a row. The face and name, the thing and their words, how long it has waited (rust past a day;
-// a call today its time; an empty week "this week"), the action as a white pill: the row and the pill open the same
-// place. ⋯ on hover: Done clears it (the row fades at once), when it can be cleared.
-function needIcon(kind: NeedRow["kind"]) {
-  switch (kind) {
+// ---- Needs you: a task a row, by category (NeedGroups). The date, the face and name, the thing and their words, how
+// long it has waited (rust past a day; an empty week "this week"), the action as its icon alone: the row and the icon
+// open the same place. The round check on hover clears it (the row fades at once), when it can be cleared.
+function needIcon(n: NeedRow) {
+  // A phase owed: a track with none (or a draft) opens the Plan, the flag; a live one with nothing in it, the pencil.
+  if (n.kind === "phase") return n.action === "Fill in" ? <PencilIcon /> : <PhaseFlagIcon />;
+  switch (n.kind) {
     case "week":
       return <PlusIcon />;
     case "locked":
@@ -102,8 +105,6 @@ function needIcon(kind: NeedRow["kind"]) {
       return <CalendarIcon />;
     case "complete-call":
       return <CheckIcon />;
-    case "phase":
-      return <PlusIcon />;
     case "read":
       return <EyeIcon />;
   }
@@ -154,38 +155,42 @@ export function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
     });
   };
 
+  // Every row's date in one column width, the whole list's (logDateWidth).
+  const dateW = logDateWidth(rows.filter((n) => n.since).map((n) => new Date(n.since!)));
+
   return (
     <section className="rls-section" aria-label="Needs you">
       <div className="trn-weekhead">
         <Titled title="Needs you">{left > 0 ? left : null}</Titled>
       </div>
-      <div className="rls-card rfd-card">
-        {rows.length === 0 ? (
+      {rows.length === 0 ? (
+        <div className="rls-card rfd-card">
           <p className="rls-none">None</p>
-        ) : (
-          <div className="rfd-rows">
-            {rows.map((n) => {
-              const w = waitOf(n, now);
-              return (
-                <div key={n.key} className={`rls-row rfd-row${out.has(n.key) ? " out" : ""}`}>
-                  <div className="rls-row-main rfd-need" onClick={(e) => open(e, n.href)}>
-                    <Link href={n.href} prefetch={false} className="rd-row-hit rfd-who">
-                      <Face name={n.client} src={n.avatarPath} />
-                      <span className="rfd-name">{n.client}</span>
+        </div>
+      ) : (
+        // By category (3 Nov, Alex: option C of docs/boards/needs-rows-mockup.html): a head and a card a group.
+        <div className={`nd-groups${rows.some((n) => n.since) ? "" : " nodate"}`} style={{ "--nd-date": `${dateW}px` } as CSSProperties}>
+          {byNeedCat(rows, (n) => n.cat).map(([cat, group]) => (
+            <NeedGroup key={cat} cat={cat} count={group.filter((n) => !out.has(n.key)).length}>
+              {group.map((n) => {
+                const w = waitOf(n, now);
+                return (
+                  <div key={n.key} className={`nd-row${out.has(n.key) ? " out" : ""}`} onClick={(e) => open(e, n.href)}>
+                    {/* The day it came in (logDate); a standing state (an empty week, a phase owed) has none. */}
+                    <span className="rd-logdate">{n.since ? logDate(new Date(n.since)) : ""}</span>
+                    <Link href={n.href} prefetch={false} className="rd-row-hit nd-who">
+                      <NeedFace name={n.client} src={n.avatarPath} />
+                      <span className="nd-name">{n.client}</span>
                     </Link>
-                    <span className="rfd-thing">
-                      <span className="rfd-what">{n.what}</span>
-                      {n.words && <span className="rfd-words">&ldquo;{n.words}&rdquo;</span>}
+                    <span className="nd-thing">
+                      <span className="nd-what">{n.what}</span>
+                      {n.words && <span className="nd-words">&ldquo;{n.words}&rdquo;</span>}
                     </span>
-                    {/* How long it has waited, then the action as its words and icon, no pill, each centred in its column
-                        (27 Oct, Alex: mockup A, "the days should be first"). */}
-                    <span className={`rfd-wait${w.late ? " late" : ""}`}>{w.text}</span>
-                    <span className="rfd-act">
-                      <Link href={n.href} prefetch={false} className="rfd-actword">
-                        {needIcon(n.kind)} {n.action}
-                      </Link>
+                    <span className={`nd-wait${w.late ? " late" : ""}`}>{w.text}</span>
+                    <span className="nd-acts">
+                      <NeedAction label={n.action} icon={needIcon(n)} href={n.href} />
                     </span>
-                    <span className="rfd-more">
+                    <span className="nd-more">
                       {/* Done in one click (25 Oct, Alex: the ⋯ held only Done): the round row button with a check. */}
                       {n.dismissId && (
                         <button
@@ -203,12 +208,12 @@ export function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
                       )}
                     </span>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                );
+              })}
+            </NeedGroup>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
