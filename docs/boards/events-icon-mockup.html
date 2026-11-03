@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Events icon</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --sec:#5b6474; --muted:#8b93a1; --line:#E1E5EB; --page:#F5F6F8; --green:#2f7a3f; --rust:#b8471f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #F5F5F5; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 70px; }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 26px; max-width: 820px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .panel { background: var(--page); border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); padding: 16px; }
+  .tag { display: inline-block; font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; margin: 0 0 4px; color: var(--green); }
+  .tag.now { color: var(--rust); }
+  .name { font-size: 13px; font-weight: 600; margin: 0 0 12px; }
+  .menu { background: #fff; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); padding: 4px 14px; }
+  .mi { display: flex; align-items: center; gap: 12px; padding: 10px 0; font-size: 15px; font-weight: 500; }
+  .mi svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .mi.hi { color: var(--ink); } .mi.lo { color: #98A2B3; }
+  .big { display: flex; gap: 18px; align-items: center; margin: 14px 0 0; padding-top: 12px; }
+  .big svg { width: 36px; height: 36px; fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .big small { font-size: 12px; color: var(--muted); font-weight: 500; line-height: 1.4; }
+  .note { margin: 22px 0 0; font-size: 12.5px; color: var(--sec); font-weight: 500; line-height: 1.5; max-width: 820px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Events icon: now and options</h1>
+  <p class="sub">Phases are the waving flag (on Events, Home's events row and the coach's to-do rows). The burger's Events entry is also a flag, a pennant. Each option below gives Events its own icon, shown in the burger beside the phase flag. Every line is 1.6. The phase flag is 2 today and goes to 1.6 whichever you pick.</p>
+
+  <div class="grid">
+    <div class="panel"><span class="tag now">Now</span><p class="name">Pennant</p>
+      <div class="menu">
+        <div class="mi hi"><svg viewBox="0 0 24 24" style="stroke-width:2"><path d="M5 21V4M5 4h12l-2 4 2 4H5"/></svg>Events</div>
+        <div class="mi lo"><svg viewBox="0 0 24 24" style="stroke-width:2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>A phase starts</div>
+      </div>
+      <div class="big"><svg viewBox="0 0 24 24" style="stroke-width:2"><path d="M5 21V4M5 4h12l-2 4 2 4H5"/></svg><small>Two flags: Events and a phase read as the same thing.</small></div>
+    </div>
+
+    <div class="panel"><span class="tag">Option A</span><p class="name">The itinerary</p>
+      <div class="menu">
+        <div class="mi hi"><svg viewBox="0 0 24 24"><path d="M7 3v18"/><circle cx="7" cy="6.5" r="2.5" fill="#fff"/><circle cx="7" cy="17.5" r="2.5" fill="#fff"/><path d="M12.5 6.5H20M12.5 17.5H18"/></svg>Events</div>
+        <div class="mi lo"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>A phase starts</div>
+      </div>
+      <div class="big"><svg viewBox="0 0 24 24"><path d="M7 3v18"/><circle cx="7" cy="6.5" r="2.5" fill="#fff"/><circle cx="7" cy="17.5" r="2.5" fill="#fff"/><path d="M12.5 6.5H20M12.5 17.5H18"/></svg><small>The Events screen itself: one spine with its rings and their lines.</small></div>
+    </div>
+
+    <div class="panel"><span class="tag">Option B</span><p class="name">A pin on the map</p>
+      <div class="menu">
+        <div class="mi hi"><svg viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Events</div>
+        <div class="mi lo"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>A phase starts</div>
+      </div>
+      <div class="big"><svg viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg><small>Somewhere to be: trips, work, a race. Close to the Trip event's own look.</small></div>
+    </div>
+
+    <div class="panel"><span class="tag">Option C</span><p class="name">A day with a star</p>
+      <div class="menu">
+        <div class="mi hi"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M12 12.3l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z" stroke-width="1.3"/></svg>Events</div>
+        <div class="mi lo"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>A phase starts</div>
+      </div>
+      <div class="big"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M12 12.3l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z" stroke-width="1.3"/></svg><small>A day that matters. It sits close to Meetings' plain calendar in the burger.</small></div>
+    </div>
+
+    <div class="panel"><span class="tag">Option D</span><p class="name">A ticket</p>
+      <div class="menu">
+        <div class="mi hi"><svg viewBox="0 0 24 24"><path d="M3.5 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4V18a1.5 1.5 0 0 0 1.5 1.5h14A1.5 1.5 0 0 0 20.5 18v-2a2 2 0 0 1 0-4 2 2 0 0 1 0-4V6A1.5 1.5 0 0 0 19 4.5H5A1.5 1.5 0 0 0 3.5 6z" transform="translate(0 0)"/><path d="M14.5 4.5v15" stroke-dasharray="2 2.4"/></svg>Events</div>
+        <div class="mi lo"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>A phase starts</div>
+      </div>
+      <div class="big"><svg viewBox="0 0 24 24"><path d="M3.5 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4V18a1.5 1.5 0 0 0 1.5 1.5h14A1.5 1.5 0 0 0 20.5 18v-2a2 2 0 0 1 0-4 2 2 0 0 1 0-4V6A1.5 1.5 0 0 0 19 4.5H5A1.5 1.5 0 0 0 3.5 6z"/><path d="M14.5 4.5v15" stroke-dasharray="2 2.4"/></svg><small>Something you go to. It reads more as a ticket than as a plan.</small></div>
+    </div>
+  </div>
+
+  <p class="note">My pick is A: it is the Events screen's own drawing, so the icon and the screen say the same thing, and it's far from both the flag and Meetings' calendar. Separately, 57 icons in the shared set are drawn at other weights (1.3 to 2.2); I can bring them all to 1.6 as a separate pass.</p>
+</div>
+</body>
+</html>
