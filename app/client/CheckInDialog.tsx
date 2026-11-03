@@ -71,7 +71,7 @@ export function sameNumber(a: string, b: string) {
 
 /** "Tue, Oct 13" or "Tuesday, October 13". */
 export const dayLabel = (iso: string, long = false) =>
-  new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", long ? { weekday: "long", month: "long", day: "numeric" } : { weekday: "short", month: "short", day: "numeric" });
+  new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", long ? { weekday: "long", month: "long", day: "numeric" } : { weekday: "short", month: "short", day: "numeric" }).replace("Sept", "Sep");
 
 export type CheckInForm = {
   /** The day the lines are for (yyyy-mm-dd). */

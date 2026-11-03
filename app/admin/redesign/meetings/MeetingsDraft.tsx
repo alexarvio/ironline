@@ -116,10 +116,10 @@ const addDaysIso = (iso: string, n: number) => {
   d.setDate(d.getDate() + n);
   return isoOf(d);
 };
-const monthCap = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short" });
+const monthCap = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short" }).replace("Sept", "Sep");
 const dayNum = (d: string) => String(parse(d).getDate());
-/** Dates in words are day/month (dayMonth, 20 Oct, Alex); the day picker's head keeps its words, and the past calls lead with logDate (21 Oct). */
-const dayHead = (d: string) => parse(d).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+/** Dates in words are day/month (dayMonth, 20 Oct, Alex): the day picker's head too, `Mon 9/11` (3 Nov, Alex: the audit); the past calls lead with logDate (21 Oct). */
+const dayHead = (d: string) => `${parse(d).toLocaleDateString("en-GB", { weekday: "short" })} ${dayMonth(d)}`;
 const toMin = (t: string) => {
   const [h, m] = t.split(":").map((x) => Number(x) || 0);
   return h * 60 + m;
@@ -1106,7 +1106,7 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
         <div className="rt-day-list">
           {onDay.length === 0 ? (
             <p className="rt-empty" style={{ padding: 0 }}>
-              Nothing booked.
+              None
             </p>
           ) : (
             onDay.map((e, i) => (

@@ -42,7 +42,7 @@ function paddedRange(min: number, max: number): [number, number] {
 // plain YYYY-MM-DD strings, so pin the time to noon local rather than
 // midnight UTC to dodge any timezone rollover onto the wrong day.
 function formatXLabel(dateStr: string) {
-  return new Date(`${dateStr}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(`${dateStr}T12:00:00`).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
 }
 
 // Evenly spaced point indices for x-axis ticks — first, last, and a few

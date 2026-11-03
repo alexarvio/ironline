@@ -19981,7 +19981,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .mts-list > li + li { border-top: 1px solid #E1E5EB; }
 .mts-row { padding: 14px 4px; }
 .mts-leaf { align-items: flex-end; width: 40px; }
-.mts-leaf b { font-size: 24px; font-weight: 300; letter-spacing: -0.02em; color: #141a24; }
+.mts-leaf b { font-size: 22px; font-weight: 300; letter-spacing: -0.02em; color: #141a24; }
 .mts-leaf small { font-weight: 600; color: #98A2B3; }
 .mts-row-title { font-size: 15px; font-weight: 500; color: #141a24; }
 .mts-row-sub { font-size: 12px; font-weight: 500; color: #8b93a1; }

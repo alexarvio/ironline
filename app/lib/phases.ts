@@ -42,7 +42,7 @@ export function phaseDays(startWeek: string, endWeek: string): number {
 
 /** "Aug 18 – Sep 28": the first day to the last. */
 export function phaseRange(startWeek: string, endWeek: string): string {
-  const fmt = (d: string) => parse(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const fmt = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
   return `${fmt(startWeek)} – ${fmt(phaseLastDay(endWeek))}`;
 }
 

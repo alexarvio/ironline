@@ -158,7 +158,7 @@ const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "Jul
 // fallback rather than guessing which of the three it is.
 function noteDateLabel(at: string | null): string {
   if (!at) return "";
-  return new Date(at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(at).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
 }
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -286,7 +286,7 @@ function meetingCardView(m: ReturnType<typeof listMeetings>[number], today: stri
     topic: m.topic || "Check-in call",
     inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
     whenLabel: [
-      when.toLocaleDateString("en-US", { weekday: "long" }),
+      when.toLocaleDateString("en-GB", { weekday: "long" }),
       m.time || null,
     ]
       .filter(Boolean)
@@ -441,7 +441,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
   const onScreen = sections.sections.filter((s) => s.id === "daily" || (s.id === "monthly" ? monthlyOpen : weeklyOpen)).flatMap((s) => s.metrics);
   const checkInCount = { done: onScreen.filter((m) => m.value !== "").length, total: onScreen.length };
 
-  const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
+  const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-GB", {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -471,7 +471,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
     if (session || !getDeployedProgram(CLIENT_ID)) return null;
     const next = new Date(`${weekStart(today)}T00:00:00`);
     next.setDate(next.getDate() + 7);
-    return { nextWeekLabel: next.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) };
+    return { nextWeekLabel: next.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace("Sept", "Sep") };
   })();
 
   // A session ended today: training is done for the day (Quick actions).
@@ -770,7 +770,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
             coachName={getCoachFirstName(CLIENT_ID)}
             photoPath={getCoachAvatarPath(CLIENT_ID)}
             note={ph?.client_note?.trim() || null}
-            noteDate={ph?.client_note_at ? new Date(ph.client_note_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null}
+            noteDate={ph?.client_note_at ? new Date(ph.client_note_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep") : null}
           />
         );
       })()}
@@ -925,7 +925,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   // logged on it (the last seven days below read their targets by it).
   const trainedOn = trainingDates(CLIENT_ID);
   const coachName = getCoachFirstName(CLIENT_ID);
-  const short = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const short = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
   const addDays = (iso: string, days: number) => {
     const d = new Date(`${iso}T00:00:00`);
     d.setDate(d.getDate() + days);
@@ -1085,7 +1085,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           : { text: `−${Math.round(-diff).toLocaleString("en-US")}`, tone: "under" };
       return {
         date: c.date,
-        label: `${d.toLocaleDateString("en-US", { weekday: "short" })} ${d.getDate()}`,
+        label: `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()}`,
         type: trained ? "Training" : "Rest",
         note: c.note ?? "",
         kcal,
@@ -1486,7 +1486,7 @@ export default async function ClientPage({
     ? { status: "completed", uploaded: photoCount, total: photoCount, coverUrl: null }
     : null;
   const checkIn = {
-    dateLabel: new Date(`${localDateStr()}T00:00:00`).toLocaleDateString("en-US", {
+    dateLabel: new Date(`${localDateStr()}T00:00:00`).toLocaleDateString("en-GB", {
       weekday: "long",
       month: "long",
       day: "numeric",
@@ -1502,7 +1502,7 @@ export default async function ClientPage({
     coachNote: (() => {
       const ph = getCurrentPhase(CLIENT_ID, "lifestyle");
       const text = ph?.client_note?.trim();
-      return text ? { text, date: ph?.client_note_at ? new Date(ph.client_note_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null } : null;
+      return text ? { text, date: ph?.client_note_at ? new Date(ph.client_note_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep") : null } : null;
     })(),
     history: getCheckInHistory(CLIENT_ID),
     // The hub's streak and month, and everything done, day by day, for its calendar (28 Sep).
@@ -1578,7 +1578,7 @@ export default async function ClientPage({
               <span style={{ width: `${elapsedPct}%` }} />
             </div>
             <div className="tr-progress-foot">
-              <span>Started {new Date(`${start}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+              <span>Started {new Date(`${start}T00:00:00`).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep")}</span>
               <span>
                 Week <b>{weekIndex}</b> of {deployedProgram.total_weeks}
               </span>
@@ -1609,7 +1609,7 @@ export default async function ClientPage({
     const list = listClientInvoices(CLIENT_ID);
     // Always there (17 Oct, Alex): with none yet the menu still has Invoices, and the screen says there is nothing to pay.
     if (list.length === 0) return { invoices: [] };
-    const short = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const short = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }).replace("Sept", "Sep");
     const rows = list.map((v) => {
       const when = new Date(`${v.issueDate}T12:00:00`);
       const late = v.status !== "paid" && (v.status === "due" || (!!v.dueDate && v.dueDate < today));

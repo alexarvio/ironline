@@ -99,7 +99,7 @@ export default function ActivityCalendar({ days, today, initialDay = null }: { d
           <RingEdge size={32} />
         </button>
         <span className="wc-title">
-          <b>{first.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</b>
+          <b>{first.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</b>
         </span>
         <button type="button" className="wc-nav next" onClick={() => move(1)} aria-label="Next month" disabled={month >= today.slice(0, 7)}>
           <ChevronLeftIcon />
@@ -172,7 +172,7 @@ function DayPanel({ day }: { day: ActivityDay }) {
     <div className="ac-panel">
       <div className="ac-panel-clip">
         <div className="ac-panel-body">
-          <span className="wc-list-date">{new Date(`${day.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span>
+          <span className="wc-list-date">{new Date(`${day.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", month: "long", day: "numeric" })}</span>
           {day.sessions.map((s, i) => (
             <div key={i} className="ac-item" style={{ ["--ac" as string]: colourOf("training") }}>
               <span className="ac-item-label">Training</span>

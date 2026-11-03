@@ -38,7 +38,7 @@ export default function InvoicesScreen({ invoices, onBack, focusId = null }: Inv
         <li key={i.id} id={`invoice-${i.id}`}>
           <Link href={`/client/invoices/${i.id}`} className="mts-row inv-row">
             <span className="mts-leaf" aria-hidden="true">
-              <b>{i.dayNumber}</b>
+              <b>{String(i.dayNumber).padStart(2, "0")}</b>
               <small>{i.monthCap}</small>
             </span>
             <span className="mts-row-text">

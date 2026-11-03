@@ -60,8 +60,8 @@ export const addDaysIso = (date: string, n: number) => {
   return iso(d);
 };
 export const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10));
-export const fmtDate = (isoDate: string) => parse(isoDate).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-const weekday = (isoDate: string) => parse(isoDate).toLocaleDateString("en-US", { weekday: "long" });
+export const fmtDate = (isoDate: string) => parse(isoDate).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
+const weekday = (isoDate: string) => parse(isoDate).toLocaleDateString("en-GB", { weekday: "long" });
 
 /** Slope per day from a least-squares fit; null with fewer than two points. */
 export function slopePerDay(points: SeriesPoint[]): number | null {

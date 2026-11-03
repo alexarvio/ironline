@@ -162,7 +162,7 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
       id: -(i + 1),
       mine: viewerIsClient,
       text: o.text,
-      dayLabel: today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+      dayLabel: today.toLocaleDateString("en-GB", { weekday: "long", month: "long", day: "numeric" }),
       timeLabel: today.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
       media: null,
       link: null,
