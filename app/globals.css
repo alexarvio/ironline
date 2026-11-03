@@ -21254,3 +21254,12 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 .ev-ask-q { align-self: center; font-size: 13px; font-weight: 600; color: #5b6474; }
 .hm-ev-remove.hm-ev-remove { min-height: 40px; padding: 0; border: 0; border-radius: 0; background: none; font-size: 13.5px; font-weight: 600; color: #b42318; }
 .hm-ev-remove.hm-ev-remove.quiet, .ev-x .ev-btn.ev-btn.quiet { color: #5b6474; }
+
+/* A scrollbar coming in never moves anything (3 Nov, Alex: "when the scrollbar appears the screen contracts and changes
+   size… make it so it never happens"): every coach list and panel that scrolls keeps its scrollbar's room from the
+   start, as the page does (html:has(.rd-page)). Text fields and pop-up cards are left out (the room would read as a
+   lopsided margin). A new scroll box joins this list. */
+.rr-list, .rbz-pop-list, .rd.rcl .rcl-clashes, .rd.rcl .rcl-day, .cal-drop.cal-drop, .rfd-drop-list, .rh-details-body, .cc-plan-list,
+.riv-tpl-list, .rm-monthdays, .rm-graph-list, .rt-day-list, .rt-tzp-list, .rm-thread, .rm-linkdlg .rm-linkdlg-list, .ncd-body, .cmp-menu,
+.rq-things, .npd.npd .rq-pop-scroll, .sup-thread, .tpk-list, .cgh-list, .dmvh-body, .dmvh-panel.mine, .rd-legend, .rd-exchat-list,
+.rd-dlg .rd-addrow-list, .rp-weeks, .cgy-body, .dmv-body, .sbh-drop, .rd-addpop-scroll, .trn-q-menu.trn-q-menu, .rd.trn .trn-q-sugs, .apx-list { scrollbar-gutter: stable; }
