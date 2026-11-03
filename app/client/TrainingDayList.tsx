@@ -113,7 +113,7 @@ export default function TrainingDayList({
   };
   // The gym picked for the open session; the server's answer takes over.
   const [gymPick, setGymPick] = useState<{ dayId: number; gymId: number | null } | null>(null);
-  const [toast, setToast] = useState<{ title: string; sub: string } | null>(null);
+  const [toast, setToast] = useState<{ title: string; facts: string[] } | null>(null);
   const [, startTransition] = useTransition();
   const [startProblem, setStartProblem] = useState<string | null>(null);
 
@@ -383,14 +383,20 @@ export default function TrainingDayList({
       )}
 
       {toast && host && createPortal(
+        // Where the in-progress pill was, in its white hairline look (3 Nov, Alex): the done check drawn in its ring, what was
+        // saved, its facts parted by bars.
         <div className="tr-toast" role="status">
           <span className="tr-toast-check" aria-hidden="true">
-            ✓
+            <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12.5l4.5 4.5L19 7.5" />
+            </svg>
           </span>
-          <span className="tr-toast-main">
-            <b>{toast.title}</b>
-            <small>{toast.sub}</small>
-          </span>
+          <b className="tr-toast-title">{toast.title}</b>
+          {toast.facts.length > 0 && (
+            <small className="tr-toast-facts">
+              <Bars parts={toast.facts} />
+            </small>
+          )}
         </div>,
         host
       )}
@@ -439,7 +445,8 @@ export default function TrainingDayList({
             const minutes = openDay.startedAt ? Math.max(1, Math.round((Date.now() - Date.parse(openDay.startedAt)) / 60000)) : null;
             const sets = loggedSets(openDay);
             setView(null);
-            setToast({ title: `${openDay.title} saved`, sub: `${minutes != null ? `${minutes} min, ` : ""}${sets} set${sets === 1 ? "" : "s"}. ${coachName} can see it now` });
+            // The facts alone, parted by bars (3 Nov, Alex: the hairline look; no sentence on who can see it).
+            setToast({ title: `${openDay.title} saved`, facts: [...(minutes != null ? [`${minutes} min`] : []), `${sets} set${sets === 1 ? "" : "s"}`] });
           }}
           onDiscarded={() => {
             // A free session discarded is gone, not put back as unstarted.
@@ -456,7 +463,7 @@ export default function TrainingDayList({
           }}
           onEdited={() => {
             setView({ dayId: openDay.key, screen: "overview" });
-            setToast({ title: "Changes saved", sub: `${coachName} sees the workout as it is now` });
+            setToast({ title: "Changes saved", facts: [] });
           }}
         />,
         host
