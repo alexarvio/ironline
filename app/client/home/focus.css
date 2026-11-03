@@ -44,3 +44,13 @@
 .hm-focus-text { flex: 1; min-width: 0; font-size: 16px; font-weight: 500; line-height: 22px; letter-spacing: -0.01em; color: #141a24; overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: reduce) { .hm-focus-fold, .hm-focus-chev, .hm-focus-goal { transition: none; } }
+
+/* Since 3 Nov (Alex: B of docs/boards/home-focus-mockup.html): always open under the coach's latest, no pill. The small-caps
+   head with the list mark, then the goals on the thin line, set in under the coach's words (the face's 36px and its gap). */
+.hm-focus.open-list { margin: 14px 0 0 66px; }
+.hm-focus-head { display: flex; align-items: center; gap: 8px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #8b93a1; }
+.hm-focus-head .hm-focus-mark { color: #8b93a1; }
+.hm-focus.open-list .hm-focus-list { margin-top: 4px; }
+.hm-focus.open-list .hm-focus-list::before { left: 6.5px; top: 10px; }
+.hm-focus.open-list .hm-focus-goal { padding-left: 1px; transform: none; }
+.hm-focus.open-list .hm-focus-goal:first-child { margin-top: 0; }

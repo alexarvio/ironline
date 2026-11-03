@@ -7,8 +7,7 @@ import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import { defaultPhaseCover } from "../lib/phaseCovers";
 import { type ProgressPics } from "./ProgressPicsCard";
-import ProgressPicsPill from "./home/ProgressPicsPill";
-import type { CheckInForm } from "./CheckInDialog";
+
 import type { HomeEvents } from "./EventsCard";
 import EventsTimelineCard from "./home/EventsTimelineCard";
 import type { CardCovers } from "./CardPictureSheet";
@@ -16,9 +15,13 @@ import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
 import { pic } from "../lib/pic";
 import type { LinkView } from "../lib/messageLinks";
-import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenEvents, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenEvents, useOpenFood, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 import { goalItemId } from "../lib/weightGoal";
-import FocusList from "./home/FocusList";
+import { FocusGoals } from "./home/FocusList";
+import HomeWeight from "./home/HomeWeight";
+import type { HomeWeight as HomeWeightData } from "./home/weightData";
+import CheckInDialog, { type CheckInForm } from "./CheckInDialog";
+import "./home/today.css";
 import { Bars } from "./Bars";
 import type { HomeFocus } from "../lib/focus";
 
@@ -123,12 +126,12 @@ export default function HomeHub({
   clientId = 0,
   cardCovers = {},
   focus = null,
-  focusOpen = true,
+  weight = null,
 }: {
-  /** To focus on (23 Oct, Alex): the coach's goals until the next call, first under the greeting; null, none. */
+  /** To focus on (23 Oct, Alex): the coach's goals until the next call, under the coach's latest since 3 Nov; null, none. */
   focus?: HomeFocus | null;
-  /** To focus on open or folded, as the client left it (the cookie, focusStamp.ts). */
-  focusOpen?: boolean;
+  /** The weight row (3 Nov, Alex); null with no weigh-in. */
+  weight?: HomeWeightData | null;
   /** Whose Home this is; the redesign mock-ups pass none. */
   clientId?: number;
   /** The client's own card pictures (12 Oct), a track at a time. */
@@ -191,14 +194,27 @@ export default function HomeHub({
   return (
     <div className="hm">
       <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
+      {/* Home's order since 3 Nov (Alex: option 3 of docs/boards/home-hierarchy-mockup.html, To focus on as B of
+          home-focus-mockup.html): Today, what today asks (the session, the check-in, food, the shape update while one is
+          open); the phase cards, shorter; the weight, always; the coach (their latest and To focus on under it, always
+          open); then Events and Meetings. */}
       <div className="hm-body">
-        {/* To focus on (23 Oct, Alex): the first thing they see, above Today and the cards, whenever the coach has set goals:
-            they stay until changed, or replaced by the next call's (24 Oct, Alex). The call line under them only while one is booked. */}
-        {focus && focus.goals.length > 0 && <FocusList focus={focus} coach={coach} today={today} initialOpen={focusOpen} />}
-        {/* The spine (8 Oct): Today, Your plan, then the coach, so Home is never
-            empty. The cards below say what is due; Today speaks only when
-            nothing is, so the top of the page still says something true. */}
-        {todoItems.length === 0 && <TodayCard next={todayNext} hasPlan={plan.length > 0} nextPhaseStart={planGap?.next?.start ?? null} />}
+        {todoItems.length === 0 ? (
+          <TodayCard next={todayNext} hasPlan={plan.length > 0} nextPhaseStart={planGap?.next?.start ?? null} />
+        ) : (
+          <TodayList
+            items={todoItems}
+            session={session}
+            checkInCount={checkInCount}
+            checkIn={hasCheckIns ? checkInForm : null}
+            food={food}
+            pics={progressPics}
+            clientId={clientId}
+            today={today}
+            coachName={coach.firstName}
+            phaseName={lifestyle?.name ?? null}
+          />
+        )}
         {/* "Your plan" (12 Oct): one swipe, lifestyle → training → nutrition, every card the same size.
             The lifestyle card's Log opens today's check-in in a pop-up (13 Oct); the card itself opens the screen. */}
         {cards.length > 0 && (
@@ -215,9 +231,11 @@ export default function HomeHub({
             ownCovers={cardCovers}
           />
         )}
-        {/* The coach's latest right under the phases (21 Oct, a coach's feedback, Alex: always here, no jumping). */}
-        <LatestActivityCard a={latestActivity} coach={coach} />
-        {progressPics && <TodaysTasks pics={progressPics} />}
+        {/* The weight, always (3 Nov, Alex): Goal | 7d | 30d | Phase as the coach's card. */}
+        {weight && <HomeWeight w={weight} today={today} />}
+        {/* The coach's latest (21 Oct, a coach's feedback, Alex: always here, no jumping), To focus on under it, always open
+            (3 Nov, Alex: B of home-focus-mockup.html, the coach's words in one place). */}
+        <LatestActivityCard a={latestActivity} coach={coach} focus={focus && focus.goals.length > 0 ? focus : null} />
         {/* What is coming up in their life (7 Oct): a trip, an injury, something started. Theirs to add; the coach's listed too. Above the coach's latest (9 Oct). */}
         {/* The timeline row (15 Oct) once there is anything at all; else the old card's empty state. */}
         {/* The timeline row always (17 Oct): with nothing logged it is just Today, "Nothing on", like the Events screen. */}
@@ -273,28 +291,83 @@ function HomeBanner({ dateLabel, firstName, initialHello }: { dateLabel: string;
   );
 }
 
-// ---- 2 · The progress-pictures card while it is due, on its own (no
-// heading: the check-in has its own way in, on the lifestyle phase card) ----
+// ---- 0b · Today: what today asks, a row each (3 Nov, Alex: option 3 of docs/boards/home-hierarchy-mockup.html) ----
+// Hairline rows flat on the page under `Today`: the thing's icon in a thin ring in its colour, what it is and one grey
+// fact, and on the right its action. The session's Start (or Resume) is the screen's one ink pill; the check-in's Fill in,
+// food's Log and the shape update's Add (Continue once begun, View once done) are words. The phase cards keep their own.
 
-function TodaysTasks({ pics }: { pics: NonNullable<ProgressPics> }) {
-  const due = pics.status === "due";
-  // Just done: a short buzz on phones that can.
-  const [seenDue, setSeenDue] = useState(due);
-  if (seenDue !== due) {
-    setSeenDue(due);
-    if (!due) {
-      try {
-        navigator.vibrate?.(40);
-      } catch {}
-    }
-  }
-  // A quiet task row (16 Oct), not a tile: it shows while a set is due and says
-  // Completed for the rest of the day the last picture went in (17 Oct, Alex:
-  // it used to vanish on coming back from the pictures screen, which remounts
-  // Home). When to show it at all is the server's call (homePhotos).
+const TODAY_ICON = {
+  training: "M6.5 8v8M17.5 8v8M3.5 10v4M20.5 10v4M6.5 12h11",
+  lifestyle: "M12 19.5s-7-4.4-7-9.6A3.9 3.9 0 0 1 12 7.6a3.9 3.9 0 0 1 7 2.3c0 5.2-7 9.6-7 9.6z",
+  nutrition: "M12 7.5c-1-1.8-2.9-2.3-4.4-1.8C5.2 6.5 4.6 9.3 5.5 12.2c.9 2.9 2.8 5.8 4.3 5.8.9 0 1.3-.5 2.2-.5s1.3.5 2.2.5c1.5 0 3.4-2.9 4.3-5.8.9-2.9.3-5.7-2.1-6.5-1.5-.5-3.4 0-4.4 1.8zM12 7.5c0-1.9.9-3.3 2.4-4",
+  shape: "M4 8h4l2-3h4l2 3h4v11H4zM12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+} as const;
+const TODAY_COLOR = { training: "#3a3390", lifestyle: "#a08a5c", nutrition: "#1d7a70", shape: "#b8471f" } as const;
+
+function TodayRow({ kind, title, fact, action, ink = false, onClick }: { kind: keyof typeof TODAY_ICON; title: string; fact: React.ReactNode; action: string; ink?: boolean; onClick: () => void }) {
   return (
-    <section className="hm-tasks" aria-label="Shape update">
-      <ProgressPicsPill pics={pics} />
+    <button type="button" className="hm-td-row" onClick={onClick} aria-label={`${title}. ${action}.`}>
+      <span className="hm-td-ring" style={{ color: TODAY_COLOR[kind] }} aria-hidden="true">
+        <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+          <path d={TODAY_ICON[kind]} />
+        </svg>
+      </span>
+      <span className="hm-td-text">
+        <span className="hm-td-title">{title}</span>
+        {fact && <span className="hm-td-fact">{fact}</span>}
+      </span>
+      <span className={`hm-td-act${ink ? " ink" : ""}`} aria-hidden="true">
+        {action}
+      </span>
+    </button>
+  );
+}
+
+function TodayList({ items, session, checkInCount, checkIn, food, pics, clientId, today, coachName, phaseName }: { items: string[]; session: HomeSession; checkInCount: { done: number; total: number } | null; checkIn: CheckInForm | null; food: PhaseFoodToday; pics: ProgressPics; clientId: number; today: string; coachName: string; phaseName: string | null }) {
+  const goToTab = useNavigateTab();
+  const openCheckIn = useOpenCheckIn();
+  const openFood = useOpenFood();
+  const openPhotos = useOpenPhotos();
+  // The check-in opens in its pop-up, as the lifestyle card's Log does (13 Oct).
+  const [logOpen, setLogOpen] = useState(false);
+  const kcal = (v: number) => Math.round(v).toLocaleString("en-US");
+  const n = pics ? Math.max(1, pics.total) : 0;
+  const k = pics ? Math.min(n, pics.uploaded) : 0;
+  return (
+    <section className="hm-td" aria-label="Today">
+      <span className="hm-td-head">Today</span>
+      {items.includes("training") && session && (
+        <TodayRow
+          kind="training"
+          title={session.name}
+          fact={<Bars parts={[`${session.exercises} exercises`, session.estMinutes ? `about ${session.estMinutes} min` : null]} />}
+          action={session.live ? "Resume" : "Start"}
+          ink
+          onClick={() => goToTab?.("training", session.dayId)}
+        />
+      )}
+      {items.includes("check-in") && checkInCount && (
+        <TodayRow
+          kind="lifestyle"
+          title="Check-in"
+          fact={`${checkInCount.total - checkInCount.done} of ${checkInCount.total} still to fill`}
+          action="Fill in"
+          onClick={() => (checkIn ? setLogOpen(true) : openCheckIn?.("daily"))}
+        />
+      )}
+      {items.includes("food") && food && (
+        <TodayRow
+          kind="nutrition"
+          title="Food diary"
+          fact={food.target ? `${kcal(food.eaten)} of ${kcal(food.target)} kcal` : food.mealsTotal ? `${food.mealsLogged ?? 0} of ${food.mealsTotal} meals` : null}
+          action="Log"
+          onClick={() => (openFood ? openFood() : goToTab?.("nutrition"))}
+        />
+      )}
+      {items.includes("pictures") && pics && (
+        <TodayRow kind="shape" title="Shape update" fact={`${k} of ${n} photos`} action={k > 0 ? "Continue" : "Add"} onClick={() => openPhotos?.()} />
+      )}
+      {logOpen && checkIn && <CheckInDialog clientId={clientId} form={checkIn} today={today} coachName={coachName} phaseName={phaseName} onClose={() => setLogOpen(false)} />}
     </section>
   );
 }
@@ -327,7 +400,7 @@ function areaOf(a: LatestActivity): NotificationCategory {
   }
 }
 
-function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstName: string; photoPath: string | null } }) {
+function LatestActivityCard({ a, coach, focus = null }: { a: LatestActivity; coach: { firstName: string; photoPath: string | null }; /** To focus on, under the note, always open (3 Nov, Alex). */ focus?: HomeFocus | null }) {
   const openMessages = useOpenMessages();
   const openCoach = useOpenCoach();
   const openLink = useOpenLink();
@@ -376,6 +449,13 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
           else openMessages?.();
         }
         return;
+      case "focus": {
+        // New goals: their list, under this note now (3 Nov, Alex).
+        const list = document.getElementById("home-focus");
+        if (list) list.scrollIntoView({ behavior: "smooth", block: "center" });
+        else goToTab?.("home");
+        return;
+      }
       case "welcome":
         openCoach?.();
         return;
@@ -437,6 +517,7 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
           )}
         </div>
       </article>
+      {focus && <FocusGoals focus={focus} />}
       {watching && a.videoReply && <VideoReplySheet reply={a.videoReply} onClose={() => setWatching(false)} />}
     </section>
   );
