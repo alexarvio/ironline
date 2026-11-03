@@ -893,16 +893,8 @@ function WeightCard({
   const [goalDlg, setGoalDlg] = useState<{ goal: WeightGoalView | null } | null>(null);
   const all = weight ? [...weight.points].sort((a, b) => timeOf(a.date) - timeOf(b.date)) : [];
   const latest = weight ? (weight.now ?? all.at(-1)?.value ?? null) : null;
-  // Where a new goal starts: the last 7 days' average (as every goal reads it), else the latest reading.
-  const nowKg = (() => {
-    const known = goals.find((g) => g.nowKg != null)?.nowKg;
-    if (known != null) return known;
-    const last = all.at(-1);
-    if (!last) return latest;
-    const from = addDaysIso(last.date.slice(0, 10), -6);
-    const week = all.filter((p) => p.date.slice(0, 10) >= from);
-    return week.reduce((s, p) => s + p.value, 0) / week.length;
-  })();
+  // Where a new goal starts (3 Nov, Alex: "from now and the current weight"): the weight beside the title, the latest.
+  const nowKg = latest;
   // The head (2 Nov, Alex): the current goal's verdict as the one state pill after the title, its facts after the change
   // under it (`82 kg by 20/12 | 5.6 kg to go`; settled, `Reached 14/12` or `Missed by 1.2 kg`), and + Goal always in the
   // tools, so the card never changes height between windows, readings or none.
@@ -996,7 +988,7 @@ function WeightCard({
       <span className="rh-under">
         <SepJoin
           parts={[
-            // In the Goal view, the change since the goal was set (from its start, the 7-day average then).
+            // In the Goal view, the change since the goal was set (from its start, the weigh-in it was set on).
             ...(goalFrom && active
               ? points.length > 0
                 ? [<b key="kg">{signed1(latest - active.startKg)} kg</b>]
