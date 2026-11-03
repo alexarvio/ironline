@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Type weights</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --green:#2f7a3f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #F5F5F5; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 70px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 28px; max-width: 820px; line-height: 1.5; }
+  section { margin: 0 0 40px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  h2 b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .what { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 14px; max-width: 760px; line-height: 1.5; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+  .panel { background: #F5F5F5; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); padding: 16px; }
+  .tag { display: inline-block; font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; margin: 0 0 12px; }
+  .tag.now { color: #b8471f; } .tag.new { color: var(--green); }
+  .note { margin: 12px 0 0; font-size: 12px; color: var(--muted); font-weight: 500; line-height: 1.45; }
+  .sep { display: inline-block; width: 1px; height: .72em; background: rgba(255,255,255,.4); margin: 0 8px; vertical-align: baseline; }
+  .sep.d { background: #C9CFD8; }
+
+  /* 1. Banners. */
+  .bn { position: relative; height: 92px; border-radius: 14px; overflow: hidden; padding: 14px 14px; color: #fff; background: linear-gradient(160deg, var(--a), #1b1d24); margin-bottom: 8px; }
+  .bn small { display: block; font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; opacity: .8; }
+  .bn b { display: block; margin-top: 4px; line-height: 1.1; letter-spacing: -.01em; }
+  .now .bn small { font-weight: 700; }
+  .now .bn b { font-weight: 700; }
+  .new .bn small { font-weight: 600; }
+  .new .bn b { font-weight: 600; font-size: 26px; }
+
+  /* 2. Session overview. */
+  .so { border-radius: 14px; overflow: hidden; background: linear-gradient(160deg, #5c6a7e, #1b1d24); color: #fff; padding: 16px 14px 14px; }
+  .so-top { display: flex; align-items: center; justify-content: space-between; }
+  .so-top b { font-size: 24px; }
+  .chip { height: 26px; padding: 0 12px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 12px; }
+  .now .so-top b { font-weight: 700; }
+  .now .chip { background: #2f7a3f; color: #fff; font-weight: 700; }
+  .new .so-top b { font-weight: 600; }
+  .new .chip { padding: 0; color: #9fd6a8; font-weight: 600; font-size: 13px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 14px; border-radius: 14px; background: rgba(255,255,255,.94); color: var(--ink); }
+  .stats div { padding: 10px 0; text-align: center; }
+  .stats b { display: block; font-size: 17px; font-weight: 700; }
+  .stats small { font-size: 10px; letter-spacing: .1em; font-weight: 700; color: #757575; }
+  .facts { margin-top: 12px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,.85); }
+
+  /* 3. Check-in count. */
+  .ci { border-radius: 14px; padding: 16px 14px; background: linear-gradient(160deg, #6e5c4a, #1d1a17); display: flex; justify-content: space-between; align-items: center; color: #fff; }
+  .ci > span:first-child { font-size: 14px; letter-spacing: .16em; font-weight: 600; }
+  .cnt { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px 0 10px; border-radius: 999px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .cnt i { width: 8px; height: 8px; border-radius: 999px; }
+  .now .cnt { background: #E0F2F1; color: #1E3A5F; font-weight: 700; }
+  .now .cnt i { background: #00897B; }
+  .now .cnt em { font-style: normal; color: #9E9E9E; font-weight: 600; }
+  .new .cnt { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); color: #fff; font-weight: 600; }
+  .new .cnt i { background: #fff; opacity: .5; }
+  .new .cnt em { font-style: normal; color: rgba(255,255,255,.65); font-weight: 500; }
+  .new .cnt.done i { background: #7fd08f; opacity: 1; }
+
+  /* 4. Nutrition labels. */
+  .nu { display: flex; align-items: center; gap: 22px; padding: 6px 4px; }
+  .ring { width: 108px; height: 108px; border-radius: 999px; box-shadow: inset 0 0 0 9px #e3f1ef; display: grid; place-items: center; text-align: center; flex: none; }
+  .ring b { display: block; font-size: 24px; font-weight: 500; }
+  .lab { display: block; margin-top: 3px; font-size: 10px; text-transform: uppercase; }
+  .now .lab { font-weight: 800; letter-spacing: .1em; color: #757575; }
+  .new .lab { font-weight: 600; letter-spacing: .16em; font-size: 10.5px; color: #5b6474; }
+  .mac div { padding: 6px 0 6px 10px; border-left: 3px solid var(--c); margin-bottom: 8px; }
+  .mac b { font-size: 20px; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Type weights: now and proposed</h1>
+  <p class="sub">The rule: client screens use 500 and 600 only (big light numerals may be 300). These four places still use 700 or 800. Left is today, right the proposal.</p>
+
+  <section>
+    <h2><b>1</b>Photo banners</h2>
+    <p class="what">Every banner's eyebrow and title are 700, and the titles come in different sizes (22 to 32px) from screen to screen.</p>
+    <div class="pair">
+      <div class="panel now"><span class="tag now">Now</span>
+        <div class="bn" style="--a:#5c6a7e"><small>Training</small><b style="font-size:28px">Hypertrophy</b></div>
+        <div class="bn" style="--a:#8a7a5e"><small>Nutrition</small><b style="font-size:32px">bulk</b></div>
+        <div class="bn" style="--a:#4b6a6a"><small>Food diary</small><b style="font-size:30px">Today</b></div>
+        <div class="bn" style="--a:#6e5c4a"><small>Session</small><b style="font-size:22px">Lower</b></div>
+      </div>
+      <div class="panel new"><span class="tag new">Proposed</span>
+        <div class="bn" style="--a:#5c6a7e"><small>Training</small><b>Hypertrophy</b></div>
+        <div class="bn" style="--a:#8a7a5e"><small>Nutrition</small><b>bulk</b></div>
+        <div class="bn" style="--a:#4b6a6a"><small>Food diary</small><b>Today</b></div>
+        <div class="bn" style="--a:#6e5c4a"><small>Session</small><b>Lower</b></div>
+        <p class="note">Eyebrows at 600, titles at 600 and one size (26px) on every banner.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>2</b>Session overview header</h2>
+    <p class="what">The status is a filled green chip at 700, while the Training list says the same thing in plain words. The stats sit in a white tile, at 700.</p>
+    <div class="pair">
+      <div class="panel now"><span class="tag now">Now</span>
+        <div class="so"><div class="so-top"><b>Lower</b><span class="chip">Completed</span></div>
+          <div class="stats"><div><b>46</b><small>MIN</small></div><div><b>18</b><small>SETS</small></div><div><b>5</b><small>EXERCISES</small></div></div></div>
+      </div>
+      <div class="panel new"><span class="tag new">Proposed</span>
+        <div class="so"><div class="so-top"><b>Lower</b><span class="chip">Completed</span></div>
+          <div class="facts">Mon 2 Nov<span class="sep"></span>46 min<span class="sep"></span>18 sets<span class="sep"></span>Muscle Factory</div></div>
+        <p class="note">The status as words in green, as the Training list shows it; the facts as one line parted by bars, no tile.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>3</b>The check-in's count (3 / 10)</h2>
+    <p class="what">A mint pill with navy numbers at 700 and a teal dot, colours from before the redesign.</p>
+    <div class="pair">
+      <div class="panel now"><span class="tag now">Now</span>
+        <div class="ci"><span>CHECK-IN</span><span class="cnt"><i></i>3 <em>/ 10</em></span></div>
+      </div>
+      <div class="panel new"><span class="tag new">Proposed</span>
+        <div class="ci"><span>CHECK-IN</span><span class="cnt"><i></i>3 <em>/ 10</em></span></div>
+        <div class="ci" style="margin-top:8px"><span>CHECK-IN</span><span class="cnt done"><i></i>10 <em>/ 10</em></span></div>
+        <p class="note">The glass pill the banner already uses, numbers at 600 and the total grey at 500; the dot turns green once all are in.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>4</b>Nutrition's ring and macro labels</h2>
+    <p class="what">"KCAL EATEN", "PROTEIN" and the rest are 800 in an old grey with tight spacing.</p>
+    <div class="pair">
+      <div class="panel now"><span class="tag now">Now</span>
+        <div class="nu"><div class="ring"><div><b>2,310</b><span class="lab">kcal</span></div></div>
+          <div class="mac"><div style="--c:#3b4ea0"><b>200</b><span class="lab">Protein</span></div><div style="--c:#d4a03b"><b>220</b><span class="lab">Carbs</span></div></div></div>
+      </div>
+      <div class="panel new"><span class="tag new">Proposed</span>
+        <div class="nu"><div class="ring"><div><b>2,310</b><span class="lab">kcal</span></div></div>
+          <div class="mac"><div style="--c:#3b4ea0"><b>200</b><span class="lab">Protein</span></div><div style="--c:#d4a03b"><b>220</b><span class="lab">Carbs</span></div></div></div>
+        <p class="note">The app's small label: 600, wider spacing, the label grey.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
