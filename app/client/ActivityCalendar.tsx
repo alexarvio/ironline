@@ -65,9 +65,9 @@ export default function ActivityCalendar({ days, today, initialDay = null }: { d
     return landOnSoon(() => panelRef.current, "center", 300);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
   }, []);
-  // The open day folding shut before it goes.
-  const [closing, setClosing] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The day each week last showed (3 Nov, Alex: on the shared fold): a week's fold keeps it while it folds shut, so the
+  // panel eases away with its words in it rather than emptying first.
+  const [shown, setShown] = useState<Record<string, string>>({});
   const [y, m] = month.split("-").map(Number);
   const first = new Date(y, m - 1, 1);
   const lead = (first.getDay() + 6) % 7;
@@ -76,26 +76,20 @@ export default function ActivityCalendar({ days, today, initialDay = null }: { d
   while (cells.length % 7) cells.push(null);
   const weeks = Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
 
-  const close = () => {
-    setClosing(true);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      setPicked(null);
-      setClosing(false);
-    }, 220);
-  };
+  /** A week by its first day, as the folds are keyed. */
+  const weekOf = (d: string) => weeks.find((wk) => wk.includes(d))?.find(Boolean) ?? d;
+  // A tap opens the day under its week; the same day again folds it shut; another day in the open week only swaps
+  // what is in it (3 Nov, Alex). Every opening and closing is the shared fold, no timers.
   const pick = (d: string) => {
-    if (d === picked) return close();
-    if (timer.current) clearTimeout(timer.current);
-    setClosing(false);
+    if (d === picked) return setPicked(null);
+    setShown((s) => ({ ...s, [weekOf(d)]: d }));
     setPicked(d);
   };
   const move = (n: number) => {
     setMonth(iso(new Date(y, m - 1 + n, 1)).slice(0, 7));
     setPicked(null);
-    setClosing(false);
+    setShown({});
   };
-  const day = picked ? byDate.get(picked) ?? null : null;
 
   return (
     <section className="wc ac" aria-label="Activity calendar">
@@ -139,7 +133,7 @@ export default function ActivityCalendar({ days, today, initialDay = null }: { d
                 <button
                   key={d}
                   type="button"
-                  className={`ac-day${parts.length ? " did" : ""}${d === today ? " today" : ""}${d > today ? " soon" : ""}${d === picked && !closing ? " on" : ""}`}
+                  className={`ac-day${parts.length ? " did" : ""}${d === today ? " today" : ""}${d > today ? " soon" : ""}${d === picked ? " on" : ""}`}
                   onClick={() => pick(d)}
                   disabled={!parts.length}
                   aria-expanded={parts.length ? d === picked : undefined}
@@ -154,12 +148,18 @@ export default function ActivityCalendar({ days, today, initialDay = null }: { d
               );
             })}
           </div>
-          {/* The picked day opens here, under its own week. */}
-          {day && week.includes(day.date) && (
-            <div ref={panelRef}>
-              <DayPanel key={day.date} day={day} closing={closing} />
-            </div>
-          )}
+          {/* The picked day opens here, under its own week, on the shared fold; the week keeps the day it last showed
+              while it folds shut. */}
+          {(() => {
+            const key = week.find(Boolean) ?? "";
+            const open = !!picked && week.includes(picked);
+            const showing = byDate.get(open ? picked! : shown[key] ?? (initialDay && week.includes(initialDay) ? initialDay : "")) ?? null;
+            return (
+              <div ref={open ? panelRef : undefined} className={`ac-fold${open ? " open" : ""}`} aria-hidden={!open} inert={!open}>
+                <div className="ac-fold-in">{showing && <DayPanel key={showing.date} day={showing} />}</div>
+              </div>
+            );
+          })()}
         </div>
       ))}
       {days.length === 0 && <p className="wc-empty">Nothing logged</p>}
@@ -167,9 +167,9 @@ export default function ActivityCalendar({ days, today, initialDay = null }: { d
   );
 }
 
-function DayPanel({ day, closing }: { day: ActivityDay; closing: boolean }) {
+function DayPanel({ day }: { day: ActivityDay }) {
   return (
-    <div className={`ac-panel${closing ? " closing" : ""}`}>
+    <div className="ac-panel">
       <div className="ac-panel-clip">
         <div className="ac-panel-body">
           <span className="wc-list-date">{new Date(`${day.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span>
