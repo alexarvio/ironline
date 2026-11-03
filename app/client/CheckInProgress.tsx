@@ -247,7 +247,9 @@ function MetricPanel({
   const activeGoal = goals?.find((g) => g.active) ?? null;
   const shownGoal = activeGoal ?? goals?.filter((g) => g.settled).at(-1) ?? null;
   const goalDay = activeGoal ? dayNum(activeGoal.byDate) : null;
-  const plotEnd = goalDay != null && goalDay > end ? (shown === "Goal" ? goalDay : Math.min(goalDay, end + 2 * Math.max(7, end - start))) : end;
+  // The goal's line and the days to it only in the Goal range (3 Nov, Alex: "only show this goal line whenever the goal is
+  // toggled, not on 7d 30d or phase"); the other ranges end today.
+  const plotEnd = shown === "Goal" && goalDay != null && goalDay > end ? goalDay : end;
   const goalFacts = (() => {
     if (!shownGoal) return [];
     const g = shownGoal;
@@ -367,6 +369,7 @@ function Chart({
   // set to the goal, then on through the milestones after it, clipped to the days shown; a ring on each goal. The
   // later milestones fainter. A goal past the plot's end is pinned at its right edge with its weight and day.
   const plan = (() => {
+    if (range !== "Goal") return null;
     const gs = series.goals ?? [];
     const at = gs.findIndex((g) => g.active);
     if (at < 0) return null;

@@ -961,11 +961,9 @@ function WeightCard({
   const charted = [weight.windows["7d"], weight.windows["30d"], weight.windows.phase].some((x) => x != null && inWindow(x.from).length >= 2);
   // The goals over the window (2 Nov, Alex): the scale holds their weights and the plan where the chart begins, so the
   // dashed path and every ring sit inside the frame.
-  const plan = goalFrom
-    ? goalLayout(goalFrom, all.at(-1)?.date ?? null, goals, isoToday(), true)
-    : points.length >= 2
-      ? goalLayout(points[0].date.slice(0, 10), points[points.length - 1].date, goals, isoToday())
-      : null;
+  // Only in the Goal view (3 Nov, Alex: "only show this goal line whenever the goal is toggled, not on 7d 30d or phase"):
+  // the other windows are the weight alone, in ink, up to the last reading.
+  const plan = goalFrom ? goalLayout(goalFrom, all.at(-1)?.date ?? null, goals, isoToday(), true) : null;
   const grid = goalFrom || points.length >= 2 ? weightGrid([...points.map((p) => p.value), ...(plan ? [...plan.segs.flatMap((s) => [s.kgA, s.kgB]), ...plan.marks.map((m) => m.kg)] : [])]) : null;
   const gridText = grid ? grid.lines.map((v) => v.toFixed(grid.decimals)) : [];
   // The gutter on the right holds the longest of the grid's kg (11px numerals, about 6.3px a character, 8px from the lines).
