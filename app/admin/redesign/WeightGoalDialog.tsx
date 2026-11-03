@@ -8,7 +8,7 @@ import { DialogClose, DialogContent, DialogTitle } from "../../components/ui/dia
 import { WeightGoalIcon } from "../../components/icons";
 import { deleteWeightGoalAction, saveWeightGoalAction } from "../../lib/actions";
 import { dayMonth } from "../../lib/dayMonth";
-import { daysBetween, kgFrom, kgIn, VERDICT_TONE, VERDICT_WORD, type WeightGoalView } from "../../lib/weightGoal";
+import { kgFrom, kgIn, VERDICT_TONE, VERDICT_WORD, type WeightGoalView } from "../../lib/weightGoal";
 import DatePick from "./DatePick";
 import { SepJoin } from "./Sep";
 
@@ -31,7 +31,6 @@ export default function WeightGoalDialog({
   clientId,
   goal,
   unit = "kg",
-  nowKg,
   initialBy,
   onDone,
 }: {
@@ -40,8 +39,6 @@ export default function WeightGoalDialog({
   goal: WeightGoalView | null;
   /** The coach's unit. */
   unit?: "kg" | "lbs";
-  /** The client's latest weigh-in, kg: where a new goal starts (3 Nov, Alex). */
-  nowKg: number | null;
   /** A new goal's date to start from (a week clicked on the Plan). */
   initialBy?: string;
   onDone: () => void;
@@ -58,10 +55,6 @@ export default function WeightGoalDialog({
   const shownBefore = goal ? one(kgIn(goal.targetKg, unit)) : null;
   const weightSame = goal != null && weight === shownBefore;
   const targetKg = weightSame ? goal.targetKg : Number.isFinite(typed) && typed > 0 ? kgFrom(typed, unit) : null;
-  const fromKg = goal?.startKg ?? nowKg;
-  const fromDay = goal?.startDate ?? today;
-  const weeks = by ? daysBetween(fromDay, by) / 7 : null;
-  const perWeek = targetKg != null && fromKg != null && weeks && weeks > 0 ? (kgIn(targetKg, unit) - kgIn(fromKg, unit)) / weeks : null;
   const changed = !goal || !weightSame || by !== goal.byDate;
   const ready = targetKg != null && /^\d{4}-\d{2}-\d{2}$/.test(by) && changed;
 
@@ -158,17 +151,7 @@ export default function WeightGoalDialog({
           />
         </div>
       </div>
-      {/* One live fact (no sentence): where it starts, the pace it asks, how long. */}
-      <p className="wgd-fact">
-        <SepJoin
-          parts={[
-            fromKg != null ? `From ${one(kgIn(fromKg, unit))} ${unit}${goal ? ` on ${dayMonth(fromDay)}` : ""}` : null,
-            // The sign only once it rounds to something; under two weeks, the days.
-            perWeek != null ? `${one(perWeek) === "0" ? "" : perWeek > 0 ? "+" : "−"}${one(Math.abs(perWeek))} ${unit} a week` : null,
-            weeks != null && weeks > 0 ? (weeks < 2 ? `${Math.round(weeks * 7)} ${Math.round(weeks * 7) === 1 ? "day" : "days"}` : `${Math.round(weeks)} weeks`) : null,
-          ]}
-        />
-      </p>
+      {/* No `From 90.1 kg | +0.3 kg a week | 6 weeks` line (3 Nov, Alex: "take out… that whole row"). */}
       {refused && <p className="dlh-error">{refused}</p>}
       {goal?.settled && (
         <p className="wgd-fact">

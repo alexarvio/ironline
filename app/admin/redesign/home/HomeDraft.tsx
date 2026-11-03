@@ -897,8 +897,6 @@ function WeightCard({
   const [goalDlg, setGoalDlg] = useState<{ goal: WeightGoalView | null } | null>(null);
   const all = weight ? [...weight.points].sort((a, b) => timeOf(a.date) - timeOf(b.date)) : [];
   const latest = weight ? (weight.now ?? all.at(-1)?.value ?? null) : null;
-  // Where a new goal starts (3 Nov, Alex: "from now and the current weight"): the weight beside the title, the latest.
-  const nowKg = latest;
   // The head (2 Nov, Alex): the current goal's verdict as the one state pill after the title, its facts after the change
   // under it (`82 kg by 20/12 | 5.6 kg to go`; settled, `Reached 14/12` or `Missed by 1.2 kg`), and + Goal always in the
   // tools, so the card never changes height between windows, readings or none.
@@ -926,7 +924,6 @@ function WeightCard({
           clientId={clientId}
           goal={goalDlg.goal}
           unit="kg"
-          nowKg={nowKg}
           onDone={() => setGoalDlg(null)}
         />
       )}

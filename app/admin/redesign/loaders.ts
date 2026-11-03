@@ -95,7 +95,6 @@ import {
   laterSameSlotSessionsIn,
   getPlanPhases,
   getWeightGoalViews,
-  goalStartKg,
 } from "../../lib/queries";
 import { isAssisted } from "../../lib/progressRules";
 import { phaseCovers, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
@@ -1119,8 +1118,6 @@ export function loadPlan(clientId: number): DraftPlan {
     eventCategories: listEventCategories(getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0),
     // The weight goals, a lane of their own on the Events card (2 Nov, Alex: "as soon as we add a goal… on the plan tab as well").
     weightGoals: getWeightGoalViews(clientId, d.today),
-    // Where a new goal starts (the last 7 days' average), for its pop-up's live fact.
-    weightNowKg: goalStartKg(clientId),
     faces: (() => {
       const coach = getCoachProfile(getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0);
       return { client: getClient(clientId)?.avatar_path ?? null, coach: coach?.avatar_path ?? null, coachName: coach?.display_name?.trim() || "" };
