@@ -227,13 +227,12 @@ function Cover({ ph, eager }: { ph: HomePhase; eager?: boolean }) {
 }
 
 // A track with nothing deployed yet (17 Oct, Alex): the same card, its picture
-// washed out, the track chip, "No plan yet" and what is coming, if anything.
-// Nothing coming: "No plan yet" alone (22 Oct, Alex: a new client is the start, nothing said to be under way).
+// washed out, the track chip and "No plan yet" alone (22 Oct, Alex: a new client is the start, nothing said to be under
+// way). A card never names the phase coming next (3 Nov, Alex: "that is something we show on events").
 function EmptyPhaseCard({ ph, eager, onOpen }: { ph: HomePhase; eager?: boolean; onOpen: () => void }) {
   const label = TRACK_LABEL[ph.track];
-  const sub = ph.next ? `${ph.next.name} starts ${short(ph.next.start)}` : null;
   return (
-    <article className="pc-card pc-empty" data-track={ph.track} aria-label={`${label}: no plan yet${sub ? `. ${sub}` : ""}`} onClick={onOpen}>
+    <article className="pc-card pc-empty" data-track={ph.track} aria-label={`${label}: no plan yet`} onClick={onOpen}>
       <Cover ph={ph} eager={eager} />
       <span className="pc-scrim" aria-hidden="true" />
       <div className="pc-top">
@@ -248,7 +247,6 @@ function EmptyPhaseCard({ ph, eager, onOpen }: { ph: HomePhase; eager?: boolean;
             <span className="pc-name">No plan yet</span>
           </h3>
         </div>
-        {sub && <p className="pc-empty-sub">{sub}</p>}
       </div>
     </article>
   );
@@ -494,13 +492,6 @@ export function PhaseCard({ ph, pictures, eager, coachName, today, nextSession, 
                 </ol>
               </div>
             </div>
-          </div>
-        )}
-        {charging && ph.next && (
-          <div className="pc-nextphase">
-            <span className="pc-nextphase-label">Next phase</span>
-            <span className="pc-nextphase-name">{ph.next.name}</span>
-            <span className="pc-nextphase-when">from {short(ph.next.start)}</span>
           </div>
         )}
       </div>
