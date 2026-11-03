@@ -373,8 +373,11 @@ export default function TrainingDayList({
         >
           <span className="tr-row-dot" aria-hidden="true" />
           <span className="tr-resume-main">
-            <b>{liveSession.label} in progress</b>
-            <small>{(liveDay ? liveDay.gyms.find((g) => g.id === gymIdFor(liveDay))?.name : null) ?? "Tap to carry on"}</small>
+            {/* The session's name alone on top, so it is never cut (3 Nov, Alex); `In progress | Trainmore` under it. */}
+            <b>{liveSession.label}</b>
+            <small>
+              <Bars parts={["In progress", liveDay ? liveDay.gyms.find((g) => g.id === gymIdFor(liveDay))?.name : null]} />
+            </small>
           </span>
           <span className="tr-resume-time">{clock(elapsedMs(liveSession.startedAt, null, now))}</span>
           <span className="tr-resume-chip">Resume</span>
