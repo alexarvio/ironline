@@ -595,8 +595,8 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
           <div className="hm-mt-when"><Bars parts={shown.whenLabel.split(" · ")} /></div>
         </div>
       </div>
-      {/* The call's link is always there: Open meeting link before, Join call
-          from ten minutes before to the end. */}
+      {/* The call's link is always there: Join, as on Meetings (3 Nov, Alex: was Open meeting link and Join call), the white
+          hairline pill before the call and the ink one from ten minutes before to the end. */}
       {m.link && (
         <a className={`hm-mt-join${joinable ? "" : " early"}`} href={m.link!} target="_blank" rel="noopener noreferrer">
           <span className="hm-mt-join-glyph" aria-hidden="true">
@@ -605,7 +605,7 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
               <path d="M16 10l5-3v10l-5-3z" />
             </svg>
           </span>
-          {joinable ? "Join call" : "Open meeting link"}
+          Join
         </a>
       )}
       {recap && (

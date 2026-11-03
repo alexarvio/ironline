@@ -21169,3 +21169,23 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 .ci-one .ci-bar.stuck .ci-count-dot.ci-count-dot.done { background: #2f7a3f; }
 /* Nutrition's ring and macro labels: the app's small label, 600, wider spacing, the label grey. */
 .nd-ring-label.nd-ring-label, .nd-macro-name.nd-macro-name { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+
+/* ---- Actions as words, one way (3 Nov, Alex: the audit). Inside a row an action is its words alone, no pill: an opened
+   event's Edit and Delete (Delete in red words; its "Yes, remove it" too), an opened check-in day's Edit. A text action
+   is never underlined: the cardio's Substitute today and the food diary's Edit are words in ink at 600. */
+.ev-x .ev-btn.ev-btn { flex: none; height: 32px; padding: 0; border-radius: 0; background: none; box-shadow: none; font-size: 13px; font-weight: 600; color: #141a24; }
+.ev-x .ev-btn.ev-btn.danger, .ev-x .ev-btn.ev-btn.danger.sure { background: none; box-shadow: none; color: #b42318; }
+.ci-day-edit.ci-day-edit, .ci-day.unfinished .ci-day-edit.ci-day-edit { padding: 6px 0; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 13px; font-weight: 600; color: #141a24; }
+.wo-cardio-swap.wo-cardio-swap, .fdi-push-edit.fdi-push-edit { text-decoration: none; font-size: 13px; font-weight: 600; color: #141a24; }
+/* Join is one word and one look everywhere (3 Nov, Alex: Home said Open meeting link and Join call on a full-width
+   button): Home's as Meetings', a pill its own width, the white hairline one before the call and ink while it is on; the
+   camera plain, no disc. */
+.hm-mt-join.hm-mt-join { display: inline-flex; align-self: flex-start; width: auto; height: 36px; padding: 0 16px 0 12px; gap: 6px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font-size: 13px; font-weight: 600; box-shadow: none; }
+.hm-mt-join.hm-mt-join.early { background: #fff; color: #141a24; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.hm-mt-join .hm-mt-join-glyph.hm-mt-join-glyph { width: auto; height: auto; background: none; color: inherit; }
+/* Apple's sign-in button as Google's (3 Nov, Alex: the audit; two ink pills on one card): the white hairline pill, so
+   Send code is the screen's one ink pill. */
+.au-card .au-provider.au-provider.apple { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.au-card .au-provider.au-provider.apple:hover { background: #fafbfd; }
+/* Client pills on the client's own hairline, #E1E5EB, not the admin's #DCE1E8 (3 Nov, Alex: the audit). */
+.ppp.done .ppp-btn.ppp-btn, .hm-mt-pill.hm-mt-pill, .hm-recap-head .hm-mt-pill.hm-mt-pill, .tr-row-pill.tr-row-pill.next { box-shadow: inset 0 0 0 1px #E1E5EB; }
