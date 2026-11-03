@@ -5,7 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
-import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, deletePhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, markProgramNoteSeenAction, markSeenAction, markVideoSeenAction, setRowDemoHiddenAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeProgramWeekAction, deletePhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
@@ -30,11 +30,7 @@ import { useOpenChat } from "../ChatPanel";
 import Picker from "../Picker";
 import AskVideoDialog from "./AskVideoDialog";
 import SessionSubstitutesDialog from "./SessionSubstitutesDialog";
-import VariationDialog from "./VariationDialog";
 import { FEATURES } from "../../../lib/features";
-
-/** Variations on a session's exercise (15 Oct): off for now (23 Oct, Alex: a feature deactivated); its data and pop-up kept. */
-const VARIATIONS = FEATURES.variations;
 import DemoVideoDialog, { type CoachClip } from "./DemoVideoDialog";
 import ClientGymsDialog from "./ClientGymsDialog";
 import DeleteSessionDialog from "./DeleteSessionDialog";
@@ -229,7 +225,6 @@ const pendingCount = (p: Pending) => p.added.length + p.removed.length + p.cardi
 
 type Dlg =
   | { kind: "progress"; rowId: number; /** The cell clicked: the pop-up opens on its window. */ window?: "7" | "30" }
-  | { kind: "variation"; rowId: number }
   | { kind: "editExercise"; sessionId: number; rowId: number }
   | { kind: "editCardio"; sessionId: number; cardioId: number }
   | { kind: "cardioAlternatives"; sessionId: number; cardioId: number }
@@ -1556,24 +1551,6 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                                     <PlayIcon /> Play the demo
                                   </DropdownMenuItem>
                                 )}
-                                {/* Which of the exercise's variations (close grip…) this row asks for, from the Library; a new one can be made here too.
-                                    Off for now (23 Oct, Alex: the feature is deactivated); VARIATIONS turns it back on. */}
-                                {VARIATIONS && r.id > 0 &&
-                                  (() => {
-                                    const variations = library.flatMap((g) => g.exercises).find((e) => e.id === r.exerciseId)?.variations ?? [];
-                                    const current = variations.find((v) => v.id === r.variationId) ?? null;
-                                    const base = current ? r.name.slice(0, -(current.name.length + 3)) : r.name;
-                                    const pickVariation = (id: number | null) => act(() => setRowVariationAction(r.id, id), `${base}${id != null ? ` · ${variations.find((v) => v.id === id)?.name}` : ""} · ${firstName} sees it from this week`);
-                                    return (
-                                      <DropdownMenuItem onSelect={() => setDlg({ kind: "variation", rowId: r.id })}>
-                                        <ColumnsIcon />{" "}
-                                        <span>
-                                          Variation<Sep />
-                                          {current ? current.name : "standard"}
-                                        </span>
-                                      </DropdownMenuItem>
-                                    );
-                                  })()}
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "alternatives", rowId: r.id })}>
                                   <DumbbellIcon /> {(() => {
                                     // The Library's substitutes only while that feature is on (23 Oct, Alex: none are preset yet).
@@ -2223,48 +2200,6 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
           />
         )}
 
-        {/* Which variation the client does on this session (15 Oct, VariationDialog): Standard or one from the library, from which week; a new one made inline; one deleted. */}
-        {dlg?.kind === "variation" && rowById(dlg.rowId) && (
-          (() => {
-            const row = rowById(dlg.rowId)!;
-            const ex = library.flatMap((g) => g.exercises).find((e) => e.id === row.exerciseId);
-            const variations = ex?.variations ?? [];
-            const current = variations.find((v) => v.id === row.variationId) ?? null;
-            const base = current ? row.name.slice(0, -(current.name.length + 3)) : row.name;
-            const session = sessions.find((x) => x.rows.some((r) => r.id === row.id))?.name ?? "Session";
-            const lastOf = (id: number | null) => row.variationLast.find((x) => x.variationId === id) ?? null;
-            const options = [{ variationId: null as number | null, name: "Standard", video: ex?.video ?? null, last: lastOf(null) }, ...variations.map((v) => ({ variationId: v.id as number | null, name: v.name, video: v.video ?? null, last: lastOf(v.id) }))];
-            return (
-              <VariationDialog
-                firstName={firstName}
-                exerciseName={base}
-                group={ex?.group ?? null}
-                session={session}
-                week={week.index}
-                lbs={lbs}
-                current={row.variationId ?? null}
-                options={options}
-                onSave={async (variationId, scope) => {
-                  await setRowVariationAction(row.id, variationId, scope);
-                  close();
-                  router.refresh();
-                  const name = options.find((o) => o.variationId === variationId)?.name ?? "Standard";
-                  toast.success(scope === "from" ? `${firstName} on ${name} from Week ${week.index}` : scope === "just" ? `${firstName} on ${name} for Week ${week.index}` : `${firstName} on ${name} for the whole programme`);
-                }}
-                onCreate={async (name) => {
-                  const made = await addExerciseVariationAction(row.exerciseId, name);
-                  router.refresh();
-                  return made ? { variationId: made.id, name: made.name, video: null, last: null } : null;
-                }}
-                onDelete={async (variationId) => {
-                  await removeExerciseVariationAction(row.exerciseId, variationId);
-                  router.refresh();
-                }}
-                onClose={close}
-              />
-            );
-          })()
-        )}
         {/* Taking an exercise or a cardio off a session asks first (20 Oct, Alex), in the delete pop-up's style. */}
         {dlg?.kind === "removeRow" && rowById(dlg.rowId) && <RemoveDialog {...removeRowCopy(rowById(dlg.rowId)!)} onRemove={() => takeOff(dlg.sessionId, { row: dlg.rowId })} onClose={close} />}
         {dlg?.kind === "removeCardio" && sessionById(dlg.sessionId)?.cardio.find((c) => c.id === dlg.cardioId) && (

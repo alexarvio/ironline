@@ -42,7 +42,6 @@ export const SLIDE_ROWS = [
   ".npd-seg",
   ".dlh-seg",
   ".dmvh-seg",
-  ".vrp-seg",
   ".rd-switch-states",
   ".mrv-rate",
   // Details' and New client's Gender (29 Oct, Alex: it jumped). Only the hairline capsule: the old admin's are chips.
