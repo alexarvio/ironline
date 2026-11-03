@@ -1313,7 +1313,6 @@ export default function FoodDiaryScreen({
               <PlusIcon />
               Add a meal
             </button>
-            <p className="fdi-meals-hint">Hold a meal&rsquo;s name to move it.</p>
           </div>
         </div>
       </main>
