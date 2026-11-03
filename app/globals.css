@@ -14691,6 +14691,20 @@ body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5
 .fdi-photo-replace { position: relative; background: #1E3A5F; color: #fff; }
 .fdi-photo-replace input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .fdi-photo-remove { background: #fbeaea; color: #C62828; }
+/* Since 3 Nov (Alex: the audit): the photo sheet in the shared voice, Replace the white hairline pill, Remove red words
+   on the left; the meal's picture as a small thumb on its row once in, the camera faded and breathing while it goes up,
+   a failed one a rust line under the meal. */
+.fdi-photo-actions { justify-content: space-between; align-items: center; }
+.fdi-photo-replace, .fdi-photo-remove { flex: none; height: 40px; font-size: 14px; font-weight: 600; }
+.fdi-photo-replace { order: 2; padding: 0 18px; border-radius: 999px; background: #fff; color: #141a24; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.fdi-photo-remove { order: 1; padding: 0 4px; background: none; color: #b42318; }
+.fdi-sheet-title { font-weight: 600; }
+.fdi-photo-thumb { padding: 0; }
+.fdi-photo-thumb img { display: block; width: 30px; height: 30px; border-radius: 8px; object-fit: cover; box-shadow: 0 0 0 1px #E1E5EB; }
+.fdi-photo-busy { color: #8b93a1; animation: fdi-photo-breathe 1.2s ease-in-out infinite; }
+@keyframes fdi-photo-breathe { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .fdi-photo-busy { animation: none; } }
+.fdi-photo-failed { margin: 2px 0 0; font-size: 12.5px; font-weight: 500; color: #b8471f; }
 
 .fdi-scan-scrim { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(20, 23, 28, 0.55); }
 .fdi-sheet-head { display: grid; grid-template-columns: 32px 1fr 32px; align-items: center; gap: 8px; }

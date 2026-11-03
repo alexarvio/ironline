@@ -35,6 +35,7 @@ import { useTween } from "./NutritionTargetsCard";
 import BarcodeScanner from "./BarcodeScanner";
 import PictureCycle from "./PictureCycle";
 import { landOn } from "../lib/landOn";
+import { pic } from "../lib/pic";
 import { Bars } from "./Bars";
 import CoachSays from "./CoachSays";
 
@@ -373,17 +374,30 @@ export default function FoodDiaryScreen({
   const [photoOf, setPhotoOf] = useState<FoodMeal | null>(null);
   const shownPhoto = photoOf ? diary.meals.find((m) => m.id === photoOf) ?? null : null;
 
-  // One picture per meal: sending another simply replaces it.
+  // One picture per meal: sending another simply replaces it. While it goes, the meal's camera says so; once in, the
+  // picture itself sits on the meal's row (3 Nov, Alex: "nothing happens when I add a photo to a meal": the camera only
+  // turned green); a failed upload says so under the meal.
+  const [photoBusy, setPhotoBusy] = useState<FoodMeal | null>(null);
+  const [photoFailed, setPhotoFailed] = useState<FoodMeal | null>(null);
   const sendPhoto = (meal: FoodMeal, file: File) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("date", date);
     fd.set("meal", meal);
     fd.set("file", file);
+    setPhotoBusy(meal);
+    setPhotoFailed(null);
     startLoad(async () => {
-      await uploadMealPhotoAction(fd);
-      const next = await getFoodDiaryAction(clientId, date);
-      if (next) setDiary(next);
+      try {
+        await uploadMealPhotoAction(fd);
+        const next = await getFoodDiaryAction(clientId, date);
+        if (next) setDiary(next);
+        if (!next?.meals.find((m) => m.id === meal)?.photo) setPhotoFailed(meal);
+      } catch {
+        setPhotoFailed(meal);
+      } finally {
+        setPhotoBusy(null);
+      }
     });
   };
 
@@ -1084,9 +1098,14 @@ export default function FoodDiaryScreen({
                           there whether or not the + is showing — the + goes
                           when the meal is open, and an icon that then slid
                           to the edge would read as a different button. */}
-                      {meal.photo ? (
-                        <button type="button" className="fdi-icon-btn has-photo" onClick={() => setPhotoOf(meal.id)} aria-label={`See your picture of ${meal.label}`}>
+                      {photoBusy === meal.id ? (
+                        <span className="fdi-icon-btn fdi-photo-busy" role="status" aria-label={`Adding the picture of ${meal.label}`}>
                           <CameraIcon />
+                        </span>
+                      ) : meal.photo ? (
+                        <button type="button" className="fdi-icon-btn fdi-photo-thumb" onClick={() => setPhotoOf(meal.id)} aria-label={`See your picture of ${meal.label}`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- the client's own upload */}
+                          <img src={pic(meal.photo, 96)} alt="" />
                         </button>
                       ) : (
                         <label className="fdi-icon-btn fdi-photo-pick" aria-label={`Add a picture of ${meal.label}`}>
@@ -1104,6 +1123,11 @@ export default function FoodDiaryScreen({
                         </label>
                       )}
                     </div>
+                    {photoFailed === meal.id && (
+                      <p className="fdi-photo-failed" role="alert">
+                        Picture not added. Try again
+                      </p>
+                    )}
                     {meal.entries.length > 0 && (
                       <Facts className="fdi-per meal" label={`${meal.label}: ${n(meal.kcal)} kcal`} kcal={meal.kcal} protein={meal.protein} carbs={meal.carbs} fat={meal.fat} />
                     )}
@@ -1287,6 +1311,8 @@ export default function FoodDiaryScreen({
       {shownPhoto?.photo && (
         <div className="fdi-photo-scrim" role="presentation" onClick={() => setPhotoOf(null)}>
           <div className="fdi-photo-sheet" role="dialog" aria-modal="true" aria-label={`Your picture of ${shownPhoto.label}`} onClick={(e) => e.stopPropagation()}>
+            {/* The shared sheet voice (3 Nov, Alex: the audit): the meal's name at 600 and the round ✕, the picture, then
+                Replace as the white hairline pill and Remove in red words. No hint line. */}
             <div className="fdi-sheet-head">
               <span />
               <span className="fdi-sheet-title">{shownPhoto.label}</span>
@@ -1296,7 +1322,6 @@ export default function FoodDiaryScreen({
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element -- the client’s own upload */}
             <img className="fdi-photo-shot" src={shownPhoto.photo} alt={`Your picture of ${shownPhoto.label}`} />
-            <p className="fdi-hint">Only your coach sees this.</p>
             <div className="fdi-photo-actions">
               <label className="fdi-photo-replace">
                 Replace
