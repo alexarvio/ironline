@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dates and times</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --page:#F5F6F8; --rust:#b8471f; --green:#2f7a3f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #F5F5F5; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 70px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 28px; max-width: 820px; line-height: 1.5; }
+  section { margin: 0 0 34px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  h2 b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .what { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 12px; max-width: 760px; line-height: 1.5; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+  .panel { background: var(--page); border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); padding: 16px; }
+  .tag { display: inline-block; font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; margin: 0 0 12px; }
+  .tag.now { color: var(--rust); } .tag.new { color: var(--green); }
+  .lbl { font-size: 11px; color: var(--muted); font-weight: 500; margin: 10px 0 4px; }
+  .lbl:first-of-type { margin-top: 0; }
+  .t { font-size: 15px; font-weight: 500; }
+  .h { font-size: 17px; font-weight: 600; }
+  .c { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .chat-day { display: inline-block; padding: 4px 12px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); font-size: 12px; font-weight: 600; color: var(--sec); }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .num { font-weight: 300; font-variant-numeric: tabular-nums; }
+  .eb { font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; color: var(--sec); }
+  .note { margin: 10px 0 0; font-size: 12px; color: var(--muted); font-weight: 500; line-height: 1.45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Dates and times: now and proposed</h1>
+  <p class="sub">One way to write a date in the client app: day before month, no commas. "2 Nov", "Mon 2 Nov", "Monday 2 November". Times always 24-hour. Left is today, right the proposal.</p>
+
+  <section>
+    <h2><b>1</b>The check-in screen: three formats on one screen</h2>
+    <p class="what">The banner, the fill-in pop-up and the calendar's open day each write the date their own way.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="lbl">Banner</div><div class="h">Monday, November 2</div>
+        <div class="lbl">Fill-in pop-up</div><div class="t">Mon, Nov 2 | 3 of 10 still to fill</div>
+        <div class="lbl">Calendar, open day</div><div class="t">Monday, November 2</div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="lbl">Banner</div><div class="h">Monday 2 November</div>
+        <div class="lbl">Fill-in pop-up</div><div class="t">Mon 2 Nov | 3 of 10 still to fill</div>
+        <div class="lbl">Calendar, open day</div><div class="t">Monday 2 November</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>2</b>Dates across the app</h2>
+    <p class="what">The chat's day headings are American; Notifications and most of the app are day-first. Home's greeting date and short dates like "Started Oct 5" follow the American way too.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="lbl">Chat day heading</div><span class="chat-day">Wednesday, October 21</span>
+        <div class="lbl">Notifications</div><div class="t">Wed 21 Oct</div>
+        <div class="lbl">Home greeting</div><div class="eb">Tuesday, November 3</div>
+        <div class="lbl">Nutrition banner</div><div class="t">Started Oct 5</div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="lbl">Chat day heading</div><span class="chat-day">Wednesday 21 October</span>
+        <div class="lbl">Notifications</div><div class="t">Wed 21 Oct</div>
+        <div class="lbl">Home greeting</div><div class="eb">Tuesday 3 November</div>
+        <div class="lbl">Nutrition banner</div><div class="t">Started 5 Oct</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>3</b>Times</h2>
+    <p class="what">On a phone set to 12-hour time, Notifications and Meetings show AM/PM while the chat and Home show 24-hour.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now (a 12-hour phone)</span>
+        <div class="lbl">Notifications</div><div class="t">06:00 PM</div>
+        <div class="lbl">Meetings</div><div class="t">06:00 PM – 06:30 PM</div>
+        <div class="lbl">Chat, Home</div><div class="t">18:00</div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="lbl">Notifications</div><div class="t">18:00</div>
+        <div class="lbl">Meetings</div><div class="t">18:00 – 18:30</div>
+        <div class="lbl">Chat, Home</div><div class="t">18:00</div>
+        <p class="note">24-hour everywhere, whatever the phone is set to.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>4</b>Coach · Schedule a meeting's day list</h2>
+    <p class="what">The coach side writes dates as day/month numerals (9/11) and empty states in a word or two.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span><div class="row"><span class="t" style="font-weight:600">Monday 9 Nov</span><span class="c">Nothing booked.</span></div></div>
+      <div class="panel"><span class="tag new">Proposed</span><div class="row"><span class="t" style="font-weight:600">Mon 9/11</span><span class="c">None</span></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>5</b>The day numeral on Invoices</h2>
+    <p class="what">Events writes its day as "05" at 22px; the client's Invoices writes "5" at 24px.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span><div class="row"><span class="num" style="font-size:24px">5</span><span class="t">Nov coaching</span></div><div class="row" style="margin-top:8px"><span class="num" style="font-size:22px">05</span><span class="t">Events: RETA</span></div></div>
+      <div class="panel"><span class="tag new">Proposed</span><div class="row"><span class="num" style="font-size:22px">05</span><span class="t">Nov coaching</span></div><div class="row" style="margin-top:8px"><span class="num" style="font-size:22px">05</span><span class="t">Events: RETA</span></div></div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
