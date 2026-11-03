@@ -9926,8 +9926,10 @@ export function liveSessionFor(clientId: number): { id: number; label: string; s
   const data = getData();
   const day = data.program_days.find((pd) => pd.client_id === clientId && pd.session_started_at && !pd.session_ended_at);
   if (!day) return null;
-  const week = data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === day.week_number).sort((a, b) => a.day_of_week - b.day_of_week);
-  const idx = week.findIndex((pd) => pd.id === day.id);
+  // Numbered as the Training list numbers it (3 Nov, Alex: the list said Session 2 was live, this pill Session 3): among
+  // the week's sessions with something in them, an empty day or a rogue session not counted.
+  const shown = getPublishedWeek(clientId, day.week_number).filter((pd) => !pd.free && (getAssignmentsForDay(pd.id).length > 0 || listCardioForDay(pd.id).length > 0));
+  const idx = shown.findIndex((pd) => pd.id === day.id);
   return { id: day.id, label: day.free ? "Rogue session" : day.label || `Session ${idx + 1}`, startedAt: day.session_started_at!, week: day.week_number };
 }
 
