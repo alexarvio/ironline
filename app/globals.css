@@ -14692,15 +14692,16 @@ body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5
 .fdi-photo-replace input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .fdi-photo-remove { background: #fbeaea; color: #C62828; }
 /* Since 3 Nov (Alex: the audit): the photo sheet in the shared voice, Replace the white hairline pill, Remove red words
-   on the left; the meal's picture as a small thumb on its row once in, the camera faded and breathing while it goes up,
+   on the left; once a picture is in, the camera green in its ring; the camera faded and breathing while it goes up,
    a failed one a rust line under the meal. */
 .fdi-photo-actions { justify-content: space-between; align-items: center; }
 .fdi-photo-replace, .fdi-photo-remove { flex: none; height: 40px; font-size: 14px; font-weight: 600; }
 .fdi-photo-replace { order: 2; padding: 0 18px; border-radius: 999px; background: #fff; color: #141a24; box-shadow: inset 0 0 0 1px #E1E5EB; }
 .fdi-photo-remove { order: 1; padding: 0 4px; background: none; color: #b42318; }
 .fdi-sheet-title { font-weight: 600; }
-.fdi-photo-thumb { padding: 0; }
-.fdi-photo-thumb img { display: block; width: 30px; height: 30px; border-radius: 8px; object-fit: cover; box-shadow: 0 0 0 1px #E1E5EB; }
+/* A picture in (3 Nov, Alex): the camera green in a 30px green ring with the soft green inside, so the meal reads as holding one. */
+.fdi-photo-ring { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: rgba(47, 122, 63, 0.12); box-shadow: inset 0 0 0 1.5px #2f7a3f; color: #2f7a3f; }
+.fdi-photo-ring svg { width: 16px; height: 16px; }
 .fdi-photo-busy { color: #8b93a1; animation: fdi-photo-breathe 1.2s ease-in-out infinite; }
 @keyframes fdi-photo-breathe { 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) { .fdi-photo-busy { animation: none; } }
