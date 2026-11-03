@@ -85,12 +85,10 @@ export type EventsCardProps = {
   faces?: { client: string | null; coach: string | null; coachName: string };
   /** The client's dated weight goals (2 Nov, Alex): a Weight lane of their own, first, while one is on the window. */
   weightGoals?: WeightGoalView[];
-  /** Where a new weight goal starts, kg. */
-  weightNowKg?: number | null;
 };
 const EV_WIN_KEY = "rq-events-window";
 
-export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, onSaving, firstName, faces, weightGoals: serverGoals = [], weightNowKg = null }: EventsCardProps) {
+export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, onSaving, firstName, faces, weightGoals: serverGoals = [] }: EventsCardProps) {
   const router = useRouter();
   // The weight goals, copied by content as the events are, so a re-read with the same goals resets nothing.
   const goalsKey = JSON.stringify(serverGoals);
@@ -244,8 +242,6 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
     fresh: !goals.some((o) => o.id !== g.id && o.byDate === g.startDate),
   }));
   const goalPins = goalsOnGrid.filter((g) => g.byDate >= first && daysBetween(first, g.byDate) < totalDays);
-  // Where a new goal starts: the client's last 7 days' average, from the server.
-  const goalNowKg = weightNowKg;
   // One goal at a time (2 Nov, Alex): while one runs, the way in opens it to edit; no second one.
   const runningGoal = goals.find((g) => !g.settled) ?? null;
   const addGoalAt = (week: string) => {
@@ -481,7 +477,7 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
 
       <Dialog open={!!goalDlg} onOpenChange={(o) => !o && setGoalDlg(null)}>
         {goalDlg && (
-          <WeightGoalDialog clientId={clientId} goal={goalDlg.goal} unit="kg" nowKg={goalNowKg} initialBy={goalDlg.by} onDone={() => setGoalDlg(null)} />
+          <WeightGoalDialog clientId={clientId} goal={goalDlg.goal} unit="kg" initialBy={goalDlg.by} onDone={() => setGoalDlg(null)} />
         )}
       </Dialog>
     </section>

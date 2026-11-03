@@ -1469,4 +1469,5 @@ span.rd-demo { cursor: default; }
 .dlh.wgd .trn-state.good { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.35); color: #2f7a3f; }
 .dlh.wgd .trn-state.warn { box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.4); color: #b8471f; }
 .dlh.wgd .wgd-fact { margin: 0; min-height: 18px; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.dlh.wgd .dlh-foot .wgd-del { margin-right: auto; }
+/* Delete's words on the card's left edge, under the title and fields (3 Nov, Alex): its 14px padding pulled back. */
+.dlh.wgd .dlh-foot .wgd-del { margin-right: auto; margin-left: -14px; }
