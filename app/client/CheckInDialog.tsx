@@ -110,7 +110,7 @@ const shortDay = (date: string) => {
   return `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 };
 // Filled is green, whatever the metric (13 Oct, Alex: no colour coding for now).
-const GREEN = { hex: "#2E7D32", rgb: "46,125,50" };
+const GREEN = { hex: "#2f7a3f", rgb: "47,122,63" };
 const colourOf = () => GREEN;
 
 export default function CheckInDialog({

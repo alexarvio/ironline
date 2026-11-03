@@ -9,7 +9,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-nav button:hover { color: #141a24; }
 /* The dot trail (dots.ts, 22 Oct, Alex): something the coach owes here, a rust dot at each step down to it. A tab carries
    it at the top right of its word; inside a screen it sits right after the thing's name. */
-.rd-due { display: inline-block; flex: none; width: 6px; height: 6px; border-radius: 999px; background: #b3471d; vertical-align: middle; }
+.rd-due { display: inline-block; flex: none; width: 6px; height: 6px; border-radius: 999px; background: #b8471f; vertical-align: middle; }
 .rd-nav button { position: relative; }
 .rd-nav .rd-nav-due { position: absolute; top: 5px; right: 8px; }
 /* Another programme or phase with something owed: a dot after the switcher's ▾, its state tab and its row in the list. */
@@ -118,7 +118,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-session-meta { flex: 1; font-size: 12.5px; color: #8b93a1; }
 .rd-pill { padding: 3px 10px; border-radius: 999px; background: #e6ecf3; font-size: 11.5px; font-weight: 700; color: #1e3a6e; white-space: nowrap; }
 .rd-pill.good { background: #dff3ea; color: #1b7a4b; }
-.rd-pill.warn { background: #fdf3ee; color: #b3471d; }
+.rd-pill.warn { background: #fdf3ee; color: #b8471f; }
 .rd-pill.quiet { background: transparent; color: #8b93a1; }
 .rd-session-more { position: absolute; top: 12px; right: 12px; }
 
@@ -129,7 +129,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-rows-scroll { overflow-x: auto; scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent; }
 .rd-rows-scroll > * { min-width: var(--rd-minw); box-sizing: border-box; }
 .rd-rows-scroll > .rd-pending { min-width: 0; position: sticky; left: 0; }
-.rd-skip { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: #fdf3ee; font-size: 12.5px; color: #b3471d; }
+.rd-skip { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: #fdf3ee; font-size: 12.5px; color: #b8471f; }
 .rd-cols, .rd-row-main { display: grid; grid-template-columns: minmax(200px, 1.5fr) 84px 64px 44px minmax(200px, 1.3fr) 66px 66px 32px; gap: 12px; align-items: center; }
 .rd-cols { padding: 6px 4px 8px 10px;font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
 /* The heading and the cell under it share the same grid track and the same
@@ -152,7 +152,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-set { padding: 3px 8px; border-radius: 7px; background: #eceff3; font-size: 12px; font-weight: 600; color: #313851; font-variant-numeric: tabular-nums; }
 .rd-set small { font-size: 10.5px; color: #8b93a1; margin-left: 2px; }
 .rd-set.up { background: #dff3ea; color: #1b7a4b; }
-.rd-set.down { background: #fdf3ee; color: #b3471d; }
+.rd-set.down { background: #fdf3ee; color: #b8471f; }
 /* A set beyond the prescribed count (12 Oct): the client added it; dashed, so it reads as extra. */
 .rd-set.extra { outline: 1px dashed #a0a7b3; outline-offset: -1px; }
 .rd-row.cardio .rd-ex { font-weight: 500; }
@@ -195,12 +195,12 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-ex-name { display: flex; align-items: baseline; gap: 8px; }
 .rd-trend { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd-trend.up { color: #1b7a4b; }
-.rd-trend.down { color: #b3471d; }
+.rd-trend.down { color: #b8471f; }
 .rd-did { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 5px; }
 .rd-did-sets { display: flex; flex-wrap: wrap; gap: 5px; }
 .rd-vs { font-size: 11.5px; color: #8b93a1; }
 .rd-vs.up { color: #1b7a4b; }
-.rd-vs.down { color: #b3471d; }
+.rd-vs.down { color: #b8471f; }
 
 .rd-row.new { background: #f1f6fd; border-radius: 10px; border-top: 0; margin-top: 4px; }
 .rd-edit { display: inline-flex; align-items: center; justify-content: flex-start; gap: 4px; }
@@ -246,7 +246,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-col-trend { text-align: left; }
 .rd-trendcell { display: inline-flex; align-items: center; justify-content: center; height: 28px; padding: 0 9px; border-radius: 8px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; transition: box-shadow 0.12s; }
 .rd-trendcell.up { background: #dff3ea; color: #1b7a4b; }
-.rd-trendcell.down { background: #fdf3ee; color: #b3471d; }
+.rd-trendcell.down { background: #fdf3ee; color: #b8471f; }
 .rd-trendcell.same { background: #eceff3; color: #5b6474; }
 .rd-trendcell.none { color: #c3c9d2; font-weight: 500; }
 .rd-trendcell:hover { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #c9d5e6; }
@@ -258,7 +258,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-progress-stats b { font-size: 22px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
 .rd-progress-stats b small { font-size: 12px; font-weight: 500; color: #5b6474; }
 .rd-progress-stats b.up { color: #1b7a4b; }
-.rd-progress-stats b.down { color: #b3471d; }
+.rd-progress-stats b.down { color: #b8471f; }
 .rd-progress-chart { position: relative; padding-bottom: 22px; }
 .rd-progress-chart svg { display: block; width: 100%; height: 200px; overflow: visible; }
 .rd-pc-line { fill: none; stroke: #2f5d8f; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
@@ -280,7 +280,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-progress-table tr.now td { background: #f1f6fd; font-weight: 700; color: #141a24; }
 .rd-progress-table tr.none td { color: #b0b6c0; }
 .rd-progress-table td.up { color: #1b7a4b; font-weight: 700; }
-.rd-progress-table td.down { color: #b3471d; font-weight: 700; }
+.rd-progress-table td.down { color: #b8471f; font-weight: 700; }
 .rd-progress-table td small { display: block; font-size: 11px; font-weight: 500; color: #8b93a1; }
 .rd-progress-table td:nth-child(2) small, .rd-progress-table td:nth-child(3) small { display: inline; margin-left: 4px; }
 .rd-progress-table tr.first td { border-top: 1px solid #dfe3e8; }
@@ -412,12 +412,12 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .wb-color:hover { transform: scale(1.12); }
 .wb-color.on { box-shadow: 0 0 0 2.5px #1e3a6e; }
 .wb-color:disabled { opacity: 0.35; cursor: default; transform: none; }
-.wb-rec { background: #b3471d; border-color: #b3471d; }
+.wb-rec { background: #b8471f; border-color: #b8471f; }
 .wb-stop { background: #141a24; border-color: #141a24; }
 .wb-preview { display: block; width: auto; max-width: 100%; max-height: max(320px, calc(100vh - 250px)); margin: 0 auto; border-radius: 12px; background: #000; }
 .wb-progress { height: 6px; border-radius: 999px; background: #e6ecf3; overflow: hidden; }
 .wb-progress i { display: block; height: 100%; background: #1e3a6e; transition: width 0.2s ease; }
-.wb-problem { color: #b3471d; }
+.wb-problem { color: #b8471f; }
 .wb-send { display: flex; justify-content: flex-end; gap: 8px; }
 .rd-dlg [data-slot="dialog-footer"] { align-items: center; margin-top: 4px; }
 .rd-dlg-hint { margin: 0; font-size: 12px; line-height: 1.5; color: #8b93a1; }
@@ -541,7 +541,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rdp-foot .rd-btn.ghost.wide:hover { background: #f5f6f8; color: #141a24; }
 /* A typed date: the same field as the others, red while what is typed is not a day. */
 .rdt { width: 100%; font-variant-numeric: tabular-nums; }
-.rdt.bad { border-color: #b3471d; box-shadow: 0 0 0 3px rgba(179, 71, 29, 0.12); }
+.rdt.bad { border-color: #b8471f; box-shadow: 0 0 0 3px rgba(184, 71, 31, 0.12); }
 .rdt:disabled { background: #f4f6fa; color: #5b6474; }
 /* The programme's length: a number typed in, "weeks" beside it. */
 .rd-field-weeks { flex: none; }
@@ -654,7 +654,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
    either side. A 13px one sat 4.5px in, so it rounded half a pixel off the ring. */
 .rd-flag svg, .rd-swapdot svg { flex: none; width: 12px; height: 12px; }
 /* Rings, not filled discs (24 Oct, Alex): the state's colour on the edge and the icon. In, waiting for you: rust. Replied: green. */
-.rd-flag.video.in { box-shadow: inset 0 0 0 1.5px #b3471d; color: #b3471d; }
+.rd-flag.video.in { box-shadow: inset 0 0 0 1.5px #b8471f; color: #b8471f; }
 .rd-flag.video.replied { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.45); color: #2f7a3f; }
 /* Asked for, waiting for the client (21 Oct, Alex: an ask had no icon): a quiet grey ring, as the client's note. */
 .rd-flag.video.asked { background: none; box-shadow: inset 0 0 0 1px #dce1e8; color: #8b93a1; }
@@ -749,7 +749,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rp-stat small { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
 .rp-stat b { font-size: 20px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
 .rp-stat.up { background: #e8f6ee; } .rp-stat.up b { color: #1b7a4b; }
-.rp-stat.down { background: #fdeee8; } .rp-stat.down b { color: #b3471d; }
+.rp-stat.down { background: #fdeee8; } .rp-stat.down b { color: #b8471f; }
 .rp-stat.flat { background: #fdf4e4; } .rp-stat.flat b { color: #9a5b00; }
 .rp-chart { width: 100%; height: auto; }
 .rp-line { fill: none; stroke: #1e3a6e; stroke-width: 2; stroke-linejoin: round; }
@@ -769,7 +769,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rp-best { font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
 .rp-best small { font-size: 11px; font-weight: 600; color: #8b93a1; }
 .rp-change { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.rp-change.up { color: #1b7a4b; } .rp-change.down { color: #b3471d; } .rp-change.flat { color: #9a5b00; } .rp-change.none { color: #b0b6c0; }
+.rp-change.up { color: #1b7a4b; } .rp-change.down { color: #b8471f; } .rp-change.flat { color: #9a5b00; } .rp-change.none { color: #b0b6c0; }
 .rp-none { margin: 0; color: #8b93a1; font-size: 13.5px; }
 /* The breakdown's parts keep their height; the dialog scrolls instead of
    squeezing the week list (25 Sep). */
@@ -790,7 +790,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rp-hit.top { background: #e3ecf8; color: #1e3a6e; }
 .rp-hit.up { background: #e8f6ee; color: #1b7a4b; }
 .rp-hit.flat { background: #fdf4e4; color: #9a5b00; }
-.rp-hit.down { background: #fdeee8; color: #b3471d; }
+.rp-hit.down { background: #fdeee8; color: #b8471f; }
 
 /* The pager under every paged list (Pager.tsx, 26 Sep): the Feed's. It floats under the list's card, a sibling after
    it (21 Oct, Alex): no background, box or line of its own, the pages centred on the page and the count grey at the

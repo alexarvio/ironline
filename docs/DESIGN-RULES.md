@@ -30,11 +30,12 @@ Read this before touching any client screen. One hero language, one everyday lan
 ## 4. Colour
 - One colour per category, everywhere (see `app/lib/eventTypes.ts`, `notificationTypes.ts`, `phases/timeline.ts`):
   training indigo `#3a3390` · nutrition teal `#1d7a70` · lifestyle beige `#a08a5c` (tint `#efede6`; 21 Oct: one beige everywhere, not amber or grey) · trip `#2f5d8f` · supplement `#1f7a4d` · health `#b8471f` · work `#5b6472` · shape update rust `#b8471f` · meeting blue `#2f6fd6` · weight goal lifestyle beige `#a08a5c` with the target mark (2 Nov, Alex: "I like this color for the weight and also the icon"; `GOAL_COLOR`, `TARGET_ICON` in app/lib/weightGoal.ts).
+- One rust and one green (3 Nov, Alex: the audit; docs/boards/colours-mockup.html): rust `#b8471f` for what needs doing, what is behind and every client error (sign-in's too); green `#2f7a3f` for what is done, the check-in's pop-up too. Numbers down a list are ink, never navy (the session overview's as Training's).
 - A colour appears as a thin ring, an icon, a label or a 2px line. Never as a filled block behind text.
 - Tints: `rgba(rgb, .12)` at most. Past things go grey (`grayscale(1)`) and fade to 30–45%; future things keep their colour at ~55%; the live or focused one is at 100%.
 
 ## 5. Icons
-- The existing category icons, drawn at **stroke 1.6**, round caps and joins, no fills.
+- The existing category icons, drawn at **stroke 1.6**, round caps and joins, no fills. Icons from different sets in one list draw at one weight (3 Nov, Alex: the burger's, 1.6 on the 24 grid, 1.2 on the 18 grid).
 - An icon centred in a ring or a round button sits on whole pixels (28 Oct, Alex): the icon's size and the ring's both even or both odd, so the room either side is whole (a 22px ring, a 12px icon), and the drawing centred in its viewBox.
 - The icon alone, in a thin ring: no tile, no disc, no halo. On the Events screen and Home's events timeline every event wears its ring (27 Oct, Alex): one still to come in its category's colour at the row's softer strength, one that is over in grey (`#C9CFD8`), the focused one in full; only what is on today pulses, in its colour.
 

@@ -18854,7 +18854,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .cki-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #8a5f16; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cki-title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
 .cki-sub { margin: 0; font-size: 13px; font-weight: 600; color: #757575; }
-.cki-sub.done { color: #2E7D32; }
+.cki-sub.done { color: #2f7a3f; }
 .cki-body { position: relative; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 0 18px 12px; overscroll-behavior: contain; }
 .cki-group-label { padding: 8px 2px 2px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #9E9E9E; }
 .cki-row { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px #E3E8F0; transition: background 0.2s, box-shadow 0.2s; }
@@ -19545,7 +19545,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .so-screen .so-card + .so-card::before { content: ""; position: absolute; top: 0; left: 48px; right: 20px; height: 1px; background: #E1E5EB; }
 .so-screen .so-card-toggle { padding: 15px 20px 15px 16px; }
 .so-screen .so-card-toggle:active { background: rgba(20, 26, 36, 0.03); }
-.so-screen .so-num { width: 22px; font-size: 15px; font-weight: 500; color: #1E3A5F; }
+.so-screen .so-num { width: 22px; font-size: 15px; font-weight: 500; color: #141a24; }
 .so-screen .so-num.done { color: #2f7a3f; }
 .so-screen .so-card-name { font-size: 15.5px; font-weight: 500; letter-spacing: -0.01em; color: #141a24; }
 .so-screen .so-card-fold.open .so-card-name { font-weight: 600; }
@@ -20890,7 +20890,7 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .au-card .au-sep { display: inline-block; width: 1px; height: 11px; background: #C9CFD8; }
 .au-card .au-code input { height: 52px; border: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #141a24; }
 .au-card .au-code input:focus { outline: none; box-shadow: inset 0 0 0 1.5px #141a24; }
-.au-card .auth-error { border: 0; background: none; padding: 0; color: #b42318; font-size: 13px; font-weight: 500; }
+.au-card .auth-error { border: 0; background: none; padding: 0; color: #b8471f; font-size: 13px; font-weight: 500; }
 .au-card .auth-ok { border: 0; background: none; padding: 0; color: #2f7a3f; font-size: 13px; font-weight: 500; }
 .au-card .au-coach { background: #141a24; }
 
@@ -21189,3 +21189,8 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 .au-card .au-provider.au-provider.apple:hover { background: #fafbfd; }
 /* Client pills on the client's own hairline, #E1E5EB, not the admin's #DCE1E8 (3 Nov, Alex: the audit). */
 .ppp.done .ppp-btn.ppp-btn, .hm-mt-pill.hm-mt-pill, .hm-recap-head .hm-mt-pill.hm-mt-pill, .tr-row-pill.tr-row-pill.next { box-shadow: inset 0 0 0 1px #E1E5EB; }
+
+/* The burger's icons one weight (3 Nov, Alex: the audit; they came from different sets at 1.3 to 2): every line 1.6
+   on the 24 grid, so the 18-grid ones (Meetings, Shape update) take 1.2, which draws the same at 18px. */
+.app-menu-ico svg[viewBox="0 0 24 24"] * { stroke-width: 1.6; }
+.app-menu-ico svg[viewBox="0 0 18 18"] * { stroke-width: 1.2; }

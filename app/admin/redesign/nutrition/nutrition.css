@@ -67,7 +67,7 @@
 .rn-stats > div { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 12px; background: #f4f7fc; }
 .rn-stats small { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
 .rn-stats b { font-size: 22px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
-.rn-stats b.warn { color: #b3471d; }
+.rn-stats b.warn { color: #b8471f; }
 .rn-stats span { font-size: 12px; color: #5b6474; }
 
 /* One row a day; the row itself opens the day. */
@@ -78,7 +78,7 @@
 .rn-day .rd-ex-name > .rd-due { align-self: center; margin-left: -3px; }
 .rn-vs { font-size: 12.5px; white-space: nowrap; }
 .rn-vs.up { background: #dff3ea; color: #1b7a4b; }
-.rn-vs.down { background: #fdf3ee; color: #b3471d; }
+.rn-vs.down { background: #fdf3ee; color: #b8471f; }
 .rd-pill.quiet { background: #eceff3; color: #5b6474; }
 
 /* The day open: its meals, each with its foods under it. */
