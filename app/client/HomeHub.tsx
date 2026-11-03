@@ -15,7 +15,7 @@ import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
 import { pic } from "../lib/pic";
 import type { LinkView } from "../lib/messageLinks";
-import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenEvents, useOpenFood, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenEvents, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 import { goalItemId } from "../lib/weightGoal";
 import { FocusGoals } from "./home/FocusList";
 import HomeWeight from "./home/HomeWeight";
@@ -182,14 +182,12 @@ export default function HomeHub({
       return own.length ? own : [empty(t, -11 - i)];
     }),
   ];
-  // What is still to do today, counted the way the cards under it show it.
-  const foodDone = !!food && ((!!food.mealsTotal && (food.mealsLogged ?? 0) >= food.mealsTotal) || (!!food.target && food.eaten >= food.target * 0.9));
+  // What is still to do today, counted the way the cards under it show it. Not food (3 Nov, Alex: "food diary is not
+  // something to have there… that is optional"): the nutrition card keeps its Log.
   const todoItems = [
+    session && (session.live || !trainedToday) ? "training" : null,
     checkInCount && checkInCount.done < checkInCount.total ? "check-in" : null,
     progressPics?.status === "due" ? "pictures" : null,
-    session && (session.live || !trainedToday) ? "training" : null,
-    // Food is a to-do only once nutrition is set up (22 Oct): a target, or a nutrition phase live.
-    food && !foodDone && (!!food.target || plan.some((p) => p.track === "nutrition")) ? "food" : null,
   ].filter((x): x is string => !!x);
   return (
     <div className="hm">
@@ -207,7 +205,6 @@ export default function HomeHub({
             session={session}
             checkInCount={checkInCount}
             checkIn={hasCheckIns ? checkInForm : null}
-            food={food}
             pics={progressPics}
             clientId={clientId}
             today={today}
@@ -292,23 +289,23 @@ function HomeBanner({ dateLabel, firstName, initialHello }: { dateLabel: string;
 }
 
 // ---- 0b · Today: what today asks, a row each (3 Nov, Alex: option 3 of docs/boards/home-hierarchy-mockup.html) ----
-// Hairline rows flat on the page under `Today`: the thing's icon in a thin ring in its colour, what it is and one grey
-// fact, and on the right its action. The session's Start (or Resume) is the screen's one ink pill; the check-in's Fill in,
-// food's Log and the shape update's Add (Continue once begun, View once done) are words. The phase cards keep their own.
+// Hairline rows flat on the page under `Today`: the thing's icon alone in its colour (3 Nov, Alex: no ring, "just like we
+// have across the app"), what it is and one grey fact, and on the right its action. The session's Start (or Resume) is
+// the screen's one ink pill; the check-in's Fill in and the shape update's Add (Continue once begun) are words. No food:
+// it is optional (3 Nov, Alex). The phase cards keep their own.
 
 const TODAY_ICON = {
   training: "M6.5 8v8M17.5 8v8M3.5 10v4M20.5 10v4M6.5 12h11",
   lifestyle: "M12 19.5s-7-4.4-7-9.6A3.9 3.9 0 0 1 12 7.6a3.9 3.9 0 0 1 7 2.3c0 5.2-7 9.6-7 9.6z",
-  nutrition: "M12 7.5c-1-1.8-2.9-2.3-4.4-1.8C5.2 6.5 4.6 9.3 5.5 12.2c.9 2.9 2.8 5.8 4.3 5.8.9 0 1.3-.5 2.2-.5s1.3.5 2.2.5c1.5 0 3.4-2.9 4.3-5.8.9-2.9.3-5.7-2.1-6.5-1.5-.5-3.4 0-4.4 1.8zM12 7.5c0-1.9.9-3.3 2.4-4",
   shape: "M4 8h4l2-3h4l2 3h4v11H4zM12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
 } as const;
-const TODAY_COLOR = { training: "#3a3390", lifestyle: "#a08a5c", nutrition: "#1d7a70", shape: "#b8471f" } as const;
+const TODAY_COLOR = { training: "#3a3390", lifestyle: "#a08a5c", shape: "#b8471f" } as const;
 
 function TodayRow({ kind, title, fact, action, ink = false, onClick }: { kind: keyof typeof TODAY_ICON; title: string; fact: React.ReactNode; action: string; ink?: boolean; onClick: () => void }) {
   return (
     <button type="button" className="hm-td-row" onClick={onClick} aria-label={`${title}. ${action}.`}>
-      <span className="hm-td-ring" style={{ color: TODAY_COLOR[kind] }} aria-hidden="true">
-        <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <span className="hm-td-icon" style={{ color: TODAY_COLOR[kind] }} aria-hidden="true">
+        <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
           <path d={TODAY_ICON[kind]} />
         </svg>
       </span>
@@ -323,14 +320,12 @@ function TodayRow({ kind, title, fact, action, ink = false, onClick }: { kind: k
   );
 }
 
-function TodayList({ items, session, checkInCount, checkIn, food, pics, clientId, today, coachName, phaseName }: { items: string[]; session: HomeSession; checkInCount: { done: number; total: number } | null; checkIn: CheckInForm | null; food: PhaseFoodToday; pics: ProgressPics; clientId: number; today: string; coachName: string; phaseName: string | null }) {
+function TodayList({ items, session, checkInCount, checkIn, pics, clientId, today, coachName, phaseName }: { items: string[]; session: HomeSession; checkInCount: { done: number; total: number } | null; checkIn: CheckInForm | null; pics: ProgressPics; clientId: number; today: string; coachName: string; phaseName: string | null }) {
   const goToTab = useNavigateTab();
   const openCheckIn = useOpenCheckIn();
-  const openFood = useOpenFood();
   const openPhotos = useOpenPhotos();
   // The check-in opens in its pop-up, as the lifestyle card's Log does (13 Oct).
   const [logOpen, setLogOpen] = useState(false);
-  const kcal = (v: number) => Math.round(v).toLocaleString("en-US");
   const n = pics ? Math.max(1, pics.total) : 0;
   const k = pics ? Math.min(n, pics.uploaded) : 0;
   return (
@@ -353,15 +348,6 @@ function TodayList({ items, session, checkInCount, checkIn, food, pics, clientId
           fact={`${checkInCount.total - checkInCount.done} of ${checkInCount.total} still to fill`}
           action="Fill in"
           onClick={() => (checkIn ? setLogOpen(true) : openCheckIn?.("daily"))}
-        />
-      )}
-      {items.includes("food") && food && (
-        <TodayRow
-          kind="nutrition"
-          title="Food diary"
-          fact={food.target ? `${kcal(food.eaten)} of ${kcal(food.target)} kcal` : food.mealsTotal ? `${food.mealsLogged ?? 0} of ${food.mealsTotal} meals` : null}
-          action="Log"
-          onClick={() => (openFood ? openFood() : goToTab?.("nutrition"))}
         />
       )}
       {items.includes("pictures") && pics && (
