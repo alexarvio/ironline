@@ -78,13 +78,13 @@
 .rd .nd-head svg { flex: none; width: 14px; height: 14px; }
 .rd .nd-head small { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; color: #98a2b3; font-variant-numeric: tabular-nums; }
 .rd .rls-card.nd-card { padding: 0; overflow: hidden; }
-.rd .nd-row { display: grid; grid-template-columns: var(--nd-date, 84px) 200px minmax(0, 1fr) 96px 72px 30px; align-items: center; column-gap: 16px; min-height: 52px; padding: 0 12px 0 18px; cursor: pointer; }
+.rd .nd-row { display: grid; grid-template-columns: var(--nd-date, 84px) 200px minmax(0, 1fr) 96px auto 18px; align-items: center; column-gap: 16px; min-height: 52px; padding: 0 12px 0 18px; cursor: pointer; }
 .rd .nd-row + .nd-row { border-top: 1px solid #eef0f3; }
 .rd .nd-row:hover { background: var(--color-row-hover, #fafbfd); }
 .rd .nd-row.still { cursor: default; }
 .rd .nd-row.out { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
 @media (prefers-reduced-motion: reduce) { .rd .nd-row.out { transition: none; } }
-.rd .nd-row.bar { grid-template-columns: var(--nd-date, 84px) 200px minmax(0, 1fr) 150px 96px 72px 30px; }
+.rd .nd-row.bar { grid-template-columns: var(--nd-date, 84px) 200px minmax(0, 1fr) 150px 96px auto 18px; }
 .rd .nd-who { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; }
 .rd a.nd-who:focus-visible { outline: none; }
 .rd a.nd-who:focus-visible .nd-name { text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
@@ -98,28 +98,30 @@
 .rd .nd-bar i { display: block; height: 100%; border-radius: 999px; background: var(--c); }
 .rd .nd-wait { font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: center; }
 .rd .nd-wait.late { font-weight: 600; color: #b8471f; }
-.rd .nd-acts { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.rd .nd-acts { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 /* The action, its icon alone (3 Nov, Alex: "the icons should be self explanatory"): ink in a round 30px button, the page
    grey behind it on hover, its word the tooltip. */
 .rd .nd-act { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 999px; background: none; color: #141a24; cursor: pointer; text-decoration: none; }
 .rd .nd-act svg { width: 16px; height: 16px; }
 .rd .nd-act:hover, .rd .nd-act[data-state="open"] { background: #f5f6f8; }
 .rd .nd-act:focus-visible { outline: 1px solid #141a24; outline-offset: 1px; }
-.rd .nd-more { display: flex; justify-content: flex-end; }
+/* The icons packed at the row's right end, 4px apart (3 Nov, Alex: "a lot of separation… squeeze them"): the action(s)
+   and the round check close up on one another, 16px back to the wait. */
+.rd .nd-more { display: flex; justify-content: flex-start; margin-left: -12px; }
 .rd .nd-row .rfd-done { opacity: 0; }
 .rd .nd-row:hover .rfd-done, .rd .nd-row .rfd-done:focus-visible { opacity: 1; }
 .rd .nd-row .rfd-done:hover { color: #2f7a3f; }
 /* A list with no date on any row (the phases owed are standing states) drops the column, never an empty one. */
 .rd .nd-groups.nodate .nd-row > .rd-logdate { display: none; }
-.rd .nd-groups.nodate .nd-row { grid-template-columns: 200px minmax(0, 1fr) 96px 72px 30px; }
+.rd .nd-groups.nodate .nd-row { grid-template-columns: 200px minmax(0, 1fr) 96px auto 18px; }
 .rd .nd-groups { container: nd / inline-size; }
 @container nd (max-width: 760px) {
-  .rd .nd-row { grid-template-columns: var(--nd-date, 84px) 150px minmax(0, 1fr) 72px 30px; }
+  .rd .nd-row { grid-template-columns: var(--nd-date, 84px) 150px minmax(0, 1fr) auto 18px; }
   .rd .nd-row > .nd-wait { display: none; }
-  .rd .nd-row.bar { grid-template-columns: var(--nd-date, 84px) 150px minmax(0, 1fr) 96px 72px 30px; }
+  .rd .nd-row.bar { grid-template-columns: var(--nd-date, 84px) 150px minmax(0, 1fr) 96px auto 18px; }
   .rd .nd-row.bar > .nd-bar { display: none; }
   .rd .nd-row.bar > .nd-wait { display: block; }
-  .rd .nd-groups.nodate .nd-row { grid-template-columns: 150px minmax(0, 1fr) 72px 30px; }
+  .rd .nd-groups.nodate .nd-row { grid-template-columns: 150px minmax(0, 1fr) auto 18px; }
 }
 
 /* Activity's client filter (26 Oct, Alex): a 36px white pill beside the kinds, the face and name when one is picked;
