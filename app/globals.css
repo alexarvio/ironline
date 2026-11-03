@@ -19398,6 +19398,21 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .tr-row-chev { border-color: #98A2B3; }
 .tr-resume { border-radius: 999px; background: #141a24; }
 .tr-resume-main b, .tr-resume-time, .tr-resume-chip { font-weight: 600; }
+/* Since 3 Nov (Alex: "the whole design is with the hairline"): the session going on is the white hairline pill, no
+   shadow, the words in ink and grey, the clock in ink, Resume the ink pill, the live dot green; and the saved message
+   comes in its place, the same pill: the done check drawn in a green ring, what was saved at 600, its facts grey parted
+   by bars. */
+.tr-resume { background: #fff; color: #141a24; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.tr-resume .tr-row-dot { background: #2f7a3f; }
+.tr-resume-main small { color: #8b93a1; }
+.tr-resume-chip { height: 36px; display: inline-flex; align-items: center; padding: 0 16px; background: #141a24; color: #fff; }
+.tr-toast { top: auto; bottom: 96px; left: 50%; right: auto; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 10px; height: 48px; padding: 0 18px 0 13px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; white-space: nowrap; max-width: calc(100% - 28px); animation: tr-toast-pill-in 0.3s ease both, tr-toast-pill-out 0.4s ease 3.8s both; }
+.tr-toast-check { width: 22px; height: 22px; background: none; color: #2f7a3f; box-shadow: inset 0 0 0 1.5px #2f7a3f; }
+.tr-toast-check svg { display: block; }
+.tr-toast-title { font-size: 14px; font-weight: 600; color: #141a24; }
+.tr-toast-facts { font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; }
+@keyframes tr-toast-pill-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes tr-toast-pill-out { from { opacity: 1; } to { opacity: 0; } }
 /* ---- Training tab blend (16 Oct): the done box stays; numbers and the week ring back to navy (green once done), Up next as a navy-tinted chip. */
 .tr-row-tile, .tr-row-tile.live, .tr-row-tile.next { color: #1E3A5F; }
 .tr-row-pill.next { background: rgba(30, 58, 95, 0.1); box-shadow: none; color: #1E3A5F; }
