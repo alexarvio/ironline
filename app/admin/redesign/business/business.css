@@ -81,6 +81,11 @@
 .rd.rbz .rbz-tag svg { flex: none; translate: 0 -0.5px; }
 .rd.rbz .rbz-act { display: flex; justify-content: flex-end; }
 .rd.rbz .rbz-act .trn-pill { text-decoration: none; }
+/* Not billed automatically: Set up and Resume show on the row's hover only (3 Nov, Alex: a pill on every row was a
+   column of buttons; as Training's ⋯), and while the keyboard is on the row; always there on a touch screen. */
+.rd.rbz .rbz-act .trn-pill { opacity: 0; transition: opacity 0.12s; }
+.rd.rbz .rbz-row:hover .rbz-act .trn-pill, .rd.rbz .rbz-row:focus-within .rbz-act .trn-pill { opacity: 1; }
+@media (hover: none) { .rd.rbz .rbz-act .trn-pill { opacity: 1; } }
 
 /* ---- The pop-ups (portaled, so never under .rd): the floating list, as the Phases' Extend menu. Six rows, then it
    scrolls inside (design rules 6). */
