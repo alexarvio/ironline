@@ -11,7 +11,7 @@
 .hm-td-row:focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
 /* The icon alone in its colour, no ring (3 Nov, Alex: "only the icons just like we have across the app"), 20px, its room
    kept so every title starts in one line. */
-.hm-td-icon { flex: none; display: grid; place-items: center; width: 20px; height: 20px; }
+.hm-td-icon { flex: none; display: grid; place-items: center; width: 24px; height: 20px; }
 .hm-td-icon svg { display: block; }
 .hm-td-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hm-td-title { font-size: 15px; font-weight: 500; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
