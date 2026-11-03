@@ -929,7 +929,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         <div className="trn-head-actions">
           {/* The client's note on the programme sits with the header's actions, so the week strip has the whole row. */}
           {program.note && (
-            <button type="button" className={`rd-note${noteSeen ? "" : " unseen"}`} onClick={() => {
+            // One of the header's own pills (3 Nov, Alex: the audit; it was a 34px box at 700): the chat icon and `Note from
+            // Paula`, its day grey after it, the shared 6px rust dot while unread.
+            <button type="button" className="trn-pill rd-note" onClick={() => {
               setDlg({ kind: "note" });
               // Opened is read: the dot goes, and stays gone until the client writes again.
               if (!noteSeen) {
@@ -938,10 +940,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
               }
             }} title={`${firstName}'s note on this programme`}>
               <ChatIcon />
-              <span>
-                Note from {firstName}
-                <small>{program.note.when}</small>
-              </span>
+              Note from {firstName}
+              <small>{program.note.when}</small>
+              {!noteSeen && <span className="rd-due" aria-label="Not read yet" />}
             </button>
           )}
           {/* The goals and note as pills (they were two full-width bars), one pop-over under them. */}

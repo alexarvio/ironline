@@ -361,11 +361,10 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 /* A session begun and left: the amber of an unfinished session. One the client couldn't do: red. Not started stays grey, week over or not. */
 .rd-pills i.missed, .rd-week.live .rd-pills i.missed, .rd-week[data-state="active"] .rd-pills i.missed { background: #d98a1c; }
 .rd-pills i.skipped, .rd-week.live .rd-pills i.skipped, .rd-week[data-state="active"] .rd-pills i.skipped { background: #c9403c; }
-.rd-note { display: inline-flex; align-items: center; gap: 8px; height: 34px; margin-right: 4px; padding: 0 12px 0 10px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; text-align: left; color: #141a24; cursor: pointer; position: relative; white-space: nowrap; }
-.rd-note svg { width: 16px; height: 16px; color: #5b6474; }
-.rd-note span { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; font-weight: 700; }
-.rd-note small { font-size: 11px; font-weight: 500; color: #8b93a1; }
-.rd-note.unseen::after { content: ""; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 999px; background: #d9480f; box-shadow: 0 0 0 2px #fff; }
+/* The client's note on the programme (3 Nov, Alex: the audit) is one of the header's pills (`trn-pill`): its day grey
+   after the words, the shared 6px rust dot (`.rd-due`) while unread. */
+.rd.trn .trn-pill.rd-note small { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.rd.trn .trn-pill.rd-note > .rd-due { margin-left: -1px; }
 .rd-weekhead-actions { display: flex; align-items: center; gap: 8px; }
 .rd-full { margin: 0; padding: 12px 14px; font-size: 12.5px; color: #8b93a1; }
 .rd-note-text { white-space: pre-wrap; }
