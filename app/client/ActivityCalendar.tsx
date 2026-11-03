@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { landOnSoon } from "../lib/landOn";
 import { ChevronLeftIcon } from "../components/icons";
 import RingEdge from "../components/RingEdge";
+import { Bars } from "./Bars";
 
 // The check-in's Calendar (28 Sep; hairline 23 Oct, Alex): everything the
 // client did, a month at a time, Monday first, flat on the page. Each day's
@@ -180,12 +181,8 @@ function DayPanel({ day }: { day: ActivityDay }) {
               <span className="ac-item-row">
                 <b>{s.title}</b>
                 <small className="ac-facts">
-                  {[s.exercises ? `${s.exercises} ${s.exercises === 1 ? "exercise" : "exercises"}` : null, s.gym, s.minutes != null ? `${s.minutes} min` : null]
-                    .filter((f): f is string => !!f)
-                    .map((f, j) => (
-                      <span key={j}>{f}</span>
-                    ))}
-                  {!s.finished && <em>Unfinished</em>}
+                  {/* The shared drawn bar (3 Nov, Alex: Bars, not a copy of its own). */}
+                  <Bars parts={[s.exercises ? <span>{`${s.exercises} ${s.exercises === 1 ? "exercise" : "exercises"}`}</span> : null, s.gym ? <span>{s.gym}</span> : null, s.minutes != null ? <span>{`${s.minutes} min`}</span> : null, !s.finished && <em>Unfinished</em>]} />
                 </small>
               </span>
             </div>

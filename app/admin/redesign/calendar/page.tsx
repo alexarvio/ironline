@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireCoach } from "../../../lib/auth";
 import { clientReasons, getActivityFeed, getCalendarDay, getCalendarMonth, getMeetingConflicts, listCalendarCategories, listClients, localDateStr, type MeetingWithClient } from "../../../lib/queries";
 import { ATTENTION } from "../../../lib/attentionReasons";
-import AutosaveNote from "../../AutosaveNote";
+import CalendarSaveStatus from "./CalendarSaveStatus";
 import { startTiming } from "../../../lib/timing";
 import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
@@ -82,9 +82,6 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, reason: r ? { text: r.text, color: ATTENTION[r.type].color, rgb: ATTENTION[r.type].rgb } : null };
     }),
   );
-  // eslint-disable-next-line react-hooks/purity -- a server render reads the clock once, on purpose
-  const renderedAt = Date.now();
-
   // All-day entries first in a cell, then by time; four shown, the rest as +N more.
   const cellOrder = (list: MeetingWithClient[]) => [...list].sort((a, b) => Number(!!b.all_day) - Number(!!a.all_day) || (a.time < b.time ? -1 : 1));
   const span = (m: MeetingWithClient) => `${m.time}–${hhmm(toMin(m.time) + m.duration_minutes)}`;
@@ -119,8 +116,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             <div className="trn-head-main">
               <div className="trn-name-row">
                 <h1 className="trn-name">Calendar</h1>
-                {/* Nothing until something is saved (22 Oct, Alex), as every tab. */}
-                <AutosaveNote renderedAt={renderedAt} savedText="All changes saved" />
+                {/* Nothing until something is saved (22 Oct, Alex), as every tab; the shared status, fed by the entry pop-up (3 Nov, Alex). */}
+                <CalendarSaveStatus />
               </div>
             </div>
           </header>

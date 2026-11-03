@@ -2,10 +2,10 @@
 
 import Pager from "../Pager";
 import { repeatWords, WEEKDAY_LETTERS, isoWeekday } from "../../../lib/eventRepeat";
-import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type React from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import type { SaveJob } from "../useSaveQueue";
 import { addClientEventAction, deleteClientEventAction, updateClientEventAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, WeightGoalIcon } from "../../../components/icons";
@@ -77,8 +77,9 @@ export type EventsCardProps = {
   intoWeek: number;
   /** The 3 / 6 / 9 / 12 month choices. The card keeps its own choice (10 Oct), apart from the phases'. */
   windows: readonly { months: number; weeks: number }[];
-  /** Told when its saves start and end, for the one status beside the plan's title. */
-  onSaving?: (busy: boolean) => void;
+  /** The Plan's save line (useSaveQueue), so its saves share the one status beside the plan's title and a failure
+   *  says `Not saved | Retry` there (3 Nov, Alex: a failed save said saved). */
+  save: (job: SaveJob) => void;
   /** The client's first name: an event they added says "From Alex" (21 Oct, Alex), not "From client". */
   firstName?: string;
   /** The faces for an event's "Added by" in its pop-up (24 Oct, Alex): the client's, and the coach's for "you". */
@@ -88,8 +89,7 @@ export type EventsCardProps = {
 };
 const EV_WIN_KEY = "rq-events-window";
 
-export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, onSaving, firstName, faces, weightGoals: serverGoals = [] }: EventsCardProps) {
-  const router = useRouter();
+export default function EventsCard({ clientId, events: serverEvents, categories: cats, today, thisWeek, intoWeek, windows, save, firstName, faces, weightGoals: serverGoals = [] }: EventsCardProps) {
   // The weight goals, copied by content as the events are, so a re-read with the same goals resets nothing.
   const goalsKey = JSON.stringify(serverGoals);
   const [goals, setGoals] = useState(serverGoals);
@@ -128,16 +128,13 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
   const [back, setBack] = useState(0);
   const grid = gridFor(win, thisWeek, intoWeek, back);
   const { count, weeks } = grid;
-  const [busy, start] = useTransition();
-  useEffect(() => {
-    onSaving?.(busy);
-  }, [busy, onSaving]);
-  // Every save goes to the server and the page re-reads; the card holds no copy.
+  // Every save goes to the server in the Plan's line, which re-reads the page once it is empty; one that fails stays
+  // first in line for Retry (3 Nov, Alex).
   const act = (fn: () => Promise<unknown>, said?: string) =>
-    start(async () => {
+    save(async () => {
       await fn();
-      router.refresh();
       if (said) toast.success(said);
+      return true;
     });
   const [dlg, setDlg] = useState<{ event: PlanEvent | null; /** A new one from an empty spot clicked: its day and its lane's kind. */ start?: string; kind?: string | null } | null>(null);
   // An empty spot on the grid is a way in (20 Oct, Alex): the day under the pointer in its week's column, the lane's kind.

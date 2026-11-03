@@ -13,7 +13,8 @@ import EventsTimelineCard from "./home/EventsTimelineCard";
 import type { CardCovers } from "./CardPictureSheet";
 import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
-import { pic } from "../lib/pic";
+import CoachSays from "./CoachSays";
+import MeetingNotes from "./meetings/MeetingNotes";
 import type { LinkView } from "../lib/messageLinks";
 import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenEvents, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 import { goalItemId } from "../lib/weightGoal";
@@ -460,11 +461,11 @@ function LatestActivityCard({ a, coach, focus = null }: { a: LatestActivity; coa
         else goToTab?.(a.actionTab ?? "training", a.actionTab === "training" || !a.actionTab ? undefined : a.actionRef ?? undefined);
     }
   };
-  const initial = (coach.firstName || "C").trim().charAt(0).toUpperCase();
   const body = a.body?.trim() || null;
   const area = NOTIFICATION_TYPES[areaOf(a)];
-  // Who and when on top, what they did as the title under the name, what they
-  // wrote under that. Tapping anywhere goes to where it happened.
+  // Drawn as every coach's note (3 Nov, Alex: CoachSays): the face with the kind's badge on it, what happened as the small
+  // caps label with when after it, their own words in ink under it. With no words of their own, the label is the coach's
+  // name and what happened is the words. Tapping anywhere goes to where it happened.
   return (
     <section className="hm-latest-note">
       <div className="hm-tasks-head">
@@ -472,29 +473,18 @@ function LatestActivityCard({ a, coach, focus = null }: { a: LatestActivity; coa
       </div>
       <article className="hm-lt" aria-label={`Latest from ${coach.firstName}: ${a.title}`}>
         <button type="button" className={`hm-lt-body${a.unseen ? " unseen" : ""}`} onClick={follow}>
-          <span className="hm-lt-avatar" aria-hidden="true">
-            {coach.photoPath ? (
-              // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-              <img src={pic(coach.photoPath, 96)} alt="" />
-            ) : (
-              <span className="hm-lt-initial">{initial}</span>
-            )}
-            <span className="hm-lt-area" style={{ background: area.color }} title={area.label}>
-              <svg viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d={area.icon} />
-              </svg>
-            </span>
-          </span>
-          <span className="hm-lt-text">
-            <span className="hm-lt-meta">
-              <span>
-                {coach.firstName}
-              </span>
-              <span>{a.whenLabel}</span>
-            </span>
-            <span className="hm-lt-title">{a.title}</span>
-            {body && <span className="hm-lt-desc">{body}</span>}
-          </span>
+          <CoachSays
+            coach={{ name: coach.firstName, photoPath: coach.photoPath }}
+            badge={{ color: area.color, icon: area.icon, label: area.label }}
+            label={
+              <>
+                <span className="coach-says-what">{body ? a.title : coach.firstName}</span>
+                <span className="coach-says-date">{a.whenLabel}</span>
+              </>
+            }
+          >
+            {body ?? a.title}
+          </CoachSays>
         </button>
         <div className="hm-lt-foot">
           {/* Left: the chat with the coach. Right: where this happened, always
@@ -701,9 +691,9 @@ function RecapFold({ recap, date }: { recap: NonNullable<MeetingRecap>; /** Show
         </span>
       </button>
       <div ref={bodyRef} className={`hm-recap-body${open ? " open" : ""}`} aria-hidden={!open}>
+        {/* The call's notes as the Meetings screen draws them (3 Nov, Alex): its title over the points on the thin line. */}
         <div className="hm-recap-clip">
-          <b className="hm-recap-sub">{recap.title}</b>
-          <p className="hm-recap-text">{recap.text}</p>
+          <MeetingNotes title={recap.title} notes={recap.text} />
         </div>
       </div>
     </div>

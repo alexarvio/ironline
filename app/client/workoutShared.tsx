@@ -7,6 +7,7 @@ import ExerciseCoachNote from "./ExerciseCoachNote";
 import type { VideoAsk } from "./VideoAskSheet";
 import type { GymOption } from "./GymPickerDialog";
 import { Bars } from "./Bars";
+import { fmtWeight, planToDisplay, unitLabel } from "../lib/units";
 
 // What the client's Training tab, a session's overview and the workout all
 // share: the shapes the server page hands over, the unit rules, and the
@@ -278,16 +279,8 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
   };
   const [swapOpen, setSwapOpen] = useState(false);
   const done = cardio.done;
-  const cells = (
-    [
-      ["Time", cardio.time],
-      ["Pace", cardio.pace],
-      ["Incline", cardio.incline],
-      ["Distance", cardio.distance],
-    ] as const
-  ).filter(([, v]) => v);
   // Drawn like an exercise page (19 Oct, Alex: the cardio was still the old boxed card): the eyebrow,
-  // the name large, the targets on one line in ink, the coach's note, then Mark as done.
+  // the name large, the targets as the exercise page's table (3 Nov, Alex), the coach's note, then Mark as done.
   return (
     <div className={`wo-cardio${done ? " done" : ""}`} data-index={index}>
       <div className="wo-ex-head">
@@ -334,18 +327,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
           ))}
         </div>
       )}
-      {!free && cells.length > 0 && (
-        <div className="lw-target">
-          <span className="lw-target-label">Target</span>
-          <span className="lw-target-vals">
-            {cells.map(([label, v]) => (
-              <span key={label} title={label}>
-                {v}
-              </span>
-            ))}
-          </span>
-        </div>
-      )}
+      {!free && <TargetTable cols={cardioColumns(cardio)} />}
       <ExerciseCoachNote assignmentId={null} dateLabel="" text={cardio.notes || null} unread={false} />
       {!readOnly && (
         <button
@@ -446,19 +428,49 @@ export function SkipReason({ dayId, text, onSaved }: { dayId: number; text: stri
   );
 }
 
-// The prescription as a small table: labels across, figures under them. The
-// session overview and the workout's own page show the same one (30 Sep).
-export function TargetTable({ cells }: { cells: { unit: string; value: string }[] }) {
-  if (!cells.length) return null;
+// The coach's targets as columns, one order everywhere (3 Nov, Alex: 1 of docs/boards/drawn-several-ways-mockup.html):
+// Sets, Reps (an en dash, 8–10), kg or lbs in the exercise's unit, RPE, Tempo, Rest (90s, or 2 min from 120s); a
+// cardio's Time, Pace, Incline, Distance. Only what the coach filled in.
+export function targetColumns(t: { sets?: number | null; reps?: string | null; weightKg?: number | null; unit?: WeightUnit | null; rpe?: number | string | null; tempo?: string | null; rest?: number | null; time?: string | null; pace?: string | null; incline?: string | null; distance?: string | null }): [string, string][] {
+  const unit = t.unit ?? "kg";
+  const reps = (t.reps ?? "").trim().replace(/\s*(?:-|–|to)\s*/i, "–");
+  const rest = t.rest != null && t.rest > 0 ? (t.rest % 60 === 0 && t.rest >= 120 ? `${t.rest / 60} min` : `${t.rest}s`) : null;
+  const text = (v: string | null | undefined) => v?.trim() || null;
   return (
-    <div className="so-tbl-wrap">
-      <div className="so-tbl-label">Target</div>
-      <div className="so-tbl" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(max-content, 1fr))` }}>
-        {cells.map((c) => (
-          <small key={`h-${c.unit}`}>{c.unit}</small>
+    [
+      t.sets != null && t.sets > 0 ? ["Sets", String(t.sets)] : null,
+      reps ? ["Reps", reps] : null,
+      t.weightKg != null ? [unitLabel(unit), fmtWeight(planToDisplay(t.weightKg, unit))] : null,
+      t.rpe != null && String(t.rpe).trim() ? ["RPE", String(t.rpe)] : null,
+      text(t.tempo) ? ["Tempo", text(t.tempo)!] : null,
+      rest ? ["Rest", rest] : null,
+      text(t.time) ? ["Time", text(t.time)!] : null,
+      text(t.pace) ? ["Pace", text(t.pace)!] : null,
+      text(t.incline) ? ["Incline", text(t.incline)!] : null,
+      text(t.distance) ? ["Distance", text(t.distance)!] : null,
+    ] as ([string, string] | null)[]
+  ).filter((c): c is [string, string] => !!c);
+}
+export const cardioColumns = (c: SessionCardio) => targetColumns({ time: c.time, pace: c.pace, incline: c.incline, distance: c.distance });
+
+// The targets as the workout's table (3 Nov, Alex: one table on the exercise page, the session overview and the
+// cardio page): TARGET, the names in small grey caps over one hairline across the width, the figures under them in
+// ink; five or more spread over the width, fewer from the left 32px apart (`.lw-target-grid`).
+export function TargetTable({ cols }: { cols: [string, string][] }) {
+  if (!cols.length) return null;
+  return (
+    <div className="lw-target">
+      <span className="lw-target-label">Target</span>
+      <div className={`lw-target-grid${cols.length >= 5 ? " spread" : ""}${cols.length >= 6 ? " dense" : ""}`} style={{ gridTemplateColumns: `repeat(${cols.length}, max-content)` }}>
+        {cols.map(([name]) => (
+          <span key={`h${name}`} className="lw-target-h">
+            {name}
+          </span>
         ))}
-        {cells.map((c) => (
-          <b key={`v-${c.unit}`}>{c.value}</b>
+        {cols.map(([name, v]) => (
+          <span key={`v${name}`} className="lw-target-v">
+            {v}
+          </span>
         ))}
       </div>
     </div>

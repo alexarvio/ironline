@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { removeProgressPhotoAction, uploadProgressPhotoAction } from "../lib/actions";
 import { fitJpeg } from "../lib/coverJpeg";
 import { ArrowRightIcon, ChevronLeftIcon } from "../components/icons";
@@ -63,12 +63,19 @@ export default function ProgressPicturesScreen({
     return landOnSoon(() => history.current?.children[linkedIndex], "start", 120);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival from a link.
   }, []);
-  // Photos picked but not sent yet; leaving would lose them, so Back asks.
+  // Photos picked but not sent yet; leaving would lose them, so Back asks, in place (3 Nov, Alex: as the check-in and Add an
+  // event ask, never the browser's alert): the sheet's send row turns into the question.
   const [unsent, setUnsent] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const back = () => {
-    if (unsent && !window.confirm("Your new pictures aren’t sent yet. Leave without sending them?")) return;
+    if (unsent) return setLeaving(true);
     onBack();
   };
+  // Nothing left unsent (the picks taken off, or sent): the question goes with them.
+  const unsentChange = useCallback((u: boolean) => {
+    setUnsent(u);
+    if (!u) setLeaving(false);
+  }, []);
 
   const open = data.openSheet;
   // The sheet (and the ones before it), or two sheets side by side.
@@ -117,7 +124,7 @@ export default function ProgressPicturesScreen({
           />
         ) : data.openSheet ? (
           <div ref={openRef}>
-            <OpenSheet clientId={data.clientId} sheet={data.openSheet} onUnsentChange={setUnsent} />
+            <OpenSheet clientId={data.clientId} sheet={data.openSheet} onUnsentChange={unsentChange} leaving={leaving} onKeep={() => setLeaving(false)} onLeave={onBack} />
           </div>
         ) : (
           !data.hasAngles && <p className="pp-app-empty">Your coach hasn&rsquo;t asked for a shape update yet.</p>
@@ -168,10 +175,17 @@ function OpenSheet({
   clientId,
   sheet,
   onUnsentChange,
+  leaving = false,
+  onKeep,
+  onLeave,
 }: {
   clientId: number;
   sheet: NonNullable<ProgressPicturesProps["openSheet"]>;
   onUnsentChange: (unsent: boolean) => void;
+  /** Back was tapped with photos not sent: the send row asks Leave without sending? (3 Nov, Alex). */
+  leaving?: boolean;
+  onKeep?: () => void;
+  onLeave?: () => void;
 }) {
   const [staged, setStaged] = useState<Record<number, Staged>>({});
   // Picked photos that have already gone up during the current Save.
@@ -198,6 +212,15 @@ function OpenSheet({
   useEffect(() => {
     onUnsentChange(stagedCount > 0);
   }, [stagedCount, onUnsentChange]);
+  // Gone from the screen (Compare), its picks go with it: nothing left to ask about.
+  useEffect(() => () => onUnsentChange(false), [onUnsentChange]);
+  // Asked to leave: the sheet comes open and its send row, now the question, is brought into view.
+  const saveRow = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!leaving) return;
+    const t = setTimeout(() => saveRow.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+    return () => clearTimeout(t);
+  }, [leaving]);
 
   const total = sheet.slots.length;
   const inCount = sheet.slots.filter((s) => s.src).length;
@@ -326,7 +349,7 @@ function OpenSheet({
         <span className={`tr-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>
 
-      {open && (
+      {(open || leaving) && (
         <div className="pp-todo-body">
           {failed && (
             <p className="pp-app-fail" role="alert">
@@ -365,8 +388,28 @@ function OpenSheet({
             })}
           />
 
-          {(stagedCount > 0 || editing || saving) && (
-            <div className="pp-todo-save">
+          {leaving && stagedCount > 0 ? (
+            // The check-in's question (.cki-confirm; 3 Nov, Alex): Keep puts the send row back, Leave throws the picks away and goes back.
+            <div ref={saveRow} className="pp-todo-save pp-leave">
+              <div className="cki-confirm" role="alertdialog" aria-label={`Leave without sending ${stagedCount === 1 ? "1 photo" : `${stagedCount} photos`}?`}>
+                <span className="cki-confirm-text">Leave without sending {stagedCount === 1 ? "1 photo" : `${stagedCount} photos`}?</span>
+                <button type="button" className="keep" onClick={onKeep}>
+                  Keep
+                </button>
+                <button
+                  type="button"
+                  className="discard"
+                  onClick={() => {
+                    cancel();
+                    onLeave?.();
+                  }}
+                >
+                  Leave
+                </button>
+              </div>
+            </div>
+          ) : (stagedCount > 0 || editing || saving) && (
+            <div ref={saveRow} className="pp-todo-save">
               {stagedCount > 0 && inCount > 0 && !saving && (
                 <button type="button" className="pp-app-save-cancel" onClick={cancel}>
                   Cancel

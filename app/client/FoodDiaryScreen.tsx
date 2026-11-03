@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "rea
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { NorCoachLogo } from "../components/NorCoachLogo";
+import DoneCheck from "../components/DoneCheck";
 import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
 import {
   addCustomFoodAction,
@@ -798,7 +799,8 @@ export default function FoodDiaryScreen({
                     Edit
                   </button>
                 )}
-                {same && <span className="fdi-push-tick" aria-hidden="true">✓</span>}
+                {/* Logged, the one done check (3 Nov, Alex), after the bookmark. */}
+                {same && <DoneCheck size={22} className="fdi-push-tick" />}
                 {/* Keeping the whole day to log again: outline to save, filled once it is. */}
                 {total > 0 &&
                   (diary.savedDayAs && diary.savedDayId != null ? (

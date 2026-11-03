@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import { NorCoachLogo } from "../components/NorCoachLogo";
+import { Bars } from "../client/Bars";
 
 // The sign-in screens for the switch to Clerk (26 Sep): no passwords, an
 // email code or Apple or Google, for coaches and clients alike. Each screen
@@ -90,9 +91,7 @@ export function SignInScreen({ onEmail, onApple, onGoogle, busy, error, notice, 
         Coaching others? <a href={signupHref}>Create a coach account</a>
       </p>
       <p className="auth-note auth-legal">
-        <a href="/privacy">Privacy policy</a>
-        <i className="au-sep" aria-hidden="true" />
-        <a href="/support">Support</a>
+        <Bars parts={[<a key="p" href="/privacy">Privacy policy</a>, <a key="s" href="/support">Support</a>]} />
       </p>
     </AuthShell>
   );

@@ -30,9 +30,9 @@
 .rd.rp .rp-selright { display: flex; align-items: center; gap: 8px; margin-left: auto; align-self: center; }
 .rd.rp .rp-cmp-btn.trn-btn { height: 36px; }
 
-.rd.rp .rp-card { padding: 14px; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; }
-.rd.rp .rp-sheet { display: flex; flex-direction: column; gap: 12px; }
-.rd.rp .rp-empty { font-size: 13.5px; font-weight: 500; color: #8b93a1; }
+/* The cards are the shared card (3 Nov, Alex: was its own radius 20 and an inset edge): `.rls-card`, a real 1px
+   hairline, radius 18. The open sheet keeps its own room inside. Nothing yet is the shared `None yet` (`.rls-none`). */
+.rd.rp .rls-card.rp-sheet.rp-sheet { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
 
 /* The photos: one column an angle, each at most 240px across, so one or two angles don't fill the screen;
    at most three a row when the tab is narrow. */
@@ -94,7 +94,7 @@
 .rd.rp .rp-phase.sm { height: 22px; padding: 0 8px; font-size: 11px; }
 
 /* ---- All sheets: a log, a row a sheet, the rows together (as every log in the app), newest first. */
-.rd.rp .rp-table { padding: 0; overflow: hidden; }
+.rd.rp .rls-card.rp-table.rp-table { padding: 0; overflow: hidden; }
 .rd.rp .rp-thead, .rd.rp .rp-trow { display: grid; grid-template-columns: 112px minmax(64px, 96px) 110px 100px minmax(0, 1fr) 104px; align-items: center; gap: 12px; }
 .rd.rp .rp-thead { padding: 12px 18px; border-bottom: 1px solid #e1e5eb; font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98a2b3; white-space: nowrap; }
 .rd.rp .rp-thead .end { text-align: center; }
@@ -244,5 +244,7 @@
 .rd.rp .rp-cap-remove:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
 @media (hover: none) { .rd.rp .rp-cap-remove { opacity: 1; } }
 
-/* All sheets before any has closed (23 Oct): its heads, then None yet as a row. */
-.rd.rp .rp-table .rp-tnone { margin: 0; padding: 14px 18px 16px; font-size: 14px; font-weight: 500; color: #8b93a1; }
+/* All sheets before any has closed (23 Oct): its heads, then None yet as a row, the shared empty word (`.rls-none`, 3 Nov).
+   An empty card is the word alone on the left, midway down (2 Nov, Alex): 16px over and under, 18px in (the card's own
+   room goes in draft.css); measurements.css's 14/6 can land after draft.css here, so it is said again. */
+.rd.rp .rls-card > .rls-none:only-child, .rd.rp .rls-card.rp-table > .rls-none { padding: 16px 18px; }
