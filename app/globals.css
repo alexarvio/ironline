@@ -21101,11 +21101,13 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 }
 
 /* ---- Toggles one way (3 Nov, Alex: the audit; docs/boards/toggles-audit-mockup.html). */
-/* Training day | Rest day on Nutrition and the food diary: the white capsule at the banner's foot, sliding as every
-   choice (SlidePills, data-slide), the picked day ink; no page dots under the rings. Was underline tabs in navy. */
-.nd-tabs.nd-daycap { display: flex; gap: 0; width: 100%; max-width: 340px; height: 36px; margin-left: auto; margin-right: auto; padding: 3px; box-sizing: border-box; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
-.nd-tabs.nd-daycap .nd-tab.nd-tab { flex: 1; height: 30px; margin: 0; padding: 0 14px; border: 0; border-radius: 999px; background: none; font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #5b6474; }
-.nd-tabs.nd-daycap .nd-tab.nd-tab.on { background: #141a24; color: #fff; }
+/* Training day | Rest day on Nutrition and the food diary keeps its underline tabs over the photo (3 Nov, Alex: the white
+   capsule "does not blend in"), and slides as every toggle (SlidePills, data-slide): the white underline glides to the day
+   picked over 250ms instead of jumping. No page dots under the rings. */
+.nd-tabs.nd-daycap { position: relative; }
+.nd-tabs.nd-daycap[data-pill]::before { top: auto; bottom: -1px; height: 2px; border-radius: 1px; transform: translateX(var(--pill-x, 0)); background: var(--nd-line, #141a24); box-shadow: none; }
+.nd-photo .nd-tabs.nd-daycap[data-pill]::before { background: #fff; }
+.nd-tabs.nd-daycap[data-pill] > .nd-tab.on { border-bottom-color: transparent; }
 /* Every client capsule one size: 36px, 3px of air round the pill, 13px words at 600 picked or not, so nothing shifts. */
 .pg-view .pg-range.pg-range, .evs-seg.evs-seg, .cmg-tabs.cmg-tabs, .pc-cmp-view.pc-cmp-view, .au-card .au-plan-cap.au-plan-cap, .hw-range.hw-range { height: 36px; padding: 3px; gap: 0; box-sizing: border-box; }
 .pg-view .pg-range.pg-range button, .evs-seg.evs-seg button, .cmg-tabs.cmg-tabs button, .pc-cmp-view.pc-cmp-view button, .au-card .au-plan-cap.au-plan-cap button, .hw-range.hw-range button { height: 30px; padding: 0 14px; font-size: 13px; font-weight: 600; }
