@@ -4,7 +4,7 @@ import { NOTIFICATION_TYPES, type NotificationCategory } from "../lib/notificati
 import { useEffect, useRef, useState, useTransition } from "react";
 import { markNotificationReadAction } from "../lib/actions";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
-import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
+import PhaseCards, { TRACK_ICON, type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import { defaultPhaseCover } from "../lib/phaseCovers";
 import { type ProgressPics } from "./ProgressPicsCard";
 
@@ -294,20 +294,25 @@ function HomeBanner({ dateLabel, firstName, initialHello }: { dateLabel: string;
 // the screen's one ink pill; the check-in's Fill in and the shape update's Add (Continue once begun) are words. No food:
 // it is optional (3 Nov, Alex). The phase cards keep their own.
 
+// The app's own icons, never drawn again here (3 Nov, Alex: "the icons the same across everything"; rule §5): the
+// tracks' as the phase cards and the tab bar draw them (TRACK_ICON), the shape update's the notifications' camera.
+const SHAPE = NOTIFICATION_TYPES.pics_reviewed;
 const TODAY_ICON = {
-  training: "M6.5 8v8M17.5 8v8M3.5 10v4M20.5 10v4M6.5 12h11",
-  lifestyle: "M12 19.5s-7-4.4-7-9.6A3.9 3.9 0 0 1 12 7.6a3.9 3.9 0 0 1 7 2.3c0 5.2-7 9.6-7 9.6z",
-  shape: "M4 8h4l2-3h4l2 3h4v11H4zM12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
-} as const;
-const TODAY_COLOR = { training: "#3a3390", lifestyle: "#a08a5c", shape: "#b8471f" } as const;
+  training: TRACK_ICON.training,
+  lifestyle: TRACK_ICON.lifestyle,
+  shape: (
+    <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <path d={SHAPE.icon} />
+    </svg>
+  ),
+};
+const TODAY_COLOR = { training: "#3a3390", lifestyle: "#a08a5c", shape: SHAPE.color };
 
 function TodayRow({ kind, title, fact, action, ink = false, onClick }: { kind: keyof typeof TODAY_ICON; title: string; fact: React.ReactNode; action: string; ink?: boolean; onClick: () => void }) {
   return (
     <button type="button" className="hm-td-row" onClick={onClick} aria-label={`${title}. ${action}.`}>
       <span className="hm-td-icon" style={{ color: TODAY_COLOR[kind] }} aria-hidden="true">
-        <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-          <path d={TODAY_ICON[kind]} />
-        </svg>
+        {TODAY_ICON[kind]}
       </span>
       <span className="hm-td-text">
         <span className="hm-td-title">{title}</span>
