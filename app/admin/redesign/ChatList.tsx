@@ -44,7 +44,7 @@ export default function ChatList({ chats, title, here = null, isUnread, onPick, 
       <input ref={search} className="rd-dock-search" type="search" value={q} placeholder="Search clients" aria-label="Search clients" onChange={(e) => setQ(e.target.value)} />
       <div className="rd-dock-rows">
         {chats == null ? null : shown.length === 0 ? (
-          <p className="rd-dock-empty">{needle ? "No match" : "No clients yet"}</p>
+          <p className="rd-dock-empty">{needle ? "No match" : "None yet"}</p>
         ) : (
           shown.map((c) => {
             const unread = isUnread(c);

@@ -13,6 +13,7 @@ import ActivityCalendar, { type ActivityDay } from "./ActivityCalendar";
 import { landOnSoon } from "../lib/landOn";
 import { Bars } from "./Bars";
 import RingEdge from "../components/RingEdge";
+import { monthWords } from "../lib/clientDates";
 
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx for why
 // a "use client" file importing queries.ts breaks the dev server). All data
@@ -127,7 +128,7 @@ export default function CheckInScreen({
   const openToday = () => setOpen({ date: today, sections, weeklyOpen, monthlyOpen });
   const openDay = (d: CheckInFeedDay) => setOpen({ date: d.date, sections: d.edit, weeklyOpen: true, monthlyOpen: true, weekLabel: "That week", monthLabel: "That month" });
   const coach = useCoachIdentity();
-  const coachFirst = coach?.name.trim().split(/\s+/)[0] || "your coach";
+  const coachFirst = coach?.name.trim().split(/\s+/)[0] || "Coach";
   const [stuck, setStuck] = useState(false);
   const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const y = e.currentTarget.scrollTop;
@@ -202,7 +203,7 @@ export default function CheckInScreen({
             <div className="ci-stats" role="list">
               {(() => {
                 const month = today.slice(0, 7);
-                const monthName = new Date(`${today}T12:00:00`).toLocaleDateString("en-GB", { month: "long" });
+                const monthName = monthWords(today, { year: false });
                 const active = calendar.filter((d) => d.date.startsWith(month)).length;
                 const tiles = [
                   { key: "streak", icon: <ChecklistIcon />, label: "Streak", value: String(stats.streak), unit: null, sub: stats.streak === 1 ? "day" : "days" },
@@ -240,7 +241,7 @@ export default function CheckInScreen({
               {/* Nothing to fill in today (a weekly-only phase, say): the goals and the coach's note still show (21 Oct). */}
               <PhaseObjectives coachName={coachFirst} objectives={objectives} variant="line" />
               <CoachCard flat coachName={coachFirst} photoPath={coach?.photoPath ?? null} note={coachNote?.text ?? null} noteDate={coachNote?.date ?? null} />
-              <p className="ci-empty">Your coach hasn&rsquo;t set up any check-in metrics yet.</p>
+              <p className="ci-empty">Nothing today</p>
             </>
           ) : (
             <>

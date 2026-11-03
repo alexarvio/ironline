@@ -4,6 +4,8 @@
 // at the clock. A single day has start === end; it is a milestone, never
 // "now".
 
+import { dayWords, monthWords } from "./clientDates";
+
 export type EventStatus = "next" | "now" | "past";
 export type Dated = { start: string; end: string };
 
@@ -12,8 +14,6 @@ const dayNum = (iso: string) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.sli
 /** Whole days from a to b; negative when b is earlier. */
 export const daysBetween = (a: string, b: string) => Math.round(dayNum(b) - dayNum(a));
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export const isSingleDay = (e: Dated) => e.start === e.end;
 
@@ -25,8 +25,7 @@ export function statusOf(e: Dated, today: string): EventStatus {
 
 /** "20 Oct", with the year when it isn't today's. */
 export function shortDay(iso: string, today: string): string {
-  const d = `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1]}`;
-  return iso.slice(0, 4) === today.slice(0, 4) ? d : `${d} ${iso.slice(0, 4)}`;
+  return dayWords(iso, { year: iso.slice(0, 4) !== today.slice(0, 4) });
 }
 
 /** "20 Oct – 20 Nov"; a single day "25 Aug", or "From 13 Oct" when still to come. */
@@ -41,7 +40,7 @@ function ago(n: number, today: string, iso: string): string {
   if (n === 1) return "yesterday";
   if (n < 21) return `${n} days ago`;
   if (n <= 90) return `${Math.round(n / 7)} weeks ago`;
-  const m = MONTHS_LONG[Number(iso.slice(5, 7)) - 1];
+  const m = monthWords(iso, { year: false });
   return iso.slice(0, 4) === today.slice(0, 4) ? `back in ${m}` : `back in ${m} ${iso.slice(0, 4)}`;
 }
 
@@ -71,11 +70,7 @@ export function dayOf(e: Dated, today: string): { day: number; total: number } {
 
 /** The TODAY line's "THU 8 OCT", and its long form for the screen reader. */
 export function todayLabel(today: string): { short: string; long: string } {
-  const d = new Date(`${today}T00:00:00Z`);
-  const wd = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getUTCDay()];
-  const day = Number(today.slice(8, 10));
-  const m = Number(today.slice(5, 7)) - 1;
-  return { short: `${wd.slice(0, 3)} ${day} ${MONTHS[m]}`.toUpperCase(), long: `Today, ${wd} ${day} ${MONTHS_LONG[m]}` };
+  return { short: dayWords(today, { weekday: "short", year: false }).toUpperCase(), long: `Today, ${dayWords(today, { weekday: "long", long: true, year: false })}` };
 }
 
 /** yyyy-mm-dd plus n days. */
@@ -95,6 +90,5 @@ export function durationLabel(start: string, end: string, today: string): string
 
 /** "Thursday 8 October", for a date field's spoken label. */
 export function longDay(iso: string): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  return `${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getUTCDay()]} ${Number(iso.slice(8, 10))} ${MONTHS_LONG[Number(iso.slice(5, 7)) - 1]}`;
+  return dayWords(iso, { weekday: "long", long: true, year: false });
 }

@@ -96,12 +96,8 @@ function NativePushToggle({ ready, row }: { ready: boolean; row: (p: PushRowProp
     setState("off");
   }
 
-  const detail =
-    state === "blocked"
-      ? "Blocked for NorCoach in your phone's settings"
-      : state === "unsupported"
-        ? "Not available yet"
-        : "On your lock screen, even with the app closed";
+  // The title alone; a short fact only when something is wrong (3 Nov, Alex: the words audit).
+  const detail = state === "blocked" ? "Blocked in phone settings" : state === "unsupported" ? "Not available" : "";
   return <>{row({ on: state === "on", disabled: state === "loading" || state === "busy" || state === "blocked" || state === "unsupported", detail, onClick: state === "on" ? turnOff : turnOn })}</>;
 }
 
@@ -110,7 +106,7 @@ function ToggleRow({ on, disabled, detail, onClick }: PushRowProps) {
     <button type="button" className="settings-toggle-row" onClick={onClick} disabled={disabled} aria-pressed={on}>
       <div className="home-dark-row-body">
         <div className="home-dark-row-title">Notifications on this phone</div>
-        <div className="home-dark-row-detail">{detail}</div>
+        {detail && <div className="home-dark-row-detail">{detail}</div>}
       </div>
       <span className={`settings-switch${on ? " on" : ""}`} aria-hidden="true">
         <span className="settings-switch-knob" />
@@ -170,14 +166,7 @@ function WebPushToggle({ publicKey, row }: { publicKey: string; row: (p: PushRow
     }
   }
 
-  const detail =
-    state === "install"
-      ? "Add NorCoach to your Home Screen first: Share, then Add to Home Screen"
-      : state === "blocked"
-        ? "Blocked for NorCoach in your phone's settings"
-        : state === "unsupported"
-          ? "This browser can't show notifications"
-          : "On your lock screen, even with the app closed";
+  const detail = state === "install" ? "Add to Home Screen first" : state === "blocked" ? "Blocked in phone settings" : state === "unsupported" ? "Not available" : "";
   const disabled = state === "loading" || state === "busy" || state === "install" || state === "blocked" || state === "unsupported";
   return <>{row({ on: state === "on", disabled, detail, onClick: state === "on" ? turnOff : turnOn })}</>;
 }

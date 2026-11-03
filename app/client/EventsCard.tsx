@@ -12,6 +12,7 @@ import { eventTypeOf } from "../lib/eventTypes";
 import { dayOf } from "../lib/eventDates";
 import { TypeIcon } from "./events/AddEventSheet";
 import { Bars } from "./Bars";
+import { dayWords } from "../lib/clientDates";
 import type { WeightGoalVerdict } from "../lib/weightGoal";
 
 // Home's "Events" card (7 Oct): what is coming up in the client's life that
@@ -56,7 +57,7 @@ export type HomeEvents = { list: HomeEvent[]; categories: HomeEventCategory[] };
 const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
-export const shortDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+export const shortDate = (d: string) => dayWords(d);
 const relative = (today: string, d: string) => {
   const n = daysBetween(today, d);
   if (n === 0) return "today";
@@ -181,7 +182,7 @@ export function EventSheet({ clientId, event, categories, coachName, today, onCl
     });
   return createPortal(
     <div className="vr-sheet-scrim" role="presentation" onClick={() => !pending && onClose()}>
-      <div className="pp-app-sheet hm-ev-sheet" role="dialog" aria-modal="true" aria-label={event ? "Change the event" : "Tell your coach"} onClick={(e) => e.stopPropagation()}>
+      <div className="pp-app-sheet hm-ev-sheet" role="dialog" aria-modal="true" aria-label={event ? "Change the event" : `Tell ${coachName}`} onClick={(e) => e.stopPropagation()}>
         <div className="pp-app-sheet-head">
           <span className="pp-app-sheet-title">{event ? "Change the event" : `Tell ${coachName}`}</span>
           <span className="pp-app-sheet-sub">It goes on your plan, where {coachName} sees it.</span>
@@ -234,14 +235,21 @@ export function EventSheet({ clientId, event, categories, coachName, today, onCl
         <button type="button" className="hm-ev-save" onClick={save} disabled={!ok || pending}>
           {pending ? "Saving…" : event ? "Save" : `Send to ${coachName}`}
         </button>
+        {/* Delete asks in place, as the chat's Delete (3 Nov, Alex: words mockup): `Delete event?`, Cancel in words, Delete in red words. */}
         {event &&
           (confirmRemove ? (
-            <button type="button" className="hm-ev-remove sure" onClick={remove} disabled={pending}>
-              Yes, remove it
-            </button>
+            <div className="ev-ask">
+              <span className="ev-ask-q">Delete event?</span>
+              <button type="button" className="hm-ev-remove quiet" onClick={() => setConfirmRemove(false)} disabled={pending}>
+                Cancel
+              </button>
+              <button type="button" className="hm-ev-remove" onClick={remove} disabled={pending}>
+                {pending ? "Deleting…" : "Delete"}
+              </button>
+            </div>
           ) : (
             <button type="button" className="hm-ev-remove" onClick={() => setConfirmRemove(true)} disabled={pending}>
-              Remove
+              Delete
             </button>
           ))}
         <button type="button" className="pp-app-sheet-cancel" onClick={onClose} disabled={pending}>

@@ -14,6 +14,7 @@ import { useOpenLink } from "./CheckInContext";
 import ChatMediaGallery, { exerciseOf } from "../components/ChatMediaGallery";
 import { ChatImage, ChatVideo } from "../components/ChatMedia";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
+import { clock, dayWords } from "../lib/clientDates";
 
 // The conversation with the coach, laid out as WhatsApp does: the coach's
 // picture and name in the header, their messages on the left and the
@@ -162,8 +163,8 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
       id: -(i + 1),
       mine: viewerIsClient,
       text: o.text,
-      dayLabel: today.toLocaleDateString("en-GB", { weekday: "long", month: "long", day: "numeric" }),
-      timeLabel: today.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+      dayLabel: dayWords(today, { weekday: "long", long: true }),
+      timeLabel: clock(today),
       media: null,
       link: null,
       reactions: { coach: null, client: null },

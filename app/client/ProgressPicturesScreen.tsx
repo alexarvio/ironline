@@ -11,6 +11,7 @@ import ProgressCompare from "./ProgressCompare";
 import PhotoDeck from "./PhotoDeck";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
 import { landOnSoon } from "../lib/landOn";
+import { Bars } from "./Bars";
 
 // Deliberately does not import from ../lib/queries (a "use client" file
 // importing queries.ts breaks the dev server); page.tsx builds these props.
@@ -127,7 +128,7 @@ export default function ProgressPicturesScreen({
             <OpenSheet clientId={data.clientId} sheet={data.openSheet} onUnsentChange={unsentChange} leaving={leaving} onKeep={() => setLeaving(false)} onLeave={onBack} />
           </div>
         ) : (
-          !data.hasAngles && <p className="pp-app-empty">Your coach hasn&rsquo;t asked for a shape update yet.</p>
+          !data.hasAngles && <p className="pp-app-empty">None yet</p>
         )}
 
         {view === "sheet" && data.earlier.length > 0 && (
@@ -154,9 +155,10 @@ export default function ProgressPicturesScreen({
           </section>
         )}
 
-        {view === "sheet" && data.hasAngles && (
+        {/* (3 Nov, Alex: words mockup) `Next sheet | 12 Nov` with the drawn bar; no next date, no line. */}
+        {view === "sheet" && data.hasAngles && data.nextLabel && (
           <p className="pp-app-foot">
-            {data.nextLabel && `Next sheet opens ${data.nextLabel}. `}Only your coach sees these.
+            <Bars parts={["Next sheet", data.nextLabel]} />
           </p>
         )}
       </main>
@@ -435,7 +437,7 @@ function OpenSheet({
             <div className="pp-app-sheet-head">
               <span className="pp-app-sheet-title">{picking.label}</span>
               {/* The coach's word on how to take this one, when there is one (21 Oct, Alex). */}
-              <span className="pp-app-sheet-sub">{picking.hint || "Only your coach sees this."}</span>
+              {picking.hint && <span className="pp-app-sheet-sub">{picking.hint}</span>}
             </div>
             {[
               { label: "Take a photo", capture: true },

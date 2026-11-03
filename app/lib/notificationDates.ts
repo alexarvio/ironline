@@ -2,9 +2,9 @@
 // own calendar: TODAY, YESTERDAY, then "WED 7 OCT" for the last week, then
 // "7 OCT" (with the year when it isn't this one).
 
+import { clock, dayWords } from "./clientDates";
+
 const DAY = 86400000;
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** yyyy-mm-dd in local time. */
 export function localDayKey(iso: string): string {
@@ -18,13 +18,11 @@ export function dayLabel(key: string, todayKey: string): string {
   const back = Math.round(dayNum(todayKey) - dayNum(key));
   if (back === 0) return "Today";
   if (back === 1) return "Yesterday";
-  const d = new Date(`${key}T12:00:00`);
-  const dm = `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-  if (back < 7) return `${DAYS[d.getDay()]} ${dm}`;
-  return key.slice(0, 4) === todayKey.slice(0, 4) ? dm : `${dm} ${key.slice(0, 4)}`;
+  if (back < 7) return dayWords(key, { weekday: "short" });
+  return dayWords(key);
 }
 
 /** "17:26", 24-hour on every phone (3 Nov, Alex: the audit; a 12-hour phone showed "5:26 PM" here while chat and Home said 17:26). */
 export function timeLabel(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return clock(iso);
 }

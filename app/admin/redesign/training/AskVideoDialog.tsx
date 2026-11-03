@@ -72,7 +72,7 @@ export default function AskVideoDialog({
       }}
     >
       <div className="avh-head">
-        <DialogTitle className="avh-title">{editing ? "Edit video request" : `Ask ${firstName} for a video`}</DialogTitle>
+        <DialogTitle className="avh-title">{editing ? "Video ask" : "Ask for a video"}</DialogTitle>
         <button type="button" className="avh-x" onClick={onClose} aria-label="Close">
           ✕
         </button>
@@ -116,7 +116,7 @@ export default function AskVideoDialog({
           Cancel
         </button>
         <button type="button" className="avh-ask" onClick={() => void ask()} disabled={busy}>
-          {busy ? (editing ? "Saving…" : "Asking…") : editing ? "Update request" : `Ask ${firstName}`}
+          {busy ? (editing ? "Saving…" : "Asking…") : editing ? "Save" : "Ask"}
         </button>
       </div>
     </DialogContent>

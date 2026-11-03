@@ -1390,7 +1390,7 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
                     ))}
                   </div>
                 ) : (
-                  <p className="rq-pop-none">No matches</p>
+                  <p className="rq-pop-none">No match</p>
                 )}
               </div>
             )}

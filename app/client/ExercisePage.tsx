@@ -12,6 +12,7 @@ import CoachSays from "./CoachSays";
 import { Bars } from "./Bars";
 import RingEdge from "../components/RingEdge";
 import DoneCheck from "../components/DoneCheck";
+import { dayWords } from "../lib/clientDates";
 
 // One exercise, as a page of the workout (13 Oct, "Stepper sheet"): logging
 // is the whole screen. The sets card holds one row a set; exactly one is
@@ -606,7 +607,7 @@ export default function ExercisePage({
       {exercise.swap && (
         <div className="wo-swap-banner">
           <span>
-            Substitute for <b>{exercise.name}</b>
+            Instead of <b>{exercise.name}</b>
           </span>
           <button type="button" onClick={() => startTransition(() => clearSwapAction(exercise.id))}>
             Undo
@@ -650,10 +651,10 @@ export default function ExercisePage({
             <VideoGlyph />
           </span>
           <span className="wo-video-main">
-            <b>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}`) : ask.src ? (ask.media === "photo" ? (ask.about === "swap" ? "Photo of the substitute sent" : "Photo sent") : "Video sent") : `${coachName} wants a video`}</b>
+            <b>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}`) : ask.src ? (ask.media === "photo" ? "Photo sent" : "Video sent") : `${coachName} asked for a video`}</b>
             {/* A reply needs no second line (17 Oct, Alex): the title says it and Open opens it. */}
             {!ask.reply && <small>{/* Sent and its day alone (25 Oct, Alex: "waiting for Finlay is not necessary"). */}
-            {ask.src ? (ask.sentAt ? `Sent ${new Date(ask.sentAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : "Sent") : ask.note || "Of this exercise, this session"}</small>}
+            {ask.src ? (ask.sentAt ? `Sent ${dayWords(new Date(ask.sentAt))}` : "Sent") : ask.note || "Of this exercise, this session"}</small>}
           </span>
           <span className="wo-video-action">{ask.reply ? "Open" : ask.src ? "View" : "Record"}</span>
         </button>
@@ -850,7 +851,7 @@ export default function ExercisePage({
           onClose={() => setSwapOpen(false)}
         />
       )}
-      {videoOpen && <VideoAskSheet ask={ask} assignmentId={exercise.id} about={mediaAbout} exerciseName={shownName(exercise)} onClose={() => setVideoOpen(false)} />}
+      {videoOpen && <VideoAskSheet ask={ask} assignmentId={exercise.id} about={mediaAbout} exerciseName={shownName(exercise)} coachName={coachName} onClose={() => setVideoOpen(false)} />}
       {demoOpen && exercise.videoUrl && (
         <div className="lw-demo-modal" role="dialog" aria-label={`${shownName(exercise)} demo`} onClick={() => setDemoOpen(false)}>
           <button type="button" className="lw-demo-close" onClick={() => setDemoOpen(false)} aria-label="Close the demo">

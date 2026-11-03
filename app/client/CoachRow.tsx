@@ -20,7 +20,7 @@ export default function CoachRow({ name, title, photoPath }: { name: string; tit
       </span>
       <span className="home-dark-row-body">
         <span className="home-dark-row-title">{name}</span>
-        <span className="home-dark-row-detail">{title || "Your coach"}</span>
+        <span className="home-dark-row-detail">{title || "Coach"}</span>
       </span>
       <ArrowRightIcon />
     </button>

@@ -8,6 +8,7 @@ import type { VideoAsk } from "./VideoAskSheet";
 import type { GymOption } from "./GymPickerDialog";
 import { Bars } from "./Bars";
 import { fmtWeight, planToDisplay, unitLabel } from "../lib/units";
+import { dayWords } from "../lib/clientDates";
 
 // What the client's Training tab, a session's overview and the workout all
 // share: the shapes the server page hands over, the unit rules, and the
@@ -209,7 +210,7 @@ export function clock(ms: number) {
 }
 export const durationMinutes = (day: { startedAt: string | null; endedAt: string | null }) =>
   day.startedAt && day.endedAt ? Math.max(0, Math.round((Date.parse(day.endedAt) - Date.parse(day.startedAt)) / 60000)) : null;
-export const shortDate = (iso: string) => new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+export const shortDate = (iso: string) => dayWords(iso, { weekday: "short" });
 
 /** A once-a-second tick while `active`; recomputed when the app comes back
     to the front, so a backgrounded phone catches up at once. */
@@ -246,7 +247,7 @@ export function CoachNote({ assignmentId, note }: { assignmentId: number | null;
 // Cardio: the targets as tiles, the coach's note, one button to tick it
 // off, a second tap to undo. Bike taken: Swap says what was done instead
 // (the coach's alternatives, or typed), which ticks it off too (28 Sep).
-export function CardioCard({ cardio, index, readOnly = false, coachName = "Your coach", sessionLabel = null, position = null, free = false, nextName = null, onNext }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: React.ReactNode; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean; /** What comes after it, for the line on the way there. */ nextName?: string | null; /** On to what's next, as an exercise moves on once its last set is in (23 Oct, Alex: Done on a cardio stayed put). */ onNext?: (line?: string) => void }) {
+export function CardioCard({ cardio, index, readOnly = false, coachName = "Coach", sessionLabel = null, position = null, free = false, nextName = null, onNext }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: React.ReactNode; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean; /** What comes after it, for the line on the way there. */ nextName?: string | null; /** On to what's next, as an exercise moves on once its last set is in (23 Oct, Alex: Done on a cardio stayed put). */ onNext?: (line?: string) => void }) {
   const [pending, startTransition] = useTransition();
   // Marked done: 1.4s, as an exercise's last set, then on to the next; taking it back in that time stays here.
   const nextTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -301,7 +302,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
       {cardio.swap && (
         <div className="wo-swap-banner">
           <span>
-            Instead of <b>{cardio.name}</b>, today only. {coachName} will see this.
+            Instead of <b>{cardio.name}</b>
           </span>
           {!readOnly && (
             <button type="button" onClick={() => startTransition(() => clearCardioSwapAction(cardio.id))}>
@@ -423,7 +424,7 @@ export function SkipReason({ dayId, text, onSaved }: { dayId: number; text: stri
     </button>
   ) : (
     <button type="button" className="ts-skip-open" onClick={() => setEditing(true)}>
-      Couldn&rsquo;t do this session?
+      Couldn&rsquo;t train
     </button>
   );
 }

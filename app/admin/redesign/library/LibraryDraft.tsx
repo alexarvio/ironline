@@ -387,7 +387,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         </nav>
 
         <div className="lbx-shown">
-          {needle && sections.length === 0 && <p className="lbx-none">None</p>}
+          {needle && sections.length === 0 && <p className="lbx-none">No match</p>}
           {/* ---- The group showing (or, searching, every group with a match): its title and count; a grid of cards, A–Z; + Exercise the last tile. */}
           {sections
             .filter((s) => needle || s.slug === showing)

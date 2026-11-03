@@ -1,6 +1,8 @@
 // Shared SVG line-chart renderer — originally lived inside admin/MetricGraph.tsx,
 // pulled out so the per-metric tracker trend view (TrackerMetricTrendModal)
 // can reuse the exact same rendering instead of a second implementation.
+import { dayWords } from "../lib/clientDates";
+
 export type Point = { date: string; value: number };
 
 // Picks ~4-5 "nice" round tick values spanning the data range (the classic
@@ -42,7 +44,7 @@ function paddedRange(min: number, max: number): [number, number] {
 // plain YYYY-MM-DD strings, so pin the time to noon local rather than
 // midnight UTC to dodge any timezone rollover onto the wrong day.
 function formatXLabel(dateStr: string) {
-  return new Date(`${dateStr}T12:00:00`).toLocaleDateString("en-GB", { month: "short", day: "numeric" }).replace("Sept", "Sep");
+  return dayWords(dateStr);
 }
 
 // Evenly spaced point indices for x-axis ticks — first, last, and a few

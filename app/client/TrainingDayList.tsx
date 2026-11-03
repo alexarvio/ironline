@@ -347,13 +347,14 @@ export default function TrainingDayList({
             On the same line as the week's sessions, but its ring empty: no
             number, so it doesn't read as one more to do this week. */}
         {currentWeek && (
-          <button type="button" className="tr-row tr-free" onClick={startFree} disabled={freeBusy} aria-label="Rogue session: your own workout, off the plan">
+          <button type="button" className="tr-row tr-free" onClick={startFree} disabled={freeBusy} aria-label="Rogue session">
             <span className="tr-row-tile free" aria-hidden="true">
               <CompassIcon size={20} rim={false} />
             </span>
+            {/* Its name alone; Starting… only while it opens (3 Nov, Alex: the words audit). */}
             <span className="tr-row-main">
               <span className="tr-row-title">Rogue session</span>
-              <span className="tr-row-sub">{freeBusy ? "Starting…" : "Your own workout, off the plan"}</span>
+              {freeBusy && <span className="tr-row-sub">Starting…</span>}
             </span>
             <span className="tr-row-chev" aria-hidden="true" />
           </button>

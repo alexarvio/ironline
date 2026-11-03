@@ -8,6 +8,7 @@ import InvoiceSheet from "../../../components/InvoiceSheet";
 import InvoicePrintButton from "../../../components/InvoicePrintButton";
 import PayButton from "./PayButton";
 import { Bars } from "../../Bars";
+import { dayWords } from "../../../lib/clientDates";
 
 // One of the client's invoices, the sheet the coach sees, to read, print or
 // save as PDF, and to pay online when the coach has Stripe connected
@@ -43,7 +44,7 @@ export default async function ClientInvoicePage({ params, searchParams }: { para
             <Bars
               parts={[
                 <b key="t">{formatMoney(v.total, v.currency, v.from.country_code)}</b>,
-                v.dueDate && `due ${new Date(`${v.dueDate}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`,
+                v.dueDate && `due ${dayWords(v.dueDate)}`,
               ]}
             />
           </span>

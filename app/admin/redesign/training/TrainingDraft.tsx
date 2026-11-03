@@ -832,7 +832,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
       {/* ---- Header (19 Oct restructure): the programme's name, its switcher (▾) and state, its weeks and dates; on the right the goals and note pills, the unit and the menu. */}
       <header className="trn-head">
         <div className="trn-head-main">
-          <span className="trn-eyebrow">Programme</span>
+          <span className="trn-eyebrow">Training</span>
           <div className="trn-name-row">
             <h1 className="trn-name">
               {renaming != null ? (
@@ -2077,7 +2077,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             onAsk={(note) => {
               const rowId = dlg.rowId;
               close();
-              act(() => requestExerciseVideoAction(rowId, note), `Video asked for. ${firstName} sees it on the exercise.`);
+              act(() => requestExerciseVideoAction(rowId, note), "Video asked for"); // (3 Nov, Alex: the words mockup, no sentence after it)
             }}
             onCancel={() => {
               const v = videos[dlg.rowId];
@@ -3150,7 +3150,8 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
   return (
     <DialogContent className="dlh dlh-video">
       <div className="dlh-head">
-        <DialogTitle className="dlh-title">{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s ${video.media}${video.about === "swap" ? " of the substitute" : ""}`}</DialogTitle>
+        {/* A swap's media names the swap (3 Nov, Alex: "Paula's photo of Hack Squat", not "of the substitute"). */}
+        <DialogTitle className="dlh-title">{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s ${video.media}${video.about === "swap" && (row.swap ?? row.swapInfo?.name) ? ` of ${row.swap ?? row.swapInfo?.name}` : ""}`}</DialogTitle>
         <DialogClose className="dlh-x" aria-label="Close">
           ✕
         </DialogClose>

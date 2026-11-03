@@ -194,7 +194,7 @@ export default function NutritionTargetsCard({
 
             </div>
           ) : (
-            <p className="nd-empty">Your coach hasn&rsquo;t set your nutrition targets yet.</p>
+            <p className="nd-empty">No targets yet</p>
           )}
 
           {/* The coach's water goal (28 Oct, Alex: set on Nutrition, never shown): the same on both days, so outside the swipe. */}

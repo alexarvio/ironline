@@ -13,6 +13,7 @@ import EventsTimelineCard from "./home/EventsTimelineCard";
 import type { CardCovers } from "./CardPictureSheet";
 import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
+import { clock, monthWords, weekdayWords } from "../lib/clientDates";
 import CoachSays from "./CoachSays";
 import MeetingNotes from "./meetings/MeetingNotes";
 import type { LinkView } from "../lib/messageLinks";
@@ -238,7 +239,7 @@ export default function HomeHub({
         {upcoming ? (
           <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />
         ) : (
-          recap ? <LastMeetingCard recap={recap} coachFirstName={coach.firstName} /> : <NoMeetingsCard coachFirstName={coach.firstName} />
+          recap ? <LastMeetingCard recap={recap} coachFirstName={coach.firstName} /> : <NoMeetingsCard />
         )}
       </div>
     </div>
@@ -502,7 +503,7 @@ function LatestActivityCard({ a, coach, focus = null }: { a: LatestActivity; coa
         </div>
       </article>
       {focus && <FocusGoals focus={focus} />}
-      {watching && a.videoReply && <VideoReplySheet reply={a.videoReply} onClose={() => setWatching(false)} />}
+      {watching && a.videoReply && <VideoReplySheet reply={a.videoReply} coachName={coach.firstName} onClose={() => setWatching(false)} />}
     </section>
   );
 }
@@ -522,9 +523,9 @@ export function localMeetingLabels(m: NonNullable<UpcomingMeeting>, now: number 
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return {
     dayNumber: String(d.getDate()),
-    monthCap: d.toLocaleDateString("en-GB", { month: "short" }).replace("Sept", "Sep").toUpperCase(),
+    monthCap: monthWords(d, { short: true, year: false }).toUpperCase(),
     inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
-    whenLabel: `${d.toLocaleDateString("en-GB", { weekday: "long" })} ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} ${tzShort(zone, d)} · ${m.durationMinutes} min`,
+    whenLabel: `${weekdayWords(d)} ${clock(d)} ${tzShort(zone, d)} · ${m.durationMinutes} min`,
   };
 }
 
@@ -611,20 +612,22 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
 
 
 // Nothing booked: the coach's notes from the last call instead.
-// No call booked and none had yet (17 Oct, Alex): the section still shows, so the client knows calls live here, with the way to ask for one.
-function NoMeetingsCard({ coachFirstName }: { coachFirstName: string }) {
+// No call booked and none had yet (17 Oct, Alex): the section still shows, so the client knows calls live here. Since
+// 3 Nov (Alex: words mockup) the same head as always, `Meetings` with All meetings on its right, then `None yet`;
+// asking for a call is on the Meetings screen.
+function NoMeetingsCard() {
   const openMeetings = useOpenMeetings();
   return (
-    <section className="hm-last-meeting hm-no-meeting" aria-label={`Meetings with ${coachFirstName}`}>
+    <section className="hm-last-meeting hm-no-meeting" aria-label="Meetings">
       <div className="hm-tasks-head">
-        <span className="hm-eyebrow">Meetings with {coachFirstName}</span>
+        <span className="hm-eyebrow">Meetings</span>
         {openMeetings && (
           <button type="button" className="hm-mt-all-link" onClick={() => openMeetings?.()}>
-            Request a meeting
+            All meetings
           </button>
         )}
       </div>
-      <p className="hm-mt-none">No meetings yet.</p>
+      <p className="hm-mt-none">None yet</p>
     </section>
   );
 }

@@ -7,7 +7,7 @@ import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction 
 import { GOAL_CHROME } from "../../lib/eventTimeline";
 import { eventTypeOf, EVENT_TYPES, type EventTypeId } from "../../lib/eventTypes";
 import { dayOf, daysBetween, shortDay } from "../../lib/eventDates";
-import { isoWeekday, nextOccurrence, repeatWords } from "../../lib/eventRepeat";
+import { nextOccurrence, repeatWords } from "../../lib/eventRepeat";
 import { pic } from "../../lib/pic";
 import { ChevronLeftIcon } from "../../components/icons";
 import RingEdge from "../../components/RingEdge";
@@ -15,6 +15,7 @@ import { useCoachIdentity } from "../CheckInContext";
 import type { HomeEvent, HomeEvents } from "../EventsCard";
 import AddEventSheet, { type EventValues } from "./AddEventSheet";
 import { Bars } from "../Bars";
+import { monthWords, weekdayWords } from "../../lib/clientDates";
 
 // The Events screen (9 Oct), restyled as an itinerary (15 Oct): one 1px
 // spine, thin rings with fine-line category icons, light type, no cards.
@@ -63,8 +64,7 @@ const TODAY_ROW = 0;
 // A weight goal always opens (2 Nov, Alex): where they are against the plan.
 const hasMore = (e: HomeEvent, status?: Status) => (e.goal ? true : e.phase || status === "past" ? !!e.note : true);
 
-const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-const monthOf = (iso: string) => MONTHS[Number(iso.slice(5, 7)) - 1];
+const monthOf = (iso: string) => monthWords(iso, { short: true, year: false }).toUpperCase();
 
 /** The row's "when" line, as its facts: drawn parted by Bars, read out with commas. */
 function whenOf(e: HomeEvent, status: Status, today: string): string[] {
@@ -84,7 +84,7 @@ function whenOf(e: HomeEvent, status: Status, today: string): string[] {
     const until = e.repeat.until ? `until ${shortDay(e.repeat.until, today)}` : "";
     if (status === "next") return [every, `from ${shortDay(e.start, today)}`, until].filter(Boolean);
     const next = nextOccurrence(e.start, e.end, e.repeat, today);
-    return [every, next === today ? "today" : next ? `next ${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][isoWeekday(next) - 1]} ${shortDay(next, today)}` : "done", until].filter(Boolean);
+    return [every, next === today ? "today" : next ? `next ${weekdayWords(next, { short: true })} ${shortDay(next, today)}` : "done", until].filter(Boolean);
   }
   if (status === "next") {
     // The countdown, then the date it starts (16 Oct); a stretch shows both ends.
@@ -398,7 +398,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
 
             {list.length > 0 && upcoming.length === 0 && (
               <button type="button" className="evp-empty" onClick={openAdd}>
-                Nothing planned. Add a trip or something you&rsquo;re starting
+                Nothing planned
               </button>
             )}
             {upcoming.map((e, i) => (
@@ -573,14 +573,29 @@ function RowMore({ e, status, open, coachName, pending, clipped, onEdit, onDelet
           {e.note && <p className="ev-x-note">{e.note}</p>}
           {/* No "Added by you · Finlay can see it" line (17 Oct, Alex): the avatar on the row already says whose it is. */}
           {/* A weight goal is the coach's to set and change (2 Nov, Alex): no Edit or Delete on it. */}
+          {/* Delete asks in place, as the chat's Delete (3 Nov, Alex: words mockup): `Delete event?`, Cancel in words, Delete in red words. */}
           {!e.phase && !e.goal && status !== "past" && (
             <div className="ev-x-actions">
-              <button type="button" className="ev-btn" onClick={onEdit} disabled={pending || !open} tabIndex={open ? 0 : -1}>
-                Edit
-              </button>
-              <button type="button" className={`ev-btn danger${sure ? " sure" : ""}`} onClick={() => (sure ? onDelete() : setSure(true))} disabled={pending || !open} tabIndex={open ? 0 : -1}>
-                {pending ? "Removing…" : sure ? "Yes, remove it" : "Delete"}
-              </button>
+              {sure ? (
+                <>
+                  <span className="ev-ask-q">Delete event?</span>
+                  <button type="button" className="ev-btn quiet" onClick={() => setSure(false)} disabled={pending || !open} tabIndex={open ? 0 : -1}>
+                    Cancel
+                  </button>
+                  <button type="button" className="ev-btn danger" onClick={onDelete} disabled={pending || !open} tabIndex={open ? 0 : -1}>
+                    {pending ? "Deleting…" : "Delete"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="ev-btn" onClick={onEdit} disabled={pending || !open} tabIndex={open ? 0 : -1}>
+                    Edit
+                  </button>
+                  <button type="button" className="ev-btn danger" onClick={() => setSure(true)} disabled={pending || !open} tabIndex={open ? 0 : -1}>
+                    Delete
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

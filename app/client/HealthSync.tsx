@@ -77,7 +77,7 @@ export function HealthAutoSync() {
 
 // Settings > Connected apps. In the app: one switch for this phone's health
 // store. In a browser: both, marked Soon.
-export function ConnectedApps() {
+export function ConnectedApps({ coachName }: { coachName: string }) {
   const platform = useSyncExternalStore(noSubscribe, platformOf, () => null);
   const router = useRouter();
   const stored = useSyncExternalStore(noSubscribe, readOn, () => false);
@@ -88,11 +88,12 @@ export function ConnectedApps() {
 
   const sync = useCallback(async () => {
     const r = await syncSteps();
-    if (r && !r.tracked) setNote("Your coach isn't tracking steps yet. They'll sync once they do.");
+    if (r && !r.tracked) setNote(`${coachName} isn't tracking steps yet`);
     else setNote(null);
     if (r?.saved) router.refresh();
-  }, [router]);
+  }, [router, coachName]);
 
+  // The names alone, Soon on their right; no line under the rows or the section (3 Nov, Alex: the words audit).
   if (!platform) {
     return (
       <section className="home-dark-section">
@@ -102,13 +103,11 @@ export function ConnectedApps() {
             <div key={name} className="settings-app-row">
               <div className="home-dark-row-body">
                 <div className="home-dark-row-title">{name}</div>
-                <div className="home-dark-row-detail">Auto-log steps, weight & workouts</div>
               </div>
               <span className="st-soon">Soon</span>
             </div>
           ))}
         </div>
-        <div className="home-dark-empty st-note">Health syncing needs the NorCoach mobile app (not available on web).</div>
       </section>
     );
   }
@@ -127,20 +126,20 @@ export function ConnectedApps() {
     try {
       const avail = await callNative<{ available?: boolean }>("Health", "isAvailable");
       if (!avail.available) {
-        setNote(platform === "android" ? "Install Health Connect from the Play Store, then try again." : "Apple Health isn't available on this device.");
+        setNote(platform === "android" ? "Health Connect not installed" : "Not on this phone");
         return;
       }
       const auth = await callNative<{ readAuthorized?: string[] }>("Health", "requestAuthorization", { read: ["steps"], write: [] });
       // Android says whether steps were allowed; iPhone never does.
       if (platform === "android" && !auth.readAuthorized?.includes("steps")) {
-        setNote("Steps weren't allowed. You can allow them in Health Connect.");
+        setNote("Steps not allowed");
         return;
       }
       writeOn(true);
       setOn(true);
       await sync();
     } catch {
-      setNote(`Couldn't connect to ${name}. Try again.`);
+      setNote("Couldn't connect. Try again");
     } finally {
       setBusy(false);
     }
@@ -153,16 +152,15 @@ export function ConnectedApps() {
         <button type="button" className="settings-toggle-row" onClick={toggle} disabled={busy}>
           <div className="home-dark-row-body">
             <div className="home-dark-row-title">{name}</div>
-            <div className="home-dark-row-detail">{on ? "Your steps log themselves each day" : "Log your steps automatically"}</div>
+            <div className="home-dark-row-detail">Steps</div>
           </div>
           <span className={`settings-switch${on ? " on" : ""}`} aria-hidden="true">
             <span className="settings-switch-knob" />
           </span>
         </button>
       </div>
-      <div className="home-dark-empty st-note">
-        {note ?? `Only your daily step count is read. NorCoach never writes to ${name}.`}
-      </div>
+      {/* A note only when something went wrong (3 Nov, Alex: the words audit). */}
+      {note && <div className="home-dark-empty st-note">{note}</div>}
     </section>
   );
 }

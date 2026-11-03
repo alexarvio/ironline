@@ -11,6 +11,7 @@ import DoneCheck from "../components/DoneCheck";
 import GymPickerDialog from "./GymPickerDialog";
 import { Bars } from "./Bars";
 import { VideoAskSheet } from "./VideoAskSheet";
+import { dayWords } from "../lib/clientDates";
 import type { GymOption } from "./GymPickerDialog";
 import {
   CoachNote,
@@ -23,7 +24,6 @@ import {
   plannedSets,
   roundTo,
   sessionStatus,
-  shortDate,
   shownName,
   TargetTable,
   targetColumns,
@@ -172,7 +172,7 @@ export default function SessionOverview({
                   <rect x="3" y="5" width="18" height="16" rx="2" />
                   <path d="M3 10h18M8 3v4M16 3v4M10 14l4 4M14 14l-4 4" />
                 </svg>
-                Couldn&rsquo;t do this session
+                Couldn&rsquo;t train
               </button>
               )}
             </div>
@@ -192,13 +192,10 @@ export default function SessionOverview({
           )}
         </div>
         {/* Live, no line here (17 Oct, Alex): the gym and the elapsed time are already in the stats and on Resume. */}
-        {(status === "skipped" || status === "missed") && (
+        {/* A missed one has no line: its Missed pill says it (3 Nov, Alex: the words audit). */}
+        {status === "skipped" && (
         <p className="so-sub">
-          {status === "skipped"
-            ? <Bars parts={["Couldn't train", day.skipReason]} />
-            : status === "missed"
-            ? "Not done that week."
-            : null}
+          <Bars parts={["Couldn't train", day.skipReason]} />
         </p>
         )}
         {(done || live) && (
@@ -206,7 +203,7 @@ export default function SessionOverview({
           {done ? (
             <>
               <div className="so-stat">
-                <b>{day.endedAt ? shortDate(day.endedAt).replace(/^\w+,? /, "") : "—"}</b>
+                <b>{day.endedAt ? dayWords(day.endedAt) : "—"}</b>
                 <small>Date</small>
               </div>
               <div className="so-stat">
@@ -277,10 +274,10 @@ export default function SessionOverview({
 
       {skipOpen && (
         <div className="wo-sheet-scrim" style={kb ? { paddingBottom: kb } : undefined} onClick={() => setSkipOpen(false)}>
-          <div className="wo-sheet" role="dialog" aria-label="Couldn't do this session" onClick={(e) => e.stopPropagation()}>
+          <div className="wo-sheet" role="dialog" aria-label="Couldn't train" onClick={(e) => e.stopPropagation()}>
             <span className="wo-sheet-grab" aria-hidden="true" />
-            <h2 className="wo-sheet-title">Couldn&rsquo;t do this session?</h2>
-            <p className="wo-sheet-sub">Tell {coachName} why. It shows next to the session.</p>
+            {/* The title alone (3 Nov, Alex: the words audit). */}
+            <h2 className="wo-sheet-title">Couldn&rsquo;t train</h2>
             <textarea
               className="wo-sheet-input so-skip-input"
               value={skipDraft}
@@ -291,11 +288,12 @@ export default function SessionOverview({
               onChange={(e) => setSkipDraft(e.target.value)}
             />
             <button type="button" className="wo-sheet-btn" disabled={!skipDraft.trim() || skipSaving} onClick={() => submitSkip()}>
-              {skipSaving ? "Sending…" : "Submit"}
+              {skipSaving ? "Sending…" : "Send"}
             </button>
+            {/* Remove in red words, as every destructive word (3 Nov, Alex: the words audit). */}
             {day.skipReason && (
-              <button type="button" className="wo-sheet-text" onClick={() => submitSkip("")}>
-                Remove the reason
+              <button type="button" className="wo-sheet-text" style={{ color: "#b42318" }} onClick={() => submitSkip("")}>
+                Remove
               </button>
             )}
           </div>
@@ -393,7 +391,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
         <span className={`so-num${exDone ? " done" : ""}`}>{exDone ? <DoneCheck size={22} /> : index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{shownName(exercise)}</span>
-          {exercise.swap && <span className="so-card-summary">Substituted with {exercise.name}</span>}
+          {exercise.swap && <span className="so-card-summary">Instead of {exercise.name}</span>}
         </span>
         <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>
@@ -414,11 +412,11 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
                   <path d="M16 10l5-3v10l-5-3z" />
                 </svg>
               )}
-              <span>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${media}`) : ask.src ? `${media === "photo" ? "Photo" : "Video"} sent to ${coachName}` : `${coachName} wants a video of this one`}</span>
+              <span>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${media}`) : ask.src ? `${media === "photo" ? "Photo" : "Video"} sent` : `${coachName} asked for a video`}</span>
               <b>{ask.reply ? "Open" : ask.src ? "View" : "Record"}</b>
             </button>
           )}
-          {videoOpen && <VideoAskSheet ask={ask} assignmentId={exercise.id} exerciseName={exercise.swap?.name ?? exercise.name} onClose={() => setVideoOpen(false)} />}
+          {videoOpen && <VideoAskSheet ask={ask} assignmentId={exercise.id} exerciseName={exercise.swap?.name ?? exercise.name} coachName={coachName} onClose={() => setVideoOpen(false)} />}
         </div>
       </SoFold>
     </div>
@@ -449,7 +447,7 @@ function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: num
         <span className={`so-num${cardio.done ? " done" : ""}`}>{cardio.done ? <DoneCheck size={22} /> : index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{cardio.swap ?? cardio.name}</span>
-          {cardio.swap && <span className="so-card-summary">Substituted with {cardio.swap}</span>}
+          {cardio.swap && <span className="so-card-summary">Instead of {cardio.name}</span>}
         </span>
         <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>

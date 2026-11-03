@@ -13,6 +13,7 @@ import { useOpenEvents } from "../CheckInContext";
 import { Bars } from "../Bars";
 import { TypeIcon } from "../events/AddEventSheet";
 import MeetingNotes from "./MeetingNotes";
+import { monthWords } from "../../lib/clientDates";
 
 // The Meetings screen (9 Oct), reshaped 16 Oct: calls are few, so the top is
 // fixed: the white pill to ask for a call, and under it the next call as a
@@ -43,11 +44,12 @@ export type MeetingRequestView = { id: number; about: string; whenSuits: string 
 export type MeetingsProps = { upcoming: ClientMeetingView[]; past: ClientMeetingView[]; request?: MeetingRequestView | null };
 
 const PAGE = 20;
-const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+/** The date tile's month, `NOV` (3 Nov, Alex: dates through clientDates). */
+const monthCap = (d: Date) => monthWords(d, { short: true, year: false }).toUpperCase();
 export const startMsOf = (m: ClientMeetingView) => (m.startIso ? Date.parse(m.startIso) : Date.parse(`${m.date}T12:00:00`));
 // The feed snaps a row to one spot near its top (16 Oct): the newest call
 // sits there on open, and scrolling hands the spot down the list. 80px is
-// the first row's centre under the PAST MEETINGS label.
+// the first row's centre under the PAST label.
 const SPOT = 80;
 
 /** A fine-line icon: 1.6 stroke, round caps and joins, no fills. */
@@ -60,7 +62,7 @@ function LineIcon({ path, size }: { path: string; size: number }) {
 }
 
 export default function MeetingsScreen({ upcoming, past, request = null, clientId = 0, coachName, focusId = null, onBack }: MeetingsProps & { clientId?: number; coachName: string; /** A call to land on (10 Oct): from a notification. The screen scrolls to it and opens it. */ focusId?: number | null; onBack: () => void }) {
-  const coachFirst = coachName.trim().split(/\s+/)[0] || "your coach";
+  const coachFirst = coachName.trim().split(/\s+/)[0] || "Coach";
   // The phone's clock, once on the phone and then every half minute, so the
   // Join window opens and closes on its own.
   const [now, setNow] = useState<number | null>(null);
@@ -269,7 +271,7 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
             <>
               {moreOpen && later.map((m) => <NextPill key={m.id} m={m} now={now} coachFirst={coachFirst} open={nextOpen === m.id} lit={lit === m.id} onToggle={() => setNextOpen((o) => (o === m.id ? null : m.id))} />)}
               <button type="button" className="mtp-more" onClick={() => setMoreOpen((o) => !o)} aria-expanded={moreOpen}>
-                {moreOpen ? "Show less" : `+${later.length} more booked`}
+                {moreOpen ? "Show less" : `+${later.length} more`}
               </button>
             </>
           )}
@@ -277,7 +279,8 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
         <div ref={scrollRef} className="evp-scroll mtp-scroll" onScroll={onScroll}>
           <div className="evp-tl mtp-tl">
             <span className="evp-spine" aria-hidden="true" />
-            {pastSorted.length > 0 ? <div className="evp-sec">Past meetings</div> : <p className="evp-empty mtp-empty">After your first call, your past calls show here.</p>}
+            {/* (3 Nov, Alex: words mockup) `Past` as on Events, `None yet` with none. */}
+            {pastSorted.length > 0 ? <div className="evp-sec">Past</div> : <p className="evp-empty mtp-empty">None yet</p>}
             {pastShown.map((m, i) => (
               <PastRow
                 key={m.id}
@@ -339,7 +342,7 @@ function NextPill({ m, now, coachFirst, open = false, lit = false, onToggle }: {
         <button type="button" className="mtp-next-open" onClick={onToggle} disabled={!has} aria-expanded={has ? open : undefined} aria-label={`Next call: ${m.title}, ${when}${has ? ", has notes" : ""}`}>
           <span className="mtp-next-date" aria-hidden="true">
             <b>{String(d.getDate()).padStart(2, "0")}</b>
-            <small>{MONTHS[d.getMonth()]}</small>
+            <small>{monthCap(d)}</small>
           </span>
           <span className="evp-add-text">
             <span className="mtp-next-title">
@@ -500,7 +503,7 @@ function PastRow({ m, label, now, focus, open, lit, refFn, onTap }: { m: ClientM
       <button type="button" className={`evp-row${label ? " labelled" : ""}`} onClick={() => onTap(opens)} aria-expanded={opens ? open : undefined} aria-label={`${label ? `${label} ` : ""}${t.label} call: ${m.title}, ${when}${!has && !m.missed ? ", no notes" : ""}`}>
         <span className="evp-date" aria-hidden="true">
           <b>{String(d.getDate()).padStart(2, "0")}</b>
-          <small>{MONTHS[d.getMonth()]}</small>
+          <small>{monthCap(d)}</small>
         </span>
         <span className="evp-node" aria-hidden="true">
           <span className="evp-ring">
