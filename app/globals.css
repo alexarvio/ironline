@@ -17759,10 +17759,15 @@ button.ci-hint { cursor: pointer; }
 .ac-day.on .ac-num { --ring: #141a24; }
 .ac-day.today .ac-num { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; --ring: transparent; }
 .ac-day:disabled { opacity: 1; }
-.ac-panel { display: grid; grid-template-rows: 1fr; animation: ac-open 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
-.ac-panel.closing { grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.22s ease, opacity 0.18s ease; }
-@keyframes ac-open { from { grid-template-rows: 0fr; opacity: 0; } to { grid-template-rows: 1fr; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .ac-panel { animation: none; } .ac-panel.closing { transition: none; } .ac-num { transition: none; } }
+/* A day opening (3 Nov, Alex: the audit; was its own 0.25s keyframe): each week's fold on the shared one, rows 0fr → 1fr
+   over 340ms on the soft ease-out, its words fading in over 220ms and settling 4px down; the same day again folds it
+   shut the same way; another day in the open week keeps it open and only swaps what is in it. */
+.ac-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; }
+.ac-fold.open { grid-template-rows: 1fr; opacity: 1; }
+.ac-fold-in { min-height: 0; overflow: hidden; }
+.ac-fold.open .ac-panel { animation: ac-swap 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes ac-swap { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ac-fold, .ac-fold.open .ac-panel { transition: none; animation: none; } .ac-num { transition: none; } }
 .ac-panel-clip { min-height: 0; overflow: hidden; }
 /* The open day: no box, flat on the page with a little air. Each item on a 2px line in its colour. */
 .ac-panel-body { display: flex; flex-direction: column; gap: 12px; margin: 10px 0 12px; padding: 4px 4px 2px; }
