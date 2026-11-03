@@ -35,19 +35,19 @@
   .gl { stroke: var(--div); }
   .yl { position: absolute; left: calc(100% + 10px); transform: translateY(-50%); font-size: 12px; color: var(--faint); font-weight: 500; }
   .strip { display: flex; gap: 4px; margin: 10px 46px 0 0; }
-  .strip i { flex: 1; height: 7px; border-radius: 3px; background: var(--ink); }
-  .strip i.off { background: var(--div); }
+  .strip i { flex: 1; height: 7px; border-radius: 3px; background: #a08a5c; }
+  .strip i.off { background: #efede6; }
   .xl { display: flex; justify-content: space-between; margin: 8px 46px 0 0; font-size: 12px; color: var(--faint); font-weight: 500; }
   .pill { position: absolute; transform: translate(-50%, -160%); background: #fff; box-shadow: inset 0 0 0 1px var(--line); border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; }
   .pill i { font-style: normal; color: var(--muted); font-weight: 500; }
-  .ring { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; background: #fff; border: 2px solid var(--ink); pointer-events: none; }
+  .ring { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; background: #fff; border: 2px solid #a08a5c; pointer-events: none; }
   .guide { stroke: var(--ink); stroke-opacity: .5; }
   @media (max-width: 640px) { .head { flex-direction: column; gap: 12px; } .card { padding: 18px 16px 14px; } }
 </style>
 </head>
 <body>
 <h1>Weight line: spikier, three ways</h1>
-<div class="sub">The readings from your screenshot (5 Oct – 3 Nov, a few days missed). Today's line is at the bottom, faint, to compare. Hover any chart to read a day: the ring sits on the line in all of them.</div>
+<div class="sub">In the weight colour, lifestyle beige (the goal's gold). The readings from your screenshot (5 Oct – 3 Nov, a few days missed). Today's line is at the bottom, faint, to compare. Hover any chart to read a day: the ring sits on the line in all of them.</div>
 
 <div class="grid2">
   <div><div class="label"><b>A</b><span>Straight between readings</span><i>every weigh-in a sharp corner</i></div><div class="card" data-k="0"></div></div>
@@ -102,7 +102,7 @@ document.querySelectorAll(".card").forEach((card) => {
     const X = (i) => (i / 29) * W, Y = (v) => H - ((v - LO) / (HI - LO)) * H;
     const pts = pts0.map((p) => ({ x: X(p.i), y: Y(p.v), v: p.v, i: p.i }));
     const grid = [86.5, 89, 91.5].map((v) => `<line class="gl" x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}"/>`).join("");
-    plot.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${grid}<path d="${path(pts, k)}" fill="none" stroke="#141a24" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><line class="guide" y1="0" y2="${H}" x1="-99" x2="-99"/></svg>`
+    plot.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${grid}<path d="${path(pts, k)}" fill="none" stroke="#a08a5c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><line class="guide" y1="0" y2="${H}" x1="-99" x2="-99"/></svg>`
       + [86.5, 89, 91.5].map((v) => `<span class="yl" style="top:${Y(v)}px">${v.toFixed(1)}</span>`).join("");
     const guide = plot.querySelector(".guide");
     let ring, pill;
