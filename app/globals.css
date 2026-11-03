@@ -17868,13 +17868,15 @@ button.ci-hint { cursor: pointer; }
 .pg-view .pg-goal-v.warn { color: #b8471f; }
 .pg-view .pg-plan { stroke: var(--goal); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.7; }
 .pg-view .pg-goalring { fill: #F5F6F8; stroke: var(--goal); stroke-width: 1.6; }
-/* Where they stand on a goal (2 Nov, Alex): the line and the latest in the goal's gold, the latest a filled dot pulsing. */
-.pg-view .goaled .pg-line { stroke: var(--goal); }
+/* Where they stand on a goal (2 Nov, Alex): the latest a filled dot pulsing. The line and the dot keep the weight's own
+   Body blue over the beige plan (3 Nov, Alex: option B of docs/boards/weight-goal-colours-mockup.html). */
 .pg-view .pg-goal .pg-goal-by { margin-left: 0; }
-.pg-view .goaled .pg-last { fill: var(--goal); stroke: var(--goal); }
-.pg-view .pg-nowpulse { fill: var(--goal); opacity: 0.45; transform-box: fill-box; transform-origin: center; animation: pg-nowpulse 1.8s ease-out infinite; }
+.pg-view .goaled .pg-last { fill: var(--cat); stroke: var(--cat); }
+.pg-view .pg-nowpulse { fill: var(--cat); opacity: 0.45; transform-box: fill-box; transform-origin: center; animation: pg-nowpulse 1.8s ease-out infinite; }
 @keyframes pg-nowpulse { from { transform: scale(1); opacity: 0.6; } to { transform: scale(2.8); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .pg-view .pg-nowpulse { animation: none; opacity: 0; } }
+.pg-view .pg-goalpulse { fill: none; stroke: var(--goal); stroke-width: 1.6; transform-box: fill-box; transform-origin: center; animation: pg-goalpulse 2s ease-out infinite; }
+@keyframes pg-goalpulse { from { transform: scale(1); opacity: 0.6; } to { transform: scale(2.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pg-view .pg-nowpulse, .pg-view .pg-goalpulse { animation: none; opacity: 0; } }
 .pg-view .pg-plan.later { opacity: 0.385; }
 .pg-view .pg-goalring.later { opacity: 0.55; }
 .pg-view .pg-goal-label { position: absolute; transform: translate(calc(-100% - 8px), calc(-100% - 4px)); font-size: 11px; font-weight: 600; line-height: 1; color: var(--goal); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }

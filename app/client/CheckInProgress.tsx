@@ -612,7 +612,8 @@ function Chart({
             <line key={v} className="pg-grid" x1={0} x2={plotW} y1={crisp(y(v))} y2={crisp(y(v))} />
           ))}
           {series.target != null && <line className="pg-target" x1={0} x2={plotW} y1={y(series.target)} y2={y(series.target)} />}
-          {/* With a goal (2 Nov, Alex): the weight line in the goal's gold and the latest a gold dot, pulsing, where they stand. */}
+          {/* With a goal (2 Nov, Alex): the latest a dot, pulsing, where they stand; the line and dot in the weight's own blue
+              over the beige plan (3 Nov, Alex). */}
           <g className={`pg-chart-fade${plan ? " goaled" : ""}`}>
             {plan?.segs.map((s) => (
               <line key={`s${s.n0}`} className={`pg-plan${s.later ? " later" : ""}`} x1={xd(s.n0)} y1={y(s.v0)} x2={xd(s.n1)} y2={y(s.v1)} />
@@ -620,6 +621,10 @@ function Chart({
             {xy.length > 1 && <path className="pg-line" d={line} />}
             {plan && <circle className="pg-nowpulse" cx={xy[latest].x} cy={xy[latest].y} r={4.5} />}
             <circle className="pg-last" cx={xy[latest].x} cy={xy[latest].y} r={4.5} />
+            {/* The goal being worked on pulses all the time in its beige (3 Nov, Alex), as on the coach's card. */}
+            {plan?.rings.map((r) =>
+              r.later ? null : <circle key={`p${r.n}`} className="pg-goalpulse" cx={xd(r.n)} cy={y(r.v)} r={5} />,
+            )}
             {plan?.rings.map((r) => (
               <circle key={`r${r.n}`} className={`pg-goalring${r.later ? " later" : ""}`} cx={xd(r.n)} cy={y(r.v)} r={5} />
             ))}

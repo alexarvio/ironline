@@ -174,6 +174,17 @@
 .rd.rh .rh-wgoal-lbl.later { opacity: 0.55; }
 .rd.rh .rh-wgoal-pill { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; box-sizing: border-box; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; transform: translate(calc(-100% + 6px), calc(-100% - 10px)); }
 .rd.rh .rh-wgoal-pill.below { transform: translate(calc(-100% + 6px), 10px); }
+.rd.rh .rh-wgoal-pill.right { transform: translate(-6px, calc(-100% - 10px)); }
+.rd.rh .rh-wgoal-pill.right.below { transform: translate(-6px, 10px); }
+/* The goal's weight shows on the ring's hover or focus alone (3 Nov, Alex: "take out the 92 kg… if we hover on top of it
+   we see the value"); pinned at the edge it stays. */
+.rd.rh .rh-wgoal-pill.hover { opacity: 0; transition: opacity 150ms ease; }
+.rd.rh .rh-wgoal:is(:hover, :focus-visible) + .rh-wgoal-pill.hover { opacity: 1; }
+/* The goal being worked on pulses all the time in its beige (3 Nov, Alex), a ring growing out of it and fading; a
+   settled one is still. */
+.rd.rh .rh-wgoal:not(.settled)::after { content: ""; position: absolute; inset: -2px; border-radius: 999px; box-shadow: inset 0 0 0 2px #a08a5c; animation: rh-wgoalpulse 2s ease-out infinite; pointer-events: none; }
+@keyframes rh-wgoalpulse { from { transform: scale(1); opacity: 0.6; } to { transform: scale(2.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .rd.rh .rh-wgoal::after { animation: none; opacity: 0; } }
 .rd.rh .rh-wgoal-pill .rh-wtip-day { font-weight: 500; color: #8b93a1; }
 .rd.rh .rh-wtoday { position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; background: #141a24; opacity: 0.14; pointer-events: none; }
 .rd.rh .rh-waxis span.today { color: #141a24; }
@@ -401,7 +412,11 @@
 .rd.rh .rls-card.rh-tile { min-height: 171px; }
 /* Where the client stands on a goal's chart (2 Nov, Alex: "the dot… where is the current weight with this golden color and
    pulsating"): the latest weigh-in a gold dot with a soft gold pulse round it; still for reduced motion and while zoomed. */
-.rd.rh .rh-wnowdot { position: absolute; z-index: 1; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; background: #a08a5c; pointer-events: none; }
-.rd.rh .rh-wnowdot::after { content: ""; position: absolute; inset: 0; border-radius: 999px; background: rgba(160, 138, 92, 0.45); animation: rh-wnowpulse 1.8s ease-out infinite; }
+/* Since 3 Nov (Alex: option B of docs/boards/weight-goal-colours-mockup.html) the weight's own Body blue over the beige
+   plan: the line, this dot and the strip. */
+.rd.rh .rh-wnowdot { position: absolute; z-index: 1; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; background: #2f5d8f; pointer-events: none; }
+.rd.rh .rh-wnowdot::after { content: ""; position: absolute; inset: 0; border-radius: 999px; background: rgba(47, 93, 143, 0.45); animation: rh-wnowpulse 1.8s ease-out infinite; }
+.rd.rh .rh-wbox.goaled .rh-wstrip i { background: #2f5d8f; }
+.rd.rh .rh-wbox.goaled .rh-wstrip i.miss { background: #dbe5f0; }
 @keyframes rh-wnowpulse { from { transform: scale(1); opacity: 0.9; } to { transform: scale(2.8); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .rd.rh .rh-wnowdot::after { animation: none; opacity: 0; } }

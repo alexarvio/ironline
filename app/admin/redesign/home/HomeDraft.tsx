@@ -32,6 +32,10 @@ import { monotoneSegments } from "../../../lib/monotoneCurve";
 // Values from weightGoal.ts are safe here: it is pure (no store, no queries).
 import { addDaysIso, currentGoal, daysBetween, GOAL_COLOR, kgIn, planKgAt, VERDICT_TONE, VERDICT_WORD, type WeightGoalView } from "../../../lib/weightGoal";
 import WeightGoalDialog from "../WeightGoalDialog";
+import { groupColour } from "../../../lib/categoryColors";
+
+/** Weight's own colour, its metric group's (Body): the line while a goal runs, over the goal's beige. */
+const WEIGHT_BLUE = groupColour("body").hex;
 
 // The client's Home (21 Oct, Alex: built from the Home mockup, root "rd trn rls rh"): Training's header, then the board.
 //
@@ -1171,7 +1175,7 @@ function WeightChart({
   const label = last < 0 ? "Weight goal, no reading since it was set" : `Weight, ${axisDay(t0)} to ${axisDay(ts[last])}: ${kg1(points[0].value)} to ${kg1(points[last].value)}, ${points.length} readings${anyMissed ? `, ${strip.filter((p) => !p.on).length} ${rhythm === "daily" ? "days" : rhythm === "weekly" ? "weeks" : "months"} without one` : ""}`;
 
   return (
-    <div className="rh-wbox">
+    <div className={`rh-wbox${plan ? " goaled" : ""}`}>
       <div className="rh-wstage">
       <div
         className="rh-wchart"
@@ -1212,9 +1216,9 @@ function WeightChart({
                 vectorEffect="non-scaling-stroke"
               />
             )}
-            {/* With a goal the weight line is the goal's gold too (2 Nov, Alex: "have this line that represents the movement of
-                the weight also in the same color"); else ink, as it was. */}
-            <path d={path} fill="none" stroke={plan ? GOAL_COLOR : "#141a24"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {/* With a goal the weight line is the weight's own Body blue over the beige plan (3 Nov, Alex: option B of
+                docs/boards/weight-goal-colours-mockup.html); else ink, as it was. */}
+            <path d={path} fill="none" stroke={plan ? WEIGHT_BLUE : "#141a24"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>
           {plan && !todayAtEnd && <span className="rh-wtoday" style={{ left: `${todayX}%` }} aria-hidden="true" />}
           {/* Where they stand (2 Nov, Alex): the latest weigh-in a gold dot, pulsing, on the line. */}
@@ -1239,9 +1243,9 @@ function WeightChart({
         </div>
       </div>
       {/* The goals' rings (2 Nov, Alex), over the chart and outside its role="img" box so they can be clicked and reached:
-          placed spans, never svg circles (the plot stretches). The goal being worked on in beige with its weight beside
-          it, later milestones the same fainter, settled ones grey; pinned at the right edge when its date is past the
-          cap, its weight and date in a white pill. A click opens the goal. */}
+          placed spans, never svg circles (the plot stretches). The goal being worked on in beige, pulsing all the time
+          (3 Nov, Alex), later milestones the same fainter, settled ones grey and still; pinned at the right edge when its
+          date is past the cap, its weight and date in a white pill. A click opens the goal. */}
       {plan && plan.marks.length > 0 && (
         <div className="rh-wgoals">
           {plan.marks.map((m) => {
@@ -1258,15 +1262,11 @@ function WeightChart({
                   aria-label={`Weight goal ${what} by ${dayMonth(m.goal.byDate)}${m.goal.verdict ? `, ${VERDICT_WORD[m.goal.verdict]}` : ""}`}
                   onClick={() => onGoal(m.goal)}
                 />
-                {m.pinned ? (
-                  <span className={`rh-wgoal-pill ${side}`} style={{ left: `${x}%`, top: `${y}%` }} aria-hidden="true">
-                    <SepJoin parts={[what, <span key="d" className="rh-wtip-day">{dayMonth(m.goal.byDate)}</span>]} />
-                  </span>
-                ) : m.kind !== "settled" ? (
-                  <span className={`rh-wgoal-lbl ${m.kind} ${side}`} style={{ left: `${x}%`, top: `${y}%` }} aria-hidden="true">
-                    {what}
-                  </span>
-                ) : null}
+                {/* Its weight and date in a white pill: always when pinned at the edge, else only while the ring is
+                    hovered or focused (3 Nov, Alex: "take out the 92 kg… if we hover on top of it we see the value"). */}
+                <span className={`rh-wgoal-pill ${m.pinned ? "" : "hover"} ${side}`} style={{ left: `${x}%`, top: `${y}%` }} aria-hidden="true">
+                  <SepJoin parts={[what, <span key="d" className="rh-wtip-day">{dayMonth(m.goal.byDate)}</span>]} />
+                </span>
               </span>
             );
           })}
