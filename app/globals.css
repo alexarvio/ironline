@@ -21142,3 +21142,6 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 .ci-day.ci-day + .ci-day::after { content: none; }
 .ci-one .ci-bar.stuck.stuck { background: rgba(245, 246, 248, 0.94); box-shadow: none; }
 .cn-screen:has(.st-body) .cn-header { background: #F5F6F8; }
+/* No dot under the picked day (3 Nov, Alex: "we already have the circle indicating which day we are in"); a logged day
+   keeps its small dot. */
+.fdi-day-dot.fdi-day-dot.on { background: transparent; }
