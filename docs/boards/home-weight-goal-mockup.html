@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Weight goal on Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --div:#EEF0F3; --blue:#2f5d8f; --goal:#a08a5c; --green:#2f7a3f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ebef; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 60px; }
+  .intro { max-width: 1240px; margin: 0 auto 26px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .intro p { margin: 0; color: var(--sec); font-size: 13px; font-weight: 500; line-height: 1.55; max-width: 860px; }
+  .phones { max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  .col { width: 375px; max-width: 100%; }
+  .lbl { display: flex; gap: 10px; align-items: baseline; margin: 0 0 4px 6px; }
+  .lbl b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; }
+  .lbl span { font-size: 15px; font-weight: 600; }
+  .why { margin: 0 6px 12px; color: var(--sec); font-size: 12.5px; font-weight: 500; line-height: 1.5; min-height: 56px; }
+  .phone { position: relative; width: 100%; height: 780px; overflow: hidden auto; border-radius: 34px; background: #F5F5F5; box-shadow: 0 0 0 10px #141a24, 0 30px 60px -20px rgba(16,24,40,.45); scrollbar-width: none; }
+  .phone::-webkit-scrollbar { display: none; }
+  .bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 4px; }
+  .word { font-size: 15px; font-weight: 600; letter-spacing: .14em; }
+  .bell { width: 20px; height: 20px; border-radius: 999px; box-shadow: inset 0 0 0 1.6px var(--ink); }
+  .hello { padding: 14px 20px 10px; }
+  .hello small { display: block; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--sec); font-weight: 600; }
+  .hello b { display: block; margin-top: 4px; font-size: 24px; font-weight: 600; }
+  .pill { display: flex; align-items: center; gap: 10px; margin: 8px 16px 0; height: 44px; padding: 0 14px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); font-size: 14px; font-weight: 600; cursor: pointer; user-select: none; }
+  .pill .face { width: 22px; height: 22px; border-radius: 999px; background: linear-gradient(135deg,#6b5a4a,#2b2420); flex: none; }
+  .pill .n { margin-left: auto; color: var(--muted); font-weight: 500; font-size: 13px; }
+  .pill .chev { width: 14px; height: 14px; color: var(--muted); transition: transform .28s cubic-bezier(.22,1,.36,1); }
+  .pill.open .chev { transform: rotate(180deg); }
+  .ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .hero { position: relative; margin: 18px 16px 0; height: 330px; border-radius: 22px; overflow: hidden; background: linear-gradient(160deg, #8a7a5e 0%, #4b4033 45%, #1f1b16 100%); color: #fff; }
+  .hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 70% at 70% 15%, rgba(255,235,200,.35), transparent 60%); }
+  .glass { position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 14px 16px; border-radius: 16px; background: rgba(20,22,26,.42); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .glass .eb { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; font-weight: 600; color: rgba(255,255,255,.75); }
+  .glass .nm { margin-top: 4px; font-size: 20px; font-weight: 600; }
+  .glass .wk { margin-top: 2px; font-size: 12.5px; color: rgba(255,255,255,.72); font-weight: 500; }
+  .dots { display: flex; justify-content: center; gap: 6px; margin: 10px 0 0; }
+  .dots i { width: 6px; height: 6px; border-radius: 999px; background: #c9cfd8; }
+  .dots i.on { background: var(--ink); }
+  .sec { margin: 26px 16px 0; }
+  .sec-h { display: flex; align-items: baseline; justify-content: space-between; margin: 0 12px 10px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+  .sec-h a { font-size: 12px; font-weight: 600; color: var(--sec); text-decoration: none; }
+  .ev { display: flex; align-items: center; gap: 12px; height: 54px; padding: 0 12px; }
+  .ev .d { width: 34px; font-size: 20px; font-weight: 300; font-variant-numeric: tabular-nums; text-align: center; }
+  .ev .ring { width: 26px; height: 26px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px currentColor; display: grid; place-items: center; flex: none; }
+  .ev .ring .ico { width: 13px; height: 13px; }
+  .ev .t b { display: block; font-size: 15px; font-weight: 500; }
+  .ev .t small { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .34s cubic-bezier(.22,1,.36,1); }
+  .fold.open { grid-template-rows: 1fr; }
+  .fold > div { overflow: hidden; }
+  .gl { stroke: var(--div); }
+  .verdict { color: var(--green); font-weight: 600; }
+  .sep { display: inline-block; width: 1px; height: 10px; background: #C9CFD8; margin: 0 7px; vertical-align: -1px; }
+  .sep.w { background: rgba(255,255,255,.35); }
+  @keyframes pulse { from { transform: scale(1); opacity: .55; } to { transform: scale(2.6); opacity: 0; } }
+  .pz { transform-box: fill-box; transform-origin: center; animation: pulse 2s ease-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .pz { animation: none; opacity: 0; } }
+
+  /* A */
+  .a-body { margin: 0 16px; padding: 14px 4px 4px 22px; position: relative; }
+  .a-body::before { content: ""; position: absolute; left: 25px; top: 0; bottom: 14px; width: 1px; background: var(--line); }
+  .a-figs { display: flex; align-items: baseline; gap: 8px; padding-left: 16px; }
+  .a-figs b { font-size: 30px; font-weight: 300; font-variant-numeric: tabular-nums; }
+  .a-figs small { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .a-line { padding-left: 16px; margin-top: 2px; font-size: 12px; color: var(--muted); font-weight: 500; }
+  .a-chart { position: relative; height: 120px; margin: 10px 0 0 16px; }
+  .axis { display: flex; justify-content: space-between; margin: 6px 0 0 16px; font-size: 11px; color: var(--faint); font-weight: 500; }
+  .axis .t { color: var(--ink); }
+
+  /* B */
+  .b-line { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.14); font-size: 12px; font-weight: 500; color: rgba(255,255,255,.8); }
+  .b-line .gt { width: 13px; height: 13px; color: #d9c79f; }
+  .b-chart { height: 56px; margin-top: 8px; position: relative; }
+
+  /* C */
+  .c-row { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; padding: 6px 12px; }
+  .c-num b { display: block; font-size: 30px; font-weight: 300; font-variant-numeric: tabular-nums; line-height: 1; }
+  .c-num small { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+  .c-chart { position: relative; height: 70px; }
+  .c-foot { display: flex; align-items: center; gap: 8px; margin: 6px 12px 0; font-size: 12px; color: var(--muted); font-weight: 500; }
+  .c-foot .gt { width: 13px; height: 13px; color: var(--goal); }
+  .c-foot .chev { margin-left: auto; width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+<div class="intro">
+  <h1>Weight goal on the client's Home: three ways</h1>
+  <p>The same goal in each (set 13 Oct at 87.2 kg, 92 kg by 15 Dec, on track): the weight in its Body blue, the coach's straight line dashed in beige to the goal's ring, which pulses, and the latest a blue dot, pulsing. Each takes as little room as it can and opens Progress on a tap. The weight goal stays on the Events row too, as it is now.</p>
+</div>
+
+<div class="phones">
+  <div class="col">
+    <div class="lbl"><b>A</b><span>A pill that opens</span></div>
+    <p class="why">As To focus on: a white pill, <i>Weight goal</i> and where they stand. Tap and the chart drops out flat under it, tied by the thin line. Closed, it is one line on Home. (Tap the pill.)</p>
+    <div class="phone" data-o="A"></div>
+  </div>
+  <div class="col">
+    <div class="lbl"><b>B</b><span>On the Lifestyle card</span></div>
+    <p class="why">Inside the Lifestyle phase card's glass panel, a small line under the phase: the weight and the goal path in white and beige. Nothing new on Home, and it sits with the phase it belongs to.</p>
+    <div class="phone" data-o="B"></div>
+  </div>
+  <div class="col">
+    <div class="lbl"><b>C</b><span>A row of its own</span></div>
+    <p class="why">A flat Weight section under the phase cards: the latest in light numerals, a small chart beside it, the goal and the verdict under them. Always in view, about 120px tall.</p>
+    <div class="phone" data-o="C"></div>
+  </div>
+</div>
+
+<script>
+// 13 Oct .. 3 Nov weigh-ins (null = missed), then the days to 15 Dec.
+const R = [87.2, 87.1, null, 88.0, 88.6, 88.7, null, 88.85, 88.9, 89.0, null, 89.8, 89.0, 89.8, 89.8, 89.4, 89.4, 89.9, 90.2, 91.1, 90.6, 90.1];
+const TOTAL = 63, TODAY = R.length - 1, START = 87.2, TARGET = 92;
+const pts0 = R.map((v, i) => (v == null ? null : { i, v })).filter(Boolean);
+const P = {
+  target: "M12 4a8 8 0 1 0 0 16 8 8 0 1 0 0-16zM12 8a4 4 0 1 0 0 8 4 4 0 1 0 0-8zM12 12h.01",
+  chev: "M6 9l6 6 6-6",
+  chevR: "M9 6l6 6-6 6",
+  list: "M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01",
+  plane: "M10.5 13.5 4 11l1.5-1.5 7 1L17 6a1.6 1.6 0 0 1 2.3 2.3L15 12.8l1 7L14.5 21l-2.5-6.5",
+  pill: "M8.5 15.5l7-7M5 12.5a5 5 0 0 1 7-7l6.5 6.5a5 5 0 0 1-7 7z",
+};
+const ico = (k, cls = "") => `<svg class="ico ${cls}" viewBox="0 0 24 24"><path d="${P[k]}"/></svg>`;
+
+function curve(pts) {
+  const n = pts.length, dx = [], s = [], m = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = pts[i + 1].x - pts[i].x; s[i] = (pts[i + 1].y - pts[i].y) / dx[i]; }
+  m[0] = s[0]; m[n - 1] = s[n - 2];
+  for (let i = 1; i < n - 1; i++) {
+    if (s[i - 1] * s[i] <= 0) m[i] = 0;
+    else { const w1 = 2 * dx[i] + dx[i - 1], w2 = dx[i] + 2 * dx[i - 1]; m[i] = (w1 + w2) / (w1 / s[i - 1] + w2 / s[i]); }
+  }
+  let d = `M${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < n - 1; i++) { const h = dx[i] / 3; d += `C${pts[i].x + h} ${pts[i].y + m[i] * h} ${pts[i + 1].x - h} ${pts[i + 1].y - m[i + 1] * h} ${pts[i + 1].x} ${pts[i + 1].y}`; }
+  return d;
+}
+
+/** The goal chart: the weight line, the dashed path to the ring, the latest dot; `dark` for the hero's glass. */
+function chart(W, H, { dark = false, grid = true, pad = 8 } = {}) {
+  const LO = 86.6, HI = 92.6;
+  const X = (i) => (i / TOTAL) * (W - pad) + 2, Y = (v) => 4 + (H - 8) * (1 - (v - LO) / (HI - LO));
+  const pts = pts0.map((p) => ({ x: X(p.i), y: Y(p.v) }));
+  const line = dark ? "#cfe0f2" : "#2f5d8f";
+  const goal = dark ? "#d9c79f" : "#a08a5c";
+  const last = pts[pts.length - 1];
+  const gx = X(TOTAL), gy = Y(TARGET);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;overflow:visible">
+    ${grid ? [87, 89.5, 92].map((v) => `<line class="gl" x1="0" x2="${W}" y1="${Y(v)}" y2="${Y(v)}"/>`).join("") : ""}
+    ${dark ? "" : `<line x1="${last.x}" x2="${last.x}" y1="0" y2="${H}" stroke="#141a24" stroke-opacity=".12"/>`}
+    <line x1="${X(0)}" y1="${Y(START)}" x2="${gx}" y2="${gy}" stroke="${goal}" stroke-opacity=".75" stroke-width="1.5" stroke-dasharray="4 4"/>
+    <path d="${curve(pts)}" fill="none" stroke="${line}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle class="pz" cx="${gx}" cy="${gy}" r="5" fill="none" stroke="${goal}" stroke-width="1.6"/>
+    <circle cx="${gx}" cy="${gy}" r="5" fill="${dark ? "rgba(20,22,26,.6)" : "#F5F5F5"}" stroke="${goal}" stroke-width="1.8"/>
+    <circle class="pz" cx="${last.x}" cy="${last.y}" r="4" fill="${line}"/>
+    <circle cx="${last.x}" cy="${last.y}" r="4" fill="${line}"/>
+  </svg>`;
+}
+
+const homeTop = `
+  <div class="bar"><span class="word">✦ NORCOACH</span><span class="bell"></span></div>
+  <div class="hello"><small>Tue 3 Nov</small><b>Good morning, Alex</b></div>
+  <div class="pill">${ico("list")}<span>To focus on</span><span class="face"></span><span class="n">3</span>${ico("chev", "chev")}</div>`;
+const hero = (extra = "") => `
+  <div class="hero"><div class="glass">
+    <div class="eb">Lifestyle</div><div class="nm">Health</div><div class="wk">Week 3 of 8</div>${extra}
+  </div></div>
+  <div class="dots"><i class="on"></i><i></i><i></i></div>`;
+const events = `
+  <div class="sec"><div class="sec-h"><span>Events</span><a>All events</a></div>
+    <div class="ev"><span class="d">3</span><span class="ring" style="color:#141a24"></span><span class="t"><b>Nothing on today</b></span></div>
+    <div class="ev"><span class="d">6</span><span class="ring" style="color:#1f7a4d">${ico("pill")}</span><span class="t"><b>RETA</b><small>In 3 days</small></span></div>
+    <div class="ev"><span class="d">15</span><span class="ring" style="color:#a08a5c">${ico("target")}</span><span class="t"><b>Weight goal</b><small>92 kg <span class="sep"></span>In 42 days</small></span></div>
+  </div><div style="height:30px"></div>`;
+
+const figs = `<b>90.1</b><small>kg</small>`;
+const goalLine = `92 kg by 15 Dec<span class="sep"></span>1.9 kg to go<span class="sep"></span><span class="verdict">On track</span>`;
+
+const build = {
+  A: () => homeTop + `
+    <div class="pill gp">${ico("target", "gt")}<span style="color:var(--ink)">Weight goal</span><span class="n">90.1 → 92 kg</span>${ico("chev", "chev")}</div>
+    <div class="fold"><div><div class="a-body">
+      <div class="a-figs">${figs}<small style="margin-left:6px">+2.9 kg since 13 Oct</small></div>
+      <div class="a-line">${goalLine}</div>
+      <div class="a-chart">${chart(300, 120)}</div>
+      <div class="axis"><span>13 Oct</span><span class="t">Today</span><span>15 Dec</span></div>
+    </div></div></div>` + hero() + events,
+  B: () => homeTop + hero(`
+      <div class="b-line">${ico("target", "gt")}<span>90.1 kg</span><span class="sep w"></span><span>92 kg by 15 Dec</span><span class="sep w"></span><span style="color:#9fd6a8;font-weight:600">On track</span></div>
+      <div class="b-chart">${chart(300, 56, { dark: true, grid: false })}</div>`) + events,
+  C: () => homeTop + hero() + `
+    <div class="sec"><div class="sec-h"><span>Weight</span><a>Progress</a></div>
+      <div class="c-row"><div class="c-num">${figs}<small>+2.9 kg since 13 Oct</small></div><div class="c-chart">${chart(190, 70, { grid: false })}</div></div>
+      <div class="c-foot">${ico("target", "gt")}<span>${goalLine}</span>${ico("chevR", "chev")}</div>
+    </div>` + events,
+};
+document.querySelectorAll(".phone").forEach((p) => {
+  p.innerHTML = build[p.dataset.o]();
+  const gp = p.querySelector(".gp");
+  if (gp) {
+    const f = gp.nextElementSibling;
+    gp.addEventListener("click", () => { gp.classList.toggle("open"); f.classList.toggle("open"); });
+    gp.click();
+  }
+});
+</script>
+</body>
+</html>
