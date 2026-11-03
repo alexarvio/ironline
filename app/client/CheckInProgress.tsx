@@ -38,6 +38,8 @@ export type CheckInSeries = {
   points: { date: string; value: number; at: string | null }[];
   /** The Weight chart's alone (empty with none): the weight goals, by date, in the series' unit (2 Nov, Alex). */
   goals?: ClientGoalLine[];
+  /** The Phase range's first day (3 Nov, Alex); null with no phase started. */
+  phaseStart?: string | null;
 };
 /** A weight goal on the Weight chart: weights in the series' unit; setBy the coach's first name or "you". */
 export type ClientGoalLine = {
@@ -69,12 +71,13 @@ export type CheckInHistory = { series: CheckInSeries[]; days: CheckInFeedDay[] }
 
 // Goal (2 Nov, Alex: a toggle to the goal's own graph, the line traced and where they stand): from the goal's start to its
 // day, offered on Weight while a goal runs.
-type Range = "Goal" | "7D" | "1M" | "3M" | "All";
-const RANGE_DAYS: Record<Range, number | null> = { Goal: null, "7D": 7, "1M": 30, "3M": 90, All: null };
-const RANGE_WORD: Record<Range, string> = { Goal: "goal", "7D": "7 days", "1M": "month", "3M": "3 months", All: "" };
-// What the capsule says (the stored key stays 7D).
-const RANGE_LABEL: Record<Range, string> = { Goal: "Goal", "7D": "1W", "1M": "1M", "3M": "3M", All: "All" };
-const RANGES: Range[] = ["Goal", "7D", "1M", "3M", "All"];
+// The ranges as everywhere else (3 Nov, Alex: "the toggles the same as everywhere else"): Goal while one runs, 7d, 30d,
+// and Phase from the live phase's first day (phaseStart). Was 1W | 1M | 3M | All.
+type Range = "Goal" | "7D" | "30D" | "Phase";
+const RANGE_DAYS: Record<Range, number | null> = { Goal: null, "7D": 7, "30D": 30, Phase: null };
+const RANGE_WORD: Record<Range, string> = { Goal: "since the goal was set", "7D": "in the last 7 days", "30D": "in the last 30 days", Phase: "in this phase" };
+const RANGE_LABEL: Record<Range, string> = { Goal: "Goal", "7D": "7d", "30D": "30d", Phase: "Phase" };
+const RANGES: Range[] = ["Goal", "7D", "30D", "Phase"];
 const RANGE_KEY = "ironline:progress-range";
 const PAGE = 20;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -133,7 +136,7 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
   });
   const [range, setRange] = useState<Range>(() => {
     const r = readStore("session", RANGE_KEY) as Range | null;
-    // Goal first (2 Nov, Alex): Weight opens on it while a goal runs; any other metric falls to 1M.
+    // Goal first (2 Nov, Alex): Weight opens on it while a goal runs; any other metric falls to 30d.
     return r && RANGES.includes(r) ? r : "Goal";
   });
   const [page, setPage] = useState(0);
@@ -211,12 +214,10 @@ function MetricPanel({
   onSwipe: (dir: 1 | -1) => void;
 }) {
   const end = dayNum(today);
-  const firstDay = dayNum(series.points[0].date);
-  // Days of history, first reading to today: a range longer than that is hidden.
-  const span = end - firstDay + 1;
   const runningGoal = series.goals?.find((g) => g.active) ?? null;
-  const ranges = RANGES.filter((r) => (r === "Goal" ? !!runningGoal : RANGE_DAYS[r] == null || span > RANGE_DAYS[r]!));
-  const shown: Range = ranges.includes(range) ? range : ranges.includes("1M") ? "1M" : "All";
+  const phaseStart = series.phaseStart ? dayNum(series.phaseStart) : null;
+  const ranges = RANGES.filter((r) => (r === "Goal" ? !!runningGoal : r === "Phase" ? phaseStart != null : true));
+  const shown: Range = ranges.includes(range) ? range : "30D";
   const days = RANGE_DAYS[shown];
   // The Goal range from the goal's start; with nothing weighed since, from the last reading before it, so the line has
   // where it came from.
@@ -225,9 +226,9 @@ function MetricPanel({
   const start =
     shown === "Goal" && runningGoal
       ? series.points.some((q) => dayNum(q.date) >= goalStart) || !before ? goalStart : dayNum(before.date)
-      : days
-        ? end - (days - 1)
-        : firstDay;
+      : shown === "Phase" && phaseStart != null
+        ? phaseStart
+        : end - ((days ?? 30) - 1);
   const points = useMemo(() => series.points.filter((p) => dayNum(p.date) >= start), [series.points, start]);
 
   const rangeWord = RANGE_WORD[shown];
@@ -290,7 +291,7 @@ function MetricPanel({
                 <span className={`pg-delta${tone}`}>
                   {signed(move, p)}
                   {moveUnit && ` ${moveUnit}`}
-                  <span className="pg-sr">{rangeWord ? ` over the last ${rangeWord}` : " since the first entry"}</span>
+                  <span className="pg-sr">{` ${rangeWord}`}</span>
                 </span>
               )}
             </div>
@@ -324,10 +325,16 @@ function MetricPanel({
       </div>
       {points.length === 0 ? (
         <div className="pg-chart-empty">
-          <span>Nothing logged in the last {rangeWord}</span>
-          <button type="button" onClick={() => onRange("All")}>
-            Show all
-          </button>
+          <span>Nothing logged {rangeWord}</span>
+          {/* The widest range there is (the phase, else 30 days) when it isn't this one. */}
+          {(() => {
+            const widest: Range = ranges.includes("Phase") ? "Phase" : "30D";
+            return widest !== shown ? (
+              <button type="button" onClick={() => onRange(widest)}>
+                {RANGE_LABEL[widest]}
+              </button>
+            ) : null;
+          })()}
         </div>
       ) : (
         <Chart key={shown} series={series} points={points} start={start} end={end} plotEnd={plotEnd} today={today} range={shown} onSwipe={onSwipe} />
@@ -584,7 +591,7 @@ function Chart({
   const tipX = Math.min(width - 60, Math.max(48, selXY.x));
   const first = points[0];
   const last = points[latest];
-  const label = `${series.name}, ${range === "All" ? "all time" : `last ${RANGE_WORD[range]}`}: from ${fmt(first.value, p)} to ${fmt(last.value, p)} ${unit}. Latest ${fmt(last.value, p)} on ${dateWord(last.date)}.${plan?.rings[0] ? ` Goal ${one(plan.rings[0].target)} ${unit} by ${dmy(plan.rings[0].byDate, today)}.` : ""}`;
+  const label = `${series.name}, ${RANGE_WORD[range]}: from ${fmt(first.value, p)} to ${fmt(last.value, p)} ${unit}. Latest ${fmt(last.value, p)} on ${dateWord(last.date)}.${plan?.rings[0] ? ` Goal ${one(plan.rings[0].target)} ${unit} by ${dmy(plan.rings[0].byDate, today)}.` : ""}`;
 
   return (
     <>
@@ -679,7 +686,8 @@ function Chart({
         {tipText}, {dateWord(selP.date)}
       </span>
       {/* The strip stops at today, its marks still under their days, when the plot runs on to a goal (2 Nov, Alex). */}
-      <div className="pg-strip" style={{ marginRight: right + Math.max(0, plotW - xToday) }} aria-hidden="true">
+      {/* Under the plot alone, the chart's own 16px either side (3 Nov, Alex: it ran out to the screen's edge on the left). */}
+      <div className="pg-strip" style={{ marginLeft: 16, marginRight: 16 + right + Math.max(0, plotW - xToday) }} aria-hidden="true">
         {strip.map((q) => (
           // Centred on its days, the ends half as wide, so a reading's ring sits over the middle of its mark (25 Oct, Alex).
           <i key={q.from} className={q.on ? "on" : ""} style={{ flexGrow: Math.min(end, q.to + 0.5) - Math.max(start, q.from - 0.5) }} />
