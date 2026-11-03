@@ -20663,6 +20663,14 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .lw-target-vals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 0; font-size: 18px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
 /* Parted by a short drawn upright bar, not a dot (21 Oct, Alex: the bar the admin uses), as tall as the figures' capitals. */
 .lw-target-vals > span + span::before { content: ""; display: inline-block; width: 1px; height: 0.72em; margin: 0 12px; background: #C9CFD8; vertical-align: baseline; }
+/* Since 3 Nov (Alex: A of docs/boards/workout-targets-table-mockup.html) a table: the columns the coach filled in, their
+   names small and grey over a hairline across the whole width, the figures under them in ink at 18px/600. Five or more
+   spread over the width; fewer sit from the left, 32px apart. The hairline is the grid's own background at the foot of
+   the names' row (14px of words and 6px under them). */
+.lw-target-grid { display: grid; column-gap: 32px; justify-content: start; background: linear-gradient(#E1E5EB, #E1E5EB) 0 20px / 100% 1px no-repeat; }
+.lw-target-grid.spread { justify-content: space-between; column-gap: 12px; }
+.lw-target-h { padding-bottom: 6px; font-size: 10px; font-weight: 600; line-height: 14px; letter-spacing: 0.14em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; }
+.lw-target-v { padding-top: 8px; font-size: 18px; font-weight: 600; line-height: 24px; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* 19 Oct (Alex): the workout's video card keeps its amber camera without the dot on it. */
 .lw .wo-video.wo-video .wo-video-tile::after { content: none; }

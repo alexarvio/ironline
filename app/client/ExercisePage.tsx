@@ -660,23 +660,37 @@ export default function ExercisePage({
 
       {/* ---- The sets card. */}
       <div className="lw-card">
-        {/* The coach's targets, big enough to read mid-set (17 Oct, Alex: the rep range faded into the Sets label): sets × reps, weight, RPE, time. */}
+        {/* The coach's targets as a table (3 Nov, Alex: A of docs/boards/workout-targets-table-mockup.html): the columns the
+            coach filled in for this exercise, and only those (Sets, Reps, kg, RPE, Tempo, Rest; a cardio's Time and
+            Distance), their names small and grey over a hairline, the figures under them in ink, big enough to read mid-set. */}
         {(() => {
           const reps = exercise.reps.trim().replace(/\s*(?:-|–|to)\s*/i, "–");
-          const parts = [
-            exercise.sets > 0 && reps ? `${exercise.sets} × ${reps} reps` : reps ? `${reps} reps` : exercise.sets > 0 ? `${exercise.sets} ${exercise.sets === 1 ? "set" : "sets"}` : null,
-            targetWeight != null ? `${fmtWeight(planToDisplay(targetWeight, unit))} ${uLabel}` : null,
-            targetRpe != null && String(targetRpe).trim() ? `RPE ${targetRpe}` : null,
-            exercise.time?.trim() ? exercise.time.trim() : null,
-          ].filter(Boolean) as string[];
-          return parts.length && !free ? (
+          const rest = exercise.rest != null && exercise.rest > 0 ? (exercise.rest % 60 === 0 && exercise.rest >= 120 ? `${exercise.rest / 60} min` : `${exercise.rest}s`) : null;
+          const cols = [
+            exercise.sets > 0 ? ["Sets", String(exercise.sets)] : null,
+            reps ? ["Reps", reps] : null,
+            targetWeight != null ? [uLabel, fmtWeight(planToDisplay(targetWeight, unit))] : null,
+            targetRpe != null && String(targetRpe).trim() ? ["RPE", String(targetRpe)] : null,
+            exercise.tempo?.trim() ? ["Tempo", exercise.tempo.trim()] : null,
+            rest ? ["Rest", rest] : null,
+            exercise.time?.trim() ? ["Time", exercise.time.trim()] : null,
+            exercise.distance?.trim() ? ["Distance", exercise.distance.trim()] : null,
+          ].filter((c): c is string[] => !!c);
+          return cols.length && !free ? (
             <div className="lw-target">
               <span className="lw-target-label">Target</span>
-              <span className="lw-target-vals">
-                {parts.map((p, i) => (
-                  <span key={i}>{p}</span>
+              <div className={`lw-target-grid${cols.length >= 5 ? " spread" : ""}`} style={{ gridTemplateColumns: `repeat(${cols.length}, max-content)` }}>
+                {cols.map(([name]) => (
+                  <span key={`h${name}`} className="lw-target-h">
+                    {name}
+                  </span>
                 ))}
-              </span>
+                {cols.map(([name, v]) => (
+                  <span key={`v${name}`} className="lw-target-v">
+                    {v}
+                  </span>
+                ))}
+              </div>
             </div>
           ) : null;
         })()}
