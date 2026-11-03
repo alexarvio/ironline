@@ -23,8 +23,10 @@ import { TodoStrip } from "../TodoStrip";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
-import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
+import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
 import { Sep } from "../Sep";
+// The tab's status, Training's, shared with every tab that saves itself (3 Nov, Alex).
+import { SaveStatus } from "../SaveStatus";
 import { Fold } from "../Fold";
 import { landOn } from "../../../lib/landOn";
 
@@ -149,25 +151,6 @@ type Dlg =
   | { kind: "deletePhase" }
   | { kind: "removeSupp"; supp: DraftSupplement }
   | null;
-
-/** A section's status, as Training's week line: Saving…, ✓ All changes saved, or Not saved · Retry. */
-function SaveStatus({ busy, failed, onRetry, solo = false }: { busy: boolean; failed: boolean; onRetry: () => void; solo?: boolean }) {
-  // Nothing until something is saved (22 Oct, Alex).
-  const said = useSaidSaved(busy);
-  if (!failed && !said) return null;
-  return failed ? (
-    <span className={`trn-allsaved failed${solo ? " solo" : ""}`} role="alert">
-      Not saved<Sep />
-      <button type="button" onClick={onRetry}>
-        Retry
-      </button>
-    </span>
-  ) : (
-    <span className={`trn-allsaved${busy ? " saving" : ""}${solo ? " solo" : ""}`} role="status">
-      {busy ? "Saving…" : "All changes saved"}
-    </span>
-  );
-}
 
 export default function NutritionDraft({
   clientId,
@@ -446,26 +429,26 @@ export default function NutritionDraft({
       // A count, in ink however few (23 Oct, Alex: a red 0 read as an error).
     },
     {
-      label: "Average intake",
+      label: "Avg intake",
       value: avg.kcal != null ? n(avg.kcal) : "–",
       unit: "kcal",
     },
     // The three macros' averages, not On target (21 Oct, Alex).
     {
-      label: "Average protein",
+      label: "Avg protein",
       value: avg.protein != null ? String(avg.protein) : "–",
-      unit: "g a day",
+      unit: "g",
       warn: proteinTarget != null && avg.protein != null && avg.protein < proteinTarget - 20,
     },
     {
-      label: "Average carbs",
+      label: "Avg carbs",
       value: avg.carbs != null ? String(avg.carbs) : "–",
-      unit: "g a day",
+      unit: "g",
     },
     {
-      label: "Average fat",
+      label: "Avg fat",
       value: avg.fat != null ? String(avg.fat) : "–",
-      unit: "g a day",
+      unit: "g",
     },
   ];
 
@@ -589,7 +572,7 @@ export default function NutritionDraft({
                 if (targetsQ.failed) targetsQ.retry();
                 if (suppQ.failed) suppQ.retry();
               }}
-              solo
+              className="solo"
             />
           </div>
           {plan.startDate && (
@@ -821,19 +804,22 @@ export default function NutritionDraft({
             </div>
           </div>
         </div>
+        {/* The five figures in the shared figures card, as Home's and Invoices' (3 Nov, Alex): a cell each with a line
+            between, the label small caps, the figure with its unit grey and no line under it (no `of 30`, no target).
+            The capsule changes the figures alone, so the card never moves. */}
+        <section className="rls-card rls-figs rn-figs" aria-label="Figures">
+          {stats.map((s) => (
+            <div key={s.label} className="rls-fig">
+              <span className="rls-fig-label">{s.label}</span>
+              <b className={s.warn ? "warn" : ""}>
+                {s.value}
+                {s.unit && s.value !== "–" && <em>{s.unit}</em>}
+              </b>
+            </div>
+          ))}
+        </section>
         <div className="rls-card rls-log">
-          <div className="rn-stats">
-            {stats.map((s) => (
-              <div key={s.label}>
-                <small>{s.label}</small>
-                {/* The unit beside the figure, no line under it (21 Oct, Alex): 3 · 2,956 kcal · 178 g a day. */}
-                <b className={s.warn ? "warn" : ""}>
-                  {s.value}
-                  {s.unit && s.value !== "–" && <em>{s.unit}</em>}
-                </b>
-              </div>
-            ))}
-          </div>
+          {view.days.length === 0 && <p className="rls-none">None yet</p>}
           {/* With more than a page, the rows keep a full page's height (21 Oct, Alex: the last page made the screen jump;
               .rd-steady): a day's row is 49px with its hairline, under 29.75px of column heads and over 6px of room. */}
           {view.days.length > 0 && (

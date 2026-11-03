@@ -62,14 +62,6 @@
 /* "+ Add item": the session pill, inside the card. */
 .rn-additem { display: block; width: 100%; margin: 8px 0 10px; padding: 12px; border-radius: 12px; }
 
-/* The four figures over the log. */
-.rn-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 8px 14px 14px; }
-.rn-stats > div { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 12px; background: #f4f7fc; }
-.rn-stats small { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
-.rn-stats b { font-size: 22px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
-.rn-stats b.warn { color: #b8471f; }
-.rn-stats span { font-size: 12px; color: #5b6474; }
-
 /* One row a day; the row itself opens the day. */
 .rn-day .rd-row-main { border-radius: 10px; }
 .rn-day.open > .rd-row-main { background: #fafbfd; }
@@ -150,12 +142,10 @@
 .rd.rnt .rls-row .rd-cell-box:focus, .rd.rnt .rls-row .rd-cell-box:focus:hover, .rd.rnt .rn-targets .rd-cell-box:focus, .rd.rnt .rn-targets .rd-cell-box:focus:hover { border-bottom-color: #141a24; background: none; caret-color: #141a24; }
 /* No tint behind a row being typed in (21 Oct, Alex): the words and their line alone, as the title's rename. */
 .rd.rnt .rls-row:hover { background: none; }
-/* The log's four figures, plain on the card: small caps over the figure, no tinted tiles. */
-.rd.rnt .rn-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 6px 8px 8px; }
-.rd.rnt .rn-stats > div { padding: 8px 10px; background: none; }
-.rd.rnt .rn-stats small { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
-.rd.rnt .rn-stats span { font-weight: 500; }
-.rd.rnt .rn-stats b.warn { color: #b42318; }
+/* The log's five figures are the shared figures card (`.rls-figs`, measurements.css; 3 Nov, Alex): low protein rust, as `b.warn`
+   there. The unit grey right after the figure. With no day logged the log card is None yet alone, on the card's own edge. */
+.rd.rnt .rn-figs .rls-fig b em { margin-left: 5px; font-size: 13px; font-style: normal; font-weight: 500; letter-spacing: 0; color: #8b93a1; }
+.rd.rnt .rls-card.rls-log > .rls-none:only-child { padding: 16px 18px; }
 .rd.rnt .rls-log .rd-rows { padding-bottom: 6px; }
 .rd.rnt .rls-log .rd-cols { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
 /* A day's row. Training or Rest: the one state pill (29 Oct, Alex: .trn-state, Training ink, Rest grey), one width down the column,
@@ -171,7 +161,6 @@
 .rd.rnt .rn-meal-name { font-weight: 600; }
 .rd.rnt .rn-said { background: #f5f6f8; }
 .rd.rnt .rn-said b { font-weight: 600; color: #5b6474; }
-.rd.rnt .rn-stats b em { margin-left: 6px; font-size: 13px; font-style: normal; font-weight: 500; letter-spacing: 0; color: #8b93a1; }
 /* The targets' figures as clean lines too (21 Oct, Alex): the unit right after the figure (235 g), no box. */
 .rd.rnt .rn-targets .rn-box { gap: 4px; }
 .rd.rnt .rn-targets .rn-box em { margin-left: 0; }

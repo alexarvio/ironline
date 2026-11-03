@@ -7,6 +7,7 @@ import { addDays, mondayOf } from "../phases/timeline";
 import DateText from "../DateText";
 import { dayMonth } from "../../../lib/dayMonth";
 import { Sep } from "../Sep";
+import { TimePick } from "../TimePick";
 
 // Scheduling a built programme (20 Oct, Alex): not its dates, which it
 // already has, but when it goes live. The coach picks the week it starts
@@ -79,7 +80,8 @@ export default function ScheduleDialog({
           plain
         />
         <div className="npd-side">
-          {/* Typed or picked, as every date (20 Oct, Alex); a typed day lands on its week's Monday. */}
+          {/* Typed or picked, as every date (20 Oct, Alex); a typed day lands on its week's Monday. The time beside it in
+              the shared time field (3 Nov, Alex: was the browser's own), as the meeting scheduler's Date | Time. */}
           <div className="npd-dates">
             <div className="npd-date arm">
               <span className="npd-date-head">Goes live</span>
@@ -93,11 +95,8 @@ export default function ScheduleDialog({
                 label="Week it goes live"
               />
             </div>
+            <TimePick value={time} onPick={setTime} head="At" label="Time it goes live" />
           </div>
-          <label className="npd-field">
-            <span className="npd-label">At</span>
-            <input className="npd-line sch-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Time it goes live" />
-          </label>
           {/* Always there, so the pop-up keeps its height whether or not something is wrong. */}
           <p className={`npd-note${clash || past ? " bad" : ""}`} role={clash || past ? "alert" : undefined}>
             <span>{clash ? `Overlaps ${clash.name}, ${short(clash.from)} – ${short(clash.to)}.` : past ? "That week has passed." : " "}</span>

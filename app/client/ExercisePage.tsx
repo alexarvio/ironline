@@ -6,11 +6,12 @@ import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAc
 import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel as labelOf, type Unit } from "../lib/units";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
-import { CoachNote, shownName, type SessionExercise } from "./workoutShared";
+import { CoachNote, shownName, TargetTable, targetColumns, type SessionExercise } from "./workoutShared";
 import { isAssisted } from "../lib/progressRules";
 import CoachSays from "./CoachSays";
 import { Bars } from "./Bars";
 import RingEdge from "../components/RingEdge";
+import DoneCheck from "../components/DoneCheck";
 
 // One exercise, as a page of the workout (13 Oct, "Stepper sheet"): logging
 // is the whole screen. The sets card holds one row a set; exactly one is
@@ -662,38 +663,9 @@ export default function ExercisePage({
       <div className="lw-card">
         {/* The coach's targets as a table (3 Nov, Alex: A of docs/boards/workout-targets-table-mockup.html): the columns the
             coach filled in for this exercise, and only those (Sets, Reps, kg, RPE, Tempo, Rest; a cardio's Time and
-            Distance), their names small and grey over a hairline, the figures under them in ink, big enough to read mid-set. */}
-        {(() => {
-          const reps = exercise.reps.trim().replace(/\s*(?:-|–|to)\s*/i, "–");
-          const rest = exercise.rest != null && exercise.rest > 0 ? (exercise.rest % 60 === 0 && exercise.rest >= 120 ? `${exercise.rest / 60} min` : `${exercise.rest}s`) : null;
-          const cols = [
-            exercise.sets > 0 ? ["Sets", String(exercise.sets)] : null,
-            reps ? ["Reps", reps] : null,
-            targetWeight != null ? [uLabel, fmtWeight(planToDisplay(targetWeight, unit))] : null,
-            targetRpe != null && String(targetRpe).trim() ? ["RPE", String(targetRpe)] : null,
-            exercise.tempo?.trim() ? ["Tempo", exercise.tempo.trim()] : null,
-            rest ? ["Rest", rest] : null,
-            exercise.time?.trim() ? ["Time", exercise.time.trim()] : null,
-            exercise.distance?.trim() ? ["Distance", exercise.distance.trim()] : null,
-          ].filter((c): c is string[] => !!c);
-          return cols.length && !free ? (
-            <div className="lw-target">
-              <span className="lw-target-label">Target</span>
-              <div className={`lw-target-grid${cols.length >= 5 ? " spread" : ""}`} style={{ gridTemplateColumns: `repeat(${cols.length}, max-content)` }}>
-                {cols.map(([name]) => (
-                  <span key={`h${name}`} className="lw-target-h">
-                    {name}
-                  </span>
-                ))}
-                {cols.map(([name, v]) => (
-                  <span key={`v${name}`} className="lw-target-v">
-                    {v}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null;
-        })()}
+            Distance), their names small and grey over a hairline, the figures under them in ink, big enough to read mid-set.
+            One helper and one table for the session overview and the cardio page too (3 Nov, Alex). */}
+        {!free && <TargetTable cols={targetColumns({ sets: exercise.sets, reps: exercise.reps, weightKg: targetWeight, unit, rpe: targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance })} />}
         <div className="lw-card-head">
           <span className="lw-eyebrow">Sets</span>
           <span className={`lw-progress${allDone ? " done" : ""}`}>
@@ -721,14 +693,15 @@ export default function ExercisePage({
                 <Fold key={row.id} state={state}>
                 <button type="button" className={`lw-row${row.saved ? " done" : " upcoming"}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" && !free ? " extra" : ""}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
                   <span className="lw-row-badge" aria-hidden="true">
+                    {/* Logged, the one done check (3 Nov, Alex): full green, a warm-up's in its amber. */}
                     {row.saved ? (
-                      <svg viewBox="0 0 24 24">
-                        <path d="m5 12.5 4.5 4.5L19 7.5" />
-                      </svg>
+                      <DoneCheck size={36} />
                     ) : (
-                      row.label
+                      <>
+                        {row.label}
+                        <RingEdge size={36} stroke={1} />
+                      </>
                     )}
-                    <RingEdge size={36} stroke={row.saved ? 1.5 : 1} />
                   </span>
                   <span className="lw-row-sum">{summaryCells(row)}</span>
                   {rowDelta(row)}

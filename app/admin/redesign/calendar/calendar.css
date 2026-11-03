@@ -176,7 +176,6 @@
 /* The day, Starts → Ends and the length on the right of the month. A box that only shows (Ends from the length, or All
    day) doesn't take a click; a time box open on its list is ringed in ink. */
 .npd.npd.cal-npd .cal-times-row { margin-top: 8px; }
-.npd.npd.cal-npd .npd-date[data-state="open"] { box-shadow: inset 0 0 0 1.5px #141a24; }
 .npd.npd.cal-npd .npd-date.cal-still, .npd.npd.cal-npd .npd-date.cal-still:hover { box-shadow: inset 0 0 0 1px #e1e5eb; cursor: default; }
 .npd.npd.cal-npd .npd-date.off { opacity: 0.45; }
 .npd.npd.cal-npd .npd-dates .npd-arrow { padding: 0 4px; }
@@ -192,9 +191,9 @@
 @keyframes cal-spin { to { transform: rotate(360deg); } }
 @media (max-width: 700px) { .npd.npd.cal-npd .cal-pair { grid-template-columns: minmax(0, 1fr); } }
 
-/* The client list and the times float over the pop-up (portalled), as the floating lists everywhere (design rules 6):
-   white, radius 14, the hairline ring, six rows then they scroll inside; the picked time ink. */
-.cal-drop.cal-drop, .cal-times.cal-times { z-index: 60; display: flex; flex-direction: column; padding: 6px; border: 0; border-radius: 14px; outline: none; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; box-sizing: border-box; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+/* The client list floats over the pop-up (portalled), as the floating lists everywhere (design rules 6):
+   white, radius 14, the hairline ring, six rows then it scrolls inside. */
+.cal-drop.cal-drop { z-index: 60; display: flex; flex-direction: column; padding: 6px; border: 0; border-radius: 14px; outline: none; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; box-sizing: border-box; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
 .cal-drop.cal-drop { width: var(--radix-popover-trigger-width); min-width: 260px; max-width: min(560px, 100vw - 32px); max-height: calc(6 * 44px + 12px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
 .cal-opt { flex: none; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; text-align: left; cursor: pointer; }
 /* One hover for every row and menu item (25 Oct, Alex): the exercise row's soft neutral; the chosen one keeps its grey. */
@@ -205,11 +204,4 @@
 .cal-opt-text b { overflow: hidden; font-size: 13.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
 .cal-opt-text small { overflow: hidden; font-size: 12px; font-weight: 500; color: #8b93a1; text-overflow: ellipsis; white-space: nowrap; }
 .cal-none { margin: 0; padding: 10px; font-size: 13px; font-weight: 500; color: #8b93a1; }
-.cal-times.cal-times { width: 200px; }
-.cal-times-type { flex: none; display: block; width: 100%; height: 36px; margin: 0 0 4px; padding: 0 10px; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: none; box-sizing: border-box; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; }
-.cal-times-type:focus { border-bottom-color: #141a24; }
-.cal-times-type::placeholder { color: #98a2b3; }
-.cal-times-list { display: flex; flex-direction: column; max-height: calc(6 * 36px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
-.cal-time { flex: none; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; text-align: left; cursor: pointer; }
-.cal-time:hover, .cal-time:focus-visible { outline: none; background: #fafbfd; }
-.cal-time.on, .cal-time.on:hover { background: #141a24; color: #fff; font-weight: 600; }
+/* The times' list is the shared time field's now (3 Nov, Alex; TimePick, time-pick.css). */

@@ -7,7 +7,7 @@ import { useKeyboardInset } from "./useKeyboardInset";
 import { saveSkipReasonAction } from "../lib/actions";
 import { pic } from "../lib/pic";
 import { ChevronLeftIcon } from "../components/icons";
-import RingEdge from "../components/RingEdge";
+import DoneCheck from "../components/DoneCheck";
 import GymPickerDialog from "./GymPickerDialog";
 import { Bars } from "./Bars";
 import { VideoAskSheet } from "./VideoAskSheet";
@@ -26,6 +26,8 @@ import {
   shortDate,
   shownName,
   TargetTable,
+  targetColumns,
+  cardioColumns,
   useTicker,
   type SessionCardio,
   type SessionDay,
@@ -320,14 +322,10 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
   const exDone = isDone(exercise);
   // The weight at the session's gym, as the workout shows it.
   const targetWeight = (gymId != null ? exercise.gymTargets?.[gymId] : null) ?? exercise.targetWeight;
-  // The prescription as figure-and-unit pairs, like the workout's target line.
-  const targets = [
-    { value: String(exercise.sets), unit: "sets" },
-    targetWeight != null ? { value: String(roundTo(targetWeight, 2)), unit: "kg" } : null,
-    exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
-    exercise.targetRpe != null ? { value: String(exercise.targetRpe), unit: "rpe" } : null,
-    exercise.tempo ? { value: exercise.tempo, unit: "tempo" } : null,
-  ].filter((t): t is { value: string; unit: string } => !!t);
+  // The prescription as the exercise page's table (3 Nov, Alex): the same columns in the same order, the weight in the
+  // exercise's unit; swapped, only the reps carry over, as the workout shows it.
+  const swapped = exercise.swap != null;
+  const targets = targetColumns({ sets: exercise.sets, reps: exercise.reps, weightKg: swapped ? null : targetWeight, unit: exercise.unit ?? "kg", rpe: swapped ? null : exercise.targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance });
   const ask = exercise.videoRequest;
   // Against the last time: the heaviest set then and now.
   const top = (sets: { weight: number | null }[]) => sets.reduce<number | null>((m, s) => (s.weight != null && (m == null || s.weight > m) ? s.weight : m), null);
@@ -349,7 +347,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
     return (
       <div ref={cardRef} className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
         <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-          <span className={`so-num${exDone ? " done" : ""}`}>{index}{exDone && <RingEdge size={26} />}</span>
+          <span className={`so-num${exDone ? " done" : ""}`}>{exDone ? <DoneCheck size={22} /> : index}</span>
           <span className="so-card-main">
             <span className="so-card-name">{shownName(exercise)}</span>
           </span>
@@ -392,7 +390,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
   return (
     <div ref={cardRef} className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
       <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className={`so-num${exDone ? " done" : ""}`}>{index}{exDone && <RingEdge size={26} />}</span>
+        <span className={`so-num${exDone ? " done" : ""}`}>{exDone ? <DoneCheck size={22} /> : index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{shownName(exercise)}</span>
           {exercise.swap && <span className="so-card-summary">Substituted with {exercise.name}</span>}
@@ -401,7 +399,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
       </button>
       <SoFold open={open}>
         <div className="so-card-body">
-          <TargetTable cells={targets} />
+          <TargetTable cols={targets} />
           {exercise.note.text && <CoachNote assignmentId={exercise.id} note={exercise.note} />}
           {ask && (
             <button type="button" className={`so-video${ask.reply ? " replied" : ask.src ? " sent" : ""}`} onClick={() => setVideoOpen(true)}>
@@ -445,18 +443,10 @@ function SoFold({ open, children }: { open: boolean; children: React.ReactNode }
 // for doing it, so it stays off the review.
 function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: number; done: boolean }) {
   const [open, setOpen] = useState(false);
-  const cells = (
-    [
-      ["time", cardio.time],
-      ["pace", cardio.pace],
-      ["incline", cardio.incline],
-      ["distance", cardio.distance],
-    ] as const
-  ).filter(([, v]) => v);
   return (
     <div className={`so-card so-card-fold${open ? " open" : ""}${cardio.done ? " done" : ""}`}>
       <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className={`so-num${cardio.done ? " done" : ""}`}>{index}{cardio.done && <RingEdge size={26} />}</span>
+        <span className={`so-num${cardio.done ? " done" : ""}`}>{cardio.done ? <DoneCheck size={22} /> : index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{cardio.swap ?? cardio.name}</span>
           {cardio.swap && <span className="so-card-summary">Substituted with {cardio.swap}</span>}
@@ -469,7 +459,7 @@ function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: num
             <div className={cardio.done ? "so-cardio-done" : "so-notlogged"}>{cardio.done ? "Done" : "Not done"}</div>
           ) : (
             <>
-              <TargetTable cells={cells.map(([unit, v]) => ({ unit, value: v }))} />
+              <TargetTable cols={cardioColumns(cardio)} />
               {cardio.notes && <CoachNote assignmentId={null} note={{ text: cardio.notes, dateLabel: "", unread: false }} />}
             </>
           )}

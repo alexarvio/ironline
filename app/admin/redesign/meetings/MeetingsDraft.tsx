@@ -19,6 +19,7 @@ import Picker from "../Picker";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { Sep, SepJoin } from "../Sep";
+import { TimePick } from "../TimePick";
 import { Fold } from "../Fold";
 import { landOnSoon } from "../../../lib/landOn";
 import { TodoStrip } from "../TodoStrip";
@@ -1196,12 +1197,9 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
               <span className="npd-date-head">Date</span>
               <DateText value={date} onChange={setDate} label="Date" />
             </div>
-            <div className="npd-date">
-              <span className="npd-date-head">
-                <SepJoin parts={["Time", "24h"]} />
-              </span>
-              <input className="rd-input rdt" type="text" inputMode="numeric" value={time} onChange={(e) => setTime(e.target.value)} onBlur={() => setTime(tidyTime(time))} placeholder="14:30" aria-label="Time, 24-hour" />
-            </div>
+            {/* The shared time field (3 Nov, Alex: was a bare typed box headed Time | 24h); a typed time read by its own
+                parseTime ("930", "1530", "3pm"), so 25:00 or 12:75 are never taken. */}
+            <TimePick value={time} onPick={setTime} head="Time" label="Time" />
           </div>
           <div className="npd-field">
             <span className="npd-label">Timezone</span>

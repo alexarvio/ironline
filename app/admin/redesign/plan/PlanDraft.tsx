@@ -29,7 +29,8 @@ import { SortableItem, SortableList } from "../Sortable";
 import { Sep, SepJoin } from "../Sep";
 import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
 import type { WeightGoalView } from "../../../lib/weightGoal";
-import { useSaidSaved } from "../useSaveQueue";
+import { useSaveQueue } from "../useSaveQueue";
+import { SaveStatus } from "../SaveStatus";
 import { AddCells, EmptyLane, gridFor, LaneRow, packLanes, PhaseBar, rgbOf, Timeline, weekSpan, weeksBetween } from "./timelineParts";
 
 // The calmer Plan tab, as a draft on real data, in the Training draft's
@@ -148,17 +149,16 @@ type Dlg = { kind: "phase"; phase: PlanPhaseRow | null; track?: PhaseTrack; /** 
 export default function PlanDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftPlan }) {
   const { today, thisWeek, intoWeek } = plan;
   const router = useRouter();
-  const [planSaving, start] = useTransition();
-  // The Events card's saves too, for the one status beside the title (21 Oct, Alex).
-  const [eventsSaving, setEventsSaving] = useState(false);
-  const saidSaved = useSaidSaved(planSaving || eventsSaving);
-  // Every save goes to the server, then the page re-reads; what is on screen
-  // is a working copy that follows the server's answer.
+  const [, startRefresh] = useTransition();
+  // Every save goes to the server in one line, the phases' and the Events card's (21 Oct, Alex: one status beside the
+  // title), then the page re-reads; what is on screen is a working copy that follows the server's answer. A save that
+  // fails stays first in line and the title says `Not saved | Retry` (3 Nov, Alex: a failed save said saved).
+  const q = useSaveQueue(() => startRefresh(() => router.refresh()));
   const act = (fn: () => Promise<unknown>, said?: string) =>
-    start(async () => {
+    q.save(async () => {
       await fn();
-      router.refresh();
       if (said) savedToast(said);
+      return true;
     });
   // The Main goal card went from this tab (10 Oct): it was not used. The goal itself stays on the client (Home shows it) and in the data.
 
@@ -303,12 +303,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           <h1 className="rd-title">
             {firstName}&rsquo;s plan
             {/* Every change saves as it is made; the status beside the title (21 Oct, Alex), as on Training, Lifestyle and Nutrition. */}
-            {/* Nothing until something is saved (22 Oct, Alex). */}
-            {saidSaved && (
-              <span className={`pln-allsaved${planSaving || eventsSaving ? " saving" : ""}`} role="status">
-                {planSaving || eventsSaving ? "Saving…" : "All changes saved"}
-              </span>
-            )}
+            {/* Nothing until something is saved (22 Oct, Alex); the shared status (3 Nov, Alex). */}
+            <SaveStatus busy={q.saving} failed={q.failed} onRetry={q.retry} className="pln-allsaved" />
           </h1>
         </div>
       </header>
@@ -411,7 +407,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
       </section>
 
       {/* ---- Events: life around the plan, on the same weeks. */}
-      <EventsCard clientId={clientId} firstName={firstName} faces={plan.faces} events={plan.events} weightGoals={plan.weightGoals} categories={plan.eventCategories} today={today} thisWeek={thisWeek} intoWeek={intoWeek} windows={WINDOWS} onSaving={setEventsSaving} />
+      <EventsCard clientId={clientId} firstName={firstName} faces={plan.faces} events={plan.events} weightGoals={plan.weightGoals} categories={plan.eventCategories} today={today} thisWeek={thisWeek} intoWeek={intoWeek} windows={WINDOWS} save={q.save} />
 
       {/* ---- Goals: off the Plan tab for now (20 Oct, Alex); the code stays for when they come back. */}
       {SHOW_GOALS && (
@@ -609,19 +605,19 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               const fd = phaseForm({ id: was.id, ...v });
               if (v.now)
                 // Live, or why not (5 Oct: a blocked one used to say "is live" anyway).
-                start(async () => {
+                q.save(async () => {
                   const why = await saveAndDeployPhaseNowAction(fd);
-                  router.refresh();
                   if (why) toast.error(`${v.name} isn't live yet`, { description: why });
                   else savedToast(`${v.name} is live`);
+                  return true;
                 });
               else
                 // Scheduled, or why not (20 Oct: an empty one said "scheduled" anyway).
-                start(async () => {
+                q.save(async () => {
                   const why = await saveAndSchedulePhaseOrSayWhyAction(fd);
-                  router.refresh();
                   if (why) toast.error(`${v.name} isn't scheduled yet`, { description: why });
                   else savedToast(`${v.name} scheduled for ${fmtDay(v.start)}`);
+                  return true;
                 });
             }}
           />

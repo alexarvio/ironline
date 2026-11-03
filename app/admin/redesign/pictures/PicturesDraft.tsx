@@ -21,7 +21,8 @@ import { TrackIcon } from "../plan/PlanDraft";
 import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
 import { SortableItem, SortableList } from "../Sortable";
-import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
+import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
+import { SaveStatus } from "../SaveStatus";
 import { dayMonth, dayMonthTime, logDate } from "../../../lib/dayMonth";
 import { pic } from "../../../lib/pic";
 import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
@@ -110,7 +111,6 @@ function Pictures({ clientId, firstName, plan }: Props) {
   const [, startRefresh] = useTransition();
   const reRead = () => startRefresh(() => router.refresh());
   const q = useSaveQueue(reRead);
-  const saidSaved = useSaidSaved(q.saving);
   const [dlg, setDlg] = useState<Dlg>(null);
   // A photo opened from Compare goes back to Compare when it closes.
   const close = () => setDlg((d) => (d?.kind === "photo" && d.back ? { kind: "compare", periods: d.back } : null));
@@ -235,21 +235,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
             ) : plan.nextSheet ? (
               <span className="trn-status rp-tag next">Next {dayMonth(plan.nextSheet)}</span>
             ) : null}
-            {q.failed ? (
-              <span className="trn-allsaved failed" role="alert">
-                Not saved{" "}
-                <button type="button" onClick={q.retry}>
-                  Retry
-                </button>
-              </span>
-            ) : (
-              // Nothing until something is saved (22 Oct, Alex: it said saved on a client nobody had touched).
-              saidSaved && (
-                <span className={`trn-allsaved${q.saving ? " saving" : ""}`} role="status">
-                  {q.saving ? "Saving…" : "All changes saved"}
-                </span>
-              )
-            )}
+            {/* The shared status (3 Nov, Alex: `Not saved | Retry` with the drawn bar, as every tab). */}
+            <SaveStatus busy={q.saving} failed={q.failed} onRetry={q.retry} />
           </div>
         </div>
         <div className="trn-head-actions">
@@ -271,7 +258,12 @@ function Pictures({ clientId, firstName, plan }: Props) {
       <TodoStrip tab="pictures" />
 
       {!top ? (
-        sheets.length === 0 && <div className="rp-card rp-empty">No sheets yet</div>
+        // The shared card and empty word (3 Nov, Alex: was its own card and "No sheets yet").
+        sheets.length === 0 && (
+          <div className="rls-card">
+            <p className="rls-none">None yet</p>
+          </div>
+        )
       ) : (
         // ---- The top (21 Oct, Alex): the sheet open now, until every photo is in; then the next one, on its own day,
         // its places empty, where its angles are added (+ Add) and taken off (× on an empty place).
@@ -287,7 +279,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
               </div>
             )}
           </div>
-          <div className="rp-card rp-sheet">
+          <div className="rls-card rp-sheet">
             <div className="rp-grid" style={{ "--rp-cols": cols, "--rp-cols-narrow": Math.min(cols, 3) } as React.CSSProperties}>
               {topCells.map((c) => {
                 const status = c.src ? "in" : top.live ? "waiting" : null;
@@ -381,7 +373,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
               <h2>All sheets</h2>
             </div>
           </div>
-          <div ref={tableRef} className="rp-card rp-table">
+          <div ref={tableRef} className="rls-card rp-table">
             <div className="rp-thead" aria-hidden="true">
               <span>Date</span>
               <span>Sheet</span>
@@ -390,7 +382,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
               <span>Phases</span>
               <span className="end">State</span>
             </div>
-            {closed.length === 0 && <p className="rp-tnone">None yet</p>}
+            {closed.length === 0 && <p className="rls-none">None yet</p>}
             {shownRows.map((sh) => {
               const st = stateOf(sh);
               const isOpen = openRow === sh.period;

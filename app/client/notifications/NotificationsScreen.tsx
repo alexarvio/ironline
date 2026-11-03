@@ -12,6 +12,7 @@ import { pic } from "../../lib/pic";
 import { useBack, useCoachIdentity, useNavigateTab, useOpenCheckIn, useOpenEvents, useOpenLink, useOpenMeetings, useOpenMessages } from "../CheckInContext";
 import type { LinkView } from "../../lib/messageLinks";
 import { TypeIcon } from "../events/AddEventSheet";
+import { Bars } from "../Bars";
 import VideoReplySheet, { type VideoReplyView } from "../VideoReplySheet";
 
 // The Notifications screen, "Clean feed" (9 Oct): what the coach did,
@@ -251,12 +252,7 @@ function NotificationItem({ n, read, todayKey, coachFirst, coachPhoto, onOpen }:
             {/* Facts parted by the drawn upright bar, never a middle dot (the rules; 23 Oct: To focus on's goals). */}
             {n.body && (
               <span className="ntf-body">
-                {n.body.split(" · ").map((part, i) => (
-                  <span key={i}>
-                    {i > 0 && <i className="ntf-sep" aria-hidden="true" />}
-                    {part}
-                  </span>
-                ))}
+                <Bars parts={n.body.split(" · ")} />
               </span>
             )}
           </span>

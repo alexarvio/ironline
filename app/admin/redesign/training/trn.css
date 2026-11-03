@@ -219,7 +219,8 @@
 .rd.trn .trn-allsaved.saving::before { content: none; }
 .rd.trn .trn-allsaved.failed { color: #b42318; }
 .rd.trn .trn-allsaved.failed::before { content: none; }
-.rd.trn .trn-allsaved.failed button { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: inherit; text-decoration: underline; cursor: pointer; }
+/* Retry is a text action, never underlined (3 Nov, Alex). */
+.rd.trn .trn-allsaved.failed button { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: inherit; text-decoration: none; cursor: pointer; }
 /* In the title's row, after the state tag (21 Oct, Alex): no divider before it, the facts' size, not the title's. */
 .rd.trn .trn-name-row .trn-allsaved { margin-left: 0; padding-left: 0; font-size: 13px; line-height: 1; white-space: nowrap; }
 .rd.trn .trn-name-row .trn-allsaved::after { display: none; }
@@ -264,7 +265,6 @@ body:has(.rd-addpop) .rd-picker-menu [data-slot="dropdown-menu-item"].on { backg
 /* ---- Schedule pop-up (ScheduleDialog, on the phase pop-up's npd styles) */
 .npd.sch.sch { width: min(680px, 100vw - 32px); }
 .npd .sch-when { padding: 8px 0 9px; border-bottom: 1px solid #e1e5eb; font-size: 15px; font-weight: 500; color: #141a24; }
-.npd .sch-time { max-width: 140px; }
 
 /* ---- Delete session pop-up (DeleteSessionDialog): portalled, so not under
    .rd.trn; doubled classes out-rank the dialog's own utility classes. */

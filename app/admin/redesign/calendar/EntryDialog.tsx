@@ -5,12 +5,13 @@ import type React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Popover as PopoverPrimitive } from "radix-ui";
-import { toast } from "sonner";
+import { runCalendarSave } from "./CalendarSaveStatus";
 import { addCalendarEntryAction, removeCalendarEntryAction, updateCalendarEntryAction } from "../../../lib/actions";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { SearchIcon } from "../../../components/icons";
 import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
+import { TimePick, TIME_SLOTS } from "../TimePick";
 import { paletteOf, type Category } from "../palette";
 import type { CalEntry } from "./CalendarDay";
 import { TRAINING_ICON } from "../../../lib/eventTypes";
@@ -56,19 +57,6 @@ const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "
 const lengthLabel = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : `${m / 60} h`);
 const longDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const SLOTS = Array.from({ length: ((22 - 5) * 60) / 15 + 1 }, (_, i) => hhmm(5 * 60 + i * 15));
-/** "1530", "15.30", "3pm" and "15:30" all read as 15:30. */
-function parseTime(raw: string): string | null {
-  const s = raw.trim().toLowerCase();
-  const m = /^(\d{1,2})(?:[:.h]?(\d{2}))?\s*(am|pm)?$/.exec(s);
-  if (!m) return null;
-  let h = Number(m[1]);
-  const mm = Number(m[2] ?? 0);
-  if (m[3] === "pm" && h < 12) h += 12;
-  if (m[3] === "am" && h === 12) h = 0;
-  if (h > 23 || mm > 59) return null;
-  return hhmm(h * 60 + mm);
-}
 function browserZone(): string | null {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
@@ -138,10 +126,6 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
   const [cameBack, setCameBack] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [timeOpen, setTimeOpen] = useState(false);
-  const [timeTyped, setTimeTyped] = useState("");
-  const [endOpen, setEndOpen] = useState(false);
-  const [endTyped, setEndTyped] = useState("");
   // The month on the left: the day's month, moved by a day typed or picked further off.
   const [today] = useState(() => isoOf(new Date()));
   const [cursor, setCursor] = useState((open.date || today).slice(0, 7));
@@ -194,24 +178,28 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
     const title = topic.trim() || suggested || "";
     // The time is in this browser's timezone, as every time on the Calendar reads.
     const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: length, allDay, topic: title, clientId: withClient ? clientId : null, category: cat, note: note.trim() };
-    try {
+    // Through the Calendar's one status (3 Nov, Alex): the header says Saving… and saved, no toast; a failure keeps the
+    // pop-up open with its line, and the header's Retry runs it again.
+    const went = await runCalendarSave(async () => {
       if (e) await updateCalendarEntryAction(e.id, v);
       else await addCalendarEntryAction(v);
       router.refresh();
-      toast.success(e ? `${title} · saved` : `${title} · added`);
       onDone();
-    } catch {
-      setError("Not saved. Try again.");
-    }
+    });
+    if (!went) setError("Not saved. Try again.");
     setSaving(false);
   };
   const remove = async () => {
     if (!e) return;
     setSaving(true);
-    await removeCalendarEntryAction(e.id);
-    router.refresh();
-    toast.success("Removed");
-    onDone();
+    setError(null);
+    const went = await runCalendarSave(async () => {
+      await removeCalendarEntryAction(e.id);
+      router.refresh();
+      onDone();
+    });
+    if (!went) setError("Not removed. Try again.");
+    setSaving(false);
   };
   // The X and Cancel just close (14 Oct): no "Discard changes?" in between.
   const tryClose = onDone;
@@ -437,103 +425,25 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
               </>
             ) : (
               <>
-                <PopoverPrimitive.Root open={timeOpen} modal onOpenChange={setTimeOpen}>
-                  <PopoverPrimitive.Trigger className="npd-date" aria-label={`Starts, ${time}`}>
-                    <span className="npd-date-head">Starts</span>
-                    <b>{time}</b>
-                  </PopoverPrimitive.Trigger>
-                  <PopoverPrimitive.Portal>
-                    <PopoverPrimitive.Content align="start" sideOffset={6} className="cal-times">
-                      <input
-                        className="cal-times-type"
-                        value={timeTyped}
-                        onChange={(x) => setTimeTyped(x.target.value)}
-                        placeholder="1530"
-                        aria-label="Type a time"
-                        onKeyDown={(x) => {
-                          if (x.key === "Enter") {
-                            const t = parseTime(timeTyped);
-                            if (t) {
-                              setTime(t);
-                              setTimeTyped("");
-                              setTimeOpen(false);
-                            }
-                          }
-                        }}
-                      />
-                      <div className="cal-times-list">
-                        {SLOTS.map((t) => (
-                          <button
-                            key={t}
-                            type="button"
-                            className={`cal-time${t === time ? " on" : ""}`}
-                            ref={(el) => {
-                              if (el && t === time) el.scrollIntoView({ block: "center" });
-                            }}
-                            onClick={() => {
-                              setTime(t);
-                              setTimeOpen(false);
-                            }}
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                    </PopoverPrimitive.Content>
-                  </PopoverPrimitive.Portal>
-                </PopoverPrimitive.Root>
+                {/* The shared time field (3 Nov, Alex: this box was the model; TimePick). */}
+                <TimePick value={time} onPick={setTime} head="Starts" label="Starts" />
                 <span className="npd-arrow" aria-hidden="true">
                   <RangeArrow />
                 </span>
                 {customLength ? (
                   /* Custom: the end is picked like the start (15 Oct), typed or from the list; the browser's time field fought every keystroke. */
-                  <PopoverPrimitive.Root open={endOpen} modal onOpenChange={setEndOpen}>
-                    <PopoverPrimitive.Trigger className="npd-date" aria-label={`Ends, ${hhmm(endMin)}`}>
-                      <span className="npd-date-head">Ends</span>
-                      <b>{hhmm(endMin)}</b>
-                    </PopoverPrimitive.Trigger>
-                    <PopoverPrimitive.Portal>
-                      <PopoverPrimitive.Content align="start" sideOffset={6} className="cal-times">
-                        <input
-                          className="cal-times-type"
-                          value={endTyped}
-                          onChange={(x) => setEndTyped(x.target.value)}
-                          placeholder="1530"
-                          aria-label="Type the end time"
-                          autoFocus
-                          onKeyDown={(x) => {
-                            if (x.key === "Enter") {
-                              const t = parseTime(endTyped);
-                              const m = t ? toMin(t) - toMin(time) : 0;
-                              if (m > 0) {
-                                setLength(m);
-                                setEndTyped("");
-                                setEndOpen(false);
-                              }
-                            }
-                          }}
-                        />
-                        <div className="cal-times-list">
-                          {SLOTS.filter((t) => toMin(t) > toMin(time)).map((t) => (
-                            <button
-                              key={t}
-                              type="button"
-                              className={`cal-time${t === hhmm(endMin) ? " on" : ""}`}
-                              ref={(el) => {
-                                if (el && t === hhmm(endMin)) el.scrollIntoView({ block: "center" });
-                              }}
-                              onClick={() => {
-                                setLength(toMin(t) - toMin(time));
-                                setEndOpen(false);
-                              }}
-                            >
-                              {t}
-                            </button>
-                          ))}
-                        </div>
-                      </PopoverPrimitive.Content>
-                    </PopoverPrimitive.Portal>
-                  </PopoverPrimitive.Root>
+                  <TimePick
+                    value={hhmm(endMin)}
+                    onPick={(t) => {
+                      const m = toMin(t) - toMin(time);
+                      if (m <= 0) return false;
+                      setLength(m);
+                    }}
+                    head="Ends"
+                    label="Ends"
+                    slots={TIME_SLOTS.filter((t) => toMin(t) > toMin(time))}
+                    autoFocus
+                  />
                 ) : (
                   <span className="npd-date cal-still" aria-live="polite">
                     <span className="npd-date-head">Ends</span>

@@ -20,6 +20,7 @@ import { DataSettings, NotificationsSettings, PreferencesSettings } from "./More
 import { loadAccountSecurity } from "../../../lib/accountSecurity";
 import ProfileEditor from "../profile/ProfileEditor";
 import SettingsBoard, { type SettingsSection } from "./SettingsBoard";
+import { SepJoin } from "../Sep";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
 import "../training/trn.css";
@@ -102,9 +103,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const eff = invoicingFor(business, invoicing);
   const livePlans = plans.filter((p) => !p.archived).length;
 
-  // The list's quiet fact under each name (27 Oct, Alex: mockup B), parts joined by the drawn bar's words.
+  // The list's quiet fact under each name (27 Oct, Alex: mockup B), parts parted by the drawn bar (3 Nov, Alex: was a typed "|").
   const billing = t.time("billing", () => billingView(coach.id, owner));
-  const join = (parts: (string | null | undefined | false)[]) => parts.filter(Boolean).join(" | ") || null;
+  const join = (parts: (string | null | undefined | false)[]) => (parts.some(Boolean) ? <SepJoin parts={parts} /> : null);
   const land = business.country_code ? countryOf(business.country_code) : null;
   const facts = {
     profile: profile ? (profile.published ? "Published" : "Not published") : null,

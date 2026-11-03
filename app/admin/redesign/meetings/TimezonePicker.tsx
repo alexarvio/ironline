@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDownIcon } from "../../../components/icons";
 import { tzShort } from "../../../lib/timezones";
+import { Sep } from "../Sep";
 
 // The timezone a meeting's time is in, as the drafts' own field (the Picker
 // look), not the browser's select: the city and its offset, and a search
@@ -42,8 +43,11 @@ export default function TimezonePicker({ value, zones, onChange }: { value: stri
   return (
     <div ref={wrap} className="rt-tzp">
       <button type="button" className="rd-input rd-picker rt-tzp-btn" data-state={open ? "open" : "closed"} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        {/* The city and its offset parted by the drawn bar (3 Nov, Alex: was a typed middle dot). */}
         <span>
-          {city(value)} <small>· {off(value)}</small>
+          {city(value)}
+          <Sep />
+          <small>{off(value)}</small>
         </span>
         <ChevronDownIcon />
       </button>

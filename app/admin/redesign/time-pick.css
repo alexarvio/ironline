@@ -1,0 +1,18 @@
+/* One time field (3 Nov, Alex: the Calendar entry's, now every coach pop-up's; TimePick.tsx). The box is the .npd
+   row's own (`.npd-date`, plan/phase-dialog.css), ringed in ink while its list is open; beside a date box that is
+   armed, only the open one is ringed. */
+.npd.npd .npd-date.tpk[data-state="open"] { box-shadow: inset 0 0 0 1.5px #141a24; }
+.npd.npd .npd-dates:has(.tpk[data-state="open"]) .npd-date.arm:not(:focus-within) { box-shadow: inset 0 0 0 1px #e1e5eb; }
+.npd.npd .npd-date.tpk b.tpk-none { color: #98a2b3; }
+
+/* The list floats over the pop-up (portalled), as the floating lists everywhere (design rules 6): white, radius 14,
+   the hairline ring, a typed line on top, six quarter hours then it scrolls inside; the picked one ink. */
+.tpk-pop.tpk-pop { z-index: 60; display: flex; flex-direction: column; width: 200px; padding: 6px; border: 0; border-radius: 14px; outline: none; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; box-sizing: border-box; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+.tpk-type { flex: none; display: block; width: 100%; height: 36px; margin: 0 0 4px; padding: 0 10px; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: none; box-sizing: border-box; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; }
+.tpk-type:focus { border-bottom-color: #141a24; }
+.tpk-type::placeholder { color: #98a2b3; }
+.tpk-list { position: relative; display: flex; flex-direction: column; max-height: calc(6 * 36px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+.tpk-time { flex: none; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; text-align: left; cursor: pointer; }
+/* One hover for every row and menu item (25 Oct, Alex): the soft neutral. */
+.tpk-time:hover, .tpk-time:focus-visible { outline: none; background: #fafbfd; }
+.tpk-time.on, .tpk-time.on:hover { background: #141a24; color: #fff; font-weight: 600; }

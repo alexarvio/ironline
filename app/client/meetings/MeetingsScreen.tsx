@@ -12,6 +12,7 @@ import { agoLabel, agreedPoints, icsDataUrl, startingNow, timeRange, untilLabel 
 import { useOpenEvents } from "../CheckInContext";
 import { Bars } from "../Bars";
 import { TypeIcon } from "../events/AddEventSheet";
+import MeetingNotes from "./MeetingNotes";
 
 // The Meetings screen (9 Oct), reshaped 16 Oct: calls are few, so the top is
 // fixed: the white pill to ask for a call, and under it the next call as a
@@ -330,7 +331,7 @@ function NextPill({ m, now, coachFirst, open = false, lit = false, onToggle }: {
   const whenParts = live ? ["Starting now", time] : [now != null ? untilLabel(ms, now) : null, time];
   const when = whenParts.filter(Boolean).join(", ");
   const t = meetingTypeOf(m.type);
-  const { points, prose } = agreedPoints(m.notes);
+  const { points } = agreedPoints(m.notes);
   const has = points.length > 0;
   return (
     <div className={`mtp-next${live ? " live" : ""}${open ? " open" : ""}${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
@@ -373,15 +374,7 @@ function NextPill({ m, now, coachFirst, open = false, lit = false, onToggle }: {
         <div className={`ev-x mtp-next-x${open ? " open" : ""}`} aria-hidden={!open}>
           <div className="ev-x-clip">
             <div className="ev-x-in">
-              {prose ? (
-                <p className="mt-prose">{points[0]}</p>
-              ) : (
-                <ul className="mt-items">
-                  {points.map((p, i) => (
-                    <CheckItem key={i} text={p} rgb={t.rgb} color={t.color} />
-                  ))}
-                </ul>
-              )}
+              <MeetingNotes notes={m.notes} />
             </div>
           </div>
         </div>
@@ -450,20 +443,7 @@ function AskSheet({ clientId, coachFirst, onClose, onSent }: { clientId: number;
   );
 }
 
-// ---- Shared bits: an agreed point with its check, and an event chip.
-
-export function CheckItem({ text, rgb, color }: { text: string; rgb: string; color: string }) {
-  return (
-    <li className="mt-item" style={{ "--rgb": rgb, "--c": color } as React.CSSProperties}>
-      <span className="mt-check" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 12.5l4.5 4.5L19 7.5" />
-        </svg>
-      </span>
-      <span>{text}</span>
-    </li>
-  );
-}
+// ---- Shared bits: an event chip. (The agreed points are MeetingNotes since 3 Nov, Alex: no ticked squares.)
 
 export function EventChip({ e, onOpen }: { e: { id: number; title: string; kind: string | null }; onOpen?: () => void }) {
   const t = eventTypeOf(e.kind);
@@ -497,7 +477,7 @@ function PastRow({ m, label, now, focus, open, lit, refFn, onTap }: { m: ClientM
   const t = meetingTypeOf(m.type);
   const ms = startMsOf(m);
   const d = new Date(ms);
-  const { points, prose } = agreedPoints(m.notes);
+  const { points } = agreedPoints(m.notes);
   const has = points.length > 0 || m.linkedEvents.length > 0;
   const openEvents = useOpenEvents();
   const ago = now != null ? agoLabel(ms, now) : "";
@@ -548,16 +528,7 @@ function PastRow({ m, label, now, focus, open, lit, refFn, onTap }: { m: ClientM
           <div className="ev-x-clip">
             <div className="ev-x-in">
               {clipped && <p className="evp-x-title">{m.title}</p>}
-              {points.length > 0 &&
-                (prose ? (
-                  <p className="mt-prose">{points[0]}</p>
-                ) : (
-                  <ul className="mt-items">
-                    {points.map((p, i) => (
-                      <CheckItem key={i} text={p} rgb={t.rgb} color={t.color} />
-                    ))}
-                  </ul>
-                ))}
+              {points.length > 0 && <MeetingNotes notes={m.notes} />}
               {m.linkedEvents.length > 0 && (
                 <span className="mt-linked">
                   <span className="mt-linked-label">Added to your events</span>

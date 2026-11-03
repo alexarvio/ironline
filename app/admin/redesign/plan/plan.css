@@ -290,6 +290,10 @@
 .rd.pln .rd-title .pln-allsaved::before { content: "✓ "; }
 .rd.pln .rd-title .pln-allsaved.saving { color: #8b93a1; }
 .rd.pln .rd-title .pln-allsaved.saving::before { content: none; }
+/* A save that failed says so (3 Nov, Alex: it said saved), `Not saved | Retry` in red, Retry a text action (the shared SaveStatus). */
+.rd.pln .rd-title .pln-allsaved.failed { color: #b42318; }
+.rd.pln .rd-title .pln-allsaved.failed::before { content: none; }
+.rd.pln .rd-title .pln-allsaved.failed button { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: inherit; text-decoration: none; cursor: pointer; }
 /* The Events log eases open and shut (27 Oct, Alex: "drop down and collapse smoothly"): its rows 0fr → 1fr on the soft
    ease-out the client app's folds use, fading in. */
 .rq-evlog-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; }
