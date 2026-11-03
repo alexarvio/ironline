@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pills and buttons</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --line:#E1E5EB; --page:#F5F6F8; --red:#b42318; --green:#2f7a3f; --rust:#b8471f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #F5F5F5; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 70px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 28px; max-width: 820px; line-height: 1.5; }
+  section { margin: 0 0 36px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  h2 b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .what { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 12px; max-width: 760px; line-height: 1.5; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+  .panel { background: var(--page); border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); padding: 16px; }
+  .tag { display: inline-block; font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; margin: 0 0 12px; }
+  .tag.now { color: var(--rust); } .tag.new { color: var(--green); }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .p { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; box-shadow: inset 0 0 0 1px #DCE1E8; }
+  .p.white { background: #fff; } .p.clear { background: transparent; }
+  .p small { font-weight: 500; color: var(--muted); }
+  .ic { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .lbl { width: 100%; font-size: 11px; color: var(--muted); font-weight: 500; margin: 6px 0 4px; }
+  .ev { background: #fff0; padding: 4px 0; }
+  .ev .t { font-size: 15px; font-weight: 500; }
+  .ev .n { font-size: 13px; color: var(--muted); margin: 4px 0 10px; }
+  .eb { flex: 1; height: 40px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); display: inline-flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: 600; }
+  .eb.red { color: var(--rust); }
+  .w { font-size: 13px; font-weight: 600; margin-right: 22px; }
+  .w.red { color: var(--red); }
+  .u { font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  .u.green { color: #2E7D32; font-weight: 700; }
+  .join-full { display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 13.5px; font-weight: 600; }
+  .join-full.early { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  .dot { width: 22px; height: 22px; border-radius: 999px; background: #C6F432; display: grid; place-items: center; color: var(--ink); }
+  .dot .ic { width: 12px; height: 12px; }
+  .join { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px 0 12px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 600; }
+  .join.early { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  .card { background: #fff; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .big { height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; }
+  .big.ink { background: var(--ink); color: #fff; } .big.white { background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+  .st { display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; background: #fff; font-size: 11.5px; font-weight: 600; color: var(--green); box-shadow: inset 0 0 0 1px rgba(47,122,63,.35); }
+  .note { margin: 10px 0 0; font-size: 12px; color: var(--muted); font-weight: 500; line-height: 1.45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pills and buttons: now and proposed</h1>
+  <p class="sub">The six points from the audit. Left is today, right the proposal. 1 to 4 are already built on preview (easy to undo); 5 and 6 are not built yet.</p>
+
+  <section>
+    <h2><b>1</b>Coach header pills (Invoices, Library, Coaches, Shape update)</h2>
+    <p class="what">On some tabs the header pill is see-through, so it shows the page's grey; on others it is white. Shape update's Sheet setup is its own button.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="lbl">Invoices</div><div class="row"><span class="p clear">+ New invoice</span></div>
+        <div class="lbl">Home</div><div class="row"><span class="p white">App access</span><span class="p white">Details</span></div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="lbl">Invoices</div><div class="row"><span class="p white">+ New invoice</span></div>
+        <div class="lbl">Home</div><div class="row"><span class="p white">App access</span><span class="p white">Details</span></div>
+        <p class="note">Every header pill white, on every tab. Sheet setup the same pill.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>2</b>Actions inside an opened row (client: an event, a check-in day)</h2>
+    <p class="what">An opened event shows Edit and Delete as two big pills; an opened check-in day has an Edit pill. The rule: inside a row an action is its words alone.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="ev"><div class="t">Padel</div><div class="n">Tue &amp; Thu evenings</div><div class="row"><span class="eb">Edit</span><span class="eb red">Delete</span></div></div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="ev"><div class="t">Padel</div><div class="n">Tue &amp; Thu evenings</div><div class="row"><span class="w">Edit</span><span class="w red">Delete</span></div></div>
+        <p class="note">Words alone, Delete in red; it still asks before it deletes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>3</b>Underlined text actions (cardio, food diary)</h2>
+    <p class="what">The cardio's Substitute today and the food diary's Edit are underlined; the Edit is also green and heavy.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span><div class="row"><span class="u" style="color:#5b6474">Substitute today</span><span style="width:20px"></span><span class="u green">Edit</span></div></div>
+      <div class="panel"><span class="tag new">Proposed</span><div class="row"><span class="w">Substitute today</span><span class="w">Edit</span></div><p class="note">Plain words in ink at 600, as every text action.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>4</b>Joining a call (Home)</h2>
+    <p class="what">Home says "Open meeting link" and "Join call" on a full-width button with a lime disc. Meetings says just "Join" on a pill.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span>
+        <div class="lbl">Before the call</div><div class="join-full early"><span class="dot"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg></span>Open meeting link</div>
+        <div class="lbl">When it starts</div><div class="join-full"><span class="dot"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg></span>Join call</div>
+      </div>
+      <div class="panel"><span class="tag new">Proposed</span>
+        <div class="lbl">Before the call</div><span class="join early"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg>Join</span>
+        <div class="lbl">When it starts</div><span class="join"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg>Join</span>
+        <p class="note">One word, as on Meetings: the white pill before, ink once the call is on.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>5</b>Sign-in (when Apple is switched on) · not built</h2>
+    <p class="what">With Apple on, the sign-in card would have two black pills. The rule: one black pill a screen.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span><div class="card"><span class="big ink"> Continue with Apple</span><span class="big white">Continue with Google</span><span class="big ink">Send code</span></div></div>
+      <div class="panel"><span class="tag new">Proposed</span><div class="card"><span class="big white"> Continue with Apple</span><span class="big white">Continue with Google</span><span class="big ink">Send code</span></div><p class="note">Apple as the white pill, like Google; Send code the one black pill.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><b>6</b>Small ones · not built</h2>
+    <p class="what">The coach's weight goal pop-up shows its verdict in a 22px pill; every other state pill is 24px. Some client pills use the coach admin's slightly darker outline.</p>
+    <div class="pair">
+      <div class="panel"><span class="tag now">Now</span><div class="row"><span class="st" style="height:22px">On track</span><span class="st" style="height:24px">Completed</span></div></div>
+      <div class="panel"><span class="tag new">Proposed</span><div class="row"><span class="st" style="height:24px">On track</span><span class="st" style="height:24px">Completed</span></div><p class="note">Both 24px. Client pill outlines all the client's own hairline.</p></div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
