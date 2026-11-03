@@ -160,3 +160,9 @@
 .rd.rfd .rfd-actword:hover { background: #f5f6f8; }
 @container rh (max-width: 860px) { .rd.rfd .rfd-need { grid-template-columns: 168px minmax(0, 1fr) 84px 96px 30px; } }
 @container rh (max-width: 600px) { .rd.rfd .rfd-need { grid-template-columns: 120px minmax(0, 1fr) 96px 30px; } }
+/* A row's action on the row's hover only (3 Nov, Alex: "a hover is interesting for all of these rows", as Training's ⋯):
+   the whole row opens the same place. Ending soon's rows (.still) can't be clicked, so their actions stay. Always there
+   on a touch screen. */
+.rd .nd-row:not(.still) .nd-act { opacity: 0; transition: opacity 0.12s; }
+.rd .nd-row:not(.still):hover .nd-act, .rd .nd-row:not(.still):focus-within .nd-act, .rd .nd-row .nd-act[data-state="open"] { opacity: 1; }
+@media (hover: none) { .rd .nd-row .nd-act { opacity: 1; } }

@@ -1491,3 +1491,9 @@ span.rd-demo { cursor: default; }
 .dlh.wgd .wgd-fact { margin: 0; min-height: 18px; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 /* Delete's words on the card's left edge, under the title and fields (3 Nov, Alex): its 14px padding pulled back. */
 .dlh.wgd .dlh-foot .wgd-del { margin-right: auto; margin-left: -14px; }
+
+/* The to-do strip's round check on the row's hover only (3 Nov, Alex: as the Feed's); the action itself stays, the row
+   can't be clicked. Always there on a touch screen. */
+.rd-todo-done { opacity: 0; }
+.rd-todo-row:hover .rd-todo-done, .rd-todo-row:focus-within .rd-todo-done { opacity: 1; }
+@media (hover: none) { .rd-todo-done { opacity: 1; } }

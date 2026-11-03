@@ -138,3 +138,9 @@
   .rd.pov .pov-soon-row.leaving { animation: none; opacity: 0; }
 }
 .pov .pov-needs { margin: 0 0 28px; }
+
+/* + Add under a client's Phases and Events on the client's hover only (3 Nov, Alex: two on every client read as a column
+   of buttons; an empty week's + does the same). Always there on a touch screen. */
+.rd.pov .pov-client .pov-add { opacity: 0; transition: opacity 0.12s, color 0.12s; }
+.rd.pov .pov-client:hover .pov-add, .rd.pov .pov-client:focus-within .pov-add { opacity: 1; }
+@media (hover: none) { .rd.pov .pov-client .pov-add { opacity: 1; } }

@@ -364,3 +364,9 @@ html.look-hl .rd-chattab.rd-phonetab:hover, html.look-hl .rd-chattab.rd-phonetab
 html.look-hl .rd-chattab.rd-phonetab.on { background: #141a24; box-shadow: none; }
 html.look-hl .rd-chattab.rd-phonetab.on:hover, html.look-hl .rd-chattab.rd-phonetab.on:focus-visible { background: #262e3b; }
 .rm-menu-ask { padding: 8px 10px 4px; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; }
+
+/* Media and files on the laptop: a file's Open on its row's hover only (3 Nov, Alex); the client's chat and the coach's
+   phone keep it showing (no hover there). */
+.rm .cmg-file .cmg-act { opacity: 0; transition: opacity 0.12s; }
+.rm .cmg-file:hover .cmg-act, .rm .cmg-file:focus-within .cmg-act { opacity: 1; }
+@media (hover: none) { .rm .cmg-file .cmg-act { opacity: 1; } }

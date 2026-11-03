@@ -205,3 +205,9 @@
 /* Every notes tab of a call one height (2 Nov, Alex: To focus on was the smallest, so the card shrank on it): as tall as
    the notes' box. */
 .rd.rt .rt-rowbody .rt-focus-split { min-height: 198px; }
+
+/* + Add as event on its agreed point's hover only (3 Nov, Alex: the same words down every line). Always there on a touch
+   screen. */
+.rd.rt .rt-lines .rt-addev { opacity: 0; transition: opacity 0.12s, background-color 0.12s; }
+.rd.rt .rt-lines li:hover .rt-addev, .rd.rt .rt-lines li:focus-within .rt-addev { opacity: 1; }
+@media (hover: none) { .rd.rt .rt-lines .rt-addev { opacity: 1; } }
