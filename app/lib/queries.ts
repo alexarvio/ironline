@@ -7865,6 +7865,9 @@ export type CheckInSeries = {
   points: { date: string; value: number; at: string | null }[];
   /** The Weight chart's alone (empty with none): the client's weight goals, by date, every weight in the series' unit (2 Nov, Alex). */
   goals?: ClientGoalLine[];
+  /** The Phase range's first day (3 Nov, Alex): the live lifestyle phase's; Weight's, the phase the coach's Weight card
+      reads (nutrition, else training, else lifestyle). Null with none started. */
+  phaseStart?: string | null;
 };
 
 /** A weight goal as the client's Weight chart draws it (2 Nov, Alex: the planned line from where they were to the goal,
@@ -8048,6 +8051,12 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
       }));
     }
   }
+
+  // The Phase range (3 Nov, Alex: "the toggles the same as everywhere else"): from the live phase's first day.
+  const startedOn = (p: { start_week: string } | null) => (p && p.start_week <= today ? p.start_week : null);
+  const lifestyleStart = startedOn(getCurrentPhase(clientId, "lifestyle"));
+  const weightStart = startedOn(getCurrentPhase(clientId, "nutrition") ?? getCurrentPhase(clientId, "training") ?? getCurrentPhase(clientId, "lifestyle"));
+  for (const s of series) s.phaseStart = s === weightSeries ? weightStart : lifestyleStart;
 
   // The seven days before today, newest first: what was logged on each (a
   // weekly reading on the day it was saved), and the day as the form, to
