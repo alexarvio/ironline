@@ -40,7 +40,6 @@ export function homeProps(state: StateId): HomeProps {
       trainedToday: false,
       food: null,
       events: { list: [], categories: [] },
-      todayNext: null,
       planGap: { next: null },
     };
   }
@@ -57,7 +56,6 @@ export function homeProps(state: StateId): HomeProps {
       trainedToday: false,
       food: null,
       events: { list: [{ id: 1, kind: "trip", title: "Japan with friends", start: "2026-10-20", end: "2026-11-20", note: "", mine: true }], categories: [{ id: "trip", label: "Trip", color: "blue" }] },
-      todayNext: null,
       planGap: { next: { track: "training", name: "Strength block 2", start: "2026-10-12" } },
     };
   }
@@ -79,7 +77,6 @@ export function homeProps(state: StateId): HomeProps {
     food: { eaten: 1240, target: 2800, mealsLogged: 2, mealsTotal: 4 },
     // In an event now, with another behind it (9 Oct): the card shows the running one as "Now".
     events: { list: [{ id: 1, kind: "work", title: "Night shifts", start: "2026-10-06", end: "2026-10-10", note: "", mine: false }, { id: 2, kind: "trip", title: "Weekend in Antwerp", start: "2026-10-24", end: "2026-10-25", note: "", mine: true }], categories: [{ id: "work", label: "Work", color: "navy" }, { id: "trip", label: "Trip", color: "blue" }] },
-    todayNext: null,
     planGap: null,
   };
 }

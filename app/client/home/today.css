@@ -18,3 +18,6 @@
 .hm-td-fact { font-size: 12px; font-weight: 500; line-height: 16px; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .hm-td-act { flex: none; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; }
 .hm-td-act.ink { display: inline-flex; align-items: center; height: 36px; padding: 0 18px; border-radius: 999px; background: #141a24; color: #fff; }
+/* Nothing left today (3 Nov, Alex): the same row, the done check in green, `All set for today`, not a button. */
+.hm-td-row.done { cursor: default; }
+.hm-td-row.done:active { background: none; }

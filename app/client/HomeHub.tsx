@@ -121,7 +121,6 @@ export default function HomeHub({
   checkInForm = null,
   events,
   trainedToday,
-  todayNext = null,
   planGap = null,
   clientId = 0,
   cardCovers = {},
@@ -136,8 +135,6 @@ export default function HomeHub({
   clientId?: number;
   /** The client's own card pictures (12 Oct), a track at a time. */
   cardCovers?: CardCovers;
-  /** With nothing to do: the next thing, "Next week starts Mon 13 Oct"; null, nothing to say. */
-  todayNext?: string | null;
   /** No phase live on training or nutrition: what is next, if anything is scheduled. */
   planGap?: PlanGap | null;
   dateLabel: string;
@@ -198,7 +195,7 @@ export default function HomeHub({
           open); then Events and Meetings. */}
       <div className="hm-body">
         {todoItems.length === 0 ? (
-          <TodayCard next={todayNext} hasPlan={plan.length > 0} nextPhaseStart={planGap?.next?.start ?? null} />
+          <TodayDone />
         ) : (
           <TodayList
             items={todoItems}
@@ -247,17 +244,23 @@ export default function HomeHub({
   );
 }
 
-// ---- 0 · Today: one line, always. What is left, or that nothing is --------
+// ---- 0 · Today with nothing left to do (3 Nov, Alex: the audit's first point): the Today list's own look, no card. The
+// head, then one row: the done check in green and `All set for today`, nothing under it and no action.
 
-function TodayCard({ next, hasPlan, nextPhaseStart }: { next: string | null; hasPlan: boolean; /** Between phases: when the next one starts. */ nextPhaseStart: string | null }) {
-  const until = nextPhaseStart ? new Date(`${nextPhaseStart}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : null;
-  // No plan and none coming (22 Oct, Alex): "Nothing to do today" alone, no sentence on what will come.
-  const sub = next ?? (hasPlan ? "Rest up." : until ? `Rest up until ${until}.` : null);
+function TodayDone() {
   return (
-    <section className="hm-today" aria-label="Today">
-      <span className="hm-eyebrow">Today</span>
-      <b className="hm-today-main">Nothing to do today</b>
-      {sub && <small className="hm-today-next">{sub}</small>}
+    <section className="hm-td" aria-label="Today">
+      <span className="hm-td-head">Today</span>
+      <div className="hm-td-row done">
+        <span className="hm-td-icon" style={{ color: "#2f7a3f" }} aria-hidden="true">
+          <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+          </svg>
+        </span>
+        <span className="hm-td-text">
+          <span className="hm-td-title">All set for today</span>
+        </span>
+      </div>
     </section>
   );
 }
