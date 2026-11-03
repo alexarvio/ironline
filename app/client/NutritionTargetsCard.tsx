@@ -100,7 +100,7 @@ export default function NutritionTargetsCard({
         {pictures && pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
         {phase}
 
-        {/* The white capsule, sliding, as every choice (3 Nov, Alex: the audit; was underline tabs in navy). */}
+        {/* The underline tabs over the photo, the underline sliding to the day picked (3 Nov, Alex). */}
         <div className="nd-tabs nd-daycap" data-slide role="tablist" aria-label="Day type">
           {([true, false] as const).map((t) => (
             <button
