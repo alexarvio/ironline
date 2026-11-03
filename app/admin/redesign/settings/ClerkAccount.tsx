@@ -69,7 +69,7 @@ export default function ClerkAccount({ email, security }: { email: string; secur
       {linked ? (
         <>
           <span className="trn-state good rst-state">Connected</span>
-          <button type="button" className="rst-danger" disabled={busy} onClick={() => act(() => disconnectLoginAction(linked.id), `${name} disconnected`)}>
+          <button type="button" className="rst-danger rst-hover" disabled={busy} onClick={() => act(() => disconnectLoginAction(linked.id), `${name} disconnected`)}>
             Disconnect
           </button>
         </>
@@ -92,12 +92,12 @@ export default function ClerkAccount({ email, security }: { email: string; secur
       {d.current ? (
         <>
           <span className="trn-state good rst-state">This device</span>
-          <button type="button" className="rst-act" onClick={() => logoutAction()}>
+          <button type="button" className="rst-act rst-hover" onClick={() => logoutAction()}>
             Sign out
           </button>
         </>
       ) : (
-        <button type="button" className="rst-act" disabled={busy} onClick={() => act(() => signOutDeviceAction(d.id), "Signed out", () => setGone((g) => [...g, d.id]))}>
+        <button type="button" className="rst-act rst-hover" disabled={busy} onClick={() => act(() => signOutDeviceAction(d.id), "Signed out", () => setGone((g) => [...g, d.id]))}>
           Sign out
         </button>
       )}
