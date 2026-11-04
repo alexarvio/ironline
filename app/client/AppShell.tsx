@@ -10,7 +10,7 @@ import { NorCoachLogo } from "../components/NorCoachLogo";
 import { BellIcon, CalendarIcon, CameraIcon, ChevronLeftIcon, GearIcon, MenuIcon, ChatIcon, ReceiptIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
 import PreviewBar from "./PreviewBar";
-import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPicturesScreen";
+import ProgressPicturesScreen, { type ProgressPicturesProps, warmShapeUpdateBanner } from "./ProgressPicturesScreen";
 import CoachProfileScreen from "./CoachProfileScreen";
 import { HealthAutoSync } from "./HealthSync";
 import { NativePush } from "./NativePush";
@@ -283,6 +283,22 @@ export default function AppShell({
   if (activeId && !visited.includes(activeId)) setVisited([...visited, activeId]);
   const [rebuilt, setRebuilt] = useState<Record<string, number>>({});
   const scrollers = useRef<Record<string, HTMLElement | null>>({});
+  // Shape update's banner photo, fetched once the page has loaded so it never competes with Home's own pictures, and
+  // there the moment the screen opens (4 Nov, Alex).
+  useEffect(() => {
+    const warm = () => setTimeout(warmShapeUpdateBanner, 300);
+    if (document.readyState === "complete") {
+      const t = warm();
+      return () => clearTimeout(t);
+    }
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const onLoad = () => (t = warm());
+    window.addEventListener("load", onLoad, { once: true });
+    return () => {
+      window.removeEventListener("load", onLoad);
+      if (t) clearTimeout(t);
+    };
+  }, []);
   // The phone's timezone, for the server: Home's greeting and a call's time
   // are drawn in it from the first paint instead of changing a moment later.
   useEffect(() => {
