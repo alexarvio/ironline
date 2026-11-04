@@ -80,9 +80,10 @@ export function proxy(request: NextRequest, event: NextFetchEvent) {
 
 export const config = {
   // Everything except Next's own assets, Stripe's webhook
-  // (signed, no cookie) and the coach's
-  // video-reply upload (which do their own per-request authorization; the
-  // proxy would also buffer and cut off a big upload body), and common static files. The app icons
+  // (signed, no cookie) and the uploads (the coach's
+  // video-reply and chat review, and every other big file through api/upload;
+  // they do their own per-request authorization, and the proxy would also
+  // buffer and cut off a big upload body), and common static files. The app icons
   // (app/icon.png, app/apple-icon.png) and the logo under public/brand must
   // stay public too: the phone fetches them from the manifest with no cookie
   // when the client adds the app to their home screen, and the login page
@@ -90,5 +91,7 @@ export const config = {
   // re-checks the service worker on its own, cookie or not, and a redirect
   // to /login there would break push notifications once a session expired.
   // coach.webmanifest is the coach phone's (21 Oct, /coach), fetched with no cookie the same way.
-  matcher: ["/((?!_next/static|_next/image|api/video-reply|api/chat-review|api/stripe/webhook|favicon.ico|manifest.webmanifest|coach.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
+  // api/upload (4 Nov, Alex: memory): every big file's way in, checked by its own route, so its body is never copied
+  // into memory here.
+  matcher: ["/((?!_next/static|_next/image|api/video-reply|api/chat-review|api/upload|api/stripe/webhook|favicon.ico|manifest.webmanifest|coach.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
 };

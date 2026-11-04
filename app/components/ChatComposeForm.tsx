@@ -4,6 +4,7 @@ import { useKeptDraft } from "./chatOutbox";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendChatMessageAction } from "../lib/actions";
 import { withVideoFrame } from "./ChatMedia";
+import { uploadFirstOrThrow } from "../lib/uploadFirst";
 import type { MessageAbout } from "../lib/messageLinks";
 import VoiceRecordButton from "./VoiceRecordButton";
 import RingEdge from "./RingEdge";
@@ -105,7 +106,8 @@ export default function ChatComposeForm({
   const deliver = async (fd: FormData) => {
     if (onSent) fd.set("quiet", "1");
     try {
-      await sendChatMessageAction(fd);
+      // A photo, video, voice message or file goes ahead to the server's disk; the send carries its handle (4 Nov, Alex: memory).
+      await sendChatMessageAction(await uploadFirstOrThrow(fd, "chat", clientId));
     } catch {
       return false;
     }

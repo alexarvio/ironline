@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { requireCoach } from "../../../lib/auth";
 import { coachOwnsExercise } from "../../../lib/tenancy";
 import { addCoachGroup, addCoachVideo, addExercise, listCoachVideos, renameCoachGroup, removeCoachVideo, renameCoachVideo, setExerciseArchived, setExerciseSubstitutes, setExerciseVariations, setExerciseVideoUrl, updateExercise } from "../../../lib/queries";
-import { deleteUpload, putUpload } from "../../../lib/storage";
+import { deleteUpload, putUploadFromDisk } from "../../../lib/storage";
+import { persist } from "../../../lib/db";
+import { claimUpload, discardUpload, placeUpload, UPLOAD_CAPS } from "../../../lib/streamUpload";
 
 // The coach's Library page (5 Oct): an exercise's name, group and default
 // cue, and taking one out of the library. Demos go through the actions the
@@ -88,20 +90,27 @@ export async function createLibraryExerciseAction(name: string, group: string, c
 
 // ---- The coach's video library (5 Oct) ----
 
-// The same 128MB a demo upload allows (serverActions.bodySizeLimit).
-const MAX_VIDEO_BYTES = 128 * 1024 * 1024;
+// The same 128MB a demo upload allows (/api/upload's cap for a video, lib/streamUpload.ts).
+const MAX_VIDEO_BYTES = UPLOAD_CAPS.video;
+const EMPTY = Buffer.alloc(0);
 
-/** One clip into the coach's video library. The page sends a batch one file at a time. */
+/** One clip into the coach's video library. The page sends a batch one file at a time. The clip itself was sent ahead
+ *  to /api/upload and written to the disk as it came (4 Nov, Alex: memory): the form carries its handle. */
 export async function uploadLibraryVideoAction(formData: FormData): Promise<{ ok: true; id: number } | { ok: false; error: string }> {
   const coach = await requireCoach();
-  const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) return { ok: false, error: "Empty file." };
-  if (file.size > MAX_VIDEO_BYTES) return { ok: false, error: `${file.name} is ${(file.size / 1024 / 1024).toFixed(0)}MB; the limit is 128MB.` };
-  if (!file.type.startsWith("video/")) return { ok: false, error: `${file.name} isn't a video.` };
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const video = addCoachVideo(coach.id, buffer, file.type, file.name.replace(/\.[a-z0-9]{2,5}$/i, ""));
-  if (!video) return { ok: false, error: "Couldn't save it." };
-  await putUpload(video.path, buffer, file.type);
+  const up = claimUpload(formData.get("upload"), { userId: coach.id, kinds: ["video"] });
+  if (!up) return { ok: false, error: "Empty file." };
+  const refuse = (error: string) => (discardUpload(up), { ok: false as const, error });
+  if (up.size > MAX_VIDEO_BYTES) return refuse(`${up.name} is ${(up.size / 1024 / 1024).toFixed(0)}MB; the limit is 128MB.`);
+  if (!up.type.startsWith("video/")) return refuse(`${up.name} isn't a video.`);
+  // The query writes an empty file where the clip goes; the upload is moved onto it and streamed to the bucket.
+  const video = addCoachVideo(coach.id, EMPTY, up.type, up.name.replace(/\.[a-z0-9]{2,5}$/i, ""));
+  if (!video) return refuse("Couldn't save it.");
+  const onDisk = placeUpload(up, video.path);
+  // Its size as it came (the query counted the empty placeholder).
+  video.bytes = up.size;
+  persist();
+  await putUploadFromDisk(video.path, onDisk, up.type);
   revalidatePath("/admin");
   return { ok: true, id: video.id };
 }

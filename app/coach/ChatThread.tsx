@@ -10,6 +10,7 @@ import VoiceRecordButton from "../components/VoiceRecordButton";
 import RingEdge from "../components/RingEdge";
 import ChatMediaGallery, { exerciseOf } from "../components/ChatMediaGallery";
 import { ChatImage, ChatVideo, sized, withVideoFrame } from "../components/ChatMedia";
+import { uploadFirstOrThrow } from "../lib/uploadFirst";
 import { dayMonth } from "../lib/dayMonth";
 import { useKeyboardInset } from "../client/useKeyboardInset";
 import { Avatar, Facts, Icon } from "./parts";
@@ -210,7 +211,8 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     fd.set("quiet", "1");
     if (replying) fd.set("replyTo", String(replying.id));
     try {
-      await sendChatMessageAction(await withVideoFrame(fd, file));
+      // The file goes ahead to the server's disk; the send carries its handle (4 Nov, Alex: memory).
+      await sendChatMessageAction(await uploadFirstOrThrow(await withVideoFrame(fd, file), "chat", clientId));
       setReplying(null);
       atEnd.current = true;
       await refresh();

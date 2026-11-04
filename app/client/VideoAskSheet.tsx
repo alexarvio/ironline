@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { sendExerciseMediaAction } from "../lib/actions";
+import { uploadFirst } from "../lib/uploadFirst";
 import { VideoReplyBody, type VideoReplyView } from "./VideoReplySheet";
 import { dayWords } from "../lib/clientDates";
 
@@ -112,7 +113,8 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
       // out of here and crash the screen (15 Oct): now it reads as a line in the sheet.
       let error: string | null;
       try {
-        error = await sendExerciseMediaAction(fd);
+        // The clip goes ahead to the server's disk; the send carries its handle (4 Nov, Alex: memory).
+        error = (await uploadFirst(fd, "media")) ?? (await sendExerciseMediaAction(fd));
       } catch (e) {
         const mb = Math.round(file.size / 1024 / 1024);
         error = `That didn't send${mb ? ` (${mb} MB)` : ""}. Check your connection and try again; a shorter clip helps.`;

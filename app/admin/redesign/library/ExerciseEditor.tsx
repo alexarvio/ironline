@@ -8,6 +8,7 @@ import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, PlayIcon, PlusIcon, Search
 import { clearExerciseDemoAction, setExerciseDemoLinkAction } from "../../../lib/actions";
 import { groupColour } from "../../../lib/muscleGroups";
 import { assignVideoToExerciseAction, createLibraryExerciseAction, saveExerciseSubstitutesAction, saveExerciseVariationsAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
+import { uploadFirst } from "../../../lib/uploadFirst";
 import type { LibraryItem, LibraryVideo } from "./load";
 import { useAutosave } from "./useAutosave";
 import { Sep, SepJoin } from "../Sep";
@@ -222,7 +223,10 @@ export default function ExerciseEditor({
     setUploading(file.name);
     const f = new FormData();
     f.set("file", file);
-    const r = await uploadLibraryVideoAction(f).catch(() => ({ ok: false as const, error: `${file.name} didn't upload.` }));
+    // The clip goes ahead to the server's disk; the action takes its handle (4 Nov, Alex: memory).
+    const r = await uploadFirst(f, "video")
+      .then((refused) => (refused ? { ok: false as const, error: refused } : uploadLibraryVideoAction(f)))
+      .catch(() => ({ ok: false as const, error: `${file.name} didn't upload.` }));
     setUploading(null);
     if (!r.ok) {
       toast.error(r.error);

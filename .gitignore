@@ -11,3 +11,4 @@ public/uploads
 
 # Local Postgres (PGlite) data folder
 /.pglite-local/
+/upload-tmp

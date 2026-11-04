@@ -11,6 +11,7 @@ import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
 import ChatMediaGallery, { exerciseOf } from "../../../components/ChatMediaGallery";
 import { ChatImage, ChatVideo, withVideoFrame } from "../../../components/ChatMedia";
+import { uploadFirstOrThrow } from "../../../lib/uploadFirst";
 import MediaReviewModal, { chatMediaReview } from "../media-review/MediaReviewModal";
 import { chatDraftThreadAction } from "./actions";
 import { chatTypingAction, deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
@@ -220,7 +221,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     if (link?.link) fd.set("link", JSON.stringify(link.link));
     if (replying) fd.set("replyTo", String(replying.id));
     act(
-      async () => sendChatMessageAction(await withVideoFrame(fd, file)),
+      // The file goes ahead to the server's disk; the send carries its handle (4 Nov, Alex: memory).
+      async () => sendChatMessageAction(await uploadFirstOrThrow(await withVideoFrame(fd, file), "chat", clientId)),
       () => {
         setReplying(null);
         setLink(null);

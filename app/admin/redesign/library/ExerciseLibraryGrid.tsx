@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ChevronDownIcon, PlayIcon, SearchIcon } from "../../../components/icons";
 import { assignVideoToExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, uploadLibraryVideoAction } from "./actions";
+import { uploadFirst } from "../../../lib/uploadFirst";
 import type { LibraryItem } from "./load";
 import { useLibraryView, type LibraryFilter } from "./useLibraryView";
 import { Sep } from "../Sep";
@@ -332,7 +333,10 @@ function ExerciseCard({
     setUploading(true);
     const f = new FormData();
     f.set("file", file);
-    const r = await uploadLibraryVideoAction(f).catch(() => ({ ok: false as const, error: `${file.name} didn't upload.` }));
+    // The clip goes ahead to the server's disk; the action takes its handle (4 Nov, Alex: memory).
+    const r = await uploadFirst(f, "video")
+      .then((refused) => (refused ? { ok: false as const, error: refused } : uploadLibraryVideoAction(f)))
+      .catch(() => ({ ok: false as const, error: `${file.name} didn't upload.` }));
     if (r.ok) {
       await assignVideoToExerciseAction(item.id, r.id);
       toast.success(`${file.name} is now the demo on ${item.name}`);

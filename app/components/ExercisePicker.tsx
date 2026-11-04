@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { addExerciseToLibraryAction, uploadExerciseVideoAction } from "../lib/actions";
+import { uploadFirst } from "../lib/uploadFirst";
 import { placePopover, type Placement } from "./popover";
 
 export type Group = { slug: string; label: string };
@@ -109,7 +110,8 @@ export default function ExercisePicker({
       const fd = new FormData();
       fd.set("exerciseId", String(created.id));
       fd.set("file", video.file);
-      const message = await uploadExerciseVideoAction(fd);
+      // The clip goes ahead to the server's disk; the action takes its handle (4 Nov, Alex: memory).
+      const message = (await uploadFirst(fd, "video")) ?? (await uploadExerciseVideoAction(fd));
       if (message) {
         // The exercise exists and is picked; only the clip failed. Say so and
         // leave the coach on the row, where the demo chip can retry it.
