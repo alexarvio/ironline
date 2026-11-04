@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Needs you reads as action</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --line:#E1E5EB; --div:#EEF0F3; --rust:#b8471f; --green:#2f7a3f; --train:#3a3390; --life:#a08a5c; --nut:#1d7a70; --msg:#5b6474; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #ECEDEF; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 20px 80px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 28px; max-width: 860px; line-height: 1.5; }
+  .opt { background: #F5F6F8; border-radius: 22px; box-shadow: inset 0 0 0 1px var(--line); padding: 22px 26px 26px; margin-bottom: 22px; }
+  .tag { font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; color: var(--green); }
+  .tag.now { color: var(--rust); }
+  .name { font-size: 15px; font-weight: 600; margin: 3px 0 4px; }
+  .explain { font-size: 13px; color: var(--sec); font-weight: 500; margin: 0 0 18px; line-height: 1.5; max-width: 860px; }
+  .sec { display: flex; align-items: baseline; gap: 8px; margin: 18px 0 8px; }
+  .sec b { font-size: 18px; font-weight: 600; }
+  .sec i { font-style: normal; font-size: 12px; color: var(--muted); font-weight: 500; }
+  .sec i.pill { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px rgba(184,71,31,.35); color: var(--rust); font-weight: 600; }
+  .gh { display: flex; align-items: center; gap: 6px; margin: 12px 0 6px 4px; font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; }
+  .gh svg { width: 13px; height: 13px; }
+  .gh span { color: var(--muted); letter-spacing: 0; }
+  .card { background: #fff; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+  .row { display: grid; grid-template-columns: 92px 170px minmax(0,1fr) 84px auto; align-items: center; column-gap: 14px; min-height: 50px; padding: 0 12px 0 18px; font-size: 13px; }
+  .row + .row { border-top: 1px solid var(--div); }
+  .row.nodate { grid-template-columns: 170px minmax(0,1fr) 84px auto; }
+  .d { color: var(--body); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .who { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 13.5px; }
+  .face { width: 22px; height: 22px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); display: grid; place-items: center; font-size: 10px; font-weight: 600; color: var(--sec); }
+  .what { color: var(--ink); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .what q { color: var(--muted); margin-left: 6px; }
+  .wait { text-align: center; font-weight: 600; color: var(--rust); font-variant-numeric: tabular-nums; }
+  .wait.calm { color: var(--muted); font-weight: 500; }
+  .acts { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+  .ic { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; color: var(--ink); }
+  .ic svg, .gh svg, .pl svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .ic svg { width: 16px; height: 16px; }
+  .ic.ring { box-shadow: inset 0 0 0 1px #DCE1E8; background: #fff; }
+  .ic.ink { background: var(--ink); color: #fff; }
+  .ic.ghost { opacity: 0; }
+  .ic.check { color: #c2c8d1; }
+  .pl { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px 0 10px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .pl svg { width: 13px; height: 13px; }
+  .bar { display: flex; align-items: center; gap: 12px; }
+  .bar b { display: block; width: 130px; height: 3px; border-radius: 3px; background: var(--div); position: relative; }
+  .bar b::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w, 60%); background: var(--life); border-radius: 3px; }
+  .card.edge { box-shadow: inset 0 0 0 1px var(--line), inset 3px 0 0 var(--rust); }
+  .card.tint { background: rgba(184,71,31,.045); box-shadow: inset 0 0 0 1.5px rgba(184,71,31,.55); }
+  .card.tint .row + .row { border-top-color: rgba(184,71,31,.12); }
+  .two { display: grid; grid-template-columns: 1fr; gap: 0; }
+  .lbl { font-size: 11px; color: var(--muted); font-weight: 500; margin: 2px 0 0 4px; }
+  .rec { display: inline-block; margin-left: 8px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--green); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Needs you: showing it's where the action is</h1>
+  <p class="sub">The problem is on the right of each row. Since 3 Nov a Needs-you row hides its action until hovered. Ending soon keeps its + and →| showing, so the list that only informs looks more actionable than the one that asks. Each option below fixes that. Phases screen first (Needs you, then Ending soon), then the Feed (Needs you, then Activity).</p>
+  <div id="out"></div>
+</div>
+<script>
+const I = {
+  heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  dumb: '<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
+  apple: '<path d="M12 7c-1-2-3-2.5-4.5-1.8C5 6.4 4.5 10 6 13.5S9.5 20 12 19c2.5 1 4.5-2 6-5.5s1-7.1-1.5-8.3C15 4.5 13 5 12 7zM12 7c0-1.5.6-3 2-4"/>',
+  msg: '<path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>',
+  flag: '<path d="M6 21V4M6 4h11l-2.5 4L17 12H6"/>',
+  pen: '<path d="M14.5 5.5l4 4L9 19H5v-4z"/>',
+  reply: '<path d="M10 8L5 12l5 4M5 12h9a5 5 0 0 1 5 5"/>',
+  play: '<path d="M8 6l10 6-10 6z"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  open: '<path d="M4 12h12M12 7l5 5-5 5M20 5v14"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/>',
+};
+const svg = (k) => `<svg viewBox="0 0 24 24">${I[k]}</svg>`;
+const face = (n) => `<span class="face">${n[0]}</span>`;
+
+// The data, from Alex's screenshots.
+const phaseNeeds = [
+  { g: "Lifestyle", c: "--life", ic: "heart", rows: [["Alex Test 01", "No lifestyle phase", "flag", "New phase"], ["Eva Stegman", "No lifestyle phase until 25/11", "flag", "New phase"]] },
+  { g: "Training", c: "--train", ic: "dumb", rows: [["Alex Test 01", "Strength block is still a draft", "flag", "Open"]] },
+  { g: "Nutrition", c: "--nut", ic: "apple", rows: [["Paula Dewenter", "Maintenance phase has no targets", "pen", "Set targets"], ["Rinze Russchen", "Cut (sprint) has no targets", "pen", "Set targets"]] },
+];
+const ending = [["Sun, 15 Nov", "Roziena Salihu", "Health", "11 days left", "60%"], ["Mon, 16 Nov", "Mattia Savenije", "Gezondheid energieverbruik", "12 days left", "72%"]];
+const feedNeeds = [
+  { g: "Messages", c: "--msg", ic: "msg", rows: [["Thu, 1 Oct", "Wim Van Halewyck", "4 messages", "25lbs", "33 days", "reply", "Reply"], ["Fri, 23 Oct", "Janine Chedd", "3 messages", "Missed out the single cable row", "11 days", "reply", "Reply"]] },
+  { g: "Training", c: "--train", ic: "dumb", rows: [["Sun, 18 Oct", "Elena", "Video of Romanian Deadlift", "", "16 days", "play", "Review"], ["Wed, 21 Oct", "Elena", "Photo of Barbell Bench Press", "", "13 days", "play", "Review"]] },
+];
+const activity = [["Wed, 4 Nov", "Steve", "Ended Session 2"], ["Wed, 4 Nov", "Awes", "Couldn't do Session 2"]];
+
+function needCards(groups, style, dated) {
+  return groups.map((g) => `
+    <div class="gh" style="color:var(${g.c})">${svg(g.ic)}${g.g} <span>${g.rows.length}</span></div>
+    <div class="card ${style.card || ""}">${g.rows.map((r) => {
+      const [date, who, what, quote, wait, act, word] = dated ? r : [null, r[0], r[1], "", "", r[2], r[3]];
+      return `<div class="row ${dated ? "" : "nodate"}">${dated ? `<span class="d">${date}</span>` : ""}<span class="who">${face(who)}${who}</span><span class="what">${what}${quote ? `<q>${quote}</q>` : ""}</span><span class="wait">${wait}</span><span class="acts">${style.act(act, word)}</span></div>`;
+    }).join("")}</div>`).join("");
+}
+function endingCard(style) {
+  return `<div class="gh" style="color:var(--life)">${svg("heart")}Lifestyle <span>2</span></div><div class="card">${ending.map(([d, who, what, left, w]) =>
+    `<div class="row"><span class="d">${d}</span><span class="who">${face(who)}${who}</span><span class="what">${what}</span><span class="bar"><b style="--w:${w}"></b></span><span class="acts">${style.endActs}</span></div>`).join("")}</div>`;
+}
+function activityCard() {
+  return `<div class="card">${activity.map(([d, who, what]) => `<div class="row"><span class="d">${d}</span><span class="who">${face(who)}${who}</span><span class="what" style="color:var(--body)">${what}</span><span></span><span></span></div>`).join("")}</div>`;
+}
+function screen(style) {
+  return `
+    <div class="sec"><b>Needs you</b><i class="${style.countPill ? "pill" : ""}">5</i></div>${needCards(phaseNeeds, style, false)}
+    <div class="sec"><b>Ending soon</b><i>5</i></div>${endingCard(style)}
+    <div style="height:14px"></div>
+    <div class="sec"><b>Needs you</b><i class="${style.countPill ? "pill" : ""}">4</i></div>${needCards(feedNeeds, style, true)}
+    <div class="sec"><b>Activity</b></div>${activityCard()}`;
+}
+
+const opts = [
+  { tag: "Now", now: true, name: "Actions on hover only",
+    explain: "At rest a Needs-you row ends in nothing, while Ending soon shows its + and →|. Nothing says these rows ask for something.",
+    style: { act: (a) => `<span class="ic ghost">${svg(a)}</span><span class="ic ghost">${svg("check")}</span>`, endActs: `<span class="ic">${svg("plus")}</span><span class="ic">${svg("open")}</span>` } },
+  { tag: "Option A", name: "The action always shows, in a white ring; Ending soon's go to hover",
+    explain: "Undo 3 Nov's hover for Needs you alone: each row's action shows as a round white button with a hairline, the check after it on hover. Ending soon's + and →| show on hover, so only the lists that ask carry buttons at rest. Smallest change, the same icons, nothing else on the page changes.",
+    style: { act: (a) => `<span class="ic ring">${svg(a)}</span><span class="ic ghost">${svg("check")}</span>`, endActs: `<span class="ic ghost">${svg("plus")}</span><span class="ic ghost">${svg("open")}</span>` } },
+  { tag: "Option B", name: "The action as a small ink pill with its word",
+    explain: "Each Needs-you row ends in the ink pill saying what to do: Reply, Review, Set targets, New phase. It reads as a to-do at a glance and you never have to guess an icon. Ending soon and Activity carry no pills at rest. Louder: a column of ink pills down the page.",
+    style: { act: (a, w) => `<span class="pl">${svg(a)}${w}</span><span class="ic ghost">${svg("check")}</span>`, endActs: `<span class="ic ghost">${svg("plus")}</span><span class="ic ghost">${svg("open")}</span>` } },
+  { tag: "Option C", name: "A as well as the to-do strip's rust edge on the cards",
+    explain: "Option A's always-on action, and every Needs-you card wears the client tab's to-do strip look: the soft rust tint and the rust edge, the count after the title a rust pill. Needs you then reads as the same thing as the strip on a client's tab, owed, and everything else stays plain white. The most at a glance; rust on a whole section is a lot when the list is long.",
+    style: { card: "tint", countPill: true, act: (a) => `<span class="ic ring">${svg(a)}</span><span class="ic ghost">${svg("check")}</span>`, endActs: `<span class="ic ghost">${svg("plus")}</span><span class="ic ghost">${svg("open")}</span>` } },
+];
+document.getElementById("out").innerHTML = opts.map((o) =>
+  `<div class="opt"><span class="tag ${o.now ? "now" : ""}">${o.tag}</span>${o.tag === "Option A" ? '<span class="rec">My pick</span>' : ""}<p class="name">${o.name}</p><p class="explain">${o.explain}</p>${screen(o.style)}</div>`).join("");
+</script>
+</body>
+</html>
