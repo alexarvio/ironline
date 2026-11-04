@@ -49,12 +49,13 @@ export function useSaveQueue(afterwards: () => void) {
   return { save, saving, failed, retry: () => void run() };
 }
 
-/** Whether the status line has anything to say yet (22 Oct, Alex: "All changes saved" on a tab nobody had touched):
- *  false until the first save starts on this screen, then true for good, so Saving… turns into ✓ All changes saved. */
+/** Whether the status line shows: always (4 Nov, Alex: "a visual thing that tells the coach whatever he was doing is
+ *  saved… we have to have it"; from 22 Oct it waited for the first save on the screen, so a tab just opened said
+ *  nothing). ✓ All changes saved from the start, Saving… while something goes. Kept as a hook so every tab reads it
+ *  one way. */
 export function useSaidSaved(busy: boolean): boolean {
-  const [seen, setSeen] = useState(false);
-  if (busy && !seen) setSeen(true);
-  return seen;
+  void busy;
+  return true;
 }
 
 /** Leaving while something is still on its way: the browser asks first. Nor does the page read itself again
