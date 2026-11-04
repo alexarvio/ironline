@@ -20,7 +20,7 @@ const VERDICT: Record<Verdict, { label: string; tone: string }> = {
   progressing: { label: "Progressing", tone: "good" },
   stalling: { label: "Stalling", tone: "warn" },
   dropping: { label: "Dropping", tone: "bad" },
-  none: { label: "Too early", tone: "" },
+  none: { label: "Not enough data", tone: "" },
 };
 const DAY = 86400000;
 const PURPLE = "#3a3390";
