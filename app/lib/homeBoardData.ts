@@ -188,7 +188,25 @@ function context(clientId: number, today: string, withCalendar = true): Ctx {
     groupCache.set(id, group);
     return group;
   };
-  const prescribedGroup = (a: AssignmentRow) => groupOfExercise(a.exercise_id);
+  // A rogue session's exercise has no library id (exercise_id 0): a library pick is copied as its name alone
+  // (addFreeExercise), so it counts by the coach's exercise of that name; one the client typed that the library
+  // doesn't have counts toward no group (4 Nov, Alex: "did it actually go in the last 7 days, what I've done?",
+  // every rogue set was left off the hexagon).
+  let byName: Map<string, number> | null = null;
+  const libraryIdByName = (name: string | null | undefined): number | null => {
+    const key = (name ?? "").trim().toLowerCase();
+    if (!key) return null;
+    if (!byName) {
+      byName = new Map();
+      for (const e of data.exercises) {
+        if (e.coach_id !== client?.coach_id) continue;
+        const k = (e.name ?? "").trim().toLowerCase();
+        if (k && !byName.has(k)) byName.set(k, e.id);
+      }
+    }
+    return byName.get(key) ?? null;
+  };
+  const prescribedGroup = (a: AssignmentRow) => (a.exercise_id ? groupOfExercise(a.exercise_id) : groupOfExercise(libraryIdByName(a.custom_name)));
   // What was done: a swap to a library exercise is that exercise; one typed in by name keeps the prescription's group.
   const doneGroup = (a: AssignmentRow) => (a.swap?.library_exercise_id != null ? groupOfExercise(a.swap.library_exercise_id) : prescribedGroup(a));
   // An assisted lift is known by the name of what was done: the exercise, its variation, a swap's (23 Oct).
