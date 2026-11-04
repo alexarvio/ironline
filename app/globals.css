@@ -14502,8 +14502,6 @@ body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5
 .fdi-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #757575; }
 /* The banner: the day, and the week around it. */
 .fdi-banner { display: flex; flex-direction: column; gap: 18px; }
-.fdi-banner-titles { display: flex; flex-direction: column; gap: 4px; }
-.fdi-date { margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.1; color: #333333; }
 .fdi-date-sub { font-size: 14px; font-weight: 500; color: #757575; }
 .fdi-week { display: flex; align-items: center; gap: 4px; margin: 0 -8px; }
 .fdi-week-view { flex: 1; min-width: 0; overflow: hidden; touch-action: pan-y; }
@@ -14536,7 +14534,6 @@ body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5
 .fdi-tick path { stroke-dasharray: 20; stroke-dashoffset: 20; animation: fdi-tick-draw 0.5s 0.1s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 @keyframes fdi-tick-draw { to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) { .fdi-tick path { animation: none; stroke-dashoffset: 0; } }
-.fdi-tabs { margin-top: 0; }
 .fdi-targets { touch-action: pan-y; }
 .fdi-dots { margin: 10px 0 0; }
 /* Attached under the rings: push the day's kcal into the calorie log. */
@@ -17143,8 +17140,6 @@ button.ci-hint { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .ci-line, .ci-label, .ci-scale-btn, .ci-note textarea, .ci-send { transition: none; } }
 /* The food diary on the Nutrition photo (25 Sep): the same .nd-photo banner,
    and its own parts in white on it: the day, the week strip, the arrows. */
-.nd-photo .fdi-eyebrow { color: rgba(255, 255, 255, 0.72); }
-.nd-photo .fdi-date { color: #fff; }
 .nd-photo .fdi-date-sub { color: rgba(255, 255, 255, 0.78); }
 .nd-photo .fdi-week-arrow { color: #fff; }
 .nd-photo .fdi-week-arrow:disabled { color: rgba(255, 255, 255, 0.4); }
@@ -17868,7 +17863,9 @@ button.ci-hint { cursor: pointer; }
 .pg-view .pg-strip { display: flex; gap: 2px; height: 5px; margin-top: 6px; }
 .pg-view .pg-strip i { flex-basis: 0; min-width: 2px; border-radius: 2px; background: #EEF0F3; }
 .pg-view .pg-strip i.on { background: var(--cat); }
-.pg-view .pg-last { fill: #F5F6F8; stroke: var(--cat); stroke-width: 1.6; }
+/* The latest a filled dot, pulsing (`.pg-nowpulse`), on every metric in every range (4 Nov, Alex: "on all the graphs";
+   was a ring outside the Goal range). */
+.pg-view .pg-last { fill: var(--cat); stroke: var(--cat); stroke-width: 1.6; }
 .pg-view .pg-guide { stroke: #141a24; stroke-width: 1; opacity: 0.25; }
 .pg-view .pg-knob { fill: #F5F6F8; stroke: #141a24; stroke-width: 1.6; }
 .pg-view .pg-tip { position: absolute; top: 0; height: 24px; padding: 0 9px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; transform: translateX(-50%); pointer-events: none; }
@@ -17883,14 +17880,16 @@ button.ci-hint { cursor: pointer; }
    milestones fainter, the axis on to the goal's day with Today where today is. */
 .pg-view .pg-goal { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-height: 26px; margin-top: 6px; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .pg-view .pg-goal-facts { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* In the Goal range alone (4 Nov, Alex); in 7d, 30d and Phase its room kept, unseen, so the chart never moves. */
+.pg-view .pg-goal.off { visibility: hidden; }
 .pg-view .pg-goal-v.good { color: #2f7a3f; }
 .pg-view .pg-goal-v.warn { color: #b8471f; }
 .pg-view .pg-plan { stroke: var(--goal); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.7; }
 .pg-view .pg-goalring { fill: #F5F6F8; stroke: var(--goal); stroke-width: 1.6; }
-/* Where they stand on a goal (2 Nov, Alex): the latest a filled dot pulsing. The line and the dot keep the weight's own
-   Body blue over the beige plan (3 Nov, Alex: option B of docs/boards/weight-goal-colours-mockup.html). */
+/* Where they stand (2 Nov, Alex; every range and metric since 4 Nov): the latest a filled dot pulsing. On a goal the line
+   and the dot keep the weight's own Body blue over the beige plan (3 Nov, Alex: option B of
+   docs/boards/weight-goal-colours-mockup.html). */
 .pg-view .pg-goal .pg-goal-by { margin-left: 0; }
-.pg-view .goaled .pg-last { fill: var(--cat); stroke: var(--cat); }
 .pg-view .pg-nowpulse { fill: var(--cat); opacity: 0.45; transform-box: fill-box; transform-origin: center; animation: pg-nowpulse 1.8s ease-out infinite; }
 @keyframes pg-nowpulse { from { transform: scale(1); opacity: 0.6; } to { transform: scale(2.8); opacity: 0; } }
 .pg-view .pg-goalpulse { fill: none; stroke: var(--goal); stroke-width: 1.6; transform-box: fill-box; transform-origin: center; animation: pg-goalpulse 2s ease-out infinite; }
@@ -20370,6 +20369,9 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw .wo-note.wo-note .wo-note-head { gap: 8px; }
 .lw .wo-note.wo-note .wo-note-pen { color: #5b6474; }
 .lw .wo-note.wo-note .wo-note-pen svg { width: 13px; height: 13px; }
+/* The words start under the label, not under the icon (4 Nov, Alex: "the text should start aligned with the title"), as a
+   coach's note runs beside the face: the icon's 13px and the 8px gap in, open or shut, so nothing moves when it opens. */
+.lw .wo-note.wo-note .wo-note-text, .lw .wo-note.wo-note .wo-note-input, .lw .wo-note.wo-note .wo-note-foot { margin-left: 21px; width: calc(100% - 21px); box-sizing: border-box; }
 .lw .wo-note.wo-note .wo-note-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
 .lw .wo-note.wo-note .wo-note-text { font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; }
 .lw .wo-note.wo-note .wo-note-input { padding: 4px 0 8px; border-bottom: 1px solid #C9CFD8; font-size: 16px; font-weight: 500; color: #141a24; }
@@ -20447,6 +20449,18 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .nd > .nd-banner.nd-banner, .nd-banner.fdi-banner { box-sizing: border-box; min-height: calc(var(--topbar-h, 67px) + 231px); }
 .nd > .nd-banner.nd-banner { display: flex; flex-direction: column; }
 .nd > .nd-banner.nd-banner > .nd-tabs { margin-top: auto; }
+/* One banner, not two alike (4 Nov, Alex: "if I go from this to the food diary, the background picture changes size, and
+   the header… jumps a little"; the diary's eyebrow sat 8px higher, its title on a 28.6px line, its tabs 7px higher, and it
+   could grow past Nutrition's). Both are exactly the top bar and 231px (height, never more, so the photo and its shade are
+   the same picture), a column with the same eyebrow and title (.nd-phase: 8px under the bar, the title on its 36px line)
+   and Training day | Rest day at its foot. The diary's date line runs on under its title, and its week strip sits in the
+   middle of the room left between them. */
+.nd > .nd-banner.nd-banner, .nd-banner.nd-banner.fdi-banner { height: calc(var(--topbar-h, 67px) + 231px); display: flex; flex-direction: column; gap: 0; }
+.nd > .nd-banner.nd-banner > :not(.tr-banner-pic), .nd-banner.nd-banner.fdi-banner > :not(.tr-banner-pic) { flex-shrink: 0; }
+.nd > .nd-banner.nd-banner > .nd-tabs, .nd-banner.nd-banner.fdi-banner > .nd-tabs { margin-top: auto; }
+.nd-banner.fdi-banner h1.nd-phase-name { margin: 4px 0 0; }
+.nd-banner.fdi-banner .fdi-date-sub { display: block; margin-top: 4px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nd-banner.nd-banner.fdi-banner > .fdi-week { margin: auto -8px 0; }
 /* Objectives from the coach in the hairline language (17 Oct, Alex), on every phase's tab (Training, Nutrition, the lifestyle check-in): no white card, a flat row between hairlines; the small grey label at 600, the count plain beside it, the chevron in the label grey; opened, the list drops out flat with thin numbered rings and the body text at 500. Doubled for the dev-server CSS order. */
 .po.po-card, .po.po-line { border: 0; border-top: 1px solid #E1E5EB; border-bottom: 1px solid #E1E5EB; border-radius: 0; background: none; }
 .po.po-card .po-head, .po.po-line .po-head { gap: 8px; padding: 16px 4px; }
@@ -21144,7 +21158,7 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 /* ---- Type weights on the client, 500 and 600 only (3 Nov, Alex: the audit; docs/boards/type-weights-mockup.html). */
 /* Every photo banner: the eyebrow at 600, the title at 600 and one size (26px; a long one still shrinks to fit). */
 .tr-kicker.tr-kicker, .nd-kicker.nd-kicker, .fdi-eyebrow.fdi-eyebrow, .so-kicker.so-kicker { font-weight: 600; letter-spacing: 0.16em; }
-.tr-name.tr-name, .nd-phase-name.nd-phase-name, .fdi-banner .fdi-date.fdi-date, .so-title.so-title { font-size: 26px; font-weight: 600; }
+.tr-name.tr-name, .nd-phase-name.nd-phase-name, .so-title.so-title { font-size: 26px; font-weight: 600; }
 .ci-banner .tr-weeks .tr-wk.tr-wk { font-weight: 600; }
 /* The session overview's facts strip stays (3 Nov, Alex: "leave the pill and make it transparent"): see-through on the
    photo, a soft white edge, its figures white at 600, their names white and quieter, the dividers faint. */
@@ -21235,9 +21249,10 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 /* Shape update, leaving with photos not sent: the send row becomes the check-in's question (.cki-confirm) across the row. */
 .pp-todo-save.pp-leave > .cki-confirm { flex: 1; min-width: 0; align-items: center; }
 
-/* The rest timer's choices (3 Nov, Alex: a countdown, "1 min 2 min and 3 min" on every tap): a white card over the bar
-   with a hairline, the three (and Stop while one runs) as white hairline pills, the one running ink; "Rest done" green. */
-.wo-rest-menu.wo-rest-menu { gap: 6px; padding: 6px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+/* The rest timer's choices (3 Nov, Alex: a countdown, "1 min 2 min and 3 min" on every tap): the three (and Stop while
+   one runs) as white hairline pills over the bar, the one running ink; "Rest done" green. The pills alone, no card
+   behind them (4 Nov, Alex: "just the pills… get rid of the one behind"). */
+.wo-rest-menu.wo-rest-menu { gap: 8px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
 .wo-rest-opt.wo-rest-opt { height: 44px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 14.5px; font-weight: 600; color: #141a24; }
 .wo-rest-opt.wo-rest-opt.on { background: #141a24; box-shadow: none; color: #fff; }
 .wo-rest-opt.wo-rest-opt.stop { color: #b8471f; }
