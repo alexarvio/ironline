@@ -103,6 +103,8 @@ export type FoodDiaryProps = {
   date: string;
   dateLabel: string;
   target: Macros | null;
+  /** Both days' targets, so the switch is instant (4 Nov, Alex). */
+  targets?: { training: Macros | null; rest: Macros | null };
   eaten: Macros;
   dayType: "training" | "rest";
   loggedKcal: number | null;
@@ -407,6 +409,14 @@ export default function FoodDiaryScreen({
   // turned green); a failed upload says so under the meal.
   const [photoBusy, setPhotoBusy] = useState<FoodMeal | null>(null);
   const [photoFailed, setPhotoFailed] = useState<FoodMeal | null>(null);
+  // One hidden picker for every meal's camera and Replace, opened by a plain button (4 Nov, Alex: two taps on the
+  // camera), as the app's other photo buttons do; it remembers which meal asked.
+  const photoInput = useRef<HTMLInputElement>(null);
+  const photoFor = useRef<FoodMeal | null>(null);
+  const pickPhotoFor = (meal: FoodMeal) => {
+    photoFor.current = meal;
+    photoInput.current?.click();
+  };
   const sendPhoto = (meal: FoodMeal, file: File) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -560,17 +570,29 @@ export default function FoodDiaryScreen({
     goTo(addDays(date, dx > 0 ? -1 : 1));
   };
 
+  // Training day | Rest day switches at once (4 Nov, Alex: "it takes maybe 1 to 2 seconds"): the day type and its
+  // targets change on the phone the moment it is tapped, from both days' targets the diary carries, and the choice
+  // saves behind it; a failed save puts the day back as it was.
   const chooseDay = (dayType: "training" | "rest") => {
     if (dayType === diary.dayType) return;
+    const was = { dayType: diary.dayType, target: diary.target };
+    setDiary((d) => ({ ...d, dayType, target: d.targets ? d.targets[dayType] : d.target }));
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("date", date);
     fd.set("dayType", dayType);
-    startLoad(async () => {
-      await setFoodDayTypeAction(fd);
-      const next = await getFoodDiaryAction(clientId, date);
-      if (next) setDiary(next);
-    });
+    void (async () => {
+      try {
+        await setFoodDayTypeAction(fd);
+        // Without both targets on hand (an older copy of the page), read the day for its targets.
+        if (!diary.targets) {
+          const next = await getFoodDiaryAction(clientId, date);
+          if (next) setDiary(next);
+        }
+      } catch {
+        setDiary((d) => (d.date === date ? { ...d, ...was } : d));
+      }
+    })();
   };
 
   const logged = new Set(diary.loggedDays);
@@ -639,6 +661,20 @@ export default function FoodDiaryScreen({
       </header>
 
       <main className={`app-content dark${loading ? " fdi-loading" : ""}`} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 4)}>
+        <input
+          ref={photoInput}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            // Cleared so picking the same file twice still fires.
+            e.target.value = "";
+            const meal = photoFor.current;
+            photoFor.current = null;
+            if (file && meal) sendPhoto(meal, file);
+          }}
+        />
         <div className="fdi-page">
           {/* A clear sideways swipe on the banner or the rings steps a day; the meals below scroll only. */}
           <div
@@ -1176,19 +1212,12 @@ export default function FoodDiaryScreen({
                           </span>
                         </button>
                       ) : (
-                        <label className="fdi-icon-btn fdi-photo-pick" aria-label={`Add a picture of ${meal.label}`}>
+                        // A plain button opening the one hidden picker, as every other photo button does (4 Nov, Alex:
+                        // "I have to click on the camera twice"; the see-through field laid over the icon could take
+                        // two taps on an iPhone).
+                        <button type="button" className="fdi-icon-btn fdi-photo-pick" onClick={() => pickPhotoFor(meal.id)} aria-label={`Add a picture of ${meal.label}`}>
                           <CameraIcon />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              // Cleared so picking the same file twice still fires.
-                              e.target.value = "";
-                              if (file) sendPhoto(meal.id, file);
-                            }}
-                          />
-                        </label>
+                        </button>
                       )}
                       </>
                       )}
@@ -1371,18 +1400,9 @@ export default function FoodDiaryScreen({
             {/* eslint-disable-next-line @next/next/no-img-element -- the client’s own upload */}
             <img className="fdi-photo-shot" src={shownPhoto.photo} alt={`Your picture of ${shownPhoto.label}`} />
             <div className="fdi-photo-actions">
-              <label className="fdi-photo-replace">
+              <button type="button" className="fdi-photo-replace" onClick={() => pickPhotoFor(shownPhoto.id)}>
                 Replace
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = "";
-                    if (file) sendPhoto(shownPhoto.id, file);
-                  }}
-                />
-              </label>
+              </button>
               <button type="button" className="fdi-photo-remove" onClick={() => dropPhoto(shownPhoto.id)}>
                 Remove
               </button>
