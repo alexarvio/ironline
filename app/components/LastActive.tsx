@@ -12,7 +12,7 @@ export default function LastActive({ at, className, keepRoom }: { at: string | n
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!at) return;
-    const id = setInterval(() => setNow(Date.now()), 60 * 1000);
+    const id = setInterval(() => setNow(Date.now()), 15 * 1000);
     return () => clearInterval(id);
   }, [at]);
   // A newer time than the last tick reads as now (lastActiveWords holds the wait at zero).

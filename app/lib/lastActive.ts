@@ -1,6 +1,6 @@
 // When the client was last in the app, in words (4 Nov, Alex: as WhatsApp does, under the client's name in a chat's
 // head, so the coach knows whether they are using the app). One way on the laptop's chat and the coach's phone:
-// `Active now` (the last 5 minutes), `Active 12 min ago`, `Active 2 h ago` (under a day), `Active yesterday`, else the
+// `Active now` (the last 2 minutes), `Active 12 min ago`, `Active 2 h ago` (under a day), `Active yesterday`, else the
 // day as every admin fact line has it, `Active 3/11` (dayMonth, the year only when it isn't this one).
 
 import { dayMonth } from "./dayMonth";
@@ -13,7 +13,8 @@ export function lastActiveWords(iso: string | null | undefined, now: number = Da
   const at = Date.parse(iso);
   if (!Number.isFinite(at)) return null;
   const ago = Math.max(0, now - at);
-  if (ago < 5 * MIN) return "Active now";
+  // Now is the last 2 minutes (4 Nov, Alex: "closer to real time"; it was 5).
+  if (ago < 2 * MIN) return "Active now";
   if (ago < 60 * MIN) return `Active ${Math.floor(ago / MIN)} min ago`;
   if (ago < 24 * 60 * MIN) return `Active ${Math.floor(ago / (60 * MIN))} h ago`;
   const day = new Date(at);
