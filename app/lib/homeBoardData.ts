@@ -930,14 +930,13 @@ export function exerciseTrends(clientId: number, today: string = localDateStr())
     return { pct: null, since: null };
   };
   // 7 days is this session against the last one (4 Nov, Alex: "last 7 days which compares this session to the last
-  // session"): the latest day in the last 7 days, its best against the best of the day it was done before, however long
-  // ago; a dash with none in the 7 days or none before it.
+  // session"; then "how there's no data for 7 days when I've done this exercise for 4 weeks in a row"): the latest day
+  // it was done, however long ago, its best against the best of the day it was done before; a dash with only one.
   const lastSession = (days: Map<string, number>): { pct: number | null; since: string | null } => {
-    const from = addDays(today, -6);
     const order = [...days.keys()].filter((d) => d <= today).sort();
     const latest = order[order.length - 1];
     const before = order[order.length - 2];
-    if (!latest || latest < from || !before) return { pct: null, since: null };
+    if (!latest || !before) return { pct: null, since: null };
     const a = days.get(latest)!;
     const b = days.get(before)!;
     return { pct: Math.round(((a - b) / b) * 1000) / 10, since: null };
