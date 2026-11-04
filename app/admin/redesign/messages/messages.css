@@ -267,7 +267,9 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
    one white card, names 600, the rest grey 500, unread a rust dot. */
 .rd-chatdock { display: flex; flex-direction: column; }
 .rd-dock-back { flex: none; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; margin: 12px 12px 0; padding: 4px 10px 4px 4px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; }
-.rd-dock-back svg { width: 16px; height: 16px; }
+/* The chevron's drawing starts where the eyebrow under it does (4 Nov, Alex: "is this aligned"; its box did, its ink sat
+   4.7px in), lifted half a pixel to the words' middle as every icon beside words. */
+.rd-dock-back svg { width: 16px; height: 16px; margin-left: -4.75px; translate: 0 -0.5px; }
 .rd-dock-back:hover { background: #eef0f3; color: #141a24; }
 .rd-dock-back:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; color: #141a24; }
 .rd-dock-back-n { margin-left: 4px; font-size: 12px; font-weight: 600; color: #b8471f; font-variant-numeric: tabular-nums; }
