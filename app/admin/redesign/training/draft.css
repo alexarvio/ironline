@@ -1168,14 +1168,14 @@ span.rd-demo { cursor: default; }
 .exp-chg.up { color: #2f7a3f; }
 .exp-chg.down { color: #b42318; }
 /* The chart: the e1RM per session, spaced by date. Drawn in pixels (measured), so the dots stay round. */
-.exp-chart { position: relative; height: 220px; margin-top: 4px; }
+.exp-chart { position: relative; height: 248px; margin-top: 4px; }
 .exp-chart svg { position: absolute; left: 0; top: 0; display: block; overflow: visible; }
 .exp-chart text { font-size: 11px; font-weight: 500; fill: #98a2b3; font-variant-numeric: tabular-nums; }
 .exp-pt { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; padding: 0; border: 0; border-radius: 999px; background: none; cursor: default; }
 .exp-pt:focus-visible { outline: 2px solid #141a24; outline-offset: 1px; }
 .exp-tip { position: absolute; left: 0; top: 0; z-index: 3; padding: 6px 10px; border-radius: 10px; background: #fff; box-shadow: 0 10px 24px -10px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-size: 12.5px; font-weight: 500; color: #141a24; white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
 .exp-tip .rd-sep { margin: 0 0.5em; }
-.exp-empty { display: flex; align-items: center; justify-content: center; height: 220px; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
+.exp-empty { display: flex; align-items: center; justify-content: center; height: 248px; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
 /* The sessions, latest first: a log (rule 8), the date (.rd-logdate) leading, hairlines between rows. */
 .exp-log { margin-top: 6px; }
 .exp-lr { display: grid; grid-template-columns: var(--exp-dw, 88px) 30px minmax(0, 1fr) 52px 104px; align-items: center; column-gap: 10px; min-height: 40px; border-top: 1px solid #eef0f3; }
@@ -1496,3 +1496,10 @@ span.rd-demo { cursor: default; }
    kept empty where this window has none and another offered one does. */
 
 .exp-lr.room, .exp-more.room { visibility: hidden; }
+/* The progress chart's best: its figure on the y axis in purple at the end of its dashed line (4 Nov, Alex: the ring
+   "is really weird"); the latest session a dot pulsing in the line's colour, as every chart's now. */
+.exp-chart text.exp-best { font-weight: 600; fill: #3a3390; }
+.exp-now { position: absolute; z-index: 1; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 999px; background: var(--exp-c, #3a3390); box-shadow: 0 0 0 2px #fff; pointer-events: none; }
+.exp-now::after { content: ""; position: absolute; inset: 0; border-radius: 999px; background: var(--exp-c, #3a3390); opacity: 0.45; animation: exp-nowpulse 1.8s ease-out infinite; }
+@keyframes exp-nowpulse { from { transform: scale(1); opacity: 0.6; } to { transform: scale(2.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .exp-now::after { animation: none; opacity: 0; } }
