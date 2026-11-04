@@ -10,7 +10,7 @@ import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
-import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, NoteIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
 import HelpTip from "../HelpTip";
 import RogueSessions from "./RogueSessions";
@@ -935,7 +935,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                 void markProgramNoteSeenAction(program.id);
               }
             }} title={`${firstName}'s note on this programme`}>
-              <ChatIcon />
+              <NoteIcon />
               Note from {firstName}
               <small>{program.note.when}</small>
               {!noteSeen && <span className="rd-due" aria-label="Not read yet" />}
@@ -1240,7 +1240,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                   })()}
                   {s.note && (
                     <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
-                      <ChatIcon />
+                      <NoteIcon />
                     </span>
                   )}
                   {(() => {
@@ -3431,7 +3431,8 @@ function TrainingLegend() {
       {row(<span className="rd-flag video in"><VideoIcon /></span>, <><b>Video or photo in</b>: waiting for your reply.</>)}
       {row(<span className="rd-flag video asked"><VideoIcon /></span>, <><b>Asked for</b>: waiting for them to send it.</>)}
       {row(<span className="rd-flag video replied"><VideoIcon /></span>, <><b>Replied</b>.</>)}
-      {row(<span className="rd-flag chat"><ChatIcon /></span>, <><b>They wrote</b> about it, or left a note on the session.</>)}
+      {row(<span className="rd-flag chat"><ChatIcon /></span>, <><b>They wrote</b> about it in the chat.</>)}
+      {row(<span className="rd-tag note"><NoteIcon /></span>, <><b>Their note</b> on the session.</>)}
       {row(<span className="rd-extradot static">+2</span>, <><b>Extra sets</b> beyond what you set.</>)}
       {row(<span className="rd-pbdot">PB</span>, <><b>Personal best</b>: heavier than ever, reps on target.</>)}
       {row(<i className="rd-due" />, <><b>Needs you</b>: something here waits for you.</>)}

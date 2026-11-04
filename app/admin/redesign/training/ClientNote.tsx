@@ -1,5 +1,5 @@
 import type React from "react";
-import { ChatIcon } from "../../../components/icons";
+import { NoteIcon } from "../../../components/icons";
 
 /**
  * The client's words in an opened session (23 Oct, Alex: the pale blue band and navy Reply were the old way), in the
@@ -10,7 +10,7 @@ export default function ClientNote({ who, children, onReply }: { who: string; ch
   return (
     <div className="rd-cnote">
       <span className="rd-cnote-icon" aria-hidden="true">
-        <ChatIcon />
+        <NoteIcon />
       </span>
       <span className="rd-cnote-body">
         <span className="rd-cnote-who">{who}</span> <span className="rd-cnote-words">{children}</span>

@@ -9,7 +9,7 @@ import { addClientPhaseAction, applySupplementChangesAction, deletePhaseAction, 
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, CameraIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, CameraIcon, ChatIcon, NoteIcon,ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { LoggedDay, LoggedDaysView, LoggedMeal, MealComment } from "../../../lib/queries";
 import { ConfirmDialog, DeletePhaseDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
@@ -1350,7 +1350,7 @@ function DayRow({ day, open, due, grid, mealGrid, commentsOn, onToggle, onShot, 
             {/* A note from the client: the chat icon in the row, the words once it is opened (21 Oct, Alex). */}
             {day.note && (
               <span className="rd-notemark" title="A note from the client" aria-label="A note from the client">
-                <ChatIcon />
+                <NoteIcon />
               </span>
             )}
             {/* The dot trail's last step (dots.ts, 22 Oct, Alex): their note on this day still to read; opening the day reads it. */}
