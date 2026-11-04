@@ -1335,8 +1335,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                     {cols.rest && <span>Rest</span>}
                     <span>Note</span>
                     <span>{firstName} did</span>
-                    <span>7 days</span>
-                    <span>30 days</span>
+                    {/* Centred over their cells on one line (4 Nov, Alex: 7 days renamed Last session, which outgrows its 80px). */}
+                    <span className="rd-trendhead">Last session</span>
+                    <span className="rd-trendhead">30 days</span>
                     <span />
                   </div>
 
