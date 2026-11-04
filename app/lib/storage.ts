@@ -129,9 +129,15 @@ export async function putUploadFromDisk(publicPath: string, filePath: string, co
     await b.s3.send(
       new PutObjectCommand({ Bucket: b.bucket, Key: key, Body: fs.createReadStream(filePath), ContentLength: size, ContentType: contentType || mimeFor(key) })
     );
+    // As putUpload keeps them (4 Nov, review: the demos, library clips and chat files come this way now): counted, and
+    // a link signed for a file replaced under the same key forgotten.
+    stats.puts++;
     inBucket.add(key);
+    linkCache.delete(key);
     dropDiskCopy(key);
   } catch (error) {
+    stats.putFails++;
+    stats.lastPutError = `${key}: ${error instanceof Error ? `${error.name} ${error.message}` : String(error)}`.slice(0, 300);
     console.error("[uploads] could not copy to the bucket:", key, error);
     import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error)).catch(() => {});
   }
@@ -528,6 +534,9 @@ function lookLater(key: string, bytes: Buffer | null) {
  * A thread read with pictures or videos that have no look yet (sent before 25 Oct): each made once a server run, behind
  * the answer, from its small copy or poster, so the next read has it. Never waits, never throws.
  */
+// Videos one after another (4 Nov, Alex: memory is most of the bill): a thread of old videos had a poster made for each
+// at once, ffmpeg and the frames all together. On globalThis, as the memory is, so every bundle shares the one line.
+const looksLine = globalThis as unknown as { _uploadsLooksLine?: Promise<unknown> };
 export function fillChatLooks(items: { path: string; type: string }[]) {
   for (const it of items) {
     const key = keyOf(it.path);
@@ -536,7 +545,13 @@ export function fillChatLooks(items: { path: string; type: string }[]) {
     const copy = it.type === "video" ? posterKey(key) : smallKey(key, CHAT_WIDTHS[0]);
     if (!copy) continue;
     const make = () => (it.type === "video" ? makePoster(key, copy) : makeSmall(key, copy, CHAT_WIDTHS[0]));
-    void (async () => keepLook(it.path, (await readUpload(copy)) ?? (await once(copy, make))))().catch(() => {});
+    const fill = async () => keepLook(it.path, (await readUpload(copy)) ?? (await once(copy, make)));
+    if (it.type !== "video") {
+      void fill().catch(() => {});
+      continue;
+    }
+    const next = (looksLine._uploadsLooksLine ?? Promise.resolve()).then(fill, fill);
+    looksLine._uploadsLooksLine = next.catch(() => {});
   }
 }
 
@@ -637,23 +652,44 @@ export async function prepareChatMedia(publicPath: string, type: "image" | "vide
  * ("chat/9/abc.mov" -> "chat/9/abc-web.mp4"), put in the bucket, the messages pointed at it and its poster made. The
  * original stays where it was. Nothing changes when ffmpeg can't make one.
  */
-export async function webChatVideo(publicPath: string) {
+// One web copy in the making a video (4 Nov, review): the send (a server action) and a first play (the uploads route)
+// are different bundles, and each checked for a copy before either had made one, so both made it, one after the
+// other in the line. On globalThis so both share it; a later call finds the copy made and only does the swap.
+const webbingNow = ((globalThis as unknown as { _uploadsWebbing?: Map<string, Promise<void>> })._uploadsWebbing ??= new Map());
+export function webChatVideo(publicPath: string): Promise<void> {
   const key = keyOf(publicPath);
-  if (!key || /-web\.mp4$/i.test(key)) return;
+  if (!key || /-web\.mp4$/i.test(key)) return Promise.resolve();
+  let p = webbingNow.get(key);
+  if (!p) {
+    p = makeWebChatVideo(publicPath, key).finally(() => webbingNow.delete(key));
+    webbingNow.set(key, p);
+  }
+  return p;
+}
+
+async function makeWebChatVideo(publicPath: string, key: string) {
   try {
-    const onDisk = path.join(DATA_DIR, "uploads", key);
-    const source = fs.existsSync(onDisk) ? onDisk : await bucketLink(key);
-    if (!source) return;
     const webKey = key.replace(/\.[^./]+$/, "") + "-web.mp4";
     const out = path.join(DATA_DIR, "uploads", webKey);
-    fs.mkdirSync(path.dirname(out), { recursive: true });
-    const { toWebVideo } = await import("./transcode");
-    if (!(await toWebVideo(source, out))) return;
     const webPath = `/uploads/${webKey}`;
-    await putUploadFromDisk(webPath, out, "video/mp4");
-    // Its poster first, so the message never points at a copy without one: made, else the original's carried over.
+    // A copy made before is not made again (4 Nov, Alex: memory is most of the bill; a send and a first play could each
+    // start one): in the bucket when it is on, else whole on the disk (toWebVideo names it only once finished).
+    const b = bucket();
+    const made = b ? await exists(b, webKey) : fs.existsSync(out) && fs.statSync(out).size > 0;
+    if (!made) {
+      const onDisk = path.join(DATA_DIR, "uploads", key);
+      const source = fs.existsSync(onDisk) ? onDisk : await bucketLink(key);
+      if (!source) return;
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      const { toWebVideo } = await import("./transcode");
+      if (!(await toWebVideo(source, out))) return;
+      await putUploadFromDisk(webPath, out, "video/mp4");
+    }
+    // Its poster first, so the message never points at a copy without one: made (or the one made before), else the
+    // original's carried over.
     const poster = posterKey(webKey);
-    if (poster && !(await once(poster, () => makePoster(webKey, poster)))) {
+    const had = made && poster ? await readUpload(poster) : null;
+    if (poster && !had && !(await once(poster, () => makePoster(webKey, poster)))) {
       const was = posterKey(key);
       const bytes = was ? await readUpload(was) : null;
       if (bytes) {
