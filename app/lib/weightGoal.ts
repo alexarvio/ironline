@@ -26,12 +26,12 @@ const staleDaysOf = (readings: { date: string }[]) => {
   return typical >= 20 ? 40 : typical >= 5 ? 21 : 14;
 };
 
-export type WeightGoalVerdict = "on" | "ahead" | "behind" | "early" | "reached" | "missed" | "stale";
+// No "too early" (4 Nov, Alex): with too little to go on there is no verdict, and nothing is shown for it.
+export type WeightGoalVerdict = "on" | "ahead" | "behind" | "reached" | "missed" | "stale";
 export const VERDICT_WORD: Record<WeightGoalVerdict, string> = {
   on: "On track",
   ahead: "Ahead",
   behind: "Behind",
-  early: "Not enough data",
   reached: "Reached",
   missed: "Missed",
   stale: "No weigh-in",
@@ -42,7 +42,6 @@ export const VERDICT_TONE: Record<WeightGoalVerdict, "good" | "warn" | ""> = {
   ahead: "good",
   reached: "good",
   behind: "warn",
-  early: "",
   missed: "",
   stale: "",
 };
@@ -181,8 +180,9 @@ export function weightGoalViews(goals: WeightGoalLike[], readingsIn: Reading[], 
       else if (active) {
         const since = readings.filter((r) => r.date >= g.start_date);
         if (!latest || daysBetween(latest.date, today) > staleDaysOf(readings)) verdict = "stale";
-        // Not enough data: under a week in, or nothing weighed since it was set.
-        else if (daysBetween(g.start_date, today) < 7 || since.length < 1 || !now) verdict = "early";
+        // Not enough data (under a week in, or nothing weighed since it was set): no verdict at all, so nothing is said
+        // anywhere until there is something to say (4 Nov, Alex: "don't show anything until there is enough data").
+        else if (daysBetween(g.start_date, today) < 7 || since.length < 1 || !now) verdict = null;
         else if (dir === 0) verdict = Math.abs(now.kg - g.target_kg) <= ON_TRACK_BAND_KG ? "on" : "behind";
         else {
           const gap = (now.kg - planKgAt(line, now.day)) * dir;

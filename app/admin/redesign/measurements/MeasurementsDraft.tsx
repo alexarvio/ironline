@@ -1445,7 +1445,10 @@ function MetricGraph({ metric: m, series, rangeSwitch = null }: { metric: Logged
           )}
         </div>
         <div className="rm-graph-dots" aria-hidden="true">
-          {/* No dots (as Home's Weight): the latest ringed in the colour, the period read ringed in ink. */}
+          {/* No dots (as Home's Weight): the latest ringed in the colour, the period read ringed in ink. The latest pulses in
+              the colour (4 Nov, Alex: "on all the graphs actually... the last check-in, that's what pulsates"), Home's Weight's
+              pulse, drawn under the ring so its white middle stays clean; still while a period is read, as Home's. */}
+          {!shown && <b className="pulse" style={{ left: pct(x(last.i), W), top: pct(y(last.value), H), background: m.colour }} />}
           <i className="last" style={{ left: pct(x(last.i), W), top: pct(y(last.value), H), borderColor: m.colour }} />
           {shown && <i className="on" style={{ left: pct(x(shown.i), W), top: pct(y(shown.value), H) }} />}
         </div>

@@ -105,6 +105,12 @@
 .rm-graph-dots i { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; box-sizing: border-box; }
 .rm-graph-dots i.last { border: 2px solid; background: #fff; }
 .rm-graph-dots i.on { border: 2px solid #141a24; background: #fff; }
+/* The latest pulses in the group's colour (4 Nov, Alex: "on all the graphs actually... the last check-in, that's what
+   pulsates"): Home's Weight dot's pulse (rh-wnowpulse: 1.8s, ×1 → ×2.8, its 45% colour at .9 → 0, so .405 here on the
+   solid colour), under the ring; still for reduced motion and while zoomed (globals.css). */
+.rm-graph-dots b.pulse { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; opacity: 0; animation: rm-graph-nowpulse 1.8s ease-out infinite; }
+@keyframes rm-graph-nowpulse { from { transform: scale(1); opacity: 0.405; } to { transform: scale(2.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .rm-graph-dots b.pulse { animation: none; } }
 .rm-graph-pill { position: absolute; transform: translate(-50%, -150%); padding: 4px 10px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
 .rm-graph-pill.below { transform: translate(-50%, 60%); }
 .rm-graph-strip { display: flex; gap: 2px; height: 6px; margin: 10px 44px 0 0; }
