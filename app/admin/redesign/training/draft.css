@@ -1167,11 +1167,6 @@ span.rd-demo { cursor: default; }
 .exp-chg { font-size: 15px; font-weight: 600; color: #8b93a1; }
 .exp-chg.up { color: #2f7a3f; }
 .exp-chg.down { color: #b42318; }
-/* A stall's fact and its fix (rule 1); a drop's fact alone. The pill is Training's .trn-pill. */
-.exp-fix { display: flex; align-items: center; gap: 12px; font-size: 13.5px; font-weight: 500; color: #3a4250; font-variant-numeric: tabular-nums; }
-.exp-pill { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; font-variant-numeric: tabular-nums; cursor: pointer; }
-.exp-pill:hover, .exp-pill:focus-visible { outline: none; box-shadow: inset 0 0 0 1px #141a24; }
-.exp-pill svg { width: 15px; height: 15px; translate: 0 -0.5px; }
 /* The chart: the e1RM per session, spaced by date. Drawn in pixels (measured), so the dots stay round. */
 .exp-chart { position: relative; height: 220px; margin-top: 4px; }
 .exp-chart svg { position: absolute; left: 0; top: 0; display: block; overflow: visible; }
@@ -1406,3 +1401,7 @@ span.rd-demo { cursor: default; }
 .rd-todo-done { opacity: 0; }
 .rd-todo-row:hover .rd-todo-done, .rd-todo-row:focus-within .rd-todo-done { opacity: 1; }
 @media (hover: none) { .rd-todo-done { opacity: 1; } }
+/* The progress pop-up keeps one height across its windows (4 Nov, Alex): the room of a log row or the fold
+   kept empty where this window has none and another offered one does. */
+
+.exp-lr.room, .exp-more.room { visibility: hidden; }
