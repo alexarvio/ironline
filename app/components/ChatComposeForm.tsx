@@ -8,13 +8,16 @@ import { uploadFirstOrThrow } from "../lib/uploadFirst";
 import type { MessageAbout } from "../lib/messageLinks";
 import VoiceRecordButton from "./VoiceRecordButton";
 import RingEdge from "./RingEdge";
+import { ChatAttachmentRow, useChatAttachment } from "./ChatAttachment";
 
 // Deliberately does NOT import from ../lib/queries (see CheckInHub.tsx for
 // why a "use client" file importing queries.ts breaks the dev server).
-// Three ways to send: type and hit Send; tap the paperclip to pick a photo,
-// video or any file, which goes at once; or hold the mic for a voice
-// message, which goes when it stops. The mic and Send share the right-hand
-// spot: the mic while the box is empty, Send as soon as anything is typed.
+// Three ways to send: type and hit Send; tap the + to pick a photo, video
+// or any file, which waits over the box until Send, words with it as one
+// message (4 Nov, Alex: "there's no me pressing send. It sends
+// automatically"); or hold the mic for a voice message, which goes when it
+// stops. The mic and Send share the right-hand spot: the mic while the box
+// is empty and nothing is picked, Send as soon as either is there.
 const ACCEPT = "image/*,video/*,audio/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip";
 
 export default function ChatComposeForm({
@@ -78,15 +81,21 @@ export default function ChatComposeForm({
       document.removeEventListener("keydown", esc);
     };
   }, [plusOpen]);
+  // A pick never sends (4 Nov, Alex): it waits over the box, already going up, until Send.
+  const att = useChatAttachment(clientId);
+  const boxRef = useRef<HTMLTextAreaElement>(null);
   const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = "";
-    if (f) sendFile(f);
+    if (!f) return;
+    att.pick(f);
+    // At a keyboard the box takes it back, so a caption can be typed and Enter sends (4 Nov, review); a phone's
+    // keyboard is left down.
+    if (!window.matchMedia("(pointer: coarse)").matches) boxRef.current?.focus();
   };
   const [pending, start] = useTransition();
   const [text, setKept] = useKeptDraft(draftKey ?? "off");
   const setText = (v: string | ((t: string) => string)) => setKept(v, !!draftKey);
-  const boxRef = useRef<HTMLTextAreaElement>(null);
   const fit = (el: HTMLTextAreaElement | null) => {
     if (!el) return;
     el.style.height = "auto";
@@ -116,6 +125,7 @@ export default function ChatComposeForm({
     onSent?.();
     return true;
   };
+  // A voice message goes as it stops (it never waits over the box).
   const sendFile = (file: File) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -152,14 +162,50 @@ export default function ChatComposeForm({
         </button>
       </div>
     )}
+    <ChatAttachmentRow att={att} sending={pending} />
     <form
       ref={formRef}
       className="chat-compose-form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!text.trim() || pending) return;
+        const picked = att.current;
+        if ((!text.trim() && !picked) || pending) return;
         const fd = new FormData();
         const words = text.trim();
+        if (picked) {
+          // The file and the words as one message, as a file with a caption always went (4 Nov, Alex). Send waits for
+          // the upload begun at the pick; the row and the words stay until the server has it, so nothing is lost.
+          fd.set("clientId", String(clientId));
+          fd.set("text", words);
+          fd.set("nonce", picked.nonce);
+          if (about) fd.set("link", JSON.stringify(about.link));
+          if (replyTo) fd.set("replyTo", String(replyTo.id));
+          if (onSent) fd.set("quiet", "1");
+          start(async () => {
+            try {
+              // An upload that failed or was refused says so on the row already.
+              const { upload, poster } = await att.take();
+              fd.set("upload", upload);
+              if (poster) fd.set("poster", new File([poster], "poster.jpg", { type: "image/jpeg" }));
+            } catch {
+              return;
+            }
+            try {
+              await sendChatMessageAction(fd);
+            } catch {
+              // The send didn't go: the row says so (4 Nov, review: nothing did), the words and it kept for Send again.
+              att.failSend();
+              return;
+            }
+            att.clear();
+            setText((t) => (t.trim() === words ? "" : t));
+            if (boxRef.current) boxRef.current.style.height = "auto";
+            onClearAbout?.();
+            onClearReply?.();
+            onSent?.();
+          });
+          return;
+        }
         if (onSendText) {
           onSendText(words, { replyTo: replyTo?.id ?? null, link: about ? JSON.stringify(about.link) : null });
           setText("");
@@ -189,7 +235,17 @@ export default function ChatComposeForm({
       <input type="hidden" name="clientId" value={clientId} />
       <input type="hidden" name="sender" value={sender} />
       <div className="chat-plus" ref={plusRef}>
-        <button type="button" className={`chat-attach-btn chat-plus-btn${plusOpen ? " open" : ""}`} aria-label="Add a photo, a video, a file or an event" aria-expanded={plusOpen} onClick={() => setPlusOpen((o) => !o)} disabled={pending}>
+        {/* The + opens the phone's own picker in one tap (4 Nov, Alex: our Camera | Camera roll | File menu came before
+            the iPhone's own Photo Library | Take Photo or Video | Choose File, and its rows took two taps); a static
+            plus, never turning. A menu only where there is more than a file to add (an event). As the coach phone. */}
+        <button
+          type="button"
+          className={`chat-attach-btn chat-plus-btn${plusOpen ? " open" : ""}`}
+          aria-label={onAddEvent ? "Add a photo, a video, a file or an event" : "Send a photo, video or file"}
+          aria-expanded={onAddEvent ? plusOpen : undefined}
+          onClick={() => (onAddEvent ? setPlusOpen((o) => !o) : fileInputRef.current?.click())}
+          disabled={pending}
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
@@ -256,8 +312,8 @@ export default function ChatComposeForm({
         disabled={pending}
       />
       {/* The round ink arrow, as every chat's (27 Oct, Alex: one composer for all three). */}
-      {text.trim() ? (
-        <button type="submit" className="chat-send-btn chat-send-round" disabled={pending} aria-label="Send" title="Send">
+      {text.trim() || att.current ? (
+        <button type="submit" className="chat-send-btn chat-send-round" disabled={pending || att.current?.status === "refused"} aria-label="Send" title="Send">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
                 <path d="M4.5 12h14M13 6.5l5.5 5.5-5.5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>

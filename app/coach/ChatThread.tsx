@@ -11,6 +11,7 @@ import RingEdge from "../components/RingEdge";
 import ChatMediaGallery, { exerciseOf } from "../components/ChatMediaGallery";
 import { ChatImage, ChatVideo, sized, withVideoFrame } from "../components/ChatMedia";
 import { uploadFirstOrThrow } from "../lib/uploadFirst";
+import { ChatAttachmentRow, useChatAttachment } from "../components/ChatAttachment";
 import { dayMonth } from "../lib/dayMonth";
 import { useKeyboardInset } from "../client/useKeyboardInset";
 import { Avatar, Facts, Icon } from "./parts";
@@ -21,8 +22,10 @@ import { ChatReview } from "./PhoneReview";
 // quiet while it shows, and the same actions for every send, reaction, edit,
 // pin and delete), laid out for a thumb. Their messages on the left in white
 // with a hairline, the coach's on the right in a neutral tint; hold one to
-// react, reply, copy, edit, pin or delete it. + sends a photo, video or file,
-// the mic a voice message, the ink arrow the words.
+// react, reply, copy, edit, pin or delete it. + picks a photo, video or file,
+// which waits over the box until the ink arrow sends it with the words as one
+// message (4 Nov, Alex: "there's no me pressing send. It sends automatically");
+// the mic a voice message, which goes as it stops; the ink arrow the words.
 
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 const POLL_MS = 15000;
@@ -162,6 +165,9 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
   const { outbox: queued, send: queue, retry } = useChatOutbox<DraftMessage>(clientId, "coach", refresh);
   const outbox = queued.filter((o) => !landed(o, messages.filter((m) => m.mine)));
   const [sendingFile, setSendingFile] = useState(false);
+  // A pick never sends (4 Nov, Alex): it waits over the box, already going up, until the arrow (ChatAttachment.tsx).
+  const att = useChatAttachment(clientId);
+  const [sendingAtt, setSendingAtt] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -179,6 +185,8 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
 
   const send = async () => {
     const words = text.trim();
+    const picked = editing ? null : att.current;
+    if (picked) return void sendPicked(words, picked.nonce);
     if (!words) return;
     setError(null);
     if (editing) {
@@ -201,6 +209,45 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     atEnd.current = true;
     box.current?.focus();
   };
+  // The file picked and the words as one message, as a file with a caption always went (4 Nov, Alex). The arrow waits
+  // for the upload begun at the pick; the row and the words stay until the server has it, so nothing is lost. Its
+  // one-time key makes a second tap after a lost answer post it once.
+  const sendPicked = async (words: string, nonce: string) => {
+    if (sendingAtt || att.current?.status === "refused") return;
+    setError(null);
+    setSendingAtt(true);
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("text", words);
+    fd.set("nonce", nonce);
+    fd.set("quiet", "1");
+    if (replying) fd.set("replyTo", String(replying.id));
+    try {
+      // An upload that failed or was refused says so on its own row (`Not uploaded. Tap to try again`, or the server's
+      // words), so nothing more is said here.
+      const { upload, poster } = await att.take();
+      fd.set("upload", upload);
+      if (poster) fd.set("poster", new File([poster], "poster.jpg", { type: "image/jpeg" }));
+    } catch {
+      setSendingAtt(false);
+      return;
+    }
+    try {
+      await sendChatMessageAction(fd);
+    } catch {
+      setError(NOT_SENT);
+      setSendingAtt(false);
+      return;
+    }
+    att.clear();
+    setText((t) => (t.trim() === words ? "" : t));
+    requestAnimationFrame(grow);
+    setReplying(null);
+    setSendingAtt(false);
+    atEnd.current = true;
+    await refresh();
+  };
+  // A voice message goes as it stops (it never waits over the box).
   const sendFile = async (file: File) => {
     setError(null);
     setSendingFile(true);
@@ -606,8 +653,10 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
             </button>
           </div>
         )}
+        {/* Out of the way while a message is edited (an edit is words alone); back once it is saved or let go. */}
+        {!editing && <ChatAttachmentRow att={att} sending={sendingAtt} />}
         <div className="cph-compose-row">
-          <button type="button" className="cph-round" onClick={() => fileInput.current?.click()} disabled={sendingFile || !!editing} aria-label="Send a photo, video or file">
+          <button type="button" className="cph-round" onClick={() => fileInput.current?.click()} disabled={sendingFile || sendingAtt || !!editing} aria-label="Send a photo, video or file">
             <Icon name="plus" />
             <RingEdge size={40} />
           </button>
@@ -619,7 +668,10 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
             onChange={(e) => {
               const f = e.target.files?.[0];
               e.target.value = "";
-              if (f) void sendFile(f);
+              if (!f) return;
+              att.pick(f);
+              // At a keyboard the box takes it back, so a caption can be typed and Enter sends (4 Nov, review).
+              if (!window.matchMedia("(pointer: coarse)").matches) box.current?.focus();
             }}
           />
           <textarea
@@ -646,8 +698,14 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
               }
             }}
           />
-          {text.trim() ? (
-            <button type="button" className="cph-round ink" onClick={() => void send()} aria-label={editing ? "Save" : "Send"}>
+          {text.trim() || (att.current && !editing) ? (
+            <button
+              type="button"
+              className="cph-round ink"
+              onClick={() => void send()}
+              disabled={!editing && !!att.current && (sendingAtt || att.current.status === "refused")}
+              aria-label={editing ? "Save" : "Send"}
+            >
               {editing ? (
                 <Icon name="check" />
               ) : (

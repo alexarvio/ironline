@@ -12,6 +12,7 @@ import VoiceRecordButton from "../../../components/VoiceRecordButton";
 import ChatMediaGallery, { exerciseOf } from "../../../components/ChatMediaGallery";
 import { ChatImage, ChatVideo, withVideoFrame } from "../../../components/ChatMedia";
 import { uploadFirstOrThrow } from "../../../lib/uploadFirst";
+import { ChatAttachmentRow, useChatAttachment } from "../../../components/ChatAttachment";
 import MediaReviewModal, { chatMediaReview } from "../media-review/MediaReviewModal";
 import { chatDraftThreadAction } from "./actions";
 import { chatTypingAction, deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
@@ -115,7 +116,11 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   // When the coach last wheeled, touched, pressed or typed in the thread: a scroll then is theirs.
   const touched = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
-  const ready = text.trim().length > 0 && !pending;
+  // A photo, video or file picked waits over the box until Send, already going up (4 Nov, Alex: "there's no me
+  // pressing send. It sends automatically"); the words typed go with it as one message. One for every chat
+  // (ChatAttachment.tsx). Another client's thread in the same panel (ChatDock) throws it away (the hook does).
+  const att = useChatAttachment(clientId);
+  const ready = (text.trim().length > 0 || (!!att.current && att.current.status !== "refused")) && !pending;
   const t = plan.targets;
 
   // Opening reads what the client wrote (the rail's dot clears); then the
@@ -202,6 +207,37 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   };
   const send = () => {
     if (!ready) return;
+    const picked = att.current;
+    if (picked) {
+      // The file and the words as one message, as a file with a caption always went (4 Nov, Alex). Send waits for the
+      // upload begun at the pick; the row, the words, the link and the reply stay until the server has it.
+      const words = text.trim();
+      const fd = new FormData();
+      fd.set("clientId", String(clientId));
+      fd.set("text", words);
+      fd.set("nonce", picked.nonce);
+      fd.set("quiet", "1");
+      if (link?.link) fd.set("link", JSON.stringify(link.link));
+      if (replying) fd.set("replyTo", String(replying.id));
+      act(
+        async () => {
+          const { upload, poster } = await att.take();
+          fd.set("upload", upload);
+          if (poster) fd.set("poster", new File([poster], "poster.jpg", { type: "image/jpeg" }));
+          await sendChatMessageAction(fd);
+        },
+        () => {
+          att.clear();
+          setText((t) => (t.trim() === words ? "" : t));
+          setLink(null);
+          setReplying(null);
+          shrinkBox(box.current);
+          box.current?.focus();
+        },
+        "Not sent"
+      );
+      return;
+    }
     // On screen at once, kept until the server has it, Not sent with a click to try again (27 Oct, step 2).
     queue(text.trim(), { replyTo: replying?.id ?? null, quote: replying ? { mine: replying.mine, text: replying.text || (replying.media ? "Media" : "") } : null, link: link?.link ? JSON.stringify(link.link) : null, after: Math.max(0, ...messages.map((m) => m.id)) });
     setText("");
@@ -210,8 +246,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     shrinkBox(box.current);
     box.current?.focus();
   };
-  // A photo, video, file or voice message carries the link over the box too,
-  // as the words do and as the client's do (21 Oct: it went without it).
+  // A voice message goes as it stops (it never waits over the box), and carries the link over the box too, as the
+  // words do and as the client's do (21 Oct: it went without it).
   const sendFile = (file: File) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -233,7 +269,10 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = "";
-    if (f) sendFile(f);
+    if (!f) return;
+    att.pick(f);
+    // The box takes the keyboard back, so a caption can be typed and Enter sends (4 Nov, review: it stayed on the +).
+    box.current?.focus();
   };
   // Replying to one message (2 Oct, as WhatsApp): it shows over the box until sent or dropped.
   const [replying, setReplying] = useState<DraftMessage | null>(null);
@@ -621,6 +660,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
               </button>
             </span>
           )}
+          {/* The photo, video or file picked, waiting for Send (4 Nov, Alex). */}
+          <ChatAttachmentRow att={att} sending={pending} />
           {/* The box with all the room (2 Oct): the link and the attachments
               behind the + on its left; on its right the mic while it is
               empty, Send once there are words, as WhatsApp does. */}
@@ -678,7 +719,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
               aria-label={`Message ${firstName}`}
               disabled={pending}
             />
-            {text.trim() ? (
+            {text.trim() || att.current ? (
               <button type="button" className="rd-btn primary rm-send" disabled={!ready} onClick={send} title="Send (Enter)" aria-label="Send">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M4.5 12h14M13 6.5l5.5 5.5-5.5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

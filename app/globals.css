@@ -18221,12 +18221,13 @@ button.ci-hint { cursor: pointer; }
 /* The chat's plus (7 Oct), left of the box: a menu above it with the camera, the camera roll, a file, and the client's event. */
 .chat-plus { position: relative; flex-shrink: 0; display: flex; align-items: center; }
 .chat-plus-btn svg { transition: transform 0.15s ease; }
-.chat-plus-btn.open svg { transform: rotate(45deg); }
+/* The + stays a plus (4 Nov, Alex: "just have the plus sign as a plus sign always, static"). */
 .chat-plus-menu { position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 9; width: 200px; padding: 6px; border-radius: 16px; background: #fff; color: #333333; box-shadow: 0 20px 50px -14px rgba(8, 31, 92, 0.45); }
 /* Every row the same: one line, 44px, the icon in its own 20px column. */
 .chat-plus-row { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: none; font: inherit; font-size: 14.5px; font-weight: 600; line-height: 1; color: #333333; text-align: left; white-space: nowrap; cursor: pointer; }
 .chat-plus-row svg { display: block; width: 20px; height: 20px; color: #757575; }
-.chat-plus-row:hover { background: #F5F5F5; }
+/* Hover only where there is a pointer: on an iPhone a hover change takes the first tap (4 Nov, Alex: two taps). */
+@media (hover: hover) { .chat-plus-row:hover { background: #F5F5F5; } }
 .chat-plus-row:disabled { color: #9E9E9E; cursor: default; }
 .chat-plus-row:disabled svg { color: #b4bac4; }
 .chat-plus-row small { grid-column: 3; font-size: 11px; font-weight: 600; color: #9E9E9E; }
@@ -21295,3 +21296,28 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 .fdi-meal-menu button { height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 14.5px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
 .fdi-meal-menu button:active { background: #F5F6F8; }
 .fdi-meal-menu button.danger { color: #b42318; }
+
+/* A photo, video or file picked in a chat waits over the box until Send (4 Nov, Alex: "the small thumbnail appears or
+   something above the chat box, and then we press send"; ChatAttachment.tsx): flat on the bar's own colour, in line
+   with the box (--chat-att-inset, past the +); a 44px rounded-square thumbnail (white with the hairline when it is a
+   glyph), `Video | 12.4 MB` grey with the kind in ink, a plain round ✕. Going up, the thumbnail breathes; failed, the
+   words in rust and the row a tap to try again. */
+.chat-att { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding-left: var(--chat-att-inset, 48px); }
+.chat-att-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; font: inherit; text-align: left; color: inherit; }
+button.chat-att-main { cursor: pointer; }
+.chat-att-thumb { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; overflow: hidden; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #5b6474; }
+.chat-att-thumb.has { background: #E1E5EB; box-shadow: none; }
+.chat-att-thumb.video:not(.has) { background: #E1E5EB; box-shadow: none; }
+.chat-att-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.chat-att-play { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 999px; background: rgba(20, 26, 36, 0.55); color: #fff; }
+.chat-att-play svg { margin-left: 1px; }
+.chat-att-thumb.busy { animation: chat-att-breathe 1.4s ease-in-out infinite; }
+@keyframes chat-att-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
+@media (prefers-reduced-motion: reduce) { .chat-att-thumb.busy { animation: none; opacity: 0.6; } }
+.chat-att-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.chat-att-name { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.chat-att-label { font-weight: 600; color: #141a24; }
+.chat-att-err { font-size: 12px; font-weight: 600; color: #b8471f; }
+.chat-att-x { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: none; color: #8b93a1; cursor: pointer; }
+.chat-att-x:hover { background: #EBEDF1; color: #141a24; }
+.chat-att-x:disabled { opacity: 0.4; cursor: default; }
