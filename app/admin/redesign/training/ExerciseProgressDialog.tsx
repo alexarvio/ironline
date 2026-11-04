@@ -41,7 +41,8 @@ const daysBefore = (day: string, n: number) => {
 export type ProgressSession = Session & { gym: string | null; assisted?: boolean; bodyKg?: number | null };
 /** A window: the last 7 or 30 days, today among them (as the cells count), or every session. */
 type Win = "7" | "30" | "all";
-const WIN_LABEL: Record<Win, string> = { "7": "7 days", "30": "30 days", all: "All time" };
+// The first window is the latest session against the one before (4 Nov, Alex: "rename it"; it was 7 days).
+const WIN_LABEL: Record<Win, string> = { "7": "Last session", "30": "30 days", all: "All time" };
 /** A change as the cell writes it: one decimal, "=" for none, a dash with nothing to compare. */
 const cellText = (dv: number | null) => (dv == null ? "—" : dv === 0 ? "0.0%" : `${dv > 0 ? "+" : "−"}${Math.abs(dv).toFixed(1)}%`);
 

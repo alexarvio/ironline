@@ -22,7 +22,7 @@ const num = (n: number | null) => (n == null ? "–" : String(Math.round(n * 100
 const each = (xs: (number | null)[]) => (xs.length === 0 ? "–" : xs.every((x) => x === xs[0]) ? num(xs[0]) : <SepJoin parts={xs.map(num)} />);
 /** The figure columns the week shows, in their order, as the planned sessions draw them. */
 const FIGURES: (keyof Cols)[] = ["sets", "weight", "reps", "rpe", "tempo", "rest"];
-/** After the figures: note, what the client did, 7 days, 30 days, ⋯. */
+/** After the figures: note, what the client did, last session, 30 days, ⋯. */
 const TAIL = 5;
 
 export default function RogueSessions({ items, firstName, grid, cols, unit, minW, kgOf }: { items: DraftRogue[]; firstName: string; grid: React.CSSProperties; cols: Cols; unit: string; minW: number; /** Kg into what the coach is reading in. */ kgOf: (kg: number | null) => number | null }) {
