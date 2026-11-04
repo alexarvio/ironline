@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useDismiss } from "./useDismiss";
 import { discardSessionAction, endSessionAction, setExerciseUnitAction } from "../lib/actions";
-import { ChatIcon, ChevronLeftIcon } from "../components/icons";
+import { ChatIcon, ChevronLeftIcon, NOTE_ICON_PATHS } from "../components/icons";
 import { useOpenMessages } from "./CheckInContext";
 import type { GymOption } from "./GymPickerDialog";
 import ExercisePage, { MAX_WARMUPS, type ExerciseRequest } from "./ExercisePage";
@@ -581,8 +581,8 @@ export default function WorkoutScreen({
 // The ⋯ menu's icons, one per row.
 const MENU_ICONS = {
   gym: ["M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z", "M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"],
-  // The note's pen on a line, as Your note draws it (4 Nov, Alex: option A).
-  note: ["M12 20h8", "M16.4 3.6a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"],
+  // The note's pen on a line, the one NoteIcon drawing (4 Nov, Alex: option A).
+  note: NOTE_ICON_PATHS,
   warmup: ["M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"],
   swap: ["M8 3 4 7l4 4", "M4 7h16", "m16 21 4-4-4-4", "M20 17H4"],
   media: ["M4 7h3l2-3h6l2 3h3v12H4z", "M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"],
