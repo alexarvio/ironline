@@ -65,7 +65,7 @@ export function ChatImage({ src, className, look, opens = true }: { src: string;
 }
 
 /** A chat's picture on the whole screen at its full size (pinch to zoom stays the phone's own), with an ✕ (Esc too). */
-function FullImage({ src, onClose }: { src: string; onClose: () => void }) {
+export function FullImage({ src, onClose }: { src: string; onClose: () => void }) {
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", esc);
@@ -211,7 +211,7 @@ export function ChatVideo({ src, className, controls = true, look }: { src: stri
 }
 
 /** A chat's video on the whole screen, playing, with its own controls and an ✕ (Esc too). */
-function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
+export function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", esc);
