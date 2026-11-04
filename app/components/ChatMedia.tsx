@@ -59,22 +59,36 @@ export function ChatImage({ src, className, look, opens = true }: { src: string;
           }
         }}
       />
-      {full && typeof document !== "undefined" && createPortal(<FullImage src={src} onClose={() => setFull(false)} />, document.body)}
+      {full && typeof document !== "undefined" && createPortal(<FullImage src={src} preview={sized(src, 1080)} onClose={() => setFull(false)} />, document.body)}
     </>
   );
 }
 
-/** A chat's picture on the whole screen at its full size (pinch to zoom stays the phone's own), with an ✕ (Esc too). */
-export function FullImage({ src, onClose }: { src: string; onClose: () => void }) {
+/** A chat's picture on the whole screen at its full size (pinch to zoom stays the phone's own), with an ✕ (Esc too).
+ *  `preview`, the copy already on the phone (the chat's 1080), shows at once and the original takes its place once it
+ *  has come (4 Nov, Alex: "it takes a second for them to load"). */
+export function FullImage({ src, preview, onClose }: { src: string; preview?: string; onClose: () => void }) {
+  const [sharp, setSharp] = useState(!preview);
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", esc);
     return () => window.removeEventListener("keydown", esc);
   }, [onClose]);
+  useEffect(() => {
+    if (!preview) return;
+    let gone = false;
+    const full = new Image();
+    full.onload = () => !gone && setSharp(true);
+    full.src = src;
+    return () => {
+      gone = true;
+      full.onload = null;
+    };
+  }, [src, preview]);
   return (
     <div className="cmv-full" role="dialog" aria-modal="true" aria-label="Picture" onClick={(e) => { e.stopPropagation(); onClose(); }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- the upload itself, full size */}
-      <img src={src} alt="" onClick={(e) => e.stopPropagation()} />
+      <img src={sharp ? src : preview} alt="" onClick={(e) => e.stopPropagation()} />
       <button type="button" className="cmv-x" onClick={(e) => { e.stopPropagation(); onClose(); }} aria-label="Close the picture">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
           <path d="M6 6l12 12M18 6L6 18" />
@@ -233,6 +247,11 @@ export function FullVideo({ src, onClose }: { src: string; onClose: () => void }
  * A video's first frame taken on the sender's own device, as WhatsApp does (25 Oct, Alex: the boxes stayed black; the
  * server could not make one): a JPEG 720 wide at most, sent with the video as "poster". Null when the browser can't
  * read the video in a few seconds; the server then makes one itself if it can.
+ *
+ * On an iPhone (4 Nov, Alex: a 114 MB camera-roll clip gave no frame) a video off the page often never loads a frame
+ * nor seeks without playing: so it sits in the page, a pixel big and all but see-through, muted and inline; it seeks to
+ * 0.1 s once its size is known, and when no frame has come 1.5 s on, it plays (muted) and is drawn on its first frame
+ * played, then paused. Drawn only once it has a size and a frame; given up after 8 s; always taken away after.
  */
 export function videoFrame(file: File): Promise<Blob | null> {
   if (typeof document === "undefined" || !file.type.startsWith("video/")) return Promise.resolve(null);
@@ -240,36 +259,69 @@ export function videoFrame(file: File): Promise<Blob | null> {
     const url = URL.createObjectURL(file);
     const v = document.createElement("video");
     let done = false;
+    let drawing = false;
     const finish = (b: Blob | null) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
-      URL.revokeObjectURL(url);
+      clearTimeout(nudge);
+      try {
+        v.pause();
+      } catch {}
       v.removeAttribute("src");
-      v.load();
+      try {
+        v.load();
+      } catch {}
+      v.remove();
+      URL.revokeObjectURL(url);
       resolve(b);
     };
-    const timer = setTimeout(() => finish(null), 5000);
-    v.muted = true;
-    v.playsInline = true;
-    v.preload = "auto";
-    v.onloadeddata = () => {
-      v.currentTime = Math.min(0.1, (v.duration || 1) / 2);
-    };
-    v.onseeked = () => {
+    const timer = setTimeout(() => finish(null), 8000);
+    const draw = () => {
+      // HAVE_CURRENT_DATA: a frame is there to draw, not only the size.
+      if (done || drawing || !v.videoWidth || !v.videoHeight || v.readyState < 2) return;
+      drawing = true;
       try {
-        const k = Math.min(1, 720 / Math.max(v.videoWidth || 1, 1));
+        v.pause();
+        const k = Math.min(1, 720 / v.videoWidth);
         const c = document.createElement("canvas");
-        c.width = Math.max(1, Math.round((v.videoWidth || 720) * k));
-        c.height = Math.max(1, Math.round((v.videoHeight || 720) * k));
+        c.width = Math.max(1, Math.round(v.videoWidth * k));
+        c.height = Math.max(1, Math.round(v.videoHeight * k));
         c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
         c.toBlob((b) => finish(b), "image/jpeg", 0.8);
       } catch {
         finish(null);
       }
     };
+    v.muted = true;
+    v.defaultMuted = true;
+    v.playsInline = true;
+    v.setAttribute("muted", "");
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "");
+    v.preload = "auto";
+    v.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1";
+    v.onloadedmetadata = () => {
+      try {
+        v.currentTime = Math.min(0.1, (v.duration || 1) / 2);
+      } catch {}
+    };
+    v.onseeked = draw;
+    v.onloadeddata = () => {
+      if (!v.seeking) draw();
+    };
     v.onerror = () => finish(null);
+    // Declared after finish as timer is: finish only runs from events and timers, after both are set.
+    const nudge = setTimeout(() => {
+      if (done || drawing) return;
+      v.addEventListener("playing", draw);
+      v.addEventListener("timeupdate", draw);
+      const p = v.play();
+      if (p) p.catch(() => {});
+    }, 1500);
     v.src = url;
+    document.body.appendChild(v);
+    v.load();
   });
 }
 

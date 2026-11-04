@@ -21,7 +21,8 @@
 //     att.clear()   takes it away (the ✕, or once sent): the upload is stopped, the object URLs revoked; an upload the
 //                   server has and nobody claims is swept after an hour
 //   <ChatAttachmentRow att={att} sending={pending} />   the row itself, over the box: a 44px thumbnail (a photo itself,
-//     a video's first frame with a small play mark, else a file glyph), `Video | 12.4 MB` (a file its name), a round ✕.
+//     a video's first frame with a small play mark, the video itself drawn still until that frame is had, else a file
+//     glyph), `Video | 12.4 MB` (a file its name), a round ✕.
 //     While it goes up (or Send waits for it) the thumbnail breathes; failed, `Not uploaded. Tap to try again` in rust.
 //     Classes `chat-att-` (globals.css, the 4 Nov block at its end); `--chat-att-inset` lines it up with the box.
 
@@ -36,6 +37,8 @@ export type ChatAttachmentState = {
   file: File;
   kind: ChatAttachmentKind;
   thumb: string | null;
+  /** A video's own object URL, drawn as its thumbnail until (or unless) its first frame is had as a picture. */
+  video: string | null;
   status: ChatAttachmentStatus;
   error: string | null;
   nonce: string;
@@ -136,11 +139,16 @@ export function useChatAttachment(clientId: number): ChatAttachment {
       const urls: string[] = [];
       const thumb = kind === "photo" ? URL.createObjectURL(file) : null;
       if (thumb) urls.push(thumb);
+      // The video itself stands in as its thumbnail at once (4 Nov, Alex: "I want also the thumbnail of the video in
+      // there"; a 114 MB camera-roll clip showed a grey tile, its frame never taken on the iPhone): Safari draws a
+      // <video>'s first frame by itself. Its picture replaces it once had.
+      const video = kind === "video" ? URL.createObjectURL(file) : null;
+      if (video) urls.push(video);
       // A video's first frame, taken once: the thumbnail now and the message's poster on Send (25 Oct, as WhatsApp).
       const poster = kind === "video" ? videoFrame(file) : Promise.resolve(null);
       const j: Job = { id, file, urls, poster, upload: null, abort: null, at: 0 };
       job.current = j;
-      setCurrent({ file, kind, thumb, status: "uploading", error: null, nonce: newKey(), unsent: false });
+      setCurrent({ file, kind, thumb, video, status: "uploading", error: null, nonce: newKey(), unsent: false });
       if (kind === "video")
         void poster.then((b) => {
           if (!b || job.current?.id !== id) return;
@@ -200,13 +208,26 @@ export function ChatAttachmentRow({ att, sending = false }: { att: ChatAttachmen
   if (!a) return null;
   const busy = a.status === "uploading" || sending;
   const thumb = a.thumb && broken !== a.thumb ? a.thumb : null;
+  const video = !thumb && a.kind === "video" && a.video && broken !== a.video ? a.video : null;
   const label = a.kind === "photo" ? "Photo" : a.kind === "video" ? "Video" : a.file.name || "File";
   const body = (
     <>
-      <span className={`chat-att-thumb ${a.kind}${thumb ? " has" : ""}${busy ? " busy" : ""}`} aria-hidden="true">
+      <span className={`chat-att-thumb ${a.kind}${thumb || video ? " has" : ""}${busy ? " busy" : ""}`} aria-hidden="true">
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={thumb} alt="" onError={() => setBroken(thumb)} />
+        ) : video ? (
+          // The video drawn still at 0.1 s as its own thumbnail until its frame is a picture (4 Nov, Alex).
+          <video
+            src={`${video}#t=0.1`}
+            muted
+            playsInline
+            preload="metadata"
+            disablePictureInPicture
+            disableRemotePlayback
+            tabIndex={-1}
+            onError={() => setBroken(video)}
+          />
         ) : a.kind === "file" || a.kind === "photo" ? (
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
             <path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8L14 3.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />

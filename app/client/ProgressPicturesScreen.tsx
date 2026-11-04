@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { removeProgressPhotoAction, uploadProgressPhotoAction } from "../lib/actions";
+import { uploadProgressPhotoAction } from "../lib/actions";
 import { fitJpeg } from "../lib/coverJpeg";
 import { ArrowRightIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenPhotos } from "./CheckInContext";
@@ -185,7 +185,7 @@ export default function ProgressPicturesScreen({
 type Staged = { file: File; preview: string };
 
 // The open sheet, like a check-in, as a section that comes open while it is
-// to do: a row per angle with Add on the right (camera or library), Save to
+// to do: a card per angle, a tap opening the phone's own picker (4 Nov), Save to
 // send them, and once all are in it folds like the earlier ones, with Edit
 // inside to reopen it. Save sends one
 // photo at a time so a weak connection fails on one photo, not all of them.
@@ -209,7 +209,15 @@ function OpenSheet({
   // Picked photos that have already gone up during the current Save.
   const [sent, setSent] = useState<number[]>([]);
   const [uploadingId, setUploadingId] = useState<number | null>(null);
-  const [picking, setPicking] = useState<Slot | null>(null);
+  // A tap on an angle opens the phone's own picker in one tap (4 Nov, Alex: "do that for shape update please"; our
+  // Take a photo | Choose from library sheet came before the iPhone's own Photo Library | Take Photo or Video |
+  // Choose File, two menus for one photo): one hidden field, opened by .click() from the tile, remembering which angle asked.
+  const photoInput = useRef<HTMLInputElement>(null);
+  const photoFor = useRef<Slot | null>(null);
+  const askPhoto = (slot: Slot) => {
+    photoFor.current = slot;
+    photoInput.current?.click();
+  };
   const [editing, setEditing] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -241,33 +249,14 @@ function OpenSheet({
   }, [leaving]);
 
   const total = sheet.slots.length;
+  const hinted = sheet.slots.filter((s) => s.hint?.trim());
   const inCount = sheet.slots.filter((s) => s.src).length;
   // Folded once every angle is in and nothing new is waiting.
   const collapsed = inCount === total && stagedCount === 0 && !editing && !saving;
 
-  const removePhoto = (slot: Slot) => {
-    setPicking(null);
-    setFailed(false);
-    if (staged[slot.id]) {
-      setStaged((s) => {
-        const next = { ...s };
-        delete next[slot.id];
-        return next;
-      });
-      return;
-    }
-    const fd = new FormData();
-    fd.set("clientId", String(clientId));
-    fd.set("slotId", String(slot.id));
-    fd.set("period", sheet.period);
-    startSaving(async () => {
-      await removeProgressPhotoAction(fd);
-    });
-  };
   const pick = (slot: Slot, file: File) => {
     const preview = URL.createObjectURL(file);
     previews.current.push(preview);
-    setPicking(null);
     setFailed(false);
     setJustSaved(false);
     setStaged((s) => ({ ...s, [slot.id]: { file, preview } }));
@@ -376,16 +365,29 @@ function OpenSheet({
           )}
 
           {/* How to take them, first (17 Oct, Alex): the coach's general instructions sit above the cards, read before the camera comes out. */}
-          {sheet.instructions && (
+          {/* The coach's word on how to take each angle (21 Oct, Alex) was the title of our sheet; with the phone's own
+              picker in its place (4 Nov, Alex) it reads here, under the general instructions, each angle by its name. */}
+          {(sheet.instructions || hinted.length > 0) && (
             <div className="pp-todo-coach first">
-              <CoachSays label="How to take them">{sheet.instructions}</CoachSays>
+              <CoachSays label="How to take them">
+                {sheet.instructions}
+                {hinted.length > 0 && (
+                  <span className={`pp-todo-hints${sheet.instructions ? "" : " alone"}`}>
+                    {hinted.map((s) => (
+                      <span key={s.id} className="pp-todo-hint">
+                        <b>{s.label}</b> {s.hint}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </CoachSays>
             </div>
           )}
 
           {/* The angles the coach asks for as a swipe of big cards (17 Oct, Alex); an empty one is a card too, a tap adds or changes its photo. */}
           <PhotoDeck
             disabled={saving}
-            onTap={(i) => setPicking(sheet.slots[i])}
+            onTap={(i) => askPhoto(sheet.slots[i])}
             items={sheet.slots.map((s) => {
               const item = staged[s.id];
               const uploading = uploadingId === s.id;
@@ -447,43 +449,21 @@ function OpenSheet({
         </div>
       )}
 
-      {picking && (
-        <div className="pp-app-sheet-scrim" role="presentation" onClick={() => setPicking(null)}>
-          <div className="pp-app-sheet" role="dialog" aria-modal="true" aria-label={`Add ${picking.label}`} onClick={(e) => e.stopPropagation()}>
-            <div className="pp-app-sheet-head">
-              <span className="pp-app-sheet-title">{picking.label}</span>
-              {/* The coach's word on how to take this one, when there is one (21 Oct, Alex). */}
-              {picking.hint && <span className="pp-app-sheet-sub">{picking.hint}</span>}
-            </div>
-            {[
-              { label: "Take a photo", capture: true },
-              { label: "Choose from library", capture: false },
-            ].map((o) => (
-              <label key={o.label} className="pp-app-sheet-option">
-                {o.label}
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture={o.capture ? "environment" : undefined}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) pick(picking, file);
-                  }}
-                />
-              </label>
-            ))}
-            {/* Take it off (17 Oct): a photo picked on this visit just goes; a sent one is removed from the sheet. */}
-            {(staged[picking.id] || picking.src) && (
-              <button type="button" className="pp-app-sheet-remove" onClick={() => removePhoto(picking)} disabled={saving}>
-                Remove photo
-              </button>
-            )}
-            <button type="button" className="pp-app-sheet-cancel" onClick={() => setPicking(null)}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      {/* No capture (4 Nov, Alex): the iPhone's own sheet offers Take Photo as well as the library. As the food diary's camera. */}
+      <input
+        ref={photoInput}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          // Cleared so picking the same file twice still fires.
+          e.target.value = "";
+          const slot = photoFor.current;
+          photoFor.current = null;
+          if (file && slot) pick(slot, file);
+        }}
+      />
     </article>
   );
 }
