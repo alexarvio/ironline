@@ -97,16 +97,17 @@ export default function ExerciseProgressDialog({
   const [gym, setGym] = useState<string | null>(null);
   const atGym = useMemo(() => (gym ? all.filter((s) => s.gym === gym) : all), [all, gym]);
   // Each window judged, every session weighed as the loader weighed it: that day's exercise assisted or not, the body
-  // weight that day. The windows are the cells': the last 30 days with today; 7 days the sessions in the last 7 days
-  // and the one before them, which the latest is compared with (4 Nov, Alex: "compares this session to the last session").
+  // weight that day. The windows are the cells': the last 30 days with today; 7 days the latest session and the one
+  // before it, which it is compared with (4 Nov, Alex: "compares this session to the last session").
   const js = useMemo(() => {
     const load = (w: number, s: ProgressSession) => liftedKg(w, s.assisted ?? assisted, s.bodyKg ?? bodyKg);
     const dated = atGym.filter((s) => !!s.date && s.date.slice(0, 10) <= today);
     const within = (from: string) => dated.filter((s) => s.date!.slice(0, 10) >= from);
-    const week = within(daysBefore(today, 6));
-    const earlier = dated.filter((s) => s.date!.slice(0, 10) < daysBefore(today, 6));
+    // The latest day it was done and the day before that, however long ago (4 Nov, Alex: four weeks in a row read None
+    // when the last was 8 days back).
+    const daysDone = [...new Set(dated.map((s) => s.date!.slice(0, 10)))].sort().slice(-2);
     const out: Record<Win, Judged> = {
-      "7": judge(week.length && earlier.length ? [earlier[earlier.length - 1], ...week] : week, load),
+      "7": judge(dated.filter((s) => daysDone.includes(s.date!.slice(0, 10))), load),
       "30": judge(within(daysBefore(today, 29)), load),
       all: judge(atGym, load),
     };
@@ -135,7 +136,7 @@ export default function ExerciseProgressDialog({
       }
       const order = [...byDay.keys()].sort();
       const [b, a] = order.slice(-2);
-      if (!a || !b || a < daysBefore(today, 6)) return { pct: null, since: null };
+      if (!a || !b) return { pct: null, since: null };
       return { pct: Math.round(((byDay.get(a)! - byDay.get(b)!) / byDay.get(b)!) * 1000) / 10, since: null };
     }
     const days = 30;
@@ -240,7 +241,7 @@ export default function ExerciseProgressDialog({
   }, [chartEl]);
 
   // The window picked alone (4 Nov, Alex: the window before in grey "is not self-explanatory enough"): 30 days by the
-  // calendar, its first day, its middle and today under it; 7 days from the session before the week to the latest, by
+  // calendar, its first day, its middle and today under it; 7 days from the session before to the latest, by
   // date, as All time.
   const winFrom = view === "30" ? daysBefore(today, 29) : null;
 

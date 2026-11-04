@@ -272,7 +272,8 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
 .rd-dock-back svg { width: 16px; height: 16px; margin-left: -4.75px; translate: 0 -0.5px; }
 .rd-dock-back:hover { background: #eef0f3; color: #141a24; }
 .rd-dock-back:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; color: #141a24; }
-.rd-dock-back-n { margin-left: 4px; font-size: 12px; font-weight: 600; color: #b8471f; font-variant-numeric: tabular-nums; }
+/* The count as the words: their size, on their baseline (4 Nov, Alex: at 12px it sat small and a quarter pixel high). */
+.rd-dock-back-n { margin-left: 4px; font-size: 13px; font-weight: 600; color: #b8471f; font-variant-numeric: tabular-nums; }
 .rd-chatdock .rm-panel { padding-top: 4px; }
 /* This client's thread waits behind the list and other chats, as it was. */
 .rd-chatview { flex: 1; min-height: 0; display: flex; flex-direction: column; }
