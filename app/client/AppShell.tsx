@@ -721,9 +721,11 @@ export default function AppShell({
                   {/* Events (9 Oct): the deliberate way in; the Home card is the quick one. */}
                   {events && (
                     <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("events"))}>
+                      {/* A ticket, not a flag: the flag is a phase's (4 Nov, Alex: option D of docs/boards/events-icon-mockup.html). */}
                       <span className="app-menu-ico">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M5 21V4M5 4h12l-2 4 2 4H5" />
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M3.5 8a2 2 0 0 0 0 4a2 2 0 0 1 0 4V18a1.5 1.5 0 0 0 1.5 1.5h14A1.5 1.5 0 0 0 20.5 18v-2a2 2 0 0 1 0-4a2 2 0 0 1 0-4V6A1.5 1.5 0 0 0 19 4.5H5A1.5 1.5 0 0 0 3.5 6z" />
+                          <path d="M14.5 4.5v15" strokeDasharray="2 2.4" />
                         </svg>
                       </span>
                       Events
