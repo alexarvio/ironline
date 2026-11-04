@@ -5024,7 +5024,13 @@ export function photoSheetForClient(clientId: number, day: string): string | nul
  *  finished one never opens again); otherwise the calendar decides the open sheet again. */
 export function resetPhotoOpenSheet(clientId: number, day: string) {
   const held = getPhotoOpenPeriod(clientId);
-  holdPhotoSheet(clientId, held && held > day ? (upcomingPhotoSheets(clientId, day, 1)[0] ?? null) : null);
+  if (!held || held <= day) return holdPhotoSheet(clientId, null);
+  // A new schedule whose sheet opens today opens it today, as a late finish does (4 Nov, Alex: Starts set to today
+  // waited a week, so nothing showed in Today), unless that day's sheet already has photos: a finished one never
+  // opens again.
+  const opensToday = calendarPhotoSheet(clientId, day) === day;
+  const takenToday = opensToday && listPhotoUploads(listPhotoSlots(clientId).map((s) => s.id)).some((u) => u.period === day);
+  holdPhotoSheet(clientId, opensToday && !takenToday ? day : (upcomingPhotoSheets(clientId, day, 1)[0] ?? null));
 }
 
 /** The day the next sheet opens while none is open: the one waiting for its day, else the calendar's next. */
