@@ -703,7 +703,7 @@ function Media({ media, onOpen }: { media: DraftMedia; onOpen: (src: string) => 
     );
   return (
     <button type="button" className="cph-img" onClick={() => onOpen(sized(media.path, 1080))} aria-label="Open the photo">
-      <ChatImage src={media.path} look={media} />
+      <ChatImage src={media.path} look={media} opens={false} />
     </button>
   );
 }
