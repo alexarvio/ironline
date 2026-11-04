@@ -1,6 +1,9 @@
 /* The Messages draft: one chat box on top of the Training draft's sheet. */
 
 .rm-title-sub { font-size: 13px; font-weight: 500; letter-spacing: 0; color: #8b93a1; }
+/* When the client was last in the app (4 Nov, Alex: `Active 12 min ago`, as WhatsApp): a grey fact line under the name,
+   in from the face (38px and the title's 12px gap), inside the head's 76px, so the head keeps its height with it or without. */
+.rm .rm-active { display: block; height: 18px; padding-left: 50px; font-size: 13px; font-weight: 500; line-height: 18px; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* The box: the thread fills it, the bar is docked at its foot. Its height is
    set in MessagesDraft to reach the foot of the window. */

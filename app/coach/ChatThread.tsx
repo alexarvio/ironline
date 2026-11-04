@@ -16,6 +16,7 @@ import { dayMonth } from "../lib/dayMonth";
 import { useKeyboardInset } from "../client/useKeyboardInset";
 import { Avatar, Facts, Icon } from "./parts";
 import { ChatReview } from "./PhoneReview";
+import LastActive from "../components/LastActive";
 
 // One client's chat on the coach's phone (21 Oct): the laptop's thread (its
 // loader, through coachThreadAction, which also keeps this chat's pushes
@@ -559,7 +560,12 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
           <Icon name="back" size={22} />
         </button>
         <Avatar name={name || "?"} src={avatar} size={34} />
-        <h1>{name}</h1>
+        {/* The name, and under it when they were last in the app (4 Nov, Alex: as WhatsApp); its line's room always
+            kept (while the thread loads, and empty when they have never been in since), so the name never moves. */}
+        <div className="cph-thread-who">
+          <h1>{name}</h1>
+          <LastActive at={plan?.lastActiveAt} className="cph-thread-active" keepRoom />
+        </div>
         <button type="button" className="cph-icon-btn quiet" onClick={() => setGallery(true)} aria-label="Photos, videos and files in this chat">
           <Icon name="photo" />
         </button>

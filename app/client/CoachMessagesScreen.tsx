@@ -196,9 +196,18 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
   const theirSide = viewerIsClient ? "coach" : "client";
 
   // Keep it fresh while it is open, and stay at the newest message.
+  // Only while the chat is on screen (4 Nov: a chat left open in a hidden tab kept reading, so the coach saw
+  // "Active now" all day); it reads once as it comes back.
   useEffect(() => {
-    const t = setInterval(() => void refresh(), POLL_MS);
-    return () => clearInterval(t);
+    const t = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, POLL_MS);
+    const back = () => document.visibilityState === "visible" && void refresh();
+    document.addEventListener("visibilitychange", back);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", back);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh reads only clientId and viewerIsClient
   }, [clientId]);
   // Open on the newest message, or on the first new one when the coach wrote since (25 Oct, Alex: "always defaulted

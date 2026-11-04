@@ -20,6 +20,7 @@ import type { MessageLink } from "../../../lib/messageLinks";
 import { pic } from "../../../lib/pic";
 import type { LinkTargets } from "../../../lib/queries";
 import { Sep, SepJoin } from "../Sep";
+import LastActive from "../../../components/LastActive";
 
 // The Messages tab in the redesign's sheet: one chat box, and unlike the
 // other drafts it is real. Everything here sends and saves through the same
@@ -33,7 +34,7 @@ export type DraftLink = { area: string; label: string; gone: boolean; link?: Mes
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null; thumb?: string | null; w?: number | null; h?: number | null };
 export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean; /** The other side has had the chat open since (27 Oct): Seen under the last of yours. */ seen?: boolean; /** The message it answers, quoted (mine: the coach's own). */ replyTo?: { id: number; mine: boolean; text: string } | null };
 /** Newest first, as the loader hands them over. */
-export type DraftMessages = { /** The chat's revision (chatBus.ts): handed back, so an unchanged chat sends nothing. */ rev?: string; messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean; /** The first of those (25 Oct): the phone opens on it. */ firstUnread?: number | null };
+export type DraftMessages = { /** The chat's revision (chatBus.ts): handed back, so an unchanged chat sends nothing. */ rev?: string; messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean; /** The first of those (25 Oct): the phone opens on it. */ firstUnread?: number | null; /** When the client was last in the app (4 Nov, Alex; presence.ts), ISO: the head's `Active 12 min ago`. */ lastActiveAt?: string | null };
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 const POLL_MS = 15000;
 
@@ -520,6 +521,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
             </span>
             {firstName}
           </h1>
+          {/* When they were last in the app (4 Nov, Alex: as WhatsApp), under the name, in the head's own room for a fact line. */}
+          <LastActive at={plan.lastActiveAt} className="rm-active" keepRoom />
         </div>
         {/* Everything sent in this chat, gathered (2 Oct). */}
         <button type="button" className="cmg-btn rm-media-btn" onClick={() => setGallery(true)} title="Photos, videos and files sent in this chat">
