@@ -34,6 +34,22 @@ export type ProgressPicturesProps = {
 };
 
 
+/** The banner's photo, as globals.css draws it (`.tr-banner.ci-banner.pp-banner`): keep the two the same. */
+export const SHAPE_UPDATE_BANNER = "/home/progress-pics.jpg";
+
+// Fetched and decoded while Home sits, so the banner is there the moment Shape update opens (4 Nov, Alex: it came in
+// half a second late). Every other banner's picture is an <img> already on Home (the phase cards), so the browser has
+// it; this one is a CSS background on a screen not yet mounted, so its fetch only began on opening. Held here so the
+// browser keeps it for the page's life.
+let warmed: HTMLImageElement | null = null;
+export function warmShapeUpdateBanner() {
+  if (warmed || typeof window === "undefined") return;
+  warmed = new Image();
+  warmed.decoding = "async";
+  warmed.src = SHAPE_UPDATE_BANNER;
+  warmed.decode?.().catch(() => {});
+}
+
 // The client's progress pictures: the sheet open now, filled in and sent
 // with Save like a check-in, and a feed of every earlier sheet below, all
 // folded until opened. A pushed layer in AppShell, from Home and Account.
