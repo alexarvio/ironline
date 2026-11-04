@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, sendChatMessageAction, setMessageLinkAction } from "../lib/actions";
 import type { LinkView } from "../lib/messageLinks";
+import { uploadFirstOrThrow } from "../lib/uploadFirst";
 import type { LinkTargets } from "../lib/queries";
 import MessageReactions from "../components/MessageReactions";
 import VoiceRecordButton from "../components/VoiceRecordButton";
@@ -94,7 +95,8 @@ export default function MessagesWorkspace({
     fd.set("clientId", String(clientId));
     fd.set("text", "");
     fd.set("file", file);
-    act(() => sendChatMessageAction(fd));
+    // The file goes ahead to the server's disk; the send carries its handle (4 Nov, Alex: memory).
+    act(async () => sendChatMessageAction(await uploadFirstOrThrow(fd, "chat", clientId)));
   };
 
   // Day headings: one per day, on its first message.

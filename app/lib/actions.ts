@@ -387,7 +387,9 @@ import {
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import { COACH_PROFILE_LIMITS } from "./coachProfileView";
-import { deleteUpload, keyOf, posterFromDevice, prepareChatMedia, putUpload, warmSmallCopies, webChatVideo } from "./storage";
+import { deleteUpload, keyOf, posterFromDevice, prepareChatMedia, putUpload, putUploadFromDisk, warmSmallCopies, webChatVideo } from "./storage";
+import fs from "fs";
+import { claimUpload, discardUpload, placeUpload, UPLOAD_CAPS, type StagedUpload, type UploadKind } from "./streamUpload";
 import { logoAsPng, makeLogoMark, removeCoachLogo, saveCoachLogo } from "./brandMark";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
@@ -1515,6 +1517,15 @@ export async function remindProgressPicturesAction(clientId: number) {
   revalidatePath("/client");
 }
 
+/** A file sent ahead to /api/upload (4 Nov, Alex: memory was 92% of the bill; lib/streamUpload.ts): the form's
+ *  "upload" handle, taken once, only by the user who sent it and for this client. Null when there is none. */
+async function takeUpload(formData: FormData, clientId: number | null, kinds: readonly UploadKind[]): Promise<StagedUpload | null> {
+  const user = await getSessionUser();
+  return user ? claimUpload(formData.get("upload"), { userId: user.id, clientId, kinds }) : null;
+}
+/** What the saving queries write where the upload then lands: the bytes stay on the disk, never in memory. */
+const EMPTY = Buffer.alloc(0);
+
 export async function uploadProgressPhotoAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const slotId = Number(formData.get("slotId"));
@@ -1528,6 +1539,8 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   const sent = String(formData.get("period") ?? "");
   if (!sheet || (sent && sent !== sheet)) throw new Error("That sheet has closed");
   if (!listActivePhotoSlots(clientId).some((s) => s.id === slotId)) throw new Error("That angle isn't asked for any more");
+  // Still in the action's body (4 Nov, Alex: memory): shrunk on the phone to a few hundred KB (fitJpeg), well under
+  // next.config.ts's 25mb; the big files go through /api/upload.
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return;
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -1558,6 +1571,8 @@ export async function uploadMealPhotoAction(formData: FormData) {
   const meal = String(formData.get("meal") ?? "");
   if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date) || !meal) return;
 
+  // Still in the action's body (4 Nov, Alex: memory): a phone photo, a few MB, under next.config.ts's 25mb; the big
+  // files go through /api/upload.
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return;
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -1648,26 +1663,28 @@ export async function markVideoSeenAction(id: number) {
   revalidatePath("/admin");
 }
 
-// The client's video for a request: 128 MB, two minutes (next.config.ts's
-// body limits are sized for it); the phone checks length and size
+// The client's video for a request: 128 MB, two minutes (/api/upload's cap,
+// lib/streamUpload.ts); the phone checks length and size
 // first and says so, this is the backstop. Returns an error to show, or null.
-const MAX_REQUESTED_VIDEO_BYTES = 128 * 1024 * 1024;
+const MAX_REQUESTED_VIDEO_BYTES = UPLOAD_CAPS.video;
 export async function uploadRequestedVideoAction(formData: FormData): Promise<string | null> {
   const id = Number(formData.get("requestId"));
   const owner = getClientIdForVideoRequest(id);
   if (owner == null) return "That request is gone.";
   await requireClientAccess(owner);
-  const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) return "Choose a video first.";
-  if (!file.type.startsWith("video/")) return "That doesn't look like a video.";
-  if (file.size > MAX_REQUESTED_VIDEO_BYTES) return `That video is ${Math.round(file.size / 1024 / 1024)} MB. The limit is 128 MB: film in 1080p and keep it under two minutes.`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const saved = saveRequestedVideo(id, buffer, file.type);
-  if (!saved) return "That request is gone.";
+  // Sent ahead to /api/upload and written to the disk as it came (4 Nov, Alex: memory): the handle here.
+  const up = await takeUpload(formData, owner, ["media"]);
+  if (!up) return "Choose a video first.";
+  const refuse = (why: string) => (discardUpload(up), why);
+  if (!up.type.startsWith("video/")) return refuse("That doesn't look like a video.");
+  if (up.size > MAX_REQUESTED_VIDEO_BYTES) return refuse(`That video is ${Math.round(up.size / 1024 / 1024)} MB. The limit is 128 MB: film in 1080p and keep it under two minutes.`);
+  const saved = saveRequestedVideo(id, EMPTY, up.type);
+  if (!saved) return refuse("That request is gone.");
+  const onDisk = placeUpload(up, saved.path);
   if (saved.previous) await deleteUpload(saved.previous);
-  await putUpload(saved.path, buffer, file.type);
-  // Its poster (or a photo's small copies) made now, so the coach's lists show it at once (25 Oct, Alex).
-  afterResponse(() => prepareChatMedia(saved.path, file.type.startsWith("image/") ? "image" : "video", file.type.startsWith("image/") ? buffer : undefined));
+  await putUploadFromDisk(saved.path, onDisk, up.type);
+  // Its poster made now, so the coach's lists show it at once (25 Oct, Alex).
+  afterResponse(() => prepareChatMedia(saved.path, "video"));
   // The coach's phone buzzes (21 Oct, /coach); not for a coach trying the client's app.
   if ((await getSessionUser())?.role === "client") pushCoachVideo(id);
   revalidatePath("/admin");
@@ -1681,23 +1698,28 @@ export async function sendExerciseMediaAction(formData: FormData): Promise<strin
   const owner = getClientIdForAssignment(assignmentId);
   if (owner == null) return "That exercise is gone.";
   await requireClientAccess(owner);
-  const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) return "Choose a photo or a video first.";
-  const isImage = file.type.startsWith("image/");
-  const isVideo = file.type.startsWith("video/");
-  if (!isImage && !isVideo) return "That doesn't look like a photo or a video.";
-  if (isVideo && file.size > MAX_REQUESTED_VIDEO_BYTES) return `That video is ${Math.round(file.size / 1024 / 1024)} MB. The limit is 128 MB: film in 1080p and keep it under two minutes.`;
-  if (isImage && file.size > 20 * 1024 * 1024) return "That photo is over 20 MB. Send a smaller one.";
+  // Sent ahead to /api/upload and written to the disk as it came (4 Nov, Alex: memory): the handle here.
+  const up = await takeUpload(formData, owner, ["media"]);
+  if (!up) return "Choose a photo or a video first.";
+  const refuse = (why: string) => (discardUpload(up), why);
+  const isImage = up.type.startsWith("image/");
+  const isVideo = up.type.startsWith("video/");
+  if (!isImage && !isVideo) return refuse("That doesn't look like a photo or a video.");
+  if (isVideo && up.size > MAX_REQUESTED_VIDEO_BYTES) return refuse(`That video is ${Math.round(up.size / 1024 / 1024)} MB. The limit is 128 MB: film in 1080p and keep it under two minutes.`);
+  if (isImage && up.size > UPLOAD_CAPS.photo) return refuse("That photo is over 20 MB. Send a smaller one.");
   const about = String(formData.get("about") ?? "") === "swap" ? "swap" : null;
   const row = fileClientMedia(assignmentId, { about, note: String(formData.get("note") ?? ""), media: isImage ? "photo" : "video" });
-  if (!row) return "That exercise is gone.";
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const saved = saveRequestedVideo(row.id, buffer, file.type);
-  if (!saved) return "That exercise is gone.";
+  if (!row) return refuse("That exercise is gone.");
+  const saved = saveRequestedVideo(row.id, EMPTY, up.type);
+  if (!saved) return refuse("That exercise is gone.");
+  const onDisk = placeUpload(up, saved.path);
+  // A photo (20 MB at most) is read once for its small copies; a video streams to the bucket, never read in.
+  const photo = isImage ? fs.readFileSync(onDisk) : undefined;
   if (saved.previous) await deleteUpload(saved.previous);
-  await putUpload(saved.path, buffer, file.type);
+  if (photo) await putUpload(saved.path, photo, up.type);
+  else await putUploadFromDisk(saved.path, onDisk, up.type);
   // Its poster (or a photo's small copies) made now, so the coach's lists show it at once (25 Oct, Alex).
-  afterResponse(() => prepareChatMedia(saved.path, file.type.startsWith("image/") ? "image" : "video", file.type.startsWith("image/") ? buffer : undefined));
+  afterResponse(() => prepareChatMedia(saved.path, isImage ? "image" : "video", photo));
   if ((await getSessionUser())?.role === "client") pushCoachVideo(row.id);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2373,22 +2395,31 @@ export async function sendChatMessageAction(formData: FormData) {
   const sender: "client" | "coach" = user?.role === "coach" ? "coach" : "client";
 
   const text = String(formData.get("text") || "").trim();
-  const file = formData.get("file") as File | null;
-  if (!clientId) return;
+  // A photo, video, voice message or file was sent ahead to /api/upload and written to the disk as it came (4 Nov,
+  // Alex: memory; there was no cap here before, now the upload's 128 MB a video, 20 MB a picture, 25 MB a file).
+  const up = await takeUpload(formData, clientId || null, ["chat"]);
+  if (!clientId) return discardUpload(up);
   // A retry of a send that already arrived (its answer lost on the way): taken once (27 Oct, the outbox).
   const nonce = String(formData.get("nonce") || "").slice(0, 80);
-  if (nonce && !firstSend(`${clientId}:${nonce}`)) return;
+  if (nonce && !firstSend(`${clientId}:${nonce}`)) return discardUpload(up);
 
   let media: ChatMedia | undefined;
-  if (file && file.size > 0) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    media = saveChatMedia(clientId, buffer, file.type || "application/octet-stream", file.name);
+  if (up) {
+    media = saveChatMedia(clientId, EMPTY, up.type || "application/octet-stream", up.name);
+    const onDisk = placeUpload(up, media.path);
     // A video's first frame taken by the sending device (25 Oct, as WhatsApp): its poster at once.
     const frame = formData.get("poster") as File | null;
     if (media.type === "video" && frame && frame.size > 0 && frame.size < 5 * 1024 * 1024) await posterFromDevice(media.path, Buffer.from(await frame.arrayBuffer()));
-    // A picture's small copies are made from these bytes while the original goes to the bucket (25 Oct).
-    if (media.type === "image") void prepareChatMedia(media.path, "image", buffer);
-    await putUpload(media.path, buffer, file.type || undefined);
+    if (media.type === "image") {
+      // A picture (20 MB at most) is read once: its small copies are made from these bytes while the original goes to
+      // the bucket (25 Oct).
+      const buffer = fs.readFileSync(onDisk);
+      void prepareChatMedia(media.path, "image", buffer);
+      await putUpload(media.path, buffer, up.type || undefined);
+    } else {
+      // A video, a voice message or a file streams to the bucket, never read in.
+      await putUploadFromDisk(media.path, onDisk, up.type || undefined);
+    }
   }
   if (!text && !media) return;
 
@@ -2967,10 +2998,20 @@ export async function clearDemoAction(formData: FormData) {
   revalidatePath("/client");
 }
 
-// 128MB, under serverActions.bodySizeLimit in next.config.ts. Checked here
-// as well because the config only rejects the request — this is what turns
+// 128MB, /api/upload's cap for a video (lib/streamUpload.ts). Checked here
+// as well because the upload only refuses the request — this is what turns
 // that into a sentence the coach can read.
-const MAX_DEMO_BYTES = 128 * 1024 * 1024;
+const MAX_DEMO_BYTES = UPLOAD_CAPS.video;
+
+/** A demo clip sent ahead to /api/upload (4 Nov, Alex: memory): the handle, or why not, in the words it always had. */
+async function takeDemoUpload(formData: FormData): Promise<StagedUpload | string> {
+  const up = await takeUpload(formData, null, ["video"]);
+  if (!up) return "Choose a file first.";
+  const refuse = (why: string) => (discardUpload(up), why);
+  if (up.size > MAX_DEMO_BYTES) return refuse(`That file is ${(up.size / 1024 / 1024).toFixed(0)}MB. The limit is 128MB. Trim the clip and try again.`);
+  if (!up.type.startsWith("video/")) return refuse("That doesn't look like a video file.");
+  return up;
+}
 
 export async function uploadDemoVideoAction(formData: FormData): Promise<string | null> {
   const assignmentId = Number(formData.get("assignmentId"));
@@ -2978,23 +3019,19 @@ export async function uploadDemoVideoAction(formData: FormData): Promise<string 
   // The client comes from the assignment, not from the form, and must be one
   // of this coach's; the clip lands on the coach's own library exercise.
   const coach = await coachForClient(getClientIdForAssignment(assignmentId));
-  if (!coach) return "That exercise no longer exists.";
+  if (!coach) return (discardUpload(await takeUpload(formData, null, ["video"])), "That exercise no longer exists.");
 
-  const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) return "Choose a file first.";
-  if (file.size > MAX_DEMO_BYTES) {
-    return `That file is ${(file.size / 1024 / 1024).toFixed(0)}MB. The limit is 128MB. Trim the clip and try again.`;
-  }
-  if (!file.type.startsWith("video/")) return "That doesn't look like a video file.";
+  const up = await takeDemoUpload(formData);
+  if (typeof up === "string") return up;
 
-  const buffer = Buffer.from(await file.arrayBuffer());
   // Stored against the exercise itself, so every client who is prescribed
   // it gets the same clip. clientId is still checked above so a stale form
   // can't upload against a deleted prescription.
   const exerciseId = getExerciseIdForAssignment(assignmentId);
-  if (exerciseId == null || !coachOwnsExercise(coach.id, exerciseId)) return "That exercise no longer exists.";
-  const publicPath = saveLibraryVideoUpload(exerciseId, buffer, file.type);
-  await putUpload(publicPath, buffer, file.type);
+  if (exerciseId == null || !coachOwnsExercise(coach.id, exerciseId)) return (discardUpload(up), "That exercise no longer exists.");
+  // Written by the query as an empty file, the upload then moved onto it and streamed to the bucket.
+  const publicPath = saveLibraryVideoUpload(exerciseId, EMPTY, up.type);
+  await putUploadFromDisk(publicPath, placeUpload(up, publicPath), up.type);
   setExerciseVideoUrl(exerciseId, publicPath);
   setAssignmentDemoUrl(assignmentId, "");
   revalidatePath("/admin");
@@ -3617,16 +3654,12 @@ export async function applyDayToLaterWeeksAction(programDayId: number) {
 export async function uploadExerciseVideoAction(formData: FormData): Promise<string | null> {
   const coach = await requireCoach();
   const exerciseId = Number(formData.get("exerciseId"));
-  if (!exerciseId || !coachOwnsExercise(coach.id, exerciseId)) return "That exercise no longer exists.";
-  const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) return "Choose a file first.";
-  if (file.size > MAX_DEMO_BYTES) {
-    return `That file is ${(file.size / 1024 / 1024).toFixed(0)}MB. The limit is 128MB. Trim the clip and try again.`;
-  }
-  if (!file.type.startsWith("video/")) return "That doesn't look like a video file.";
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const videoPath = saveLibraryVideoUpload(exerciseId, buffer, file.type);
-  await putUpload(videoPath, buffer, file.type);
+  if (!exerciseId || !coachOwnsExercise(coach.id, exerciseId)) return (discardUpload(await takeUpload(formData, null, ["video"])), "That exercise no longer exists.");
+  // Sent ahead to /api/upload and written to the disk as it came (4 Nov, Alex: memory).
+  const up = await takeDemoUpload(formData);
+  if (typeof up === "string") return up;
+  const videoPath = saveLibraryVideoUpload(exerciseId, EMPTY, up.type);
+  await putUploadFromDisk(videoPath, placeUpload(up, videoPath), up.type);
   const variationId = Number(formData.get("variationId"));
   if (variationId > 0) setExerciseVariationVideo(exerciseId, variationId, videoPath);
   else setExerciseVideoUrl(exerciseId, videoPath);

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { clearDemoAction, clearExerciseDemoAction, setDemoUrlAction, setExerciseDemoLinkAction, uploadDemoVideoAction, uploadExerciseVideoAction } from "../lib/actions";
 import { TRACK_PALETTE } from "./phaseChrome";
+import { uploadFirst } from "../lib/uploadFirst";
 
 // The demo video for one prescribed exercise.
 //
@@ -140,14 +141,15 @@ function DemoDialog({
         <form
           className="pl-dlg-form"
           action={(fd) =>
-            run(() =>
+            run(async () =>
               byExercise
                 ? tab === "link"
                   ? setExerciseDemoLinkAction(fd)
-                  : uploadExerciseVideoAction(fd)
+                  : // The clip goes ahead to the server's disk; the action takes its handle (4 Nov, Alex: memory).
+                    ((await uploadFirst(fd, "video")) ?? uploadExerciseVideoAction(fd))
                 : tab === "link"
                   ? setDemoUrlAction(fd)
-                  : uploadDemoVideoAction(fd)
+                  : ((await uploadFirst(fd, "video")) ?? uploadDemoVideoAction(fd))
             )
           }
         >

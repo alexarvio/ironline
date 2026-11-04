@@ -7,6 +7,11 @@ import { toast } from "sonner";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
 import { addExerciseToLibraryAction, markProgramNoteSeenAction, markSeenAction, markVideoSeenAction, setRowDemoHiddenAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeProgramWeekAction, deletePhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
+<<<<<<< HEAD
+=======
+import { uploadFirst } from "../../../lib/uploadFirst";
+import type { MuscleMapData } from "../../../lib/muscles";
+>>>>>>> 4fbb069 (Memory: big uploads stream to disk through /api/upload (never held whole in memory); chat files capped (video 128 MB, photo 20 MB, file 25 MB); server action bodies down to 25 MB (4 Nov, Alex: memory was 92% of the Railway bill))
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
@@ -2020,6 +2025,10 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
               f.set("exerciseId", String(row.exerciseId));
               if (row.variationId != null) f.set("variationId", String(row.variationId));
               f.set("file", file);
+              // The clip goes ahead to the server's disk; the action takes its handle (4 Nov, Alex: memory). A refusal
+              // (over 128 MB) shows in the dialog as its reason.
+              const refused = await uploadFirst(f, "video");
+              if (refused) throw new Error(refused);
               await uploadExerciseVideoAction(f);
               close();
               toast.success(`Demo updated${(row.demoClients ?? 1) > 1 ? ` for ${row.demoClients} clients` : ""}`);

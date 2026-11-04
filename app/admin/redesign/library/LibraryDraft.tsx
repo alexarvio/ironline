@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ArrowRightIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
 import { setExerciseDemoLinkAction } from "../../../lib/actions";
+import { uploadFirst } from "../../../lib/uploadFirst";
 import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem } from "./load";
 import Picker from "../Picker";
@@ -33,7 +34,7 @@ type Patch = Partial<Pick<LibraryItem, "name" | "group" | "video" | "archived">>
 type Row = { key: string; id: number; name: string; group: string; video: string | null; archived: boolean; pending: boolean };
 type Dlg = { kind: "demo"; id: number; tab?: "link" | "file" } | { kind: "remove"; id: number } | { kind: "takeout"; id: number } | null;
 
-// What uploadLibraryVideoAction takes (serverActions.bodySizeLimit).
+// What uploadLibraryVideoAction takes (/api/upload's cap for a video, lib/streamUpload.ts).
 const MAX_UPLOAD = 128 * 1024 * 1024;
 const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
 const isUpload = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
@@ -199,6 +200,9 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
     if (file.size > MAX_UPLOAD) throw new Error(`${Math.round(file.size / 1024 / 1024)} MB is over 128 MB`);
     const f = new FormData();
     f.set("file", file);
+    // The clip goes ahead to the server's disk; the action takes its handle (4 Nov, Alex: memory).
+    const refused = await uploadFirst(f, "video");
+    if (refused) throw new Error(refused);
     const r = await uploadLibraryVideoAction(f);
     if (!r.ok) throw new Error(r.error);
     if (!(await assignVideoToExerciseAction(it.id, r.id))) throw new Error("it didn’t go through");
