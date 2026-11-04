@@ -25,7 +25,7 @@ import { DEFAULT_WORKOUT_QUESTIONS, EARLIER_DEFAULT_QUESTIONS, MAX_QUESTION_LENG
 import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 import { cleanRepeat, openEnd, type EventRepeat } from "./eventRepeat";
-import { assistedRow, beforeStop, copiedWeights, isReset, laneKg, laneOfGym, laneTypedAt, laterSlot, liftOf, raisedTo, setsSinceReset, stopAfter, writeLane, type Lane } from "./targetRule";
+import { assistedRow, beforeStop, copiedWeights, isReset, laneKg, laneOfGym, laneTypedAt, laterSlot, liftOf, raisedTo, repFloor, setsSinceReset, stopAfter, writeLane, type Lane } from "./targetRule";
 import { FEATURES } from "./features";
 import { daysBetween, weightGoalViews, type WeightGoalView } from "./weightGoal";
 import type { WeightGoal } from "./db";
@@ -100,7 +100,9 @@ export type WorkoutAssignment = {
   note_at: string | null;
   note_read: boolean;
   target_set_at?: string | null;
-  gym_targets?: Record<string, { kg: number | null; set_at?: string | null }>;
+  /** The coach's own weight beside one the rule raised (see db.ts, lib/targetRule.ts). */
+  coach_kg?: number | null;
+  gym_targets?: Record<string, { kg: number | null; set_at?: string | null; coach_kg?: number | null }>;
   warmup_sets?: { weight_kg: number | null; reps: number | null }[];
   swap?: { library_exercise_id: number | null; custom_name: string | null; at: string };
   /** In a free session, an exercise the client named that is not in the library (exercise_id 0). */
@@ -1966,6 +1968,8 @@ function exerciseOccurrences(clientId: number, exerciseId: number): { slot: Stor
  * (carryReset). The same edit applied to the weeks after (`carried`, the old
  * builder's Apply to remaining weeks) lands as a reset's carry does, never as
  * a reset of its own. A gym's weight cleared follows the home gym's again.
+ * The weight typed is the coach's own again, so the figure kept beside a
+ * raised one goes (coach_kg, 4 Nov, Alex; a gym's entry is made afresh).
  */
 function typeWeight(row: StoredAssignment, lane: Lane, kg: number | null, carried = false) {
   const at = new Date().toISOString();
@@ -1974,6 +1978,7 @@ function typeWeight(row: StoredAssignment, lane: Lane, kg: number | null, carrie
     row.target_weight_kg = kg;
     row.target_set_at = at;
     row.target_pinned = reset;
+    delete row.coach_kg;
   } else {
     const next = { ...(row.gym_targets ?? {}) };
     if (kg == null) delete next[lane];
@@ -1992,7 +1997,8 @@ function typeWeight(row: StoredAssignment, lane: Lane, kg: number | null, carrie
  * client lifts from the reset on moves it, as the weeks after always moved.
  * A row that already carries this reset's stamp is left as it is, so carrying
  * it again changes nothing. A cleared weight of the coach's (a reset with no
- * number) stays cleared. True when a row took it.
+ * number) stays cleared. True when a row took it. The number carried is the
+ * coach's own, so a figure kept beside an earlier raise goes (coach_kg, 4 Nov).
  */
 function carryReset(reset: StoredAssignment, lane: Lane, kg: number, at: string): boolean {
   const data = getData();
@@ -2010,6 +2016,7 @@ function carryReset(reset: StoredAssignment, lane: Lane, kg: number, at: string)
     if (lane == null) {
       row.target_weight_kg = kg;
       row.target_set_at = at;
+      delete row.coach_kg;
     } else row.gym_targets = { ...(row.gym_targets ?? {}), [lane]: { kg, set_at: at } };
     changed = true;
   }
@@ -2088,13 +2095,16 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   // that lane. "Later" is by day: a later week, or a later weekday of the
   // same week. Occurrences the client has already logged against are left
   // alone, and a target the coach planned higher than the logged weight stays.
+  // Only a set in the rep range counts (4 Nov, Alex: 70 kg × 8 against 10–12
+  // raised weeks 6–13 to 70): its reps reach the bottom of this row's reps.
   const rows = exerciseOccurrences(day.client_id, wa.exercise_id);
   const logged = new Set(data.set_logs.map((sl) => sl.workout_assignment_id));
   const later = rows.filter((o) => o.row.id !== wa.id && laterSlot(o.slot, day) && !logged.has(o.row.id));
+  const minReps = repFloor(wa.reps);
 
   let changed = false;
   for (const [lane, laneLogs] of byGym) {
-    const lift = liftOf(setsSinceReset(laneLogs, wa, lane), laneKg(wa, lane), lane, assisted);
+    const lift = liftOf(setsSinceReset(laneLogs, wa, lane), laneKg(wa, lane), lane, assisted, minReps);
     if (!lift) continue;
     const stop = stopAfter(day, rows, lane);
     for (const o of later) {
@@ -9723,8 +9733,16 @@ export function setHomeGym(gymId: number) {
   for (const wa of assignments) {
     const targets = { ...(wa.gym_targets ?? {}) };
     const incoming = targets[gymId];
+    // The coach's own figure beside a raised weight goes with its gym's weight too (coach_kg, 4 Nov): a gym's null
+    // there means it followed the home weight, so the old home's own figure.
+    const homeCoach = wa.coach_kg !== undefined ? wa.coach_kg : wa.target_weight_kg;
     // A reset goes with its gym's weight (lib/targetRule.ts).
-    targets[oldHome] = { kg: wa.target_weight_kg, set_at: wa.target_set_at ?? null, ...(wa.target_pinned ? { pinned: true } : {}) };
+    targets[oldHome] = {
+      kg: wa.target_weight_kg,
+      set_at: wa.target_set_at ?? null,
+      ...(wa.target_pinned ? { pinned: true } : {}),
+      ...(wa.coach_kg !== undefined ? { coach_kg: wa.coach_kg } : {}),
+    };
     if (wa.target_pinned || incoming?.pinned) wa.target_pinned = !!incoming?.pinned && incoming.kg != null;
     // A week trained at the new home before it had a weight of its own was
     // its first visit there: what was lifted is that week's weight, or the
@@ -9737,9 +9755,13 @@ export function setHomeGym(gymId: number) {
     if (incoming?.kg != null) {
       wa.target_weight_kg = incoming.kg;
       wa.target_set_at = incoming.set_at ?? null;
+      if (incoming.coach_kg !== undefined) wa.coach_kg = incoming.coach_kg ?? homeCoach;
+      else delete wa.coach_kg;
     } else if (wa.target_weight_kg != null && Number.isFinite(firstVisitBest)) {
       wa.target_weight_kg = firstVisitBest;
       wa.target_set_at = null;
+      // What was lifted there is the rule's figure; the coach's own is the one the gym followed.
+      wa.coach_kg = homeCoach;
     }
     delete targets[gymId];
     wa.gym_targets = targets;

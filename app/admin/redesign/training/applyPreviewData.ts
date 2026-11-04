@@ -1,6 +1,6 @@
 import { getData } from "../../../lib/db";
 import { MAX_SESSIONS_PER_WEEK, assignmentsForDayIn, cardioForDayIn, getAssignmentsForDay, getWeek, homeGymId, listCardioForDay, listClientGyms, trainingIndex, weekIn } from "../../../lib/queries";
-import { assistedRow, beforeStop, copiedWeights, laneKg, laneOfGym, laterSlot, liftOf, raisedTo, setsSinceReset, stopAfter, writeLane, type Lane } from "../../../lib/targetRule";
+import { assistedRow, beforeStop, coachKg, copiedWeights, laneKg, laneOfGym, laterSlot, liftOf, raisedTo, repFloor, setsSinceReset, stopAfter, writeLane, type Lane } from "../../../lib/targetRule";
 import { changedWeeks, type ApplyFig, type ApplyItem, type ApplyPreview, type ApplySession, type ApplyWeek } from "./applyShape";
 
 // What Apply to the rest (copyProgramWeek, one target week at a time) and a session's Apply to remaining weeks
@@ -102,7 +102,8 @@ function compare(clientId: number, gone: Set<number>) {
         lanes.set(lane, [...(lanes.get(lane) ?? []), sl]);
       }
       for (const [lane, ls] of lanes) {
-        const lift = liftOf(setsSinceReset(ls, wa, lane), laneKg(wa, lane), lane, assisted);
+        // Only sets in the logged row's rep range count, as on the server (4 Nov, Alex).
+        const lift = liftOf(setsSinceReset(ls, wa, lane), laneKg(wa, lane), lane, assisted, repFloor(wa.reps));
         if (!lift || !beforeStop(dest, stopAfter(day, stays, lane))) continue;
         const kg = raisedTo(copy, lane, lift, assisted);
         if (kg != null) writeLane(copy, lane, kg);
@@ -110,6 +111,13 @@ function compare(clientId: number, gone: Set<number>) {
     }
     return copy;
   };
+
+  /** A row's weights as the coach typed them: the figure kept beside a raise in each lane, else the weight as it is (coachKg). */
+  const coachOwn = (row: Row): Row => ({
+    ...row,
+    target_weight_kg: coachKg(row, null),
+    gym_targets: row.gym_targets && Object.fromEntries(Object.entries(row.gym_targets).map(([gym, e]) => [gym, { ...e, kg: coachKg(row, Number(gym)) }])),
+  });
 
   /** A recurring ask on an earlier session of the same name makes the copied row one of its own (resolveRecurringVideoAsks). */
   const askRemade = (row: Row, dest: Day, label: string | null) => {
@@ -201,9 +209,11 @@ function compare(clientId: number, gone: Set<number>) {
       else {
         // A weight differs only where the coach's own numbers do (27 Oct, Alex: the client lifting heavier this week made
         // the copy land higher than the later weeks, which the coach typed after, and the confirm read that as a change of
-        // theirs). The client's lifts moving a weight is the progression's doing, never a difference to apply.
-        const coachKg = rowFigs(p.dest, p.src).filter((x) => x.kg);
-        const figs = rowFigs(p.dest, landed(p.src, dest)).filter((x) => !x.kg || coachKg.some((k) => k.gym === x.gym));
+        // theirs). The client's lifts moving a weight is the progression's doing, never a difference to apply. Each side
+        // reads as the coach typed it (4 Nov, Alex): a weight the rule raised keeps the coach's own beside it (coach_kg),
+        // so a raise on either side is no difference of theirs.
+        const coachSide = rowFigs(coachOwn(p.dest), coachOwn(p.src)).filter((x) => x.kg);
+        const figs = rowFigs(p.dest, landed(p.src, dest)).filter((x) => !x.kg || coachSide.some((k) => k.gym === x.gym));
         // An ask is the row's (videoRequestsFor), so it goes with the row the copy replaces, unless a recurring one makes it again.
         const ask = askOf.get(p.dest.id);
         if (ask) push(figs, "Video", ask.file_path ? "Sent" : "Asked", askRemade(p.src, dest, src.label) ? "Asked" : null);

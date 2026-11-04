@@ -12,13 +12,44 @@ import { isAssisted } from "./progressRules";
 // set a new one in week 4, I want that weight to override any count the system was taking into account from previous
 // weights"). Lifts from before it never move a row after it (stopAfter); its number goes on to the rows after it
 // (carryReset, queries.ts); from it on, what the client lifts moves them again.
+//
+// A weight moves up only on a set that is heavier and in the range (4 Nov, Alex: "it has to have a higher weight, but it
+// also needs to be within the range"): a set counts only when its reps reach the bottom of the logged row's target reps
+// (repFloor), so 70 kg × 8 against 10–12 moves nothing. And the coach's own figure is kept beside a raised one (coach_kg,
+// set at the first raise, cleared when the coach types the weight again), so the Apply confirm compares the coach's
+// numbers alone (applyPreviewData.ts) and never reads the rule's raise as a change of theirs.
 
 /** A gym lane: null is the home gym, a gym id that gym. */
 export type Lane = number | null;
 
-type GymEntry = { kg: number | null; set_at?: string | null; pinned?: boolean };
-/** A row's weights, as stored. */
-export type Weights = { target_weight_kg: number | null; target_set_at?: string | null; target_pinned?: boolean; gym_targets?: Record<string, GymEntry> };
+/**
+ * `coach_kg`: the coach's own figure before the rule first raised this weight (null: none of theirs; on a gym, it
+ * followed the home weight). Absent while the weight is the coach's own.
+ */
+type GymEntry = { kg: number | null; set_at?: string | null; pinned?: boolean; coach_kg?: number | null };
+/** A row's weights, as stored. `coach_kg` as a gym entry's, for the home lane. */
+export type Weights = { target_weight_kg: number | null; target_set_at?: string | null; target_pinned?: boolean; coach_kg?: number | null; gym_targets?: Record<string, GymEntry> };
+
+/**
+ * The bottom of a row's target reps, the least a set needs to count for the weight (4 Nov, Alex): "10-12" and "10–12"
+ * 10, "12" and "12+" 12, "8-10/side" 8, the first number ("3x10" the reps, 10). Null asks nothing: AMRAP, empty, no number, or a time
+ * ("30s", "1 min", "0:45"), whose reps aren't reps.
+ */
+export function repFloor(reps: string | null | undefined): number | null {
+  const t = (reps ?? "").trim();
+  if (!t || /:\d|\d\s*(?:s|secs?|seconds?|m|mins?|minutes?)\b/i.test(t)) return null;
+  // "3x10" is sets by reps: the reps.
+  const m = /^\s*\d+\s*[x×]\s*(\d+)/i.exec(t) ?? /(\d+)/.exec(t);
+  const n = m ? Number(m[1]) : 0;
+  return n > 0 ? n : null;
+}
+
+/** The coach's own figure in a lane: the one kept beside a raise, else the lane's weight as it is. */
+export function coachKg(row: Weights, lane: Lane): number | null {
+  if (lane == null) return row.coach_kg !== undefined ? row.coach_kg : row.target_weight_kg;
+  const e = row.gym_targets?.[lane];
+  return e ? (e.coach_kg !== undefined ? e.coach_kg : e.kg) : null;
+}
 /** Where a row sits in the plan: its week and its session. */
 export type Slot = { week_number: number; day_of_week: number };
 /** A row of the exercise where it sits: every planned one, logged or not. */
@@ -64,16 +95,20 @@ export function setsSinceReset<S extends { logged_at: string }>(sets: S[], row: 
 }
 
 /**
- * What one logged row's sets in a lane carry forward, or null. The home lane needs a weight met; another gym with no
- * weight of its own takes what was lifted there as its weight going forward.
+ * What one logged row's sets in a lane carry forward, or null. Only sets whose reps reach `minReps` (the row's
+ * repFloor; null asks none) count (4 Nov, Alex). The home lane needs a weight met; another gym with no weight of its
+ * own takes what was lifted there as its weight going forward.
  */
-export function liftOf(sets: { weight_kg: number | null; logged_at: string }[], own: number | null, lane: Lane, assisted: boolean): Lift | null {
-  const weights = sets.map((s) => s.weight_kg).filter((w): w is number => w != null);
+export function liftOf(sets: { weight_kg: number | null; reps?: number | null; logged_at: string }[], own: number | null, lane: Lane, assisted: boolean, minReps: number | null): Lift | null {
+  const counted = sets.filter((s) => s.weight_kg != null && (minReps == null || (s.reps != null && s.reps >= minReps)));
+  const weights = counted.map((s) => s.weight_kg as number);
   if (weights.length === 0) return null;
   const best = assisted ? Math.min(...weights) : Math.max(...weights);
   const met = own != null && (assisted ? best <= own : best >= own);
   if (lane == null ? !met : own != null && !met) return null;
-  return { best, last: Math.max(...sets.map((s) => stampMs(s.logged_at))) };
+  // When the counted sets went in (4 Nov): a set out of the range logged after the coach typed a weight is no lift
+  // that came after it, so it never lets an earlier one move the coach's figure (raisedTo).
+  return { best, last: Math.max(...counted.map((s) => stampMs(s.logged_at))) };
 }
 
 /**
@@ -107,22 +142,31 @@ export function raisedTo(row: Weights, lane: Lane, lift: Lift, assisted: boolean
   return next === kg ? null : next;
 }
 
-/** Moves a lane's weight (raisedTo): when it was typed, and whether it is a reset, stay as they were. */
+/**
+ * Moves a lane's weight (raisedTo): when it was typed, and whether it is a reset, stay as they were. The first raise
+ * keeps the coach's own figure beside it (coach_kg, 4 Nov, Alex), and later raises never overwrite it: the coach typing
+ * the weight again clears it (typeWeight, carryReset in queries.ts).
+ */
 export function writeLane(row: Weights, lane: Lane, kg: number): void {
   if (lane == null) {
+    if (row.coach_kg === undefined) row.coach_kg = row.target_weight_kg;
     row.target_weight_kg = kg;
     return;
   }
   const entry = row.gym_targets?.[lane];
-  row.gym_targets = { ...(row.gym_targets ?? {}), [lane]: { ...entry, kg, set_at: entry?.set_at ?? null } };
+  const coach = entry?.coach_kg !== undefined ? entry.coach_kg : entry?.kg ?? null;
+  row.gym_targets = { ...(row.gym_targets ?? {}), [lane]: { ...entry, kg, set_at: entry?.set_at ?? null, coach_kg: coach } };
 }
 
 /**
  * A row as a copy lands (Apply to the rest, a session copied on): the coach's weights and when they were typed, never
  * the reset itself. The reset stays the one row the coach typed on, so the copies after it move with the client's
- * lifts from it on, as the rows its number was carried to do.
+ * lifts from it on, as the rows its number was carried to do. The coach's own figure beside a raised one goes with it
+ * (coach_kg, 4 Nov).
  */
 export function copiedWeights<T extends Weights>(row: T): T {
-  const gyms = row.gym_targets && Object.fromEntries(Object.entries(row.gym_targets).map(([gym, e]) => [gym, { kg: e.kg, set_at: e.set_at ?? null }]));
+  const gyms =
+    row.gym_targets &&
+    Object.fromEntries(Object.entries(row.gym_targets).map(([gym, e]) => [gym, { kg: e.kg, set_at: e.set_at ?? null, ...(e.coach_kg !== undefined ? { coach_kg: e.coach_kg } : {}) }]));
   return { ...row, target_pinned: undefined, gym_targets: gyms };
 }
