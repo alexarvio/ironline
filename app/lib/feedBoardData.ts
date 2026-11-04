@@ -340,7 +340,8 @@ function needFrom(ctx: Ctx, c: ClientData, a: HomeAction): NeedRow | null {
   // of the feed… keep it in phases"): the Phases screen lists them (loadPhaseNeeds), the rail counts them on its Phases row.
   if (/^(track|empty)-/.test(a.id)) return null;
   if (a.id.startsWith("read-")) {
-    // The thing in the store's words, its first part: "Couldn't do Session 3", "Wrote a note on Hypertrophy".
+    // The thing in the store's words, its first part: "Logged food", "Wrote a note on Hypertrophy". (A session they
+    // couldn't do is never one, 4 Nov, Alex: getClientHome leaves it to Activity.)
     const what = (parts(a.title)[0] ?? a.title).replace(/\s*\(Week \d+\)$/, "");
     return { ...base, cat: needCatOfHref(open), kind: "read", what, words: a.detail?.trim() || null, since: iso(a.at), action: "Read", href: open };
   }
