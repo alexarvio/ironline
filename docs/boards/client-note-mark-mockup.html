@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Client note mark</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --line:#E1E5EB; --div:#EEF0F3; --green:#2f7a3f; --rust:#b8471f; --train:#3a3390; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #ECEDEF; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 70px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 26px; max-width: 900px; line-height: 1.5; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+  .opt { background: #F5F6F8; border-radius: 22px; box-shadow: inset 0 0 0 1px var(--line); padding: 22px 22px 26px; }
+  .tag { font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; color: var(--green); }
+  .tag.now { color: var(--rust); }
+  .name { font-size: 15px; font-weight: 600; margin: 3px 0 4px; }
+  .explain { font-size: 13px; color: var(--sec); font-weight: 500; margin: 0 0 20px; line-height: 1.5; min-height: 58px; }
+  .where { font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px 2px; }
+  svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  /* header pills */
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px 0 12px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE1E8; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .pill svg { width: 15px; height: 15px; }
+  .pill small { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .pill .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--rust); }
+  .pill.coach { color: var(--ink); }
+  /* session card */
+  .card { background: #fff; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); }
+  .srow { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px 0 26px; }
+  .srow b { font-size: 15px; font-weight: 600; }
+  .srow small { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .sp { flex: 1; }
+  .mark { width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; box-shadow: inset 0 0 0 1.5px #c9cfd8; color: var(--sec); }
+  .mark svg { width: 12px; height: 12px; }
+  .mark.pb { font-size: 8.5px; font-weight: 600; color: var(--green); box-shadow: inset 0 0 0 1.5px rgba(47,122,63,.5); }
+  .state { display: inline-flex; align-items: center; justify-content: center; min-width: 96px; height: 24px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(47,122,63,.35); font-size: 11.5px; font-weight: 600; color: var(--green); }
+  .chev { color: #98A2B3; display: inline-grid; } .chev svg { width: 16px; height: 16px; }
+  /* open session: what they wrote */
+  .wrote { display: flex; gap: 10px; padding: 4px 18px 16px 26px; align-items: flex-start; }
+  .wrote svg { width: 15px; height: 15px; color: var(--sec); flex: none; margin-top: 2px; }
+  .wrote p { margin: 0; font-size: 13.5px; color: var(--body); font-weight: 500; line-height: 1.45; }
+  .wrote p span { color: var(--muted); display: block; font-size: 12px; margin-bottom: 2px; }
+  /* log row */
+  .lrow { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 18px; font-size: 13.5px; }
+  .lrow + .lrow { border-top: 1px solid var(--div); }
+  .lrow .d { color: var(--body); font-weight: 500; width: 92px; }
+  .lrow .nm { color: var(--sec); display: inline-grid; } .lrow .nm svg { width: 15px; height: 15px; }
+  .lrow .f { color: var(--ink); font-weight: 600; }
+  .lrow .g { color: var(--muted); font-weight: 500; }
+  .who { display: inline-flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; margin-left: 4px; }
+  .rec { margin-left: 8px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--green); }
+  .key { margin-top: 22px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--sec); font-weight: 500; }
+  .key span { display: inline-flex; align-items: center; gap: 7px; }
+  .key svg { width: 15px; height: 15px; color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The coach's screens: what the client wrote</h1>
+  <p class="sub">There are two kinds of note. <b>Your own note to the client</b> ("Note to Paula") is now the new pen on a line. <b>The client's own words</b> (a note on a session, a food day or a check-in, "Note from Paula") still wear the chat bubble. Left: as it is now. Right: the client's words switch to the pen too.</p>
+  <div class="cols" id="out"></div>
+</div>
+<script>
+const CHAT = '<path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>';
+const PEN = '<path d="M12 20h8"/><path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/>';
+const CHEV = '<path d="M9 6l6 6-6 6"/>';
+const VID = '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/>';
+const ic = (d) => `<svg viewBox="0 0 24 24">${d}</svg>`;
+
+function screen(clientIcon) {
+  return `
+    <div class="where">Training tab header</div>
+    <div class="pills">
+      <span class="pill">${ic(clientIcon)}Note from Paula <small>3/11</small><i class="dot"></i></span>
+      <span class="pill coach">${ic(PEN)}Note to Paula</span>
+    </div>
+
+    <div class="where">A session on the week, and opened</div>
+    <div class="card">
+      <div class="srow"><b>Lower body</b><small>4 exercises</small><span class="chev">${ic(CHEV)}</span><span class="sp"></span>
+        <span class="mark pb">PB</span><span class="mark">${ic(clientIcon)}</span><span class="mark" style="color:#b8471f;box-shadow:inset 0 0 0 1.5px rgba(184,71,31,.5)">${ic(VID)}</span>
+        <span class="state">Completed</span></div>
+      <div class="wrote">${ic(clientIcon)}<p><span>Paula wrote</span>"Knee felt a bit off on the last set of lunges."</p></div>
+    </div>
+
+    <div class="where">Nutrition log and Lifestyle check-ins</div>
+    <div class="card">
+      <div class="lrow"><span class="d">Mon, 3 Nov</span><span class="nm">${ic(clientIcon)}</span><span class="f">2,140 kcal</span><span class="g">Ate out tonight</span></div>
+      <div class="lrow"><span class="d">Sun, 2 Nov</span><span class="nm">${ic(clientIcon)}</span><span class="f">Weekly check-in</span><span class="g">Slept badly this week</span></div>
+    </div>`;
+}
+
+const opts = [
+  { tag: "Now", now: true, rec: true, name: "The client's words: chat bubble", icon: CHAT,
+    explain: "Two marks that say two things: the pen is your own note, the bubble is them talking to you. The bubble also matches the chat, where their words live. My pick: it tells you at a glance who wrote it." },
+  { tag: "Option", name: "The client's words: the pen too", icon: PEN,
+    explain: "Every note wears the pen, whoever wrote it. One icon for one idea, but on the header \"Note from Paula\" and \"Note to Paula\" then look alike, and a row's mark no longer says it came from them." },
+];
+document.getElementById("out").innerHTML = opts.map((o) => `
+  <div class="opt"><span class="tag ${o.now ? "now" : ""}">${o.tag}</span>${o.rec ? '<span class="rec">My pick</span>' : ""}
+    <p class="name">${o.name}</p><p class="explain">${o.explain}</p>${screen(o.icon)}
+    <div class="key"><span>${ic(PEN)} your note</span><span>${ic(o.icon)} what the client wrote</span></div>
+  </div>`).join("");
+</script>
+</body>
+</html>
