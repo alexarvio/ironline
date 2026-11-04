@@ -30,10 +30,58 @@ const lookStyle = (look?: MediaLook | null): CSSProperties | undefined => {
   return Object.keys(s).length ? s : undefined;
 };
 
-/** A chat's picture: 1080 wide, at its size from the start over its preview. */
-export function ChatImage({ src, className, look }: { src: string; className?: string; look?: MediaLook | null }) {
+/** A chat's picture: 1080 wide, at its size from the start over its preview. A tap opens it on the whole screen at its
+ *  full size, black behind and an ✕ (Esc too), as a video plays (4 Nov, Alex: "if I press on it, it doesn't expand"). */
+export function ChatImage({ src, className, look, opens = true }: { src: string; className?: string; look?: MediaLook | null; /** False where the picture sits in a button of its own (the coach phone's viewer). */ opens?: boolean }) {
+  const [full, setFull] = useState(false);
   // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-  return <img className={className} src={sized(src, 1080)} alt="" decoding="async" style={lookStyle(look)} />;
+  if (!opens) return <img className={className} src={sized(src, 1080)} alt="" decoding="async" style={lookStyle(look)} />;
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route */}
+      <img
+        className={`${className ?? ""} cm-img-open`}
+        src={sized(src, 1080)}
+        alt=""
+        decoding="async"
+        style={lookStyle(look)}
+        role="button"
+        tabIndex={0}
+        aria-label="Open the picture"
+        onClick={(e) => {
+          e.stopPropagation();
+          setFull(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setFull(true);
+          }
+        }}
+      />
+      {full && typeof document !== "undefined" && createPortal(<FullImage src={src} onClose={() => setFull(false)} />, document.body)}
+    </>
+  );
+}
+
+/** A chat's picture on the whole screen at its full size (pinch to zoom stays the phone's own), with an ✕ (Esc too). */
+function FullImage({ src, onClose }: { src: string; onClose: () => void }) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [onClose]);
+  return (
+    <div className="cmv-full" role="dialog" aria-modal="true" aria-label="Picture" onClick={(e) => { e.stopPropagation(); onClose(); }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- the upload itself, full size */}
+      <img src={src} alt="" onClick={(e) => e.stopPropagation()} />
+      <button type="button" className="cmv-x" onClick={(e) => { e.stopPropagation(); onClose(); }} aria-label="Close the picture">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+  );
 }
 
 // ---- A video on screen comes down before it is tapped (25 Oct, Alex: "as much smoothness as possible"): only its
