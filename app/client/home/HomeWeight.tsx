@@ -13,9 +13,10 @@ import "./weight.css";
 // toggle "same logic as in the admin panel"): flat on the page under the phase cards. `Weight` with Goal | 7d | 30d |
 // Phase as the capsule on its right (Goal only while one runs and first then, else 30d; Phase only with a live phase);
 // the latest in light numerals with its unit grey and the change over the window; the line in the weight's own Body
-// blue, the same smooth curve as everywhere (monotoneCurve); in Goal the coach's straight line dashed in beige from where
-// they were to the goal's ring, which pulses, and the latest a blue dot, pulsing; the first day, Today and the goal's
-// day under it; then the goal, the kilos to go and the verdict. A tap on the chart opens Progress on Weight.
+// blue, the same smooth curve as everywhere (monotoneCurve), the latest a blue dot pulsing in every window (4 Nov, Alex);
+// in Goal the coach's straight line dashed in beige from where they were to the goal's ring, which pulses; the first day,
+// Today and the goal's day under it; then, in Goal alone (its room kept in the others), the goal, the kilos to go and the
+// verdict. A tap on the chart opens Progress on Weight.
 
 export const PROGRESS_PICK_KEY = "nc-progress-pick";
 const BLUE = "#2f5d8f";
@@ -104,7 +105,8 @@ export default function HomeWeight({ w, today }: { w: HomeWeightData; today: str
               {line && <path d={line} fill="none" stroke={BLUE} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
             </svg>
             {goal && todayX > 0 && todayX < 100 && <span className="hw-today" style={{ left: `${todayX}%` }} />}
-            {/* Where they stand, a blue dot pulsing (2 Nov, Alex), and the goal's ring pulsing in its beige (3 Nov, Alex). */}
+            {/* Where they stand, a blue dot pulsing in every window (2 Nov, Alex; 4 Nov, Alex: "on all the graphs"), and the
+                goal's ring pulsing in its beige (3 Nov, Alex). */}
             {last && <span className="hw-dot" style={{ left: `${last.x}%`, top: `${last.y}%` } as CSSProperties} />}
             {goal && <span className="hw-ring" style={{ left: `${x(goal.byDate)}%`, top: `${y(goal.target)}%` }} />}
             {grid.map((v) => (
@@ -124,8 +126,10 @@ export default function HomeWeight({ w, today }: { w: HomeWeightData; today: str
           </div>
         </>
       )}
+      {/* The goal's facts in the Goal window alone (4 Nov, Alex: not under the weight of 7d, 30d or Phase); there its room
+          is kept, unseen, so switching windows moves nothing under it. */}
       {w.goal && (
-        <div className="hw-goal">
+        <div className={`hw-goal${win === "goal" ? "" : " off"}`} aria-hidden={win === "goal" ? undefined : true}>
           <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke={GOAL_COLOR} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d={TARGET_ICON} />
           </svg>

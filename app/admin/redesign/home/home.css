@@ -415,7 +415,8 @@
 /* Where the client stands on a goal's chart (2 Nov, Alex: "the dot… where is the current weight with this golden color and
    pulsating"): the latest weigh-in a gold dot with a soft gold pulse round it; still for reduced motion and while zoomed. */
 /* Since 3 Nov (Alex: option B of docs/boards/weight-goal-colours-mockup.html; "always this blue") the weight's own Body blue, every window, over the beige
-   plan: the line, this dot and the strip. */
+   plan: the line, this dot and the strip. Since 4 Nov (Alex: "on all the graphs actually") the dot pulses in 7d, 30d and
+   Phase too, not the Goal view alone. */
 .rd.rh .rh-wnowdot { position: absolute; z-index: 1; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; background: #2f5d8f; pointer-events: none; }
 .rd.rh .rh-wnowdot::after { content: ""; position: absolute; inset: 0; border-radius: 999px; background: rgba(47, 93, 143, 0.45); animation: rh-wnowpulse 1.8s ease-out infinite; }
 .rd.rh .rh-wbox .rh-wstrip i { background: #2f5d8f; }

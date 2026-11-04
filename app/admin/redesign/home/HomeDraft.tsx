@@ -1216,8 +1216,9 @@ function WeightChart({
             <path d={path} fill="none" stroke={WEIGHT_BLUE} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>
           {plan && !todayAtEnd && <span className="rh-wtoday" style={{ left: `${todayX}%` }} aria-hidden="true" />}
-          {/* Where they stand (2 Nov, Alex): the latest weigh-in a gold dot, pulsing, on the line. */}
-          {plan && last >= 0 && sel == null && <span className="rh-wnowdot" style={{ left: `${xs[last]}%`, top: `${ys[last]}%` }} aria-hidden="true" />}
+          {/* Where they stand (2 Nov, Alex): the latest weigh-in a dot, pulsing, on the line. In every window since 4 Nov
+              (Alex: "on all the graphs actually... the last check-in, that's what pulsates"), not the Goal view alone. */}
+          {last >= 0 && sel == null && <span className="rh-wnowdot" style={{ left: `${xs[last]}%`, top: `${ys[last]}%` }} aria-hidden="true" />}
           {grid.lines.map((v, i) => (
             <span key={v} className="rh-wgrid" style={{ top: `${((hi - v) / (hi - lo)) * 100}%` }} aria-hidden="true">
               {gridText[i]}

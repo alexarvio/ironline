@@ -250,18 +250,16 @@ function MetricPanel({
   }
   const moveUnit = series.scaleMax ? "" : series.unit;
   // The weight goal (2 Nov, Alex: "great to see the goal as a line traced and where we stand in that line"; mockup B):
-  // the one being worked on, else the last one settled, as a grey line under the value; the plot runs on past today to
-  // its day, the days to come at most twice the days shown, else it stops there and the goal is pinned at its edge.
-  const goals = series.goals ?? null;
-  const activeGoal = goals?.find((g) => g.active) ?? null;
-  const shownGoal = activeGoal ?? goals?.filter((g) => g.settled).at(-1) ?? null;
+  // the one being worked on as a grey line under the value, in the Goal range alone (4 Nov, Alex); the plot runs on past
+  // today to its day, the days to come at most twice the days shown, else it stops there and the goal is pinned at its edge.
+  const activeGoal = runningGoal;
   const goalDay = activeGoal ? dayNum(activeGoal.byDate) : null;
   // The goal's line and the days to it only in the Goal range (3 Nov, Alex: "only show this goal line whenever the goal is
   // toggled, not on 7d 30d or phase"); the other ranges end today.
   const plotEnd = shown === "Goal" && goalDay != null && goalDay > end ? goalDay : end;
   const goalFacts = (() => {
-    if (!shownGoal) return [];
-    const g = shownGoal;
+    if (!activeGoal) return [];
+    const g = activeGoal;
     const head = `${one(g.target)} ${unit} by ${dmy(g.byDate, today)}`;
     if (g.settled) {
       return [
@@ -307,15 +305,17 @@ function MetricPanel({
           </div>
         </div>
         {/* The goal is the coach's to set (2 Nov, Alex): the client reads it, with no action, the coach's face first as on an
-            event they added. */}
-        {shownGoal && (
-          <div className="pg-goal">
-            <span className="evp-by pg-goal-by" role="img" aria-label={`Set by ${shownGoal.setBy}`}>
-              {shownGoal.byPhoto ? (
+            event they added. Only in the Goal range (4 Nov, Alex: "that's not something that we should show if it's just
+            like previous weight"); in 7d, 30d and Phase its room is kept, unseen, so switching moves nothing. A goal
+            settled with none running has no Goal range, so no line. */}
+        {activeGoal && (
+          <div className={`pg-goal${shown === "Goal" ? "" : " off"}`} aria-hidden={shown === "Goal" ? undefined : true}>
+            <span className="evp-by pg-goal-by" role="img" aria-label={`Set by ${activeGoal.setBy}`}>
+              {activeGoal.byPhoto ? (
                 // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
-                <img src={pic(shownGoal.byPhoto, 96)} alt="" />
+                <img src={pic(activeGoal.byPhoto, 96)} alt="" />
               ) : (
-                (shownGoal.setBy || "?").trim().charAt(0).toUpperCase()
+                (activeGoal.setBy || "?").trim().charAt(0).toUpperCase()
               )}
             </span>
             <span className="pg-goal-facts">
@@ -474,7 +474,7 @@ function Chart({
   // The marker: the latest point until the mouse is over the chart or a
   // finger is on it, then the logged point nearest it; back to the latest on
   // release. While reading, an ink guide and ring and the value in a white
-  // pill; otherwise only the latest point's ring. Two gestures on the chart
+  // pill; otherwise only the latest point's pulsing dot. Two gestures on the chart
   // (10 Oct): a finger that lands and stays (a fifth of a second) scrubs,
   // the marker following it; a finger
   // that moves sideways straight away is a swipe, the chart slides with it
@@ -630,14 +630,15 @@ function Chart({
             <line key={v} className="pg-grid" x1={0} x2={plotW} y1={crisp(y(v))} y2={crisp(y(v))} />
           ))}
           {series.target != null && <line className="pg-target" x1={0} x2={plotW} y1={y(series.target)} y2={y(series.target)} />}
-          {/* With a goal (2 Nov, Alex): the latest a dot, pulsing, where they stand; the line and dot in the weight's own blue
-              over the beige plan (3 Nov, Alex). */}
-          <g className={`pg-chart-fade${plan ? " goaled" : ""}`}>
+          {/* The latest a dot, pulsing, where they stand now (2 Nov, Alex, with a goal; 4 Nov, Alex: "on all the graphs"):
+              every metric in its colour, every range; with a goal the line and dot in the weight's own blue over the beige
+              plan (3 Nov, Alex). */}
+          <g className="pg-chart-fade">
             {plan?.segs.map((s) => (
               <line key={`s${s.n0}`} className={`pg-plan${s.later ? " later" : ""}`} x1={xd(s.n0)} y1={y(s.v0)} x2={xd(s.n1)} y2={y(s.v1)} />
             ))}
             {xy.length > 1 && <path className="pg-line" d={line} />}
-            {plan && <circle className="pg-nowpulse" cx={xy[latest].x} cy={xy[latest].y} r={4.5} />}
+            <circle className="pg-nowpulse" cx={xy[latest].x} cy={xy[latest].y} r={4.5} />
             <circle className="pg-last" cx={xy[latest].x} cy={xy[latest].y} r={4.5} />
             {/* The goal being worked on pulses all the time in its beige (3 Nov, Alex), as on the coach's card. */}
             {plan?.rings.map((r) =>
