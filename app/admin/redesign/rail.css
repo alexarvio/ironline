@@ -11,9 +11,9 @@
 .rr { position: sticky; top: 0; display: flex; flex-direction: column; height: 100vh; background: #fff; border-right: 1px solid #e1e5eb; }
 
 .rr-brand { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px 16px 14px; container-type: inline-size; }
-/* The logo spans the rail's whole width inside its padding (24 Oct, Alex): it is 6.68em wide (the star 1.41em, the
-   gap 0.5em, the bold word 4.77em since 2 Nov), so its size is the rail's width over that. */
-.rr-logo { font-size: calc(100cqw / 6.7); color: #141a24; }
+/* The logo spans the rail's whole width inside its padding (24 Oct, Alex): it is 7.23em wide (the star 1.04em, as tall
+   as the letters since 4 Nov, the gap 0.5em, the word 5.68em), so its size is the rail's width over that. */
+.rr-logo { font-size: calc(100cqw / 7.23); color: #141a24; }
 .rr-brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .rr-brand-text b { font-size: 13.5px; font-weight: 600; color: #141a24; }
 .rr-brand-text small { font-size: 11px; font-weight: 500; color: #8b93a1; }
