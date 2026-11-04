@@ -104,8 +104,8 @@ export default function ExercisePage({
   const gymWeight = (gymId != null ? exercise.gymTargets?.[gymId] : null) ?? exercise.targetWeight;
   // A free session always asks the weight: nothing prescribed says it's a bodyweight exercise.
   const askWeight = exercise.targetWeight != null || free;
-  // Swapped for something else: the weight and RPE were set for the
-  // prescribed exercise, so only the reps carry over.
+  // Swapped for something else: the targets were set for the prescribed exercise, so none carry over (4 Nov, Alex:
+  // "a naked sheet"; was the reps alone).
   const swapped = exercise.swap != null;
   // The coach's note on the substitute picked, when it is one they suggested with a note.
   const swapNote = exercise.swap?.libraryExerciseId != null ? exercise.alternatives.find((a) => a.id === exercise.swap!.libraryExerciseId)?.note?.trim() || null : null;
@@ -179,7 +179,8 @@ export default function ExercisePage({
   // A set's plan (29 Oct, Alex: "it should always show the weight and reps done last time"): the weight and reps this
   // set was done at last time, met or missed; the coach's weight is in the targets over the sets. A set with no
   // last-time twin follows the latest set done before it this session (25 Oct, Alex: "for the next one it is always the
-  // defaulted value"), else the coach's figures.
+  // defaulted value"), else the coach's figures. Swapped, a naked sheet (4 Nov, Alex): never the coach's figures for
+  // the exercise it replaced; the latest set done this session, else empty.
   const planOf = (n: number): Vals => {
     const then = lastOf(n);
     // The latest set done before it this session, so a set two ahead follows it too.
@@ -189,7 +190,7 @@ export default function ExercisePage({
       if (isSaved(v)) carried = v;
     }
     const weightKg = then?.weight ?? carried?.weightKg ?? planWeight;
-    const reps = then?.reps ?? (n > exercise.sets ? carried?.reps : null) ?? repLow;
+    const reps = swapped ? (carried?.reps ?? null) : (then?.reps ?? (n > exercise.sets ? carried?.reps : null) ?? repLow);
     return { weightKg: weightKg ?? null, reps, rpe: then?.rpe ?? targetRpe };
   };
 
@@ -666,8 +667,10 @@ export default function ExercisePage({
         {/* The coach's targets as a table (3 Nov, Alex: A of docs/boards/workout-targets-table-mockup.html): the columns the
             coach filled in for this exercise, and only those (Sets, Reps, kg, RPE, Tempo, Rest; a cardio's Time and
             Distance), their names small and grey over a hairline, the figures under them in ink, big enough to read mid-set.
-            One helper and one table for the session overview and the cardio page too (3 Nov, Alex). */}
-        {!free && <TargetTable cols={targetColumns({ sets: exercise.sets, reps: exercise.reps, weightKg: targetWeight, unit, rpe: targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance })} />}
+            One helper and one table for the session overview and the cardio page too (3 Nov, Alex). Swapped, a naked
+            sheet (4 Nov, Alex: "when we swap an exercise, it should just be a naked sheet"): the targets were set for the
+            exercise it replaced, so no table at all. */}
+        {!free && !swapped && <TargetTable cols={targetColumns({ sets: exercise.sets, reps: exercise.reps, weightKg: targetWeight, unit, rpe: targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance })} />}
         <div className="lw-card-head">
           <span className="lw-eyebrow">Sets</span>
           <span className={`lw-progress${allDone ? " done" : ""}`}>
