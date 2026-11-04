@@ -1038,11 +1038,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
               <TrashIcon />
             </button>
           )}
-          {!weekLocked && weeks.length > 1 && viewIdx > 1 && copyable(viewIdx - 1) && (
-            <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyWeek", from: viewIdx - 1 })}>
-              <CopyIcon /> Copy week {viewIdx - 1} here
-            </button>
-          )}
+          {/* No "Copy week 4 here" on a later week (4 Nov, Alex: a week changed on purpose was offered the week before over
+              it, one click from undoing the edit). A new week copies one through + Week; week 1 keeps Copy from… to fill a
+              programme's first week from another. */}
           {!weekLocked && weeks.length > 1 && viewIdx === 1 && copyFromChoices.length > 0 && (
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger className="trn-btn">
@@ -1060,9 +1058,10 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
           )}
           {/* Build one week, fill the rest in one go (20 Oct, Alex). */}
           {!weekLocked && later.length > 0 && sessions.length > 0 && forwardChanges && (
-            // What it does, not where (23 Oct, Alex: "Copy to weeks 4–6" → "Apply to the rest"); the weeks it reaches in its title.
+            // The weeks it reaches, said on the button (4 Nov, Alex: "make it a bit more self-explanatory"; it was "Apply to
+            // the rest" since 23 Oct): "Apply to weeks 6–13", only the weeks it would really change.
             <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyForward" })} title={`Apply ${week.label}'s changes to ${forwardLabel}`} aria-label={`Apply ${week.label}'s changes to ${forwardLabel}`}>
-              <CopyIcon /> Apply to the rest
+              <CopyIcon /> Apply to {forwardLabel || "later weeks"}
             </button>
           )}
           {/* Which columns the week's tables show, beside KG/LBS (21 Oct, Alex: it was in the programme's ··· menu). */}
@@ -2165,7 +2164,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         {dlg?.kind === "copyForward" && later.length > 0 && (
           <ApplyChangesDialog
             key={`copyForward-${viewIdx}`}
-            title={`Apply ${week.label} to the rest?`}
+            title={`Apply ${week.label} to ${forwardTo.length ? forwardLabel : "the later weeks"}?`}
             // Said plainly (20 Oct, Alex: "what does this mean?"), the weeks it reaches named.
             description={`${forwardTo.length ? `${forwardLabel.charAt(0).toUpperCase()}${forwardLabel.slice(1)} ${forwardTo.length === 1 ? "becomes" : "become"}` : "The later weeks become"} ${week.label}, cardio included. Sessions with logged sets stay as they are.`}
             confirm="Apply"
