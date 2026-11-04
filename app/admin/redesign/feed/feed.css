@@ -160,9 +160,17 @@
 .rd.rfd .rfd-actword:hover { background: #f5f6f8; }
 @container rh (max-width: 860px) { .rd.rfd .rfd-need { grid-template-columns: 168px minmax(0, 1fr) 84px 96px 30px; } }
 @container rh (max-width: 600px) { .rd.rfd .rfd-need { grid-template-columns: 120px minmax(0, 1fr) 96px 30px; } }
-/* A row's action on the row's hover only (3 Nov, Alex: "a hover is interesting for all of these rows", as Training's ⋯):
-   the whole row opens the same place. Ending soon's rows (.still) can't be clicked, so their actions stay. Always there
-   on a touch screen. */
-.rd .nd-row:not(.still) .nd-act { opacity: 0; transition: opacity 0.12s; }
-.rd .nd-row:not(.still):hover .nd-act, .rd .nd-row:not(.still):focus-within .nd-act, .rd .nd-row .nd-act[data-state="open"] { opacity: 1; }
+/* Needs you reads as owed at a glance (4 Nov, Alex: option C of docs/boards/needs-action-mockup.html, "not instantly
+   clear what requires action and what isn't"): the Feed's and Phases' Needs you wear the client tab's to-do strip, the
+   soft rust tint inside a rust edge, rust lines between rows, and the count after the title a rust pill; each row's
+   action always there as a round white button with a hairline, the check after it on hover. A list that only informs
+   (Ending soon) stays plain white, its buttons on the row's hover (always there on a touch screen). */
+.rd .nd-groups.owed .rls-card.nd-card { background: linear-gradient(rgba(184, 71, 31, 0.045), rgba(184, 71, 31, 0.045)), #fff; box-shadow: inset 0 0 0 1.5px rgba(184, 71, 31, 0.55); }
+.rd .nd-groups.owed .nd-row + .nd-row { border-top-color: rgba(184, 71, 31, 0.14); }
+.rd .nd-groups.owed .nd-row:hover { background: rgba(184, 71, 31, 0.05); }
+.rd .nd-groups.owed .nd-act { background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; }
+.rd .nd-groups.owed .nd-act:hover, .rd .nd-groups.owed .nd-act[data-state="open"] { background: #fff; box-shadow: inset 0 0 0 1px #141a24; }
+.rd .nd-row.still .nd-act { opacity: 0; transition: opacity 0.12s; }
+.rd .nd-row.still:hover .nd-act, .rd .nd-row.still:focus-within .nd-act, .rd .nd-row.still .nd-act[data-state="open"] { opacity: 1; }
 @media (hover: none) { .rd .nd-row .nd-act { opacity: 1; } }
+.rd .rfd-titled > span.nd-count { align-self: center; display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.35); font-size: 12px; font-weight: 600; color: #b8471f; }

@@ -76,11 +76,11 @@ export default function FeedDraft({ board, now, kind }: { board: FeedBoard; /** 
 }
 
 /** The section's title with what it holds right after it, on its line. */
-function Titled({ title, children }: { title: string; children?: ReactNode }) {
+function Titled({ title, children, owed }: { title: string; children?: ReactNode; /** Needs you's count as a rust pill. */ owed?: boolean }) {
   return (
     <div className="rfd-titled">
       <h2>{title}</h2>
-      {children ? <span>{children}</span> : null}
+      {children ? <span className={owed ? "nd-count" : undefined}>{children}</span> : null}
     </div>
   );
 }
@@ -161,7 +161,9 @@ export function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
   return (
     <section className="rls-section" aria-label="Needs you">
       <div className="trn-weekhead">
-        <Titled title="Needs you">{left > 0 ? left : null}</Titled>
+        <Titled title="Needs you" owed>
+          {left > 0 ? left : null}
+        </Titled>
       </div>
       {rows.length === 0 ? (
         <div className="rls-card rfd-card">
@@ -169,7 +171,7 @@ export function NeedsYou({ needs, now }: { needs: NeedRow[]; now: number }) {
         </div>
       ) : (
         // By category (3 Nov, Alex: option C of docs/boards/needs-rows-mockup.html): a head and a card a group.
-        <div className={`nd-groups${rows.some((n) => n.since) ? "" : " nodate"}`} style={{ "--nd-date": `${dateW}px` } as CSSProperties}>
+        <div className={`nd-groups owed${rows.some((n) => n.since) ? "" : " nodate"}`} style={{ "--nd-date": `${dateW}px` } as CSSProperties}>
           {byNeedCat(rows, (n) => n.cat).map(([cat, group]) => (
             <NeedGroup key={cat} cat={cat} count={group.filter((n) => !out.has(n.key)).length}>
               {group.map((n) => {
