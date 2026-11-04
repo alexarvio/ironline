@@ -4,7 +4,8 @@
 // is the moment it is for anyway. Nothing here is stored.
 
 import type { SessionUser } from "./auth";
-import { getData } from "./db";
+import { chatChanged } from "./chatBus";
+import { getData, persist } from "./db";
 import { getClient } from "./queries";
 
 type Entry = { key: string; role: "coach" | "client"; id: number; lastSeen: number; where: string | null };
@@ -21,6 +22,45 @@ export function touchPresence(user: Pick<SessionUser, "id" | "role" | "client_id
   entries.set(key, { key, role, id, lastSeen: Date.now(), where: where ?? was?.where ?? null });
   // Old rows go, so the map never grows past a day of visitors.
   if (entries.size > 500) for (const [k, e] of entries) if (Date.now() - e.lastSeen > KEEP_MS) entries.delete(k);
+  // The client's own use alone (4 Nov, Alex): a client account, never a coach previewing their app (?phone=1, or the
+  // coach's own login on /client: both are the coach's role, so they never reach here).
+  if (user.role === "client" && user.client_id != null) noteClientActive(user.client_id);
+}
+
+// ---- Last active (4 Nov, Alex: "so the coach knows whether the client is using the app") --------------------------
+// Kept on the client's row (last_active_at), so it outlives a deploy. Written at most once every 5 minutes a client:
+// the time held in memory says when it was last written, and the stored one covers the first request after a restart.
+const ACTIVE_EVERY_MS = 5 * 60 * 1000;
+// On globalThis, as chatBus.ts: server actions and route handlers can load this module twice, and both must share them.
+const g = globalThis as unknown as { __norcoachActive?: { written: Map<number, number>; seen: Map<number, number> } };
+const active = (g.__norcoachActive ??= { written: new Map(), seen: new Map() });
+const activeWritten = active.written;
+// Their latest request, between writes (memory only, as the rest of this file).
+const activeSeen = active.seen;
+
+function noteClientActive(clientId: number) {
+  const now = Date.now();
+  activeSeen.set(clientId, now);
+  if (now - (activeWritten.get(clientId) ?? 0) < ACTIVE_EVERY_MS) return;
+  activeWritten.set(clientId, now);
+  const client = getData().clients.find((c) => c.id === clientId);
+  if (!client) return;
+  const stored = client.last_active_at ? Date.parse(client.last_active_at) : NaN;
+  if (Number.isFinite(stored) && now - stored < ACTIVE_EVERY_MS) return;
+  client.last_active_at = new Date(now).toISOString();
+  persist();
+  // An open chat with them reads itself again, so the coach sees "Active now" as they come in (chatBus.ts).
+  chatChanged(clientId);
+}
+
+/** When the client was last in the app (ISO), or null when never since this was kept: the later of the stored time and
+ *  this server's own memory of their last request, so a client in the app now reads "Active now" between writes. */
+export function clientLastActive(clientId: number): string | null {
+  const stored = getData().clients.find((c) => c.id === clientId)?.last_active_at ?? null;
+  const seen = activeSeen.get(clientId) ?? 0;
+  const storedMs = stored ? Date.parse(stored) : 0;
+  if (seen > (Number.isFinite(storedMs) ? storedMs : 0)) return new Date(seen).toISOString();
+  return stored;
 }
 
 export type PresenceRow = { key: string; role: "coach" | "client"; name: string; where: string | null; lastSeen: number; secondsAgo: number };

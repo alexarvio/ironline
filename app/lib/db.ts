@@ -48,6 +48,9 @@ type Client = {
   // the other side sent before it reads Seen under it; set only by the chat itself (never a "mark all" or a preview).
   chat_seen_by_coach_at?: string;
   chat_seen_by_client_at?: string;
+  // When the client last used the app (4 Nov, Alex: the coach knows whether they are using it), ISO: set by their own
+  // requests alone (presence.ts noteClientActive), at most once every 5 minutes, never by a coach looking at their app.
+  last_active_at?: string;
   // Needs-you items the coach marked as read (12 Oct): action id to when.
   // An item comes back once something newer stands behind it.
   coach_dismissed?: Record<string, number>;
