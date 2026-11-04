@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
-import { RULES, isAssisted, judge, liftedKg, nudgeFor, repRange, rowStatus, type Judged, type Session, type Verdict } from "../../../lib/progressRules";
+import { isAssisted, judge, liftedKg, repRange, rowStatus, type Judged, type Session, type Verdict } from "../../../lib/progressRules";
+import { monotoneSegments } from "../../../lib/monotoneCurve";
 import { Fold } from "../Fold";
 import { Sep, SepJoin } from "../Sep";
 
@@ -25,11 +26,12 @@ const VERDICT: Record<Verdict, { label: string; tone: string }> = {
 const DAY = 86400000;
 const PURPLE = "#3a3390";
 const RUST = "#b8471f";
+/** The window before, drawn for the change to be seen (4 Nov). */
+const GREY = "#C9CFD8";
 /** The chart's box: its height and the room kept for the y figures (left), the dates (bottom) and the dots. */
 const CH = { h: 220, l: 34, r: 10, t: 16, b: 26 };
 /** A yyyy-mm-dd day (read as that calendar day) or a timestamp, in ms; NaN when there is none. */
 const dayMs = (d: string | null) => (d ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T00:00:00` : d).getTime() : NaN);
-const reps = (lo: number, hi: number) => (lo === hi ? `${lo}` : `${lo}–${hi}`);
 /** The yyyy-mm-dd n days before a yyyy-mm-dd day, counted in UTC both ways so the day isn't shifted by the time zone. */
 const daysBefore = (day: string, n: number) => {
   const [y, m, d] = day.split("-").map(Number);
@@ -56,7 +58,6 @@ export default function ExerciseProgressDialog({
   lbs,
   assisted: assistedRow,
   bodyKg,
-  stepKg,
   onMessage,
   onClose,
 }: {
@@ -79,8 +80,7 @@ export default function ExerciseProgressDialog({
   assisted?: boolean;
   /** The client's body weight now: an assisted lift is judged by it less the help (23 Oct, Alex); a session's own day's first. */
   bodyKg: number | null;
-  stepKg?: number;
-  onMessage: (draft: string) => void;
+  onMessage: () => void;
   onClose: () => void;
 }) {
   const range = repRange(targets.reps);
@@ -203,29 +203,12 @@ export default function ExerciseProgressDialog({
   }, null);
   const changePct = judged.change == null ? null : Math.round(judged.change * 100);
 
-  // A stall's fix: the next load asked for (a step heavier, an assisted lift a step less help) at the range's lower reps,
-  // or one more rep at the best's load (an assisted lift already at no help: one more rep); the same rule as the chat
-  // nudge (nudgeFor), written here in the coach's unit so the pill and the message it sends say the same.
-  const suggest = (() => {
-    if (!stalling || !best) return null;
-    const b = best.best.set;
-    const step = stepKg ?? RULES.stepKg;
-    const help = assisted ? " of help" : "";
-    const name = exerciseName.charAt(0).toLowerCase() + exerciseName.slice(1);
-    const say = (pill: string, next: string) => ({ pill, draft: `Hey ${firstName}, ${name} has been at ${kg(b.weight)} × ${b.reps} for a few sessions. Let’s try ${next} next session 💪` });
-    if (range && b.reps >= range.max && !(assisted && b.weight <= 0)) {
-      const load = `${kg(assisted ? Math.max(0, b.weight - step) : b.weight + step)} ${unit}${help}`;
-      const r = reps(range.min, Math.max(range.min, range.max - 2));
-      return say(`${load} × ${r}`, `${load} for ${r} reps`);
-    }
-    return say(`${kg(b.weight)} ${unit}${help} × ${b.reps + 1}`, `${b.reps + 1} reps at ${kg(b.weight)} ${unit}${help}`);
-  })();
-  const draft = suggest?.draft ?? nudgeFor(judged, exerciseName, firstName, range, stepKg, assisted);
-  const chatIcon = (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 5h16v11H8l-4 4z" />
-    </svg>
-  );
+  // No suggestion and no message written for the coach (4 Nov, Alex: "there should not be any sort of pre written text";
+  // "just have that message Alex"): Message {First} opens the chat on an empty bar.
+  // One height across 7 days | 30 days | All time (4 Nov, Alex: the card changed size on a switch): the log's rows and
+  // its fold keep the room of the fullest window offered, so switching never moves the card.
+  const logSlots = Math.min(4, Math.max(...offered.map((w) => js[w].sessions.length)));
+  const anyMore = offered.some((w) => js[w].sessions.length > 4);
 
   // The chart: measured, so the dots stay round at any width.
   const [chartEl, setChartEl] = useState<HTMLDivElement | null>(null);
@@ -237,11 +220,22 @@ export default function ExerciseProgressDialog({
     return () => ro.disconnect();
   }, [chartEl]);
 
+  // In 7 days and 30 days the chart shows the window before as well, greyed (4 Nov, Alex: "there's a −15%, but it doesn't
+  // show anything on the graph"): the change compares the two, so both are drawn, by the calendar, the window's first
+  // day the axis's middle.
+  const days = view === "7" ? 7 : 30;
+  const winFrom = view === "all" ? null : daysBefore(today, days - 1);
+  const prevFrom = view === "all" ? null : daysBefore(today, 2 * days - 1);
+  const before = winFrom && prevFrom ? js.all.sessions.filter((s) => !!s.date && s.date.slice(0, 10) >= prevFrom && s.date.slice(0, 10) < winFrom) : [];
+  const off = before.length;
+  const series = [...before, ...ss];
+  const N = series.length;
+
   const chart = (() => {
     if (n === 0) return null;
     const pw = W - CH.l - CH.r;
     const ph = CH.h - CH.t - CH.b;
-    const es = ss.map((s) => disp(s.best.e1rm));
+    const es = series.map((s) => disp(s.best.e1rm));
     const mn = Math.min(...es);
     const mx = Math.max(...es);
     const pad = Math.max((mx - mn) * 0.12, 1);
@@ -257,23 +251,26 @@ export default function ExerciseProgressDialog({
     const ticks: number[] = [];
     for (let k = Math.ceil(lo / step) * step; k <= hi + 1e-9; k += step) ticks.push(k);
     const yy = (val: number) => CH.t + ((hi - val) / (hi - lo)) * ph;
-    // Spaced by date; by order when a date is missing or every session is on one day.
-    const ts = ss.map((s) => dayMs(s.date));
-    const byTime = n > 1 && ts.every(Number.isFinite) && ts[n - 1] > ts[0];
-    const pts = ss.map((s, i) => ({
-      x: n < 2 ? CH.l + pw / 2 : byTime ? CH.l + ((ts[i] - ts[0]) / (ts[n - 1] - ts[0])) * pw : CH.l + (i / (n - 1)) * pw,
+    // Spaced by date; by order when a date is missing or every session is on one day. A window spans its own days and the
+    // window before's, whatever was logged in them.
+    const ts = series.map((s) => dayMs(s.date));
+    const t0 = winFrom && prevFrom ? dayMs(prevFrom) : ts[0];
+    const t1 = winFrom ? dayMs(today) : ts[N - 1];
+    const byTime = ts.every(Number.isFinite) && t1 > t0 && (N > 1 || !!winFrom);
+    const xAt = (t: number) => CH.l + ((t - t0) / (t1 - t0)) * pw;
+    const pts = series.map((s, i) => ({
+      x: byTime ? xAt(ts[i]) : N < 2 ? CH.l + pw / 2 : CH.l + (i / (N - 1)) * pw,
       y: yy(es[i]),
       s,
-      c: stalling && i > judged.bestAt ? RUST : PURPLE,
+      c: i < off ? GREY : stalling && i - off > judged.bestAt ? RUST : PURPLE,
     }));
-    const path = (a: number, b: number) =>
-      pts
-        .slice(a, b + 1)
-        .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-        .join(" ");
-    return { pw, ph, ticks, yy, pts, path };
+    // One smooth curve through every session (the weight line's, monotoneCurve), drawn in stretches by colour.
+    const segs = monotoneSegments(pts);
+    const path = (a: number, b: number) => `M${pts[a].x.toFixed(2)} ${pts[a].y.toFixed(2)} ${segs.slice(a, b).join(" ")}`;
+    const split = winFrom && byTime ? xAt(dayMs(winFrom)) : null;
+    return { pw, ph, ticks, yy, pts, path, split };
   })();
-  const hv = chart && hover != null && hover < n ? chart.pts[hover] : null;
+  const hv = chart && hover != null && hover < N ? chart.pts[hover] : null;
   const nearest = (clientX: number, el: HTMLElement) => {
     if (!chart) return;
     const m = clientX - el.getBoundingClientRect().left;
@@ -417,18 +414,19 @@ export default function ExerciseProgressDialog({
                 <b>
                   {whole(last!.best.e1rm)} {unit}
                 </b>
+                {/* The change alone (4 Nov, Alex: "on the 7 days before" said what the capsule says); a lift newer than
+                    the window before keeps `since 7/10`, which the capsule doesn't say. */}
                 {view !== "all" ? (
                   // The cell's own figure and comparison: the best in the window against the best in the one before.
                   <>
                     <span className={`exp-chg${windowChange != null && windowChange > 0 ? " up" : windowChange != null && windowChange < 0 ? " down" : ""}`}>{cellText(windowChange)}</span>
-                    <small>{windowSince ? `since ${dayMonth(windowSince)}` : `on the ${WIN_LABEL[view]} before`}</small>
+                    {windowSince && <small>since {dayMonth(windowSince)}</small>}
                     {heaviest && <Sep />}
                   </>
                 ) : (
                   changePct != null && (
                     <>
                       <span className={`exp-chg${changePct > 0 ? " up" : changePct < 0 ? " down" : ""}`}>{`${changePct > 0 ? "+" : changePct < 0 ? "−" : ""}${Math.abs(changePct)}%`}</span>
-                      <small>since {ss[0].date ? dayMonth(ss[0].date) : "—"}</small>
                       {heaviest && <Sep />}
                     </>
                   )
@@ -442,27 +440,6 @@ export default function ExerciseProgressDialog({
             </div>
             {seg}
           </div>
-
-          {stalling && suggest && (
-            <div className="exp-fix">
-              <span>
-                No new best in {n - 1 - judged.bestAt} session{n - 1 - judged.bestAt === 1 ? "" : "s"}.
-              </span>
-              <button type="button" className="exp-pill" onClick={() => onMessage(draft)}>
-                {chatIcon}
-                Suggest {suggest.pill}
-              </button>
-            </div>
-          )}
-          {judged.verdict === "dropping" && last && best && (
-            <div className="exp-fix">
-              <span>{Math.round((1 - last.best.e1rm / best.best.e1rm) * 100)}% under the best.</span>
-              <button type="button" className="exp-pill" onClick={() => onMessage(draft)}>
-                {chatIcon}
-                Ask about recovery
-              </button>
-            </div>
-          )}
 
           {chart && (
             <div
@@ -483,29 +460,44 @@ export default function ExerciseProgressDialog({
                     </g>
                   );
                 })}
-                {n < 2 ? (
+                {chart.split != null && prevFrom && winFrom ? (
+                  // A window: its first day, the one it starts on and today, as a grid axis; a faint line where it starts.
+                  <>
+                    <line x1={chart.split} x2={chart.split} y1={CH.t} y2={CH.t + chart.ph} stroke="#E1E5EB" strokeDasharray="3 4" />
+                    <text x={CH.l} y={CH.h - 6} textAnchor="start">
+                      {dayMonth(prevFrom)}
+                    </text>
+                    <text x={chart.split} y={CH.h - 6} textAnchor="middle">
+                      {dayMonth(winFrom)}
+                    </text>
+                    <text x={W - CH.r} y={CH.h - 6} textAnchor="end">
+                      {dayMonth(today)}
+                    </text>
+                  </>
+                ) : N < 2 ? (
                   <text x={chart.pts[0].x} y={CH.h - 6} textAnchor="middle">
-                    {ss[0].date ? dayMonth(ss[0].date) : ""}
+                    {series[0].date ? dayMonth(series[0].date) : ""}
                   </text>
                 ) : (
                   <>
                     <text x={chart.pts[0].x} y={CH.h - 6} textAnchor="start">
-                      {ss[0].date ? dayMonth(ss[0].date) : ""}
+                      {series[0].date ? dayMonth(series[0].date) : ""}
                     </text>
-                    <text x={chart.pts[n - 1].x} y={CH.h - 6} textAnchor="end">
+                    <text x={chart.pts[N - 1].x} y={CH.h - 6} textAnchor="end">
                       {last!.date ? dayMonth(last!.date) : ""}
                     </text>
                   </>
                 )}
-                {hv && <line x1={hv.x} x2={hv.x} y1={CH.t} y2={CH.t + chart.ph} stroke="#E1E5EB" />}
-                {stalling && <line x1={chart.pts[judged.bestAt].x} x2={W - CH.r} y1={chart.pts[judged.bestAt].y} y2={chart.pts[judged.bestAt].y} stroke={RUST} strokeOpacity={0.45} strokeDasharray="3 4" />}
-                {n > 1 && <path d={chart.path(0, stalling ? judged.bestAt : n - 1)} fill="none" stroke={PURPLE} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
-                {stalling && <path d={chart.path(judged.bestAt, n - 1)} fill="none" stroke={RUST} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
-                {hv && <circle cx={hv.x} cy={hv.y} r={8} fill={hv.c} fillOpacity={0.14} />}
-                {chart.pts.map((p, i) => (
-                  <circle key={i} cx={p.x} cy={p.y} r={i === n - 1 ? 4.5 : 3} fill={p.c} stroke="#fff" strokeWidth={2} />
-                ))}
-                {n > 1 && <circle cx={chart.pts[judged.bestAt].x} cy={chart.pts[judged.bestAt].y} r={8.5} fill="none" stroke={PURPLE} strokeWidth={1.5} />}
+                {hv && <line x1={hv.x} x2={hv.x} y1={CH.t} y2={CH.t + chart.ph} stroke="#141a24" strokeOpacity={0.25} />}
+                {stalling && <line x1={chart.pts[off + judged.bestAt].x} x2={W - CH.r} y1={chart.pts[off + judged.bestAt].y} y2={chart.pts[off + judged.bestAt].y} stroke={RUST} strokeOpacity={0.45} strokeDasharray="3 4" />}
+                {/* The window before in grey up to the window's first session, then the window in purple, a stall's
+                    stretch rust; no dot a session (the weight line's rule), the latest a dot, the best ringed. */}
+                {off > 0 && <path d={chart.path(0, off)} fill="none" stroke={GREY} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
+                {n > 1 && <path d={chart.path(off, off + (stalling ? judged.bestAt : n - 1))} fill="none" stroke={PURPLE} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
+                {stalling && <path d={chart.path(off + judged.bestAt, N - 1)} fill="none" stroke={RUST} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
+                <circle cx={chart.pts[N - 1].x} cy={chart.pts[N - 1].y} r={4.5} fill={chart.pts[N - 1].c} stroke="#fff" strokeWidth={2} />
+                {n > 1 && <circle cx={chart.pts[off + judged.bestAt].x} cy={chart.pts[off + judged.bestAt].y} r={8.5} fill="none" stroke={PURPLE} strokeWidth={1.5} />}
+                {hv && <circle cx={hv.x} cy={hv.y} r={5} fill="#fff" stroke="#141a24" strokeWidth={1.6} />}
               </svg>
               {chart.pts.map((p, i) => (
                 <button
@@ -540,18 +532,23 @@ export default function ExerciseProgressDialog({
             </div>
             {/* One run of sessions, the fold under it (24 Oct, Alex: open, it sat between the latest four and the rest and cut the list). */}
             {(open ? rows : rows.slice(0, 4)).map(row)}
-            {rows.length > 4 && (
+            {Array.from({ length: Math.max(0, logSlots - rows.length) }, (_, i) => (
+              <div key={`room-${i}`} className="exp-lr room" aria-hidden="true" />
+            ))}
+            {rows.length > 4 ? (
               <button type="button" className="exp-more" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
                 {open ? "Latest 4" : `All ${rows.length} sessions`}
                 <Fold open={open} />
               </button>
+            ) : (
+              anyMore && <div className="exp-more room" aria-hidden="true" />
             )}
           </div>
         </>
       )}
 
       <div className="dlh-foot">
-        <button type="button" className="dlh-go" onClick={() => onMessage(draft)}>
+        <button type="button" className="dlh-go" onClick={onMessage}>
           Message {firstName}
         </button>
       </div>

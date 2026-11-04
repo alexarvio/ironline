@@ -685,7 +685,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
   // right (ChatPanel), the reply pointing at it; outside the shell, the
   // message dialog as before.
   const openChat = useOpenChat();
-  const replyTo = (label: string, link: MessageLink, focus: number | null = null, draft?: string) => (openChat ? openChat({ area: "Training", label, link, ...(draft ? { draft } : {}) }, focus) : setDlg({ kind: "message", label, link }));
+  const replyTo = (label: string, link: MessageLink, focus: number | null = null) => (openChat ? openChat({ area: "Training", label, link }, focus) : setDlg({ kind: "message", label, link }));
   // And on a later link that changes only the #part (21 Oct): a second
   // session of the same week from the chat left the page as it was.
   useEffect(() => {
@@ -1939,9 +1939,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                 lbs={lbs}
                 assisted={row.assisted}
                 bodyKg={program.bodyKg}
-                onMessage={(draft) => {
+                onMessage={() => {
                   close();
-                  replyTo(`${row.name} · ${session?.name ?? "Session"}, ${week.label}`, { kind: "exercise", dayId: session?.id ?? 0, assignmentId: row.id }, null, draft);
+                  replyTo(`${row.name} · ${session?.name ?? "Session"}, ${week.label}`, { kind: "exercise", dayId: session?.id ?? 0, assignmentId: row.id });
                 }}
                 onClose={close}
               />
