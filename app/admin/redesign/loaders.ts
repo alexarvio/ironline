@@ -750,7 +750,8 @@ export function loadDots(clientId: number): DotTrail {
       todo(t, { key: a.id, kind: "setup", what: a.title, words: null, since: null, action: t === "training" ? "Add sessions" : t === "nutrition" ? "Set targets" : "Add metrics", href: route(t, `${rest}#${at}`), ref: null });
     } else if (a.id.startsWith("read-")) {
       const t = a.eventId ? byId.get(a.eventId)?.target : undefined;
-      // The thing in the store's words, its first part: "Couldn't do Session 3", "Wrote a note on Hypertrophy".
+      // The thing in the store's words, its first part: "Logged food", "Wrote a note on Hypertrophy" (a session they
+      // couldn't do is Activity alone, 4 Nov, Alex).
       const what = (titleParts(a.title)[0] ?? a.title).replace(/\s*\(Week \d+\)$/, "");
       const words = a.detail?.trim() || null;
       if (t?.kind === "session") {

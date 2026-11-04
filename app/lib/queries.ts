@@ -7282,6 +7282,9 @@ export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: Trainin
     // Nor a note on a check-in (12 Oct): those read in Activity and on
     // Measurements; in Start here they were most of the noise.
     if (!e.note || e.category === "messages" || e.category === "measurements") continue;
+    // Nor a session they couldn't do, its reason included (4 Nov, Alex: "that is not something that needs me… I don't need
+    // to do anything there"): it is Activity alone, so never on the Feed's Needs you, the rail, the dots or the to-do strip.
+    if (e.id.startsWith("skip-")) continue;
     actions.push({ id: `read-${e.id}`, tone: "note", group: "check", title: e.text.charAt(0).toUpperCase() + e.text.slice(1), detail: e.note, quote: !!e.note, tab: e.tab, at: e.at, eventId: e.id });
   }
   // Gone quiet: nothing at all logged for a while.
