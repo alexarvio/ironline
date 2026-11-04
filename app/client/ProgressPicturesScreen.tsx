@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { uploadProgressPhotoAction } from "../lib/actions";
+import { removeProgressPhotoAction, uploadProgressPhotoAction } from "../lib/actions";
 import { fitJpeg } from "../lib/coverJpeg";
 import { ArrowRightIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenPhotos } from "./CheckInContext";
@@ -221,6 +221,9 @@ function OpenSheet({
   const [editing, setEditing] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [failed, setFailed] = useState(false);
+  // A sent photo being taken off while the sheet is edited (4 Nov, Alex: "bring it back"), and one that would not go.
+  const [removingId, setRemovingId] = useState<number | null>(null);
+  const [removeFailed, setRemoveFailed] = useState(false);
   // Whether the folded "sent" row is opened up.
   const [sentOpen, setSentOpen] = useState(false);
   // The sheet still to do comes open; its head folds it.
@@ -258,8 +261,34 @@ function OpenSheet({
     const preview = URL.createObjectURL(file);
     previews.current.push(preview);
     setFailed(false);
+    setRemoveFailed(false);
     setJustSaved(false);
     setStaged((s) => ({ ...s, [slot.id]: { file, preview } }));
+  };
+
+  // Takes a sent photo off the sheet, as the old sheet's Remove photo did (17 Oct); asked on the card first (4 Nov,
+  // Alex). The card waits dimmed and lands empty with the refreshed sheet, its counts with it.
+  const removePhoto = (slot: Slot) => {
+    setFailed(false);
+    setRemoveFailed(false);
+    setJustSaved(false);
+    setRemovingId(slot.id);
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("slotId", String(slot.id));
+    fd.set("period", sheet.period);
+    startSaving(async () => {
+      let ok = true;
+      try {
+        await removeProgressPhotoAction(fd);
+      } catch {
+        ok = false;
+      }
+      startSaving(() => {
+        setRemovingId(null);
+        if (!ok) setRemoveFailed(true);
+      });
+    });
   };
 
   const save = () => {
@@ -310,6 +339,7 @@ function OpenSheet({
   const cancel = () => {
     setStaged({});
     setFailed(false);
+    setRemoveFailed(false);
     setEditing(false);
   };
 
@@ -363,6 +393,11 @@ function OpenSheet({
               A photo didn&rsquo;t send. Check your connection and press Save again.
             </p>
           )}
+          {removeFailed && (
+            <p className="pp-app-fail" role="alert">
+              Photo not removed. Try again
+            </p>
+          )}
 
           {/* How to take them, first (17 Oct, Alex): the coach's general instructions sit above the cards, read before the camera comes out. */}
           {/* The coach's word on how to take each angle (21 Oct, Alex) was the title of our sheet; with the phone's own
@@ -388,6 +423,7 @@ function OpenSheet({
           <PhotoDeck
             disabled={saving}
             onTap={(i) => askPhoto(sheet.slots[i])}
+            onRemove={(i) => removePhoto(sheet.slots[i])}
             items={sheet.slots.map((s) => {
               const item = staged[s.id];
               const uploading = uploadingId === s.id;
@@ -404,6 +440,10 @@ function OpenSheet({
                 // Editing (17 Oct, Alex: a sent photo could not be swapped or taken off): every card opens again.
                 locked: ticked && !uploading && !editing,
                 action: ticked && !uploading && !editing ? null : src ? "Change" : "Add photo",
+                // A sent photo while editing (4 Nov, Alex): Remove on its card. One picked and not sent has Cancel for that.
+                removable: editing && !!s.src && !item && !uploading,
+                removing: removingId === s.id,
+                ...(removingId === s.id ? { state: "Removing…", tone: null, action: null } : {}),
               };
             })}
           />
@@ -435,13 +475,22 @@ function OpenSheet({
                   Cancel
                 </button>
               )}
-              {stagedCount === 0 && editing && !saving ? (
-                <button type="button" className="pp-app-save-btn secondary" onClick={() => setEditing(false)}>
+              {/* A photo being removed is no send (4 Nov): Done stays, held still, and the send pill never says Sending… for it. */}
+              {stagedCount === 0 && editing && (!saving || removingId !== null) ? (
+                <button
+                  type="button"
+                  className="pp-app-save-btn secondary"
+                  disabled={saving}
+                  onClick={() => {
+                    setEditing(false);
+                    setRemoveFailed(false);
+                  }}
+                >
                   Done
                 </button>
               ) : (
                 <button type="button" className="pp-app-save-btn" onClick={save} disabled={saving}>
-                  {saving ? "Sending…" : stagedCount === 1 ? "Send 1 photo" : `Send ${stagedCount} photos`}
+                  {saving && removingId === null ? "Sending…" : stagedCount === 1 ? "Send 1 photo" : `Send ${stagedCount} photos`}
                 </button>
               )}
             </div>

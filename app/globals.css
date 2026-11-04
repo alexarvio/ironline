@@ -20103,6 +20103,24 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ppd-card.locked .ppd-tap { cursor: default; }
 .ppd-card.locked .ppd-foot { justify-content: flex-end; }
 .ppd-check { color: #3fbf6a; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)); }
+/* A sent photo taken off while its sheet is edited (4 Nov, Alex: "bring it back"): Remove in the client's red words at the card's top right, level with the angle's chip, never a pill; a soft light edge keeps the words read on any photo. A tap asks in place: the photo dims and the card says Remove photo? with Cancel in words and Remove in red words. */
+.ppd-card { position: relative; }
+.ppd-img { transition: opacity 200ms ease; }
+.ppd-remove { position: absolute; top: 4px; right: 4px; height: 44px; padding: 0 10px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #b42318; text-shadow: 0 0 2px rgba(255, 255, 255, 0.9), 0 0 8px rgba(255, 255, 255, 0.75); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ppd-remove:disabled { opacity: 0.5; cursor: default; }
+.ppd-card.asking .ppd-img { opacity: 0.25; }
+.ppd-card.removing .ppd-img { opacity: 0.35; }
+.ppd-ask { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; pointer-events: none; animation: ppd-ask-in 200ms ease; }
+.ppd-ask-q { font-size: 15px; font-weight: 600; color: #141a24; }
+.ppd-ask-btns { display: flex; gap: 6px; pointer-events: auto; }
+.ppd-ask-btns button { height: 40px; padding: 0 12px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ppd-ask-btns .ppd-ask-remove { color: #b42318; }
+.ppd-ask-btns button:disabled { opacity: 0.5; cursor: default; }
+@keyframes ppd-ask-in { from { opacity: 0; } }
+@media (hover: hover) {
+  .ppd-remove:not(:disabled):hover, .ppd-ask-btns button:not(:disabled):hover { opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) { .ppd-img { transition: none; } .ppd-ask { animation: none; } }
 /* How to take them, above the cards (17 Oct): no line over it, just room. */
 .pp-todo-coach.first { margin-top: 14px; padding-top: 0; border-top: 0; }
 /* ---- Add an event in the shared voice (17 Oct, Alex): still a pop-up with real fields, but plain white (no wash or glow, which also pushed a sideways scrollbar), the type tiles white with a hairline and their icon in the category's colour, the chosen one ink; fields white with a hairline, ink while typing; small grey labels; the dates as hairline boxes; Save one ink pill. 500/600 type. */

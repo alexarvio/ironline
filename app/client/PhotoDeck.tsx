@@ -22,11 +22,27 @@ export type DeckItem = {
   locked?: boolean;
   /** The action the card's tap does ("Add", "Change", "View"); none, the card does nothing. */
   action?: string | null;
+  /** A sent photo while its sheet is edited (4 Nov, Alex): Remove in red words on the card, asking in place first. */
+  removable?: boolean;
+  /** Being taken off: the photo dimmed, the card still until it is gone. */
+  removing?: boolean;
 };
 
-export default function PhotoDeck({ items, onTap, disabled = false }: { items: DeckItem[]; onTap?: (index: number) => void; disabled?: boolean }) {
+export default function PhotoDeck({
+  items,
+  onTap,
+  onRemove,
+  disabled = false,
+}: {
+  items: DeckItem[];
+  onTap?: (index: number) => void;
+  onRemove?: (index: number) => void;
+  disabled?: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
+  // The card asking `Remove photo?` (4 Nov, Alex: as Settings' card pictures and the check-in's Discard changes? ask in place).
+  const [asking, setAsking] = useState<number | null>(null);
   const onScroll = () => {
     const el = ref.current;
     const card = el?.firstElementChild as HTMLElement | null;
@@ -37,9 +53,14 @@ export default function PhotoDeck({ items, onTap, disabled = false }: { items: D
     <div className="ppd">
       <div ref={ref} className="ppd-scroller" onScroll={onScroll} role="list">
         {items.map((it, i) => {
-          const can = !!it.action && !!onTap && !disabled;
+          const ask = asking === it.key && !!it.removable && !!it.src;
+          const can = !!it.action && !!onTap && !disabled && !ask && !it.removing;
           return (
-            <div key={it.key} role="listitem" className={`ppd-card${it.src ? " in" : " empty"}${it.locked ? " locked" : ""}`}>
+            <div
+              key={it.key}
+              role="listitem"
+              className={`ppd-card${it.src ? " in" : " empty"}${it.locked ? " locked" : ""}${ask ? " asking" : ""}${it.removing ? " removing" : ""}`}
+            >
               <button type="button" className="ppd-tap" onClick={() => can && onTap?.(i)} disabled={!can} aria-label={`${i + 1}, ${it.label}${it.state ? `, ${it.state}` : ""}${it.action ? `. ${it.action}` : ""}`}>
                 {it.src ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -60,7 +81,7 @@ export default function PhotoDeck({ items, onTap, disabled = false }: { items: D
                   </b>
                   {it.label}
                 </span>
-                {(it.state || it.action) && (
+                {(it.state || it.action) && !ask && (
                   <span className="ppd-foot" aria-hidden="true">
                     {it.locked ? (
                       // Sent (17 Oct, Alex): a green tick alone, low on the right.
@@ -74,6 +95,40 @@ export default function PhotoDeck({ items, onTap, disabled = false }: { items: D
                   </span>
                 )}
               </button>
+              {/* Take a sent photo off (4 Nov, Alex: "bring it back"): its words alone, never a pill; a tap on the photo still replaces it. */}
+              {it.removable && it.src && !ask && !it.removing && onRemove && (
+                <button type="button" className="ppd-remove" onClick={() => setAsking(it.key)} disabled={disabled} aria-label={`Remove ${it.label}`}>
+                  Remove
+                </button>
+              )}
+              {ask && (
+                <div
+                  className="ppd-ask"
+                  role="group"
+                  aria-label={`Remove ${it.label}?`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setAsking(null);
+                  }}
+                >
+                  <span className="ppd-ask-q">Remove photo?</span>
+                  <span className="ppd-ask-btns">
+                    <button type="button" className="ppd-ask-cancel" onClick={() => setAsking(null)} autoFocus>
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="ppd-ask-remove"
+                      disabled={disabled}
+                      onClick={() => {
+                        setAsking(null);
+                        onRemove?.(i);
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </span>
+                </div>
+              )}
             </div>
           );
         })}
