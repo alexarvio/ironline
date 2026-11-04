@@ -8,7 +8,7 @@ import { addClientPhaseAction, applyMetricChangesAction, deletePhaseAction, depl
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, ChartIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChartIcon, ChatIcon, NoteIcon,ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { LoggedMetric, LoggedValues } from "../../../lib/queries";
 import { ConfirmDialog, DeletePhaseDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
 import { GoalsNotePills, GripIcon } from "../training/TrainingParts";
@@ -1130,7 +1130,7 @@ function NoteBubble({ text, onReply }: { text: string; onReply: () => void }) {
     <Popover>
       <PopoverTrigger asChild>
         <button type="button" className="rm-notebtn" onClick={(e) => e.stopPropagation()} aria-label="Note from the client" title="Note from the client">
-          <ChatIcon />
+          <NoteIcon />
         </button>
       </PopoverTrigger>
       <PopoverContent side="bottom" align="start" className="rm-notepop w-80" onClick={(e) => e.stopPropagation()}>
