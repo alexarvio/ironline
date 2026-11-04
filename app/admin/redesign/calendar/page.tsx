@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { requireCoach } from "../../../lib/auth";
-import { clientReasons, getActivityFeed, getCalendarDay, getCalendarMonth, getMeetingConflicts, listCalendarCategories, listClients, localDateStr, type MeetingWithClient } from "../../../lib/queries";
-import { ATTENTION } from "../../../lib/attentionReasons";
+import { getCalendarDay, getCalendarMonth, getMeetingConflicts, listCalendarCategories, listClients, localDateStr, type MeetingWithClient } from "../../../lib/queries";
 import CalendarSaveStatus from "./CalendarSaveStatus";
 import { startTiming } from "../../../lib/timing";
 import { loadChatDock, loadRail } from "../loaders";
@@ -74,14 +73,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const entries: Record<string, CalEntry[]> = {};
   for (const cell of calendar.weeks.flat()) entries[cell.date] = cell.meetings.map(entryOf);
   if (!(selectedDay in entries)) entries[selectedDay] = t.time("calendarDay", () => getCalendarDay(coach.id, selectedDay)).map(entryOf);
-  // Each with why they need the coach, as the rail says it (14 Oct), for the With picker.
-  const feed = t.time("activityFeed", () => getActivityFeed(coach.id));
-  const clients = t.time("clientReasons", () =>
-    listClients(coach.id).map((c) => {
-      const r = clientReasons(c.id, feed)[0];
-      return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, reason: r ? { text: r.text, color: ATTENTION[r.type].color, rgb: ATTENTION[r.type].rgb } : null };
-    }),
-  );
+  // For the With picker: faces and names alone (27 Oct, Alex), so no feed and no reasons worked out for a list that
+  // never shows them (4 Nov, Alex: "just a tiny bit slow" going from screen to screen).
+  const clients = t.time("clients", () => listClients(coach.id).map((c) => ({ id: c.id, name: c.name, avatarPath: c.avatar_path ?? null })));
   // All-day entries first in a cell, then by time; four shown, the rest as +N more.
   const cellOrder = (list: MeetingWithClient[]) => [...list].sort((a, b) => Number(!!b.all_day) - Number(!!a.all_day) || (a.time < b.time ? -1 : 1));
   const span = (m: MeetingWithClient) => `${m.time}–${hhmm(toMin(m.time) + m.duration_minutes)}`;

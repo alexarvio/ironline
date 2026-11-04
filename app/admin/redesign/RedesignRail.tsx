@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { dayMonth } from "../../lib/dayMonth";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -79,9 +79,32 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
   const pendingId = pending && pending.from === here && pending.id !== clientId ? pending.id : null;
   const markedId = pendingId ?? clientId;
   const setPendingId = (id: number) => setPending({ id, from: here });
+  // A view clicked (Feed, Calendar, Phases…) answers the same way (4 Nov, Alex: "a tiny bit slow" going Phases → Calendar
+  // → Feed): its row is the ink pill at once and the one you were on lets go, and the page under it dims a little, until
+  // the new page arrives and the rail is drawn afresh. Let go after 8s, or on Back, so a navigation that never lands
+  // never leaves the page dimmed.
+  const [goingTo, setGoingTo] = useState<{ href: string; from: string } | null>(null);
+  const pendingView = goingTo && goingTo.from === path ? goingTo.href : null;
+  useEffect(() => {
+    if (!goingTo) return;
+    const stop = () => setGoingTo(null);
+    const t = window.setTimeout(stop, 8000);
+    window.addEventListener("popstate", stop);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("popstate", stop);
+    };
+  }, [goingTo]);
+  // The row marked: the one clicked while it loads, else the page you are on.
+  const viewOn = (href: string, isHere: boolean) => (pendingView ? pendingView === href : isHere);
+  const goView = (href: string, isHere: boolean) => (e: MouseEvent) => {
+    // A new tab or window goes the usual way, and the row you are on changes nothing.
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || isHere) return;
+    setGoingTo({ href, from: path });
+  };
 
   return (
-    <aside className="rr" aria-label="Coach rail">
+    <aside className={`rr${pendingView ? " going" : ""}`} aria-label="Coach rail">
       {/* In the native app a coach is sent to their phone screens (21 Oct, /coach): the rail is on every admin screen. */}
       <NativeCoachRedirect />
       {/* Back at the window, the page reads itself again (23 Oct, Alex): what the client logged meanwhile shows. */}
@@ -105,27 +128,31 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
 
       <nav className="rr-nav" aria-label="Views">
         {/* The cross-client views are not redrawn yet: they open where they always were. */}
-        {VIEWS.map(({ key, label, Icon }) => (
-          <Link key={key} href={REDRAWN[key] ?? `/admin?view=${key}`} className={`rr-navrow${REDRAWN[key] && path?.startsWith(REDRAWN[key]!) ? " active" : ""}`} aria-current={REDRAWN[key] && path?.startsWith(REDRAWN[key]!) ? "page" : undefined}>
-            <Icon />
-            <span>{label}</span>
-            {/* The Feed's own Needs you, counted as it lists them (22 Oct: it counted clients, a new one too, and read
-                1 over a Feed that said None). */}
-            {key === "phases" && phasesOwed > 0 && (
-              <em className="rr-badge" title={`${phasesOwed} thing${phasesOwed === 1 ? "" : "s"} need you`}>
-                {phasesOwed}
-              </em>
-            )}
-            {key === "feed" && feedOwed > 0 && (
-              <em className="rr-badge" title={`${feedOwed} thing${feedOwed === 1 ? "" : "s"} need you`}>
-                {feedOwed}
-              </em>
-            )}
-          </Link>
-        ))}
+        {VIEWS.map(({ key, label, Icon }) => {
+          const href = REDRAWN[key] ?? `/admin?view=${key}`;
+          const isHere = !!(REDRAWN[key] && path?.startsWith(REDRAWN[key]!));
+          return (
+            <Link key={key} href={href} className={`rr-navrow${viewOn(href, isHere) ? " active" : ""}`} aria-current={isHere ? "page" : undefined} onClick={goView(href, isHere)}>
+              <Icon />
+              <span>{label}</span>
+              {/* The Feed's own Needs you, counted as it lists them (22 Oct: it counted clients, a new one too, and read
+                  1 over a Feed that said None). */}
+              {key === "phases" && phasesOwed > 0 && (
+                <em className="rr-badge" title={`${phasesOwed} thing${phasesOwed === 1 ? "" : "s"} need you`}>
+                  {phasesOwed}
+                </em>
+              )}
+              {key === "feed" && feedOwed > 0 && (
+                <em className="rr-badge" title={`${feedOwed} thing${feedOwed === 1 ? "" : "s"} need you`}>
+                  {feedOwed}
+                </em>
+              )}
+            </Link>
+          );
+        })}
         {/* Owner only, as before; the coaches page in the redesign (22 Oct). */}
         {rail.isOwner && (
-          <Link href={COACHES} className={`rr-navrow${path?.startsWith(COACHES) ? " active" : ""}`} aria-current={path?.startsWith(COACHES) ? "page" : undefined}>
+          <Link href={COACHES} className={`rr-navrow${viewOn(COACHES, !!path?.startsWith(COACHES)) ? " active" : ""}`} aria-current={path?.startsWith(COACHES) ? "page" : undefined} onClick={goView(COACHES, !!path?.startsWith(COACHES))}>
             <AccountIcon />
             <span>Coaches</span>
             {/* A coach's support line the owner hasn't read: a rust dot (the inbox is on Coaches). */}

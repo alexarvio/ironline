@@ -30,7 +30,8 @@ import { pic } from "../../../lib/pic";
 // With is only for a Client call or Training (23 Oct, Alex; calendarKinds.ts):
 // on any other category it keeps its room unseen, and no client is saved.
 
-export type EntryClient = { id: number; name: string; avatarPath: string | null; /** Why they need the coach, as the rail says it; null: all good. */ reason: { text: string; color: string; rgb: string } | null };
+/** A client to pick: the face and the name alone (27 Oct, Alex; the reason it once carried went 4 Nov, never shown). */
+export type EntryClient = { id: number; name: string; avatarPath: string | null };
 export type Open = { entry: CalEntry | null; date: string; time: string };
 
 const PRESET: Record<string, { icon: string; placeholder: string; length: number }> = {

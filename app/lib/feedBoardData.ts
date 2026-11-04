@@ -8,8 +8,6 @@ import { getData, persist, type Data } from "./db";
 import {
   activityWords,
   callThing,
-  getActivityFeed,
-  getClientHome,
   getDeployedProgram,
   getProgramCurrentWeekIndex,
   listMeetings,
@@ -21,6 +19,7 @@ import {
 import { activityMarkOf } from "./activityMark";
 import { SERVER_TZ, zonedToUtc } from "./timezones";
 import { titleParts } from "./titleParts";
+import { clientActions, coachNeeds } from "./coachNeeds";
 import { feedHref, needView } from "../admin/redesign/loaders";
 
 type UserRow = Data["users"][number];
@@ -106,12 +105,13 @@ function context(coachId: number, today: string): Ctx {
   const clients = data.clients.filter((c) => c.coach_id === coachId).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
   const ids = new Set(clients.map((c) => c.id));
 
-  const feed = getActivityFeed(coachId);
-  const byEventId = new Map(feed.map((e) => [e.id, e] as const));
+  // The coach's feed and each client's Needs you, the one read the rail shares this request (4 Nov, Alex: "just a tiny
+  // bit slow"; coachNeeds.ts). A client whose Home fails still reads as empty here.
+  const { feed, byId: byEventId } = coachNeeds(coachId);
   const actions = new Map<number, HomeAction[]>();
   for (const c of clients) {
     try {
-      actions.set(c.id, getClientHome(c.id, feed).actions);
+      actions.set(c.id, clientActions(coachId, c.id));
     } catch (e) {
       console.error(`[feedBoard] home ${c.id}:`, e);
       actions.set(c.id, []);

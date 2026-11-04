@@ -85,6 +85,12 @@
 .rr-row.loading .rr-avatar { animation: rr-pulse 0.9s ease-in-out infinite; }
 @keyframes rr-pulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .rr-row.loading .rr-avatar { animation: none; } }
+/* A view clicked (Feed, Calendar, Phases…), page on its way (4 Nov, Alex: "a tiny bit slow"): its row is the ink pill at
+   once (.rr-navrow.active) and the page you are leaving dims a little and takes no clicks, until the new one lands. Its
+   content dims, never the faint star behind it (.rd-page::before), which stays still. */
+.rd-frame:has(> .rr.going) > .rd-page { pointer-events: none; }
+.rd-frame:has(> .rr.going) > .rd-page > * { opacity: 0.6; transition: opacity 0.12s ease; }
+@media (prefers-reduced-motion: reduce) { .rd-frame:has(> .rr.going) > .rd-page > * { transition: none; } }
 .rr-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; box-sizing: border-box; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; color: #5b6474; font-size: 12px; font-weight: 500; transition: box-shadow 0.2s ease; }
 .rr-avatar img { width: 100%; height: 100%; object-fit: cover; }
 /* The open client: their row on a soft grey, a step stronger than hover, the name ink at 600 (22 Oct, Alex: as the old
