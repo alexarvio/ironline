@@ -9,7 +9,7 @@ const svgs = [...src.replace(/fillRule=/g, "fill-rule=").matchAll(/<svg[^>]*view
 const [mark, word] = svgs;
 const H = 120; // mark height
 const mw = (mark.box[2] / mark.box[3]) * H;
-const wh = H / 1.35; // the word at 1em beside the star at 1.35em, as the app draws it (2 Nov)
+const wh = H; // the word as tall as the star, as the app draws it (4 Nov, Alex)
 const ww = (word.box[2] / word.box[3]) * wh;
 const gap = 34, pad = 30;
 const W = Math.round(pad * 2 + mw + gap + ww), T = Math.round(pad * 2 + H);

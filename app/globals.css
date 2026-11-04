@@ -8801,8 +8801,10 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
    and the wordmark, sized by the font size of wherever it sits and in its
    colour, so it is ink on the page and white over a photo. */
 .nc-logo { display: inline-flex; align-items: center; gap: 0.5em; line-height: 1; color: inherit; }
-.nc-logo-mark { flex: none; height: 1.35em; width: auto; }
-/* The bold condensed wordmark (2 Nov, Alex): a little shorter than the star, about as wide as the old word was. */
+/* The star exactly as tall as the letters (4 Nov, Alex: "the length of it the same length as the letters"; it stood
+   taller beside the word since 2 Nov), both 1em, centred on one another. */
+.nc-logo-mark { flex: none; height: 1em; width: auto; }
+/* The bold condensed wordmark (4 Nov, Alex: his cleaner artwork, 5.68em wide at 1em). */
 .nc-logo-word { flex: none; height: 1em; width: auto; }
 
 .auth-title {
@@ -20874,7 +20876,7 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .au-card.auth-card { max-width: 400px; padding: 30px 28px 24px; border: 0; border-radius: 20px; background: #fff; box-shadow: 0 0 0 1px #E1E5EB; }
 .au-card .auth-brand { display: block; margin-bottom: 26px; color: #141a24; }
 .au-card .auth-brand .nc-logo { display: flex; align-items: center; gap: 14px; width: 100%; }
-.au-card .auth-brand .nc-logo-mark { height: 46px; }
+.au-card .auth-brand .nc-logo-mark { height: 34px; }
 .au-card .auth-brand .nc-logo-word { flex: none; width: auto; height: 34px; }
 .au-card .auth-title { margin: 0 0 18px; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
 .au-card .au-lead { color: #5b6474; font-size: 14px; font-weight: 500; }
