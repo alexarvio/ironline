@@ -38,9 +38,19 @@ const activeWritten = active.written;
 // Their latest request, between writes (memory only, as the rest of this file).
 const activeSeen = active.seen;
 
+// The coach's open chat hears of it far more often than it is saved (4 Nov, Alex: "closer to real time"): a minute
+// apart a client, memory only (chatBus), so the head's time stays fresh without a write.
+const SIGNAL_EVERY_MS = 60 * 1000;
+const g2 = globalThis as unknown as { __norcoachActiveSignal?: Map<number, number> };
+const activeSignalled = (g2.__norcoachActiveSignal ??= new Map());
+
 function noteClientActive(clientId: number) {
   const now = Date.now();
   activeSeen.set(clientId, now);
+  if (now - (activeSignalled.get(clientId) ?? 0) >= SIGNAL_EVERY_MS) {
+    activeSignalled.set(clientId, now);
+    chatChanged(clientId);
+  }
   if (now - (activeWritten.get(clientId) ?? 0) < ACTIVE_EVERY_MS) return;
   activeWritten.set(clientId, now);
   const client = getData().clients.find((c) => c.id === clientId);
@@ -49,8 +59,6 @@ function noteClientActive(clientId: number) {
   if (Number.isFinite(stored) && now - stored < ACTIVE_EVERY_MS) return;
   client.last_active_at = new Date(now).toISOString();
   persist();
-  // An open chat with them reads itself again, so the coach sees "Active now" as they come in (chatBus.ts).
-  chatChanged(clientId);
 }
 
 /** When the client was last in the app (ISO), or null when never since this was kept: the later of the stored time and
