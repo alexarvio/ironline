@@ -45,21 +45,26 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
         return (
           <section key={r.id} className={`trn-rg${isOpen ? " open" : ""}`}>
             <div className="trn-rg-row" onClick={(e) => !(e.target as HTMLElement).closest("button") && setOpen(isOpen ? null : r.id)}>
+              {/* The grip's room a planned session has (a done week's keeps it too), so the names stand in one column. */}
+              <span className="trn-grip-slot" aria-hidden="true" />
               <span className="trn-row-name">
                 <b>Rogue session</b>
                 <small>
                   {count} {count === 1 ? "exercise" : "exercises"}
                 </small>
+                {/* The fold right after the title and its fact, as a planned session's (4 Nov, Alex: "not aligned, inconsistencies"). */}
+                <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : r.id)} aria-expanded={isOpen} aria-label={isOpen ? "Fold rogue session" : "Open rogue session"}>
+                  <span className={`trn-chev${isOpen ? " open" : ""}`} aria-hidden="true">
+                    <ChevronRightIcon />
+                  </span>
+                </button>
               </span>
               <span className="trn-rg-when">
                 <SepJoin parts={[r.started && dayMonth(r.started), r.duration != null && `${r.duration} min`]} />
               </span>
               <span className={`trn-state ${r.ended ? "good" : "live"}`}>{r.ended ? "Completed" : "In progress"}</span>
-              <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : r.id)} aria-expanded={isOpen} aria-label={isOpen ? "Fold rogue session" : "Open rogue session"}>
-                <span className={`trn-chev${isOpen ? " open" : ""}`} aria-hidden="true">
-                  <ChevronRightIcon />
-                </span>
-              </button>
+              {/* The ⋯'s room a planned session has, so the state pills stand in one column down the page. */}
+              <span className="trn-row-more-slot" aria-hidden="true" />
             </div>
             {isOpen && (
               <div className="rd-rows rd-rows-scroll" style={{ "--rd-minw": `${minW}px` } as React.CSSProperties}>
