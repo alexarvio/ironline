@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChatVideo, sized } from "./ChatMedia";
+import { createPortal } from "react-dom";
+import { ChatVideo, FullImage, FullVideo, sized } from "./ChatMedia";
 
 // Everything sent in a chat, gathered (2 Oct): the photos and videos as a
 // grid, and the files and voice messages as a list, newest first. Tapping
@@ -10,6 +11,10 @@ import { ChatVideo, sized } from "./ChatMedia";
 // Since 27 Oct (Alex: "finding the form check from week three means scrolling past two months of chat") it finds
 // things too: a search line over it reads every message's words and every file's name and exercise. The photos and
 // videos are tiles alone (27 Oct, Alex: the ↗ did what a tap does; the chips by exercise taken out for now).
+// Since 4 Nov (Alex: "if I click on a picture, I want to be able to just see the picture there. I don't need to be going
+// to the chat"; "just photos, videos, and files"): Photos | Videos | Files as the capsule across the row (a voice message
+// is a file), and a tap opens the thing right here: a photo on the whole screen, a video playing, a file itself. Only
+// the search's words still go to their message in the chat.
 // Deliberately does NOT import from ../lib/queries (see ChatComposeForm.tsx).
 
 export type GalleryItem = {
@@ -49,14 +54,48 @@ function Marked({ text, q }: { text: string; q: string }) {
 
 export default function ChatMediaGallery({ items, onShow, onClose }: { items: GalleryItem[]; onShow: (id: number) => void; onClose: () => void }) {
   const withMedia = items.filter((i) => i.media);
-  const visual = withMedia.filter((i) => i.media!.type === "image" || i.media!.type === "video");
+  const photos = withMedia.filter((i) => i.media!.type === "image");
+  const videos = withMedia.filter((i) => i.media!.type === "video");
   const files = withMedia.filter((i) => i.media!.type === "file" || i.media!.type === "audio");
-  const [tab, setTab] = useState<"media" | "files">(visual.length || !files.length ? "media" : "files");
+  const [tab, setTab] = useState<"photos" | "videos" | "files">(photos.length || (!videos.length && !files.length) ? "photos" : videos.length ? "videos" : "files");
   const [q, setQ] = useState("");
+  // Opened on the whole screen, right here (4 Nov, Alex).
+  const [open, setOpen] = useState<{ type: "image" | "video"; path: string } | null>(null);
   const show = (id: number) => {
     onClose();
     onShow(id);
   };
+  // A search result: its media opens here, words go to their message.
+  const showFound = (i: GalleryItem) => {
+    if (i.media && (i.media.type === "image" || i.media.type === "video") && !i.text?.trim()) setOpen({ type: i.media.type, path: i.media.path });
+    else show(i.id);
+  };
+  const grid = (list: GalleryItem[], empty: string) =>
+    list.length === 0 ? (
+      <p className="cmg-empty">{empty}</p>
+    ) : (
+      <div className="cmg-grid">
+        {list.map((i) => (
+          <div key={i.id} className="cmg-tile">
+            <button type="button" className="cmg-thumb" onClick={() => setOpen({ type: i.media!.type as "image" | "video", path: i.media!.path })} aria-label={`${i.media!.type === "video" ? "Play the video" : "Open the photo"} from ${i.who}, ${i.when}${i.about ? `, ${i.about}` : ""}`} title={`${i.who} | ${i.when}${i.about ? ` | ${i.about}` : ""}`}>
+              {i.media!.type === "video" ? (
+                <>
+                  <ChatVideo src={i.media!.path} controls={false} muted />
+                  <span className="cmg-play" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+                    </svg>
+                  </span>
+                </>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- an upload from the chat
+                <img src={sized(i.media!.path, 480)} alt="" loading="lazy" decoding="async" />
+              )}
+            </button>
+          </div>
+        ))}
+      </div>
+    );
   const term = q.trim();
   const needle = term.toLowerCase();
   const found = term ? items.filter((i) => [i.text, i.about, i.media?.name, i.media ? kindWord(i.media.type) : null].some((w) => w && w.toLowerCase().includes(needle))) : [];
@@ -87,7 +126,7 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
             <ul className="cmg-list cmg-found">
               {found.map((i) => (
                 <li key={i.id} className="cmg-file">
-                  <button type="button" className="cmg-file-main" onClick={() => show(i.id)} title="Show it in the chat">
+                  <button type="button" className="cmg-file-main" onClick={() => showFound(i)} title={i.text?.trim() ? "Show it in the chat" : undefined}>
                     <span className="cmg-file-text">
                       <b className="cmg-found-text">{i.text?.trim() ? <Marked text={i.text} q={term} /> : i.media ? <Marked text={i.media.type === "file" ? (i.media.name ?? "File") : kindWord(i.media.type)} q={term} /> : null}</b>
                       <small>
@@ -112,50 +151,31 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
         </div>
       ) : (
         <>
+          {/* Photos | Videos | Files, the capsule across the whole row in three equal parts (4 Nov, Alex). */}
           <div className="cmg-tabs" role="tablist">
-            <button type="button" role="tab" aria-selected={tab === "media"} className={tab === "media" ? "on" : ""} onClick={() => setTab("media")}>
-              Photos &amp; videos <small>{visual.length}</small>
+            <button type="button" role="tab" aria-selected={tab === "photos"} className={tab === "photos" ? "on" : ""} onClick={() => setTab("photos")}>
+              Photos <small>{photos.length}</small>
+            </button>
+            <button type="button" role="tab" aria-selected={tab === "videos"} className={tab === "videos" ? "on" : ""} onClick={() => setTab("videos")}>
+              Videos <small>{videos.length}</small>
             </button>
             <button type="button" role="tab" aria-selected={tab === "files"} className={tab === "files" ? "on" : ""} onClick={() => setTab("files")}>
-              Files &amp; voice <small>{files.length}</small>
+              Files <small>{files.length}</small>
             </button>
           </div>
           <div className="cmg-body">
-            {tab === "media" ? (
-              visual.length === 0 ? (
-                <p className="cmg-empty">No photos or videos sent yet.</p>
-              ) : (
-                <>
-                  <div className="cmg-grid">
-                    {visual.map((i) => (
-                      <div key={i.id} className="cmg-tile">
-                        <button type="button" className="cmg-thumb" onClick={() => show(i.id)} aria-label={`${i.media!.type === "video" ? "Video" : "Photo"} from ${i.who}, ${i.when}${i.about ? `, ${i.about}` : ""}: show it in the chat`} title={`${i.who} | ${i.when}${i.about ? ` | ${i.about}` : ""}`}>
-                          {i.media!.type === "video" ? (
-                            <>
-                              <ChatVideo src={i.media!.path} controls={false} muted />
-                              <span className="cmg-play" aria-hidden="true">
-                                <svg viewBox="0 0 24 24">
-                                  <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
-                                </svg>
-                              </span>
-                            </>
-                          ) : (
-                            // eslint-disable-next-line @next/next/no-img-element -- an upload from the chat
-                            <img src={sized(i.media!.path, 480)} alt="" loading="lazy" decoding="async" />
-                          )}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )
+            {tab === "photos" ? (
+              grid(photos, "No photos yet")
+            ) : tab === "videos" ? (
+              grid(videos, "No videos yet")
             ) : files.length === 0 ? (
-              <p className="cmg-empty">No files or voice messages sent yet.</p>
+              <p className="cmg-empty">No files yet</p>
             ) : (
               <ul className="cmg-list">
                 {files.map((i) => (
                   <li key={i.id} className="cmg-file">
-                    <button type="button" className="cmg-file-main" onClick={() => show(i.id)} title="Show it in the chat">
+                    {/* The row opens the file itself, a voice message playing (4 Nov, Alex: no going to the chat). */}
+                    <a className="cmg-file-main" href={i.media!.path} target="_blank" rel="noreferrer" download={i.media!.type === "file" ? i.media!.name ?? undefined : undefined}>
                       <span className="cmg-file-icon" aria-hidden="true">
                         {/* The icon alone, line-drawn (24 Oct, Alex: the emoji were the old design). */}
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -175,10 +195,6 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
                           {i.when}
                         </small>
                       </span>
-                    </button>
-                    {/* Inside a row an action is its words alone (27 Oct, Alex: the ↗ in a ring looked cheap). */}
-                    <a className="cmg-act" href={i.media!.path} target="_blank" rel="noreferrer" download={i.media!.type === "file" ? i.media!.name ?? undefined : undefined}>
-                      Open
                     </a>
                   </li>
                 ))}
@@ -187,6 +203,9 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
           </div>
         </>
       )}
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(open.type === "video" ? <FullVideo src={open.path} onClose={() => setOpen(null)} /> : <FullImage src={open.path} onClose={() => setOpen(null)} />, document.body)}
     </div>
   );
 }
