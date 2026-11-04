@@ -7,6 +7,7 @@
 
 import { eventTypeOf, TRAINING_ICON, type EventTypeId } from "./eventTypes";
 import { GOAL_CHROME } from "./eventTimeline";
+import { NOTE_ICON_PATHS } from "../components/icons";
 
 export type NotificationCategory =
   | "meeting_booked"
@@ -36,7 +37,10 @@ const ICON = {
   play: "M8 5v14l11-7z",
   dumbbell: TRAINING_ICON,
   chat: "M4 5h16v11H9l-5 4z",
+  // A report's page with its lines.
   notes: "M6 3h12v18H6zM9 8h6M9 12h6M9 16h4",
+  // A note, the pen on a line (4 Nov, Alex: option A of docs/boards/note-icon-mockup.html; NoteIcon).
+  note: NOTE_ICON_PATHS.join(""),
   upload: "M12 16V5M7 10l5-5 5 5M5 19h14",
   camera: "M4 8h4l2-3h4l2 3h4v11H4zM12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
   leaf: "M5 19c0-8 6-14 14-14 0 8-6 14-14 14zM5 19l7-7",
@@ -61,7 +65,7 @@ const SLATE = { color: "#5b6472", rgb: "91,100,114" };
 export const NOTIFICATION_TYPES: Record<NotificationCategory, NotificationType> = {
   meeting_booked: { label: "Meeting", ...BLUE, icon: ICON.video, action: "View call" },
   meeting_changed: { label: "Meeting", ...BLUE, icon: ICON.video, action: "View call" },
-  meeting_notes: { label: "Call notes", ...BLUE, icon: ICON.notes, action: "Read notes" },
+  meeting_notes: { label: "Call notes", ...BLUE, icon: ICON.note, action: "Read notes" },
   // Set at a call (23 Oct, Alex: it showed a bell, not the coach's face), so the call's blue.
   focus: { label: "To focus on", ...BLUE, icon: ICON.list, action: "See it" },
   video_reply: { label: "Video reply", ...INDIGO, icon: ICON.play, action: "Watch reply" },

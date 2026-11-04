@@ -555,3 +555,17 @@ export function PhaseFlagIcon() {
     </svg>
   );
 }
+
+/** A note (4 Nov, Alex: option A of docs/boards/note-icon-mockup.html): a pen writing on a line, at stroke 1.6. One
+    drawing wherever a note is marked; an Edit stays the pencil, a client's words the chat bubble. */
+export const NOTE_ICON_PATHS = ["M12 20h8", "M16.4 3.6a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"] as const;
+
+export function NoteIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {NOTE_ICON_PATHS.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}

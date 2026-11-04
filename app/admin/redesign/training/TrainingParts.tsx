@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { saveProgramWorkoutQuestionsAction, savePhaseNoteAction, setPhaseGoalsAction } from "../../../lib/actions";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../../../lib/phaseCovers";
 import { MAX_WORKOUT_QUESTIONS, WORKOUT_QUESTION_PRESETS } from "../../../lib/workoutQuestions";
-import { ChatIcon, TargetIcon } from "../../../components/icons";
+import { NoteIcon, TargetIcon } from "../../../components/icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog } from "../../../components/ui/dialog";
 import { ConfirmDialog, type DraftAnswered, type DraftProgram } from "./TrainingDraft";
@@ -119,7 +119,7 @@ export function GoalsNotePills({ firstName, phaseId, goals, note, area = "traini
     if (locked && !set) return null;
     return (
       <button type="button" className={`trn-pill${set ? " set" : ""}${open === k ? " on" : ""}`} aria-haspopup="dialog" aria-expanded={open === k} aria-label={`${name}, ${set ? "set" : "not set"}`} onClick={() => openIt(k)}>
-        {k === "goals" ? <TargetIcon /> : <ChatIcon />}
+        {k === "goals" ? <TargetIcon /> : <NoteIcon />}
         {/* One size whatever it holds (20 Oct, Alex): set only changes the colour; the goals say how many. */}
         <span>{name}</span>
         {k === "goals" && <b className="trn-pill-n">{savedGoals.length}</b>}

@@ -12,6 +12,7 @@ import CoachSays from "./CoachSays";
 import { Bars } from "./Bars";
 import RingEdge from "../components/RingEdge";
 import DoneCheck from "../components/DoneCheck";
+import { NoteIcon } from "../components/icons";
 import { dayWords } from "../lib/clientDates";
 
 // One exercise, as a page of the workout (13 Oct, "Stepper sheet"): logging
@@ -794,7 +795,7 @@ export default function ExercisePage({
           {/* The same head as the note shut, so nothing moves when it opens (4 Nov, Alex). */}
           <span className="wo-note-head">
             <span className="wo-note-pen" aria-hidden="true">
-              <EditPen />
+              <NoteIcon size={16} />
             </span>
             <span className="wo-note-label">Your note</span>
           </span>
@@ -829,7 +830,7 @@ export default function ExercisePage({
         >
           <span className="wo-note-head">
             <span className="wo-note-pen" aria-hidden="true">
-              <EditPen />
+              <NoteIcon size={16} />
             </span>
             <span className="wo-note-label">Your note</span>
           </span>
@@ -1016,14 +1017,3 @@ function Stepper({
   );
 }
 
-
-// The note's mark: a pen writing on a line (4 Nov, Alex: option A of docs/boards/note-icon-mockup.html), at stroke 1.6 as
-// every icon; the ⋯ menu's note row draws the same (WorkoutScreen MENU_ICONS.note).
-function EditPen() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 20h8" />
-      <path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z" />
-    </svg>
-  );
-}
