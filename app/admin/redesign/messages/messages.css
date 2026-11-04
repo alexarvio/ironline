@@ -370,3 +370,7 @@ html.look-hl .rd-chattab.rd-phonetab.on:hover, html.look-hl .rd-chattab.rd-phone
 .rm .cmg-file .cmg-act { opacity: 0; transition: opacity 0.12s; }
 .rm .cmg-file:hover .cmg-act, .rm .cmg-file:focus-within .cmg-act { opacity: 1; }
 @media (hover: none) { .rm .cmg-file .cmg-act { opacity: 1; } }
+
+/* The file picked, waiting for Send (4 Nov, Alex; ChatAttachment.tsx, the chat-att block at the end of globals.css):
+   the bar's gap is its air, and it starts where the box does, past the 40px + and the row's 8px gap. */
+.rm .rm-bar .chat-att { --chat-att-inset: 48px; margin: 0; }

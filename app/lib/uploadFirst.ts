@@ -20,6 +20,26 @@ export async function uploadFirst(fd: FormData, kind: UploadKind, clientId?: num
     fd.delete("file");
     return null;
   }
+  const answer = await uploadFileFirst(file, kind, clientId);
+  if ("refused" in answer) return answer.refused;
+  // The file leaves the form only once the server has it (4 Nov, review): a failed upload leaves the form as it was.
+  fd.delete("file");
+  fd.set("upload", answer.handle);
+  return null;
+}
+
+/**
+ * One file straight to /api/upload, with no form round it (4 Nov, Alex: the chat's attachment starts going the moment
+ * it is picked, so Send only carries the handle; ChatAttachment.tsx). Back with the handle, or with the server's words
+ * when it refused the file (413 too big, 415 not a video). A dropped connection, a server error or `signal` aborting
+ * throws.
+ */
+export async function uploadFileFirst(
+  file: Blob,
+  kind: UploadKind,
+  clientId?: number | null,
+  signal?: AbortSignal,
+): Promise<{ handle: string } | { refused: string }> {
   const name = file instanceof File ? file.name : "";
   const q = new URLSearchParams({ kind, type: file.type, name });
   if (clientId != null && Number.isFinite(clientId)) q.set("clientId", String(clientId));
@@ -29,6 +49,7 @@ export async function uploadFirst(fd: FormData, kind: UploadKind, clientId?: num
     body: file,
     headers: { "content-type": file.type || "application/octet-stream" },
     credentials: "same-origin",
+    signal,
   });
   let answer: { handle?: string; error?: string } = {};
   try {
@@ -36,14 +57,9 @@ export async function uploadFirst(fd: FormData, kind: UploadKind, clientId?: num
   } catch {
     /* not JSON: a proxy's or server's error page */
   }
-  if (res.ok && answer.handle) {
-    // The file leaves the form only once the server has it (4 Nov, review): a failed upload leaves the form as it was.
-    fd.delete("file");
-    fd.set("upload", answer.handle);
-    return null;
-  }
+  if (res.ok && answer.handle) return { handle: answer.handle };
   // Refused in words (413 too big, 415 not a video): those words. Anything else is a failure like any other.
-  if ((res.status === 413 || res.status === 415) && answer.error) return answer.error;
+  if ((res.status === 413 || res.status === 415) && answer.error) return { refused: answer.error };
   throw new Error(answer.error || `Upload failed (${res.status})`);
 }
 
