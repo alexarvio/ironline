@@ -52,6 +52,8 @@ type ChatState = { mounted: boolean; open: boolean; about: DraftLink | null; ope
 type ChatView = "own" | "list" | "other";
 /** The panel shows the chat, or the client's phone (21 Oct, Alex: the coach sees what the client sees). */
 type PanelMode = "chat" | "phone";
+/** Whether the chat is open, across screens: the dock's own key (ChatDock.tsx), so it carries between them too. */
+const CHAT_KEPT_KEY = "norcoach:chat-dock";
 const CHAT_LIST_POLL_MS = 15000;
 const firstOf = (name: string) => name.split(" ")[0];
 
@@ -103,6 +105,39 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   const closeChat = () => setChat((c) => ({ ...c, open: false }));
   // A click on empty space closes it, one on anything with a function doesn't (24 Oct, Alex).
   useCloseOnEmptyClick(chat.open, closeChat);
+  // Open stays open (4 Nov, Alex: a click on a week closed it; "if it's open, it stays open"): a week loaded from the
+  // server, another tab's screen or the Feed mounts a new page, so whether the chat is open lives in sessionStorage,
+  // the same key as the dock's (ChatDock.tsx), and a new screen puts it back in place, no slide.
+  const [chatStill, setChatStill] = useState(false);
+  const keptRead = useRef(false);
+  useEffect(() => {
+    let saved: { open?: boolean; mode?: PanelMode } | null = null;
+    try {
+      saved = JSON.parse(window.sessionStorage.getItem(CHAT_KEPT_KEY) ?? "null");
+    } catch {}
+    keptRead.current = true;
+    if (!saved?.open) return;
+    const frame = document.querySelector(".rd-frame");
+    frame?.setAttribute("data-chat-still", "");
+    const t = setTimeout(() => {
+      setChatStill(true);
+      mountedRef.current = true;
+      if (saved?.mode === "phone") {
+        setMode("phone");
+        setPhoneMounted(true);
+      }
+      setChat((c) => ({ ...c, mounted: true, open: true, opened: c.opened + 1 }));
+    }, 0);
+    const t2 = setTimeout(() => {
+      setChatStill(false);
+      frame?.removeAttribute("data-chat-still");
+    }, 400);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(t2);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arriving
+  }, []);
   // All chats (21 Oct, Alex): the panel can show every chat and another
   // client's thread, so someone else writing is answered without leaving
   // this client's page. This client's thread stays mounted behind (what was
@@ -137,6 +172,13 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
       requestAnimationFrame(() => requestAnimationFrame(() => setChat(next)));
     }
   }, []);
+  // Kept for the next screen as it changes (4 Nov), once the saved one has been read, so arriving never wipes it.
+  useEffect(() => {
+    if (!keptRead.current) return;
+    try {
+      window.sessionStorage.setItem(CHAT_KEPT_KEY, JSON.stringify({ open: chat.open, chat: chat.open ? clientId : null, mode }));
+    } catch {}
+  }, [chat.open, mode, clientId]);
   // The phone (21 Oct): mounted on its first opening, then kept, so it is read again in place rather than loaded anew.
   const [phoneMounted, setPhoneMounted] = useState(false);
   const openPhone = () => {
@@ -385,7 +427,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
         <PhoneIcon />
       </button>
       {chat.mounted && (
-        <aside ref={panelRef} className={`rd-chatpanel rd-chatdock${chat.open ? " open" : ""}`} aria-label={mode === "phone" ? `${firstName}'s app` : view === "own" ? `Chat with ${firstName}` : inOther ? `Chat with ${firstOf(other.name)}` : "Chats"} aria-hidden={!chat.open} inert={chat.open ? undefined : true}>
+        <aside ref={panelRef} className={`rd-chatpanel rd-chatdock${chat.open ? " open" : ""}${chatStill ? " still" : ""}`} aria-label={mode === "phone" ? `${firstName}'s app` : view === "own" ? `Chat with ${firstName}` : inOther ? `Chat with ${firstOf(other.name)}` : "Chats"} aria-hidden={!chat.open} inert={chat.open ? undefined : true}>
           <div className="rd-panelpart" hidden={mode !== "chat"}>
           {/* All chats (21 Oct, Alex): the list, or a way back to it over a thread. */}
           {view === "own" || inOther ? (
