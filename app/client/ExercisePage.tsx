@@ -791,7 +791,13 @@ export default function ExercisePage({
 
       {swapped ? null : noteOpen ? (
         <div className="wo-note editing">
-          <span className="wo-note-label">Your note</span>
+          {/* The same head as the note shut, so nothing moves when it opens (4 Nov, Alex). */}
+          <span className="wo-note-head">
+            <span className="wo-note-pen" aria-hidden="true">
+              <EditPen />
+            </span>
+            <span className="wo-note-label">Your note</span>
+          </span>
           <textarea className="wo-note-input" value={noteDraft} autoFocus rows={2} placeholder="Seat height, grip, cues. Only you see this." onChange={(e) => setNoteDraft(e.target.value)} onBlur={() => noteDraft.trim() === myNote.trim() && setNoteOpen(false)} />
           {/* Cancel and Save only once the note has changed (17 Oct, Alex). */}
           {noteDraft.trim() !== myNote.trim() && (
@@ -1011,12 +1017,13 @@ function Stepper({
 }
 
 
-// A clean pencil, for editing the note.
+// The note's mark: a pen writing on a line (4 Nov, Alex: option A of docs/boards/note-icon-mockup.html), at stroke 1.6 as
+// every icon; the ⋯ menu's note row draws the same (WorkoutScreen MENU_ICONS.note).
 function EditPen() {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z" />
-      <path d="m15 5 4 4" />
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 20h8" />
+      <path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z" />
     </svg>
   );
 }
