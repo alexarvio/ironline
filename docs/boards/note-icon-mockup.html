@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Note icon</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --line:#E1E5EB; --green:#2f7a3f; --rust:#b8471f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #ECEDEF; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 70px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--sec); font-size: 13px; font-weight: 500; margin: 0 0 26px; max-width: 760px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .opt { background: #F5F6F8; border-radius: 22px; box-shadow: inset 0 0 0 1px var(--line); padding: 20px 20px 26px; }
+  .tag { font-size: 10.5px; letter-spacing: .16em; font-weight: 600; text-transform: uppercase; color: var(--green); }
+  .tag.now { color: var(--rust); }
+  .name { font-size: 15px; font-weight: 600; margin: 3px 0 4px; }
+  .explain { font-size: 12.5px; color: var(--sec); font-weight: 500; margin: 0 0 18px; line-height: 1.45; min-height: 54px; }
+  .big { height: 96px; display: grid; place-items: center; color: var(--ink); }
+  .big svg { width: 56px; height: 56px; }
+  svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .note { margin-top: 14px; padding: 0 4px; }
+  .head { display: flex; align-items: center; gap: 8px; color: var(--sec); }
+  .head svg { width: 13px; height: 13px; flex: none; }
+  .lbl { font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+  .text { margin: 6px 0 0 21px; font-size: 14px; font-weight: 500; color: var(--body); line-height: 1.45; }
+  .rec { margin-left: 8px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--green); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Your note: the icon</h1>
+  <p class="sub">The workout's "Your note", with its words now starting under the label. Each option is drawn as every icon in the app: stroke 1.6, round ends, no fill. Shown big, then at its real 13px beside the label.</p>
+  <div class="grid" id="out"></div>
+</div>
+<script>
+const opts = [
+  { tag: "Now", now: true, name: "Pencil", explain: "Drawn at stroke 2, not 1.6, and it reads as \"edit\" more than \"note\".", d: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z" style="stroke-width:2"/><path d="m15 5 4 4" style="stroke-width:2"/>' },
+  { tag: "Option A", name: "Pen on a line", explain: "A pen writing on a line: something you wrote. The closest to now, lighter, and clearly writing rather than editing.", d: '<path d="M12 20h8"/><path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/>' },
+  { tag: "Option B", rec: true, name: "Page with lines", explain: "A sheet with a folded corner and two lines of writing: a note you keep. It doesn't look like an action, so it doesn't ask to be tapped.", d: '<path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5"/><path d="M8.5 13h7"/><path d="M8.5 16.5h4.5"/>' },
+  { tag: "Option C", name: "Sticky note", explain: "A square note with its corner peeled: the note stuck to the machine. Friendly, a little more playful than B.", d: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5V14l-6 6H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M14 20v-4.5a1.5 1.5 0 0 1 1.5-1.5H20"/><path d="M8 9h8"/><path d="M8 12.5h3.5"/>' },
+];
+document.getElementById("out").innerHTML = opts.map((o) => `
+  <div class="opt">
+    <span class="tag ${o.now ? "now" : ""}">${o.tag}</span>${o.rec ? '<span class="rec">My pick</span>' : ""}
+    <p class="name">${o.name}</p>
+    <p class="explain">${o.explain}</p>
+    <div class="big"><svg viewBox="0 0 24 24">${o.d}</svg></div>
+    <div class="note"><div class="head"><svg viewBox="0 0 24 24">${o.d}</svg><span class="lbl">Your note</span></div><p class="text">Smart ass</p></div>
+  </div>`).join("");
+</script>
+</body>
+</html>
