@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestUser } from "../../lib/auth";
-import { timingReport } from "../../lib/timing";
+import { memoryReport, timingReport } from "../../lib/timing";
 import { bucketProbe, storageStats } from "../../lib/storage";
 
 // The admin screens' server render times (23 Oct; app/lib/timing.ts): the last 200 renders newest first, and per
@@ -17,5 +17,6 @@ export async function GET(request: Request) {
   if (!user || user.pending || user.role !== "coach") return notFound();
   // How far the uploads bucket is, asked now (25 Oct): its host and three small asks in ms.
   const bucket = await bucketProbe().catch(() => null);
-  return NextResponse.json({ bucket, storage: await storageStats(), ...timingReport() }, { headers: { "Cache-Control": "no-store" } });
+  // The process's and the container's memory, in MB (4 Nov, Alex: memory is most of the bill; app/lib/timing.ts).
+  return NextResponse.json({ memory: memoryReport(), bucket, storage: await storageStats(), ...timingReport() }, { headers: { "Cache-Control": "no-store" } });
 }

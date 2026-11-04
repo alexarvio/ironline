@@ -1,4 +1,5 @@
 import "server-only";
+import fs from "fs";
 
 // How long each part of an admin screen's server render takes, with the live data (23 Oct, Alex: "insanely slow in
 // the admin panel when I open a screen"), measured before anything is optimised. A page starts a timer, wraps each
@@ -131,6 +132,130 @@ export function recordTiming(screen: string, total: number, parts: Record<string
     list.push({ at: new Date().toISOString(), screen, client: null, total: tenth(total), parts: rounded });
     if (list.length > MAX) list.splice(0, list.length - MAX);
   } catch {}
+}
+
+// ---- Memory (/api/timing, 4 Nov, Alex: memory is 92% of the Railway bill, the app spikes to 2-8 GB for hours) ---
+// What the process holds now, its peak since it started, and on Linux the container's own count, the figure Railway
+// bills, split into anon (the app's own memory) and file (page cache the kernel can drop). Everything in MB, read
+// safely: a file that isn't there (Windows, macOS, no cgroup) is null, never a throw. The peak is sampled every 30 s
+// on a timer that never keeps the process alive (unref), started the first time this module loads (the root layout
+// imports it), on globalThis so a second bundle of this module shares the one sampler.
+
+const mb = (bytes: number) => Math.round((bytes / 1048576) * 10) / 10;
+
+type RssPeak = { mb: number; at: string; since: string };
+const gm = globalThis as unknown as { _ironlineRssPeak?: RssPeak; _ironlineRssTimer?: ReturnType<typeof setInterval> };
+
+function sampleRss() {
+  try {
+    const now = mb(process.memoryUsage.rss());
+    const peak = (gm._ironlineRssPeak ??= { mb: 0, at: new Date().toISOString(), since: new Date().toISOString() });
+    if (now > peak.mb) {
+      peak.mb = now;
+      peak.at = new Date().toISOString();
+    }
+  } catch {}
+}
+
+try {
+  if (!gm._ironlineRssTimer) {
+    sampleRss();
+    const timer = setInterval(sampleRss, 30_000);
+    timer.unref?.();
+    gm._ironlineRssTimer = timer;
+  }
+} catch {}
+
+function readText(file: string): string | null {
+  try {
+    return fs.readFileSync(file, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+/** A file holding one byte count ("max" or missing reads null). */
+function readBytes(file: string): number | null {
+  const text = readText(file)?.trim();
+  if (!text || !/^\d+$/.test(text)) return null;
+  return mb(Number(text));
+}
+
+/** memory.stat's "key value" lines, the keys asked for, in MB (a key not there is null). */
+function readStat(file: string, keys: string[]): Record<string, number | null> | null {
+  const text = readText(file);
+  if (text == null) return null;
+  const all = new Map<string, number>();
+  for (const line of text.split("\n")) {
+    const [k, v] = line.trim().split(/\s+/);
+    if (k && v && /^\d+$/.test(v)) all.set(k, Number(v));
+  }
+  return Object.fromEntries(keys.map((k) => [k, all.has(k) ? mb(all.get(k)!) : null]));
+}
+
+/** The container's memory: cgroup v2 first (Railway), else v1; null when neither is there. */
+function containerMemory() {
+  try {
+    const current = readBytes("/sys/fs/cgroup/memory.current");
+    if (current != null) {
+      const stat = readStat("/sys/fs/cgroup/memory.stat", ["anon", "file", "kernel", "shmem", "sock"]);
+      return {
+        cgroup: "v2",
+        currentMb: current,
+        peakMb: readBytes("/sys/fs/cgroup/memory.peak"),
+        limitMb: readBytes("/sys/fs/cgroup/memory.max"),
+        anonMb: stat?.anon ?? null,
+        fileMb: stat?.file ?? null,
+        kernelMb: stat?.kernel ?? null,
+        shmemMb: stat?.shmem ?? null,
+        sockMb: stat?.sock ?? null,
+      };
+    }
+    const v1 = readBytes("/sys/fs/cgroup/memory/memory.usage_in_bytes");
+    if (v1 != null) {
+      const stat = readStat("/sys/fs/cgroup/memory/memory.stat", ["total_rss", "total_cache", "rss", "cache"]);
+      return {
+        cgroup: "v1",
+        currentMb: v1,
+        peakMb: readBytes("/sys/fs/cgroup/memory/memory.max_usage_in_bytes"),
+        limitMb: readBytes("/sys/fs/cgroup/memory/memory.limit_in_bytes"),
+        anonMb: stat?.total_rss ?? stat?.rss ?? null,
+        fileMb: stat?.total_cache ?? stat?.cache ?? null,
+        kernelMb: null,
+        shmemMb: null,
+        sockMb: null,
+      };
+    }
+  } catch {}
+  return null;
+}
+
+/** This process's memory now and at its peak, and the container's. Never throws. */
+export function memoryReport() {
+  try {
+    sampleRss();
+    const m = process.memoryUsage();
+    let maxRssMb: number | null = null;
+    try {
+      // The OS's own high-water mark for this process, in KB (Linux and macOS; Windows reports its peak working set).
+      maxRssMb = mb(process.resourceUsage().maxRSS * 1024);
+    } catch {}
+    return {
+      pid: process.pid,
+      uptimeS: Math.round(process.uptime()),
+      process: {
+        rssMb: mb(m.rss),
+        heapTotalMb: mb(m.heapTotal),
+        heapUsedMb: mb(m.heapUsed),
+        externalMb: mb(m.external),
+        arrayBuffersMb: mb(m.arrayBuffers),
+      },
+      peak: { sampledRssMb: gm._ironlineRssPeak?.mb ?? null, sampledAt: gm._ironlineRssPeak?.at ?? null, sampledSince: gm._ironlineRssPeak?.since ?? null, maxRssMb },
+      container: containerMemory(),
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ---- The report (/api/timing) ---------------------------------------------------------------------------------

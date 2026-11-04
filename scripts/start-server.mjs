@@ -5,6 +5,7 @@
 // marker already exists, so this just runs `next start` straight away.
 import { spawnSync } from "child_process";
 import fs from "fs";
+import { createRequire } from "module";
 import path from "path";
 
 const DATA_DIR = process.env.DATA_DIR || process.cwd();
@@ -90,6 +91,12 @@ if (process.env.SKIP_SEED !== "1" && !fs.existsSync(samMarker)) {
   console.log("[start-server] Sam Rivera demo already seeded, skipping.");
 }
 
-const result = spawnSync("npx", ["next", "start"], { stdio: "inherit", shell: true });
-if (result.error) throw result.error;
-process.exit(result.status ?? 0);
+// Next runs in this very process (4 Nov, Alex: memory is most of the Railway bill): it was spawnSync("npx",
+// ["next", "start"], { shell: true }), which kept this Node, a shell and npx/npm alive beside Next for the server's
+// whole life. Now the seed checks above run first, then Next's own CLI is loaded here as `next start` would load it,
+// so there is one Node process. Next's start handles SIGTERM / SIGINT itself (it closes the server and exits 143 /
+// 130), PORT and every env var are this process's own, and its exit code is the process's.
+const require = createRequire(import.meta.url);
+const nextBin = require.resolve("next/dist/bin/next");
+process.argv = [process.execPath, nextBin, "start"];
+require(nextBin);
