@@ -26,10 +26,9 @@ const VERDICT: Record<Verdict, { label: string; tone: string }> = {
 const DAY = 86400000;
 const PURPLE = "#3a3390";
 const RUST = "#b8471f";
-/** The window before, drawn for the change to be seen (4 Nov). */
-const GREY = "#C9CFD8";
-/** The chart's box: its height and the room kept for the y figures (left), the dates (bottom) and the dots. */
-const CH = { h: 220, l: 34, r: 10, t: 16, b: 26 };
+/** The chart's box: its height and the room kept for the y figures (left), the dates (bottom) and, at the top, the pill that
+ *  reads a session (4 Nov, Alex: over the line "it's blocking the graph"). */
+const CH = { h: 248, l: 34, r: 10, t: 44, b: 26 };
 /** A yyyy-mm-dd day (read as that calendar day) or a timestamp, in ms; NaN when there is none. */
 const dayMs = (d: string | null) => (d ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T00:00:00` : d).getTime() : NaN);
 /** The yyyy-mm-dd n days before a yyyy-mm-dd day, counted in UTC both ways so the day isn't shifted by the time zone. */
@@ -205,10 +204,16 @@ export default function ExerciseProgressDialog({
 
   // No suggestion and no message written for the coach (4 Nov, Alex: "there should not be any sort of pre written text";
   // "just have that message Alex"): Message {First} opens the chat on an empty bar.
-  // One height across 7 days | 30 days | All time (4 Nov, Alex: the card changed size on a switch): the log's rows and
-  // its fold keep the room of the fullest window offered, so switching never moves the card.
-  const logSlots = Math.min(4, Math.max(...offered.map((w) => js[w].sessions.length)));
-  const anyMore = offered.some((w) => js[w].sessions.length > 4);
+  // 7 days and 30 days list every session in them; only All time folds after the latest 4 (4 Nov, Alex: "there's no point
+  // in showing all the sessions there. It should only be in All Time"). One height across the three (4 Nov, Alex: the
+  // card changed size on a switch): the log keeps the room of the fullest window offered, its fold a row of it, so
+  // switching never moves the card.
+  const logRows = (w: Win) => {
+    const len = js[w].sessions.length;
+    return w === "all" ? Math.min(4, len) + (len > 4 ? 1 : 0) : len;
+  };
+  const logSlots = Math.max(...offered.map(logRows));
+  const folds = view === "all" && n > 4;
 
   // The chart: measured, so the dots stay round at any width.
   const [chartEl, setChartEl] = useState<HTMLDivElement | null>(null);
@@ -220,22 +225,15 @@ export default function ExerciseProgressDialog({
     return () => ro.disconnect();
   }, [chartEl]);
 
-  // In 7 days and 30 days the chart shows the window before as well, greyed (4 Nov, Alex: "there's a −15%, but it doesn't
-  // show anything on the graph"): the change compares the two, so both are drawn, by the calendar, the window's first
-  // day the axis's middle.
-  const days = view === "7" ? 7 : 30;
-  const winFrom = view === "all" ? null : daysBefore(today, days - 1);
-  const prevFrom = view === "all" ? null : daysBefore(today, 2 * days - 1);
-  const before = winFrom && prevFrom ? js.all.sessions.filter((s) => !!s.date && s.date.slice(0, 10) >= prevFrom && s.date.slice(0, 10) < winFrom) : [];
-  const off = before.length;
-  const series = [...before, ...ss];
-  const N = series.length;
+  // The window picked alone (4 Nov, Alex: the window before in grey "is not self-explanatory enough"), by the calendar in
+  // 7 days and 30 days: its first day, its middle and today under it.
+  const winFrom = view === "all" ? null : daysBefore(today, (view === "7" ? 7 : 30) - 1);
 
   const chart = (() => {
     if (n === 0) return null;
     const pw = W - CH.l - CH.r;
     const ph = CH.h - CH.t - CH.b;
-    const es = series.map((s) => disp(s.best.e1rm));
+    const es = ss.map((s) => disp(s.best.e1rm));
     const mn = Math.min(...es);
     const mx = Math.max(...es);
     const pad = Math.max((mx - mn) * 0.12, 1);
@@ -247,30 +245,32 @@ export default function ExerciseProgressDialog({
       lo = mid - least / 2;
       hi = mid + least / 2;
     }
-    const step = [1, 2, 5, 10, 20, 50].find((q) => Math.floor(hi / q) - Math.ceil(lo / q) + 1 <= 4) ?? 100;
+    const step = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000].find((q) => Math.floor(hi / q) - Math.ceil(lo / q) + 1 <= 4) ?? 2000;
     const ticks: number[] = [];
     for (let k = Math.ceil(lo / step) * step; k <= hi + 1e-9; k += step) ticks.push(k);
     const yy = (val: number) => CH.t + ((hi - val) / (hi - lo)) * ph;
-    // Spaced by date; by order when a date is missing or every session is on one day. A window spans its own days and the
-    // window before's, whatever was logged in them.
-    const ts = series.map((s) => dayMs(s.date));
-    const t0 = winFrom && prevFrom ? dayMs(prevFrom) : ts[0];
-    const t1 = winFrom ? dayMs(today) : ts[N - 1];
-    const byTime = ts.every(Number.isFinite) && t1 > t0 && (N > 1 || !!winFrom);
-    const xAt = (t: number) => CH.l + ((t - t0) / (t1 - t0)) * pw;
-    const pts = series.map((s, i) => ({
-      x: byTime ? xAt(ts[i]) : N < 2 ? CH.l + pw / 2 : CH.l + (i / (N - 1)) * pw,
+    // Spaced by date; by order when a date is missing or every session is on one day. A window spans its own days,
+    // whatever was logged in them.
+    const ts = ss.map((s) => dayMs(s.date));
+    const t0 = winFrom ? dayMs(winFrom) : ts[0];
+    const t1 = winFrom ? dayMs(today) : ts[n - 1];
+    const byTime = ts.every(Number.isFinite) && t1 > t0 && (n > 1 || !!winFrom);
+    const pts = ss.map((s, i) => ({
+      x: byTime ? CH.l + ((ts[i] - t0) / (t1 - t0)) * pw : n < 2 ? CH.l + pw / 2 : CH.l + (i / (n - 1)) * pw,
       y: yy(es[i]),
       s,
-      c: i < off ? GREY : stalling && i - off > judged.bestAt ? RUST : PURPLE,
+      c: stalling && i > judged.bestAt ? RUST : PURPLE,
     }));
     // One smooth curve through every session (the weight line's, monotoneCurve), drawn in stretches by colour.
     const segs = monotoneSegments(pts);
     const path = (a: number, b: number) => `M${pts[a].x.toFixed(2)} ${pts[a].y.toFixed(2)} ${segs.slice(a, b).join(" ")}`;
-    const split = winFrom && byTime ? xAt(dayMs(winFrom)) : null;
-    return { pw, ph, ticks, yy, pts, path, split };
+    // The best (4 Nov, Alex: the ring "is really weird"): a dashed line from it to the y axis, its figure there in purple,
+    // the grid figures it would sit on left out.
+    const bestY = n > 1 ? pts[judged.bestAt].y : null;
+    const shown = bestY == null ? ticks : ticks.filter((k) => Math.abs(yy(k) - bestY) > 12);
+    return { pw, ph, ticks, shown, yy, pts, path, bestY };
   })();
-  const hv = chart && hover != null && hover < N ? chart.pts[hover] : null;
+  const hv = chart && hover != null && hover < n ? chart.pts[hover] : null;
   const nearest = (clientX: number, el: HTMLElement) => {
     if (!chart) return;
     const m = clientX - el.getBoundingClientRect().left;
@@ -449,56 +449,59 @@ export default function ExerciseProgressDialog({
               onMouseLeave={() => setHover(null)}
             >
               <svg width={W} height={CH.h} viewBox={`0 0 ${W} ${CH.h}`} role="img" aria-label={`Estimated 1RM from ${whole(ss[0].best.e1rm)} to ${whole(last!.best.e1rm)} ${unit} over ${n} session${n === 1 ? "" : "s"}`}>
-                {chart.ticks.map((k) => {
-                  const y = chart.yy(k);
-                  return (
-                    <g key={k}>
-                      <line x1={CH.l} x2={W - CH.r} y1={y} y2={y} stroke="#EEF0F3" />
-                      <text x={CH.l - 10} y={y + 4} textAnchor="end">
-                        {k}
-                      </text>
-                    </g>
-                  );
-                })}
-                {chart.split != null && prevFrom && winFrom ? (
-                  // A window: its first day, the one it starts on and today, as a grid axis; a faint line where it starts.
+                {chart.ticks.map((k) => (
+                  <line key={k} x1={CH.l} x2={W - CH.r} y1={chart.yy(k)} y2={chart.yy(k)} stroke="#EEF0F3" />
+                ))}
+                {chart.shown.map((k) => (
+                  <text key={k} x={CH.l - 10} y={chart.yy(k) + 4} textAnchor="end">
+                    {k}
+                  </text>
+                ))}
+                {winFrom ? (
+                  // A window: its first day, its middle and today, as a grid axis.
                   <>
-                    <line x1={chart.split} x2={chart.split} y1={CH.t} y2={CH.t + chart.ph} stroke="#E1E5EB" strokeDasharray="3 4" />
                     <text x={CH.l} y={CH.h - 6} textAnchor="start">
-                      {dayMonth(prevFrom)}
-                    </text>
-                    <text x={chart.split} y={CH.h - 6} textAnchor="middle">
                       {dayMonth(winFrom)}
+                    </text>
+                    <text x={CH.l + chart.pw / 2} y={CH.h - 6} textAnchor="middle">
+                      {dayMonth(daysBefore(today, view === "7" ? 3 : 15))}
                     </text>
                     <text x={W - CH.r} y={CH.h - 6} textAnchor="end">
                       {dayMonth(today)}
                     </text>
                   </>
-                ) : N < 2 ? (
+                ) : n < 2 ? (
                   <text x={chart.pts[0].x} y={CH.h - 6} textAnchor="middle">
-                    {series[0].date ? dayMonth(series[0].date) : ""}
+                    {ss[0].date ? dayMonth(ss[0].date) : ""}
                   </text>
                 ) : (
                   <>
                     <text x={chart.pts[0].x} y={CH.h - 6} textAnchor="start">
-                      {series[0].date ? dayMonth(series[0].date) : ""}
+                      {ss[0].date ? dayMonth(ss[0].date) : ""}
                     </text>
-                    <text x={chart.pts[N - 1].x} y={CH.h - 6} textAnchor="end">
+                    <text x={chart.pts[n - 1].x} y={CH.h - 6} textAnchor="end">
                       {last!.date ? dayMonth(last!.date) : ""}
                     </text>
                   </>
                 )}
                 {hv && <line x1={hv.x} x2={hv.x} y1={CH.t} y2={CH.t + chart.ph} stroke="#141a24" strokeOpacity={0.25} />}
-                {stalling && <line x1={chart.pts[off + judged.bestAt].x} x2={W - CH.r} y1={chart.pts[off + judged.bestAt].y} y2={chart.pts[off + judged.bestAt].y} stroke={RUST} strokeOpacity={0.45} strokeDasharray="3 4" />}
-                {/* The window before in grey up to the window's first session, then the window in purple, a stall's
-                    stretch rust; no dot a session (the weight line's rule), the latest a dot, the best ringed. */}
-                {off > 0 && <path d={chart.path(0, off)} fill="none" stroke={GREY} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
-                {n > 1 && <path d={chart.path(off, off + (stalling ? judged.bestAt : n - 1))} fill="none" stroke={PURPLE} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
-                {stalling && <path d={chart.path(off + judged.bestAt, N - 1)} fill="none" stroke={RUST} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
-                <circle cx={chart.pts[N - 1].x} cy={chart.pts[N - 1].y} r={4.5} fill={chart.pts[N - 1].c} stroke="#fff" strokeWidth={2} />
-                {n > 1 && <circle cx={chart.pts[off + judged.bestAt].x} cy={chart.pts[off + judged.bestAt].y} r={8.5} fill="none" stroke={PURPLE} strokeWidth={1.5} />}
+                {chart.bestY != null && best && (
+                  <>
+                    <line x1={CH.l} x2={chart.pts[judged.bestAt].x} y1={chart.bestY} y2={chart.bestY} stroke={PURPLE} strokeOpacity={0.45} strokeDasharray="3 4" />
+                    <text className="exp-best" x={CH.l - 10} y={chart.bestY + 4} textAnchor="end">
+                      {whole(best.best.e1rm)}
+                    </text>
+                  </>
+                )}
+                {stalling && <line x1={chart.pts[judged.bestAt].x} x2={W - CH.r} y1={chart.pts[judged.bestAt].y} y2={chart.pts[judged.bestAt].y} stroke={RUST} strokeOpacity={0.45} strokeDasharray="3 4" />}
+                {/* The line in purple, a stall's stretch rust; no dot a session (the weight line's rule), the latest a
+                    dot pulsing (laid over the chart below). */}
+                {n > 1 && <path d={chart.path(0, stalling ? judged.bestAt : n - 1)} fill="none" stroke={PURPLE} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
+                {stalling && <path d={chart.path(judged.bestAt, n - 1)} fill="none" stroke={RUST} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
                 {hv && <circle cx={hv.x} cy={hv.y} r={5} fill="#fff" stroke="#141a24" strokeWidth={1.6} />}
               </svg>
+              {/* The latest session, a dot pulsing in the line's colour, as every chart's now (4 Nov, Alex). */}
+              <span className="exp-now" aria-hidden="true" style={{ left: chart.pts[n - 1].x, top: chart.pts[n - 1].y, "--exp-c": chart.pts[n - 1].c } as CSSProperties} />
               {chart.pts.map((p, i) => (
                 <button
                   key={i}
@@ -514,7 +517,8 @@ export default function ExerciseProgressDialog({
                 <span
                   className="exp-tip"
                   aria-hidden="true"
-                  style={{ translate: `clamp(0px, calc(${hv.x.toFixed(1)}px - 50%), calc(${W}px - 100%)) ${hv.y < 44 ? `${(hv.y + 14).toFixed(1)}px` : `calc(${(hv.y - 14).toFixed(1)}px - 100%)`}` }}
+                  // Over the chart in the room kept for it at the top, never over the line (4 Nov, Alex: "it's blocking the graph").
+                  style={{ translate: `clamp(0px, calc(${hv.x.toFixed(1)}px - 50%), calc(${W}px - 100%)) 0` }}
                 >
                   <SepJoin parts={[hv.s.date ? logDate(hv.s.date) : null, `${kg(hv.s.best.set.weight)} × ${hv.s.best.set.reps}`, `e1RM ${whole(hv.s.best.e1rm)}`]} />
                 </span>
@@ -531,18 +535,17 @@ export default function ExerciseProgressDialog({
               <span />
             </div>
             {/* One run of sessions, the fold under it (24 Oct, Alex: open, it sat between the latest four and the rest and cut the list). */}
-            {(open ? rows : rows.slice(0, 4)).map(row)}
-            {Array.from({ length: Math.max(0, logSlots - rows.length) }, (_, i) => (
-              <div key={`room-${i}`} className="exp-lr room" aria-hidden="true" />
-            ))}
-            {rows.length > 4 ? (
+            {(folds && !open ? rows.slice(0, 4) : rows).map(row)}
+            {folds && (
               <button type="button" className="exp-more" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
                 {open ? "Latest 4" : `All ${rows.length} sessions`}
                 <Fold open={open} />
               </button>
-            ) : (
-              anyMore && <div className="exp-more room" aria-hidden="true" />
             )}
+            {/* The fullest window's room, a row and the fold alike 41px (exp-lr, exp-more). */}
+            {Array.from({ length: Math.max(0, logSlots - logRows(view)) }, (_, i) => (
+              <div key={`room-${i}`} className="exp-lr room" aria-hidden="true" />
+            ))}
           </div>
         </>
       )}
