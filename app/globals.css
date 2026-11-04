@@ -21121,6 +21121,12 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 /* The drawn corners (two borders): pointing right at rest, down when open. */
 .so-card-chev.so-card-chev, .tr-chev.tr-chev { transform: rotate(-45deg); }
 .so-card-chev.so-card-chev.up, .tr-chev.tr-chev.up { transform: rotate(45deg); }
+/* A message's ⌄ in every chat (the client's, the coach's phone, the laptop's panel) is a pill dropping its menu: down at
+   rest, up while the menu is open, on the same 280ms curve (4 Nov, Alex: the chats' chevrons didn't follow the rule;
+   the laptop's and the phone's didn't turn at all). */
+.cm-chev.cm-chev svg, .cph-chev.cph-chev svg, .rm-chev.rm-chev svg { transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+.cm-chev.cm-chev.open svg, .cph-chev.cph-chev.open svg, .rm-chev.rm-chev[data-state="open"] svg { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .cm-chev.cm-chev svg, .cph-chev.cph-chev svg, .rm-chev.rm-chev svg { transition: none; } }
 /* Every switch's knob as a capsule's pill moves (3 Nov, Alex: "change to 250"): 250ms on the shared curve. */
 .settings-dark .settings-switch.settings-switch { transition: background-color 0.25s ease; }
 .settings-dark .settings-switch-knob.settings-switch-knob { transition: left 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
