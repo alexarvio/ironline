@@ -117,7 +117,10 @@
 /* The one toggle, on every tab (21 Oct, Alex): a white capsule, 36px, a hairline, 4px of air round the
    chosen option, which is ink with white words (never blue). Plan and Lifestyle had their own copies; gone. */
 .rd-btn-group { display: inline-flex; align-items: center; gap: 2px; height: 36px; padding: 4px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
-.rd-btn-group button { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 500; color: #5b6474; white-space: nowrap; cursor: pointer; }
+/* Words at 600 picked or not, as the client's capsules (4 Nov, Alex: toggling KG | LBS moved Columns beside it): a
+   picked option bolder than the rest made the capsule a hair wider or narrower on every switch, and what sat beside it
+   moved. */
+.rd-btn-group button { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; cursor: pointer; }
 .rd-btn-group button:hover:not(.on) { color: #141a24; }
 .rd-btn-group button.on { background: #141a24; color: #fff; font-weight: 600; box-shadow: none; }
 
