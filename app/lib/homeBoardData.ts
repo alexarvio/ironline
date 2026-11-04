@@ -861,8 +861,9 @@ export function noteHomeLooked(clientId: number): void {
 // ---- Training's 7 and 30 days cells -----------------------------------------------------------------
 
 /** Each exercise's change in its best estimated one-rep max (Epley), by the calendar as Home's Strength counts it
-    (23 Oct, Alex: Training's 7 days and 30 days cells read the same as Home): the last 7 (30) days' best against the 7
-    (30) days just before, only when the exercise was done in both; one decimal. Keyed as the board keys an exercise,
+    (23 Oct, Alex: Training's 7 days and 30 days cells read the same as Home): the last 30 days' best against the 30 days
+    just before, only when the exercise was done in both; one decimal. 7 days is the latest session against the one
+    before it (4 Nov, Alex; lastSession below). Keyed as the board keys an exercise,
     "exerciseId:variationId" (a swap counts as what was done).
     With each its sessions, for the progress pop-up the cells open (23 Oct, Alex: it held one programme's slot at one gym,
     "it still shows 1 week"): every session of the exercise the cells count, any programme, any gym, oldest first. A session
@@ -928,13 +929,26 @@ export function exerciseTrends(clientId: number, today: string = localDateStr())
     if (cur > 0 && first && first >= from && [...days.keys()].some((d) => d > first! && d <= today)) return { pct: pct(cur, days.get(first)!), since: first };
     return { pct: null, since: null };
   };
+  // 7 days is this session against the last one (4 Nov, Alex: "last 7 days which compares this session to the last
+  // session"): the latest day in the last 7 days, its best against the best of the day it was done before, however long
+  // ago; a dash with none in the 7 days or none before it.
+  const lastSession = (days: Map<string, number>): { pct: number | null; since: string | null } => {
+    const from = addDays(today, -6);
+    const order = [...days.keys()].filter((d) => d <= today).sort();
+    const latest = order[order.length - 1];
+    const before = order[order.length - 2];
+    if (!latest || latest < from || !before) return { pct: null, since: null };
+    const a = days.get(latest)!;
+    const b = days.get(before)!;
+    return { pct: Math.round(((a - b) / b) * 1000) / 10, since: null };
+  };
   const out = new Map<string, { d7: number | null; d30: number | null; d7Since: string | null; d30Since: string | null; sessions: ExerciseSession[] }>();
   for (const key of new Set([...byKey.keys(), ...sessionsByKey.keys()])) {
     const days = byKey.get(key);
     const sessions = [...(sessionsByKey.get(key)?.values() ?? [])]
       .map(({ numbered, ...one }) => ({ ...one, sets: numbered.sort((p, q) => p.n - q.n).map((x) => x.set) }))
       .sort((p, q) => ((p.date ?? "") < (q.date ?? "") ? -1 : (p.date ?? "") > (q.date ?? "") ? 1 : 0));
-    const w7 = days ? change(days, 7) : null;
+    const w7 = days ? lastSession(days) : null;
     const w30 = days ? change(days, 30) : null;
     out.set(key, { d7: w7?.pct ?? null, d30: w30?.pct ?? null, d7Since: w7?.since ?? null, d30Since: w30?.since ?? null, sessions });
   }
