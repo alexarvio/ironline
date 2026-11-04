@@ -321,14 +321,16 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
   // The weight at the session's gym, as the workout shows it.
   const targetWeight = (gymId != null ? exercise.gymTargets?.[gymId] : null) ?? exercise.targetWeight;
   // The prescription as the exercise page's table (3 Nov, Alex): the same columns in the same order, the weight in the
-  // exercise's unit; swapped, only the reps carry over, as the workout shows it.
+  // exercise's unit. Swapped, a naked sheet (4 Nov, Alex: "when we swap an exercise, it should just be a naked sheet"):
+  // the targets were set for the exercise it replaced, so none show, as on the exercise page.
   const swapped = exercise.swap != null;
-  const targets = targetColumns({ sets: exercise.sets, reps: exercise.reps, weightKg: swapped ? null : targetWeight, unit: exercise.unit ?? "kg", rpe: swapped ? null : exercise.targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance });
+  const targets = swapped ? [] : targetColumns({ sets: exercise.sets, reps: exercise.reps, weightKg: targetWeight, unit: exercise.unit ?? "kg", rpe: exercise.targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance });
   const ask = exercise.videoRequest;
   // Against the last time: the heaviest set then and now.
   const top = (sets: { weight: number | null }[]) => sets.reduce<number | null>((m, s) => (s.weight != null && (m == null || s.weight > m) ? s.weight : m), null);
   const nowTop = top(exercise.logs);
-  const thenTop = exercise.lastSets ? top(exercise.lastSets.sets) : null;
+  // Swapped, last time was another lift (as the exercise page reads it): no change against it (4 Nov, review).
+  const thenTop = exercise.lastSets && !swapped ? top(exercise.lastSets.sets) : null;
   const delta = nowTop != null && thenTop != null ? roundTo(nowTop - thenTop, 2) : null;
   const [open, setOpen] = useState(landed);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -398,7 +400,8 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
       <SoFold open={open}>
         <div className="so-card-body">
           <TargetTable cols={targets} />
-          {exercise.note.text && <CoachNote assignmentId={exercise.id} note={exercise.note} />}
+          {/* Swapped, the coach's cue was for the exercise it replaced, as on the exercise page (17 Oct, Alex; 4 Nov, review). */}
+          {exercise.note.text && !swapped && <CoachNote assignmentId={exercise.id} note={exercise.note} />}
           {ask && (
             <button type="button" className={`so-video${ask.reply ? " replied" : ask.src ? " sent" : ""}`} onClick={() => setVideoOpen(true)}>
               {media === "photo" ? (
@@ -457,8 +460,9 @@ function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: num
             <div className={cardio.done ? "so-cardio-done" : "so-notlogged"}>{cardio.done ? "Done" : "Not done"}</div>
           ) : (
             <>
-              <TargetTable cols={cardioColumns(cardio)} />
-              {cardio.notes && <CoachNote assignmentId={null} note={{ text: cardio.notes, dateLabel: "", unread: false }} />}
+              {/* Swapped, a naked sheet (4 Nov, Alex): the targets were the replaced cardio's. */}
+              {!cardio.swap && <TargetTable cols={cardioColumns(cardio)} />}
+              {cardio.notes && !cardio.swap && <CoachNote assignmentId={null} note={{ text: cardio.notes, dateLabel: "", unread: false }} />}
             </>
           )}
         </div>

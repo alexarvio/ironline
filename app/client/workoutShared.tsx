@@ -328,8 +328,10 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Coach
           ))}
         </div>
       )}
-      {!free && <TargetTable cols={cardioColumns(cardio)} />}
-      <ExerciseCoachNote assignmentId={null} dateLabel="" text={cardio.notes || null} unread={false} />
+      {/* Swapped, a naked sheet (4 Nov, Alex: "when we swap an exercise, it should just be a naked sheet"): the targets were the replaced cardio's. */}
+      {!free && !cardio.swap && <TargetTable cols={cardioColumns(cardio)} />}
+      {/* Swapped, the coach's note on the cardio it replaced goes, their note on the substitute shows, as an exercise's (17 Oct, Alex; 4 Nov, review). */}
+      <ExerciseCoachNote assignmentId={null} dateLabel="" text={(cardio.swap ? cardio.alternatives.find((a) => a.name === cardio.swap)?.note?.trim() : cardio.notes) || null} unread={false} />
       {!readOnly && (
         <button
           type="button"
