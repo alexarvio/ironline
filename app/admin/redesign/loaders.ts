@@ -12,13 +12,13 @@ import { titleParts } from "../../lib/titleParts";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { clerkOn } from "../../lib/clerk";
-import { getCoachSettings, getInvoiceView, listInvoices, listInvoiceTemplates, invoiceRepeatViews, runRecurringInvoices, type FeedEvent, type HomeAction, type InvoiceView, type TrainingIndex, listCoachVideos, exerciseClientCounts, listMeetings, activityWords, callThing, callOver, callToComplete } from "../../lib/queries";
+import { getCoachSettings, getInvoiceView, listInvoices, listInvoiceTemplates, invoiceRepeatViews, runRecurringInvoices, type FeedEvent, type HomeAction, type InvoiceView, listCoachVideos, exerciseClientCounts, listMeetings, activityWords, callThing, callOver, callToComplete } from "../../lib/queries";
 import { getHomeBoard, noteHomeLooked } from "../../lib/homeBoard";
 import { activityMarkOf } from "../../lib/activityMark";
 import { SERVER_TZ, zonedToUtc } from "../../lib/timezones";
 import { hasBankDetails, invoicingFor } from "../../lib/countries";
+import { clientActions, coachNeeds } from "../../lib/coachNeeds";
 import {
-  getClientHome,
   getActivityFeed,
   getClientProfile,
   phaseCheckInDays,
@@ -621,10 +621,9 @@ const screenOf = (href: string) => (/[?&]chat=/.test(href) ? "Chat" : SCREEN_OF[
  *  sign-in lock), then the rest oldest first; a screen sits where its first thing does. A call today is no task (2 Nov,
  *  Alex: the rail said Meetings and nothing there said what; the Feed dropped it 25 Oct); a call over and not marked
  *  completed is (complete-<id>). */
-function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEvent>, isNew: boolean, ix?: TrainingIndex): { spots: RailSpot[]; total: number; owed: number; phases: number } {
+function railSpots(clientId: number, actions: HomeAction[], byId: Map<string, FeedEvent>, isNew: boolean): { spots: RailSpot[]; total: number; owed: number; phases: number } {
   const ranked: { href: string; rank: number; ms: number }[] = [];
   if (isNew) ranked.push({ href: `/admin/redesign/plan?client=${clientId}`, rank: -1, ms: 0 });
-  const actions = getClientHome(clientId, feed, ix).actions;
   const phases = (isNew ? 1 : 0) + actions.filter((a) => PHASE_OWED.test(a.id)).length;
   for (const a of actions) {
     if (!OWED.some((re) => re.test(a.id))) continue;
@@ -645,8 +644,8 @@ function railSpots(clientId: number, feed: FeedEvent[], byId: Map<string, FeedEv
  *  in feed"): a new client with no phase yet, a track with no live phase (or its draft over today), a live phase with
  *  nothing in it; the Feed's rows, the Plan their way in. */
 export function loadPhaseNeeds(coachId: number): NeedRow[] {
-  const feed = getActivityFeed(coachId);
-  const byId = new Map(feed.map((e) => [e.id, e]));
+  // The rail's read of the coach's Needs you, not a second one (4 Nov, Alex: "just a tiny bit slow"; coachNeeds.ts).
+  const { byId } = coachNeeds(coachId);
   const data = getData();
   const rows: NeedRow[] = [];
   for (const c of listClients(coachId)) {
@@ -655,7 +654,7 @@ export function loadPhaseNeeds(coachId: number): NeedRow[] {
       rows.push({ ...base, key: `${c.id}:setup`, cat: "plan", kind: "phase", what: "No phase yet", action: "New phase", href: `/admin/redesign/plan?client=${c.id}`, dismissId: null });
       continue;
     }
-    for (const a of getClientHome(c.id, feed).actions) {
+    for (const a of clientActions(coachId, c.id)) {
       if (!PHASE_OWED.test(a.id)) continue;
       // Its track's group: `track-training` names it, `empty-…` by the tab it opens (Lifestyle's is measurements).
       const track = /^track-(lifestyle|training|nutrition)$/.exec(a.id)?.[1] ?? (a.tab === "measurements" ? "lifestyle" : a.tab);
@@ -695,9 +694,9 @@ export function loadDots(clientId: number): DotTrail {
   if (listClientPhases(clientId).length === 0 && !data.training_programs.some((p) => p.client_id === clientId)) {
     todo("plan", { key: "setup", kind: "setup", what: "No phase yet", words: null, since: null, action: "New phase", href: route("plan"), ref: null });
   }
-  const feed = getActivityFeed(client.coach_id ?? 0);
-  const byId = new Map(feed.map((e) => [e.id, e]));
-  for (const a of getClientHome(clientId, feed).actions) {
+  // The rail's read of the coach's Needs you, not the whole feed again for one client (4 Nov, Alex; coachNeeds.ts).
+  const { byId } = coachNeeds(client.coach_id ?? 0);
+  for (const a of clientActions(client.coach_id ?? 0, clientId)) {
     const open = needView(clientId, a, byId).open;
     const since = a.at != null && Number.isFinite(a.at) ? a.at : null;
     if (a.id === "week") {
@@ -773,20 +772,17 @@ export function loadDots(clientId: number): DotTrail {
 export function loadRail(coach: { id: number; email: string; role: "coach" | "client" }): RailData {
   // A new coach sees the welcome steps first; every redesign page reads the rail, so this is the one gate.
   if (getData().users.find((u) => u.id === coach.id)?.onboarding) redirect("/welcome");
-  const feed = sub("feed", () => getActivityFeed(coach.id));
-  const byId = new Map(feed.map((e) => [e.id, e]));
+  // The coach's feed and every client's Needs you, read once a request and shared with the Feed, the Phases screen and
+  // the dot trail (4 Nov, Alex: "just a tiny bit slow"; coachNeeds.ts). Timed as rail.feed and rail.needsYou when the
+  // rail reads it first.
+  const { byId } = coachNeeds(coach.id);
   const data = getData();
   const clients = sub("needsYou", () => {
     const list = listClients(coach.id);
-    // Each client's own events and every client's training rows, read once for the whole rail (23 Oct, speed: every
-    // client's Needs you walked the whole feed and scanned the store per session); getClientHome reads the same rows.
-    const feedOf = new Map<number, FeedEvent[]>(list.map((c) => [c.id, []]));
-    for (const e of feed) feedOf.get(e.clientId)?.push(e);
-    const ix = trainingIndex(list.map((c) => c.id));
     return list.map((c) => {
       const user = getUserForClient(c.id);
       const isNew = listClientPhases(c.id).length === 0 && !data.training_programs.some((p) => p.client_id === c.id);
-      return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, ...railSpots(c.id, feedOf.get(c.id) ?? [], byId, isNew, ix), notSignedIn: !user || (!user.clerk_user_id && (user.must_change_password || !user.password_hash)) };
+      return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, ...railSpots(c.id, clientActions(coach.id, c.id), byId, isNew), notSignedIn: !user || (!user.clerk_user_id && (user.must_change_password || !user.password_hash)) };
     });
   });
   return sub("coach", () => {

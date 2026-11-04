@@ -1,4 +1,4 @@
-import { getCoachProfile, getPlanData, listClientEvents, listClients, listEventCategories, localDateStr, weekStart, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
+import { getCoachProfile, getPlanPhases, listClientEvents, listClients, listEventCategories, localDateStr, weekStart, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
 import { phaseLastDay } from "../../../lib/phases";
 import type { OverviewEvent, OverviewPhase } from "./timeline";
 
@@ -40,7 +40,9 @@ const intoWeek = () => {
 export function loadPhasesOverview(coachId: number): PhasesOverviewData {
   const today = localDateStr();
   const clients = listClients(coachId).map((c) => {
-    const plan = getPlanData(c.id);
+    // The phases and programmes alone, as getPlanData has them, without its goals table this screen never shows
+    // (4 Nov, Alex: "just a tiny bit slow" going from screen to screen).
+    const plan = getPlanPhases(c.id);
     const phases: OverviewPhase[] = plan.phases.map((p) => ({
       id: p.id,
       track: p.track,
