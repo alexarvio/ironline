@@ -97,26 +97,28 @@ export default function ExerciseProgressDialog({
   const [gym, setGym] = useState<string | null>(null);
   const atGym = useMemo(() => (gym ? all.filter((s) => s.gym === gym) : all), [all, gym]);
   // Each window judged, every session weighed as the loader weighed it: that day's exercise assisted or not, the body
-  // weight that day. The windows are the cells': the last 7 (30) days with today.
+  // weight that day. The windows are the cells': the last 30 days with today; 7 days the sessions in the last 7 days
+  // and the one before them, which the latest is compared with (4 Nov, Alex: "compares this session to the last session").
   const js = useMemo(() => {
     const load = (w: number, s: ProgressSession) => liftedKg(w, s.assisted ?? assisted, s.bodyKg ?? bodyKg);
-    const within = (from: string) => atGym.filter((s) => !!s.date && s.date.slice(0, 10) >= from && s.date.slice(0, 10) <= today);
-    const out: Record<Win, Judged> = { "7": judge(within(daysBefore(today, 6)), load), "30": judge(within(daysBefore(today, 29)), load), all: judge(atGym, load) };
+    const dated = atGym.filter((s) => !!s.date && s.date.slice(0, 10) <= today);
+    const within = (from: string) => dated.filter((s) => s.date!.slice(0, 10) >= from);
+    const week = within(daysBefore(today, 6));
+    const earlier = dated.filter((s) => s.date!.slice(0, 10) < daysBefore(today, 6));
+    const out: Record<Win, Judged> = {
+      "7": judge(week.length && earlier.length ? [earlier[earlier.length - 1], ...week] : week, load),
+      "30": judge(within(daysBefore(today, 29)), load),
+      all: judge(atGym, load),
+    };
     return out;
   }, [atGym, assisted, bodyKg, today]);
   // Opened from a cell, on its window; else 30 days with three sessions in it, else all time.
   const [rangeKey, setRangeKey] = useState<Win>(() => clicked ?? (js["30"].sessions.length >= 3 ? "30" : "all"));
-  // A window only while it holds other sessions than the next wider one (no choice that changes nothing), the one
-  // clicked always; All time with them. One left: no capsule.
-  const n7 = js["7"].sessions.length;
-  const n30 = js["30"].sessions.length;
+  // 7 days | 30 days | All time always (4 Nov, Alex: "it should be last 7 days then last 30"); a window with no session
+  // in it says None.
   const nAll = js.all.sessions.length;
-  const offered: Win[] = [
-    ...(clicked === "7" || (n7 > 0 && n7 < n30) ? (["7"] as const) : []),
-    ...(clicked === "30" || (n30 > 0 && n30 < nAll) ? (["30"] as const) : []),
-    "all",
-  ];
-  const view: Win = offered.includes(rangeKey) ? rangeKey : "all";
+  const offered: Win[] = ["7", "30", "all"];
+  const view: Win = rangeKey;
   const judged = js[view];
   // The change in a window: the best e1RM in it against the best in the window before, as the cell (exerciseTrends);
   // on All gyms the cell's own figure, a gym's own sessions worked the same way. A lift newer than the window before
@@ -124,7 +126,19 @@ export default function ExerciseProgressDialog({
   const { pct: windowChange, since: windowSince } = ((): { pct: number | null; since: string | null } => {
     if (view === "all") return { pct: null, since: null };
     if (!gym && trend) return view === "7" ? { pct: trend.d7, since: trend.d7Since ?? null } : { pct: trend.d30, since: trend.d30Since ?? null };
-    const days = view === "7" ? 7 : 30;
+    // 7 days at one gym as the cell counts it: the latest day in the 7 days against the day before it (a day's best).
+    if (view === "7") {
+      const byDay = new Map<string, number>();
+      for (const s of js.all.sessions) {
+        const d = (s.date ?? "").slice(0, 10);
+        if (d && d <= today) byDay.set(d, Math.max(byDay.get(d) ?? 0, s.best.e1rm));
+      }
+      const order = [...byDay.keys()].sort();
+      const [b, a] = order.slice(-2);
+      if (!a || !b || a < daysBefore(today, 6)) return { pct: null, since: null };
+      return { pct: Math.round(((byDay.get(a)! - byDay.get(b)!) / byDay.get(b)!) * 1000) / 10, since: null };
+    }
+    const days = 30;
     const from = daysBefore(today, days - 1);
     const prevFrom = daysBefore(today, 2 * days - 1);
     let cur = 0;
@@ -225,9 +239,10 @@ export default function ExerciseProgressDialog({
     return () => ro.disconnect();
   }, [chartEl]);
 
-  // The window picked alone (4 Nov, Alex: the window before in grey "is not self-explanatory enough"), by the calendar in
-  // 7 days and 30 days: its first day, its middle and today under it.
-  const winFrom = view === "all" ? null : daysBefore(today, (view === "7" ? 7 : 30) - 1);
+  // The window picked alone (4 Nov, Alex: the window before in grey "is not self-explanatory enough"): 30 days by the
+  // calendar, its first day, its middle and today under it; 7 days from the session before the week to the latest, by
+  // date, as All time.
+  const winFrom = view === "30" ? daysBefore(today, 29) : null;
 
   const chart = (() => {
     if (n === 0) return null;
@@ -397,13 +412,24 @@ export default function ExerciseProgressDialog({
         // An assisted lift is weighed by the body weight less the help: without a body weight, its sessions can't be judged.
         <div className="exp-empty">{assisted && bodyKg == null && atGym.some((s) => s.sets.length > 0) ? "No body weight yet" : "None yet"}</div>
       ) : n === 0 ? (
-        // The window clicked holds no session (the others do): the capsule to reach them.
+        // The window holds no session (the others do): the capsule to reach them, in the same room as the others take, so
+        // switching moves nothing (the figures' line, the chart, the log's head and rows).
         <>
           <div className="exp-hl">
-            <div />
+            <div>
+              <div className="exp-lab">Estimated 1RM</div>
+              <div className="exp-big">
+                <b>—</b>
+              </div>
+            </div>
             {seg}
           </div>
           <div className="exp-empty">None</div>
+          <div className="exp-log" aria-hidden="true">
+            {Array.from({ length: logSlots + 1 }, (_, i) => (
+              <div key={i} className={`exp-lr room${i === 0 ? " head" : ""}`} />
+            ))}
+          </div>
         </>
       ) : (
         <>
@@ -464,7 +490,7 @@ export default function ExerciseProgressDialog({
                       {dayMonth(winFrom)}
                     </text>
                     <text x={CH.l + chart.pw / 2} y={CH.h - 6} textAnchor="middle">
-                      {dayMonth(daysBefore(today, view === "7" ? 3 : 15))}
+                      {dayMonth(daysBefore(today, 15))}
                     </text>
                     <text x={W - CH.r} y={CH.h - 6} textAnchor="end">
                       {dayMonth(today)}
