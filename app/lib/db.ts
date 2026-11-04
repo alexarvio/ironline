@@ -556,12 +556,21 @@ type WorkoutAssignment = {
   // its number goes on to the later rows, and lifts from before it never move
   // them (lib/targetRule.ts). A copy of the row never carries it.
   target_pinned?: boolean;
+  // The coach's own weight from before the rule first raised target_weight_kg
+  // (4 Nov, Alex: a raised figure read as the coach's, so Apply offered
+  // "70 → 55"). Null: the coach had none. Set once at the first raise, never
+  // by a later one; gone when the coach types the weight (or a reset is
+  // carried to it). Absent while the weight is the coach's own. Lives in the
+  // Postgres row's `extra`.
+  coach_kg?: number | null;
   // Weight targets for the client's other gyms, by gym id. The home gym's
   // target is target_weight_kg; a gym with no entry here starts from it.
   // `set_at` marks one the coach typed, as target_set_at does; `pinned`, one
   // typed while the client was logging the exercise, as target_pinned does
-  // (23 Oct: a reset point for that gym, see lib/targetRule.ts).
-  gym_targets?: Record<string, { kg: number | null; set_at?: string | null; pinned?: boolean }>;
+  // (23 Oct: a reset point for that gym, see lib/targetRule.ts); `coach_kg`,
+  // the coach's own beside a raised one, as coach_kg above (null: the gym
+  // followed the home weight).
+  gym_targets?: Record<string, { kg: number | null; set_at?: string | null; pinned?: boolean; coach_kg?: number | null }>;
   // Warm-up sets the client did before the working sets. Optional, theirs to
   // fill in, and kept off set_logs so progression, goals and the set counts
   // never see them. Not carried along when a day or week is copied.
