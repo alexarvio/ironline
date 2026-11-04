@@ -387,7 +387,7 @@ import {
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import { COACH_PROFILE_LIMITS } from "./coachProfileView";
-import { deleteUpload, keyOf, posterFromDevice, prepareChatMedia, putUpload, putUploadFromDisk, warmSmallCopies, webChatVideo } from "./storage";
+import { deleteUpload, fitPhoto, keyOf, photoName, posterFromDevice, prepareChatMedia, putUpload, putUploadFromDisk, warmSmallCopies, webVideo } from "./storage";
 import fs from "fs";
 import { claimUpload, discardUpload, placeUpload, UPLOAD_CAPS, type StagedUpload, type UploadKind } from "./streamUpload";
 import { logoAsPng, makeLogoMark, removeCoachLogo, saveCoachLogo } from "./brandMark";
@@ -1575,12 +1575,18 @@ export async function uploadMealPhotoAction(formData: FormData) {
   // files go through /api/upload.
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return;
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const original = Buffer.from(await file.arrayBuffer());
+  // Kept shrunk, 2048 at most, never the phone's original as well (4 Nov, Alex, fix 2: storage; fitPhoto).
+  const fitted = await fitPhoto(original);
+  const buffer = fitted?.bytes ?? original;
+  const type = fitted?.type ?? (file.type || "image/jpeg");
   const previous = getMealPhoto(clientId, date, meal);
   // Saved to the disk, then copied into the storage bucket when it is on.
-  const saved = saveMealPhoto(clientId, date, meal, buffer, file.type || "image/jpeg");
-  if (previous && keyOf(previous) !== keyOf(saved)) await deleteUpload(previous);
-  await putUpload(saved, buffer, file.type);
+  const saved = saveMealPhoto(clientId, date, meal, buffer, type);
+  // The previous picture's small copies go even under the same name (4 Nov: every meal photo is a .jpg now, so a
+  // replaced one would show the old one's copy); the new one then takes the name in the bucket.
+  if (previous) await deleteUpload(previous);
+  await putUpload(saved, buffer, type);
   revalidatePath("/admin");
 }
 
@@ -1683,8 +1689,9 @@ export async function uploadRequestedVideoAction(formData: FormData): Promise<st
   const onDisk = placeUpload(up, saved.path);
   if (saved.previous) await deleteUpload(saved.previous);
   await putUploadFromDisk(saved.path, onDisk, up.type);
-  // Its poster made now, so the coach's lists show it at once (25 Oct, Alex).
-  afterResponse(() => prepareChatMedia(saved.path, "video"));
+  // Its poster made now, so the coach's lists show it at once (25 Oct, Alex); then its web copy, as a chat video's,
+  // which the row then shows and the coach reviews, the original dropped once it does (4 Nov, Alex, fix 2: storage).
+  afterResponse(async () => (await prepareChatMedia(saved.path, "video"), await webVideo(saved.path, { dropOriginal: true })));
   // The coach's phone buzzes (21 Oct, /coach); not for a coach trying the client's app.
   if ((await getSessionUser())?.role === "client") pushCoachVideo(id);
   revalidatePath("/admin");
@@ -1710,16 +1717,27 @@ export async function sendExerciseMediaAction(formData: FormData): Promise<strin
   const about = String(formData.get("about") ?? "") === "swap" ? "swap" : null;
   const row = fileClientMedia(assignmentId, { about, note: String(formData.get("note") ?? ""), media: isImage ? "photo" : "video" });
   if (!row) return refuse("That exercise is gone.");
-  const saved = saveRequestedVideo(row.id, EMPTY, up.type);
+  // A photo (20 MB at most) is read once, kept shrunk (4 Nov, Alex, fix 2: storage; fitPhoto, never the original as
+  // well) and its small copies made from those bytes; a video streams to the bucket, never read in.
+  const fitted = isImage ? await fitPhoto(fs.readFileSync(up.file)) : null;
+  const saved = saveRequestedVideo(row.id, fitted?.bytes ?? EMPTY, fitted?.type ?? up.type);
   if (!saved) return refuse("That exercise is gone.");
-  const onDisk = placeUpload(up, saved.path);
-  // A photo (20 MB at most) is read once for its small copies; a video streams to the bucket, never read in.
-  const photo = isImage ? fs.readFileSync(onDisk) : undefined;
+  let photo: Buffer | undefined;
+  let onDisk = "";
+  if (fitted) {
+    discardUpload(up);
+    photo = fitted.bytes;
+  } else {
+    onDisk = placeUpload(up, saved.path);
+    if (isImage) photo = fs.readFileSync(onDisk);
+  }
   if (saved.previous) await deleteUpload(saved.previous);
-  if (photo) await putUpload(saved.path, photo, up.type);
+  if (photo) await putUpload(saved.path, photo, fitted?.type ?? up.type);
   else await putUploadFromDisk(saved.path, onDisk, up.type);
-  // Its poster (or a photo's small copies) made now, so the coach's lists show it at once (25 Oct, Alex).
-  afterResponse(() => prepareChatMedia(saved.path, isImage ? "image" : "video", photo));
+  // Its poster (or a photo's small copies) made now, so the coach's lists show it at once (25 Oct, Alex); a video's
+  // web copy after it, the row then showing it and the original dropped once it does (4 Nov, Alex, fix 2: storage).
+  if (isImage) afterResponse(() => prepareChatMedia(saved.path, "image", photo));
+  else afterResponse(async () => (await prepareChatMedia(saved.path, "video"), await webVideo(saved.path, { dropOriginal: true })));
   if ((await getSessionUser())?.role === "client") pushCoachVideo(row.id);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2405,17 +2423,21 @@ export async function sendChatMessageAction(formData: FormData) {
 
   let media: ChatMedia | undefined;
   if (up) {
-    media = saveChatMedia(clientId, EMPTY, up.type || "application/octet-stream", up.name);
-    const onDisk = placeUpload(up, media.path);
+    // A picture (20 MB at most) is read once and kept shrunk, 2048 at most, never the phone's original as well (4 Nov,
+    // Alex, fix 2: storage; fitPhoto); its name takes the fitted one's extension, which saveChatMedia files it under.
+    const fitted = (up.type || "").startsWith("image/") ? await fitPhoto(fs.readFileSync(up.file)) : null;
+    media = fitted
+      ? saveChatMedia(clientId, fitted.bytes, fitted.type, photoName(up.name, fitted.type))
+      : saveChatMedia(clientId, EMPTY, up.type || "application/octet-stream", up.name);
+    const onDisk = fitted ? (discardUpload(up), "") : placeUpload(up, media.path);
     // A video's first frame taken by the sending device (25 Oct, as WhatsApp): its poster at once.
     const frame = formData.get("poster") as File | null;
     if (media.type === "video" && frame && frame.size > 0 && frame.size < 5 * 1024 * 1024) await posterFromDevice(media.path, Buffer.from(await frame.arrayBuffer()));
     if (media.type === "image") {
-      // A picture (20 MB at most) is read once: its small copies are made from these bytes while the original goes to
-      // the bucket (25 Oct).
-      const buffer = fs.readFileSync(onDisk);
+      // Its small copies are made from these bytes while it goes to the bucket (25 Oct).
+      const buffer = fitted?.bytes ?? fs.readFileSync(onDisk);
       void prepareChatMedia(media.path, "image", buffer);
-      await putUpload(media.path, buffer, up.type || undefined);
+      await putUpload(media.path, buffer, fitted?.type ?? (up.type || undefined));
     } else {
       // A video, a voice message or a file streams to the bucket, never read in.
       await putUploadFromDisk(media.path, onDisk, up.type || undefined);
@@ -2447,8 +2469,9 @@ export async function sendChatMessageAction(formData: FormData) {
   // A picture's small copies and a video's poster are made now, after the
   // answer, so the first person to open the chat doesn't wait for them (21 Oct).
   const kind = media?.type;
-  // A video: its poster at once, then its small web copy, which the message then shows (25 Oct, Alex).
-  if (media && kind === "video") afterResponse(async () => (await prepareChatMedia(media.path, kind), await webChatVideo(media.path)));
+  // A video: its poster at once, then its small web copy, which the message then shows (25 Oct, Alex), the original
+  // dropped once it does (4 Nov, Alex, fix 2: storage).
+  if (media && kind === "video") afterResponse(async () => (await prepareChatMedia(media.path, kind), await webVideo(media.path, { dropOriginal: true })));
   // The chat screens ask for their own thread after a send ("quiet"): a page
   // read on top sent the whole page back with every message (21 Oct: 211 KB
   // on the client's phone, 96 KB for the coach). Other callers still need it.
@@ -4173,11 +4196,15 @@ export async function uploadClientAvatarAction(formData: FormData) {
   if (!file || file.size === 0 || file.size > 6 * 1024 * 1024) return;
   if (!file.type.startsWith("image/")) return;
   const previous = getClient(clientId)?.avatar_path ?? null;
-  const body = Buffer.from(await file.arrayBuffer());
-  const saved = saveClientAvatar(clientId, body, file.type);
+  const original = Buffer.from(await file.arrayBuffer());
+  // Kept shrunk, never the phone's original as well (4 Nov, Alex, fix 2: storage; fitPhoto).
+  const fitted = await fitPhoto(original);
+  const body = fitted?.bytes ?? original;
+  const type = fitted?.type ?? file.type;
+  const saved = saveClientAvatar(clientId, body, type);
   // A new extension is a new file; the old one goes from the bucket too.
   if (previous && keyOf(previous) !== keyOf(saved)) await deleteUpload(previous);
-  await putUpload(saved, body, file.type);
+  await putUpload(saved, body, type);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -4264,10 +4291,14 @@ export async function uploadCoachPhotoAction(formData: FormData) {
   if (!file.type.startsWith("image/")) return;
   const current = getCoachProfile(coachId);
   const previous = (kind === "hero" ? current?.hero_path : kind === "candid" ? current?.candid_path : current?.avatar_path) ?? null;
-  const body = Buffer.from(await file.arrayBuffer());
-  const saved = saveCoachPhoto(coachId, kind, body, file.type);
+  const original = Buffer.from(await file.arrayBuffer());
+  // Kept shrunk, never the camera's original as well (4 Nov, Alex, fix 2: storage; fitPhoto).
+  const fitted = await fitPhoto(original);
+  const body = fitted?.bytes ?? original;
+  const type = fitted?.type ?? file.type;
+  const saved = saveCoachPhoto(coachId, kind, body, type);
   if (previous && keyOf(previous) !== keyOf(saved)) await deleteUpload(previous);
-  await putUpload(saved, body, file.type);
+  await putUpload(saved, body, type);
   revalidateCoachProfile();
 }
 
