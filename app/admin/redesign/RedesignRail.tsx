@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { dayMonth } from "../../lib/dayMonth";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -35,6 +35,13 @@ const VIEWS = [
 const REDRAWN: Partial<Record<string, string>> = { feed: "/admin/redesign/feed", calendar: "/admin/redesign/calendar", phases: "/admin/redesign/phases", business: "/admin/redesign/business", library: "/admin/redesign/library" };
 const COACHES = "/admin/redesign/coaches";
 
+// Where the client list was left, kept from page to page (4 Nov, Alex: "whenever I switch a page, it kind of like pulls
+// the page up. So I have to scroll back down"). Every coach page draws its own rail, so each switch drew a new one at
+// the list's top with All picked: the list's scroll and its All | Needs you come back as they were, before the first
+// paint. Kept in the tab's memory alone: a reload starts at the top, as the server draws it.
+let keptListTop = 0;
+let keptFilter: "all" | "needs" = "all";
+
 
 export default function RedesignRail({ rail, clientId, settings = false }: { rail: RailData; clientId: number; /** On the Settings page: the rail opens on Settings and marks the section open. */ settings?: boolean }) {
   // This browser's timezone, for the server: meetings read in it (lib/viewZone.ts).
@@ -58,7 +65,10 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
   // "Take a tour" from the welcome steps.
   const touring = useSearchParams().get("tour") === "1";
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "needs">("all");
+  const [filter, setFilter] = useState<"all" | "needs">(() => keptFilter);
+  useEffect(() => {
+    keptFilter = filter;
+  }, [filter]);
   // Needs you: something owed, or a new client still to set up (22 Oct, Alex).
   const needsMe = (c: RailClient) => c.total > 0;
   const needsYou = rail.clients.filter(needsMe).length;
@@ -101,6 +111,63 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
     // A new tab or window goes the usual way, and the row you are on changes nothing.
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || isHere) return;
     setGoingTo({ href, from: path });
+  };
+
+  // The client list where it was left (keptListTop): set before the first paint, so a page switch never shows it at the
+  // top first. The client you are on is kept in view, brought just inside the list's edge when it would be hidden (a
+  // client opened from a link, the Feed, the chat); nothing moves when it shows already.
+  const listRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el || el.clientHeight === 0) return; // folded under Settings: the top it is kept at waits for it to unfold
+    el.scrollTop = keptListTop;
+    const row = el.querySelector<HTMLElement>(".rr-row.active");
+    if (!row) return;
+    const box = el.getBoundingClientRect();
+    const at = row.getBoundingClientRect();
+    if (at.top < box.top) el.scrollTop += at.top - box.top;
+    else if (at.bottom > box.bottom) el.scrollTop += at.bottom - box.bottom;
+    keptListTop = el.scrollTop;
+    // On mount alone: within a page the list scrolls only under the coach's hand.
+  }, []);
+  // Settings folded back to Clients: the list grows out of nothing over .32s, so its top is held to the one kept, frame
+  // by frame, until it has its room (at once with reduced motion, where it doesn't ease).
+  const wasSettings = useRef(settingsOpen);
+  const holding = useRef(false);
+  useLayoutEffect(() => {
+    const was = wasSettings.current;
+    wasSettings.current = settingsOpen;
+    const el = listRef.current;
+    if (settingsOpen || !was || !el) return;
+    const until = performance.now() + 400;
+    let frame = 0;
+    holding.current = true;
+    // The coach's own hand wins: a wheel, a touch or a press on the list lets go of it at once.
+    const letGo = () => {
+      cancelAnimationFrame(frame);
+      holding.current = false;
+    };
+    const hold = () => {
+      el.scrollTop = keptListTop;
+      if (holding.current && performance.now() < until) frame = requestAnimationFrame(hold);
+      else holding.current = false;
+    };
+    hold();
+    el.addEventListener("wheel", letGo, { passive: true });
+    el.addEventListener("touchstart", letGo, { passive: true });
+    el.addEventListener("pointerdown", letGo);
+    return () => {
+      letGo();
+      el.removeEventListener("wheel", letGo);
+      el.removeEventListener("touchstart", letGo);
+      el.removeEventListener("pointerdown", letGo);
+    };
+  }, [settingsOpen]);
+  // Kept as the coach scrolls; not while a search narrows the list, nor while Settings folds or unfolds it (the browser
+  // pulls a list with less room toward its top, which is no place the coach left it).
+  const keepListTop = () => {
+    const el = listRef.current;
+    if (el && !q && !settingsOpen && !holding.current && el.clientHeight > 0) keptListTop = el.scrollTop;
   };
 
   return (
@@ -179,7 +246,7 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
             Needs you <small>{needsYou}</small>
           </button>
         </div>
-        <div className="rr-list">
+        <div className="rr-list" ref={listRef} onScroll={keepListTop}>
           {shown.length === 0 ? (
             <p className="rr-empty">{rail.clients.length === 0 ? "None yet" : "No match"}</p>
           ) : (

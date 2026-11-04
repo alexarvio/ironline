@@ -651,12 +651,16 @@ export default function FoodDiaryScreen({
               swipeStart.current = null;
             }}
           >
+          {/* Nutrition's banner, part for part (4 Nov, Alex: going from Nutrition to here the picture and the header
+              jumped): its height, its eyebrow and title (.nd-phase), Training day | Rest day at its foot. */}
           <header className="nd-banner nd-photo fdi-banner">
             {pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
-            <div className="fdi-banner-titles">
-              <div className="fdi-eyebrow">Food diary</div>
-              <h1 className="fdi-date">{dayTitle}</h1>
-              <span className="fdi-date-sub">{daySub}</span>
+            <div className="nd-phase">
+              <div className="nd-phase-titles">
+                <div className="nd-kicker">Food diary</div>
+                <h1 className="nd-phase-name">{dayTitle}</h1>
+                <div className="fdi-date-sub">{daySub}</div>
+              </div>
             </div>
             <div className="fdi-week">
               <button type="button" className="fdi-week-arrow" onClick={() => goTo(addDays(date, -1))} disabled={date <= floor} aria-label="Previous day">
@@ -709,7 +713,7 @@ export default function FoodDiaryScreen({
               </button>
             </div>
             {/* Which targets the day counts down from. */}
-            <div className="nd-tabs fdi-tabs nd-daycap" data-slide role="tablist" aria-label="Day type">
+            <div className="nd-tabs nd-daycap" data-slide role="tablist" aria-label="Day type">
               {(["training", "rest"] as const).map((t) => (
                 <button key={t} type="button" role="tab" aria-selected={diary.dayType === t} className={`nd-tab${diary.dayType === t ? " on" : ""}`} onClick={() => chooseDay(t)}>
                   {t === "training" ? "Training day" : "Rest day"}
