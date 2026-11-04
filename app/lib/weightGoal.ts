@@ -31,7 +31,7 @@ export const VERDICT_WORD: Record<WeightGoalVerdict, string> = {
   on: "On track",
   ahead: "Ahead",
   behind: "Behind",
-  early: "Too early",
+  early: "Not enough data",
   reached: "Reached",
   missed: "Missed",
   stale: "No weigh-in",
@@ -181,7 +181,7 @@ export function weightGoalViews(goals: WeightGoalLike[], readingsIn: Reading[], 
       else if (active) {
         const since = readings.filter((r) => r.date >= g.start_date);
         if (!latest || daysBetween(latest.date, today) > staleDaysOf(readings)) verdict = "stale";
-        // Too early: under a week in, or nothing weighed since it was set.
+        // Not enough data: under a week in, or nothing weighed since it was set.
         else if (daysBetween(g.start_date, today) < 7 || since.length < 1 || !now) verdict = "early";
         else if (dir === 0) verdict = Math.abs(now.kg - g.target_kg) <= ON_TRACK_BAND_KG ? "on" : "behind";
         else {
