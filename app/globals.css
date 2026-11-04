@@ -21341,3 +21341,7 @@ button.chat-att-main { cursor: pointer; }
 .chat-att-x { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: none; color: #8b93a1; cursor: pointer; }
 .chat-att-x:hover { background: #EBEDF1; color: #141a24; }
 .chat-att-x:disabled { opacity: 0.4; cursor: default; }
+
+/* Shape update, a sheet sent in part (4 Nov, Alex: a sent photo couldn't be edited until every angle was in): Edit photos
+   as a text action under the photos, ink at 600, no underline, right-aligned with the send row. */
+.pp-todo-edit { display: block; margin: 10px 0 0 auto; min-height: 44px; padding: 0 4px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }

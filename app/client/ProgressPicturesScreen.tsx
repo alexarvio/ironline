@@ -495,6 +495,20 @@ function OpenSheet({
               )}
             </div>
           )}
+          {/* A sheet sent in part can be edited too (4 Nov, Alex: "I uploaded a progress pic, I saved it, but I can't edit
+              it now"): Edit photos in words under the photos once one is sent, as the finished sheet's own. */}
+          {!leaving && !editing && !saving && stagedCount === 0 && inCount > 0 && (
+            <button
+              type="button"
+              className="pp-todo-edit"
+              onClick={() => {
+                setEditing(true);
+                setJustSaved(false);
+              }}
+            >
+              Edit photos
+            </button>
+          )}
         </div>
       )}
 
