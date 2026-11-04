@@ -13011,6 +13011,8 @@ export type FoodDiaryView = {
   dateLabel: string;
   /** The day's targets, training or rest as the client called it (else by sets); null without targets. */
   target: { kcal: number; protein: number; carbs: number; fat: number } | null;
+  /** Both days' targets, so Training day | Rest day switches on the phone at once (4 Nov, Alex: it took 1-2 s). */
+  targets: { training: FoodDiaryView["target"]; rest: FoodDiaryView["target"] };
   eaten: { kcal: number; protein: number; carbs: number; fat: number };
   meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null; /** The client's picture of this meal, when they took one. */ photo: string | null; /** What the coach said about this meal. */ comments: MealComment[] }[];
   recent: FoodOption[];
@@ -13061,16 +13063,23 @@ export function setFoodDayType(clientId: number, date: string, dayType: "trainin
 
 /** The kcal and macro targets the diary counts down from on a date: the ring's, for the kind of day it is. */
 export function foodDiaryTargetOn(clientId: number, date: string): FoodDiaryView["target"] {
+  return foodDiaryTargetsFor(clientId)[foodDayType(clientId, date)];
+}
+
+/** A training day's targets and a rest day's, each null without targets. */
+export function foodDiaryTargetsFor(clientId: number): FoodDiaryView["targets"] {
   const s = getNutritionGoalsSummary(clientId);
-  const trained = foodDayType(clientId, date) === "training";
-  const kcal = trained ? s.trainingKcal : s.restKcal;
-  if (!(kcal > 0)) return null;
-  return {
-    kcal,
-    protein: trained ? s.trainingProtein : s.restProtein,
-    carbs: trained ? s.trainingCarbs : s.restCarbs,
-    fat: trained ? s.trainingFats : s.restFats,
+  const of = (trained: boolean): FoodDiaryView["target"] => {
+    const kcal = trained ? s.trainingKcal : s.restKcal;
+    if (!(kcal > 0)) return null;
+    return {
+      kcal,
+      protein: trained ? s.trainingProtein : s.restProtein,
+      carbs: trained ? s.trainingCarbs : s.restCarbs,
+      fat: trained ? s.trainingFats : s.restFats,
+    };
   };
+  return { training: of(true), rest: of(false) };
 }
 
 // ---- What the client actually ate, for the coach ----------------------
@@ -13446,6 +13455,7 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     date,
     dateLabel: dayLabelFor(date, today),
     target: foodDiaryTargetOn(clientId, date),
+    targets: foodDiaryTargetsFor(clientId),
     dayType: foodDayType(clientId, date),
     loggedKcal: getCalorieLog(clientId, date)?.kcal ?? null,
     eaten: { kcal: sum("kcal"), protein: sum("protein"), carbs: sum("carbs"), fat: sum("fat") },
