@@ -17997,7 +17997,7 @@ button.ci-hint { cursor: pointer; }
 /* Files: flat rows on the page, space between them; the icon alone, no tile. */
 .cmg-list { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .cmg-file { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
-.cmg-file-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.cmg-file-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; text-decoration: none; }
 .cmg-file-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: #141a24; }
 .cmg-file-icon svg { width: 22px; height: 22px; }
 .cmg-file-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
