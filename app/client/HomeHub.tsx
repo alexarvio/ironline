@@ -345,7 +345,8 @@ function TodayList({ items, session, checkInCount, checkIn, pics, clientId, toda
         <TodayRow
           kind="training"
           title={session.name}
-          fact={<Bars parts={[`${session.exercises} exercises`, session.estMinutes ? `about ${session.estMinutes} min` : null]} />}
+          // The exercises alone, no time estimate (4 Nov, Alex: "take that out").
+          fact={`${session.exercises} exercises`}
           action={session.live ? "Resume" : "Start"}
           ink
           onClick={() => goToTab?.("training", session.dayId)}
