@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "node scripts/start-server.mjs",
+    "build": "node scripts/build.mjs",
+    "start": "node --max-old-space-size=768 scripts/start-server.mjs",
     "lint": "eslint",
     "audit:ui": "node scripts/ui-audit.mjs"
   },
