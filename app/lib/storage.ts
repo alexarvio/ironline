@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { DeleteObjectCommand, DeleteObjectsCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { DATA_DIR, getData } from "./db";
+import { DATA_DIR, getData, persist } from "./db";
 import { loadSharp } from "./sharpSetup";
 
 // Uploaded files (progress photos, avatars, chat media, demo videos) in the
@@ -154,6 +154,8 @@ export async function deleteUpload(publicPath: string | null | undefined) {
     (k): k is string => !!k
   );
   for (const k of smalls) dropDiskCopy(k);
+  // And from the server's memory (4 Nov: a meal's photo replaced under the same name showed the old one's copy).
+  for (const k of smalls) forget(k);
   if (!b) return;
   for (const k of [key, ...smalls]) {
     inBucket.delete(k);
@@ -220,6 +222,12 @@ function remember(key: string, bytes: Buffer) {
     memo.map.delete(k);
     memo.size -= v.length;
   }
+}
+function forget(key: string) {
+  const old = memo.map.get(key);
+  if (!old) return;
+  memo.map.delete(key);
+  memo.size -= old.length;
 }
 function recall(key: string): Buffer | null {
   const hit = memo.map.get(key);
@@ -342,6 +350,37 @@ async function keepCopy(copy: string, bytes: Buffer) {
   fs.mkdirSync(path.dirname(onDisk), { recursive: true });
   fs.writeFileSync(onDisk, bytes);
 }
+
+/** The longest side a photo is kept at (4 Nov, Alex, fix 2: storage). A bit more than shape updates' 1600 (fitJpeg in
+    the browser), since a chat photo opens on the whole screen; the 1080 copy is what the viewer shows first anyway. */
+export const PHOTO_MAX = 2048;
+
+/**
+ * A photo as it is kept (4 Nov, Alex, fix 2: "shrink photos"): a phone's original is 2–4 MB at ~4000 px, and it was
+ * kept whole, for the chat, a meal, an exercise and the faces. Now its longest side 2048 at most, turned upright by its
+ * EXIF, a JPEG at 82; a PNG with see-through parts (a screenshot with alpha) stays a PNG. Re-encoded either way, so the
+ * camera's block (the location with it) goes, as fitJpeg drops it. Null, and the caller keeps what came as before,
+ * when sharp can't read it (an iPhone HEIC: sharp has no HEVC; iOS hands a picked photo over as a JPEG) or it moves (a
+ * GIF, an animated WebP). Never throws.
+ */
+export async function fitPhoto(input: Buffer): Promise<{ bytes: Buffer; type: "image/jpeg" | "image/png" } | null> {
+  try {
+    const sharp = await loadSharp();
+    const meta = await sharp(input, { failOn: "none" }).metadata();
+    if (!meta.width || !meta.height || meta.format === "gif" || (meta.pages ?? 1) > 1) return null;
+    const alpha = meta.format === "png" && !!meta.hasAlpha && !(await sharp(input, { failOn: "none" }).stats()).isOpaque;
+    const fitted = sharp(input, { failOn: "none" }).rotate().resize({ width: PHOTO_MAX, height: PHOTO_MAX, fit: "inside", withoutEnlargement: true });
+    if (alpha) return { bytes: await fitted.png({ compressionLevel: 9 }).toBuffer(), type: "image/png" };
+    return { bytes: await fitted.flatten({ background: "#ffffff" }).jpeg({ quality: 82, progressive: true }).toBuffer(), type: "image/jpeg" };
+  } catch (error) {
+    console.warn("[uploads] photo kept as it came:", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+/** A file name's extension made the fitted photo's ("IMG_1234.HEIC" -> "IMG_1234.jpg"), for saveChatMedia, which takes
+    a picture's extension from its name first. */
+export const photoName = (name: string | null | undefined, type: string) => `${(name || "photo").replace(/\.[^./]*$/, "") || "photo"}.${type === "image/png" ? "png" : "jpg"}`;
 
 async function shrink(original: Buffer, w: number): Promise<Buffer> {
   const sharp = await loadSharp();
@@ -648,26 +687,61 @@ export async function prepareChatMedia(publicPath: string, type: "image" | "vide
 }
 
 /**
- * A client's chat video as its small web copy (25 Oct, Alex: videos slow to play): made beside the original
- * ("chat/9/abc.mov" -> "chat/9/abc-web.mp4"), put in the bucket, the messages pointed at it and its poster made. The
- * original stays where it was. Nothing changes when ffmpeg can't make one.
+ * A video as its small web copy (25 Oct, Alex: videos slow to play): made beside the original ("chat/9/abc.mov" ->
+ * "chat/9/abc-web.mp4"), put in the bucket, what showed the original pointed at it and its poster made. A chat
+ * message's video, and since 4 Nov (Alex, fix 2) a client's exercise video too ("videos/9/12-1730….mov" ->
+ * "videos/9/12-1730…-web.mp4"; the coach reviews it from the row's path, so the copy). Nothing changes when ffmpeg
+ * can't make one. `dropOriginal` (4 Nov, Alex, fix 2: "drop video originals once a web copy exists"; the sends ask
+ * it): once the copy is in and every message or exercise row shows it, the original goes from the bucket and the disk,
+ * an hour later (dropOriginalLater). A first play of a message from before (the uploads route) doesn't ask it: their
+ * originals are left alone.
  */
 // One web copy in the making a video (4 Nov, review): the send (a server action) and a first play (the uploads route)
 // are different bundles, and each checked for a copy before either had made one, so both made it, one after the
 // other in the line. On globalThis so both share it; a later call finds the copy made and only does the swap.
 const webbingNow = ((globalThis as unknown as { _uploadsWebbing?: Map<string, Promise<void>> })._uploadsWebbing ??= new Map());
-export function webChatVideo(publicPath: string): Promise<void> {
+// The originals some caller asked to drop, read once the copy in the making is done (whichever call started it).
+const dropWanted = ((globalThis as unknown as { _uploadsDropWanted?: Set<string> })._uploadsDropWanted ??= new Set());
+export function webVideo(publicPath: string, opts: { dropOriginal?: boolean } = {}): Promise<void> {
   const key = keyOf(publicPath);
   if (!key || /-web\.mp4$/i.test(key)) return Promise.resolve();
+  if (opts.dropOriginal) dropWanted.add(key);
   let p = webbingNow.get(key);
   if (!p) {
-    p = makeWebChatVideo(publicPath, key).finally(() => webbingNow.delete(key));
+    p = makeWebVideo(publicPath, key).finally(() => {
+      webbingNow.delete(key);
+      dropWanted.delete(key);
+    });
     webbingNow.set(key, p);
   }
   return p;
 }
+/** The chat's name for it (the uploads route's first play). */
+export const webChatVideo = (publicPath: string, opts: { dropOriginal?: boolean } = {}) => webVideo(publicPath, opts);
 
-async function makeWebChatVideo(publicPath: string, key: string) {
+/** Whether a message or an exercise row still shows this file (a client's video, a coach's review, a chat file). */
+function fileShown(publicPath: string): boolean {
+  const data = getData();
+  return (
+    data.chat_messages.some((m) => m.media_path === publicPath) ||
+    (data.video_requests ?? []).some((r) => r.file_path === publicPath || r.reply_file_path === publicPath)
+  );
+}
+
+/** A client's exercise videos pointed at the web copy, as swapChatMedia does a chat's. */
+function swapExerciseVideo(from: string, to: string): number {
+  let n = 0;
+  for (const r of getData().video_requests ?? []) {
+    if (r.file_path !== from) continue;
+    r.file_path = to;
+    n++;
+  }
+  if (n) persist();
+  return n;
+}
+
+async function makeWebVideo(publicPath: string, key: string) {
+  void dropDueOriginals();
   try {
     const webKey = key.replace(/\.[^./]+$/, "") + "-web.mp4";
     const out = path.join(DATA_DIR, "uploads", webKey);
@@ -699,10 +773,98 @@ async function makeWebChatVideo(publicPath: string, key: string) {
     }
     const { swapChatMedia } = await import("./queries");
     swapChatMedia(publicPath, webPath);
+    swapExerciseVideo(publicPath, webPath);
+    // Nothing shows the copy (the message deleted, the exercise's video replaced or taken back meanwhile, and the
+    // original gone with it): the copy goes too, so it never sits in the bucket unseen.
+    if (!fileShown(webPath)) {
+      dropDiskCopy(webKey);
+      await deleteUpload(webPath);
+      return;
+    }
     await prepareChatMedia(webPath, "video");
+    if (dropWanted.has(key) && !fileShown(publicPath)) dropOriginalLater(publicPath, webPath);
   } catch (error) {
     console.error(`[uploads] no web copy of ${key}:`, error instanceof Error ? error.message : error);
   }
+}
+
+// ---- A video's original dropped once its web copy shows (4 Nov, Alex, fix 2: Railway bills what the bucket holds; a
+// phone's original is 30–128 MB, its web copy a tenth of that). An hour's grace first: a coach who opened the client's
+// video before the copy was made is still playing or recording a review from the original, and a page opened before
+// the swap still links it. The list is kept on the disk beside the data, so a restart in that hour still drops them:
+// the next web copy made, or the next upload, runs what is due. Before dropping it is checked again: nothing shows the
+// original any more, and the copy, when something shows it, is there (the bucket or the disk). Otherwise it stays.
+const DROP_AFTER_MS = 60 * 60 * 1000;
+const DROP_FILE = path.join(DATA_DIR, "originals-to-drop.json");
+type Drop = { path: string; web: string; at: number };
+
+function readDrops(): Drop[] {
+  try {
+    const list = JSON.parse(fs.readFileSync(DROP_FILE, "utf8"));
+    return Array.isArray(list) ? list.filter((d): d is Drop => !!d && typeof d.path === "string" && typeof d.web === "string" && typeof d.at === "number") : [];
+  } catch {
+    return [];
+  }
+}
+function writeDrops(list: Drop[]) {
+  try {
+    if (list.length) fs.writeFileSync(DROP_FILE, JSON.stringify(list));
+    else fs.rmSync(DROP_FILE, { force: true });
+  } catch (error) {
+    console.error("[uploads] could not keep the originals to drop:", error instanceof Error ? error.message : error);
+  }
+}
+
+function dropOriginalLater(original: string, web: string) {
+  writeDrops([...readDrops().filter((d) => d.path !== original), { path: original, web, at: Date.now() + DROP_AFTER_MS }]);
+  const t = setTimeout(() => void dropDueOriginals(), DROP_AFTER_MS + 5000);
+  t.unref?.();
+}
+
+/** Has the bucket or the disk the file. */
+async function fileThere(publicPath: string): Promise<boolean> {
+  const key = keyOf(publicPath);
+  if (!key) return false;
+  const onDisk = path.join(DATA_DIR, "uploads", key);
+  if (fs.existsSync(onDisk) && fs.statSync(onDisk).size > 0) return true;
+  const b = bucket();
+  return b ? exists(b, key) : false;
+}
+
+// One run at a time, shared by every bundle.
+const dropping = globalThis as unknown as { _uploadsDropping?: Promise<void> | null };
+/** Drops every original whose hour is up (see above). Never throws. */
+export function dropDueOriginals(): Promise<void> {
+  if (dropping._uploadsDropping) return dropping._uploadsDropping;
+  const run = (async () => {
+    const due = readDrops().filter((d) => d.at <= Date.now());
+    if (!due.length) return;
+    const settled = new Set<string>();
+    for (const d of due) {
+      try {
+        const key = keyOf(d.path);
+        // Still shown, or its copy shown but not there (kept, to put right by hand): the original stays, not asked again.
+        // Its copy shown by nothing either (the exercise's video replaced or taken back, the message deleted, in that
+        // hour): nothing needs the original, it goes.
+        if (key && !fileShown(d.path) && (!fileShown(d.web) || (await fileThere(d.web)))) {
+          dropDiskCopy(key);
+          await deleteUpload(d.path);
+          console.log(`[uploads] original dropped for its web copy: ${key}`);
+        }
+        settled.add(d.path);
+      } catch (error) {
+        console.error(`[uploads] could not drop ${d.path}:`, error instanceof Error ? error.message : error);
+      }
+    }
+    // Read again: one added while these went stays on the list.
+    writeDrops(readDrops().filter((d) => !settled.has(d.path)));
+  })()
+    .catch(() => {})
+    .finally(() => {
+      dropping._uploadsDropping = null;
+    });
+  dropping._uploadsDropping = run;
+  return run;
 }
 
 /** Deletes every object whose key starts with `prefix` ("progress/9/"); returns how many. */

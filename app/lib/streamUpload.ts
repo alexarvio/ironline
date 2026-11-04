@@ -82,6 +82,9 @@ export function sweepUploads(force = false) {
   const now = Date.now();
   if (!force && g.__uploadSweptAt && now - g.__uploadSweptAt < SWEEP_EVERY_MS) return;
   g.__uploadSweptAt = now;
+  // The video originals whose hour is up go with it (4 Nov, Alex, fix 2: storage; storage.ts dropDueOriginals), so a
+  // restart in that hour still drops them.
+  void import("./storage").then((s) => s.dropDueOriginals()).catch(() => {});
   let names: string[];
   try {
     names = fs.readdirSync(TMP_DIR);
