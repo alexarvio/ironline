@@ -37,9 +37,12 @@ export function ChatImage({ src, className, look }: { src: string; className?: s
 }
 
 // ---- A video on screen comes down before it is tapped (25 Oct, Alex: "as much smoothness as possible"): only its
-// small web copy (a few MB, "-web.mp4"), through the app so the page may read it, kept as a blob the full screen plays
-// at once. The last few only.
-const ready = new Map<string, string>();
+// small web copy (a few MB, "-web.mp4"). Since 4 Nov (Alex: Railway bills every byte the app sends; the bucket's own
+// downloads are free) straight from the bucket, as the plain /uploads link redirects, never through the app: a hidden
+// player buffers it (no blob: the page may not read the bucket's bytes, a player may still play them), and the full
+// screen asks for the same link, which stays the same for days (storage.ts bucketLink), so it plays from what came down.
+// The last few only.
+const ready = new Map<string, HTMLVideoElement>();
 const coming = new Set<string>();
 // One at a time, newest first, and only once the pictures on screen are in (26 Oct, Alex: "way too long" from Thailand:
 // a thread shares one connection, and its videos coming down whole all at once held its pictures back behind them).
@@ -55,23 +58,33 @@ function nextVideo() {
   const src = waiting.pop()!;
   busy = true;
   coming.add(src);
-  fetch(`${src}?stream=1`)
-    .then((r) => (r.ok ? r.blob() : null))
-    .then((b) => {
-      if (!b) return;
-      ready.set(src, URL.createObjectURL(b));
-      while (ready.size > 6) {
-        const [oldest, url] = ready.entries().next().value as [string, string];
-        URL.revokeObjectURL(url);
-        ready.delete(oldest);
-      }
-    })
-    .catch(() => {})
-    .finally(() => {
-      coming.delete(src);
-      busy = false;
-      nextVideo();
-    });
+  const v = document.createElement("video");
+  v.muted = true;
+  v.playsInline = true;
+  v.preload = "auto";
+  // On to the next once it can play through, the browser stops fetching (a phone buffers only so much ahead), it
+  // fails, or after 20 s whatever came.
+  let settled = false;
+  const settle = () => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timer);
+    for (const e of ["canplaythrough", "suspend", "error"]) v.removeEventListener(e, settle);
+    coming.delete(src);
+    busy = false;
+    nextVideo();
+  };
+  const timer = setTimeout(settle, 20000);
+  for (const e of ["canplaythrough", "suspend", "error"]) v.addEventListener(e, settle);
+  ready.set(src, v);
+  while (ready.size > 6) {
+    const [oldest, old] = ready.entries().next().value as [string, HTMLVideoElement];
+    old.removeAttribute("src");
+    old.load();
+    ready.delete(oldest);
+  }
+  v.src = src;
+  v.load();
 }
 function preloadVideo(src: string) {
   if (ready.has(src) || coming.has(src) || waiting.includes(src) || !/-web\.mp4$/i.test(src)) return;
@@ -158,7 +171,7 @@ function FullVideo({ src, onClose }: { src: string; onClose: () => void }) {
   }, [onClose]);
   return (
     <div className="cmv-full" role="dialog" aria-modal="true" aria-label="Video" onClick={(e) => e.stopPropagation()}>
-      <video src={ready.get(src) ?? src} autoPlay controls playsInline />
+      <video src={src} autoPlay controls playsInline />
       <button type="button" className="cmv-x" onClick={onClose} aria-label="Close the video">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
           <path d="M6 6l12 12M18 6L6 18" />

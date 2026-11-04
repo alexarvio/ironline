@@ -4,7 +4,7 @@ import { Readable } from "stream";
 import { DATA_DIR } from "../../lib/db";
 import { canAccessClient, getSessionUser, isOwner } from "../../lib/auth";
 import { coachIdOfClient, coachOwnsExercise } from "../../lib/tenancy";
-import { bucketLink, LINK_CACHE_SECONDS, posterCopy, posterKey, smallCopy, smallKey, sourceOf, streamUpload } from "../../lib/storage";
+import { bucketLink, linkFreshSeconds, posterCopy, posterKey, smallCopy, smallKey, sourceOf, streamUpload } from "../../lib/storage";
 import { recordTiming } from "../../lib/timing";
 import { after } from "next/server";
 import { webChatVideo } from "../../lib/storage";
@@ -117,7 +117,10 @@ export async function GET(
   // Access is settled above. With the storage bucket on, the file downloads
   // from the bucket through a link that expires; a file not copied there yet
   // is served from the disk below. "?stream=1" (10 Oct) sends the bytes
-  // through the app instead, same-origin, for the whiteboard's canvas.
+  // through the app instead, same-origin, for the whiteboard's canvas. Only the
+  // players that draw a video on a canvas ask for it (4 Nov, Alex: every byte the app
+  // sends is billed, the bucket's own are free): the review recorders, until the
+  // bucket answers with CORS; the chat plays and preloads from the bucket.
   const search = new URL(request.url).searchParams;
   const stream = search.get("stream") === "1";
   const range = request.headers.get("range");
@@ -146,13 +149,16 @@ export async function GET(
     webbing.add(joined);
     after(() => webChatVideo(`/uploads/${joined}`));
   }
-  const link = stream ? null : await bucketLink(segments.join("/"));
+  // The link is the same all its 6-day window (storage.ts bucketLink), so the browser keeps this redirect until the
+  // window ends (4 Nov, Alex): a phone opening the photo or video again goes straight to the bucket, and to what it
+  // already downloaded from there, without asking the app. The "?v=" stamp gives a replaced file a link of its own.
+  const link = stream ? null : await bucketLink(segments.join("/"), search.get("v"));
   if (link) {
     return timed(
       "link",
       new Response(null, {
         status: 302,
-        headers: { Location: link, "Cache-Control": `private, max-age=${LINK_CACHE_SECONDS}` },
+        headers: { Location: link, "Cache-Control": `private, max-age=${linkFreshSeconds()}` },
       })
     );
   }
