@@ -3,6 +3,7 @@ import path from "path";
 import { DeleteObjectCommand, DeleteObjectsCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { DATA_DIR, getData } from "./db";
+import { loadSharp } from "./sharpSetup";
 
 // Uploaded files (progress photos, avatars, chat media, demo videos) in the
 // Railway storage bucket, off the server's disk.
@@ -13,9 +14,16 @@ import { DATA_DIR, getData } from "./db";
 // bucket (15 Oct: the volume had filled with copies), and a file not yet there is
 // served from the disk. The stored paths stay "/uploads/<key>", so nothing in
 // the data changes; the /uploads route checks access, then redirects to a
-// link into the bucket that expires after a few minutes.
+// link into the bucket that expires after a week (4 Nov; was a few minutes, see bucketLink).
 
-const LINK_SECONDS = 15 * 60;
+// A link lives 7 days, the most a SigV4 link can (4 Nov, Alex: Railway bills every byte the app sends, a download
+// straight from the bucket is free, and a phone can only reuse what it downloaded while the link is the same).
+const LINK_SECONDS = 7 * 24 * 60 * 60;
+// Links are signed for 6-day windows: every link of a window is signed as at its first moment, so the same file has the
+// same link the whole window, across requests and restarts alike, and stays good a day past the window's end.
+const LINK_WINDOW_MS = 6 * 24 * 60 * 60 * 1000;
+// Every link is signed this long before its window starts (and a "?v=" stamp's up to an hour more), never after now.
+const SIGN_EARLY_SECONDS = 5 * 60;
 
 const MIME: Record<string, string> = {
   jpg: "image/jpeg",
@@ -185,9 +193,10 @@ export function smallKey(key: string, w: number, v?: string | null): string | nu
 
 // ---- The small copies and posters lately made or served, kept in the server's memory (25 Oct, Alex: "the media sent
 // in chats takes a few seconds to load"): the coach, the client and the coach's phone each ask for a picture just sent,
-// and every ask went to the bucket and back. Most recently used kept, 96 MB at most; a restart empties it. On
+// and every ask went to the bucket and back. Most recently used kept, 32 MB at most (4 Nov, Alex: was 96 MB; Railway
+// bills the memory held, and the posters and chat copies of a few threads fit in 32); a restart empties it. On
 // globalThis, so the uploads route and the server actions (built into different bundles) share one.
-const MEMO_BYTES = 96 * 1024 * 1024;
+const MEMO_BYTES = 32 * 1024 * 1024;
 const shared = globalThis as unknown as { _uploadsMemo?: { map: Map<string, Buffer>; size: number }; _uploadsMaking?: Map<string, Promise<Buffer | null>> };
 const memo = (shared._uploadsMemo ??= { map: new Map(), size: 0 });
 const isCopy = (key: string) => /\/(_w\d+|_poster)\//.test(key);
@@ -329,7 +338,7 @@ async function keepCopy(copy: string, bytes: Buffer) {
 }
 
 async function shrink(original: Buffer, w: number): Promise<Buffer> {
-  const sharp = (await import("sharp")).default;
+  const sharp = await loadSharp();
   return sharp(original, { failOn: "none" }).rotate().resize({ width: w, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
 }
 
@@ -459,7 +468,7 @@ async function makePoster(key: string, poster: string): Promise<Buffer | null> {
     stats.made.push(`FAILED ${new Date().toISOString().slice(11, 19)} ${poster}`);
     return null;
   }
-  const sharp = (await import("sharp")).default;
+  const sharp = await loadSharp();
   // A recording that opens on black (the coach's form reviews do) is shown a second in.
   const dark = async (jpg: Buffer) => (await sharp(jpg).stats()).channels.slice(0, 3).every((c) => c.mean < 12);
   if (await dark(frame)) frame = (await firstFrame(source, 1)) ?? frame;
@@ -492,7 +501,7 @@ export async function posterCopy(key: string): Promise<Response | null> {
 
 /** A picture's look from a small copy of it (25 Oct): its width and height and a 20px preview as a data URI. */
 async function lookOf(bytes: Buffer): Promise<{ thumb: string | null; w: number | null; h: number | null }> {
-  const sharp = (await import("sharp")).default;
+  const sharp = await loadSharp();
   const meta = await sharp(bytes).metadata();
   const tiny = await sharp(bytes, { failOn: "none" }).resize({ width: 20 }).webp({ quality: 40 }).toBuffer();
   return { thumb: `data:image/webp;base64,${tiny.toString("base64")}`, w: meta.width ?? null, h: meta.height ?? null };
@@ -583,7 +592,7 @@ export async function posterFromDevice(publicPath: string, frame: Buffer) {
   const poster = key ? posterKey(key) : null;
   if (!key || !poster) return;
   try {
-    const sharp = (await import("sharp")).default;
+    const sharp = await loadSharp();
     const out = await sharp(frame, { failOn: "none" }).rotate().resize({ width: 720, withoutEnlargement: true }).webp({ quality: 74 }).toBuffer();
     remember(poster, out);
     await keepCopy(poster, out);
@@ -693,22 +702,56 @@ export async function deleteUploadFolder(folder: string) {
 // One signed link per file for most of its lifetime (15 Oct): a fresh signature on
 // every request meant a new URL each time, so the browser could never reuse a photo
 // it had just downloaded and a chat re-fetched every image on every open.
-const linkCache = new Map<string, { url: string; until: number }>();
+// Since 4 Nov (Alex: Railway's egress) one link a file for a whole 6-day window, signed as at the window's first moment
+// (`signingDate`), so a restart signs the very same link and the phone's cache still holds what it downloaded. A file
+// replaced under the same name (a face, a card picture) has a new "?v=" stamp; the stamp moves the signing moment a few
+// seconds, so the replaced file gets a link of its own and never shows the old one's bytes. Always moved back, before the
+// window's first moment, never into it: a link signed for a moment still to come is refused by the bucket ("not yet
+// valid") until then, and the browser would keep that redirect for days. Five minutes more back for a clock running
+// ahead of the bucket's; the link still lasts close to a day past the window's end.
+const linkCache = new Map<string, string>();
+let linkCacheWindow = 0;
+const windowStart = (now = Date.now()) => Math.floor(now / LINK_WINDOW_MS) * LINK_WINDOW_MS;
+/** Seconds further back a "?v=" stamp signs at: 1–3600, the same for the same stamp; 0 with none. */
+function stampSeconds(v: string | null | undefined): number {
+  const stamp = versionOf(v);
+  if (!stamp) return 0;
+  let h = 2166136261;
+  for (let i = 0; i < stamp.length; i++) h = Math.imul(h ^ stamp.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 3600) + 1;
+}
 
-export async function bucketLink(key: string): Promise<string | null> {
+export async function bucketLink(key: string, v?: string | null): Promise<string | null> {
   const b = bucket();
   if (!b) return null;
-  const hit = linkCache.get(key);
-  if (hit && hit.until > Date.now()) return hit.url;
+  const start = windowStart();
+  if (start !== linkCacheWindow) {
+    linkCache.clear();
+    linkCacheWindow = start;
+  }
+  const at = stampSeconds(v);
+  const id = `${key}@${at}`;
+  const hit = linkCache.get(id);
+  if (hit) return hit;
   // Not copied to the bucket yet: served from the disk. Otherwise signed at once, no trip to the bucket to ask first
   // (25 Oct): signing is worked out here, and a file gone from both answers 404 from the bucket.
   if (fs.existsSync(path.join(DATA_DIR, "uploads", key))) return null;
-  const url = await getSignedUrl(b.s3, new GetObjectCommand({ Bucket: b.bucket, Key: key }), { expiresIn: LINK_SECONDS });
-  linkCache.set(key, { url, until: Date.now() + (LINK_SECONDS - 6 * 60) * 1000 });
+  const url = await getSignedUrl(b.s3, new GetObjectCommand({ Bucket: b.bucket, Key: key }), {
+    expiresIn: LINK_SECONDS,
+    signingDate: new Date(start - (SIGN_EARLY_SECONDS + at) * 1000),
+  });
+  linkCache.set(id, url);
   return url;
 }
 
-export const LINK_CACHE_SECONDS = LINK_SECONDS - 5 * 60;
+/** How long the browser may keep the /uploads redirect (4 Nov): to the window's end, less ten minutes, so it never holds
+    one past the link's life (the link lasts a day beyond the window). A minute at least. */
+export function linkFreshSeconds(now = Date.now()): number {
+  return Math.max(60, Math.floor((windowStart(now) + LINK_WINDOW_MS - now) / 1000) - 10 * 60);
+}
+
+/** A redirect's keep for callers that don't ask (the support screenshots): an hour, well inside any link's life. */
+export const LINK_CACHE_SECONDS = 60 * 60;
 
 /**
  * The file's bytes through the app instead of a link into the bucket (10 Oct):

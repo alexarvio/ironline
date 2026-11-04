@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { DATA_DIR, getData, persist } from "./db";
+import { loadSharp } from "./sharpSetup";
 
 // The coach's logo behind the screens (28 Oct, Alex: "their logo would be the one in the background"). Where the
 // NorCoach star sits very faint today (the client's Home, every chat, every admin screen, the coach's phone), a coach
@@ -20,7 +21,7 @@ export type MarkResult = { ok: true; png: Buffer } | { ok: false; error: string 
 
 /** The logo as a one-colour silhouette in the star's box, or why it can't be one. */
 export async function makeLogoMark(upload: Buffer): Promise<MarkResult> {
-  const sharp = (await import("sharp")).default;
+  const sharp = await loadSharp();
   let raw: { data: Buffer; info: { width: number; height: number } };
   try {
     raw = await sharp(upload, { failOn: "none", density: 300 }).rotate().resize(800, 800, { fit: "inside", withoutEnlargement: true }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -89,7 +90,7 @@ export function markFor(user: { role: string; id: number; client_id: number | nu
 /** The upload as a PNG of at most 1600px, kept beside the mark (for its own colours later, an invoice's head): never
  *  the file as sent, so an SVG is never served as one. */
 export async function logoAsPng(upload: Buffer): Promise<Buffer> {
-  const sharp = (await import("sharp")).default;
+  const sharp = await loadSharp();
   return sharp(upload, { failOn: "none", density: 300 }).rotate().resize(1600, 1600, { fit: "inside", withoutEnlargement: true }).png().toBuffer();
 }
 
