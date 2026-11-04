@@ -57,7 +57,14 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
   const photos = withMedia.filter((i) => i.media!.type === "image");
   const videos = withMedia.filter((i) => i.media!.type === "video");
   const files = withMedia.filter((i) => i.media!.type === "file" || i.media!.type === "audio");
-  const [tab, setTab] = useState<"photos" | "videos" | "files">(photos.length || (!videos.length && !files.length) ? "photos" : videos.length ? "videos" : "files");
+  const [tab, pickTab] = useState<"photos" | "videos" | "files">(photos.length || (!videos.length && !files.length) ? "photos" : videos.length ? "videos" : "files");
+  // A tab stays built once opened, shown or hidden after that, so switching never rebuilds a grid of tiles while the
+  // pill slides (4 Nov, Alex: the toggle didn't slide "completely").
+  const [built, setBuilt] = useState<Set<string>>(() => new Set([tab]));
+  const setTab = (t: "photos" | "videos" | "files") => {
+    pickTab(t);
+    if (!built.has(t)) setBuilt((b) => new Set(b).add(t));
+  };
   const [q, setQ] = useState("");
   // Opened on the whole screen, right here (4 Nov, Alex).
   const [open, setOpen] = useState<{ type: "image" | "video"; path: string } | null>(null);
@@ -88,8 +95,10 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
                   </span>
                 </>
               ) : (
+                // The chat's own 1080 copy, so a photo seen in the chat is already here (4 Nov, Alex: "it takes a second
+                // for them to load").
                 // eslint-disable-next-line @next/next/no-img-element -- an upload from the chat
-                <img src={sized(i.media!.path, 480)} alt="" loading="lazy" decoding="async" />
+                <img src={sized(i.media!.path, 1080)} alt="" loading="lazy" decoding="async" />
               )}
             </button>
           </div>
@@ -164,11 +173,11 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
             </button>
           </div>
           <div className="cmg-body">
-            {tab === "photos" ? (
-              grid(photos, "No photos yet")
-            ) : tab === "videos" ? (
-              grid(videos, "No videos yet")
-            ) : files.length === 0 ? (
+            {built.has("photos") && <div hidden={tab !== "photos"}>{grid(photos, "No photos yet")}</div>}
+            {built.has("videos") && <div hidden={tab !== "videos"}>{grid(videos, "No videos yet")}</div>}
+            {built.has("files") && (
+            <div hidden={tab !== "files"}>
+            {files.length === 0 ? (
               <p className="cmg-empty">No files yet</p>
             ) : (
               <ul className="cmg-list">
@@ -200,12 +209,14 @@ export default function ChatMediaGallery({ items, onShow, onClose }: { items: Ga
                 ))}
               </ul>
             )}
+            </div>
+            )}
           </div>
         </>
       )}
       {open &&
         typeof document !== "undefined" &&
-        createPortal(open.type === "video" ? <FullVideo src={open.path} onClose={() => setOpen(null)} /> : <FullImage src={open.path} onClose={() => setOpen(null)} />, document.body)}
+        createPortal(open.type === "video" ? <FullVideo src={open.path} onClose={() => setOpen(null)} /> : <FullImage src={open.path} preview={sized(open.path, 1080)} onClose={() => setOpen(null)} />, document.body)}
     </div>
   );
 }
