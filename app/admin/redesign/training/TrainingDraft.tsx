@@ -43,6 +43,7 @@ import { stateTagStyle } from "../../phaseChrome";
 import ExerciseProgressDialog, { type ProgressSession } from "./ExerciseProgressDialog";
 import DatePick from "../DatePick";
 import { dayMonth } from "../../../lib/dayMonth";
+import { pic } from "../../../lib/pic";
 import { Sep, SepJoin } from "../Sep";
 import { useSaidSaved } from "../useSaveQueue";
 import { useHoldRefresh } from "../holdRefresh";
@@ -61,7 +62,7 @@ import { weekDue, type DotTrail } from "../dots";
 // - Edits queue on the session's own bar at its foot: cells typed into, rows
 //   added, removed or dragged into a new order, the name. Apply lands them.
 
-export type Gym = { id: number; name: string; home: boolean; /** The picker's colour and the gym's use (15 Oct), for the gyms pop-up. */ color: string; rgb: string; sessions8w: number; lastSessionAt: string | null; /** The picture the client gave it in their app (20 Oct), and whether it is a gym, home or hotel. */ logo?: string | null; kind?: "gym" | "home" | "hotel" };
+export type Gym = { id: number; name: string; home: boolean; /** The picker's colour and the gym's use (15 Oct), for the gyms pop-up. */ color: string; rgb: string; sessions8w: number; lastSessionAt: string | null; /** The picture the client gave it in their app (20 Oct), and whether it is a gym, home or hotel. */ logo?: string | null; kind?: "gym" | "home" | "hotel"; /** Trained at once (6 Nov, Alex): on its sessions and in the gyms pop-up, never planned for. */ once?: boolean };
 export type Library = { slug: string; label: string; exercises: { id: number; name: string; /** Its muscle group and its demo (15 Oct): the substitutes and variation pop-ups. */ group?: string; video?: string | null; /** The coach's default cue (Library page): the note it starts with when added. */ cue?: string; /** Close grip, wide grip… (Library page): one can be picked per row; its own cue, if any, is the note the row starts with. */ variations?: PickedVariation[] }[] }[];
 /** A variation as the picker hands it over with the exercise. */
 export type PickedVariation = { id: number; name: string; cue?: string; /** Its own demo (15 Oct). */ video?: string | null };
@@ -119,7 +120,7 @@ export type DraftRow = {
 };
 /** swap: what the client did instead; alternatives: what the coach offers (names, with a note). */
 export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean; swap?: string | null; alternatives?: { name: string; note: string }[] };
-export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[]; /** The later weeks (screen index) with this session's slot and nothing logged in it: what "Also delete it from" reaches. */ laterWeeks?: number[] };
+export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; /** The gym it was trained at, for its face on the row (6 Nov, Alex). */ gymId?: number | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[]; /** The later weeks (screen index) with this session's slot and nothing logged in it: what "Also delete it from" reaches. */ laterWeeks?: number[] };
 /** A workout the client ended, with what they answered on ending it (the answers feed). */
 export type DraftAnswered = { dayId: number; weekIdx: number; weekLabel: string; name: string; ended: string; duration: number | null; gym: string | null; note: string | null; answers: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[] };
 /** A rogue session as the coach sees it: when, how long, and what was logged. */
@@ -178,6 +179,8 @@ export type DraftProgram = {
   /** The client's body weight now (latest reading, else their starting weight; 23 Oct): what an assisted lift really lifts is this less the help. */
   bodyKg: number | null;
   gyms: Gym[];
+  /** Every gym, the ones trained at once too (6 Nov, Alex): the faces on the session rows and the gyms pop-up. */
+  allGyms?: Gym[];
   /** The client's note to the coach on this programme. */
   /** The client's note on it; seen: the coach has opened this version. */
   note: { text: string; when: string; seen: boolean } | null;
@@ -249,7 +252,7 @@ type Dlg =
   | { kind: "liveNow" }
   | { kind: "backToDraft" }
   | { kind: "dates" }
-  | { kind: "gyms" }
+  | { kind: "gyms"; focus?: number }
   | { kind: "newProgram" }
   | { kind: "note" }
   | { kind: "removeWeek" }
@@ -1153,9 +1156,13 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             act(() => reorderSessionsAction(clientId, weekNo(viewIdx), ids as number[]), "Session order changed");
           }}
         >
-        {sessions.map((s) => {
+        {sessions.map((s, _i, all) => {
           const p = pend(s.id);
           const isOpen = open === s.id;
+          // Where it was trained (6 Nov, Alex): the gym's face after the state pill, its room kept on every row of a week
+          // where one was, so the pills stay in one column.
+          const gymFace = s.gymId != null ? (program.allGyms ?? gyms).find((g) => g.id === s.gymId) ?? null : null;
+          const gymCol = all.some((x) => x.gymId != null);
           const name = p.renamed ?? s.name;
           const complete = s.setsPlanned > 0 && s.setsLogged >= s.setsPlanned && s.cardio.every((c) => c.done);
           // The states worth a word: done, skipped, or begun and left with
@@ -1277,6 +1284,14 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                 </span>
                 {/* "Not started" only where it can be: this week, or a past week left undone; a week still to come shows nothing (20 Oct, Alex). */}
                 {!(status.cls === "idle" && week.state === "ahead") && <span className={`trn-state ${status.cls}`}>{status.text}</span>}
+                {gymFace ? (
+                  <button type="button" className="rd-gymface" title={gymFace.once ? `${gymFace.name}, once` : gymFace.name} aria-label={`Trained at ${gymFace.name}`} style={{ background: `rgba(${gymFace.rgb}, 0.14)`, color: gymFace.color }} onClick={() => setDlg({ kind: "gyms", focus: gymFace.id })}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- an upload under /uploads, sized by CSS */}
+                    {gymFace.logo ? <img src={pic(gymFace.logo, 96)} alt="" draggable={false} /> : (gymFace.name.trim()[0] ?? "?").toUpperCase()}
+                  </button>
+                ) : gymCol ? (
+                  <span className="rd-gymface-slot" aria-hidden="true" />
+                ) : null}
                 {/* A done week's ⋯ holds only the message; with nothing in it (an ended programme) its room stays, so the state pill doesn't move. */}
                 {weekLocked && program.status !== "live" ? (
                   <span className="trn-row-more-slot" aria-hidden="true" />
@@ -2377,7 +2392,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         {dlg?.kind === "gyms" && (
           <ClientGymsDialog
             firstName={firstName}
-            gyms={gyms}
+            // The gyms trained at once too (6 Nov, Alex), and the one a session's face was clicked on lit.
+            gyms={program.allGyms ?? gyms}
+            focus={dlg.focus ?? null}
             today={today}
             onAdd={async (nm) => {
               const made = await addGymAction(clientId, nm);

@@ -200,15 +200,19 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     for (const [variationId, last] of byVariation) out.push({ variationId, ...last });
     return out;
   };
-  const gymRows = listClientGyms(clientId);
-  const gymName = new Map(gymRows.map((g) => [g.id, g.name] as const));
+  // A gym trained at once (6 Nov, Alex) is named on its sessions and in the gyms pop-up, never planned for.
+  const allGymRows = listClientGyms(clientId);
+  const gymRows = allGymRows.filter((g) => !g.once);
+  const gymName = new Map(allGymRows.map((g) => [g.id, g.name] as const));
   // Home is the gym marked home (15 Oct: it used to be whichever came first), with each gym's colour and its sessions for the coach's gyms pop-up.
   const homeId = homeGymId(clientId);
   const gymStats = sub("gyms", () => gymSessionStats(clientId));
-  const gyms = gymRows.map((g) => {
+  const gymCard = (g: (typeof allGymRows)[number]) => {
     const c = GYM_COLORS[isGymColor(g.color) ? g.color : "navy"];
-    return { id: g.id, name: g.name, home: g.id === homeId, color: c.hex, rgb: c.rgb, sessions8w: gymStats.get(g.id)?.sessions8w ?? 0, lastSessionAt: gymStats.get(g.id)?.lastUsedAt ?? null, logo: g.logo_path ?? null, kind: g.kind ?? "gym" };
-  });
+    return { id: g.id, name: g.name, home: g.id === homeId, color: c.hex, rgb: c.rgb, sessions8w: gymStats.get(g.id)?.sessions8w ?? 0, lastSessionAt: gymStats.get(g.id)?.lastUsedAt ?? null, logo: g.logo_path ?? null, kind: g.kind ?? "gym", ...(g.once ? { once: true } : {}) };
+  };
+  const gyms = gymRows.map(gymCard);
+  const allGyms = allGymRows.map(gymCard);
 
   // The coach's library, for the add-exercise row; cardio has its own form.
   const byGroup = sub("library", () => listExercisesByGroup(coachId));
@@ -436,13 +440,15 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     // A swapped exercise's sets still count as done for the session.
     const setsLogged = rows.reduce((t, r) => t + r.logged.length + (r.swapInfo?.sets.length ?? 0), 0);
     const gym = rows.flatMap((r) => [...r.logged, ...(r.swapInfo?.sets ?? [])]).find((l) => l.gym)?.gym ?? null;
+    // Where it was trained, for the gym's face on the session row (6 Nov, Alex).
+    const gymId = gym != null ? allGymRows.find((g) => g.name === gym)?.id ?? null : null;
     const duration = d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null;
     // The later weeks "Also delete it from" would reach (20 Oct, Alex: it offered weeks that never had this session): the same slot, nothing logged.
     const laterWeeks = laterSameSlotSessionsIn(ix, d.id)
       .map((id) => (ix.dayById.get(id) ?? getData().program_days.find((x) => x.id === id))?.week_number)
       .filter((n): n is number => n != null)
       .map((n) => n - program.start_week + 1);
-    return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })), laterWeeks };
+    return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, gymId, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })), laterWeeks };
   }));
 
   // The client's rogue sessions (19 Oct, Alex): workouts of their own, off
@@ -520,6 +526,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     rogue,
     bodyKg,
     gyms,
+    allGyms,
     note: noteMeta ? { seen: noteMeta.seen, text: noteMeta.text, when: dayMonth(noteMeta.updatedAt) } : null,
     muscleMap: sub("muscleMap", () => muscleMapFor(clientId, program.id)),
   };

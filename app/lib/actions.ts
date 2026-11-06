@@ -3823,13 +3823,15 @@ export async function removeGymAction(gymId: number) {
 }
 
 /** The client adds a gym from the picker (13 Oct): name, colour, type. Back with the gym, or why not. */
-export async function clientAddGymAction(programDayId: number, name: string, color: string, kind: string): Promise<{ id: number; name: string; color: "navy" | "indigo" | "teal" | "rust" | "sand" | "slate"; kind: "gym" | "home" | "hotel" } | { error: string }> {
+export async function clientAddGymAction(programDayId: number, name: string, color: string, kind: string, once = false): Promise<{ id: number; name: string; color: "navy" | "indigo" | "teal" | "rust" | "sand" | "slate"; kind: "gym" | "home" | "hotel" } | { error: string }> {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return { error: "Not signed in." };
   const clean = String(name ?? "").trim().replace(/\s+/g, " ");
   if (clean.length < 2) return { error: "Give the gym a name." };
-  if (listClientGyms(owner).some((g) => g.name.toLowerCase() === clean.toLowerCase())) return { error: `You already have a gym called ${clean}` };
-  const gym = addClientGym(owner, clean, isGymColor(color) ? color : "navy", isGymKind(kind) ? kind : "gym");
+  // Just this once (6 Nov, Alex): a name already used once is that gym again; a regular gym's name is that gym.
+  const same = listClientGyms(owner).find((g) => g.name.toLowerCase() === clean.toLowerCase());
+  if (same && !(once || same.once)) return { error: `You already have a gym called ${clean}` };
+  const gym = same && once ? same : addClientGym(owner, clean, isGymColor(color) ? color : "navy", isGymKind(kind) ? kind : "gym", once);
   if (!gym) return { error: "Couldn't add the gym." };
   revalidatePath("/client");
   revalidatePath("/admin");

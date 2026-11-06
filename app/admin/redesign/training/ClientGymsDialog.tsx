@@ -1,7 +1,8 @@
 "use client";
 
 import "./client-gyms.css";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { landOnSoon } from "../../../lib/landOn";
 import type React from "react";
 import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { dayMonth } from "../../../lib/dayMonth";
@@ -15,7 +16,7 @@ import { SepJoin } from "../Sep";
 // weights logged there stay). A clean line to add one. Everything saves at
 // once; Done just closes. Prefix cgh- (client-gyms.css).
 
-export type GymCard = { id: number; name: string; home: boolean; color: string; rgb: string; sessions8w: number; lastSessionAt: string | null; /** The picture the client gave it in their app. */ logo?: string | null };
+export type GymCard = { id: number; name: string; home: boolean; color: string; rgb: string; sessions8w: number; lastSessionAt: string | null; /** The picture the client gave it in their app. */ logo?: string | null; /** Trained at once (6 Nov, Alex): `Once` in Home's place, never made home. */ once?: boolean };
 
 const when = (iso: string, today: string) => {
   const d = new Date(iso);
@@ -44,6 +45,7 @@ export default function ClientGymsDialog({
   firstName,
   gyms: initial,
   today,
+  focus = null,
   onAdd,
   onHome,
   onRemove,
@@ -52,6 +54,8 @@ export default function ClientGymsDialog({
   firstName: string;
   gyms: GymCard[];
   today: string;
+  /** Opened from a session's gym face (6 Nov, Alex): that gym's row, brought into view and lit. */
+  focus?: number | null;
   onAdd: (name: string) => Promise<GymCard | null>;
   onHome: (id: number) => Promise<void>;
   onRemove: (id: number) => Promise<void>;
@@ -62,6 +66,8 @@ export default function ClientGymsDialog({
   const [confirm, setConfirm] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => (focus == null ? undefined : landOnSoon(() => list.current?.querySelector(`[data-gym="${focus}"]`), "nearest", 200)), [focus]);
   const clean = name.trim();
   const duplicate = !!clean && gyms.some((g) => g.name.trim().toLowerCase() === clean.toLowerCase());
   const canAdd = !!clean && !duplicate;
@@ -128,12 +134,12 @@ export default function ClientGymsDialog({
         {sorted.length === 0 ? (
           <p className="cgh-empty">No gyms yet</p>
         ) : (
-          <div className="cgh-list">
+          <div className="cgh-list" ref={list}>
             {sorted.map((g, i) => {
               const next = g.home ? nextHomeAfter(g.id) : null;
               const asking = confirm === g.id;
               return (
-                <div key={g.id} role="group" aria-label={`${g.name}${g.home ? ", home" : ""}. ${g.sessions8w} sessions, ${pct[i]}% of sessions.`} className={`cgh-row${asking ? " asking" : ""}`}>
+                <div key={g.id} data-gym={g.id} role="group" aria-label={`${g.name}${g.home ? ", home" : ""}. ${g.sessions8w} sessions, ${pct[i]}% of sessions.`} className={`cgh-row${asking ? " asking" : ""}`}>
                   {/* The picture the client gave it in their app (20 Oct, Alex); else its initial on its own colour, as the client's picker shows it. */}
                   {g.logo ? (
                     // eslint-disable-next-line @next/next/no-img-element -- an upload under /uploads, sized by CSS
@@ -146,12 +152,12 @@ export default function ClientGymsDialog({
                   <span className="cgh-text">
                     <span className="cgh-name-row">
                       <b>{g.name}</b>
-                      {g.home && <span className="cgh-home">Home</span>}
+                      {g.home ? <span className="cgh-home">Home</span> : g.once ? <span className="cgh-home">Once</span> : null}
                     </span>
                     <small>{g.sessions8w ? <SepJoin parts={[`${g.sessions8w} session${g.sessions8w === 1 ? "" : "s"} in the last 8 weeks`, g.lastSessionAt && `last ${when(g.lastSessionAt, today)}`]} /> : "No sessions yet"}</small>
                   </span>
                   <span className="cgh-actions">
-                    {!g.home && (
+                    {!g.home && !g.once && (
                       <button type="button" className="cgh-makehome" onClick={() => void makeHome(g.id)} aria-label={`Make ${g.name} the home gym`}>
                         Make home
                       </button>

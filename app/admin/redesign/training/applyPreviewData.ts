@@ -32,7 +32,8 @@ function compare(clientId: number, gone: Set<number>) {
   const data = getData();
   const exName = new Map(data.exercises.map((e) => [e.id, e.name] as const));
   const exById = new Map(data.exercises.map((e) => [e.id, e] as const));
-  const gyms = listClientGyms(clientId);
+  // A gym trained at once is never planned for (6 Nov, Alex).
+  const gyms = listClientGyms(clientId).filter((g) => !g.once);
   const home = homeGymId(clientId);
   const awayGyms = gyms.length > 1 ? gyms.filter((g) => g.id !== home) : [];
   const dayOf = new Map(data.program_days.map((d) => [d.id, d] as const));
