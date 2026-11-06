@@ -502,3 +502,11 @@ html .rd.trn .trn-rail .trn-week.on.on, html .rd.trn .trn-rail[role="tablist"] .
 .rd.trn .trn-week.add.indef { justify-content: space-between; color: #5b6474; }
 .rd.trn .trn-week.add.indef .trn-week-name { font-weight: 600; color: #3a4250; }
 .rd.trn .trn-week.add.indef:hover { box-shadow: inset 0 0 0 1px var(--trn-btnline); }
+
+/* Where a session was trained (6 Nov, Alex): the gym's face after the state pill, 22px as the row's marks, its picture
+   or its initial on its own colour as the gyms pop-up draws it; the name on hover, a click opening the gyms pop-up on it.
+   A week where one was keeps its room on every row, so the pills stay in one column. */
+.rd.trn .rd-gymface, .rd.trn .rd-gymface-slot { flex: none; width: 22px; height: 22px; }
+.rd.trn .rd-gymface { display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 999px; overflow: hidden; font: inherit; font-size: 10px; font-weight: 600; line-height: 1; cursor: pointer; transition: box-shadow 0.15s; }
+.rd.trn .rd-gymface img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rd.trn .rd-gymface:hover, .rd.trn .rd-gymface:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #141a24; }

@@ -97,6 +97,8 @@ type ProgramDay = {
   // session's duration for the row and the coach.
   session_started_at?: string;
   session_ended_at?: string;
+  /** The gym picked for it (6 Nov, Alex), before a set says so: a gym trained at once is never the next session's. */
+  gym_id?: number;
   // What the client wrote to the coach on ending the session.
   session_note?: string;
   // How the session was, asked before ending it, each 1 to 10 and each
@@ -378,6 +380,8 @@ export type ClientGym = {
   kind?: "gym" | "home" | "hotel";
   /** A logo on the badge instead of the initials; none yet. */
   logo_path?: string | null;
+  /** Trained at once (6 Nov, Alex: a day pass on holiday): out of the picker's list and never where a session starts. */
+  once?: boolean;
 };
 
 // The client's note about a whole programme, for the coach. One per

@@ -9798,7 +9798,7 @@ export function saveGymLogo(gymId: number, buffer: Buffer, mimeType: string): { 
 }
 
 /** Adds a gym, or brings back a removed one of the same name. */
-export function addClientGym(clientId: number, name: string, color?: string, kind?: ClientGym["kind"]): ClientGym | null {
+export function addClientGym(clientId: number, name: string, color?: string, kind?: ClientGym["kind"], once = false): ClientGym | null {
   const clean = name.trim().replace(/\s+/g, " ").slice(0, 40);
   if (!clean) return null;
   const data = getData();
@@ -9807,10 +9807,12 @@ export function addClientGym(clientId: number, name: string, color?: string, kin
     same.archived = false;
     if (color) same.color = color;
     if (kind) same.kind = kind;
+    // Added as a regular gym, a gym trained at once becomes one; picked once again, a regular gym stays one.
+    if (!once) delete same.once;
     persist();
     return same;
   }
-  const gym: ClientGym = { id: allocId("client_gyms"), client_id: clientId, name: clean, created_at: new Date().toISOString(), last_used_at: null, archived: false, ...(color ? { color } : {}), ...(kind ? { kind } : {}) };
+  const gym: ClientGym = { id: allocId("client_gyms"), client_id: clientId, name: clean, created_at: new Date().toISOString(), last_used_at: null, archived: false, ...(color ? { color } : {}), ...(kind ? { kind } : {}), ...(once ? { once: true } : {}) };
   data.client_gyms.push(gym);
   persist();
   return gym;
@@ -9869,7 +9871,9 @@ export function gymSessionStats(clientId: number): Map<number, { sessions: numbe
 
 /** The gym a new session starts on: the one picked most recently. */
 export function currentGymId(clientId: number): number | null {
-  const gyms = listClientGyms(clientId);
+  // A gym trained at once is never where the next session starts (6 Nov, Alex).
+  const regular = listClientGyms(clientId).filter((g) => !g.once);
+  const gyms = regular.length ? regular : listClientGyms(clientId);
   if (gyms.length === 0) return null;
   const used = gyms.filter((g) => g.last_used_at).sort((a, b) => (a.last_used_at! < b.last_used_at! ? 1 : -1));
   return (used[0] ?? gyms.find((g) => g.id === homeGymId(clientId)) ?? gyms[0]).id;
@@ -9884,7 +9888,9 @@ export function dayGymId(programDayId: number): number | null {
   if (home == null) return null;
   const ids = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id));
   const log = data.set_logs.find((sl) => ids.has(sl.workout_assignment_id));
-  return log ? log.gym_id ?? home : currentGymId(day.client_id);
+  // Picked and nothing logged yet: the gym picked, so a gym trained at once holds for its own session (6 Nov, Alex).
+  const picked = day.gym_id != null && (data.client_gyms ?? []).some((g) => g.id === day.gym_id && !g.archived) ? day.gym_id : null;
+  return log ? log.gym_id ?? home : picked ?? currentGymId(day.client_id);
 }
 
 /** The weight target on this prescription at this gym. */
@@ -9904,6 +9910,7 @@ export function pickGymForDay(programDayId: number, gymId: number) {
   const gym = (data.client_gyms ?? []).find((g) => g.id === gymId);
   if (!day || !gym || gym.client_id !== day.client_id) return;
   gym.last_used_at = new Date().toISOString();
+  day.gym_id = gymId;
   const ids = data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id);
   const moved = new Set<number>();
   for (const sl of data.set_logs) {

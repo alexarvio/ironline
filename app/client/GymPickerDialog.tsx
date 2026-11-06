@@ -31,6 +31,8 @@ export type GymOption = {
   lastUsed: boolean;
   /** The client's picture on the badge instead of the initials (17 Oct); null, the initials. */
   logo?: string | null;
+  /** Trained at once (6 Nov, Alex): listed only on the session it was picked for. */
+  once?: boolean;
 };
 
 // A gym's picture, square and small (17 Oct): tap the badge to add or change it.
@@ -81,11 +83,15 @@ export default function GymPickerDialog({
   onPick: (gym: GymOption) => void;
   onClose: () => void;
 }) {
-  const [list, setList] = useState<GymOption[]>(() => [...gyms].sort(order));
+  // A gym trained at once only on the session it was picked for (6 Nov, Alex: "just going to be this one time").
+  const [list, setList] = useState<GymOption[]>(() => gyms.filter((g) => !g.once || g.id === gymId).sort(order));
   const [selected, setSelected] = useState<number | null>(() => (list.find((g) => g.id === gymId) ?? list.find((g) => g.lastUsed) ?? list[0])?.id ?? null);
   const chosen = list.find((g) => g.id === selected) ?? null;
   // No gyms yet: straight into the form, with no way back to an empty list.
   const [adding, setAdding] = useState(list.length === 0);
+  // Just this once (6 Nov, Alex: a day pass on holiday): the same form with the name and picture alone, and the pick
+  // goes straight to the session; the gym stays out of the list after it.
+  const [once, setOnce] = useState(false);
   const firstGym = list.length === 0;
   // Leaving: the card shrinks away over .18s, then the caller hears.
   const [closing, setClosing] = useState(false);
@@ -101,7 +107,7 @@ export default function GymPickerDialog({
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const clean = name.trim().replace(/\s+/g, " ");
-  const duplicate = clean.length >= 2 && list.some((g) => g.name.toLowerCase() === clean.toLowerCase());
+  const duplicate = clean.length >= 2 && list.some((g) => g.name.toLowerCase() === clean.toLowerCase() && !(once && g.once));
   const valid = clean.length >= 2 && !duplicate && !busy;
   const nameRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -182,7 +188,7 @@ export default function GymPickerDialog({
   const add = async () => {
     if (!valid) return;
     setBusy(true);
-    const r = await clientAddGymAction(dayId, clean, color, kind);
+    const r = await clientAddGymAction(dayId, clean, color, once ? "gym" : kind, once);
     if (!r || "error" in r) {
       setBusy(false);
       setToast(r?.error ?? "Couldn't add the gym. Try again.");
@@ -191,7 +197,14 @@ export default function GymPickerDialog({
     }
     const logo = newLogo ? await sendLogo(r.id, newLogo.blob) : null;
     setBusy(false);
-    const gym: GymOption = { id: r.id, name: r.name, color: r.color, kind: r.kind, sessions: 0, lastUsedAt: null, lastUsed: false, logo };
+    const gym: GymOption = { id: r.id, name: r.name, color: r.color, kind: r.kind, sessions: 0, lastUsedAt: null, lastUsed: false, logo, once };
+    if (once) {
+      try {
+        navigator.vibrate?.(10);
+      } catch {}
+      onPick(gym);
+      return;
+    }
     setList((l) => [...l.filter((g) => g.id !== gym.id), gym]);
     setSelected(gym.id);
     setNewLogo(null);
@@ -219,7 +232,11 @@ export default function GymPickerDialog({
 
   const tint = adding ? GYM_COLORS[color] : gymColor(chosen?.color);
   const currentName = list.find((g) => g.id === gymId)?.name ?? null;
-  const title = adding ? (firstGym ? "Where do you train?" : "Add a gym") : mode === "switch" ? "Switch gym" : "Where are you training?";
+  const title = adding ? (once ? "Just this once" : firstGym ? "Where do you train?" : "Add a gym") : mode === "switch" ? "Switch gym" : "Where are you training?";
+  const openForm = (asOnce: boolean) => {
+    setOnce(asOnce);
+    setAdding(true);
+  };
   return createPortal(
     <div className={`gpk-overlay${closing ? " closing" : ""}`} onClick={close}>
       <div ref={card} className={`gpk-card${closing ? " closing" : ""}`} role="dialog" aria-modal="true" aria-labelledby="gpk-title" style={{ "--g": tint.hex, "--g-rgb": tint.rgb } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
@@ -254,7 +271,7 @@ export default function GymPickerDialog({
                     className="gpk-input"
                     value={name}
                     maxLength={32}
-                    placeholder="e.g. PureGym Leeds"
+                    placeholder={once ? "e.g. Day pass, Koh Samui" : "e.g. PureGym Leeds"}
                     autoCapitalize="words"
                     autoComplete="off"
                     enterKeyHint="done"
@@ -265,6 +282,8 @@ export default function GymPickerDialog({
                 {duplicate && <span className="gpk-error">You already have a gym called {clean}</span>}
               </label>
             </div>
+            {!once && (
+            <>
             <div className="gpk-group">
               <span className="gpk-label">Colour</span>
               <div className="gpk-swatches" role="radiogroup" aria-label="Colour">
@@ -284,8 +303,10 @@ export default function GymPickerDialog({
               </div>
             </div>
             <p className="gpk-info">Weights you log here are kept separate from your other gyms.</p>
+            </>
+            )}
             <button type="button" className="gpk-primary" disabled={!valid} onClick={() => void add()}>
-              {busy ? "Adding…" : "Add & select"}
+              {busy ? (once ? "Starting…" : "Adding…") : once ? (mode === "switch" ? "Switch here" : "Start here") : "Add & select"}
             </button>
             {toast && (
               <div className="gpk-toast" role="alert">
@@ -339,13 +360,23 @@ export default function GymPickerDialog({
                   </div>
                 );
               })}
-              <button type="button" className="gpk-addrow" onClick={() => setAdding(true)}>
+              <button type="button" className="gpk-addrow" onClick={() => openForm(false)}>
                 <span className="gpk-addrow-ico" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </span>
                 Add a gym
+              </button>
+              {/* Somewhere else today (6 Nov, Alex): named, trained at, and never in this list again. */}
+              <button type="button" className="gpk-addrow" onClick={() => openForm(true)}>
+                <span className="gpk-addrow-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+                    <circle cx="12" cy="10" r="2.3" />
+                  </svg>
+                </span>
+                Just this once
               </button>
             </div>
             <button type="button" className="gpk-primary gpk-start" disabled={!chosen} onClick={go}>
