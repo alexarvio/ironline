@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { addClientPhaseAction, removeClientPhaseAction, saveAndDeployPhaseNowFormAction, saveAndSchedulePhaseAction, schedulePhaseAction, setPhaseCoverAction, updateClientPhaseAction, uploadPhaseCoverAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import { defaultPhaseCover, PHASE_COVERS, PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../lib/phaseCovers";
 import type { ClientPhase, PhaseTrack } from "../lib/db";
 import { FEATURES } from "../lib/features";
@@ -299,7 +300,9 @@ export function PhaseDialog({
   const vars = { "--sel-edge": sel.edge, "--sel-soft": sel.soft, "--sel-band": sel.band } as CSSProperties;
   const title = scheduling ? "Schedule phase" : editing ? "Edit phase" : "New phase";
   // addClientPhaseAction says what it made (10 Oct); a form action must give nothing back, so it is wrapped.
+  // Its one-time key is made here, as the form is sent (6 Nov).
   const addQuiet = async (fd: FormData) => {
+    fd.set("onceKey", newOnceKey());
     await addClientPhaseAction(fd);
   };
   const action = scheduling ? schedulePhaseAction : editing ? updateClientPhaseAction : addQuiet;

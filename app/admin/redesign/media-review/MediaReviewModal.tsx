@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { markVideoSeenAction, replyToMediaAction, sendChatMessageAction, sendFormReviewAction } from "../../../lib/actions";
 import { pic } from "../../../lib/pic";
+import { newOnceKey } from "../../../lib/onceKey";
 import { pathOf, simplify, SIZES, STROKE, UNDERLAY, UNDERLAY_COLOR, unitFor, worthKeeping, type Pt, type Shape, type Tool } from "./shapes";
 import { MAX_SECONDS, recordingSupported, setClipMuted, useReviewRecorder, type Corner } from "./useReviewRecorder";
 import { Sep, SepJoin } from "../Sep";
@@ -407,9 +408,15 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A one-time key a send (6 Nov); the same words sent again after "Try again" keep the failed one's key, and so does
+  // the same recording, so one that in fact landed is not posted twice.
+  const textTry = useRef<{ what: string; key: string } | null>(null);
+  const reviewTry = useRef<{ blob: Blob; key: string } | null>(null);
   const sendText = async () => {
     const clean = text.trim();
     if (!clean || busy) return;
+    const onceKey = textTry.current?.what === clean ? textTry.current.key : newOnceKey();
+    textTry.current = { what: clean, key: onceKey };
     setBusy(true);
     setError(null);
     if (chat) {
@@ -419,18 +426,21 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
       fd.set("text", clean);
       fd.set("replyTo", String(chat.replyTo));
       fd.set("quiet", "1");
+      fd.set("nonce", onceKey);
       const sentOk = await sendChatMessageAction(fd).then(
         () => true,
         () => false
       );
       setBusy(false);
       if (!sentOk) return setError("That did not send. Try again.");
+      textTry.current = null;
       onClose();
       return;
     }
-    const ok = await replyToMediaAction(review.requestId, clean);
+    const ok = await replyToMediaAction(review.requestId, clean, onceKey);
     setBusy(false);
     if (!ok) return setError("That did not send. Try again.");
+    textTry.current = null;
     setSent((s) => [...s, { id: `t${Date.now()}`, kind: "text", mine: true, text: clean, at: Date.now() }]);
     setText("");
     router.refresh();
@@ -457,9 +467,12 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
       return setError(err);
     }
     const meta = { durationMs: recorder.secs * 1000, annotations: drawn };
-    const ok = await sendFormReviewAction(review.requestId, reviewNote.trim(), meta);
+    const onceKey = reviewTry.current?.blob === blob ? reviewTry.current.key : newOnceKey();
+    reviewTry.current = { blob, key: onceKey };
+    const ok = await sendFormReviewAction(review.requestId, reviewNote.trim(), meta, onceKey);
     setProgress(null);
     if (!ok) return setError("The review is up, but the reply did not save. Try Send again.");
+    reviewTry.current = null;
     setSent((s) => [...s, { id: `r${Date.now()}`, kind: "review", url: URL.createObjectURL(blob), durationMs: meta.durationMs, annotations: meta.annotations, message: reviewNote.trim() || null, at: Date.now() }]);
     setReviewNote("");
     backToTalk();

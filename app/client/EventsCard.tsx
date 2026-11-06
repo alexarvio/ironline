@@ -6,6 +6,7 @@ import type React from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import { NO_CATEGORY, paletteOf } from "../admin/redesign/palette";
 import { useOpenEvents } from "./CheckInContext";
 import { eventTypeOf } from "../lib/eventTypes";
@@ -165,15 +166,18 @@ export function EventSheet({ clientId, event, categories, coachName, today, onCl
   const end = period ? (to < from ? from : to) : from;
   const ok = title.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(from) && (!period || /^\d{4}-\d{2}-\d{2}$/.test(to));
   const placeholder = kind === "trip" ? "Japan with friends" : kind === "health" ? "Sprained my ankle" : kind === "family" ? "Wedding in Groningen" : kind === "work" ? "Night shifts all week" : "Started creatine, 5 g a day";
-  const save = () =>
+  const save = () => {
+    // A new event's one-time key, made as Save is tapped (6 Nov): sent again once the signal is back, it adds one.
+    const onceKey = event ? undefined : newOnceKey();
     start(async () => {
       const v = { kind, title: title.trim(), start: from, end, note: note.trim() };
       if (event) await clientUpdateEventAction(clientId, event.id, v);
-      else await clientAddEventAction(clientId, v);
+      else await clientAddEventAction(clientId, v, onceKey);
       onSaved?.(v);
       router.refresh();
       onClose();
     });
+  };
   const remove = () =>
     start(async () => {
       await clientDeleteEventAction(clientId, event!.id);

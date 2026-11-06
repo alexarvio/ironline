@@ -2,6 +2,7 @@
 
 import { isOwner, requireCoach, requireCoachAccount } from "./auth";
 import { putUpload } from "./storage";
+import { once, onceKeyOf } from "./once";
 import {
   addSupportMessage,
   isSupportCoach,
@@ -32,16 +33,22 @@ export async function sendSupportAction(formData: FormData): Promise<SupportSent
   const text = String(formData.get("text") ?? "").trim();
   if (!text) return { ok: false, error: "Nothing to send." };
   const where = kind === "problem" ? String(formData.get("where") ?? "").trim() : "";
-  let imagePath: string | null = null;
   const file = kind === "problem" ? formData.get("file") : null;
   if (file instanceof File && file.size > 0) {
     if (!isSupportImageType(file.type)) return { ok: false, error: "The screenshot has to be a picture." };
     if (file.size > SUPPORT_IMAGE_BYTES) return { ok: false, error: "That screenshot is over 20 MB." };
-    const buffer = Buffer.from(await file.arrayBuffer());
-    imagePath = saveSupportImage(coach.id, buffer, file.type);
-    await putUpload(imagePath, buffer, file.type);
   }
-  addSupportMessage({ coachId: coach.id, from: "coach", kind, text, where, imagePath });
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it posts no second message. The thread is read
+  // after it either way, so the answer is the thread as it now stands (and no thread is kept with the key).
+  await once(`sendSupportAction:${coach.id}`, onceKeyOf(formData), async () => {
+    let imagePath: string | null = null;
+    if (file instanceof File && file.size > 0) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      imagePath = saveSupportImage(coach.id, buffer, file.type);
+      await putUpload(imagePath, buffer, file.type);
+    }
+    addSupportMessage({ coachId: coach.id, from: "coach", kind, text, where, imagePath });
+  });
   return { ok: true, thread: supportThreadView(coach.id, "coach") };
 }
 
@@ -86,14 +93,18 @@ export async function markSupportThreadSeenAction(coachId: number): Promise<void
 }
 
 /** The owner answers a coach. Answers with the thread as it now stands, or null when it didn't go. */
-export async function replySupportAction(coachId: number, text: string): Promise<SupportLine[] | null> {
+export async function replySupportAction(coachId: number, text: string, onceKey?: string): Promise<SupportLine[] | null> {
   const coach = await requireCoach();
   const id = Number(coachId);
   const words = String(text ?? "").trim();
   if (!isOwner(coach) || !Number.isInteger(id) || !isSupportCoach(id) || !words) return null;
-  // Answering is reading what came before.
-  markSupportSeen(id, "owner");
-  addSupportMessage({ coachId: id, from: "owner", kind: "message", text: words });
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it posts no second answer; the thread as it
+  // now stands either way.
+  await once(`replySupportAction:${id}`, onceKeyOf(onceKey), () => {
+    // Answering is reading what came before.
+    markSupportSeen(id, "owner");
+    addSupportMessage({ coachId: id, from: "owner", kind: "message", text: words });
+  });
   return supportThreadView(id, "owner");
 }
 

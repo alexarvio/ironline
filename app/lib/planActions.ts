@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { coachForClient, requireCoach } from "./auth";
 import { coachIdOfClient } from "./tenancy";
+import { once, onceKeyOf } from "./once";
 import { addCoachPlan, deleteCoachPlan, setClientPlan, setCoachPlanArchived, updateCoachPlan, type PlanFields } from "./coachPlans";
 
 // The coach's plans (coachPlans.ts): made, changed, archived and deleted in Settings, Plans (28 Oct, Alex), and from a
@@ -12,15 +13,18 @@ import { addCoachPlan, deleteCoachPlan, setClientPlan, setCoachPlanArchived, upd
 const planOut = (p: { id: string; name: string; price?: number | null; every?: PlanFields["every"] }) => ({ id: p.id, name: p.name, price: p.price ?? null, every: p.every ?? null });
 
 /** A new plan, and the client put on it. Gives back the plan, or null when refused. */
-export async function addClientPlanAction(clientId: number, v: PlanFields) {
+export async function addClientPlanAction(clientId: number, v: PlanFields, onceKey?: string) {
   if (!(await coachForClient(Number(clientId)))) return null;
   const coachId = coachIdOfClient(Number(clientId));
   if (coachId == null) return null;
-  const plan = addCoachPlan(coachId, v);
-  if (!plan) return null;
-  setClientPlan(coachId, Number(clientId), plan.id);
-  revalidatePath("/admin");
-  return planOut(plan);
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the plan the first made.
+  return once(`addClientPlanAction:${Number(clientId)}`, onceKeyOf(onceKey), () => {
+    const plan = addCoachPlan(coachId, v);
+    if (!plan) return null;
+    setClientPlan(coachId, Number(clientId), plan.id);
+    revalidatePath("/admin");
+    return planOut(plan);
+  });
 }
 
 /** Put the client on one of their coach's plans, or on none (null); a series billing a plan moves with them. */
@@ -34,11 +38,14 @@ export async function setClientPlanAction(clientId: number, planId: string | nul
 }
 
 /** Settings, Plans: a new plan. */
-export async function addPlanAction(v: PlanFields) {
+export async function addPlanAction(v: PlanFields, onceKey?: string) {
   const coach = await requireCoach();
-  const plan = addCoachPlan(coach.id, v);
-  revalidatePath("/admin/redesign", "layout");
-  return plan ? planOut(plan) : null;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the plan the first made.
+  return once(`addPlanAction:${coach.id}`, onceKeyOf(onceKey), () => {
+    const plan = addCoachPlan(coach.id, v);
+    revalidatePath("/admin/redesign", "layout");
+    return plan ? planOut(plan) : null;
+  });
 }
 
 /** Settings, Plans: a plan's name, price and rhythm. Clients already billed keep their price. */

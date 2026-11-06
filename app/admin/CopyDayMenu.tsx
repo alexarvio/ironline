@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { copyProgramDayAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 
 export type CopyDayProps = {
   fromDayId: number;
@@ -55,7 +56,11 @@ export function CopyDayDialog({
   return createPortal(
     <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <form
-        action={copyProgramDayAction}
+        action={(fd: FormData) => {
+          // Its one-time key, made as it is sent (6 Nov): a new session sent again after a dropped signal is added once.
+          fd.set("onceKey", newOnceKey());
+          return copyProgramDayAction(fd);
+        }}
         onSubmit={() => setTimeout(onClose, 0)}
         className="pl-dlg pl-move"
         role="dialog"

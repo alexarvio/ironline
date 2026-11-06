@@ -1,4 +1,5 @@
 import { addPhotoSlotAction } from "../lib/actions";
+import OnceKeyField from "./OnceKeyField";
 import {
   getClient,
   getPhotoCadence,
@@ -123,6 +124,7 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
         <div className="pp-suggest">
           {SUGGESTED_ANGLES.map((label) => (
             <form key={label} action={addPhotoSlotAction}>
+              <OnceKeyField />
               <input type="hidden" name="clientId" value={clientId} />
               <input type="hidden" name="label" value={label} />
               <button type="submit" className="pp-suggest-chip">
@@ -183,6 +185,7 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
         {/* The add box sits on its own row above the angles, so it stays in
             the same spot however many angles there are. */}
         <form action={addPhotoSlotAction} className="pp-add pp-add-row">
+          <OnceKeyField />
           <input type="hidden" name="clientId" value={clientId} />
           <input name="label" type="text" className="pp-input" placeholder="Name an angle…" aria-label="New angle name" required />
           <button type="submit" className="pp-btn navy sm">

@@ -17,6 +17,7 @@ import type { CalEntry } from "./CalendarDay";
 import { TRAINING_ICON } from "../../../lib/eventTypes";
 import { isClientCall, takesClient } from "../../../lib/calendarKinds";
 import { pic } from "../../../lib/pic";
+import { newOnceKey } from "../../../lib/onceKey";
 
 // The Calendar's entry pop-up, built as the meeting scheduler (22 Oct, the
 // .npd pattern): the title and the category as its tinted tag; the
@@ -172,6 +173,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
     setDate(d);
     setCursor(d.slice(0, 7));
   };
+  const failedAdd = useRef<{ what: string; key: string } | null>(null);
   const save = async () => {
     if (!ok || saving) return;
     setSaving(true);
@@ -179,14 +181,19 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
     const title = topic.trim() || suggested || "";
     // The time is in this browser's timezone, as every time on the Calendar reads.
     const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: length, allDay, topic: title, clientId: withClient ? clientId : null, category: cat, note: note.trim() };
+    // A new entry's one-time key (6 Nov): made with the tap, kept by the header's Retry, and the same entry saved again
+    // after "Not saved. Try again." goes with the failed one's key, so one that in fact landed is not added twice.
+    const what = JSON.stringify(v);
+    const onceKey = failedAdd.current?.what === what ? failedAdd.current.key : newOnceKey();
     // Through the Calendar's one status (3 Nov, Alex): the header says Saving… and saved, no toast; a failure keeps the
     // pop-up open with its line, and the header's Retry runs it again.
     const went = await runCalendarSave(async () => {
       if (e) await updateCalendarEntryAction(e.id, v);
-      else await addCalendarEntryAction(v);
+      else await addCalendarEntryAction(v, onceKey);
       router.refresh();
       onDone();
     });
+    failedAdd.current = went || e ? null : { what, key: onceKey };
     if (!went) setError("Not saved. Try again.");
     setSaving(false);
   };

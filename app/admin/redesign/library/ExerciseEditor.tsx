@@ -9,6 +9,7 @@ import { clearExerciseDemoAction, setExerciseDemoLinkAction } from "../../../lib
 import { groupColour } from "../../../lib/muscleGroups";
 import { assignVideoToExerciseAction, createLibraryExerciseAction, saveExerciseSubstitutesAction, saveExerciseVariationsAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
 import { uploadFirst } from "../../../lib/uploadFirst";
+import { newOnceKey } from "../../../lib/onceKey";
 import type { LibraryItem, LibraryVideo } from "./load";
 import { useAutosave } from "./useAutosave";
 import { Sep, SepJoin } from "../Sep";
@@ -142,8 +143,10 @@ export default function ExerciseEditor({
     if (n === savedName) return;
     setSavedName(n);
     if (unnamed) {
+      // Made here, so the chip's retry of this job goes with the same one-time key (6 Nov).
+      const onceKey = newOnceKey();
       void save.run(async () => {
-        const id = await createLibraryExerciseAction(n, group, cue.trim());
+        const id = await createLibraryExerciseAction(n, group, cue.trim(), onceKey);
         if (id == null) throw new Error("create");
         onChanged();
         onCreated?.(id);
@@ -419,7 +422,7 @@ export default function ExerciseEditor({
     const n = q.trim();
     if (!n || creating) return;
     setCreating(true);
-    const id = await createLibraryExerciseAction(n, group, "");
+    const id = await createLibraryExerciseAction(n, group, "", newOnceKey());
     setCreating(false);
     if (id == null) {
       toast.error("Couldn't add it.");

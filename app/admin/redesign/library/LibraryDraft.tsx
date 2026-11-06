@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { ArrowRightIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
 import { setExerciseDemoLinkAction } from "../../../lib/actions";
 import { uploadFirst } from "../../../lib/uploadFirst";
+import { newOnceKey } from "../../../lib/onceKey";
 import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem } from "./load";
 import Picker from "../Picker";
@@ -209,30 +210,42 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
     setDlg(null);
     router.refresh();
   };
+  // A one-time key a tap (6 Nov); after "Not saved. Try again." the same name tried again goes with the failed
+  // attempt's key, so one that in fact landed is not added twice.
+  const failedAdd = useRef<{ what: string; key: string } | null>(null);
+  const keyFor = (what: string) => (failedAdd.current?.what === what ? failedAdd.current.key : newOnceKey());
   const addExercise = (name: string, group: string) => {
     const key = `new-${Date.now()}`;
+    const what = `exercise:${group}:${name}`;
+    const onceKey = keyFor(what);
     setPanel(null);
     setAdding((a) => [...a, { key, name, group, id: null }]);
     // Shown where it went.
     setLanding(null);
     setPicked(group);
     void (async () => {
-      const id = await createLibraryExerciseAction(name, group, "").catch(() => null);
+      const id = await createLibraryExerciseAction(name, group, "", onceKey).catch(() => null);
       if (id == null) {
+        failedAdd.current = { what, key: onceKey };
         setAdding((a) => a.filter((x) => x.key !== key));
         toast.error("Not saved. Try again.");
         return;
       }
+      if (failedAdd.current?.what === what) failedAdd.current = null;
       setAdding((a) => a.map((x) => (x.key === key ? { ...x, id } : x)));
       router.refresh();
     })();
   };
   const addGroup = async (label: string) => {
-    const slug = await createLibraryGroupAction(label).catch(() => null);
+    const what = `group:${label}`;
+    const onceKey = keyFor(what);
+    const slug = await createLibraryGroupAction(label, onceKey).catch(() => null);
     if (!slug) {
+      failedAdd.current = { what, key: onceKey };
       toast.error("Not saved. Try again.");
       return;
     }
+    if (failedAdd.current?.what === what) failedAdd.current = null;
     setPanel(null);
     pick(slug);
     router.refresh();

@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction } from "../../lib/actions";
+import { newOnceKey } from "../../lib/onceKey";
 import { GOAL_CHROME } from "../../lib/eventTimeline";
 import { eventTypeOf, EVENT_TYPES, type EventTypeId } from "../../lib/eventTypes";
 import { dayOf, daysBetween, shortDay } from "../../lib/eventDates";
@@ -24,7 +25,8 @@ import { monthWords, weekdayWords } from "../../lib/clientDates";
 // client adds from the white pill on top; a row opens in place on a tap
 // with its note, who set it, and for the client's own, Edit and Delete.
 
-type Sheet = { event: HomeEvent | null; type: EventTypeId; initial?: EventValues | null; error?: string | null } | null;
+/** `retry`: the add that didn't save, its one-time key and what it sent, so Try again with the same is that add again (6 Nov). */
+type Sheet = { event: HomeEvent | null; type: EventTypeId; initial?: EventValues | null; error?: string | null; retry?: { key: string; sent: string } } | null;
 const LAST_TYPE_KEY = "ironline:last-event-type";
 const FILTER_KEY = "norcoach:events-filter";
 const PAGE = 20;
@@ -289,17 +291,21 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
       }
       return;
     }
+    // Its one-time key, made as Add is tapped (6 Nov): sent again once the signal is back, or tried again unchanged after
+    // a failure, it adds one. Changed before trying again, it is a new add.
+    const sent = JSON.stringify(input);
+    const onceKey = s.retry?.sent === sent ? s.retry.key : newOnceKey();
     // In its place at once; the server's copy replaces it on the refresh.
     const temp: HomeEvent = { id: -Date.now(), kind: v.type, title: v.title, start: v.start, end: v.end, note: v.note, mine: true, repeat: v.repeat ?? null };
     setAdded((a) => [...a, temp]);
     if (onToday) setHighlight(temp.id);
     try {
-      const id = await clientAddEventAction(clientId, input);
+      const id = await clientAddEventAction(clientId, input, onceKey);
       if (id == null) throw new Error("not saved");
       router.refresh();
     } catch {
       setAdded((a) => a.filter((e) => e.id !== temp.id));
-      setSheet({ event: null, type: v.type, initial: v, error: "That didn't save. Try again." });
+      setSheet({ event: null, type: v.type, initial: v, error: "That didn't save. Try again.", retry: { key: onceKey, sent } });
     }
   };
 

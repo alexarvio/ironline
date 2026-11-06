@@ -30,8 +30,9 @@ const form = (fields: Record<string, string | number>) => {
   return fd;
 };
 
-export async function addCoach(email: string, password: string): Promise<CoachOutcome> {
-  return answer(() => createCoachAction(form({ email, password })));
+/** `onceKey`, made on the device with the tap (6 Nov, one-time key): sent again, it answers as the first did. */
+export async function addCoach(email: string, password: string, onceKey?: string): Promise<CoachOutcome> {
+  return answer(() => createCoachAction(form({ email, password, ...(onceKey ? { onceKey } : {}) })));
 }
 
 export async function resetCoachPassword(coachId: number, password: string): Promise<CoachOutcome> {

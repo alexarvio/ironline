@@ -13,6 +13,7 @@ import {
   setMeetingStatusAction,
   updateMeetingAction,
 } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import type { GoalTracking } from "../lib/goalView";
 import type { GoalEditorOptions } from "../lib/queries";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
@@ -156,7 +157,9 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
     return p.others.find((o) => o.date === form.date && toMin(o.time) < e && s < toMin(o.time) + o.durationMinutes) ?? null;
   })();
 
-  const submit = (fd: FormData) =>
+  const submit = (fd: FormData) => {
+    // A new call's one-time key (6 Nov), made with the tap.
+    if (form.rescheduleId == null) fd.set("onceKey", newOnceKey());
     start(async () => {
       // Whatever was typed for the time is tidied here too, in case the
       // field never lost focus before Schedule was pressed.
@@ -165,6 +168,7 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
       else await addMeetingAction(fd);
       setForm({ rescheduleId: null, date: form.date, time: "", duration: 30, topic: "", link: "" });
     });
+  };
 
   return (
     <div className="mw-wrap">
@@ -598,13 +602,7 @@ function PastMeetings({ past, today }: { past: WsMeeting[]; today: string }) {
                         </div>
                       </div>
                     ))}
-                    <form action={addMeetingNoteAction} className="mw-note-add">
-                      <input type="hidden" name="meetingId" value={m.id} />
-                      <input name="text" type="text" placeholder="Add a note…" required />
-                      <button type="submit" className="mw-ghost">
-                        Add
-                      </button>
-                    </form>
+                    <MeetingNoteAdd meetingId={m.id} />
                   </div>
                   <div className="mw-col">
                     <div className="mw-label">Goals set in this meeting</div>
@@ -631,6 +629,27 @@ function PastMeetings({ past, today }: { past: WsMeeting[]; today: string }) {
         );
       })}
     </section>
+  );
+}
+
+// A note on a past call (6 Nov, one-time key): its key made as Add is pressed, and Add held while it is on its way.
+function MeetingNoteAdd({ meetingId }: { meetingId: number }) {
+  const [busy, start] = useTransition();
+  const add = (fd: FormData) => {
+    if (busy) return;
+    fd.set("onceKey", newOnceKey());
+    start(async () => {
+      await addMeetingNoteAction(fd);
+    });
+  };
+  return (
+    <form action={add} className="mw-note-add">
+      <input type="hidden" name="meetingId" value={meetingId} />
+      <input name="text" type="text" placeholder="Add a note…" required />
+      <button type="submit" className="mw-ghost" disabled={busy}>
+        Add
+      </button>
+    </form>
   );
 }
 

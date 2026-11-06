@@ -2,6 +2,7 @@
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { applyDayChangesAction, type DayChangesPayload, type DayFieldKey } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import { TrashIcon } from "./icons";
 
 // Pending changes for one programme day.
@@ -159,6 +160,9 @@ export function DayPendingProvider({
 }) {
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [status, setStatus] = useState<Status>("idle");
+  // A second press while Apply is out is nothing; the apply that failed keeps its key for applying it again (6 Nov).
+  const applyOut = useRef(false);
+  const failedApply = useRef<{ key: string; sent: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [alsoRemaining, setAlsoRemainingState] = useState(false);
@@ -345,7 +349,8 @@ export function DayPendingProvider({
   }, []);
 
   const apply = useCallback(async () => {
-    if (count === 0 || status === "applying") return;
+    if (count === 0 || status === "applying" || applyOut.current) return;
+    applyOut.current = true;
     setStatus("applying");
     setError(null);
     const payload: DayChangesPayload = {
@@ -366,12 +371,24 @@ export function DayPendingProvider({
         order: draft.cardio.order ? cardioOrder : null,
       },
     };
-    const result = await applyDayChangesAction(payload);
+    // Its one-time key, made as Apply is pressed (6 Nov): sent again once the signal is back, or applied again unchanged
+    // after it failed, the added exercises and cardio go in once.
+    const sent = JSON.stringify(payload);
+    const onceKey = failedApply.current?.sent === sent ? failedApply.current.key : newOnceKey();
+    failedApply.current = { key: onceKey, sent };
+    let result: Awaited<ReturnType<typeof applyDayChangesAction>>;
+    try {
+      result = await applyDayChangesAction(payload, onceKey);
+    } catch {
+      result = { ok: false, error: "Not saved. Try again." };
+    }
+    applyOut.current = false;
     if (!result.ok) {
       setStatus("failed");
       setError(result.error);
       return;
     }
+    failedApply.current = null;
     setDraft(EMPTY);
     setStatus("idle");
     setNotice(result.skipped.length ? `Applied · skipped ${result.skipped.map((w) => `${w} (logged)`).join(", ")}` : null);

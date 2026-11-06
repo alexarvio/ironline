@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { PhaseTrack } from "../lib/db";
 import { discardCardPicturesAction, resetCardCoverAction, saveCardPicturesAction, stageCardPictureAction } from "../lib/actions";
 import { coverJpeg } from "../lib/coverJpeg";
+import { newOnceKey } from "../lib/onceKey";
 import { pic } from "../lib/pic";
 import RingEdge from "../components/RingEdge";
 
@@ -91,6 +92,8 @@ function useCardUploads(clientId: number, track: PhaseTrack) {
       files.map((file, i) => {
         const preview = URL.createObjectURL(file);
         previews.current.push(preview);
+        // Each picture's one-time key, made as it is picked (6 Nov): sent again once the signal is back, it is put up once.
+        const onceKey = newOnceKey();
         const job = (async () => {
           const blob = await coverJpeg(file);
           if (!blob) return null;
@@ -98,6 +101,7 @@ function useCardUploads(clientId: number, track: PhaseTrack) {
           fd.set("clientId", String(clientId));
           fd.set("track", track);
           fd.set("file", new File([blob], "cover.jpg", { type: "image/jpeg" }));
+          fd.set("onceKey", onceKey);
           return stageCardPictureAction(fd).catch(() => null);
         })();
         void job.then((saved) => {

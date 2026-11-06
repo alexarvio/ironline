@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { sendChatMessageAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import type { LinkArea, MessageLink } from "../lib/messageLinks";
 import { ChatIcon } from "../components/icons";
 import { LinkIcon } from "./MessageLinkPicker";
@@ -56,6 +57,8 @@ export function MessageAboutDialog({ target, onClose }: { target: AboutTarget; o
     fd.set("clientId", String(who.clientId));
     fd.set("text", text.trim());
     fd.set("link", JSON.stringify(target.link));
+    // Its one-time key (6 Nov): sent again after a dropped signal, it is not posted twice.
+    fd.set("nonce", newOnceKey());
     run(async () => {
       await sendChatMessageAction(fd);
       setSent(true);

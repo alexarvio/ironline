@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Dialog } from "../../../components/ui/dialog";
 import { createProgramWithAction } from "../../../lib/actions";
+import { newOnceKey } from "../../../lib/onceKey";
 import { NewProgramDialog } from "./TrainingDraft";
 import { TodoStrip } from "../TodoStrip";
 
@@ -40,9 +41,10 @@ export default function NoProgramme({ clientId }: { clientId: number; firstName:
         {open && (
           <NewProgramDialog
             onCreate={(v) => {
+              const onceKey = newOnceKey();
               setOpen(false);
               start(async () => {
-                const id = await createProgramWithAction(clientId, v.name, v.weeks, v.start || null);
+                const id = await createProgramWithAction(clientId, v.name, v.weeks, v.start || null, onceKey);
                 toast.success("Saved", { description: `${v.name || "New programme"}: ${v.weeks} weeks, a draft` });
                 if (id) router.push(`/admin/redesign/training?client=${clientId}&program=${id}&week=1`, { scroll: false });
                 else router.refresh();

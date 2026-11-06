@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import type { SupportLine, SupportSectionData } from "../../../lib/support";
 import { loadSupportThreadAction, markSupportSeenAction, sendSupportAction } from "../../../lib/supportActions";
+import { newOnceKey } from "../../../lib/onceKey";
 import "./support.css";
 
 // Settings' Support (23 Oct, Alex: "where the coaches can go in and talk to someone from the company or report an
@@ -271,6 +272,7 @@ function CoachSupport({ initial }: { initial: SupportLine[] }) {
     setError(null);
   };
 
+  const failedSend = useRef<{ what: string; key: string } | null>(null);
   const send = () => {
     const words = text.trim();
     if (!words || busy) return;
@@ -281,6 +283,12 @@ function CoachSupport({ initial }: { initial: SupportLine[] }) {
       fd.set("where", where.trim());
       if (file) fd.set("file", file);
     }
+    // A one-time key a send (6 Nov); the same thing sent again after "Not sent" keeps the failed one's key, so one that
+    // in fact landed is not posted twice.
+    const what = JSON.stringify([mode, words, mode === "problem" ? where.trim() : "", mode === "problem" && file ? [file.name, file.size, file.lastModified] : null]);
+    const onceKey = failedSend.current?.what === what ? failedSend.current.key : newOnceKey();
+    failedSend.current = { what, key: onceKey };
+    fd.set("onceKey", onceKey);
     setBusy(true);
     setError(null);
     // A message shows at once, faded until it is in; a problem keeps its form until then.
@@ -294,6 +302,7 @@ function CoachSupport({ initial }: { initial: SupportLine[] }) {
       .then(
         (r) => {
           if (r.ok) {
+            failedSend.current = null;
             setLines(r.thread);
             if (!asMessage) reset();
           } else {

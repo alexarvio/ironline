@@ -1,9 +1,10 @@
 "use client";
 
-import { Fragment, useEffect, useState, useTransition } from "react";
+import { Fragment, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Bars } from "./Bars";
 import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, pickGymAction, removeFreeSessionAction, startSessionAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
@@ -188,9 +189,15 @@ export default function TrainingDayList({
   // A free session: made on the server, then straight into its workout, empty,
   // on its "Add an exercise" page. Refused while another session is going.
   const [freeBusy, setFreeBusy] = useState(false);
+  // The start not yet seen through (6 Nov, one-time key): since useOffline its answer may land after the 10 s, so the
+  // next tap sends its key again and a late landing and that tap are one session (a late start answers that session
+  // again). Any answer ends it, and the tap after is a new key.
+  const freeUnanswered = useRef<string | null>(null);
   const startFree = () => {
     if (freeBusy) return;
     const at = new Date().toISOString();
+    const onceKey = freeUnanswered.current ?? newOnceKey();
+    freeUnanswered.current = onceKey;
     setFreeBusy(true);
     setStartProblem(null);
     startTransition(async () => {
@@ -198,13 +205,19 @@ export default function TrainingDayList({
         // Never stuck on "Starting…" (19 Oct): an answer lost on the way (the
         // server restarting, the connection dropping) gives up after 10 s.
         const r = await Promise.race([
-          createFreeSessionAction(clientId, at),
+          // Any answer ends the key, a late one too (6 Nov, review): kept after a late start, a tap hours later would
+          // have opened that session again instead of a new one. A late start shows as the session going.
+          createFreeSessionAction(clientId, at, onceKey).then((answer) => {
+            if (freeUnanswered.current === onceKey) freeUnanswered.current = null;
+            return answer;
+          }),
           new Promise<{ ok: false; other?: string }>((resolve) => setTimeout(() => resolve({ ok: false }), 10000)),
         ]).catch(() => ({ ok: false as const }));
         if (!r.ok) {
           setStartProblem("other" in r && r.other ? `Finish ${r.other} first.` : "Couldn't start a rogue session. Try again.");
           return;
         }
+        if (freeUnanswered.current === onceKey) freeUnanswered.current = null;
         const like = serverDays.find((d) => !d.free) ?? serverDays[0];
         setLocalFree({ key: r.id, index: days.length + 1, week: like?.week ?? 1, title: "Rogue session", exercises: [], cardio: [], skipReason: "", startedAt: at, endedAt: null, sessionNote: "", questions: like?.questions ?? [], answers: {}, gyms: [], gymId: null, free: true });
         setView({ dayId: r.id, screen: "workout" });
@@ -213,16 +226,27 @@ export default function TrainingDayList({
       }
     });
   };
+  const freeAddLost = useRef<{ key: string; sent: string } | null>(null);
   /** An exercise into the open free session: drawn the moment the server gives it an id. */
   const addFree = async (dayId: number, pick: { exerciseId: number | null; name: string; group: string }): Promise<number | null> => {
+    // Its one-time key, made as the row is tapped (6 Nov): sent again once the signal is back, or the same row tapped
+    // again after `That didn't add`, it adds one. Only an answer lost on the way keeps it; an answer ends it.
+    const sent = JSON.stringify([dayId, pick.exerciseId, pick.name, pick.group]);
+    const onceKey = freeAddLost.current?.sent === sent ? freeAddLost.current.key : newOnceKey();
+    freeAddLost.current = { key: onceKey, sent };
+    const answered = <T,>(p: Promise<T>) =>
+      p.then((v) => {
+        freeAddLost.current = null;
+        return v;
+      });
     // Cardio (19 Oct): its own page, the client's numbers filled in there.
     if (pick.group === "cardio") {
-      const cid = await addFreeCardioAction(dayId, pick.name);
+      const cid = await answered(addFreeCardioAction(dayId, pick.name, onceKey));
       if (cid == null) return null;
       setFreeCardio((a) => [...a, { dayId, c: { id: cid, name: pick.name, time: "", pace: "", incline: "", distance: "", notes: "", done: false, swap: null, alternatives: [] } }]);
       return cid;
     }
-    const id = await addFreeExerciseAction(dayId, pick.exerciseId != null ? { exerciseId: pick.exerciseId } : { name: pick.name });
+    const id = await answered(addFreeExerciseAction(dayId, pick.exerciseId != null ? { exerciseId: pick.exerciseId } : { name: pick.name }, onceKey));
     if (id == null) return null;
     const ex: SessionExercise = { id, name: pick.name, swap: null, alternatives: [], group: pick.group, sets: 1, reps: "", targetWeight: null, unit: null, targetRpe: null, tempo: null, rest: null, distance: null, time: null, videoUrl: null, logs: [], note: { text: null, dateLabel: "", unread: false }, myNote: "", warmups: [], lastWarmups: [], videoRequest: null, lastSets: null, history: [] };
     setFreeAdds((a) => [...a, { dayId, ex }]);

@@ -1,6 +1,7 @@
 "use server";
 
-import { chatChanged, chatCurrent, chatRev, chatTyping, firstSend, timedChatRead } from "./chatBus";
+import { chatChanged, chatCurrent, chatRev, chatTyping, timedChatRead } from "./chatBus";
+import { once, onceKeyOf, releaseOnce, takeOnce } from "./once";
 import { isMeetingTypeId } from "./meetingTypes";
 import { isClientCall, takesClient } from "./calendarKinds";
 import { newerCallDone, noteFocus, setFocusOnComplete } from "./focus";
@@ -497,9 +498,12 @@ export async function addExerciseToLibraryAction(formData: FormData): Promise<{ 
   const muscleGroup = String(formData.get("muscleGroup") || "other");
   const videoUrl = String(formData.get("videoUrl") || "").trim() || null;
   if (!name) return null;
-  const exercise = addExercise(coach.id, name, muscleGroup, videoUrl);
-  revalidatePath("/admin");
-  return { id: exercise.id, name: exercise.name };
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the exercise the first made.
+  return once(`addExerciseToLibraryAction:${coach.id}`, onceKeyOf(formData), () => {
+    const exercise = addExercise(coach.id, name, muscleGroup, videoUrl);
+    revalidatePath("/admin");
+    return { id: exercise.id, name: exercise.name };
+  });
 }
 
 export async function updateTrainingColumnAction(formData: FormData) {
@@ -555,9 +559,12 @@ export async function copyProgramWeekAction(formData: FormData) {
   const fromWeek = Number(formData.get("fromWeek"));
   const toWeek = Number(formData.get("toWeek"));
   if (!clientId || !fromWeek || !toWeek) return;
-  copyProgramWeek(clientId, fromWeek, toWeek);
-  revalidatePath("/client");
-  revalidatePath("/admin");
+  // Taken once (6 Nov, one-time key): the copy replaces the week, so a second arrival only did the work again.
+  return once(`copyProgramWeekAction:${clientId}`, onceKeyOf(formData), () => {
+    copyProgramWeek(clientId, fromWeek, toWeek);
+    revalidatePath("/client");
+    revalidatePath("/admin");
+  });
 }
 
 export async function setLabelAction(formData: FormData) {
@@ -599,24 +606,28 @@ export async function addProgramWeekAction(formData: FormData) {
   const programId = Number(formData.get("programId"));
   const copyFrom = formData.get("copyFrom") ? Number(formData.get("copyFrom")) : null;
 
-  const program = listPrograms(clientId).find((p) => p.id === programId);
-  if (!program) return;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it adds no second week. The programme is read
+  // inside, so the week counted is the one before the first arrival.
+  return once(`addProgramWeekAction:${clientId}`, onceKeyOf(formData), () => {
+    const program = listPrograms(clientId).find((p) => p.id === programId);
+    if (!program) return;
 
-  const newTotal = program.total_weeks + 1;
-  // "Blank week" means blank: the copy-from-week-1 seeding is only for
-  // lengthening from the Plan tab. The copy option overwrites anyway.
-  updateProgramTotalWeeks(programId, newTotal, false);
+    const newTotal = program.total_weeks + 1;
+    // "Blank week" means blank: the copy-from-week-1 seeding is only for
+    // lengthening from the Plan tab. The copy option overwrites anyway.
+    updateProgramTotalWeeks(programId, newTotal, false);
 
-  const newWeekNumber = program.start_week + newTotal - 1;
-  if (copyFrom) copyProgramWeek(clientId, copyFrom, newWeekNumber);
-  // A week added to a programme the client already has must go out with
-  // it: new days are created as drafts, and the client's Training tab shows
-  // published days only, so without this the new week arrived empty.
-  if (program.status === "deployed") publishWeek(clientId, newWeekNumber);
+    const newWeekNumber = program.start_week + newTotal - 1;
+    if (copyFrom) copyProgramWeek(clientId, copyFrom, newWeekNumber);
+    // A week added to a programme the client already has must go out with
+    // it: new days are created as drafts, and the client's Training tab shows
+    // published days only, so without this the new week arrived empty.
+    if (program.status === "deployed") publishWeek(clientId, newWeekNumber);
 
-  if (clientSeesTrainingWeek(clientId, newWeekNumber)) noteChange(clientId, `Added a week to your programme: Week ${newWeekNumber}${copyFrom ? `, a copy of week ${copyFrom}` : ""}`, { tab: "training", label: "See your training", key: "training-week", ref: program.id, detail: `Week ${newWeekNumber}${copyFrom ? `, a copy of week ${copyFrom}` : ""}` });
-  revalidatePath("/admin");
-  revalidatePath("/client");
+    if (clientSeesTrainingWeek(clientId, newWeekNumber)) noteChange(clientId, `Added a week to your programme: Week ${newWeekNumber}${copyFrom ? `, a copy of week ${copyFrom}` : ""}`, { tab: "training", label: "See your training", key: "training-week", ref: program.id, detail: `Week ${newWeekNumber}${copyFrom ? `, a copy of week ${copyFrom}` : ""}` });
+    revalidatePath("/admin");
+    revalidatePath("/client");
+  });
 }
 
 // NOTE: there is no updateProgramWeeksAction any more. A programme's length
@@ -812,7 +823,8 @@ export async function checkLoginEmailAction(email: string): Promise<{ taken: boo
 }
 
 export async function createClientWithLoginAction(
-  p: NewClientPayload
+  p: NewClientPayload,
+  onceKey?: string
 ): Promise<{ ok: true; clientId: number; invited: boolean; inviteFailed: boolean } | { ok: false; error: string }> {
   const coach = await requireCoach();
   const s = (v: unknown) => String(v ?? "").trim();
@@ -829,55 +841,59 @@ export async function createClientWithLoginAction(
   if ((clerkOn() || email) && !EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right." };
   // With Clerk there is no password: the client gets an invite link instead.
   if (!clerkOn() && password && password.length < 8) return { ok: false, error: "The password needs at least 8 characters." };
-  if (email && findUserByEmail(email)) return { ok: false, error: "That email already has an account." };
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the client the first made, never a
+  // second client (without an email nothing else would stop one) or "That email already has an account".
+  return once(`createClientWithLoginAction:${coach.id}`, onceKeyOf(onceKey), async (): Promise<{ ok: true; clientId: number; invited: boolean; inviteFailed: boolean } | { ok: false; error: string }> => {
+    if (email && findUserByEmail(email)) return { ok: false, error: "That email already has an account." };
 
-  // The record, then the login. If the login cannot be made, the record goes
-  // too: a client with no way in, that the coach did not ask for, is worse
-  // than trying again.
-  const client = createClient(`${first} ${last}`, coach.id);
-  try {
-    if (clerkOn()) createPasswordlessUser(email, "client", client.id);
-    else if (password) createUser(email, password, "client", client.id, true);
-  } catch (error) {
-    removeClient(client.id);
-    return { ok: false, error: error instanceof Error ? error.message : "The login could not be made." };
-  }
-  const birthdate = s(p.birthdate);
-  const phoneCode = s(p.phoneCode);
-  patchClientProfile(client.id, {
-    birthdate: /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(birthdate) ? birthdate : null,
-    gender: GENDERS.has(s(p.gender)) ? s(p.gender) : null,
-    height_cm: num(p.heightCm),
-    starting_weight_kg: num(p.startingWeightKg),
-    email: email || null,
-    // The dial code and the national number are kept apart, and joined only
-    // for show, so a country is never guessed back out of a typed string.
-    phone_code: /^\+[0-9]{1,4}$/.test(phoneCode) ? phoneCode : null,
-    phone: s(p.phone) || null,
-    // The address in its parts (23 Oct, for invoicing), clipped as Business details are.
-    ...cleanAddress({ address: p.address, postcode: p.postcode, city: p.city, region: p.region, country_code: p.countryCode, country: p.country }),
-  });
-  revalidatePath("/admin");
+    // The record, then the login. If the login cannot be made, the record goes
+    // too: a client with no way in, that the coach did not ask for, is worse
+    // than trying again.
+    const client = createClient(`${first} ${last}`, coach.id);
+    try {
+      if (clerkOn()) createPasswordlessUser(email, "client", client.id);
+      else if (password) createUser(email, password, "client", client.id, true);
+    } catch (error) {
+      removeClient(client.id);
+      return { ok: false, error: error instanceof Error ? error.message : "The login could not be made." };
+    }
+    const birthdate = s(p.birthdate);
+    const phoneCode = s(p.phoneCode);
+    patchClientProfile(client.id, {
+      birthdate: /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(birthdate) ? birthdate : null,
+      gender: GENDERS.has(s(p.gender)) ? s(p.gender) : null,
+      height_cm: num(p.heightCm),
+      starting_weight_kg: num(p.startingWeightKg),
+      email: email || null,
+      // The dial code and the national number are kept apart, and joined only
+      // for show, so a country is never guessed back out of a typed string.
+      phone_code: /^\+[0-9]{1,4}$/.test(phoneCode) ? phoneCode : null,
+      phone: s(p.phone) || null,
+      // The address in its parts (23 Oct, for invoicing), clipped as Business details are.
+      ...cleanAddress({ address: p.address, postcode: p.postcode, city: p.city, region: p.region, country_code: p.countryCode, country: p.country }),
+    });
+    revalidatePath("/admin");
 
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  // With Clerk the invite always goes: it is the only way in. Clerk sends it,
-  // and the link lands on /invite, which greets them by name.
-  if (clerkOn()) {
-    const invited = await sendClerkInvite(email, `${proto}://${host}/invite?c=${inviteToken(client.id)}`);
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+    const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+    // With Clerk the invite always goes: it is the only way in. Clerk sends it,
+    // and the link lands on /invite, which greets them by name.
+    if (clerkOn()) {
+      const invited = await sendClerkInvite(email, `${proto}://${host}/invite?c=${inviteToken(client.id)}`);
+      return { ok: true, clientId: client.id, invited, inviteFailed: !invited };
+    }
+    if (!p.invite || !password) return { ok: true, clientId: client.id, invited: false, inviteFailed: false };
+    const invited = await sendInviteEmail({
+      to: email,
+      firstName: first,
+      coachName: getCoachProfile(coach.id)?.display_name || "Your coach",
+      coachEmail: coach.email,
+      password,
+      signInUrl: `${proto}://${host}/login`,
+    });
     return { ok: true, clientId: client.id, invited, inviteFailed: !invited };
-  }
-  if (!p.invite || !password) return { ok: true, clientId: client.id, invited: false, inviteFailed: false };
-  const invited = await sendInviteEmail({
-    to: email,
-    firstName: first,
-    coachName: getCoachProfile(coach.id)?.display_name || "Your coach",
-    coachEmail: coach.email,
-    password,
-    signInUrl: `${proto}://${host}/login`,
   });
-  return { ok: true, clientId: client.id, invited, inviteFailed: !invited };
 }
 
 export async function addInvoiceAction(formData: FormData) {
@@ -1317,12 +1333,15 @@ export async function addPhotoSlotAction(formData: FormData) {
   if (!(await coachForClient(clientId))) return;
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
-  // The first angle asked for: the schedule starts afresh from now (nothing held from before).
-  if (listActivePhotoSlots(clientId).length === 0) clearPhotoOpenSheet(clientId);
-  addPhotoSlot(clientId, label);
-  if (shapeUpdateStarted(clientId)) noteChange(clientId, `Changed your shape update: Added a ${label} picture`, { tab: "home", label: "See your tasks", key: "photos", detail: `Added a ${label} picture` });
-  revalidatePath("/admin");
-  revalidatePath("/client");
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it adds no second angle.
+  return once(`addPhotoSlotAction:${clientId}`, onceKeyOf(formData), () => {
+    // The first angle asked for: the schedule starts afresh from now (nothing held from before).
+    if (listActivePhotoSlots(clientId).length === 0) clearPhotoOpenSheet(clientId);
+    addPhotoSlot(clientId, label);
+    if (shapeUpdateStarted(clientId)) noteChange(clientId, `Changed your shape update: Added a ${label} picture`, { tab: "home", label: "See your tasks", key: "photos", detail: `Added a ${label} picture` });
+    revalidatePath("/admin");
+    revalidatePath("/client");
+  });
 }
 
 export async function updatePhotoSlotAction(formData: FormData) {
@@ -1594,16 +1613,19 @@ export async function uploadMealPhotoAction(formData: FormData) {
 
 // The coach asks for a video of one exercise in one session (or changes what
 // they asked for). Called directly from the builder's dialog.
-export async function requestExerciseVideoAction(assignmentId: number, note: string, recurring = false) {
+export async function requestExerciseVideoAction(assignmentId: number, note: string, recurring = false, onceKey?: string) {
   const id = Number(assignmentId);
   if (!Number.isInteger(id) || !(await coachForClient(getClientIdForAssignment(id)))) return;
-  requestExerciseVideo(id, String(note ?? ""), !!recurring);
-  if (clientSeesAssignment(id)) {
-    const w = assignmentWords(id);
-    noteChange(getClientIdForAssignment(id), `Asked you for a video of ${w.name} in ${w.dayId != null ? dayWords(w.dayId) : "a session"}${recurring ? ", and in every session like it" : ""}`, { tab: "training", label: "See which", key: `video-ask:${id}`, ref: w.dayId ?? undefined });
-  }
-  revalidatePath("/admin");
-  revalidatePath("/client");
+  // Taken once (6 Nov, one-time key): the ask is one a row already, so a second arrival only told the client twice.
+  return once(`requestExerciseVideoAction:${id}`, onceKeyOf(onceKey), () => {
+    requestExerciseVideo(id, String(note ?? ""), !!recurring);
+    if (clientSeesAssignment(id)) {
+      const w = assignmentWords(id);
+      noteChange(getClientIdForAssignment(id), `Asked you for a video of ${w.name} in ${w.dayId != null ? dayWords(w.dayId) : "a session"}${recurring ? ", and in every session like it" : ""}`, { tab: "training", label: "See which", key: `video-ask:${id}`, ref: w.dayId ?? undefined });
+    }
+    revalidatePath("/admin");
+    revalidatePath("/client");
+  });
 }
 
 /** Ask every session on or off (15 Oct); off takes back the unanswered requests it made. */
@@ -1705,43 +1727,47 @@ export async function sendExerciseMediaAction(formData: FormData): Promise<strin
   const owner = getClientIdForAssignment(assignmentId);
   if (owner == null) return "That exercise is gone.";
   await requireClientAccess(owner);
-  // Sent ahead to /api/upload and written to the disk as it came (4 Nov, Alex: memory): the handle here.
-  const up = await takeUpload(formData, owner, ["media"]);
-  if (!up) return "Choose a photo or a video first.";
-  const refuse = (why: string) => (discardUpload(up), why);
-  const isImage = up.type.startsWith("image/");
-  const isVideo = up.type.startsWith("video/");
-  if (!isImage && !isVideo) return refuse("That doesn't look like a photo or a video.");
-  if (isVideo && up.size > MAX_REQUESTED_VIDEO_BYTES) return refuse(`That video is ${Math.round(up.size / 1024 / 1024)} MB. The limit is 128 MB: film in 1080p and keep it under two minutes.`);
-  if (isImage && up.size > UPLOAD_CAPS.photo) return refuse("That photo is over 20 MB. Send a smaller one.");
-  const about = String(formData.get("about") ?? "") === "swap" ? "swap" : null;
-  const row = fileClientMedia(assignmentId, { about, note: String(formData.get("note") ?? ""), media: isImage ? "photo" : "video" });
-  if (!row) return refuse("That exercise is gone.");
-  // A photo (20 MB at most) is read once, kept shrunk (4 Nov, Alex, fix 2: storage; fitPhoto, never the original as
-  // well) and its small copies made from those bytes; a video streams to the bucket, never read in.
-  const fitted = isImage ? await fitPhoto(fs.readFileSync(up.file)) : null;
-  const saved = saveRequestedVideo(row.id, fitted?.bytes ?? EMPTY, fitted?.type ?? up.type);
-  if (!saved) return refuse("That exercise is gone.");
-  let photo: Buffer | undefined;
-  let onDisk = "";
-  if (fitted) {
-    discardUpload(up);
-    photo = fitted.bytes;
-  } else {
-    onDisk = placeUpload(up, saved.path);
-    if (isImage) photo = fs.readFileSync(onDisk);
-  }
-  if (saved.previous) await deleteUpload(saved.previous);
-  if (photo) await putUpload(saved.path, photo, fitted?.type ?? up.type);
-  else await putUploadFromDisk(saved.path, onDisk, up.type);
-  // Its poster (or a photo's small copies) made now, so the coach's lists show it at once (25 Oct, Alex); a video's
-  // web copy after it, the row then showing it and the original dropped once it does (4 Nov, Alex, fix 2: storage).
-  if (isImage) afterResponse(() => prepareChatMedia(saved.path, "image", photo));
-  else afterResponse(async () => (await prepareChatMedia(saved.path, "video"), await webVideo(saved.path, { dropOriginal: true })));
-  if ((await getSessionUser())?.role === "client") pushCoachVideo(row.id);
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return null;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers as the first did (its upload was
+  // claimed then, so running again would say "Choose a photo or a video first") and files nothing twice.
+  return once(`sendExerciseMediaAction:${owner}`, onceKeyOf(formData), async (): Promise<string | null> => {
+    // Sent ahead to /api/upload and written to the disk as it came (4 Nov, Alex: memory): the handle here.
+    const up = await takeUpload(formData, owner, ["media"]);
+    if (!up) return "Choose a photo or a video first.";
+    const refuse = (why: string) => (discardUpload(up), why);
+    const isImage = up.type.startsWith("image/");
+    const isVideo = up.type.startsWith("video/");
+    if (!isImage && !isVideo) return refuse("That doesn't look like a photo or a video.");
+    if (isVideo && up.size > MAX_REQUESTED_VIDEO_BYTES) return refuse(`That video is ${Math.round(up.size / 1024 / 1024)} MB. The limit is 128 MB: film in 1080p and keep it under two minutes.`);
+    if (isImage && up.size > UPLOAD_CAPS.photo) return refuse("That photo is over 20 MB. Send a smaller one.");
+    const about = String(formData.get("about") ?? "") === "swap" ? "swap" : null;
+    const row = fileClientMedia(assignmentId, { about, note: String(formData.get("note") ?? ""), media: isImage ? "photo" : "video" });
+    if (!row) return refuse("That exercise is gone.");
+    // A photo (20 MB at most) is read once, kept shrunk (4 Nov, Alex, fix 2: storage; fitPhoto, never the original as
+    // well) and its small copies made from those bytes; a video streams to the bucket, never read in.
+    const fitted = isImage ? await fitPhoto(fs.readFileSync(up.file)) : null;
+    const saved = saveRequestedVideo(row.id, fitted?.bytes ?? EMPTY, fitted?.type ?? up.type);
+    if (!saved) return refuse("That exercise is gone.");
+    let photo: Buffer | undefined;
+    let onDisk = "";
+    if (fitted) {
+      discardUpload(up);
+      photo = fitted.bytes;
+    } else {
+      onDisk = placeUpload(up, saved.path);
+      if (isImage) photo = fs.readFileSync(onDisk);
+    }
+    if (saved.previous) await deleteUpload(saved.previous);
+    if (photo) await putUpload(saved.path, photo, fitted?.type ?? up.type);
+    else await putUploadFromDisk(saved.path, onDisk, up.type);
+    // Its poster (or a photo's small copies) made now, so the coach's lists show it at once (25 Oct, Alex); a video's
+    // web copy after it, the row then showing it and the original dropped once it does (4 Nov, Alex, fix 2: storage).
+    if (isImage) afterResponse(() => prepareChatMedia(saved.path, "image", photo));
+    else afterResponse(async () => (await prepareChatMedia(saved.path, "video"), await webVideo(saved.path, { dropOriginal: true })));
+    if ((await getSessionUser())?.role === "client") pushCoachVideo(row.id);
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return null;
+  });
 }
 
 export async function removeMealPhotoAction(formData: FormData) {
@@ -2081,16 +2107,19 @@ export async function addClientGoalAction(formData: FormData) {
   const meetingRaw = Number(formData.get("meetingId"));
   // The meeting a goal was set in must be one of this client's.
   const meetingId = Number.isInteger(meetingRaw) && meetingRaw > 0 && getClientIdForMeeting(meetingRaw) === clientId ? meetingRaw : null;
-  addClientGoal(clientId, text, trackingFor(clientId, coach.id, parseGoalTracking(formData.get("tracking"))), meetingId);
-  const startRaw = String(formData.get("start") ?? "");
-  if (/^\d{4}-\d{2}-\d{2}$/.test(startRaw)) {
-    const mine = listClientGoals(clientId);
-    const newest = mine[mine.length - 1];
-    if (newest) setClientGoalStart(newest.id, startRaw);
-  }
-  noteChange(clientId, `Set a new goal: ${text}`, { tab: "home", label: "See your goals", key: `goal:${text}`, ref: listClientGoals(clientId).slice(-1)[0]?.id });
-  revalidatePath("/admin");
-  revalidatePath("/client");
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it adds no second goal.
+  return once(`addClientGoalAction:${clientId}`, onceKeyOf(formData), () => {
+    addClientGoal(clientId, text, trackingFor(clientId, coach.id, parseGoalTracking(formData.get("tracking"))), meetingId);
+    const startRaw = String(formData.get("start") ?? "");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(startRaw)) {
+      const mine = listClientGoals(clientId);
+      const newest = mine[mine.length - 1];
+      if (newest) setClientGoalStart(newest.id, startRaw);
+    }
+    noteChange(clientId, `Set a new goal: ${text}`, { tab: "home", label: "See your goals", key: `goal:${text}`, ref: listClientGoals(clientId).slice(-1)[0]?.id });
+    revalidatePath("/admin");
+    revalidatePath("/client");
+  });
 }
 
 // The tracking arrives as JSON from the goal editor; anything malformed
@@ -2214,39 +2243,45 @@ export async function addMeetingAction(formData: FormData) {
   const meetingTypeRaw = String(formData.get("meetingType") || "");
   const meetingType = isMeetingTypeId(meetingTypeRaw) ? meetingTypeRaw : null;
   const count = Math.min(26, Math.max(2, Math.round(Number(formData.get("count")) || 0)));
-  if (repeatWeeks) addMeetingSeries(clientId, date, repeatWeeks, count, time, topic, duration, link || null, tz);
-  else addMeeting(clientId, date, time, topic, duration, link || null, null, tz, meetingType);
-  // A call the client asked for is answered by whatever gets booked next (9 Oct).
-  const booked = listMeetings(clientId).filter((m) => m.status === "scheduled").sort((a, b) => b.id - a.id)[0];
-  settleOpenMeetingRequest(clientId, booked?.id ?? 0);
-  const every = repeatWeeks === 1 ? "weekly" : `every-${repeatWeeks}-weeks`;
-  logCoachActivity(clientId, repeatWeeks ? `Scheduled ${count} ${every} meetings${topic ? `: "${topic}"` : ""}` : topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
-    kind: "general",
-    push: true,
-    actionTab: "home",
-    actionLabel: "View schedule",
-    actionRef: booked?.id,
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it books no second call.
+  return once(`addMeetingAction:${clientId}`, onceKeyOf(formData), () => {
+    if (repeatWeeks) addMeetingSeries(clientId, date, repeatWeeks, count, time, topic, duration, link || null, tz);
+    else addMeeting(clientId, date, time, topic, duration, link || null, null, tz, meetingType);
+    // A call the client asked for is answered by whatever gets booked next (9 Oct).
+    const booked = listMeetings(clientId).filter((m) => m.status === "scheduled").sort((a, b) => b.id - a.id)[0];
+    settleOpenMeetingRequest(clientId, booked?.id ?? 0);
+    const every = repeatWeeks === 1 ? "weekly" : `every-${repeatWeeks}-weeks`;
+    logCoachActivity(clientId, repeatWeeks ? `Scheduled ${count} ${every} meetings${topic ? `: "${topic}"` : ""}` : topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
+      kind: "general",
+      push: true,
+      actionTab: "home",
+      actionLabel: "View schedule",
+      actionRef: booked?.id,
+    });
+    revalidatePath("/admin");
+    revalidatePath("/client");
   });
-  revalidatePath("/admin");
-  revalidatePath("/client");
 }
 
 // ---- Calls the client asks for (9 Oct) --------------------------------------
 
 /** The client asks for a call: what about, and when suits. The coach hears of it on Home and by push. */
-export async function requestMeetingAction(clientId: number, about: string, whenSuits: string): Promise<string | null> {
+export async function requestMeetingAction(clientId: number, about: string, whenSuits: string, onceKey?: string): Promise<string | null> {
   await requireClientAccess(Number(clientId));
   const topic = about.trim();
   if (!topic) return "Say what the call is about.";
   if (topic.length > 140) return "Keep it to a line.";
-  requestMeeting(Number(clientId), topic, whenSuits.trim().slice(0, 140) || null);
-  const client = getClient(Number(clientId));
-  const coachId = coachUserIdOf(Number(clientId));
-  // Held in the coach's quiet hours, as every push to them (27 Oct).
-  if (coachId) pushCoachNews(Number(clientId), { title: `${(client?.name ?? "A client").trim().split(/\s+/)[0]} asked for a call`, body: topic, url: `/admin/redesign/meetings?client=${clientId}`, tag: `meeting-request:${clientId}` });
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return null;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it asks no second time.
+  return once(`requestMeetingAction:${Number(clientId)}`, onceKeyOf(onceKey), (): string | null => {
+    requestMeeting(Number(clientId), topic, whenSuits.trim().slice(0, 140) || null);
+    const client = getClient(Number(clientId));
+    const coachId = coachUserIdOf(Number(clientId));
+    // Held in the coach's quiet hours, as every push to them (27 Oct).
+    if (coachId) pushCoachNews(Number(clientId), { title: `${(client?.name ?? "A client").trim().split(/\s+/)[0]} asked for a call`, body: topic, url: `/admin/redesign/meetings?client=${clientId}`, tag: `meeting-request:${clientId}` });
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return null;
+  });
 }
 
 /** The client takes the ask back. */
@@ -2360,11 +2395,14 @@ export async function addEventFromMeetingNoteAction(formData: FormData) {
   const text = String(formData.get("text") ?? "").trim().slice(0, 80);
   const date = String(formData.get("date") ?? "").slice(0, 10);
   if (!text || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-  const row = addClientEvent(clientId, { kind: null, title: text, start: date, end: date, note: "", meetingId });
-  noteChange(clientId, `Added to your calendar: ${text}`, { tab: "home", label: "See it", key: `event:${text}`, ref: row?.id });
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return row?.id ?? null;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the event the first made.
+  return once(`addEventFromMeetingNoteAction:${clientId}`, onceKeyOf(formData), () => {
+    const row = addClientEvent(clientId, { kind: null, title: text, start: date, end: date, note: "", meetingId });
+    noteChange(clientId, `Added to your calendar: ${text}`, { tab: "home", label: "See it", key: `event:${text}`, ref: row?.id });
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return row?.id ?? null;
+  });
 }
 
 export async function removeMeetingAction(formData: FormData) {
@@ -2390,8 +2428,11 @@ export async function addMeetingNoteAction(formData: FormData) {
   if (!coachOwnsMeeting(coach.id, meetingId)) return;
   const text = String(formData.get("text") || "").trim();
   if (!text) return;
-  addMeetingNote(meetingId, text);
-  revalidatePath("/admin");
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it adds no second note.
+  return once(`addMeetingNoteAction:${meetingId}`, onceKeyOf(formData), () => {
+    addMeetingNote(meetingId, text);
+    revalidatePath("/admin");
+  });
 }
 
 export async function removeMeetingNoteAction(formData: FormData) {
@@ -2419,10 +2460,13 @@ export async function sendChatMessageAction(formData: FormData) {
   if (!clientId) return discardUpload(up);
   // A retry of a send that already arrived (its answer lost on the way): taken once (27 Oct, the outbox).
   const nonce = String(formData.get("nonce") || "").slice(0, 80);
-  if (nonce && !firstSend(`${clientId}:${nonce}`)) return discardUpload(up);
+  // Known in the store, so one that comes again after a restart or a deploy is still known (6 Nov, lib/once.ts).
+  if (nonce && !takeOnce(`chat${clientId}`, nonce)) return discardUpload(up);
 
   let media: ChatMedia | undefined;
-  if (up) {
+  // Filing the file can fail (the disk, the bucket); its key is then given back, so the send going again goes through
+  // instead of being taken for one already posted (6 Nov, review).
+  if (up) try {
     // A picture (20 MB at most) is read once and kept shrunk, 2048 at most, never the phone's original as well (4 Nov,
     // Alex, fix 2: storage; fitPhoto); its name takes the fitted one's extension, which saveChatMedia files it under.
     const fitted = (up.type || "").startsWith("image/") ? await fitPhoto(fs.readFileSync(up.file)) : null;
@@ -2442,6 +2486,9 @@ export async function sendChatMessageAction(formData: FormData) {
       // A video, a voice message or a file streams to the bucket, never read in.
       await putUploadFromDisk(media.path, onDisk, up.type || undefined);
     }
+  } catch (err) {
+    if (nonce) releaseOnce(`chat${clientId}`, nonce);
+    throw err;
   }
   if (!text && !media) return;
 
@@ -2524,30 +2571,36 @@ export async function reactToMessageAction(clientId: number, messageId: number, 
  * given, the training phase on the plan that carries its dates. Answers with
  * the programme's id. Starts as a draft: only the coach sees it.
  */
-export async function createProgramWithAction(clientId: number, name: string, weeks: number, startDate: string | null): Promise<number | null> {
+export async function createProgramWithAction(clientId: number, name: string, weeks: number, startDate: string | null, onceKey?: string): Promise<number | null> {
   if (!(await coachForClient(Number(clientId)))) return null;
   const n = Math.max(1, Math.min(52, Math.round(Number(weeks) || 1)));
-  const existingWeeks = listWeekNumbers(Number(clientId));
-  const startWeek = (existingWeeks.length > 0 ? Math.max(...existingWeeks) : 0) + 1;
-  const program = createProgram(Number(clientId), String(name ?? "").trim(), n, startWeek);
-  if (startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
-    const end = new Date(`${startDate}T00:00:00`);
-    end.setDate(end.getDate() + (n - 1) * 7);
-    addClientPhase(Number(clientId), "training", String(name ?? "").trim() || "Programme", startDate, end.toISOString().slice(0, 10), program.id);
-  }
-  revalidatePath("/admin");
-  return program.id;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the programme the first made.
+  return once(`createProgramWithAction:${Number(clientId)}`, onceKeyOf(onceKey), () => {
+    const existingWeeks = listWeekNumbers(Number(clientId));
+    const startWeek = (existingWeeks.length > 0 ? Math.max(...existingWeeks) : 0) + 1;
+    const program = createProgram(Number(clientId), String(name ?? "").trim(), n, startWeek);
+    if (startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+      const end = new Date(`${startDate}T00:00:00`);
+      end.setDate(end.getDate() + (n - 1) * 7);
+      addClientPhase(Number(clientId), "training", String(name ?? "").trim() || "Programme", startDate, end.toISOString().slice(0, 10), program.id);
+    }
+    revalidatePath("/admin");
+    return program.id;
+  });
 }
 
 // ---- Events on the plan, and the coach's own categories for them.
 export type EventInput = { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null; /** Repeating on these weekdays (19 Oct); lib/eventRepeat.ts. */ repeat?: { days: number[]; until: string | null } | null };
 
-export async function addClientEventAction(clientId: number, v: EventInput) {
+export async function addClientEventAction(clientId: number, v: EventInput, onceKey?: string) {
   if (!(await coachForClient(Number(clientId)))) return null;
-  const row = addClientEvent(Number(clientId), v);
-  noteChange(Number(clientId), `Added to your calendar: ${v.title}`, { tab: "home", label: "See it", key: `event:${v.title}`, ref: row?.id });
-  revalidatePath("/admin");
-  return row?.id ?? null;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the event the first made.
+  return once(`addClientEventAction:${Number(clientId)}`, onceKeyOf(onceKey), () => {
+    const row = addClientEvent(Number(clientId), v);
+    noteChange(Number(clientId), `Added to your calendar: ${v.title}`, { tab: "home", label: "See it", key: `event:${v.title}`, ref: row?.id });
+    revalidatePath("/admin");
+    return row?.id ?? null;
+  });
 }
 
 export async function updateClientEventAction(clientId: number, eventId: number, v: EventInput) {
@@ -2569,16 +2622,20 @@ export type WeightGoalSaved = { id: number } | { error: WeightGoalRefusal };
 const GOAL_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const goalWords = (clientId: number, kg: number, byDate: string) => `${goalWeightText(kg, askedWeightUnit(clientId))} by ${Number(byDate.slice(8, 10))} ${GOAL_MONTHS[Number(byDate.slice(5, 7)) - 1]}`;
 
-export async function saveWeightGoalAction(clientId: number, v: WeightGoalFields, goalId?: number): Promise<WeightGoalSaved | null> {
+export async function saveWeightGoalAction(clientId: number, v: WeightGoalFields, goalId?: number, onceKey?: string): Promise<WeightGoalSaved | null> {
   const coach = await coachForClient(Number(clientId));
   if (!coach) return null;
-  const row = saveWeightGoal(Number(clientId), v, { who: "coach", userId: coach.id }, goalId == null ? undefined : Number(goalId));
-  if (typeof row === "string") return { error: row };
-  // The client hears of it, landing on the goal (a new one rings; a change rewrites today's note).
-  noteChange(Number(clientId), `${goalId == null ? "Set a weight goal" : "Changed your weight goal"}: ${goalWords(Number(clientId), row.target_kg, row.by_date)}`, { tab: "home", label: "See it", key: `weight-goal:${row.id}`, ref: row.id, push: goalId == null, replace: true });
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return { id: row.id };
+  // Taken once (6 Nov, one-time key): a new goal sent again after a dropped signal answers the goal the first made,
+  // never "one is running already". A change needs none, it lands in the same place.
+  return once(`saveWeightGoalAction:${Number(clientId)}`, goalId == null ? onceKeyOf(onceKey) : null, (): WeightGoalSaved => {
+    const row = saveWeightGoal(Number(clientId), v, { who: "coach", userId: coach.id }, goalId == null ? undefined : Number(goalId));
+    if (typeof row === "string") return { error: row };
+    // The client hears of it, landing on the goal (a new one rings; a change rewrites today's note).
+    noteChange(Number(clientId), `${goalId == null ? "Set a weight goal" : "Changed your weight goal"}: ${goalWords(Number(clientId), row.target_kg, row.by_date)}`, { tab: "home", label: "See it", key: `weight-goal:${row.id}`, ref: row.id, push: goalId == null, replace: true });
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return { id: row.id };
+  });
 }
 
 export async function deleteWeightGoalAction(clientId: number, goalId: number) {
@@ -2597,19 +2654,22 @@ export async function deleteWeightGoalAction(clientId: number, goalId: number) {
 // Access, not requireClient (9 Oct): a coach previewing the client's app acts
 // as the client here, and requireClient's redirect was throwing them to the
 // login page from inside the sheet.
-export async function clientAddEventAction(clientId: number, v: EventInput) {
+export async function clientAddEventAction(clientId: number, v: EventInput, onceKey?: string) {
   if (!(await canAccessClient(Number(clientId)))) return null;
-  const row = addClientEvent(Number(clientId), v, "client");
-  // The coach hears of it (27 Oct, Alex: "more like a notification", not something owed): a push, and Activity lists
-  // it. Not when a coach previews the app.
-  if (row && (await getSessionUser())?.role === "client") {
-    const first = (getClient(Number(clientId))?.name ?? "A client").trim().split(/\s+/)[0];
-    const when = !v.end || v.start === v.end ? dayMonth(v.start) : `${dayMonth(v.start)} – ${dayMonth(v.end)}`;
-    pushCoachNews(Number(clientId), { title: `${first} added an event`, body: `${v.title} | ${when}`, url: `/admin/redesign/plan?client=${clientId}`, tag: `event:${row.id}` });
-  }
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return row?.id ?? null;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the event the first made.
+  return once(`clientAddEventAction:${Number(clientId)}`, onceKeyOf(onceKey), async () => {
+    const row = addClientEvent(Number(clientId), v, "client");
+    // The coach hears of it (27 Oct, Alex: "more like a notification", not something owed): a push, and Activity lists
+    // it. Not when a coach previews the app.
+    if (row && (await getSessionUser())?.role === "client") {
+      const first = (getClient(Number(clientId))?.name ?? "A client").trim().split(/\s+/)[0];
+      const when = !v.end || v.start === v.end ? dayMonth(v.start) : `${dayMonth(v.start)} – ${dayMonth(v.end)}`;
+      pushCoachNews(Number(clientId), { title: `${first} added an event`, body: `${v.title} | ${when}`, url: `/admin/redesign/plan?client=${clientId}`, tag: `event:${row.id}` });
+    }
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return row?.id ?? null;
+  });
 }
 export async function clientUpdateEventAction(clientId: number, eventId: number, v: EventInput) {
   if (!(await canAccessClient(Number(clientId)))) return;
@@ -3162,19 +3222,25 @@ export async function setEngagementPartsAction(clientId: number, ids: string[]) 
 
 // The media review (12 Oct): a text reply, and a recorded form review whose
 // file is already up through /api/video-reply.
-export async function replyToMediaAction(id: number, text: string): Promise<boolean> {
+// Each lands in the chat as a message, so each is taken once (6 Nov, one-time key): sent again after a dropped signal,
+// it posts no second message.
+export async function replyToMediaAction(id: number, text: string, onceKey?: string): Promise<boolean> {
   if (!Number.isInteger(id) || !(await coachForClient(getClientIdForVideoRequest(id)))) return false;
-  const ok = replyToMedia(id, String(text ?? ""));
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return ok;
+  return once(`replyToMediaAction:${id}`, onceKeyOf(onceKey), () => {
+    const ok = replyToMedia(id, String(text ?? ""));
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return ok;
+  });
 }
-export async function sendFormReviewAction(id: number, message: string, meta: { durationMs: number; annotations: number }): Promise<boolean> {
+export async function sendFormReviewAction(id: number, message: string, meta: { durationMs: number; annotations: number }, onceKey?: string): Promise<boolean> {
   if (!Number.isInteger(id) || !(await coachForClient(getClientIdForVideoRequest(id)))) return false;
-  const ok = sendFormReview(id, String(message ?? ""), { durationMs: Number(meta?.durationMs), annotations: Number(meta?.annotations) });
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return ok;
+  return once(`sendFormReviewAction:${id}`, onceKeyOf(onceKey), () => {
+    const ok = sendFormReview(id, String(message ?? ""), { durationMs: Number(meta?.durationMs), annotations: Number(meta?.annotations) });
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return ok;
+  });
 }
 
 // The redesign's Delete client (12 Oct), from the Details dialog on Home:
@@ -3265,20 +3331,23 @@ export async function addCalendarEventAction(formData: FormData) {
 // The redesign's Calendar dialog: the same entry with a category, a note
 // (the coach-only prep notes) and all day. Called from the client, which
 // refreshes; answers with the entry's id.
-export async function addCalendarEntryAction(v: CalendarEntryInput) {
+export async function addCalendarEntryAction(v: CalendarEntryInput, onceKey?: string) {
   const coach = await requireCoach();
   // Only a Client call or Training takes a client (23 Oct, Alex); any other entry is the coach's own, whatever is sent.
   const clientId = v.clientId == null || !takesClient(v.category) ? null : Number(v.clientId);
   if (clientId != null && !(await coachForClient(clientId))) return null;
-  const id = addCalendarEntry(coach.id, { ...v, clientId });
-  // The client hears of a call; a training session with them stays on the coach's Calendar.
-  if (id != null && clientId != null && isClientCall(v.category)) {
-    const topic = String(v.topic ?? "").trim();
-    logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule", actionRef: id });
-  }
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return id;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the entry the first made.
+  return once(`addCalendarEntryAction:${coach.id}`, onceKeyOf(onceKey), () => {
+    const id = addCalendarEntry(coach.id, { ...v, clientId });
+    // The client hears of a call; a training session with them stays on the coach's Calendar.
+    if (id != null && clientId != null && isClientCall(v.category)) {
+      const topic = String(v.topic ?? "").trim();
+      logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule", actionRef: id });
+    }
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return id;
+  });
 }
 
 export async function updateCalendarEntryAction(id: number, v: CalendarEntryInput) {
@@ -3373,14 +3442,17 @@ export async function addClientPhaseAction(formData: FormData): Promise<{ phaseI
   const rawProgram = String(formData.get("programId") ?? "");
   // Only one of this client's own programmes can be linked.
   const programId = /^\d+$/.test(rawProgram) && getClientIdForProgram(Number(rawProgram)) === clientId ? Number(rawProgram) : null;
-  // A running phase with no end on this track ends the week before (26 Oct).
-  endOpenPhaseBefore(clientId, fields.track, fields.start);
-  const added = addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId);
-  saveObjectivesFrom(added.id, formData);
-  if (formData.get("openEnded") === "1") setPhaseOpenEnded(added.id, true);
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return { phaseId: added.id, programId: added.program_id ?? null };
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the phase the first made.
+  return once(`addClientPhaseAction:${clientId}`, onceKeyOf(formData), () => {
+    // A running phase with no end on this track ends the week before (26 Oct).
+    endOpenPhaseBefore(clientId, fields.track, fields.start);
+    const added = addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId);
+    saveObjectivesFrom(added.id, formData);
+    if (formData.get("openEnded") === "1") setPhaseOpenEnded(added.id, true);
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return { phaseId: added.id, programId: added.program_id ?? null };
+  });
 }
 
 /**
@@ -3389,32 +3461,35 @@ export async function addClientPhaseAction(formData: FormData): Promise<{ phaseI
  * and a lifestyle phase's metrics. A training phase's programme does not
  * (the coach picks or builds one for the copy).
  */
-export async function duplicateClientPhaseAction(phaseId: number): Promise<number | null> {
+export async function duplicateClientPhaseAction(phaseId: number, onceKey?: string): Promise<number | null> {
   const src = getPhaseById(Number(phaseId));
   if (!src || !(await coachForClient(src.client_id))) return null;
-  const days = phaseDays(src.start_week, src.end_week);
-  const nextMonday = new Date(`${weekStart(localDateStr())}T00:00:00`);
-  nextMonday.setDate(nextMonday.getDate() + 7);
-  const start = localDateStr(nextMonday);
-  // Its last day, the same length on: the copy runs to the end of that week (whole weeks, 21 Oct).
-  const last = new Date(nextMonday);
-  last.setDate(last.getDate() + Math.max(0, days - 1));
-  const made = addClientPhase(src.client_id, src.track, `${src.name} (copy)`, start, localDateStr(last), null);
-  setPhaseObjectives(made.id, src.objectives ?? []);
-  const row = getData().client_phases.find((p) => p.id === made.id);
-  if (row) {
-    if (src.nutrition) row.nutrition = JSON.parse(JSON.stringify(src.nutrition));
-    if (src.cover_path) row.cover_path = src.cover_path;
-    if (src.client_note) row.client_note = src.client_note;
-    // A copy is a copy: its check-in days come with its metrics.
-    if (src.check_in_day !== undefined) row.check_in_day = src.check_in_day;
-    if (src.monthly_check_in_day !== undefined) row.monthly_check_in_day = src.monthly_check_in_day;
-    persist();
-  }
-  if (src.track === "lifestyle") copyPhaseMetrics(src.id, made.id, src.client_id, false);
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return made.id;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the copy the first made.
+  return once(`duplicateClientPhaseAction:${src.client_id}`, onceKeyOf(onceKey), () => {
+    const days = phaseDays(src.start_week, src.end_week);
+    const nextMonday = new Date(`${weekStart(localDateStr())}T00:00:00`);
+    nextMonday.setDate(nextMonday.getDate() + 7);
+    const start = localDateStr(nextMonday);
+    // Its last day, the same length on: the copy runs to the end of that week (whole weeks, 21 Oct).
+    const last = new Date(nextMonday);
+    last.setDate(last.getDate() + Math.max(0, days - 1));
+    const made = addClientPhase(src.client_id, src.track, `${src.name} (copy)`, start, localDateStr(last), null);
+    setPhaseObjectives(made.id, src.objectives ?? []);
+    const row = getData().client_phases.find((p) => p.id === made.id);
+    if (row) {
+      if (src.nutrition) row.nutrition = JSON.parse(JSON.stringify(src.nutrition));
+      if (src.cover_path) row.cover_path = src.cover_path;
+      if (src.client_note) row.client_note = src.client_note;
+      // A copy is a copy: its check-in days come with its metrics.
+      if (src.check_in_day !== undefined) row.check_in_day = src.check_in_day;
+      if (src.monthly_check_in_day !== undefined) row.monthly_check_in_day = src.monthly_check_in_day;
+      persist();
+    }
+    if (src.track === "lifestyle") copyPhaseMetrics(src.id, made.id, src.client_id, false);
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return made.id;
+  });
 }
 
 /** The draft is named, dated and sent: the last step of the same flow on every track. */
@@ -3646,17 +3721,20 @@ export async function copyProgramDayAction(formData: FormData) {
   const owner = clientIdForProgramDay(fromDayId);
   if (!fromDayId || owner == null || !(await coachForClient(owner))) return;
   const laterWeeks = formData.get("applyToRemainingWeeks") === "1";
-  if (to === "new") {
-    copyProgramDayToNewSession(fromDayId, laterWeeks);
-  } else {
-    const toDayId = Number(to);
-    if (!toDayId || clientIdForProgramDay(toDayId) !== owner) return;
-    copyProgramDay(fromDayId, toDayId);
-    if (laterWeeks) copyProgramDayToLaterWeeks(fromDayId, toDayId);
-  }
-  if (clientSeesProgramDay(fromDayId)) trainingChange(owner, to === "new" ? fromDayId : Number(to), `Copied ${dayWords(fromDayId)} to ${to === "new" ? "a new session" : dayWords(Number(to))}`);
-  revalidatePath("/client");
-  revalidatePath("/admin");
+  // Taken once (6 Nov, one-time key): a copy into a new session, sent again after a dropped signal, adds no second one.
+  return once(`copyProgramDayAction:${owner}`, onceKeyOf(formData), () => {
+    if (to === "new") {
+      copyProgramDayToNewSession(fromDayId, laterWeeks);
+    } else {
+      const toDayId = Number(to);
+      if (!toDayId || clientIdForProgramDay(toDayId) !== owner) return;
+      copyProgramDay(fromDayId, toDayId);
+      if (laterWeeks) copyProgramDayToLaterWeeks(fromDayId, toDayId);
+    }
+    if (clientSeesProgramDay(fromDayId)) trainingChange(owner, to === "new" ? fromDayId : Number(to), `Copied ${dayWords(fromDayId)} to ${to === "new" ? "a new session" : dayWords(Number(to))}`);
+    revalidatePath("/client");
+    revalidatePath("/admin");
+  });
 }
 
 // A session's ⋯ → "Apply to remaining weeks" (12 Oct): this session, as it is
@@ -3704,10 +3782,13 @@ export async function addSessionAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   const week = Number(formData.get("week"));
   if (!clientId || !week || !(await coachForClient(clientId))) return;
-  const made = addSession(clientId, week);
-  if (clientSeesTrainingWeek(clientId, week)) trainingChange(clientId, made?.id, `Added a session to week ${week}`);
-  revalidatePath("/client");
-  revalidatePath("/admin");
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it adds no second session.
+  return once(`addSessionAction:${clientId}`, onceKeyOf(formData), () => {
+    const made = addSession(clientId, week);
+    if (clientSeesTrainingWeek(clientId, week)) trainingChange(clientId, made?.id, `Added a session to week ${week}`);
+    revalidatePath("/client");
+    revalidatePath("/admin");
+  });
 }
 
 // Deleting a session from its header; the ones after it move up.
@@ -3740,7 +3821,8 @@ export type { DayFieldKey } from "./queries";
 export type DayChangesPayload = DayChanges;
 
 export async function applyDayChangesAction(
-  payload: DayChangesPayload
+  payload: DayChangesPayload,
+  onceKey?: string
 ): Promise<{ ok: true; skipped: string[] } | { ok: false; error: string }> {
   if (!Number.isInteger(payload?.programDayId)) return { ok: false, error: "Unknown day" };
   const coach = await coachForClient(clientIdForProgramDay(payload.programDayId));
@@ -3751,44 +3833,48 @@ export async function applyDayChangesAction(
   // A finished session takes no new exercises (the builder hides the row; this is the backstop).
   if ((payload.added ?? []).length > 0 && isSessionComplete(payload.programDayId)) return { ok: false, error: "This session is completed" };
   try {
-    // What changed, in words, before the rows go (for the client's note).
-    const removedNames = (payload.removed ?? []).map((id) => assignmentWords(id).name);
-    const { skipped } = applyDayChanges({
-      programDayId: payload.programDayId,
-      alsoRemaining: !!payload.alsoRemaining,
-      label: typeof payload.label === "string" ? payload.label.trim() : null,
-      rest: typeof payload.rest === "boolean" ? payload.rest : null,
-      fields: payload.fields ?? {},
-      custom: payload.custom ?? {},
-      gyms: payload.gyms ?? {},
-      cardio: {
-        fields: payload.cardio?.fields ?? {},
-        removed: (payload.cardio?.removed ?? []).filter((id) => Number.isInteger(id)),
-        added: payload.cardio?.added ?? [],
-        order: Array.isArray(payload.cardio?.order) ? payload.cardio.order.filter((id) => Number.isInteger(id)) : null,
-      },
-      removed: (payload.removed ?? []).filter((id) => Number.isInteger(id)),
-      added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)).map((a) => ({ exerciseId: a.exerciseId, fields: a.fields, variationId: Number.isInteger(a.variationId) ? a.variationId : null })),
-      order: Array.isArray(payload.order) ? payload.order.filter((id) => Number.isInteger(id)) : null,
-      swap: payload.swap ?? {},
+    // Taken once (6 Nov, one-time key): its exercises and cardio added, sent again after a dropped signal, are not
+    // added twice. Inside the try, so a save that throws is not kept and goes again.
+    return await once(`applyDayChangesAction:${payload.programDayId}`, onceKeyOf(onceKey), (): { ok: true; skipped: string[] } => {
+      // What changed, in words, before the rows go (for the client's note).
+      const removedNames = (payload.removed ?? []).map((id) => assignmentWords(id).name);
+      const { skipped } = applyDayChanges({
+        programDayId: payload.programDayId,
+        alsoRemaining: !!payload.alsoRemaining,
+        label: typeof payload.label === "string" ? payload.label.trim() : null,
+        rest: typeof payload.rest === "boolean" ? payload.rest : null,
+        fields: payload.fields ?? {},
+        custom: payload.custom ?? {},
+        gyms: payload.gyms ?? {},
+        cardio: {
+          fields: payload.cardio?.fields ?? {},
+          removed: (payload.cardio?.removed ?? []).filter((id) => Number.isInteger(id)),
+          added: payload.cardio?.added ?? [],
+          order: Array.isArray(payload.cardio?.order) ? payload.cardio.order.filter((id) => Number.isInteger(id)) : null,
+        },
+        removed: (payload.removed ?? []).filter((id) => Number.isInteger(id)),
+        added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)).map((a) => ({ exerciseId: a.exerciseId, fields: a.fields, variationId: Number.isInteger(a.variationId) ? a.variationId : null })),
+        order: Array.isArray(payload.order) ? payload.order.filter((id) => Number.isInteger(id)) : null,
+        swap: payload.swap ?? {},
+      });
+      if (clientSeesProgramDay(payload.programDayId)) {
+        const addedNames = (payload.added ?? []).map((a) => exerciseWords(a.exerciseId));
+        const changed = new Set([...Object.keys(payload.fields ?? {}), ...Object.keys(payload.custom ?? {}), ...Object.keys(payload.gyms ?? {}), ...Object.keys(payload.swap ?? {})]).size;
+        const cardioTouched = Object.keys(payload.cardio?.fields ?? {}).length + (payload.cardio?.removed ?? []).length + (payload.cardio?.added ?? []).length;
+        const parts = [
+          addedNames.length ? `Added ${addedNames.join(", ")}` : null,
+          removedNames.length ? `Removed ${removedNames.join(", ")}` : null,
+          changed ? `Changed ${changed === 1 ? "an exercise" : `${changed} exercises`}` : null,
+          cardioTouched ? "Changed the cardio" : null,
+          typeof payload.label === "string" ? "Renamed it" : null,
+          payload.order ? "Reordered it" : null,
+        ].filter(Boolean);
+        trainingChange(clientIdForProgramDay(payload.programDayId), payload.programDayId, `${parts.length ? parts.join(", ") : "Changed"} in ${dayWords(payload.programDayId)}${payload.alsoRemaining ? " and the weeks after" : ""}`);
+      }
+      revalidatePath("/client");
+      revalidatePath("/admin");
+      return { ok: true, skipped };
     });
-    if (clientSeesProgramDay(payload.programDayId)) {
-      const addedNames = (payload.added ?? []).map((a) => exerciseWords(a.exerciseId));
-      const changed = new Set([...Object.keys(payload.fields ?? {}), ...Object.keys(payload.custom ?? {}), ...Object.keys(payload.gyms ?? {}), ...Object.keys(payload.swap ?? {})]).size;
-      const cardioTouched = Object.keys(payload.cardio?.fields ?? {}).length + (payload.cardio?.removed ?? []).length + (payload.cardio?.added ?? []).length;
-      const parts = [
-        addedNames.length ? `Added ${addedNames.join(", ")}` : null,
-        removedNames.length ? `Removed ${removedNames.join(", ")}` : null,
-        changed ? `Changed ${changed === 1 ? "an exercise" : `${changed} exercises`}` : null,
-        cardioTouched ? "Changed the cardio" : null,
-        typeof payload.label === "string" ? "Renamed it" : null,
-        payload.order ? "Reordered it" : null,
-      ].filter(Boolean);
-      trainingChange(clientIdForProgramDay(payload.programDayId), payload.programDayId, `${parts.length ? parts.join(", ") : "Changed"} in ${dayWords(payload.programDayId)}${payload.alsoRemaining ? " and the weeks after" : ""}`);
-    }
-    revalidatePath("/client");
-    revalidatePath("/admin");
-    return { ok: true, skipped };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Something went wrong" };
   }
@@ -3799,12 +3885,15 @@ export async function applyDayChangesAction(
 // and lanes, so it is not something a client should be able to reshape. The
 // client picks one of those gyms per session.
 
-export async function addGymAction(clientId: number, name: string): Promise<{ id: number; name: string } | null> {
+export async function addGymAction(clientId: number, name: string, onceKey?: string): Promise<{ id: number; name: string } | null> {
   if (!(await coachForClient(Number(clientId)))) return null;
-  const gym = addClientGym(Number(clientId), String(name ?? ""));
-  revalidatePath("/client");
-  revalidatePath("/admin");
-  return gym ? { id: gym.id, name: gym.name } : null;
+  // Taken once (6 Nov, one-time key): a name already there is that gym, so this only answers as the first did.
+  return once(`addGymAction:${Number(clientId)}`, onceKeyOf(onceKey), () => {
+    const gym = addClientGym(Number(clientId), String(name ?? ""));
+    revalidatePath("/client");
+    revalidatePath("/admin");
+    return gym ? { id: gym.id, name: gym.name } : null;
+  });
 }
 
 /** The gym the client trains at most: its weights are the plain targets. */
@@ -3823,19 +3912,35 @@ export async function removeGymAction(gymId: number) {
 }
 
 /** The client adds a gym from the picker (13 Oct): name, colour, type. Back with the gym, or why not. */
-export async function clientAddGymAction(programDayId: number, name: string, color: string, kind: string, once = false): Promise<{ id: number; name: string; color: "navy" | "indigo" | "teal" | "rust" | "sand" | "slate"; kind: "gym" | "home" | "hotel" } | { error: string }> {
+type ClientAddedGym = { id: number; name: string; color: "navy" | "indigo" | "teal" | "rust" | "sand" | "slate"; kind: "gym" | "home" | "hotel" } | { error: string };
+export async function clientAddGymAction(programDayId: number, name: string, color: string, kind: string, justOnce = false, onceKey?: string): Promise<ClientAddedGym> {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return { error: "Not signed in." };
   const clean = String(name ?? "").trim().replace(/\s+/g, " ");
   if (clean.length < 2) return { error: "Give the gym a name." };
-  // Just this once (6 Nov, Alex): a name already used once is that gym again; a regular gym's name is that gym.
-  const same = listClientGyms(owner).find((g) => g.name.toLowerCase() === clean.toLowerCase());
-  if (same && !(once || same.once)) return { error: `You already have a gym called ${clean}` };
-  const gym = same && once ? same : addClientGym(owner, clean, isGymColor(color) ? color : "navy", isGymKind(kind) ? kind : "gym", once);
-  if (!gym) return { error: "Couldn't add the gym." };
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the gym the first made, never
+  // "You already have a gym called X".
+  return once(`clientAddGymAction:${owner}`, onceKeyOf(onceKey), (): ClientAddedGym => {
+    // Just this once (6 Nov, Alex): a name already used once is that gym again; a regular gym's name is that gym.
+    const same = listClientGyms(owner).find((g) => g.name.toLowerCase() === clean.toLowerCase());
+    if (same && !(justOnce || same.once)) return { error: `You already have a gym called ${clean}` };
+    const gym = same && justOnce ? same : addClientGym(owner, clean, isGymColor(color) ? color : "navy", isGymKind(kind) ? kind : "gym", justOnce);
+    if (!gym) return { error: "Couldn't add the gym." };
+    revalidatePath("/client");
+    revalidatePath("/admin");
+    return { id: gym.id, name: gym.name, color: isGymColor(gym.color) ? gym.color : "navy", kind: gym.kind ?? "gym" };
+  });
+}
+
+/** The client deletes one of their gyms from the picker (6 Nov, Alex: hold it, then Delete). It leaves the picker and
+ *  the coach's plans as the coach's Remove does; what was trained there keeps its gym. True once it is gone. */
+export async function clientRemoveGymAction(gymId: number): Promise<boolean> {
+  const owner = getClientIdForGym(Number(gymId));
+  if (owner == null || !(await canAccessClient(owner))) return false;
+  removeClientGym(Number(gymId));
   revalidatePath("/client");
   revalidatePath("/admin");
-  return { id: gym.id, name: gym.name, color: isGymColor(gym.color) ? gym.color : "navy", kind: gym.kind ?? "gym" };
+  return true;
 }
 
 /** The client's picture for one of their gyms (17 Oct): square, already shrunk in the browser. Back with its path. */
@@ -4003,25 +4108,31 @@ export async function discardSessionAction(programDayId: number) {
 
 // ---- Free sessions (19 Oct): see createFreeSession in queries.ts.
 /** Starts an empty session in this week, off the plan; refused while another is going. */
-export async function createFreeSessionAction(clientId: number, at?: string): Promise<{ ok: true; id: number } | { ok: false; other?: string }> {
+export async function createFreeSessionAction(clientId: number, at?: string, onceKey?: string): Promise<{ ok: true; id: number } | { ok: false; other?: string }> {
   if (!(await canAccessClient(Number(clientId)))) return { ok: false };
-  const r = createFreeSession(Number(clientId), getCurrentWeekNumber(Number(clientId)), stampOrNow(at));
-  if (r.ok) revalidatePath("/admin");
-  return r;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the session the first started,
+  // never "Finish Rogue session first".
+  return once(`createFreeSessionAction:${Number(clientId)}`, onceKeyOf(onceKey), () => {
+    const r = createFreeSession(Number(clientId), getCurrentWeekNumber(Number(clientId)), stampOrNow(at));
+    if (r.ok) revalidatePath("/admin");
+    return r;
+  });
 }
 
 /** An exercise into a free session; answers with its id, or null. The client's screen draws it at once, so no page rebuild here. */
-export async function addFreeExerciseAction(programDayId: number, v: { exerciseId?: number | null; name?: string | null }): Promise<number | null> {
+export async function addFreeExerciseAction(programDayId: number, v: { exerciseId?: number | null; name?: string | null }, onceKey?: string): Promise<number | null> {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return null;
-  return addFreeExercise(Number(programDayId), v)?.id ?? null;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the exercise the first added.
+  return once(`addFreeExerciseAction:${owner}`, onceKeyOf(onceKey), () => addFreeExercise(Number(programDayId), v)?.id ?? null);
 }
 
 /** Cardio into a free session; answers with its id, or null. */
-export async function addFreeCardioAction(programDayId: number, name: string): Promise<number | null> {
+export async function addFreeCardioAction(programDayId: number, name: string, onceKey?: string): Promise<number | null> {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return null;
-  return addFreeCardio(Number(programDayId), String(name ?? ""))?.id ?? null;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the cardio the first added.
+  return once(`addFreeCardioAction:${owner}`, onceKeyOf(onceKey), () => addFreeCardio(Number(programDayId), String(name ?? ""))?.id ?? null);
 }
 
 /** What the client did on a free session's cardio: time, distance, pace, incline. */
@@ -4158,11 +4269,14 @@ export async function stageCardPictureAction(formData: FormData): Promise<string
   if (!CARD_TRACKS.has(track)) return null;
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0 || file.size > 6 * 1024 * 1024 || !file.type.startsWith("image/")) return null;
-  const body = Buffer.from(await file.arrayBuffer());
-  const saved = stageClientCardPicture(clientId, track as PhaseTrack, body, file.type);
-  if (!saved) return null;
-  await putUpload(saved, body, file.type);
-  return saved;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the picture the first staged.
+  return once(`stageCardPictureAction:${clientId}`, onceKeyOf(formData), async () => {
+    const body = Buffer.from(await file.arrayBuffer());
+    const saved = stageClientCardPicture(clientId, track as PhaseTrack, body, file.type);
+    if (!saved) return null;
+    await putUpload(saved, body, file.type);
+    return saved;
+  });
 }
 
 export async function saveCardPicturesAction(clientId: number, track: PhaseTrack, paths: string[]) {
@@ -4397,8 +4511,12 @@ export async function addFoodEntryAction(formData: FormData): Promise<FoodDiaryV
   const grams = gramsOf(formData.get("grams"));
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !hasFoodMeal(clientId, meal, date) || !foodId || grams == null) return null;
   const serving = String(formData.get("serving") ?? "").trim().slice(0, 80) || null;
-  addFoodEntry(clientId, date, meal as FoodMeal, foodId, grams, serving);
-  revalidatePath("/admin");
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it adds no second food. The day is read after
+  // it either way, so the answer is the day as it now is (and no day is kept with the key).
+  await once(`addFoodEntryAction:${clientId}`, onceKeyOf(formData), () => {
+    addFoodEntry(clientId, date, meal as FoodMeal, foodId, grams, serving);
+    revalidatePath("/admin");
+  });
   return getFoodDiary(clientId, date);
 }
 
@@ -4439,8 +4557,11 @@ export async function addCustomFoodAction(formData: FormData): Promise<string | 
   if (!name || kcal == null || protein == null || carbs == null || fat == null) return null;
   const servingLabel = String(formData.get("servingLabel") ?? "").trim().slice(0, 40) || null;
   const servingGrams = gramsOf(formData.get("servingGrams"));
-  const row = addCustomFood(clientId, { name, kcal, protein, carbs, fat, servingLabel: servingLabel && servingGrams ? servingLabel : null, servingGrams: servingLabel && servingGrams ? servingGrams : null });
-  return `custom:${row.id}`;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the food the first made.
+  return once(`addCustomFoodAction:${clientId}`, onceKeyOf(formData), () => {
+    const row = addCustomFood(clientId, { name, kcal, protein, carbs, fat, servingLabel: servingLabel && servingGrams ? servingLabel : null, servingGrams: servingLabel && servingGrams ? servingGrams : null });
+    return `custom:${row.id}`;
+  });
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -4465,8 +4586,11 @@ export async function addFoodMealAction(formData: FormData): Promise<string | nu
   const name = String(formData.get("name") ?? "").trim().slice(0, 30);
   const date = String(formData.get("date") ?? "");
   if (!name || !diaryDateOk(date)) return null;
-  const row = addFoodMeal(clientId, name, date);
-  return `m:${row.id}`;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the meal the first made.
+  return once(`addFoodMealAction:${clientId}`, onceKeyOf(formData), () => {
+    const row = addFoodMeal(clientId, name, date);
+    return `m:${row.id}`;
+  });
 }
 
 export async function renameFoodMealAction(formData: FormData) {
@@ -4531,7 +4655,10 @@ export async function saveMealAction(formData: FormData) {
   const meal = String(formData.get("meal") ?? "");
   const name = String(formData.get("name") ?? "").trim().slice(0, 40);
   if (!DATE.test(date) || !name) return;
-  saveMeal(clientId, date, meal, name);
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it saves no second meal.
+  await once(`saveMealAction:${clientId}`, onceKeyOf(formData), () => {
+    saveMeal(clientId, date, meal, name);
+  });
 }
 
 export async function deleteSavedMealAction(formData: FormData) {
@@ -4547,7 +4674,10 @@ export async function addSavedMealAction(formData: FormData) {
   const date = String(formData.get("date") ?? "");
   const meal = String(formData.get("meal") ?? "");
   if (!Number.isInteger(id) || !diaryDateOk(date)) return;
-  addSavedMeal(clientId, id, date, meal);
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, its foods are not added twice.
+  await once(`addSavedMealAction:${clientId}`, onceKeyOf(formData), () => {
+    addSavedMeal(clientId, id, date, meal);
+  });
 }
 
 // ---- Open Food Facts ---------------------------------------------------------
@@ -4584,8 +4714,11 @@ export async function copyFoodDayAction(formData: FormData) {
   const fromDate = String(formData.get("fromDate") ?? "");
   const toDate = String(formData.get("toDate") ?? "");
   if (!DATE.test(fromDate) || !diaryDateOk(toDate) || fromDate === toDate) return;
-  copyFoodDay(clientId, fromDate, toDate);
-  revalidatePath("/admin");
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, the day's foods are not copied twice.
+  await once(`copyFoodDayAction:${clientId}`, onceKeyOf(formData), () => {
+    copyFoodDay(clientId, fromDate, toDate);
+    revalidatePath("/admin");
+  });
 }
 
 export async function saveDayAction(formData: FormData) {
@@ -4593,7 +4726,10 @@ export async function saveDayAction(formData: FormData) {
   const date = String(formData.get("date") ?? "");
   const name = String(formData.get("name") ?? "").trim().slice(0, 40);
   if (!DATE.test(date) || !name) return;
-  saveDay(clientId, date, name);
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it saves no second day.
+  await once(`saveDayAction:${clientId}`, onceKeyOf(formData), () => {
+    saveDay(clientId, date, name);
+  });
 }
 
 export async function deleteSavedDayAction(formData: FormData) {
@@ -4608,8 +4744,11 @@ export async function addSavedDayAction(formData: FormData) {
   const id = Number(formData.get("id"));
   const date = String(formData.get("date") ?? "");
   if (!Number.isInteger(id) || !diaryDateOk(date)) return;
-  addSavedDay(clientId, id, date);
-  revalidatePath("/admin");
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, its foods are not added twice.
+  await once(`addSavedDayAction:${clientId}`, onceKeyOf(formData), () => {
+    addSavedDay(clientId, id, date);
+    revalidatePath("/admin");
+  });
 }
 
 // ---- Settings (the redesign's rail): the coach's business and invoicing ----
@@ -4642,18 +4781,22 @@ export async function saveCoachPreferencesAction(p: { units?: string; timezone?:
 
 // ---- Invoices in the redesign (the client's Invoices tab) ----
 
-export async function createInvoiceAction(clientId: number, v: NewInvoice & { repeat?: InvoiceEvery | null; template?: string | null; planId?: string | null }) {
+export async function createInvoiceAction(clientId: number, v: NewInvoice & { repeat?: InvoiceEvery | null; template?: string | null; planId?: string | null }, onceKey?: string) {
   const coach = await coachForClient(Number(clientId));
   if (!coach) return null;
-  const id = createInvoice(coach.id, Number(clientId), v);
-  if (id != null && v.sent) tellClientAboutInvoice(id, "unpaid");
-  // Repeat (21 Oct): this one is the first; the series makes the rest on their days.
-  // Start billing (28 Oct): the series bills the client's plan, tied to it while it is still theirs and nothing bills it yet.
-  const planId = v.planId && v.planId === clientPlanId(Number(clientId)) && !clientPlanSeries(Number(clientId)) ? v.planId : undefined;
-  if (id != null && v.repeat) addInvoiceRepeat(Number(clientId), { every: v.repeat, issueDate: v.issueDate, lines: v.lines, note: v.note, send: !!v.sent, template: v.template ?? undefined, firstInvoiceId: id, planId });
-  revalidatePath("/admin");
-  revalidatePath("/client");
-  return id;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the invoice the first made, never a
+  // second invoice (or series) for the same work.
+  return once(`createInvoiceAction:${Number(clientId)}`, onceKeyOf(onceKey), () => {
+    const id = createInvoice(coach.id, Number(clientId), v);
+    if (id != null && v.sent) tellClientAboutInvoice(id, "unpaid");
+    // Repeat (21 Oct): this one is the first; the series makes the rest on their days.
+    // Start billing (28 Oct): the series bills the client's plan, tied to it while it is still theirs and nothing bills it yet.
+    const planId = v.planId && v.planId === clientPlanId(Number(clientId)) && !clientPlanSeries(Number(clientId)) ? v.planId : undefined;
+    if (id != null && v.repeat) addInvoiceRepeat(Number(clientId), { every: v.repeat, issueDate: v.issueDate, lines: v.lines, note: v.note, send: !!v.sent, template: v.template ?? undefined, firstInvoiceId: id, planId });
+    revalidatePath("/admin");
+    revalidatePath("/client");
+    return id;
+  });
 }
 
 // ---- Invoice templates and recurring invoices (21 Oct, Alex).

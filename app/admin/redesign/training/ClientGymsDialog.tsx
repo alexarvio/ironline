@@ -16,7 +16,7 @@ import { SepJoin } from "../Sep";
 // weights logged there stay). A clean line to add one. Everything saves at
 // once; Done just closes. Prefix cgh- (client-gyms.css).
 
-export type GymCard = { id: number; name: string; home: boolean; color: string; rgb: string; sessions8w: number; lastSessionAt: string | null; /** The picture the client gave it in their app. */ logo?: string | null; /** Trained at once (6 Nov, Alex): `Once` in Home's place, never made home. */ once?: boolean };
+export type GymCard = { id: number; name: string; home: boolean; color: string; rgb: string; sessions8w: number; lastSessionAt: string | null; /** The picture the client gave it in their app. */ logo?: string | null; /** Trained at once (6 Nov, Alex): `Once` in Home's place, never made home. */ once?: boolean; /** Deleted, by the client or the coach, and trained at (6 Nov, Alex): `Deleted` in Home's place, its history kept, nothing to do. */ deleted?: boolean };
 
 const when = (iso: string, today: string) => {
   const d = new Date(iso);
@@ -69,13 +69,13 @@ export default function ClientGymsDialog({
   const list = useRef<HTMLDivElement>(null);
   useEffect(() => (focus == null ? undefined : landOnSoon(() => list.current?.querySelector(`[data-gym="${focus}"]`), "nearest", 200)), [focus]);
   const clean = name.trim();
-  const duplicate = !!clean && gyms.some((g) => g.name.trim().toLowerCase() === clean.toLowerCase());
+  const duplicate = !!clean && gyms.some((g) => !g.deleted && g.name.trim().toLowerCase() === clean.toLowerCase());
   const canAdd = !!clean && !duplicate;
 
   // Home first, then the most used, then A to Z.
   const sorted = [...gyms].sort((a, b) => Number(b.home) - Number(a.home) || b.sessions8w - a.sessions8w || a.name.localeCompare(b.name));
   const pct = shares(sorted.map((g) => g.sessions8w));
-  const nextHomeAfter = (id: number) => sorted.find((g) => g.id !== id) ?? null;
+  const nextHomeAfter = (id: number) => sorted.find((g) => g.id !== id && !g.deleted && !g.once) ?? null;
 
   const fail = (what: string, revert: GymCard[]) => {
     setGyms(revert);
@@ -112,7 +112,8 @@ export default function ClientGymsDialog({
     const gone = gyms.find((g) => g.id === id);
     const next = gone?.home ? nextHomeAfter(id) : null;
     setConfirm(null);
-    setGyms(gyms.filter((g) => g.id !== id).map((g) => (next && g.id === next.id ? { ...g, home: true } : g)));
+    // One trained at stays, as `Deleted`, so its history keeps its name (6 Nov, Alex).
+    setGyms(gyms.flatMap((g) => (g.id === id ? (g.lastSessionAt ? [{ ...g, home: false, deleted: true }] : []) : [next && g.id === next.id ? { ...g, home: true } : g])));
     setError(null);
     try {
       await onRemove(id);
@@ -152,21 +153,21 @@ export default function ClientGymsDialog({
                   <span className="cgh-text">
                     <span className="cgh-name-row">
                       <b>{g.name}</b>
-                      {g.home ? <span className="cgh-home">Home</span> : g.once ? <span className="cgh-home">Once</span> : null}
+                      {g.home ? <span className="cgh-home">Home</span> : g.deleted ? <span className="cgh-home">Deleted</span> : g.once ? <span className="cgh-home">Once</span> : null}
                     </span>
                     <small>{g.sessions8w ? <SepJoin parts={[`${g.sessions8w} session${g.sessions8w === 1 ? "" : "s"} in the last 8 weeks`, g.lastSessionAt && `last ${when(g.lastSessionAt, today)}`]} /> : "No sessions yet"}</small>
                   </span>
                   <span className="cgh-actions">
-                    {!g.home && !g.once && (
+                    {!g.home && !g.once && !g.deleted && (
                       <button type="button" className="cgh-makehome" onClick={() => void makeHome(g.id)} aria-label={`Make ${g.name} the home gym`}>
                         Make home
                       </button>
                     )}
-                    <button type="button" className={`cgh-remove${asking ? " on" : ""}`} onClick={() => setConfirm(asking ? null : g.id)} aria-label={`Remove ${g.name}`} aria-expanded={asking}>
+                    {!g.deleted && <button type="button" className={`cgh-remove${asking ? " on" : ""}`} onClick={() => setConfirm(asking ? null : g.id)} aria-label={`Remove ${g.name}`} aria-expanded={asking}>
                       <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
                       </svg>
-                    </button>
+                    </button>}
                   </span>
                   <span className="cgh-usage">
                     <span className="cgh-bar" aria-hidden="true">

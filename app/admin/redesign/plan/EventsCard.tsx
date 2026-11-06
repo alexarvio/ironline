@@ -21,6 +21,7 @@ import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes
 import { SepJoin } from "../Sep";
 import { Fold } from "../Fold";
 import { pic } from "../../../lib/pic";
+import { newOnceKey } from "../../../lib/onceKey";
 
 // The New event dialog after the client's sheet and the phase dialog (10 Oct):
 // a category pill in the title, category tiles with icons, the dates as pills.
@@ -459,8 +460,10 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
               const was = dlg.event;
               // An edit shows at once, as a move does; a new one comes with the page's re-read (it needs its id).
               if (was) setEvents((prev) => prev.map((x) => (x.id === was.id ? { ...x, ...v } : x)));
+              // A new one's one-time key (6 Nov), made with the tap, so its retry goes with it.
+              const onceKey = was ? undefined : newOnceKey();
               setDlg(null);
-              act(() => (was ? updateClientEventAction(clientId, was.id, v) : addClientEventAction(clientId, v)), `Event: ${v.title}`);
+              act(() => (was ? updateClientEventAction(clientId, was.id, v) : addClientEventAction(clientId, v, onceKey)), `Event: ${v.title}`);
             }}
             onDelete={() => {
               const was = dlg.event!;

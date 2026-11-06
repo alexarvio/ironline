@@ -6,6 +6,7 @@ import { addCalendarEntryAction, updateCalendarEntryAction } from "../lib/action
 import { TRAINING_ICON } from "../lib/eventTypes";
 import { callLink, isClientCall, takesClient } from "../lib/calendarKinds";
 import { dayMonth } from "../lib/dayMonth";
+import { newOnceKey } from "../lib/onceKey";
 import { MonthRange } from "../admin/redesign/MonthRange";
 import { paletteOf, type Category } from "../admin/redesign/palette";
 import type { PhoneEntry } from "./calendar";
@@ -156,17 +157,24 @@ export default function EntrySheet({
       window.localStorage.setItem(LAST_CAT_KEY, id);
     } catch {}
   };
+  const failedAdd = useRef<{ what: string; key: string } | null>(null);
   const save = async () => {
     if (!ok || !title || saving) return;
     setSaving(true);
     setError(null);
     // The time is in this phone's timezone, as every time on the Calendar reads.
     const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: length, allDay, topic: title, clientId: withClient ? clientId : null, category: cat, note: note.trim(), link: withLink ? callLink(link) : null };
+    // A new entry's one-time key (6 Nov), made with the tap; the same entry saved again after "Not saved. Try again."
+    // goes with the failed one's key, so one that in fact landed is not added twice.
+    const what = JSON.stringify(v);
+    const onceKey = failedAdd.current?.what === what ? failedAdd.current.key : newOnceKey();
     try {
       if (e) await updateCalendarEntryAction(e.id, v);
-      else if ((await addCalendarEntryAction(v)) == null) throw new Error("not saved");
+      else if ((await addCalendarEntryAction(v, onceKey)) == null) throw new Error("not saved");
+      failedAdd.current = null;
       onSaved(date, open.date);
     } catch {
+      if (!e) failedAdd.current = { what, key: onceKey };
       setError("Not saved. Try again.");
       setSaving(false);
     }

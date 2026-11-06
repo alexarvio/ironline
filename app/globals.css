@@ -20363,6 +20363,17 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .gpk-badge-pick { position: absolute; left: 12px; top: 50%; width: 44px; height: 44px; margin-top: -22px; padding: 0; border: 0; border-radius: 14px; background: none; cursor: pointer; }
 .gpk-badge-pick:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .gpk-badge.busy { animation: none; opacity: 0.6; } }
+/* A gym held down asks in place (6 Nov, Alex: "if I press on it then I can delete"): its row keeps its height and its
+   badge, the name gives way to `Delete Muscle Factory?`, Cancel in words and Delete in red words, as the events' ask.
+   Held, a row never selects its text or opens the phone's own menu. */
+.gpk-row { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.gpk-ask { flex: none; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px; box-sizing: border-box; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1.5px #141a24; animation: ppd-ask-in 200ms ease; }
+.gpk-ask .gpk-badge { opacity: 0.45; }
+.gpk-ask-q { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gpk-ask-btns { flex: none; display: flex; gap: 2px; margin-right: -6px; }
+.gpk-ask-btns button { height: 40px; padding: 0 8px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.gpk-ask-btns .gpk-ask-delete { color: #b42318; }
+.gpk-ask-btns button:disabled { opacity: 0.45; cursor: default; }
 /* The workout's video row flat on the page too (17 Oct, Alex), like the session overview's: no white pill, the icon, the words and Open in a line. */
 .lw .wo-video.wo-video, .lw .wo-video.wo-video.sent, .lw .wo-video.wo-video.replied { padding: 6px 0; border-radius: 0; background: none; box-shadow: none; }
 .lw .wo-video.wo-video .wo-video-tile { margin-left: -3px; }

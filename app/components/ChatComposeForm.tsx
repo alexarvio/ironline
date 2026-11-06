@@ -3,6 +3,7 @@
 import { useKeptDraft } from "./chatOutbox";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { sendChatMessageAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import { withVideoFrame } from "./ChatMedia";
 import { uploadFirstOrThrow } from "../lib/uploadFirst";
 import type { MessageAbout } from "../lib/messageLinks";
@@ -125,12 +126,17 @@ export default function ChatComposeForm({
     onSent?.();
     return true;
   };
+  // Words sent here that didn't go (the coach's panel, no outbox): Send again with the same words is that send again,
+  // its one-time key with it, so one that did arrive and only lost its answer posts once (6 Nov, one-time key).
+  const failedWords = useRef<{ words: string; nonce: string } | null>(null);
   // A voice message goes as it stops (it never waits over the box).
   const sendFile = (file: File) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("text", "");
     fd.set("file", file);
+    // Its one-time key (6 Nov): sent again once the signal is back, it posts once.
+    fd.set("nonce", newOnceKey());
     if (about) fd.set("link", JSON.stringify(about.link));
     if (replyTo) fd.set("replyTo", String(replyTo.id));
     start(async () => {
@@ -216,6 +222,9 @@ export default function ChatComposeForm({
         }
         fd.set("clientId", String(clientId));
         fd.set("text", words);
+        const nonce = failedWords.current?.words === words ? failedWords.current.nonce : newOnceKey();
+        failedWords.current = null;
+        fd.set("nonce", nonce);
         if (about) fd.set("link", JSON.stringify(about.link));
         if (replyTo) fd.set("replyTo", String(replyTo.id));
         // The box clears and the thread shows the words straight away; the
@@ -226,6 +235,7 @@ export default function ChatComposeForm({
         start(async () => {
           if (await deliver(fd)) return;
           // Not sent: the words go back in the box (unless something new was typed meanwhile).
+          failedWords.current = { words, nonce };
           onFailed?.(words);
           setText((t) => t || words);
           requestAnimationFrame(() => fit(boxRef.current));

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { addGymAction, removeGymAction, setHomeGymAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import { ChevronDownIcon, HomeIcon } from "../components/icons";
 import { placePopover, type Placement } from "../components/popover";
 
@@ -52,9 +53,10 @@ export default function GymChipRow({ clientId, gyms }: { clientId: number; gyms:
   const add = (e: React.FormEvent) => {
     e.preventDefault();
     const clean = newName.trim();
-    if (!clean) return;
+    if (!clean || pending) return;
+    const onceKey = newOnceKey();
     start(async () => {
-      await addGymAction(clientId, clean);
+      await addGymAction(clientId, clean, onceKey);
       setNewName("");
     });
   };

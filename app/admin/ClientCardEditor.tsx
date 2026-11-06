@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { ChevronDownIcon } from "../components/icons";
 import type { InvoiceEvery } from "../lib/db";
 import { dayMonth } from "../lib/dayMonth";
+import { newOnceKey } from "../lib/onceKey";
 import { PLAN_EVERY, planFacts, type PlanChoice } from "../lib/planText";
 import { SepJoin } from "./redesign/Sep";
 import type { OverviewInfoRow, OverviewPanel } from "../lib/queries";
@@ -397,9 +398,10 @@ function PlanPicker({ clientId, plans, planId, currency, billedNext }: { clientI
     const clean = name.trim();
     if (!clean || priceBad) return;
     const v = { name: clean, price: priceNum, every };
+    const onceKey = newOnceKey();
     close();
     startSaving(async () => {
-      const made = await addClientPlanAction(clientId, v);
+      const made = await addClientPlanAction(clientId, v, onceKey);
       if (made) {
         setAdded((a) => [...a, made]);
         setShown(made.id);

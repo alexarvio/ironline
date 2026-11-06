@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Fold } from "../Fold";
 import { pic } from "../../../lib/pic";
+import { newOnceKey } from "../../../lib/onceKey";
 import type { SupportInboxRow, SupportLine } from "../../../lib/support";
 import { loadSupportInboxAction, loadSupportThreadForOwnerAction, markSupportProblemDoneAction, markSupportThreadSeenAction, replySupportAction } from "../../../lib/supportActions";
 import { SupportLineBox, SupportThread, type SupportPending } from "../settings/SupportSection";
@@ -72,15 +73,21 @@ export default function SupportInbox({ initial }: { initial: SupportInboxRow[] }
     };
   }, []);
 
+  // A one-time key a send (6 Nov); the words put back after "Not sent" and sent again keep the failed one's key, so a
+  // reply that in fact landed is not posted twice.
+  const failedSend = useRef<{ what: string; key: string } | null>(null);
   const reply = (coachId: number) => {
     const words = text.trim();
     if (!words || busy) return;
     const key = `p${Date.now()}`;
+    const what = `${coachId}\n${words}`;
+    const onceKey = failedSend.current?.what === what ? failedSend.current.key : newOnceKey();
+    failedSend.current = { what, key: onceKey };
     setBusy(true);
     setError(null);
     setPending((p) => [...p, { key, text: words }]);
     setText("");
-    replySupportAction(coachId, words)
+    replySupportAction(coachId, words, onceKey)
       .then(
         (lines) => {
           if (!lines) {
@@ -88,6 +95,7 @@ export default function SupportInbox({ initial }: { initial: SupportInboxRow[] }
             setText(words);
             return;
           }
+          failedSend.current = null;
           setThreads((t) => ({ ...t, [coachId]: lines }));
           const last = lines[lines.length - 1];
           setRows((rs) => {

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { sendExerciseMediaAction } from "../lib/actions";
 import { uploadFirst } from "../lib/uploadFirst";
+import { newOnceKey } from "../lib/onceKey";
 import { VideoReplyBody, type VideoReplyView } from "./VideoReplySheet";
 import { dayWords } from "../lib/clientDates";
 
@@ -76,6 +77,8 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
   const [done, setDone] = useState(false);
   const [sending, run] = useTransition();
   const url = useRef<string | null>(null);
+  // The send whose answer was lost on the way, its one-time key kept for sending that clip again (6 Nov).
+  const lostSend = useRef<{ key: string; sent: string } | null>(null);
 
   // The preview's object URL is let go when it changes and when the sheet closes.
   useEffect(() => () => {
@@ -108,13 +111,23 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
     fd.set("file", file);
     fd.set("about", about ?? ask?.about ?? "");
     fd.set("note", note);
+    // Its one-time key, made as Send is tapped (6 Nov): sent again once the signal is back, or the same clip sent again
+    // after `That didn't send`, it goes once. An answer from the server (sent, or a reason) ends it.
+    const sent = JSON.stringify([assignmentId, file.name, file.size, file.lastModified]);
+    const onceKey = lostSend.current?.sent === sent ? lostSend.current.key : newOnceKey();
+    lostSend.current = { key: onceKey, sent };
+    fd.set("onceKey", onceKey);
     run(async () => {
       // A failed request (the connection dropped, the body refused) used to throw
       // out of here and crash the screen (15 Oct): now it reads as a line in the sheet.
       let error: string | null;
       try {
         // The clip goes ahead to the server's disk; the send carries its handle (4 Nov, Alex: memory).
-        error = (await uploadFirst(fd, "media")) ?? (await sendExerciseMediaAction(fd));
+        error = await uploadFirst(fd, "media");
+        if (!error) {
+          error = await sendExerciseMediaAction(fd);
+          lostSend.current = null;
+        }
       } catch (e) {
         const mb = Math.round(file.size / 1024 / 1024);
         error = `That didn't send${mb ? ` (${mb} MB)` : ""}. Check your connection and try again; a shorter clip helps.`;
