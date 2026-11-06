@@ -21,7 +21,9 @@ import type { Sheet } from "./PicturesDraft";
 // The weeks, the angle and the view are remembered for the client while the tab stays open.
 
 type View = "side" | "slider";
-type Saved = { a: string; b: string; slot: number | null; view: View };
+/** How big the photos are (6 Nov, Alex: "1x, 2x, 3x… whenever we have a call with a client… share the screen"). */
+type Size = 1 | 2 | 3;
+type Saved = { a: string; b: string; slot: number | null; view: View; size: Size };
 const KEY = (clientId: number) => `rp-compare-${clientId}`;
 const kgChange = (d: number) => `${d > 0 ? "+" : "−"}${Math.abs(d).toFixed(1)} kg`;
 
@@ -44,7 +46,7 @@ export default function Compare({ clientId, sheets, initial, onOpenPhoto }: { cl
     const a = has(saved.a) ? saved.a : (initial[0] ?? chrono[0]?.period ?? "");
     const b = has(saved.b) && saved.b !== a ? saved.b : (initial[1] ?? sheets[0]?.period ?? "");
     const slot = saved.slot != null && angles.some((x) => x.slotId === saved.slot) ? saved.slot : (angles[0]?.slotId ?? null);
-    return { a, b, slot, view: saved.view === "slider" ? "slider" : "side" };
+    return { a, b, slot, view: saved.view === "slider" ? "slider" : "side", size: saved.size === 2 || saved.size === 3 ? saved.size : 1 };
   });
   useEffect(() => {
     try {
@@ -79,6 +81,15 @@ export default function Compare({ clientId, sheets, initial, onOpenPhoto }: { cl
         <div>
           <h2>Compare</h2>
         </div>
+        {/* Bigger for a call (6 Nov, Alex): 1× as it was, 2× most of the screen's height, 3× nearly all of it, never wider
+            than the card. Both views. */}
+        <div className="rd-btn-group cmp-size" role="radiogroup" aria-label="Size">
+          {([1, 2, 3] as const).map((n) => (
+            <button key={n} type="button" role="radio" aria-checked={state.size === n} className={state.size === n ? "on" : ""} onClick={() => setState((s) => ({ ...s, size: n }))}>
+              {n}×
+            </button>
+          ))}
+        </div>
         <div className="rd-btn-group cmp-view" role="radiogroup" aria-label="View">
           {(
             [
@@ -93,7 +104,7 @@ export default function Compare({ clientId, sheets, initial, onOpenPhoto }: { cl
         </div>
       </div>
 
-      <div className="rls-card cmp">
+      <div className="rls-card cmp" data-size={state.size}>
       <div className="cmp-weeks">
         <WeekPicker label="First" value={state.a} sheets={chrono} onPick={(p) => pick("a", p)} />
         <span className="cmp-vs">vs</span>
