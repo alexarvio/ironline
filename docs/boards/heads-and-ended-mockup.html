@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Heads and ended</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  /* Items 3 and 4 of the 6 Nov admin audit (docs/design-audit-2026-11-06-admin.md). Values copied from the app:
+     3, the column heads: the shared look (measurements.css:177 .rls-cols), Training's (draft.css:134 .rd-cols),
+     Meetings' (meetings.css:15 over .rd-cols), Shape update's (pictures.css:97 .rp-thead, before today's row change).
+     4, an ended phase: the banner and the fade (draft.css:191-193 .rd-past-note, .rd-past), as Lifestyle and Nutrition
+     draw it (MeasurementsDraft.tsx:402, NutritionDraft.tsx:495), against Training's look-only week (rule §8). */
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --div:#EEF0F3; --page:#F5F6F8; --rust:#b8471f; --green:#2f7a3f; --life:#a08a5c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ebef; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 60px; }
+  .intro { max-width: 980px; margin: 0 auto 26px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .intro p { margin: 0; color: var(--sec); font-size: 13px; font-weight: 500; line-height: 1.55; max-width: 860px; }
+  .part { max-width: 980px; margin: 40px auto 12px; font-size: 13px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--sec); }
+  .opt { max-width: 980px; margin: 0 auto 26px; }
+  .lbl { display: flex; gap: 10px; align-items: baseline; margin: 0 0 4px 6px; }
+  .lbl b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; }
+  .lbl span { font-size: 15px; font-weight: 600; }
+  .why { margin: 0 6px 12px; color: var(--sec); font-size: 12.5px; font-weight: 500; line-height: 1.5; }
+  .page { padding: 22px 24px 24px; border-radius: 22px; background: var(--page); }
+  .card { border-radius: 18px; background: #fff; border: 1px solid var(--line); overflow-x: auto; padding: 2px 0 8px; }
+  .cols, .row { display: grid; grid-template-columns: 130px minmax(0, 1fr) 110px 110px 110px; align-items: center; min-width: 620px; }
+  .row { min-height: 52px; padding: 0 18px; border-top: 1px solid var(--div); }
+  .date { font-size: 13.5px; font-weight: 500; color: var(--body); font-variant-numeric: tabular-nums; }
+  .name { font-size: 14.5px; font-weight: 600; }
+  .fig { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .grey { font-size: 13px; font-weight: 500; color: var(--muted); }
+
+  /* 3: the four looks of a column head row. */
+  .h-shared { min-height: 36px; padding: 4px 18px 0; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #5b6474; }
+  .h-training { padding: 6px 18px 8px; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #8b93a1; }
+  .h-meetings { padding: 6px 18px 8px; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #8b93a1; }
+  .h-pictures { padding: 12px 18px; font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #98a2b3; border-bottom: 1px solid #e1e5eb; }
+  .h-pictures + .row { border-top: 0; }
+  .heads { display: grid; gap: 14px; }
+  .heads .tag { display: block; margin: 0 0 6px 4px; font-size: 12px; font-weight: 600; color: var(--sec); }
+
+  /* 4: an ended phase. */
+  .past-note { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin: 0 0 18px; border-radius: 12px; background: #eceff3; font-size: 13px; font-weight: 600; color: #5b6474; }
+  .past-note b { font-weight: 800; color: #141a24; }
+  .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 0 22px; }
+  .eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--life); }
+  .hname { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  .hname h3 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -.01em; }
+  .state { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: #EEF0F3; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; color: #5b6474; }
+  .fact { margin-top: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+  .acts { display: flex; gap: 8px; }
+  .pill { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .more { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font-size: 16px; color: var(--sec); }
+  .sh { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; }
+  .sh h4 { margin: 0; font-size: 20px; font-weight: 600; }
+  .cap { display: inline-flex; padding: 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; }
+  .cap span { height: 30px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--sec); }
+  .cap span.on { background: var(--ink); color: #fff; }
+  .addm { display: inline-flex; align-items: center; gap: 6px; height: 40px; margin: 6px 18px 0; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .rmore { justify-self: end; color: var(--muted); font-size: 16px; }
+  .faded .pill, .faded .more, .faded .addm, .faded .rmore, .faded .cap { opacity: .55; }
+  .g-met { grid-template-columns: minmax(0, 1fr) 160px 140px 40px; }
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>Column heads, and an ended phase</h1>
+    <p>Item 3: the small grey heads over a table's columns, drawn four ways across the coach's screens. Item 4: what Lifestyle and Nutrition show once a phase has ended, against the look-only way Training already uses.</p>
+  </div>
+
+  <div class="part">3 · Column heads</div>
+  <section class="opt">
+    <div class="lbl"><b>NOW</b><span>Four looks for the same thing</span></div>
+    <p class="why">The same table under each head row. Look at how dark the heads are, how bold, and the line under Shape update's.</p>
+    <div class="page heads">
+      <div>
+        <span class="tag">Most screens (Lifestyle metrics, Nutrition, Invoices, Feed, Plan)</span>
+        <div class="card"><div class="cols h-shared"><span>Date</span><span>Session</span><span>Sets</span><span>Volume</span><span>State</span></div><div class="row"><span class="date">Wed, 5 Nov</span><span class="name">Upper push</span><span class="fig">18</span><span class="fig">8,420 kg</span><span class="grey">Done</span></div></div>
+      </div>
+      <div>
+        <span class="tag">Training's session tables: bolder (700), wider spaced less, lighter grey</span>
+        <div class="card"><div class="cols h-training"><span>Date</span><span>Session</span><span>Sets</span><span>Volume</span><span>State</span></div><div class="row"><span class="date">Wed, 5 Nov</span><span class="name">Upper push</span><span class="fig">18</span><span class="fig">8,420 kg</span><span class="grey">Done</span></div></div>
+      </div>
+      <div>
+        <span class="tag">Meetings: the right weight, the lighter grey</span>
+        <div class="card"><div class="cols h-meetings"><span>Date</span><span>Session</span><span>Sets</span><span>Volume</span><span>State</span></div><div class="row"><span class="date">Wed, 5 Nov</span><span class="name">Upper push</span><span class="fig">18</span><span class="fig">8,420 kg</span><span class="grey">Done</span></div></div>
+      </div>
+      <div>
+        <span class="tag">Shape update, until today's row change: smaller, palest, a line under the heads</span>
+        <div class="card"><div class="cols h-pictures"><span>Date</span><span>Session</span><span>Sets</span><span>Volume</span><span>State</span></div><div class="row"><span class="date">Wed, 5 Nov</span><span class="name">Upper push</span><span class="fig">18</span><span class="fig">8,420 kg</span><span class="grey">Done</span></div></div>
+      </div>
+    </div>
+  </section>
+  <section class="opt">
+    <div class="lbl"><b>PROPOSED</b><span>One head row, the first look, everywhere</span></div>
+    <p class="why">10.5px, weight 600, spaced .16em, the darker grey #5b6474, no line under it: what most screens already use and what the rules ask for. Shape update gets it with today's row change; this would bring Training's and Meetings' over too.</p>
+    <div class="page">
+      <div class="card"><div class="cols h-shared"><span>Date</span><span>Session</span><span>Sets</span><span>Volume</span><span>State</span></div><div class="row"><span class="date">Wed, 5 Nov</span><span class="name">Upper push</span><span class="fig">18</span><span class="fig">8,420 kg</span><span class="grey">Done</span></div><div class="row"><span class="date">Mon, 3 Nov</span><span class="name">Lower</span><span class="fig">16</span><span class="fig">10,250 kg</span><span class="grey">Done</span></div></div>
+    </div>
+  </section>
+
+  <div class="part">4 · An ended phase</div>
+  <section class="opt">
+    <div class="lbl"><b>NOW</b><span>Lifestyle (and Nutrition) once the phase is over</span></div>
+    <p class="why">A grey banner over the header with "Ended." at weight 800 and a sentence explaining it, and every button, switch and field on the page faded to 55% but still drawn. The header's grey PAST tag already says it.</p>
+    <div class="page faded">
+      <div class="past-note"><b>Ended.</b> This phase is here to look back on; nothing in it can be changed.</div>
+      <div class="head">
+        <div>
+          <div class="eyebrow">Lifestyle</div>
+          <div class="hname"><h3>Cut, phase 1</h3><span class="state">PAST</span></div>
+          <div class="fact">6 weeks | 15/9 – 26/10</div>
+        </div>
+        <div class="acts"><span class="pill">Note to Alex</span><span class="more">⋯</span></div>
+      </div>
+      <div class="sh"><h4>Tracked metrics</h4></div>
+      <div class="card">
+        <div class="cols g-met h-shared"><span>Metric</span><span>Group</span><span>Last</span><span></span></div>
+        <div class="row g-met"><span class="name">Weight</span><span class="grey">Body</span><span class="fig">90.8 kg</span><span class="rmore">⋯</span></div>
+        <div class="row g-met"><span class="name">Sleep</span><span class="grey">Recovery</span><span class="fig">7 / 10</span><span class="rmore">⋯</span></div>
+        <div class="row g-met"><span class="name">Steps</span><span class="grey">Activity</span><span class="fig">9,412</span><span class="rmore">⋯</span></div>
+        <div class="addm">+ Metric</div>
+      </div>
+      <div class="sh" style="margin-top:22px"><h4>Check-ins</h4><span class="cap"><span class="on">Table</span><span>Graph</span></span></div>
+    </div>
+  </section>
+  <section class="opt">
+    <div class="lbl"><b>PROPOSED</b><span>Look-only, as Training's finished weeks</span></div>
+    <p class="why">No banner and nothing faded. The PAST tag says it's over; what would change the phase is simply not offered (no + Metric, no ⋯ on a metric, Note to Alex read only). What is for reading stays as it is: Table | Graph still switches, rows still open.</p>
+    <div class="page">
+      <div class="head">
+        <div>
+          <div class="eyebrow">Lifestyle</div>
+          <div class="hname"><h3>Cut, phase 1</h3><span class="state">PAST</span></div>
+          <div class="fact">6 weeks | 15/9 – 26/10</div>
+        </div>
+        <div class="acts"><span class="pill">Note to Alex</span></div>
+      </div>
+      <div class="sh"><h4>Tracked metrics</h4></div>
+      <div class="card">
+        <div class="cols g-met h-shared"><span>Metric</span><span>Group</span><span>Last</span><span></span></div>
+        <div class="row g-met"><span class="name">Weight</span><span class="grey">Body</span><span class="fig">90.8 kg</span><span></span></div>
+        <div class="row g-met"><span class="name">Sleep</span><span class="grey">Recovery</span><span class="fig">7 / 10</span><span></span></div>
+        <div class="row g-met"><span class="name">Steps</span><span class="grey">Activity</span><span class="fig">9,412</span><span></span></div>
+      </div>
+      <div class="sh" style="margin-top:22px"><h4>Check-ins</h4><span class="cap"><span class="on">Table</span><span>Graph</span></span></div>
+    </div>
+  </section>
+</body>
+</html>

@@ -92,12 +92,12 @@
 .rd.rp .rp-tbody .rp-comment { margin-top: 14px; }
 
 /* ---- All shape updates: a log, a row an update, the rows together (as every log in the app), newest first. */
-.rd.rp .rls-card.rp-table.rp-table { padding: 0; overflow: hidden; }
+/* One list row (6 Nov, Alex: one list row): the shared .rls-card as it is (2px over, 8px under), the heads as .rls-cols
+   (36px, 10.5px grey #5b6474, no line under them), each row 52px with a full-width #eef0f3 line over it, 18px in each side. */
 .rd.rp .rp-thead, .rd.rp .rp-trow { display: grid; grid-template-columns: 112px minmax(0, 1fr) 110px 100px 104px; align-items: center; gap: 12px; }
-.rd.rp .rp-thead { padding: 12px 18px; border-bottom: 1px solid #e1e5eb; font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98a2b3; white-space: nowrap; }
+.rd.rp .rp-thead { min-height: 36px; padding: 4px 18px 0; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; white-space: nowrap; }
 .rd.rp .rp-thead .end { text-align: center; }
-.rd.rp .rp-trow { width: 100%; min-height: 54px; padding: 8px 18px; border: 0; border-top: 1px solid #eef0f3; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
-.rd.rp .rp-thead + .rp-trow { border-top: 0; }
+.rd.rp .rp-trow { width: 100%; min-height: 52px; padding: 0 18px; border: 0; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
 .rd.rp .rp-trow:hover { background: #fafbfd; }
 .rd.rp .rp-trow:focus-visible { outline: 2px solid #141a24; outline-offset: -2px; }
 .rd.rp .rp-tdate { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -238,8 +238,8 @@
 .rd-addrow.rp-addrow.rp-addtile-wrap { display: block; }
 
 /* A row of All sheets open on its photos: under the row, from the sheet's column, smaller tiles. */
-.rd.rp .rp-tgroup + .rp-tgroup { border-top: 1px solid #eef0f3; }
-.rd.rp .rp-tgroup .rp-trow { border-top: 0; }
+/* Every row's line over it, the first's too: the only line under the heads (6 Nov, Alex: one list row). */
+.rd.rp .rp-tgroup { border-top: 1px solid #eef0f3; }
 .rd.rp .rp-tgroup.open .rp-trow { background: #fafbfc; }
 .rd.rp .rp-tbody { padding: 4px 18px 16px; background: #fafbfc; }
 .rd.rp .rp-tgrid { grid-template-columns: repeat(var(--rp-cols, 4), minmax(0, 170px)); }

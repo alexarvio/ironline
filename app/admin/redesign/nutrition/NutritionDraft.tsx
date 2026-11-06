@@ -175,6 +175,9 @@ export default function NutritionDraft({
       if (said) savedToast(said);
     });
   const phaseId = plan.id > 0 ? plan.id : null;
+  // An ended phase is look-only (6 Nov, Alex: an ended phase look-only): what would change it isn't drawn, its figures
+  // and fields read as words; what is for reading (the log, its capsule, folds, pager, messages) stays. No banner, no fade.
+  const ended = plan.status === "past";
   const today = plan.planCtx.today;
   const startHasCome = !!plan.startDate && plan.startDate <= today;
   const lastDay = plan.endDate ? addDays(plan.endDate, 6) : null;
@@ -330,7 +333,7 @@ export default function NutritionDraft({
     sendSupps({ removedIds: [s.id] });
   };
   // A drop sets the new order, saved at once; not while a new row waits for its number.
-  const canDrag = plan.status !== "past" && !supps.some((s) => s.id < 0 && s.name.trim());
+  const canDrag = !ended && !supps.some((s) => s.id < 0 && s.name.trim());
   const moveSupps = (ids: (number | string)[]) => {
     if (!canDrag) return;
     const next = ids.map((id) => supps.find((x) => x.id === id)).filter((s): s is DraftSupplement => !!s);
@@ -492,12 +495,8 @@ export default function NutritionDraft({
   } as const;
 
   return (
-    <div className={`rd trn rls rnt${plan.status === "past" ? " rd-past" : ""}`}>
-      {plan.status === "past" && (
-        <div className="rd-past-note" role="note">
-          <b>Ended.</b> This phase is here to look back on; nothing in it can be changed.
-        </div>
-      )}
+    // An ended phase: no Ended note and no blanket fade (6 Nov, Alex: an ended phase look-only); the header's tag says it.
+    <div className="rd trn rls rnt">
       {/* ---- Header (21 Oct, as Training's and Lifestyle's): the name to click and type, the ▾ to switch phase,
           the state tag as its menu; the facts under it; on the right the goals and note pills and the menu. */}
       {/* No fact line, no room kept for one; no phase, the track's name is the title and the eyebrow goes (22 Oct, Alex). */}
@@ -523,7 +522,10 @@ export default function NutritionDraft({
                 />
               ) : (
                 <>
-                  {phaseId ? (
+                  {/* An ended phase's name is words (6 Nov, Alex: an ended phase look-only), as Training's. */}
+                  {phaseId && ended ? (
+                    <span className="trn-name-btn ro">{shownName}</span>
+                  ) : phaseId ? (
                     <button type="button" className="trn-name-btn" onClick={() => setRenaming(shownName)} title="Rename">
                       {shownName}
                     </button>
@@ -602,6 +604,8 @@ export default function NutritionDraft({
             goals={plan.goals}
             note={plan.note}
             area="nutrition"
+            // Ended: the note read only, gone when empty (6 Nov, Alex: an ended phase look-only).
+            locked={ended}
             saveNote={async (text) => {
               const f = new FormData();
               f.set("clientId", String(clientId));
@@ -618,7 +622,8 @@ export default function NutritionDraft({
               <DropdownMenuItem onSelect={() => message({ label: phaseId != null ? plan.name : "Nutrition", link: { kind: "nutrition" } })}>
                 <ChatIcon /> Message about nutrition
               </DropdownMenuItem>
-              {phaseId != null && (
+              {/* No Edit dates on an ended phase (6 Nov, Alex: an ended phase look-only); Message, New phase and Delete stay. */}
+              {phaseId != null && !ended && (
                 <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>
                   <CalendarIcon /> Edit dates
                 </DropdownMenuItem>
@@ -655,20 +660,23 @@ export default function NutritionDraft({
                 </button>
               ))}
             </div>
-            <label className="rd-tick rnt-same">
-              <input
-                type="checkbox"
-                checked={t.same}
-                onChange={(e) =>
-                  editTargets((x) => ({
-                    ...x,
-                    same: e.target.checked,
-                    rest: e.target.checked ? x.rest : isEmpty(x.rest) ? x.training : x.rest,
-                  }))
-                }
-              />
-              Same on training and rest days
-            </label>
+            {/* The tick changes the targets: not on an ended phase (6 Nov, Alex: an ended phase look-only); the capsule reads. */}
+            {!ended && (
+              <label className="rd-tick rnt-same">
+                <input
+                  type="checkbox"
+                  checked={t.same}
+                  onChange={(e) =>
+                    editTargets((x) => ({
+                      ...x,
+                      same: e.target.checked,
+                      rest: e.target.checked ? x.rest : isEmpty(x.rest) ? x.training : x.rest,
+                    }))
+                  }
+                />
+                Same on training and rest days
+              </label>
+            )}
           </div>
         </div>
         <div className="rls-card">
@@ -700,6 +708,7 @@ export default function NutritionDraft({
                       }
                       label={`${f} on ${shown} days`}
                       unit="g"
+                      fixed={ended}
                     />
                   ))}
                 </div>
@@ -709,7 +718,7 @@ export default function NutritionDraft({
                   <span className="rd-ex">
                     <span className="rd-ex-name">Water</span>
                   </span>
-                  <Box value={t.water} onChange={(v) => editTargets((x) => ({ ...x, water: v }))} label="Water goal" unit="L" placeholder="—" />
+                  <Box value={t.water} onChange={(v) => editTargets((x) => ({ ...x, water: v }))} label="Water goal" unit="L" placeholder="—" fixed={ended} />
                 </div>
               </div>
             </div>
@@ -749,16 +758,22 @@ export default function NutritionDraft({
                       leaveRow(s.id);
                     }}
                   >
-                    <span className="rd-grip trn-grip" {...(canDrag && s.id > 0 ? suppGrip : {})}>
-                      <GripIcon />
-                    </span>
-                    {/* A new row on its way is still until it has its number: an edit then would be lost. */}
-                    <Box value={s.name} onChange={(v) => editSupp(s.id, { name: v })} label="Item" placeholder="Creatine" strong autoFocus={!s.name} readOnly={incoming(s)} />
-                    <Box value={s.quantity} onChange={(v) => editSupp(s.id, { quantity: v })} label="Quantity" placeholder="5 g" readOnly={incoming(s)} />
-                    <Box value={s.timing} onChange={(v) => editSupp(s.id, { timing: v })} label="Timing" placeholder="With breakfast" readOnly={incoming(s)} />
-                    <Box value={s.notes} onChange={(v) => editSupp(s.id, { notes: v })} label="Notes" placeholder="—" quiet readOnly={incoming(s)} />
+                    {/* Ended: no grip, its column's room kept so the rows stay in line (6 Nov, Alex: an ended phase look-only). */}
+                    {ended ? (
+                      <span aria-hidden="true" />
+                    ) : (
+                      <span className="rd-grip trn-grip" {...(canDrag && s.id > 0 ? suppGrip : {})}>
+                        <GripIcon />
+                      </span>
+                    )}
+                    {/* A new row on its way is still until it has its number: an edit then would be lost. Ended: the words alone. */}
+                    <Box value={s.name} onChange={(v) => editSupp(s.id, { name: v })} label="Item" placeholder="Creatine" strong autoFocus={!s.name && !ended} readOnly={incoming(s)} fixed={ended} />
+                    <Box value={s.quantity} onChange={(v) => editSupp(s.id, { quantity: v })} label="Quantity" placeholder="5 g" readOnly={incoming(s)} fixed={ended} />
+                    <Box value={s.timing} onChange={(v) => editSupp(s.id, { timing: v })} label="Timing" placeholder="With breakfast" readOnly={incoming(s)} fixed={ended} />
+                    <Box value={s.notes} onChange={(v) => editSupp(s.id, { notes: v })} label="Notes" placeholder="—" quiet readOnly={incoming(s)} fixed={ended} />
                     <span className="rls-more">
-                      {!incoming(s) && (
+                      {/* Remove is a change: no ⋯ on an ended phase, its room kept (6 Nov, Alex: an ended phase look-only). */}
+                      {!incoming(s) && !ended && (
                         <DropdownMenu modal={false}>
                           <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${s.name || "item"}`}>
                             <MoreIcon />
@@ -778,7 +793,10 @@ export default function NutritionDraft({
             ))}
           </SortableList>
           {/* + Item opens a dropdown with the search at its top, as + Metric (21 Oct, Alex): presets by group, or your own. */}
-          {adding ? (
+          {/* Ended: no + Item, and with no items the card says None (6 Nov, Alex: an ended phase look-only). */}
+          {ended ? (
+            supps.length === 0 && <p className="rls-none">None</p>
+          ) : adding ? (
             <AddSuppRow have={supps.map((s) => s.name.trim().toLowerCase())} onAdd={addSupp} onClose={() => setAdding(false)} />
           ) : (
             <button type="button" className="rls-add" onClick={() => setAdding(true)}>
@@ -788,8 +806,9 @@ export default function NutritionDraft({
         </div>
       </section>
 
-      {/* ---- What the client logged: figures, then one row a day. Still to be looked through on an ended phase (rd-keep). */}
-      <section className="rls-section rd-keep">
+      {/* ---- What the client logged: figures, then one row a day. All of it for reading, so all of it stays on an ended
+          phase: the capsule, the days opening, the pager, the message and the meal's comment (6 Nov, Alex: an ended phase look-only). */}
+      <section className="rls-section">
         <div className="trn-weekhead">
           <div>
             <h2>{firstName}&rsquo;s logs</h2>
@@ -822,9 +841,9 @@ export default function NutritionDraft({
         <div className="rls-card rls-log">
           {view.days.length === 0 && <p className="rls-none">None yet</p>}
           {/* With more than a page, the rows keep a full page's height (21 Oct, Alex: the last page made the screen jump;
-              .rd-steady): a day's row is 49px with its hairline, under 29.75px of column heads and over 6px of room. */}
+              .rd-steady): a day's row is 53px with its hairline, under 36px of column heads (6 Nov, Alex: one list row). */}
           {view.days.length > 0 && (
-            <div className={`rd-rows${pages > 1 ? " rd-steady" : ""}`} style={pages > 1 ? ({ "--log-rows": PAGE, "--log-row": "49px", "--log-head": "35.75px" } as React.CSSProperties) : undefined}>
+            <div className={`rd-rows${pages > 1 ? " rd-steady" : ""}`} style={pages > 1 ? ({ "--log-rows": PAGE, "--log-row": "53px", "--log-head": "36px" } as React.CSSProperties) : undefined}>
               <div className="rd-cols" aria-hidden="true" style={lGrid}>
                 <span>Date</span>
                 <span>Logged</span>
@@ -1258,11 +1277,20 @@ function CreateSupp({ initial, taken, onCreate, onCancel }: { initial: string; t
   );
 }
 
-function Box({ value, onChange, label, placeholder, unit, strong, quiet, autoFocus, readOnly }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string; unit?: string; strong?: boolean; quiet?: boolean; autoFocus?: boolean; readOnly?: boolean }) {
+/** fixed: an ended phase's (6 Nov, Alex: an ended phase look-only), the value as words where the field was, as Training's
+ *  Fixed draws a done week's: no line, no caret, a dash where there is none, the whole of it in the tooltip when cut. */
+function Box({ value, onChange, label, placeholder, unit, strong, quiet, autoFocus, readOnly, fixed }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string; unit?: string; strong?: boolean; quiet?: boolean; autoFocus?: boolean; readOnly?: boolean; fixed?: boolean }) {
+  const v = value.trim();
   return (
     <span className={`rd-cell rn-box${unit ? " unit" : ""}${strong ? " strong" : ""}${quiet ? " quiet" : ""}`}>
-      <input className="rd-cell-box" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder ?? "—"} aria-label={label} autoFocus={autoFocus} readOnly={readOnly} />
-      {unit && value !== "" && <em aria-hidden="true">{unit}</em>}
+      {fixed ? (
+        <span className={`rd-cell-box rd-cell-ro${v ? "" : " none"}`} aria-label={label} title={v.length > 12 ? v : undefined}>
+          {v || "—"}
+        </span>
+      ) : (
+        <input className="rd-cell-box" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder ?? "—"} aria-label={label} autoFocus={autoFocus} readOnly={readOnly} />
+      )}
+      {unit && (fixed ? v : value) !== "" && <em aria-hidden="true">{unit}</em>}
     </span>
   );
 }

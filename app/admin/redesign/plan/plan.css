@@ -311,3 +311,15 @@
 /* A log's category is its icon in its colour before the thing (27 Oct, Alex), no pill column. */
 .rd-row-main.rq-evrow.rq-evrow, .rq-evrow.rq-evrow { grid-template-columns: calc(var(--ev-start, 84px) + var(--ev-arrow, 0px) + var(--ev-end, 0px)) 22px 16px minmax(0, 1fr); }
 .rq-evrow-kind { display: inline-flex; align-items: center; justify-content: center; }
+
+/* The Events log drawn with the one list row (6 Nov, Alex: one list row), as the Feed's: the hairline across the card's
+   whole width in #eef0f3, every row 52px, the first column 18px in. The card's edge is an inset ring, so the rows stop
+   1px inside it (their hover never paints over it) and keep 17px of their own. The Log head and None yet stay where they
+   were. A full page is 53px a row with its hairline over the rows' 12px foot (EventsCard still sets --log-row 43px, so
+   the steady height is set here). */
+.rd.pln .rq-evlog { padding-left: 1px; padding-right: 1px; }
+.rd.pln .rq-evlog-head { padding-left: 23px; padding-right: 13px; }
+.rd.pln .rq-evlog-empty { padding-left: 23px; padding-right: 23px; }
+.rd.pln .rq-evlog .rd-rows { padding: 0 0 12px; }
+.rd.pln .rq-evlog .rd-row { border-top: 1px solid #eef0f3; }
+.rd.pln .rq-evlog .rd-row-main.rq-evrow { min-height: 52px; padding: 0 17px; border-radius: 0; }

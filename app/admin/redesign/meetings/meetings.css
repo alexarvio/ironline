@@ -53,6 +53,8 @@
 /* A past call's summary opens a tab in, under the call's title (23 Oct, Alex: as the next call's body sits under its
    title): the date column (150px) and its gap (24px) of pGrid past the row's own 10px. */
 .rd.rt .rn-day > .rt-past:not(.bare) { padding-left: 184px; }
+/* (6 Nov, Alex: one list row) the row starts 18px in, so the summary's tab in is 150 + 24 + 18. */
+.rd.rt .rt-log .rn-day > .rt-past:not(.bare) { padding-left: 192px; }
 .rd.rt .rt-past-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
 .rd.rt .rt-recap-title { width: 100%; height: 34px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; box-shadow: none; outline: none; font: inherit; font-size: 15px; font-weight: 600; color: #141a24; }
 .rd.rt .rt-recap-title:hover { border-bottom-color: #e1e5eb; }
@@ -140,6 +142,15 @@
 .rd.rt .rt-calls > .rd-rows { padding: 0; }
 .rd.rt .rt-calls .rd-row-main { padding: 12px 18px; border-radius: 0; }
 .rd.rt .rt-calls .rd-row + .rd-row { border-top: 1px solid #eef0f3; }
+
+/* Past calls drawn with the one list row (6 Nov, Alex: one list row), as the calls above and the Feed: the shared card,
+   the hairline across the card's whole width in #eef0f3, every row 52px, the heads and the first column 18px in, the
+   heads small caps at 600 in #5b6474 with no line under them (the first row's top line is the only one). */
+.rd.rt .rt-card.rt-log { padding: 2px 0 8px; }
+.rd.rt .rt-log > .rd-rows { padding: 0; }
+.rd.rt .rt-log .rd-cols { min-height: 36px; padding: 4px 18px 0; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.rd.rt .rt-log .rd-row { border-top: 1px solid #eef0f3; }
+.rd.rt .rt-log .rd-row-main { min-height: 52px; padding: 0 18px; border-radius: 0; }
 
 /* The kind of call (21 Oct, Alex): a tag in its colour after the title (Check-in blue, Review purple, Other grey). */
 .rd.rt .rt-kind { align-self: center; display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px 0 6px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }

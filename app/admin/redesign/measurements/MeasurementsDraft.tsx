@@ -163,6 +163,9 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const lastDay = plan.endDate ? addDays(plan.endDate, 6) : null;
   const today = plan.planCtx.today;
   const startHasCome = !!plan.startDate && plan.startDate <= today;
+  // An ended phase is look-only (6 Nov, Alex: an ended phase look-only), as Training's done weeks: no banner and nothing
+  // faded; what would change it is not drawn, what is for reading stays. The header's Ended tag says it is over.
+  const past = plan.status === "past";
 
   // ---- What the client is asked for: changed on screen at once, saved behind it (21 Oct, Alex: as Training).
   const [rows, setRows] = useState(plan.metrics);
@@ -260,7 +263,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   // The rows of the rhythm on screen; a drag reorders them among themselves.
   const shown = rows.filter((r) => r.frequency === cadence);
   // No drag on an ended phase, nor while a row just added is still saving (its place would be lost).
-  const canDrag = plan.status !== "past" && !rows.some((r) => r.id < 0);
+  const canDrag = !past && !rows.some((r) => r.id < 0);
   const moveShown = (ids: (number | string)[]) => {
     if (!canDrag) return;
     const queue = ids.map((id) => rows.find((r) => r.id === id)).filter((r): r is DraftMetric => !!r);
@@ -397,12 +400,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   };
 
   return (
-    <div className={`rd trn rls${plan.status === "past" ? " rd-past" : ""}`}>
-      {plan.status === "past" && (
-        <div className="rd-past-note" role="note">
-          <b>Ended.</b> This phase is here to look back on; nothing in it can be changed.
-        </div>
-      )}
+    // No Ended banner and no blanket fade (6 Nov, Alex: an ended phase look-only): the Ended tag says it.
+    <div className="rd trn rls">
       {/* ---- Header (21 Oct, as Training's): the name to click and type, the ▾ to switch phase, the state tag as its menu;
           the weeks and dates under it; on the right the goals and note pills and the menu. */}
       {/* No fact line, no room kept for one; no phase, the track's name is the title and the eyebrow goes (22 Oct, Alex). */}
@@ -428,7 +427,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                 />
               ) : (
                 <>
-                  {phaseId ? (
+                  {/* An ended phase's name is words (6 Nov, Alex: an ended phase look-only), as an ended programme's. */}
+                  {phaseId && past ? (
+                    <span className="trn-name-btn ro">{shownName}</span>
+                  ) : phaseId ? (
                     <button type="button" className="trn-name-btn" onClick={() => setRenaming(shownName)} title="Rename">
                       {shownName}
                     </button>
@@ -508,7 +510,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         </div>
         <div className="trn-head-actions">
           {/* The goals and the note to the client as pills (21 Oct, as Training's), one pop-over under them. */}
-          {phaseId != null && <GoalsNotePills firstName={firstName} phaseId={phaseId} goals={plan.goals} note={plan.coachNote} area="lifestyle" />}
+          {/* Ended: the note reads, gone when empty (6 Nov, Alex: an ended phase look-only). */}
+          {phaseId != null && <GoalsNotePills firstName={firstName} phaseId={phaseId} goals={plan.goals} note={plan.coachNote} area="lifestyle" locked={past} />}
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="trn-more" aria-label="More for the phase">
               <MoreIcon />
@@ -517,7 +520,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <DropdownMenuItem onSelect={() => message({ label: "Lifestyle", link: { kind: "checkin", section: logCadence } })}>
                 <ChatIcon /> Message about lifestyle
               </DropdownMenuItem>
-              {phaseId != null && (
+              {phaseId != null && !past && (
                 <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>
                   <CalendarIcon /> Edit dates
                 </DropdownMenuItem>
@@ -546,11 +549,24 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             <h2>Tracked metrics</h2>
             <span>
               {shown.length} {CAD[cadence].label.toLowerCase()} {shown.length === 1 ? "metric" : "metrics"}
+              {/* Ended, the day it opened is a fact on this line, not a menu (6 Nov, Alex: an ended phase look-only). */}
+              {past && shown.length > 0 && cadence === "weekly" && (
+                <>
+                  <Sep />
+                  opened {checkInDay}
+                </>
+              )}
+              {past && shown.length > 0 && cadence === "monthly" && (
+                <>
+                  <Sep />
+                  opened on the {ordinal(monthDay ?? 1)}
+                </>
+              )}
             </span>
           </div>
           <div className="trn-weekhead-actions">
             {/* The day this rhythm's check-in opens, beside the rhythm it belongs to. */}
-            {cadence === "weekly" && (
+            {cadence === "weekly" && !past && (
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger className="trn-btn" aria-label="Which day the weekly check-in opens">
                   <CalendarIcon /> Opens {checkInDay}
@@ -565,7 +581,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            {cadence === "monthly" && (
+            {cadence === "monthly" && !past && (
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger className="trn-btn" aria-label="Which day of the month the monthly check-in opens">
                   <CalendarIcon /> Opens on the {ordinal(monthDay ?? 1)}
@@ -591,6 +607,9 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                 New phase
               </button>
             </div>
+          ) : past && shown.length === 0 ? (
+            // Ended with nothing on this rhythm: the one word, no + Metric (6 Nov, Alex: an ended phase look-only).
+            <p className="rls-none">None</p>
           ) : (
             <>
               {shown.length > 0 && (
@@ -610,9 +629,14 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                     <SortableItem key={m.id} id={m.id} className={`rls-row${incoming ? " trn-incoming" : ""}`}>
                       {(grip) => (
                         <div className="rls-row-main" style={grid}>
-                          <span className="rd-grip trn-grip" {...(canDrag ? grip : {})}>
-                            <GripIcon />
-                          </span>
+                          {/* Ended: the order stays, no grip, its column kept (6 Nov, Alex: an ended phase look-only). */}
+                          {past ? (
+                            <span aria-hidden="true" />
+                          ) : (
+                            <span className="rd-grip trn-grip" {...(canDrag ? grip : {})}>
+                              <GripIcon />
+                            </span>
+                          )}
                           <span className="rls-name">
                             <b>{m.name}</b>
                             {m.unit && <small>{m.unit}</small>}
@@ -638,8 +662,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                                   <DropdownMenuItem onSelect={() => message({ label: m.name, link: { kind: "checkin", section: m.frequency } })}>
                                     <ChatIcon /> Message about {m.name}
                                   </DropdownMenuItem>
-                                  {/* To another rhythm: it leaves this list for that one. */}
-                                  {CADENCES.filter((c) => c !== m.frequency).map((c) => (
+                                  {/* To another rhythm: it leaves this list for that one. Not on an ended phase (6 Nov, Alex: an ended phase look-only). */}
+                                  {!past && CADENCES.filter((c) => c !== m.frequency).map((c) => (
                                     <DropdownMenuItem key={c} onSelect={() => moveTo(m, c)}>
                                       <CalendarIcon /> Ask {c} instead
                                     </DropdownMenuItem>
@@ -648,10 +672,14 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                                   <DropdownMenuItem onSelect={() => setSummary(m, m.summary === "change" ? "average" : "change")}>
                                     <ChartIcon /> {m.summary === "change" ? "Show the average" : "Show the change"}
                                   </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "remove", metric: m })}>
-                                    <TrashIcon /> Remove
-                                  </DropdownMenuItem>
+                                  {!past && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "remove", metric: m })}>
+                                        <TrashIcon /> Remove
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
@@ -663,7 +691,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                 })}
               </SortableList>
               {/* + Metric opens a dropdown with the search at its top (21 Oct, Alex): the card never stretches while adding. */}
-              {adding ? (
+              {/* Nothing added to an ended phase (6 Nov, Alex: an ended phase look-only). */}
+              {past ? null : adding ? (
                 <AddMetricRow library={plan.library} groups={plan.groups} have={rows.map((r) => r.name.toLowerCase())} onAdd={addMetric} onClose={() => setAdding(false)} />
               ) : (
                 <button type="button" className="rls-add" onClick={() => setAdding(true)}>
@@ -675,8 +704,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         </div>
       </section>
 
-      {/* ---- Check-ins: what the client logged lately, three ways. Still to be looked through on an ended phase (rd-keep). */}
-      <section className="rls-section rd-keep">
+      {/* ---- Check-ins: what the client logged lately, Table | Graph; on an ended phase all of it still reads. */}
+      <section className="rls-section">
         <div className="trn-weekhead">
           <div>
             <h2>Check-ins</h2>
@@ -692,12 +721,13 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             {rhythmToggle(logCadence, setLogCadence, false)}
           </div>
         </div>
-        {/* As tall as its fullest page (.rd-steady): a row is 42px with its hairline, under a 45.75px head; the card's edge,
-            padding and the rows' own 12px under them make up the rest. The Graph keeps its own height. */}
+        {/* As tall as its fullest page (.rd-steady): a row is 53px with its hairline, under a 50px head; the card's 1px edges and
+            its own padding (2px over, 8px under) make up the rest. The Table sits on the plain card, its lines edge to edge
+            (6 Nov, Alex: one list row); the Graph keeps the log card and its own height. */}
         <div
           ref={logCard}
-          className={`rls-card rls-log${logSteady ? " rd-steady" : ""}`}
-          style={logSteady ? ({ "--log-rows": logRows, "--log-row": "42px", "--log-head": `${73.75 + logBar}px` } as React.CSSProperties) : undefined}
+          className={`rls-card${!plan.notStarted && show !== "graph" ? "" : " rls-log"}${logSteady ? " rd-steady" : ""}`}
+          style={logSteady ? ({ "--log-rows": logRows, "--log-row": "53px", "--log-head": `${62 + logBar}px` } as React.CSSProperties) : undefined}
         >
           {/* Not started or nothing asked: two words, the header already says the state and the dates. */}
           {plan.notStarted ? (
@@ -1171,14 +1201,14 @@ function CheckinTable({ view, whole, cadence, summaryOf, onReply }: { view: Logg
   };
   return (
     <div className="rm-scroll">
-      <div className="rm-table" style={{ gridTemplateColumns: `150px repeat(${view.metrics.length}, minmax(96px, 1fr))` }}>
-        <span className="rm-th" style={{ paddingLeft: 10 }}>
-          Date
-        </span>
-        {view.metrics.map((m) => {
+      {/* No gap between the columns, so the line between rows runs edge to edge (6 Nov, Alex: one list row): each cell
+          keeps its 24px of room on its right instead, the date 18px in, the last column 18px from the edge. */}
+      <div className="rm-table" style={{ gridTemplateColumns: `182px repeat(${view.metrics.length}, minmax(120px, 1fr))` }}>
+        <span className="rm-th">Date</span>
+        {view.metrics.map((m, j) => {
           const s = summary(m);
           return (
-            <span key={m.id} className="rm-th">
+            <span key={m.id} className={`rm-th${j === view.metrics.length - 1 ? " last" : ""}`}>
               <span className="rm-th-top">
                 <span className="rm-th-name">{m.name}</span>
                 {s && (
@@ -1205,10 +1235,10 @@ function CheckinTable({ view, whole, cadence, summaryOf, onReply }: { view: Logg
               <span className="rd-logdate">{logWhen(p.key, p.label, cadence)}</span>
               {view.notes[p.key] && <NoteBubble text={view.notes[p.key]} onReply={() => onReply(p.key)} />}
             </span>
-            {view.metrics.map((m) => {
+            {view.metrics.map((m, j) => {
               const v = valueFor(m.id, p.key);
               return (
-                <span key={m.id} className={`rm-td${i === 0 ? " now" : ""}${v == null ? " none" : ""}`}>
+                <span key={m.id} className={`rm-td${i === 0 ? " now" : ""}${v == null ? " none" : ""}${j === view.metrics.length - 1 ? " last" : ""}`}>
                   {v == null ? "—" : n(v)}
                 </span>
               );

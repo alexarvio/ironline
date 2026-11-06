@@ -641,7 +641,8 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
             <h2>Past calls</h2>
           </div>
         </div>
-        <div className="rls-card rt-card">
+        {/* One list row (6 Nov, Alex): the full-width row, as the calls above and the Feed (rt-log, meetings.css). */}
+        <div className="rls-card rt-card rt-log">
           {past.length === 0 ? (
             <p className="rt-none">None yet</p>
           ) : (

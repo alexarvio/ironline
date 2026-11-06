@@ -140,14 +140,27 @@
 .rd.rnt .rls-row .rd-cell-box, .rd.rnt .rn-targets .rd-cell-box { width: auto; min-width: 9ch; max-width: 100%; height: 30px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: none; field-sizing: content; }
 .rd.rnt .rls-row .rd-cell-box:hover, .rd.rnt .rn-targets .rd-cell-box:hover { border-bottom-color: #e1e5eb; background: none; }
 .rd.rnt .rls-row .rd-cell-box:focus, .rd.rnt .rls-row .rd-cell-box:focus:hover, .rd.rnt .rn-targets .rd-cell-box:focus, .rd.rnt .rn-targets .rd-cell-box:focus:hover { border-bottom-color: #141a24; background: none; caret-color: #141a24; }
+/* An ended phase's figures and supplements as words where the fields were (6 Nov, Alex: an ended phase look-only), as
+   Training's done week (.rd-cell-ro, trn.css): no line on hover, the unit right after the figure, a grey dash for none. */
+.rd.rnt .rn-box .rd-cell-box.rd-cell-ro { display: block; min-width: 0; overflow: hidden; line-height: 30px; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+.rd.rnt .rn-box .rd-cell-box.rd-cell-ro:hover { border-bottom-color: transparent; }
+.rd.rnt .rn-box .rd-cell-box.rd-cell-ro.none { font-weight: 500; color: #b0b6c0; }
 /* No tint behind a row being typed in (21 Oct, Alex): the words and their line alone, as the title's rename. */
 .rd.rnt .rls-row:hover { background: none; }
 /* The log's five figures are the shared figures card (`.rls-figs`, measurements.css; 3 Nov, Alex): low protein rust, as `b.warn`
    there. The unit grey right after the figure. With no day logged the log card is None yet alone, on the card's own edge. */
 .rd.rnt .rn-figs .rls-fig b em { margin-left: 5px; font-size: 13px; font-style: normal; font-weight: 500; letter-spacing: 0; color: #8b93a1; }
-.rd.rnt .rls-card.rls-log > .rls-none:only-child { padding: 16px 18px; }
-.rd.rnt .rls-log .rd-rows { padding-bottom: 6px; }
+.rd.rnt .rls-card.rls-log > .rls-none:only-child { padding: 21px 18px 15px; }
 .rd.rnt .rls-log .rd-cols { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+/* The logs drawn as the supplements over them and every list (6 Nov, Alex: one list row): the card's own padding, the
+   line between days edge to edge in #eef0f3, a day 52px with its content on the row's middle, the date and the heads
+   18px in, the right edge 18px in too. The opened day's meals keep those edges. */
+.rd.rnt .rls-card.rls-log { padding: 2px 0 8px; }
+.rd.rnt .rls-log .rd-rows { padding: 0; }
+.rd.rnt .rls-log .rd-rows > .rd-cols { min-height: 36px; padding: 4px 18px 0; }
+.rd.rnt .rls-log .rd-rows > .rd-row { border-top-color: #eef0f3; }
+.rd.rnt .rls-log .rd-rows > .rn-day > .rd-row-main { min-height: 52px; padding: 0 18px; border-radius: 0; }
+.rd.rnt .rls-log .rn-day > .rn-meals { padding-left: 18px; padding-right: 18px; }
 /* A day's row. Training or Rest: the one state pill (29 Oct, Alex: .trn-state, Training ink, Rest grey), one width down the column,
    the word centred, the head over it centred too (21 Oct, Alex). */
 .rd.rnt .rn-day .rnt-daypill { display: inline-flex; align-items: center; justify-content: center; justify-self: stretch; box-sizing: border-box; padding-left: 0; padding-right: 0; }
