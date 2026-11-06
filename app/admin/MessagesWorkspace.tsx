@@ -52,6 +52,7 @@ export default function MessagesWorkspace({
   const [link, setLink] = useState<PickedLink | null>(null);
   const [pending, startTransition] = useTransition();
   const [sent, setSent] = useState(false);
+  const [fileFailed, setFileFailed] = useState(false);
   // One message at a time is being reworded, or getting a link.
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
   const [linking, setLinking] = useState<number | null>(null);
@@ -96,7 +97,15 @@ export default function MessagesWorkspace({
     fd.set("text", "");
     fd.set("file", file);
     // The file goes ahead to the server's disk; the send carries its handle (4 Nov, Alex: memory).
-    act(async () => sendChatMessageAction(await uploadFirstOrThrow(fd, "chat", clientId)));
+    // The upload is a plain fetch, so a dropped connection throws here; caught, or it took the whole page down (6 Nov).
+    setFileFailed(false);
+    act(async () => {
+      try {
+        await sendChatMessageAction(await uploadFirstOrThrow(fd, "chat", clientId));
+      } catch {
+        setFileFailed(true);
+      }
+    });
   };
 
   // Day headings: one per day, on its first message.
@@ -233,6 +242,7 @@ export default function MessagesWorkspace({
         )}
         <div className="msg-bar-row">
           <MessageLinkPicker targets={targets} onPick={setLink} />
+          {fileFailed && <span style={{ color: "#b8471f", fontSize: 12.5, fontWeight: 600, alignSelf: "center" }}>Not sent. Try again</span>}
           <button type="button" className="msg-attach" onClick={() => fileInput.current?.click()} disabled={pending} aria-label="Send a photo, video or file" title="Photo, video or file">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M17.5 8.5l-8 8a3.5 3.5 0 0 1-5-5l8.3-8.3a2.4 2.4 0 0 1 3.4 3.4l-8.1 8.1a1.3 1.3 0 0 1-1.9-1.9l7-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

@@ -59,14 +59,19 @@ export default function BarcodeScanner({ onCode, onClose }: { onCode: (code: str
         tick();
         stop = () => window.clearTimeout(frame);
       } else {
-        const { BrowserMultiFormatReader } = await import("@zxing/browser");
-        if (cancelled) return;
-        const reader = new BrowserMultiFormatReader();
-        const controls = await reader.decodeFromVideoElement(video, (result) => {
-          const text = result?.getText();
-          if (text && /^\d{8,14}$/.test(text)) finish(text);
-        });
-        stop = () => controls.stop();
+        // The reader comes over the network; with no signal it says so, as the camera does (6 Nov).
+        try {
+          const { BrowserMultiFormatReader } = await import("@zxing/browser");
+          if (cancelled) return;
+          const reader = new BrowserMultiFormatReader();
+          const controls = await reader.decodeFromVideoElement(video, (result) => {
+            const text = result?.getText();
+            if (text && /^\d{8,14}$/.test(text)) finish(text);
+          });
+          stop = () => controls.stop();
+        } catch {
+          if (!cancelled) setError("The scanner did not load. Type the barcode instead.");
+        }
       }
     })();
     return () => {

@@ -31,6 +31,11 @@ const nextConfig: NextConfig = {
     // recording, go to a route the proxy skips.) 25mb with it (4 Nov): the big
     // files skip the proxy now (api/upload in its matcher).
     proxyClientMaxBodySize: "25mb",
+    // A save sent while the phone has no signal waits for it and goes again,
+    // instead of rejecting (6 Nov: a client on 5G in the gym lost the whole
+    // app to "Something went wrong" each time a set's save failed to load).
+    // Navigations and refreshes wait the same way.
+    useOffline: true,
   },
 };
 
