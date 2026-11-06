@@ -1200,6 +1200,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         clientId={CLIENT_ID}
         email={profile.email ?? null}
         phone={profile.phone ?? null}
+        phoneCode={profile.phone_code ?? null}
         address={{ address: profile.address ?? "", postcode: profile.postcode ?? "", city: profile.city ?? "", region: profile.region ?? "", country_code: profile.country_code ?? "", country: profile.country ?? "" }}
       />
 

@@ -4,27 +4,29 @@ import { useState, useTransition } from "react";
 import { saveMyDetailsAction } from "../lib/actions";
 import { addressLine, type PostalAddress } from "../lib/address";
 import { COUNTRIES, countryOf } from "../lib/countries";
+import { DEFAULT_DIAL, DIAL_CODES, phoneLine } from "../lib/phone";
 
 // Your details on Settings: email, phone, address, shown as rows and edited
 // in place. Edit turns the rows into fields; Save posts them all at once.
 // The photo lives in the banner above. The address is in its parts (23 Oct,
 // for the coach's invoices): read as one line, typed as the street, the
 // postcode and city, and the country (a state where the country has them).
+// The phone as the coach's Details keeps it (6 Nov, Alex): the dial code
+// picked beside the number, shown joined; one record for both.
 type Address = { address: string; postcode: string; city: string; region: string; country_code: string; country: string };
-type Fields = { email: string; phone: string } & Address;
+type Fields = { email: string; phone: string; phone_code: string } & Address;
 
-const ROWS: { key: "email" | "phone"; label: string; type: string; placeholder: string; autoComplete: string }[] = [
-  { key: "email", label: "Email", type: "email", placeholder: "name@example.com", autoComplete: "email" },
-  { key: "phone", label: "Phone", type: "tel", placeholder: "+31 6 12345678", autoComplete: "tel" },
-];
-const KEYS: (keyof Fields)[] = ["email", "phone", "address", "postcode", "city", "region", "country_code", "country"];
+const KEYS: (keyof Fields)[] = ["email", "phone", "phone_code", "address", "postcode", "city", "region", "country_code", "country"];
 /** The country list's own value for a country not on it, typed by name. */
 const OTHER = "other";
 
-export default function MyDetailsCard({ clientId, email, phone, address }: { clientId: number; email: string | null; phone: string | null; address: PostalAddress }) {
+export default function MyDetailsCard({ clientId, email, phone, phoneCode, address }: { clientId: number; email: string | null; phone: string | null; phoneCode: string | null; address: PostalAddress }) {
+  // A number kept from before the split has no code: it stays as typed, the code left unpicked (as the coach's Details).
+  const legacy = !phoneCode && !!phone;
   const saved: Fields = {
     email: email ?? "",
     phone: phone ?? "",
+    phone_code: phoneCode || (legacy ? "" : DEFAULT_DIAL),
     address: address.address ?? "",
     postcode: address.postcode ?? "",
     city: address.city ?? "",
@@ -55,6 +57,7 @@ export default function MyDetailsCard({ clientId, email, phone, address }: { cli
     setEditing(false);
   };
   const shownAddress = addressLine(address);
+  const shownPhone = phoneLine(phoneCode, phone);
 
   return (
     <section className="home-dark-section st-details">
@@ -74,22 +77,26 @@ export default function MyDetailsCard({ clientId, email, phone, address }: { cli
             if (changed && !pending) save();
           }}
         >
-          {ROWS.map((r) => (
-            <label key={r.key} className="st-details-field">
-              <span className="st-details-label">{r.label}</span>
-              <input
-                id={`st-details-${r.key}`}
-                className="st-details-input"
-                type={r.type}
-                inputMode={r.type === "tel" ? "tel" : r.type === "email" ? "email" : "text"}
-                autoComplete={r.autoComplete}
-                value={draft[r.key]}
-                placeholder={r.placeholder}
-                onChange={(e) => set(r.key)(e.target.value)}
-                disabled={pending}
-              />
-            </label>
-          ))}
+          <label className="st-details-field">
+            <span className="st-details-label">Email</span>
+            <input id="st-details-email" className="st-details-input" type="email" inputMode="email" autoComplete="email" value={draft.email} placeholder="name@example.com" onChange={(e) => set("email")(e.target.value)} disabled={pending} />
+          </label>
+          <div className="st-details-field">
+            <span className="st-details-label" id="st-details-phone-label">
+              Phone
+            </span>
+            <span className="st-details-phone" role="group" aria-labelledby="st-details-phone-label">
+              <select className={`st-details-input st-details-dial${draft.phone_code ? "" : " empty"}`} value={draft.phone_code} onChange={(e) => set("phone_code")(e.target.value)} disabled={pending} aria-label="Country dial code">
+                {!draft.phone_code && <option value="">Code</option>}
+                {DIAL_CODES.map(([iso, c]) => (
+                  <option key={iso} value={c}>
+                    {iso} {c}
+                  </option>
+                ))}
+              </select>
+              <input id="st-details-phone" className="st-details-input" type="tel" inputMode="tel" autoComplete="tel-national" value={draft.phone} placeholder="6 12345678" onChange={(e) => set("phone")(e.target.value)} disabled={pending} aria-label="Phone number" />
+            </span>
+          </div>
           <label className="st-details-field">
             <span className="st-details-label">Address</span>
             <input className="st-details-input" autoComplete="street-address" value={draft.address} placeholder="Street and number" onChange={(e) => set("address")(e.target.value)} disabled={pending} maxLength={160} />
@@ -151,12 +158,14 @@ export default function MyDetailsCard({ clientId, email, phone, address }: { cli
         </form>
       ) : (
         <div className="home-dark-rows">
-          {ROWS.map((r) => (
-            <div key={r.key} className="st-details-row">
-              <span className="st-details-label">{r.label}</span>
-              <span className={`st-details-value${saved[r.key] ? "" : " empty"}`}>{saved[r.key] || "Add"}</span>
-            </div>
-          ))}
+          <div className="st-details-row">
+            <span className="st-details-label">Email</span>
+            <span className={`st-details-value${saved.email ? "" : " empty"}`}>{saved.email || "Add"}</span>
+          </div>
+          <div className="st-details-row">
+            <span className="st-details-label">Phone</span>
+            <span className={`st-details-value${shownPhone ? "" : " empty"}`}>{shownPhone || "Add"}</span>
+          </div>
           <div className="st-details-row">
             <span className="st-details-label">Address</span>
             <span className={`st-details-value${shownAddress ? "" : " empty"}`}>{shownAddress || "Add"}</span>
