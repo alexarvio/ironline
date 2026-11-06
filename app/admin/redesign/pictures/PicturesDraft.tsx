@@ -6,10 +6,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { addPhotoSlotAction, remindProgressPicturesAction, removePhotoAngleAction, savePhotoSetupAction, sendChatMessageAction, setPhotoSlotPausedAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
-import type { PhaseTrack } from "../../../lib/db";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { SepJoin } from "../Sep";
-import CompareDialog from "./CompareDialog";
+import Compare from "./Compare";
 import { Fold } from "../Fold";
 import { TodoStrip } from "../TodoStrip";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
@@ -17,7 +16,6 @@ import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/p
 import { CameraIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { ConfirmDialog, MessageDialog, useClickAway } from "../training/TrainingDraft";
 import { GripIcon } from "../training/TrainingParts";
-import { TrackIcon } from "../plan/PlanDraft";
 import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
 import { SortableItem, SortableList } from "../Sortable";
@@ -26,25 +24,22 @@ import { SaveStatus } from "../SaveStatus";
 import { dayMonth, dayMonthTime, logDate } from "../../../lib/dayMonth";
 import { pic } from "../../../lib/pic";
 import { newOnceKey } from "../../../lib/onceKey";
-import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
 import { landOn } from "../../../lib/landOn";
 
-// The Progress pictures tab (21 Oct, Alex), built as Training's header:
+// The Shape update tab (21 Oct, Alex), built as Training's header. Each update is "Shape update 1, 2, 3" in the order
+// they opened, never "Month 2" or "Week 3", and nothing reads "sheet" (6 Nov, Alex). The code keeps its sheet names.
 //
-// - Header: the client's pictures, the open sheet (or the next one) as a tag,
-//   the save status; Sheet setup and ⋯ on the right.
-// - Sheet setup: a pop-up, as a phase's: the month, the start, the rhythm, the
-//   instructions, and the angles, each with a word on how to take it. Save.
-// - The newest sheet alone: its photos (empty places while it is open), the
-//   weigh-in, the plan's phases, Remind, and a comment for the client that
-//   goes to the chat, linked to the sheet (no notes of its own).
-//   Compare opens the same angle from the sheets picked, side by side.
-// - All sheets: a log, a row a sheet, newest first; a row opens in place on its photos and, with photos, the same
-//   comment (23 Oct, Alex: the finished sheets took none). What was said on a sheet shows over its line.
+// - Header: the client's shape updates, the open one (or the next one) as a tag, the save status; Setup on the right.
+// - Setup: a pop-up, as a phase's: the month, the start, the rhythm, the instructions, and the angles, each with a
+//   word on how to take it. Save.
+// - The newest update alone: its photos (empty places while it is open), the weigh-in, Remind, and a comment for the
+//   client that goes to the chat, linked to the update (no notes of its own). No phases (6 Nov, Alex).
+// - Compare, on the page (6 Nov, Alex: it was a pop-up, "a step away"): the same angle from the two updates picked.
+// - All shape updates: a log, a row an update, newest first; a row opens in place on its photos and, with photos, the
+//   same comment (23 Oct, Alex: the finished ones took none). What was said on an update shows over its line.
 
 export type Cadence = "weekly" | "biweekly" | "monthly" | "sixweekly";
 export type Cell = { slotId: number; label: string; src: string | null; shot: string | null; shotDay: string | null };
-export type SheetPhase = { id: number; track: PhaseTrack; name: string };
 export type Sheet = {
   period: string;
   title: string;
@@ -55,8 +50,6 @@ export type Sheet = {
   total: number;
   cells: Cell[];
   weight: number | null;
-  /** Every non-draft phase that ran while the sheet was open: Lifestyle, Training, Nutrition. */
-  phases: SheetPhase[];
   /** The coach's comments on it (23 Oct, Alex): their chat messages linked to the sheet, oldest first. */
   comments: SheetSaid[];
 };
@@ -78,7 +71,7 @@ export type DraftPictures = {
   remindedToday: boolean;
 };
 
-type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "photo"; period: string; slotId: number; /** Opened from Compare: closing it goes back there. */ back?: string[] } | { kind: "setup" } | { kind: "compare"; periods: string[] } | { kind: "drop"; slotId: number; label: string } | null;
+type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "photo"; period: string; slotId: number } | { kind: "setup" } | { kind: "drop"; slotId: number; label: string } | null;
 
 const ROWS_SHOWN = 12;
 const REPEATS: { value: Cadence; label: string }[] = [
@@ -113,8 +106,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
   const reRead = () => startRefresh(() => router.refresh());
   const q = useSaveQueue(reRead);
   const [dlg, setDlg] = useState<Dlg>(null);
-  // A photo opened from Compare goes back to Compare when it closes.
-  const close = () => setDlg((d) => (d?.kind === "photo" && d.back ? { kind: "compare", periods: d.back } : null));
+  const close = () => setDlg(null);
 
   // ---- A comment typed on a sheet, not sent yet, by the sheet: kept while its row is folded, and leaving the page asks first.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -138,7 +130,6 @@ function Pictures({ clientId, firstName, plan }: Props) {
 
   // ---- Sheets, newest first. The top of the tab is the newest alone (21 Oct, Alex): the one open now, or the last one.
   const sheets = plan.sheets;
-  const latest = sheets[0] ?? null;
   // The top: the sheet open now (until every photo is in), else the next one on its own day (21 Oct, Alex).
   const openSheet = sheets.find((s) => s.live) ?? null;
   const top = openSheet ?? plan.upcoming;
@@ -157,7 +148,9 @@ function Pictures({ clientId, firstName, plan }: Props) {
       return true;
     });
   };
-  const oldest = sheets[sheets.length - 1] ?? null;
+  // Compare (6 Nov, Alex: on the page): the updates with a photo, the first beside the newest.
+  const withPhotos = sheets.filter((s) => s.inCount > 0);
+  const compareFrom = withPhotos.length >= 2 ? [withPhotos[withPhotos.length - 1].period, withPhotos[0].period] : [];
   const [all, setAll] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   const showAll = () => {
@@ -210,12 +203,6 @@ function Pictures({ clientId, firstName, plan }: Props) {
       cancelAnimationFrame(frame);
     };
   }, []);
-  // Compare: the first sheet beside the newest.
-  const openCompare = (period?: string) => {
-    if (!latest) return;
-    const other = period && period !== latest.period ? period : oldest && oldest.period !== latest.period ? oldest.period : null;
-    setDlg({ kind: "compare", periods: other ? [other, latest.period] : [latest.period] });
-  };
   const [remindedNow, setRemindedNow] = useState<string | null>(null);
   const reminded = !!openSheet && (plan.remindedToday || remindedNow === openSheet.period);
   const remind = (sh: Sheet) => {
@@ -250,10 +237,10 @@ function Pictures({ clientId, firstName, plan }: Props) {
           </div>
         </div>
         <div className="trn-head-actions">
-          {/* Sheet setup is a pop-up, as a phase's (21 Oct, Alex): the calendar, the rhythm, the instructions and the angles. */}
+          {/* Setup is a pop-up, as a phase's (21 Oct, Alex): the calendar, the rhythm, the instructions and the angles. */}
           <button type="button" className="trn-pill rp-setup-btn" aria-haspopup="dialog" onClick={() => setDlg({ kind: "setup" })}>
             <SlidersIcon />
-            Sheet setup
+            Setup
             {/* Its facts only once an angle is set (22 Oct, Alex: a new client has nothing set up). */}
             {plan.slots.length > 0 && (
               <small>
@@ -281,13 +268,6 @@ function Pictures({ clientId, firstName, plan }: Props) {
           <div className="rp-selhead">
             <h2>{top.title}</h2>
             <span className="rp-selmeta">{top.dateLabel}</span>
-            {sheets.length > 1 && (
-              <div className="rp-selright">
-                <button type="button" className="trn-btn rp-cmp-btn" aria-haspopup="dialog" onClick={() => openCompare()}>
-                  <CompareIcon /> Compare
-                </button>
-              </div>
-            )}
           </div>
           <div className="rls-card rp-sheet">
             <div className="rp-grid" style={{ "--rp-cols": cols, "--rp-cols-narrow": Math.min(cols, 3) } as React.CSSProperties}>
@@ -343,18 +323,11 @@ function Pictures({ clientId, firstName, plan }: Props) {
                 )}
               </div>
             </div>
+            {top.live && (
             <div className="rp-foot">
-              {top.live && (
-                <>
-                  <span className="rp-weight">
-                    <span className="rp-label">Weight</span>
-                    <b>{top.weight == null ? "—" : `${top.weight} kg`}</b>
-                  </span>
-                  <span className="rp-div" aria-hidden="true" />
-                </>
-              )}
-              <span className="rp-phases">
-                <PhaseTags phases={top.phases} />
+              <span className="rp-weight">
+                <span className="rp-label">Weight</span>
+                <b>{top.weight == null ? "—" : `${top.weight} kg`}</b>
               </span>
               {/* Reminded keeps the focus (aria-disabled, not disabled): the keyboard isn't dropped to the page. */}
               {top.live && !top.complete && (
@@ -365,12 +338,17 @@ function Pictures({ clientId, firstName, plan }: Props) {
                 </span>
               )}
             </div>
+            )}
             {/* A comment on the open sheet goes to the chat, linked to it (21 Oct, Alex): no notes of its own. The next
                 sheet, waiting with no photos, takes none. */}
             {top.live && <SheetComment key={top.period} firstName={firstName} said={top.comments} draft={drafts[top.period] ?? ""} onDraft={setDraft(top.period)} onSend={sendComment(top)} />}
           </div>
         </section>
       )}
+
+      {/* ---- Compare, on the page (6 Nov, Alex: "a step away" in a pop-up): second, under the update on top, once two
+          updates hold photos. A photo in it opens big as any other. */}
+      {compareFrom.length === 2 && <Compare clientId={clientId} sheets={withPhotos} initial={compareFrom} onOpenPhoto={(period, slotId) => setDlg({ kind: "photo", period, slotId })} />}
 
       {/* ---- All sheets, newest first, the closed ones (the open one is at the top until it is done): a log, the rows
           together as every log in the app (21 Oct, Alex). A row opens in place on its photos (the chevron after its title). */}
@@ -380,16 +358,15 @@ function Pictures({ clientId, firstName, plan }: Props) {
         <section className="rls-section">
           <div className="trn-weekhead">
             <div>
-              <h2>All sheets</h2>
+              <h2>All shape updates</h2>
             </div>
           </div>
           <div ref={tableRef} className="rls-card rp-table">
             <div className="rp-thead" aria-hidden="true">
               <span>Date</span>
-              <span>Sheet</span>
+              <span>Name</span>
               <span>Photos</span>
               <span>Weight</span>
-              <span>Phases</span>
               <span className="end">State</span>
             </div>
             {closed.length === 0 && <p className="rls-none">None yet</p>}
@@ -414,7 +391,6 @@ function Pictures({ clientId, firstName, plan }: Props) {
                     </span>
                     {/* The weigh-in alone: a change is Compare's to show (21 Oct, Alex). */}
                     <span className="rp-tweight">{sh.weight == null ? <span className="none">—</span> : `${sh.weight} kg`}</span>
-                    <span className="rp-phases">{sh.phases.length > 0 ? <PhaseTags phases={sh.phases} small /> : <span className="none">—</span>}</span>
                     <span className="rp-tstate">
                       <span className={`trn-state${st.tone === "good" ? " good" : st.tone === "open" ? " warn" : ""}`}>{st.text}</span>
                     </span>
@@ -464,7 +440,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
             }}
           />
         )}
-        {dlg?.kind === "photo" && photoSheet && <PhotoDialog sheet={photoSheet} sheets={sheets} slotId={dlg.slotId} onMove={(period, slotId) => setDlg({ kind: "photo", period, slotId, back: dlg.back })} />}
+        {dlg?.kind === "photo" && photoSheet && <PhotoDialog sheet={photoSheet} sheets={sheets} slotId={dlg.slotId} onMove={(period, slotId) => setDlg({ kind: "photo", period, slotId })} />}
         {dlg?.kind === "setup" && (
           <SetupDialog
             clientId={clientId}
@@ -488,13 +464,12 @@ function Pictures({ clientId, firstName, plan }: Props) {
             }}
           />
         )}
-        {dlg?.kind === "compare" && <CompareDialog clientId={clientId} sheets={sheets} initial={dlg.periods} onOpenPhoto={(period, slotId) => setDlg({ kind: "photo", period, slotId, back: dlg.periods })} />}
       </Dialog>
     </div>
   );
 }
 
-/** Sheet setup, as a phase's pop-up (21 Oct, Alex): the month on the left, the start date (typed or picked), how often a
+/** Setup, as a phase's pop-up (21 Oct, Alex): the month on the left, the start date (typed or picked), how often a
  *  sheet opens and the instructions on the right; under them the angles, each with a word on how to take it.
  *  Cancel / Save: nothing reaches the client before Save. Removing an angle with photos asks for a tick first. */
 type AngleDraft = { key: number; id: number | null; label: string; hint: string; paused: boolean; count: number };
@@ -567,14 +542,14 @@ function SetupDialog({ clientId, firstName, plan, onSaved }: { clientId: number;
       }}
     >
       <div className="npd-head">
-        <DialogTitle className="npd-title">Sheet setup</DialogTitle>
+        <DialogTitle className="npd-title">Setup</DialogTitle>
         <span className="npd-tools">
           <DialogClose className="npd-x" aria-label="Close">
             ✕
           </DialogClose>
         </span>
       </div>
-      <DialogDescription className="sr-only">When {firstName}&rsquo;s sheets open, how to take them, and the angles asked for</DialogDescription>
+      <DialogDescription className="sr-only">When {firstName}&rsquo;s shape updates open, how to take them, and the angles asked for</DialogDescription>
 
       <div className="npd-cols">
         <MonthRange
@@ -724,20 +699,6 @@ function Tile({ cell, sheet, label, tag, emptyText, onOpen }: { cell: Cell | nul
         </span>
       )}
     </button>
-  );
-}
-
-/** A track's tag, as every track tag wears it (phaseChrome's palette): its tint behind, its icon and words in its ink. */
-function PhaseTags({ phases, small = false }: { phases: SheetPhase[]; small?: boolean }) {
-  return (
-    <>
-      {phases.map((p) => (
-        <span key={p.id} className={`rp-phase${small ? " sm" : ""}`} style={{ color: TRACK_PALETTE[p.track].ink, background: TRACK_PALETTE[p.track].tint }} title={`${TRACK_LABEL[p.track]} · ${p.name}`}>
-          <TrackIcon track={p.track} size={small ? 10 : 11} />
-          <span>{p.name}</span>
-        </span>
-      ))}
-    </>
   );
 }
 
@@ -1052,7 +1013,7 @@ function PhotoDialog({ sheet, sheets, slotId, onMove }: { sheet: Sheet; sheets: 
       </div>
       {earlier.length > 0 && (
         <>
-          <span className="rp-label">Same angle, other sheets</span>
+          <span className="rp-label">Same angle, other shape updates</span>
           <div className="rp-strip">
             {earlier.map(({ sheet: x, cell: c }) => (
               <button key={x.period} type="button" className="rp-mini" onClick={() => onMove(x.period, c.slotId)} aria-label={`${c.label}, ${x.title}`}>
@@ -1075,17 +1036,7 @@ function PhotoDialog({ sheet, sheets, slotId, onMove }: { sheet: Sheet; sheets: 
   );
 }
 
-/** Compare's mark: two frames side by side. */
-function CompareIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="5" width="7.5" height="14" rx="1.5" />
-      <rect x="13.5" y="5" width="7.5" height="14" rx="1.5" />
-    </svg>
-  );
-}
-
-/** Sheet setup's mark: three sliders. */
+/** Setup's mark: three sliders. */
 function SlidersIcon() {
   return (
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

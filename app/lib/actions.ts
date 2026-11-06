@@ -1556,7 +1556,7 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   // Only into the sheet the client's screen shows (it may have closed meanwhile), never an angle no longer asked for.
   const sheet = photoSheetForClient(clientId, localDateStr());
   const sent = String(formData.get("period") ?? "");
-  if (!sheet || (sent && sent !== sheet)) throw new Error("That sheet has closed");
+  if (!sheet || (sent && sent !== sheet)) throw new Error("That shape update has closed");
   if (!listActivePhotoSlots(clientId).some((s) => s.id === slotId)) throw new Error("That angle isn't asked for any more");
   // Still in the action's body (4 Nov, Alex: memory): shrunk on the phone to a few hundred KB (fitJpeg), well under
   // next.config.ts's 25mb; the big files go through /api/upload.
@@ -1578,7 +1578,7 @@ export async function removeProgressPhotoAction(formData: FormData) {
   const slotId = Number(formData.get("slotId"));
   if (getClientIdForPhotoSlot(slotId) !== clientId) return;
   const sent = String(formData.get("period") ?? "");
-  if (sent && sent !== photoSheetForClient(clientId, localDateStr())) throw new Error("That sheet has closed");
+  if (sent && sent !== photoSheetForClient(clientId, localDateStr())) throw new Error("That shape update has closed");
   await deleteUpload(removePhotoUpload(clientId, slotId));
   revalidatePath("/admin");
   revalidatePath("/client");

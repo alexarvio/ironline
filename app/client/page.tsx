@@ -86,6 +86,7 @@ import {
   listPhotoPeriods,
   listPhotoSlots,
   listPhotoUploads,
+  photoSlotsOnSheet,
   localDateStr,
   photoSheetFor,
   nextPhotoSheet,
@@ -1350,16 +1351,15 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
 // schedule the coach set: the sheet open now with its angles, and every
 // earlier sheet with the coach's notes on it.
 
-// "September sheet" on a monthly schedule; the opening day otherwise.
-function sheetTitle(period: string, cadence: ReturnType<typeof getPhotoCadence>) {
-  const d = new Date(`${period}T00:00:00`);
-  return cadence === "monthly" ? `${monthWords(d, { year: false })} sheet` : `Sheet of ${dayWords(d)}`;
+// Shape update 1, 2, 3 in the order they opened (6 Nov, Alex: no "Month 1", no "sheet"), as the coach's tab counts them.
+function sheetTitles(periods: string[]) {
+  const order = [...new Set(periods)].sort();
+  return (period: string) => `Shape update ${order.indexOf(period) + 1}`;
 }
 
 function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
   // Their photos' small copies made behind the page where missing (27 Oct, Alex: Compare loading slowly).
   warmClientPhotos(CLIENT_ID);
-  const cadence = getPhotoCadence(CLIENT_ID);
   const today = localDateStr();
   const slots = listPhotoSlots(CLIENT_ID);
   const active = slots.filter((s) => !s.paused);
@@ -1370,15 +1370,16 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
   // The client's sheet: the open one, else the one just finished (a wrong photo can still be swapped) until the next opens.
   const openPeriod = active.length > 0 ? photoSheetForClient(CLIENT_ID, today) : null;
   const strictlyOpen = active.length > 0 ? photoSheetFor(CLIENT_ID, today) : null;
-  const earlier = listPhotoPeriods(slots.map((s) => s.id))
+  const sent = listPhotoPeriods(slots.map((s) => s.id));
+  const sheetTitle = sheetTitles(openPeriod ? [...sent, openPeriod] : sent);
+  const earlier = sent
     .filter((p) => p !== openPeriod)
     .map((period) => ({
       period,
-      title: sheetTitle(period, cadence),
-      // A sheet keeps any paused angle it already has a photo for.
-      photos: slots
-        .filter((s) => !s.paused || srcFor(s.id, period))
-        .map((s) => ({ slotId: s.id, label: s.label, src: srcFor(s.id, period) })),
+      title: sheetTitle(period),
+      // A sheet keeps any paused angle it already has a photo for, and an angle added later is not missing from it
+      // (6 Nov, Alex; photoSlotsOnSheet).
+      photos: photoSlotsOnSheet(slots, uploads, period, false).map((s) => ({ slotId: s.id, label: s.label, src: srcFor(s.id, period) })),
     }));
   const oldest = earlier[earlier.length - 1];
   const next = active.length > 0 && !strictlyOpen ? nextPhotoSheet(CLIENT_ID, today) : null;
@@ -1388,7 +1389,7 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
     openSheet: openPeriod
       ? {
           period: openPeriod,
-          title: sheetTitle(openPeriod, cadence),
+          title: sheetTitle(openPeriod),
           openedLabel: fmtShortDate(openPeriod),
           slots: active.map((s) => ({ id: s.id, label: s.label, hint: s.hint ?? null, src: srcFor(s.id, openPeriod) })),
           instructions: getPhotoInstructions(CLIENT_ID),

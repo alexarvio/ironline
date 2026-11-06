@@ -121,7 +121,7 @@ export default function ProgressPicturesScreen({
             Entries and Compare (24 Oct, Alex: as the check-in's Entries). */}
         <header className="tr-banner ci-banner pp-banner">
           <div className="tr-kicker">{open ? "Open now" : "Shape update"}</div>
-          <FitTitle className="tr-name">{open ? open.title : "No sheet open"}</FitTitle>
+          <FitTitle className="tr-name">{open ? open.title : "Nothing open"}</FitTitle>
           <div className="tr-weeks ci-views" role="tablist" aria-label="Shape update">
             <button type="button" role="tab" aria-selected={view === "sheet"} className={`tr-wk${view === "sheet" ? " on" : ""}`} onClick={() => setView("sheet")}>
               Entries
@@ -171,10 +171,10 @@ export default function ProgressPicturesScreen({
           </section>
         )}
 
-        {/* (3 Nov, Alex: words mockup) `Next sheet | 12 Nov` with the drawn bar; no next date, no line. */}
+        {/* (3 Nov, Alex: words mockup) `Next shape update | 12 Nov` with the drawn bar; no next date, no line. (6 Nov, Alex: no "sheet".) */}
         {view === "sheet" && data.hasAngles && data.nextLabel && (
           <p className="pp-app-foot">
-            <Bars parts={["Next sheet", data.nextLabel]} />
+            <Bars parts={["Next shape update", data.nextLabel]} />
           </p>
         )}
       </main>

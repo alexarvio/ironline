@@ -73,6 +73,7 @@ import {
   listPhotoPeriods,
   listPhotoSlots,
   listPhotoUploads,
+  photoSlotsOnSheet,
   photoSheetFor,
   nextPhotoSheet,
   localDateStr,
@@ -912,7 +913,6 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
 
 // ---- Progress pictures ---------------------------------------------------------
 
-const PERIOD_UNIT = { weekly: "Week", biweekly: "Check-in", monthly: "Month", sixweekly: "Block" } as const;
 const stampDay = (iso: string) => dayMonth(localDateStr(new Date(iso)));
 const stampDayTime = dayMonthTime;
 
@@ -942,32 +942,7 @@ export function loadPictures(clientId: number): DraftPictures {
     const last = inside[inside.length - 1];
     return last ? Math.round(last.value * 10) / 10 : null;
   };
-  // The Plan tab's phases that ran while a sheet was open (from the day it opened to the day before the next,
-  // or today for the newest), so one that began mid-week counts (21 Oct, Alex): Lifestyle, Training, Nutrition, as the Plan's lanes run.
-  const trackOrder = ["lifestyle", "training", "nutrition"] as const;
-  const phases = listClientPhases(clientId).filter((p) => !p.draft);
-  const dayBefore = (iso: string) => {
-    const d = new Date(`${iso}T12:00:00`);
-    d.setDate(d.getDate() - 1);
-    return localDateStr(d);
-  };
-  // A sheet's own stretch: a week, two, a month or six from the day it opened (never past the next sheet).
-  // Monthly opens on the start's day of the month, clamped in shorter months (as the sheets themselves: 31 Jan, 28 Feb, 31 Mar).
-  const sheetEnd = (from: string) => {
-    if (cadence === "monthly") {
-      const [y, m] = from.split("-").map(Number);
-      const day = Number((startDate ?? from).slice(8, 10));
-      return dayBefore(localDateStr(new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()))));
-    }
-    const d = new Date(`${from}T12:00:00`);
-    d.setDate(d.getDate() + (cadence === "biweekly" ? 14 : cadence === "sixweekly" ? 42 : 7));
-    return dayBefore(localDateStr(d));
-  };
-  const phasesIn = (from: string, newer: string | undefined) => {
-    const end = sheetEnd(from);
-    const to = newer && dayBefore(newer) < end ? dayBefore(newer) : end;
-    return trackOrder.flatMap((track) => phases.filter((p) => p.track === track && p.start_week <= to && phaseLastDay(p.end_week) >= from).map((p) => ({ id: p.id, track, name: p.name })));
-  };
+  // No phases on an update (6 Nov, Alex): the Plan says what ran when.
   // The coach's comments on each sheet (23 Oct, Alex): their chat messages linked to it, oldest first, read only here.
   const commentsOn = new Map<string, { id: number; text: string; when: string }[]>();
   for (const m of listChatMessages(clientId)) {
@@ -978,8 +953,8 @@ export function loadPictures(clientId: number): DraftPictures {
   }
 
   const sheets = periods.map((period, i) => {
-    const cells = slots
-      .filter((s) => !s.paused || uploadFor(s.id, period))
+    // An angle added later is not missing from the updates before it (6 Nov, Alex).
+    const cells = photoSlotsOnSheet(slots, uploads, period, period === live)
       .map((s) => {
         const u = uploadFor(s.id, period);
         return { slotId: s.id, label: s.label, src: u?.file_path ?? null, shot: u ? stampDayTime(u.uploaded_at) : null, shotDay: u ? stampDay(u.uploaded_at) : null };
@@ -988,7 +963,8 @@ export function loadPictures(clientId: number): DraftPictures {
     const number = periods.length - i;
     return {
       period,
-      title: `${PERIOD_UNIT[cadence]} ${number}`,
+      // Shape update 1, 2, 3 (6 Nov, Alex): never "Month 2" or "Week 3", whatever the rhythm.
+      title: `Shape update ${number}`,
       live: period === live,
       complete: cells.length > 0 && inCount === cells.length,
       dateLabel: dayMonth(period),
@@ -996,7 +972,6 @@ export function loadPictures(clientId: number): DraftPictures {
       total: cells.length,
       cells,
       weight: weightFor(period, periods[i - 1]),
-      phases: phasesIn(period, periods[i - 1]),
       comments: commentsOn.get(period) ?? [],
     };
   });
@@ -1007,7 +982,7 @@ export function loadPictures(clientId: number): DraftPictures {
   const upcoming = nextSheet
     ? {
         period: nextSheet,
-        title: `${PERIOD_UNIT[cadence]} ${periods.length + 1}`,
+        title: `Shape update ${periods.length + 1}`,
         live: false,
         complete: false,
         dateLabel: dayMonth(nextSheet),
@@ -1015,7 +990,6 @@ export function loadPictures(clientId: number): DraftPictures {
         total: active.length,
         cells: active.map((s) => ({ slotId: s.id, label: s.label, src: null, shot: null, shotDay: null })),
         weight: null,
-        phases: phasesIn(nextSheet, undefined),
         comments: [],
       }
     : null;

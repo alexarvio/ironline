@@ -3257,7 +3257,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       category: "measurements",
       at: s.latest ? stampMs(s.latest) : middayMs(s.period),
       tab: "photos",
-      text: `sent ${plural(s.photos.length, "photo")} for the sheet of ${feedDay(s.period)}`,
+      text: `sent ${plural(s.photos.length, "photo")} for the shape update of ${feedDay(s.period)}`,
       thing: "Sent a shape update",
       thumbs: s.photos.sort((a, b) => a.order - b.order).map((p) => p.src),
       // That sheet, opened (24 Oct, Alex).
@@ -4809,7 +4809,7 @@ export function listMetricPeriods(metricDefinitionIds: number[], limit = 500): s
 // 1, anything) — not a fixed set. The client uploads one photo per slot per
 // week; uploading again the same week replaces that week's photo.
 
-export type PhotoSlot = { id: number; client_id: number; label: string; order_index: number; paused?: boolean; /** How to take it, shown to the client as they add it (21 Oct). */ hint?: string };
+export type PhotoSlot = { id: number; client_id: number; label: string; order_index: number; paused?: boolean; /** How to take it, shown to the client as they add it (21 Oct). */ hint?: string; /** When it was first asked for (6 Nov); absent on older angles. */ added_at?: string };
 export type PhotoUpload = {
   id: number;
   slot_id: number;
@@ -5075,6 +5075,27 @@ export function listPhotoSlots(clientId: number): PhotoSlot[] {
     .sort((a, b) => a.order_index - b.order_index);
 }
 
+/**
+ * The angles a shape update shows (6 Nov, Alex: two angles added on the fourth showed as missing on the three before):
+ * an open or coming one, every angle asked now; one that is done, the angles it holds a photo for, and those that were
+ * already asked when its last photo came in (from the day an angle was added; an older angle, from its first photo).
+ * A paused angle only where it has a photo. The coach's tab and the client's screen alike.
+ */
+export function photoSlotsOnSheet<S extends Pick<PhotoSlot, "id" | "paused" | "added_at">>(slots: S[], uploads: Pick<PhotoUpload, "slot_id" | "period" | "uploaded_at">[], period: string, open: boolean): S[] {
+  const here = uploads.filter((u) => u.period === period);
+  const has = (s: S) => here.some((u) => u.slot_id === s.id);
+  if (open) return slots.filter((s) => !s.paused || has(s));
+  const lastIn = here.reduce<string | null>((m, u) => (!m || u.uploaded_at > m ? u.uploaded_at : m), null);
+  const askedFrom = (s: S) =>
+    s.added_at ?? uploads.filter((u) => u.slot_id === s.id).reduce<string | null>((m, u) => (!m || u.uploaded_at < m ? u.uploaded_at : m), null);
+  return slots.filter((s) => {
+    if (has(s)) return true;
+    if (s.paused) return false;
+    const from = askedFrom(s);
+    return !!from && !!lastIn && from <= lastIn;
+  });
+}
+
 export function addPhotoSlot(clientId: number, label: string, hint?: string): number {
   const data = getData();
   // After the last one, whatever removals left gaps in the numbers.
@@ -5086,6 +5107,7 @@ export function addPhotoSlot(clientId: number, label: string, hint?: string): nu
     label,
     order_index: Math.max(-1, ...mine.map((s) => s.order_index)) + 1,
     ...(hint?.trim() ? { hint: hint.trim() } : {}),
+    added_at: new Date().toISOString(),
   });
   persist();
   return id;

@@ -28,7 +28,6 @@
 .rd.rp .rp-selhead h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
 .rd.rp .rp-selmeta { font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd.rp .rp-selright { display: flex; align-items: center; gap: 8px; margin-left: auto; align-self: center; }
-.rd.rp .rp-cmp-btn.trn-btn { height: 36px; }
 
 /* The cards are the shared card (3 Nov, Alex: was its own radius 20 and an inset edge): `.rls-card`, a real 1px
    hairline, radius 18. The open sheet keeps its own room inside. Nothing yet is the shared `None yet` (`.rls-none`). */
@@ -54,12 +53,10 @@
 .rd.rp .rp-cap-state.waiting { color: #b8471f; }
 .rd.rp .rp-cap-state.missing { color: #98a2b3; }
 
-/* The card's foot: the weigh-in, the phases, Remind. */
+/* The card's foot: the weigh-in, Remind (no phases, 6 Nov, Alex). */
 .rd.rp .rp-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 12px; border-top: 1px solid #eef0f3; }
 .rd.rp .rp-weight { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; }
 .rd.rp .rp-weight b { font-size: 15px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
-.rd.rp .rp-div { width: 1px; height: 16px; background: #e1e5eb; }
-.rd.rp .rp-foot .rp-phases { flex: 1; min-width: 0; }
 .rd.rp .rp-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 /* Training's trn-pill: 36px, 13px at 600 (29 Oct, Alex). */
 .rd.rp .rp-pill { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
@@ -86,16 +83,9 @@
 /* A finished sheet's comment, under its photos in the opened row. */
 .rd.rp .rp-tbody .rp-comment { margin-top: 14px; }
 
-/* A track's tag: its tint behind, its icon and words in its ink (style, inline). */
-.rd.rp .rp-phases { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
-.rd.rp .rp-phase { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; height: 24px; padding: 0 9px; border-radius: 999px; box-sizing: border-box; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
-.rd.rp .rp-phase > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.rd.rp .rp-phase svg { flex: none; }
-.rd.rp .rp-phase.sm { height: 22px; padding: 0 8px; font-size: 11px; }
-
-/* ---- All sheets: a log, a row a sheet, the rows together (as every log in the app), newest first. */
+/* ---- All shape updates: a log, a row an update, the rows together (as every log in the app), newest first. */
 .rd.rp .rls-card.rp-table.rp-table { padding: 0; overflow: hidden; }
-.rd.rp .rp-thead, .rd.rp .rp-trow { display: grid; grid-template-columns: 112px minmax(64px, 96px) 110px 100px minmax(0, 1fr) 104px; align-items: center; gap: 12px; }
+.rd.rp .rp-thead, .rd.rp .rp-trow { display: grid; grid-template-columns: 112px minmax(0, 1fr) 110px 100px 104px; align-items: center; gap: 12px; }
 .rd.rp .rp-thead { padding: 12px 18px; border-bottom: 1px solid #e1e5eb; font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98a2b3; white-space: nowrap; }
 .rd.rp .rp-thead .end { text-align: center; }
 .rd.rp .rp-trow { width: 100%; min-height: 54px; padding: 8px 18px; border: 0; border-top: 1px solid #eef0f3; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
@@ -112,21 +102,17 @@
 .rd.rp .rp-bars.done i.in { background: #2f7a3f; }
 .rd.rp .rp-tweight { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd.rp .rp-trow .none { font-size: 13px; color: #98a2b3; }
-/* Tags that don't fit shrink and end in an ellipsis (the icon stays), never cut mid-pill. */
-.rd.rp .rp-trow .rp-phases { flex-wrap: nowrap; overflow: hidden; }
-.rd.rp .rp-trow .rp-phase { flex: 0 1 auto; min-width: 24px; }
 /* The state is Training's .trn-state pill, every one the column's width, the word centred (21 Oct, Alex). */
 .rd.rp .rp-tstate { display: flex; }
 .rd.rp .rp-tstate .trn-state { flex: 1; justify-content: center; box-sizing: border-box; }
-/* A narrow tab: the phases column steps aside (they show on the newest sheet). */
+/* A narrow tab: the columns close up. */
 @container rp (max-width: 640px) {
   .rd.rp .rp-thead, .rd.rp .rp-trow { grid-template-columns: 112px minmax(0, 1fr) 96px 90px 104px; }
-  .rd.rp .rp-thead > :nth-child(5), .rd.rp .rp-trow > .rp-phases { display: none; }
 }
 .rd.rp .rp-showall { align-self: flex-start; padding: 0 0 0 4px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
 .rd.rp .rp-showall:hover { color: #5b6474; }
 
-/* ---- Sheet setup: the phase pop-up's .npd (month left, the dates and words right), the angles under them. */
+/* ---- Setup: the phase pop-up's .npd (month left, the dates and words right), the angles under them. */
 .npd.npd.rp-setupdlg .rp-anglesfield { margin-top: 22px; }
 /* Clear beside Starts: words alone, as Cancel. */
 .npd.npd.rp-setupdlg .rp-clear { flex: none; height: 36px; padding: 0 8px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; cursor: pointer; }
@@ -158,11 +144,12 @@
 .npd.npd.rp-setupdlg .rp-ack { margin-top: 16px; }
 .npd.npd.rp-setupdlg .rp-err { margin-right: auto; font-size: 13px; font-weight: 500; color: #b42318; }
 
-/* ---- Compare (21 Oct, Alex): the .dlh card at 960px, everything on a laptop screen without a scroll. Two week pickers,
-   the angle switch across the row in equal parts (the shared capsule, ink when chosen), then two 3:4 photos or the slider. */
-.dlh.dlh.cmp { width: min(960px, 100vw - 32px); max-height: calc(100dvh - 48px); overflow-y: auto; gap: 14px; padding: 18px 22px 22px; scrollbar-width: thin; }
-.cmp-head { display: flex; align-items: center; gap: 12px; }
-.cmp-head .cmp-view { margin-left: auto; }
+/* ---- Compare (21 Oct, Alex), on the page since 6 Nov (Alex: it was a pop-up, "a step away"): the section's title with
+   Side by side | Slider on its right, then one shared card: two pickers, the angle switch across the row in equal parts
+   (the shared capsule, ink when chosen), then two 3:4 photos or the slider. */
+.rd.rp .rls-card.cmp.cmp { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px 18px; }
+.rd.rp .cmp-head { display: flex; align-items: center; gap: 12px; }
+.rd.rp .cmp-head .cmp-view { margin-left: auto; }
 .cmp-weeks { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
 .cmp-week { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 42px; padding: 0 14px; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
 .cmp-week:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
