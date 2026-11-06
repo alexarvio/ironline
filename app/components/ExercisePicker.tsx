@@ -110,8 +110,14 @@ export default function ExercisePicker({
       const fd = new FormData();
       fd.set("exerciseId", String(created.id));
       fd.set("file", video.file);
-      // The clip goes ahead to the server's disk; the action takes its handle (4 Nov, Alex: memory).
-      const message = (await uploadFirst(fd, "video")) ?? (await uploadExerciseVideoAction(fd));
+      // The clip goes ahead to the server's disk; the action takes its handle (4 Nov, Alex: memory). That upload is a
+      // plain fetch, so a dropped connection throws: caught, or it took the whole page down (6 Nov).
+      let message: string | null;
+      try {
+        message = (await uploadFirst(fd, "video")) ?? (await uploadExerciseVideoAction(fd));
+      } catch {
+        message = "the connection dropped";
+      }
       if (message) {
         // The exercise exists and is picked; only the clip failed. Say so and
         // leave the coach on the row, where the demo chip can retry it.

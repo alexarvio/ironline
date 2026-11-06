@@ -113,7 +113,13 @@ function DemoDialog({
   const run = (fn: () => Promise<string | null | void>) =>
     start(async () => {
       setError(null);
-      const message = await fn();
+      // The clip's upload is a plain fetch, so a dropped connection throws; said here, never the whole page (6 Nov).
+      let message: string | null | void;
+      try {
+        message = await fn();
+      } catch {
+        message = "Not uploaded. Try again";
+      }
       if (message) setError(message);
       else onClose();
     });
