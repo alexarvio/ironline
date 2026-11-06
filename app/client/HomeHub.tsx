@@ -15,7 +15,7 @@ import EventsTimelineCard from "./home/EventsTimelineCard";
 import type { CardCovers } from "./CardPictureSheet";
 import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
-import { clock, dayWords, monthWords, weekdayWords } from "../lib/clientDates";
+import { clock, clockRange, dayWords, monthWords, weekdayWords } from "../lib/clientDates";
 import CoachSays from "./CoachSays";
 import MeetingNotes from "./meetings/MeetingNotes";
 import type { LinkView } from "../lib/messageLinks";
@@ -192,9 +192,10 @@ export default function HomeHub({
   ].filter((x): x is string => !!x);
   // What happens today, always last (6 Nov, Alex): an event on today, or one that starts today; a trip already under way
   // is not today's any more. A repeating one on one of its days. Not a phase or a weight goal: they have their own.
+  // A phase starting today goes there too, over the events (6 Nov, Alex: "if today some lifestyle phase is starting").
   const todayEvents = events.list
-    .filter((e) => !e.phase && !e.goal && (e.repeat ? e.start <= today && e.end >= today && e.repeat.days.includes(isoWeekday(today)) : e.start === today))
-    .sort((a, b) => a.id - b.id);
+    .filter((e) => !e.goal && (e.repeat ? !e.phase && e.start <= today && e.end >= today && e.repeat.days.includes(isoWeekday(today)) : e.start === today))
+    .sort((a, b) => (!!a.phase === !!b.phase ? a.id - b.id : a.phase ? -1 : 1));
   return (
     <div className="hm">
       <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
@@ -204,7 +205,7 @@ export default function HomeHub({
           open); then Events and Meetings. */}
       <div className="hm-body">
         {todoItems.length === 0 ? (
-          <TodayDone events={todayEvents} today={today} />
+          <TodayDone events={todayEvents} today={today} call={upcoming} />
         ) : (
           <TodayList
             items={todoItems}
@@ -217,6 +218,7 @@ export default function HomeHub({
             coachName={coach.firstName}
             phaseName={lifestyle?.name ?? null}
             events={todayEvents}
+            call={upcoming}
           />
         )}
         {/* "Your plan" (12 Oct): one swipe, lifestyle → training → nutrition, every card the same size.
@@ -257,7 +259,7 @@ export default function HomeHub({
 // ---- 0 · Today with nothing left to do (3 Nov, Alex: the audit's first point): the Today list's own look, no card. The
 // head, then one row: the done check in green and `All set for today`, nothing under it and no action.
 
-function TodayDone({ events, today }: { events: HomeEvent[]; today: string }) {
+function TodayDone({ events, today, call }: { events: HomeEvent[]; today: string; call: UpcomingMeeting }) {
   return (
     <section className="hm-td" aria-label="Today">
       <span className="hm-td-head">Today</span>
@@ -271,30 +273,87 @@ function TodayDone({ events, today }: { events: HomeEvent[]; today: string }) {
           <span className="hm-td-title">All set for today</span>
         </span>
       </div>
+      <TodayCall m={call} />
       <TodayEvents events={events} today={today} />
     </section>
   );
 }
 
+// A call with the coach today (6 Nov, Alex: "let's have meetings as well there"), before the events: the meeting's video
+// mark in its blue, the topic, its time, and Join when it has a link (the white pill, the ink one while it is on, as
+// Home's Meetings), else View opening Meetings. It follows the clock as the Meetings card does, and goes once it is over.
+const CALL = NOTIFICATION_TYPES.meeting_booked;
+function TodayCall({ m }: { m: UpcomingMeeting }) {
+  const openMeetings = useOpenMeetings();
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    const t = setInterval(tick, 60000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearTimeout(first);
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, []);
+  if (!m) return null;
+  const start = m.startIso ? Date.parse(m.startIso) : NaN;
+  const mins = now != null && Number.isFinite(start) ? (start - now) / 60000 : null;
+  if (localMeetingLabels(m, now).inLabel !== "Today" || (mins != null && mins < -m.durationMinutes)) return null;
+  const live = mins != null ? mins <= 10 : m.startingNow;
+  // The time from the phone's clock once it is known; before, the server's words without the weekday.
+  const when = now != null && Number.isFinite(start) ? clockRange(new Date(start), new Date(start + m.durationMinutes * 60000)) : m.whenLabel.split(" · ")[0].split(" ").slice(1).join(" ");
+  const inner = (
+    <>
+      <span className="hm-td-icon" style={{ color: CALL.color }} aria-hidden="true">
+        <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+          <path d={CALL.icon} />
+        </svg>
+      </span>
+      <span className="hm-td-text">
+        <span className="hm-td-title">{m.topic}</span>
+        <span className="hm-td-fact">{when}</span>
+      </span>
+      <span className={`hm-td-act${m.link && live ? " ink" : ""}`} aria-hidden="true">
+        {m.link ? "Join" : "View"}
+      </span>
+    </>
+  );
+  return m.link ? (
+    <a className="hm-td-row" href={m.link} target="_blank" rel="noopener noreferrer" aria-label={`${m.topic}. Join.`}>
+      {inner}
+    </a>
+  ) : (
+    <button type="button" className="hm-td-row" onClick={() => openMeetings?.()} aria-label={`${m.topic}. View.`}>
+      {inner}
+    </button>
+  );
+}
+
 // Today's events, the list's last rows (6 Nov, Alex: "always the last thing"): the event's own icon in its colour, its
 // title (its kind's name when it has none), the kind as the fact, with `Until 13 Nov` after it on one that runs on, and
-// View opening it on the Events screen.
+// View opening it on the Events screen. A phase starting today first, its flag in its track's colour, as Events draws it.
+const PHASE_FLAG = "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7";
+const TRACK_WORD = { training: "Training", nutrition: "Nutrition", lifestyle: "Lifestyle" } as const;
+const TRACK_COLOR = { training: "#3a3390", nutrition: "#1d7a70", lifestyle: "#a08a5c" } as const;
 function TodayEvents({ events, today }: { events: HomeEvent[]; today: string }) {
   const openEvents = useOpenEvents();
   return events.map((e) => {
     const t = eventTypeOf(e.kind);
-    const title = e.title.trim() || t.label;
+    const title = e.phase ? e.title.replace(/ starts$/, "") : e.title.trim() || t.label;
     const runsOn = !e.repeat && e.end > today;
+    const fact = e.phase ? <Bars parts={[`${TRACK_WORD[e.phase]} phase`, "Starts today"]} /> : runsOn ? <Bars parts={[t.label, `Until ${dayWords(e.end)}`]} /> : t.label;
     return (
       <button key={e.id} type="button" className="hm-td-row" onClick={() => openEvents?.(e.id)} aria-label={`${title}. View.`}>
-        <span className="hm-td-icon" style={{ color: t.color }} aria-hidden="true">
+        <span className="hm-td-icon" style={{ color: e.phase ? TRACK_COLOR[e.phase] : t.color }} aria-hidden="true">
           <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-            <path d={t.icon} />
+            <path d={e.phase ? PHASE_FLAG : t.icon} />
           </svg>
         </span>
         <span className="hm-td-text">
           <span className="hm-td-title">{title}</span>
-          <span className="hm-td-fact">{runsOn ? <Bars parts={[t.label, `Until ${dayWords(e.end)}`]} /> : t.label}</span>
+          <span className="hm-td-fact">{fact}</span>
         </span>
         <span className="hm-td-act" aria-hidden="true">
           View
@@ -367,7 +426,7 @@ function TodayRow({ kind, title, fact, action, ink = false, onClick }: { kind: k
   );
 }
 
-function TodayList({ items, session, checkInCount, checkIn, pics, clientId, today, coachName, phaseName, events }: { items: string[]; session: HomeSession; checkInCount: { done: number; total: number } | null; checkIn: CheckInForm | null; pics: ProgressPics; clientId: number; today: string; coachName: string; phaseName: string | null; events: HomeEvent[] }) {
+function TodayList({ items, session, checkInCount, checkIn, pics, clientId, today, coachName, phaseName, events, call }: { items: string[]; session: HomeSession; checkInCount: { done: number; total: number } | null; checkIn: CheckInForm | null; pics: ProgressPics; clientId: number; today: string; coachName: string; phaseName: string | null; events: HomeEvent[]; call: UpcomingMeeting }) {
   const goToTab = useNavigateTab();
   const openCheckIn = useOpenCheckIn();
   const openPhotos = useOpenPhotos();
@@ -401,6 +460,7 @@ function TodayList({ items, session, checkInCount, checkIn, pics, clientId, toda
       {items.includes("pictures") && pics && (
         <TodayRow kind="shape" title="Shape update" fact={`${k} of ${n} photos`} action={k > 0 ? "Continue" : "Add"} onClick={() => openPhotos?.()} />
       )}
+      <TodayCall m={call} />
       <TodayEvents events={events} today={today} />
       {logOpen && checkIn && <CheckInDialog clientId={clientId} form={checkIn} today={today} coachName={coachName} phaseName={phaseName} onClose={() => setLogOpen(false)} />}
     </section>
