@@ -2,6 +2,7 @@
 
 import { chatChanged, chatCurrent, chatRev, chatTyping, timedChatRead } from "./chatBus";
 import { once, onceKeyOf, releaseOnce, takeOnce } from "./once";
+import { isDialCode, splitTypedPhone } from "./phone";
 import { isMeetingTypeId } from "./meetingTypes";
 import { isClientCall, takesClient } from "./calendarKinds";
 import { newerCallDone, noteFocus, setFocusOnComplete } from "./focus";
@@ -4475,9 +4476,16 @@ export async function saveMyDetailsAction(formData: FormData) {
     return v ? v.slice(0, 200) : null;
   };
   const str = (name: string) => String(formData.get(name) ?? "");
+  // The phone as the coach's Details keeps it (6 Nov, Alex): the dial code apart from the number. A number typed with its
+  // code in it (+31 6…) is split; a page from before sends no code and leaves the coach's as it is.
+  const typed = field("phone");
+  const split = typed ? splitTypedPhone(typed) : { code: null, number: "" };
+  const pickedCode = str("phone_code").trim();
+  const phoneCode = split.code ?? (isDialCode(pickedCode) ? pickedCode : null);
   patchClientProfile(clientId, {
     email: field("email"),
-    phone: field("phone"),
+    phone: typed ? split.number || null : null,
+    ...(formData.has("phone_code") || split.code ? { phone_code: phoneCode } : {}),
     // The address in its parts (23 Oct), as the coach's card saves it; a page from before the split posts the street alone.
     ...(ADDRESS_KEYS.every((k) => formData.has(k))
       ? cleanAddress({ address: str("address"), postcode: str("postcode"), city: str("city"), region: str("region"), country_code: str("country_code"), country: str("country") })

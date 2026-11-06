@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { DIAL_CODES } from "../lib/phone";
 
 // The client card's field row, shared by the Member info editor and the New
 // client dialog so editing a client and making one feel like the same
@@ -63,30 +64,8 @@ export function ageFrom(birthdate: string, today: Date = new Date()): number | n
   return age >= 0 && age <= 120 ? age : null;
 }
 
-// Dial codes in the order this business meets them, not alphabetically.
-export const DIAL_CODES: [iso: string, code: string][] = [
-  ["NL", "+31"],
-  ["BE", "+32"],
-  ["UK", "+44"],
-  ["DE", "+49"],
-  ["FR", "+33"],
-  ["ES", "+34"],
-  ["IT", "+39"],
-  ["PT", "+351"],
-  ["IE", "+353"],
-  ["CH", "+41"],
-  ["AT", "+43"],
-  ["DK", "+45"],
-  ["SE", "+46"],
-  ["NO", "+47"],
-  ["PL", "+48"],
-  ["US", "+1"],
-  ["AU", "+61"],
-  ["NZ", "+64"],
-  ["ZA", "+27"],
-  ["AE", "+971"],
-];
-export const DEFAULT_DIAL = "+31";
+// The dial codes live with the phone's other helpers, shared with the client's app (6 Nov, lib/phone.ts).
+export { DEFAULT_DIAL, DIAL_CODES } from "../lib/phone";
 
 /**
  * Dial code and number as one field. The two are stored apart and only

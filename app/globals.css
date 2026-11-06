@@ -20660,6 +20660,9 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .st-details-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 12px; }
 select.st-details-input.st-details-input.st-details-input { appearance: none; padding-right: 22px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b93a1' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 2px center / 14px; font-family: inherit; }
 select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3; }
+/* The phone's dial code beside the number on one line (6 Nov, Alex: as the coach's Details keeps it), the code as wide
+   as `NL +31` and its chevron. */
+.st-details-phone { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; }
 .evs-note.evs-note small { right: 0; bottom: 10px; }
 .wo-sheet-input.wo-sheet-input { height: auto; min-height: 44px; }
 /* The check-in's note keeps the coach's face beside it; the box goes, the underline runs under both. */
