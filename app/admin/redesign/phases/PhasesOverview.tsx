@@ -256,7 +256,8 @@ export default function PhasesOverview({ data, needs = [], now }: { data: Phases
           {clients.length === 0 ? (
             <p className="pov-empty">No clients yet</p>
           ) : shown.length === 0 ? (
-            <p className="pov-empty">Nobody</p>
+            // The one empty word (6 Nov, Alex: admin audit; was "Nobody").
+            <p className="pov-empty">None</p>
           ) : (
             <div className="rq-tl-scroll" ref={sideScroll}>
               <div className="rq-tl" style={{ minWidth: Math.round(grid.count * 63) }}>

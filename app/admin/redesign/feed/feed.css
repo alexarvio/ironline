@@ -165,8 +165,10 @@
    soft rust tint inside a rust edge, rust lines between rows, and the count after the title a rust pill; each row's
    action always there as a round white button with a hairline, the check after it on hover. A list that only informs
    (Ending soon) stays plain white, its buttons on the row's hover (always there on a touch screen). */
-.rd .nd-groups.owed .rls-card.nd-card { background: linear-gradient(rgba(184, 71, 31, 0.045), rgba(184, 71, 31, 0.045)), #fff; box-shadow: inset 0 0 0 1.5px rgba(184, 71, 31, 0.55); }
-.rd .nd-groups.owed .nd-row + .nd-row { border-top-color: rgba(184, 71, 31, 0.14); }
+/* Exactly the strip's look (6 Nov, Alex: admin audit; .rd-todo in training/draft.css): its 8% tint, its full 1.5px rust
+   edge as a real border at its radius 14, its 16% lines between rows; the card's grey hairline gone. */
+.rd .nd-groups.owed .rls-card.nd-card { border: 1.5px solid #b8471f; border-radius: 14px; background: rgba(184, 71, 31, 0.08); box-shadow: none; }
+.rd .nd-groups.owed .nd-row + .nd-row { border-top-color: rgba(184, 71, 31, 0.16); }
 .rd .nd-groups.owed .nd-row:hover { background: rgba(184, 71, 31, 0.05); }
 .rd .nd-groups.owed .nd-act { background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; }
 .rd .nd-groups.owed .nd-act:hover, .rd .nd-groups.owed .nd-act[data-state="open"] { background: #fff; box-shadow: inset 0 0 0 1px #141a24; }

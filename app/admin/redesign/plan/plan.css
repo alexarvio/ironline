@@ -89,7 +89,8 @@
 .rd.pln > .pln-section + .pln-section { margin-top: 10px; }
 .rd.pln .pln-section > .rn-card-head { min-height: 36px; padding: 0; }
 .rd.pln .pln-section > .rn-card-head h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
-.rd.pln .pln-card { border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; overflow: hidden; }
+/* A real 1px hairline border, never an inset shadow over its rows (6 Nov, Alex: admin audit; design rules 8). */
+.rd.pln .pln-card { border: 1px solid #e1e5eb; border-radius: 18px; background: #fff; overflow: hidden; }
 .rd.pln .pln-card > .rq-tl-scroll { padding-top: 8px; }
 /* Lane labels: the track's (or event kind's) icon in its colour, the name in ink; no tinted pill. */
 .rd.pln .rq-track { gap: 7px; height: auto; padding: 0; border-radius: 0; background: none; font-size: 12.5px; font-weight: 600; color: #141a24; }

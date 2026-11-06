@@ -6,7 +6,8 @@ import { landed, useChatOutbox, useKeptDraft } from "../../../components/chatOut
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { ChevronDownIcon, PinIcon } from "../../../components/icons";
+import { ChevronDownIcon } from "../../../components/icons";
+import { MEDIA_PATHS } from "../../../components/ChatLastLine";
 import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
 import ChatMediaGallery, { exerciseOf } from "../../../components/ChatMediaGallery";
@@ -285,7 +286,6 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     setTimeout(() => box.current?.focus(), 0);
   };
   const quoteOf = (m: DraftMessage) => m.text.trim() || (m.media?.type === "image" ? "📷 Photo" : m.media?.type === "video" ? "🎥 Video" : m.media?.type === "audio" ? "🎤 Voice message" : m.media ? `📄 ${m.media.name ?? "File"}` : "");
-  const photoInput = useRef<HTMLInputElement>(null);
   // A photo or video they sent, reviewed on the recorder (26 Oct, Alex: the phone had Review, the laptop did not); the
   // recording or words go back into the chat answering it.
   const [reviewing, setReviewing] = useState<DraftMessage | null>(null);
@@ -498,7 +498,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
       <span className="rm-meta">
         {m.pinned && !inPins && (
           <span className="rm-meta-pin" title="Pinned">
-            <PinIcon filled />
+            <PinMark />
           </span>
         )}
         {m.edited && "Edited "}
@@ -527,12 +527,13 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
           {/* When they were last in the app (4 Nov, Alex: as WhatsApp), under the name, in the head's own room for a fact line. */}
           <LastActive at={plan.lastActiveAt} className="rm-active" keepRoom />
         </div>
-        {/* Everything sent in this chat, gathered (2 Oct). */}
-        <button type="button" className="cmg-btn rm-media-btn" onClick={() => setGallery(true)} title="Photos, videos and files sent in this chat">
+        {/* Everything sent in this chat, gathered (2 Oct). The admin's white header pill, Training's trn-pill (6 Nov, Alex:
+            admin audit; was the client app's .cmg-btn), drawn in messages.css since this root is not .rd.trn. */}
+        <button type="button" className="trn-pill rm-media-btn" onClick={() => setGallery(true)} title="Photos, videos and files sent in this chat">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
+            <rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
             <circle cx="9" cy="10" r="1.6" fill="currentColor" />
-            <path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
           </svg>
           Media
         </button>
@@ -571,9 +572,16 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
               </span>
             )}
             <span className="rm-pinbar-pin" aria-hidden="true">
-              <PinIcon />
+              <PinMark />
             </span>
-            {pinShown.media && <span className="rm-pinbar-kind">{pinShown.media.type === "image" ? "📷" : pinShown.media.type === "video" ? "🎥" : pinShown.media.type === "audio" ? "🎤" : "📄"}</span>}
+            {/* The kind as its line icon, never an emoji (6 Nov, Alex: admin audit; the chat list's own, ChatLastLine). */}
+            {pinShown.media && (
+              <span className="rm-pinbar-kind" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d={MEDIA_PATHS[pinShown.media.type]} />
+                </svg>
+              </span>
+            )}
             <span className="rm-pinbar-text">
               {pinShown.text || (pinShown.media ? (pinShown.media.type === "image" ? "Photo" : pinShown.media.type === "video" ? "Video" : pinShown.media.type === "audio" ? "Voice message" : pinShown.media.name ?? "File") : pinShown.link?.label ?? "")}
             </span>
@@ -602,7 +610,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
         >
           <div ref={threadInner} className="rm-thread-inner">
           {days.length === 0 ? (
-            <p className="rm-empty">No messages yet</p>
+            // The empty word on the left, midway down, as every card's (6 Nov, Alex: admin audit; rule §1, rls-none).
+            <p className="rm-empty">None yet</p>
           ) : (
             days.map((d) => (
               <div key={d.day} className="rm-day">
@@ -672,32 +681,15 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
               behind the + on its left; on its right the mic while it is
               empty, Send once there are words, as WhatsApp does. */}
           <div className="rm-bar-row">
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger className="rd-btn ghost rm-linkbtn rm-plus" disabled={pending} aria-label="Link or attach" title="Link or attach">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start" className="pb-menu rm-plus-menu">
-                <DropdownMenuItem onSelect={() => photoInput.current?.click()}>
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
-                    <circle cx="9" cy="10" r="1.6" fill="currentColor" />
-                    <path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                  </svg>
-                  Photo or video
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => fileInput.current?.click()}>
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M17.5 8.5l-8 8a3.5 3.5 0 0 1-5-5l8.3-8.3a2.4 2.4 0 0 1 3.4 3.4l-8.1 8.1a1.3 1.3 0 0 1-1.9-1.9l7-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  File
-                </DropdownMenuItem>
-                {/* Link to something in their app is off for now (27 Oct, Alex: "could be interesting in the future"); a
-                    message's own Link to… in its menu, and links made before, stay. */}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <input ref={photoInput} type="file" accept="image/*,video/*" hidden onChange={pickFile} />
+            {/* The + opens the computer's own picker in one click (6 Nov, Alex: admin audit; docs/DESIGN-RULES.md §9, as
+                the client's ChatComposeForm): a plain button on a hidden file field, no menu of ours before it; photos,
+                videos and files all in the one picker. Link to something in their app is off for now (27 Oct, Alex:
+                "could be interesting in the future"); a message's own Link to… in its menu, and links made before, stay. */}
+            <button type="button" className="rd-btn ghost rm-linkbtn rm-plus" disabled={pending} onClick={() => fileInput.current?.click()} aria-label="Send a photo, video or file" title="Photo, video or file">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
             <input ref={fileInput} type="file" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip" hidden onChange={pickFile} />
             <textarea
               ref={box}
@@ -903,6 +895,18 @@ function Media({ media }: { media: DraftMedia }) {
 /** A link's label as written ("Squat · Upper, Week 2"), its parts parted by the drawn bar (21 Oct). */
 function LinkLabel({ label }: { label: string }) {
   return <SepJoin parts={label.split(" · ")} />;
+}
+
+/** A pin as a line icon (6 Nov, Alex: admin audit): stroke 1.6 on the 24 grid, round, no fill (design rules 5); the
+ *  shared PinIcon draws at 1.1 with a filled head. Sized by its box (.rm-meta-pin, .rm-pinbar-pin). */
+function PinMark() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 2.75c-2.9 0-5.25 2.35-5.25 5.3 0 3.4 3.4 6.3 5.25 9.4 1.85-3.1 5.25-6 5.25-9.4 0-2.95-2.35-5.3-5.25-5.3z" />
+      <circle cx="12" cy="8" r="1.9" />
+      <path d="M12 17.5v3.75" />
+    </svg>
+  );
 }
 
 function LinkGlyph() {

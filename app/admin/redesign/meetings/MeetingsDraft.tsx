@@ -26,7 +26,8 @@ import { newOnceKey } from "../../../lib/onceKey";
 import { TodoStrip } from "../TodoStrip";
 import { saveFocusAction, saveFocusDraftAction } from "../../../lib/focusActions";
 import type { CoachFocus, FocusGoalView } from "../../../lib/focus";
-import { useHoldWhile, useSaidSaved, useSaveQueue } from "../useSaveQueue";
+import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
+import { SaveStatus } from "../SaveStatus";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
 // sheet. The next call with everything to prepare it, the calls after it,
@@ -137,9 +138,11 @@ const tidyTime = (raw: string) => {
 };
 const endTime = (time: string, dur: number) => (time ? fromMin(toMin(time) + dur) : "");
 /** A call over and never marked (2 Nov, Alex): owed for a week (rust, the to-do strip carries it), then let go (grey). */
-const TO_COMPLETE = { text: "To complete", cls: "due" };
+// The shared state pill's own words (6 Nov, Alex: admin audit; trn-state, was Meetings' rt-state): Completed green
+// (good), To complete rust (warn), No-show red (bad), the rest grey.
+const TO_COMPLETE = { text: "To complete", cls: "warn" };
 const NOT_COMPLETED = { text: "Not completed", cls: "" };
-const STATUS: Record<DraftMeeting["status"], { text: string; cls: string }> = { scheduled: { text: "Scheduled", cls: "" }, completed: { text: "Completed", cls: "up" }, "no-show": { text: "No-show", cls: "down" }, cancelled: { text: "Cancelled", cls: "" } };
+const STATUS: Record<DraftMeeting["status"], { text: string; cls: string }> = { scheduled: { text: "Scheduled", cls: "" }, completed: { text: "Completed", cls: "good" }, "no-show": { text: "No-show", cls: "bad" }, cancelled: { text: "Cancelled", cls: "" } };
 /** A call's title (21 Oct, Alex): the recap's title once written, else the topic, else its kind ("Review call"). */
 const titleOf = (m: { summaryTitle: string; topic: string; kind: MeetingTypeId }) => m.summaryTitle.trim() || m.topic.trim() || `${meetingTypeOf(m.kind).label} call`;
 
@@ -248,7 +251,6 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
   const [waiting, setWaiting] = useState<string[]>([]);
   // Words still waiting are not saved yet (as Nutrition's): Saving… until they have gone.
   const busy = q.saving || waiting.length > 0;
-  const saidSaved = useSaidSaved(busy);
   const onWaiting = (key: string, on: boolean) => setWaiting((w) => (on ? (w.includes(key) ? w : [...w, key]) : w.includes(key) ? w.filter((k) => k !== key) : w));
   // While a save is on its way, failed, or its re-read is coming, what the server says is older than the screen.
   const hold = q.saving || q.failed || refreshing;
@@ -534,22 +536,9 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
           <span className="trn-eyebrow">Meetings</span>
           <div className="trn-name-row">
             <h1 className="trn-name">{firstName}&rsquo;s calls</h1>
-            {/* The tab's one save status after its title, as Training's (23 Oct, Alex). */}
-            {q.failed ? (
-              <span className="trn-allsaved failed" role="alert">
-                Not saved<Sep />
-                <button type="button" onClick={q.retry}>
-                  Retry
-                </button>
-              </span>
-            ) : (
-              // Nothing until something is saved (22 Oct, Alex).
-              saidSaved && (
-                <span className={`trn-allsaved${busy ? " saving" : ""}`} role="status">
-                  {busy ? "Saving…" : "All changes saved"}
-                </span>
-              )
-            )}
+            {/* The tab's one save status after its title, as Training's (23 Oct, Alex): the shared part (6 Nov, Alex: admin
+                audit; was written here by hand). */}
+            <SaveStatus busy={busy} failed={q.failed} onRetry={q.retry} />
           </div>
         </div>
         <div className="trn-head-actions">
@@ -644,7 +633,8 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
         {/* One list row (6 Nov, Alex): the full-width row, as the calls above and the Feed (rt-log, meetings.css). */}
         <div className="rls-card rt-card rt-log">
           {past.length === 0 ? (
-            <p className="rt-none">None yet</p>
+            // The shared empty word (6 Nov, Alex: admin audit; was Meetings' rt-none).
+            <p className="rls-none">None yet</p>
           ) : (
             <div className="rd-rows">
               <div className="rd-cols" aria-hidden="true" style={pGrid}>
@@ -676,7 +666,7 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
                         </span>
                       </span>
                       <span>
-                        <span className={`rt-state ${st.cls}`}>{st.text}</span>
+                        <span className={`trn-state rt-st ${st.cls}`}>{st.text}</span>
                       </span>
                       <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu modal={false}>
