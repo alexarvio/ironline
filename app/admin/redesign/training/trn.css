@@ -233,15 +233,17 @@
 .rd.trn .rd-row.trn-landing { opacity: 0.55; pointer-events: none; }
 
 /* ---- The exercise search's list (AddExerciseRow): a panel over the page,
-   portalled (so not under .rd.trn), six rows then it scrolls; Create pinned at its foot. */
-.rd-addpop.rd-addpop { width: var(--radix-popper-anchor-width); min-width: min(320px, 100vw - 32px); max-width: min(560px, 100vw - 32px); display: flex; flex-direction: column; padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; }
-.rd-addpop-scroll { display: flex; flex-direction: column; max-height: calc(6 * 38px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
-.rd-addpop .rd-addrow-item { flex: none; min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: #141a24; }
+   portalled (so not under .rd.trn), six rows then it scrolls; Create pinned at its foot. In the ⋯ menu's look (6 Nov, Alex:
+   docs/boards/admin-choices-mockup.html, A): radius 10, padding 5, the soft shadow and no edge, rows 34px at 13.5/600 with
+   radius 7; the create form in it keeps its lines. */
+.rd-addpop.rd-addpop { width: var(--radix-popper-anchor-width); min-width: min(320px, 100vw - 32px); max-width: min(560px, 100vw - 32px); display: flex; flex-direction: column; padding: 5px; border: 0; border-radius: 10px; background: #fff; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; }
+.rd-addpop-scroll { display: flex; flex-direction: column; max-height: calc(6 * 34px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
+.rd-addpop .rd-addrow-item { flex: none; min-height: 34px; padding: 0 10px; border-radius: 7px; font-size: 13.5px; font-weight: 600; color: #141a24; }
 /* One hover for every row and menu item (25 Oct, Alex): the exercise row's soft neutral (.on is the keyboard's row). */
 .rd-addpop .rd-addrow-item.on, .rd-addpop .rd-addrow-item:hover { background: #fafbfd; color: #141a24; }
 .rd-addpop .rd-addrow-item small { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; color: #98a2b3; }
-.rd-addpop .rd-addrow-item.create { justify-content: flex-start; gap: 6px; margin-top: 4px; padding-top: 4px; border-top: 1px solid #eef0f3; border-radius: 0 0 8px 8px; font-weight: 600; color: #141a24; }
-.rd-addpop .rd-addrow-item.create.solo { margin-top: 0; padding-top: 0; border-top: 0; border-radius: 8px; }
+.rd-addpop .rd-addrow-item.create { justify-content: flex-start; gap: 6px; margin-top: 4px; padding-top: 4px; border-top: 1px solid #eef0f3; border-radius: 0 0 7px 7px; font-weight: 600; color: #141a24; }
+.rd-addpop .rd-addrow-item.create.solo { margin-top: 0; padding-top: 0; border-top: 0; border-radius: 7px; }
 .rd-addpop .rd-addrow-item.create svg { width: 14px; height: 14px; }
 .rd-addpop .rd-addrow-back { flex: none; padding: 8px 10px; font-weight: 600; color: #5b6474; }
 /* Create your own (an exercise, a metric), in the same floating panel (21 Oct, Alex: inline it stretched the card):
@@ -418,8 +420,9 @@ body:has(.dlh) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background:
 .rd.trn .trn-q-plus:hover, .rd.trn .trn-q-plus[data-state="open"] { box-shadow: inset 0 0 0 1px var(--trn-ink); }
 .trn-q-menu.trn-q-menu { min-width: 200px; max-height: calc(6 * 36px + 12px); overflow-y: auto; scrollbar-width: thin; }
 .rd.trn .trn-q-add { position: relative; }
-.rd.trn .trn-q-sugs { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; display: flex; flex-direction: column; width: 260px; max-height: calc(6 * 36px + 12px); padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px var(--trn-line); box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
-.rd.trn .trn-q-sugs button { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 10px; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: var(--trn-ink); text-align: left; cursor: pointer; }
+/* The typed question's suggestions, a floating add-row list in the ⋯ menu's look (6 Nov, Alex: docs/boards/admin-choices-mockup.html, A). */
+.rd.trn .trn-q-sugs { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; display: flex; flex-direction: column; width: 260px; max-height: calc(6 * 34px + 10px); padding: 5px; border-radius: 10px; background: #fff; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
+.rd.trn .trn-q-sugs button { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 10px; height: 34px; padding: 0 10px; border: 0; border-radius: 7px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--trn-ink); text-align: left; cursor: pointer; }
 .rd.trn .trn-q-sugs button.on { background: var(--trn-page); }
 .rd.trn .trn-q-sugs small { font-size: 12px; font-weight: 500; color: var(--trn-faint); }
 .rd.trn .trn-q-warn { font-size: 12.5px; font-weight: 500; color: #b8471f; }

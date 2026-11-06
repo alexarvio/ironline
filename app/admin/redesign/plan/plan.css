@@ -77,6 +77,10 @@
 .rd.pln .rd-btn.ghost:hover, .rd.pln .rd-btn.ghost[data-state="open"] { background: #f5f6f8; color: #141a24; }
 .rd.pln .rd-btn.ghost.sm { width: 28px; height: 28px; }
 .rd.pln .rd-btn.ghost.rq-today { width: auto; padding: 0 12px; }
+/* ‹ Today › one look, the Plan's, the Phases screen's and the Calendar's (6 Nov, Alex: B of docs/boards/admin-choices-mockup.html): 32 square, Today 12.5px, the one row hover. */
+.rd.pln .rq-pan .rd-btn.ghost { width: 32px; height: 32px; }
+.rd.pln .rq-pan .rd-btn.ghost.rq-today { width: auto; padding: 0 12px; font-size: 12.5px; }
+.rd.pln .rq-pan .rd-btn.ghost:hover { background: #fafbfd; color: #141a24; }
 .rd.pln .rd-btn:disabled { opacity: 0.35; cursor: default; }
 /* The goals table: white small caps heads, no navy on a hovered name, one-word empty states. */
 .rd.pln .rd-cols { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }

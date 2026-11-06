@@ -7,7 +7,7 @@
 
 /* The list floats over the pop-up (portalled), as the floating lists everywhere (design rules 6): white, radius 14,
    the hairline ring, a typed line on top, six quarter hours then it scrolls inside; the picked one ink. */
-.tpk-pop.tpk-pop { z-index: 60; display: flex; flex-direction: column; width: 200px; padding: 6px; border: 0; border-radius: 14px; outline: none; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; box-sizing: border-box; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+.tpk-pop.tpk-pop { z-index: 60; display: flex; flex-direction: column; width: 200px; padding: 5px; border: 0; border-radius: 10px; outline: none; background: #fff; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); box-sizing: border-box; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
 .tpk-type { flex: none; display: block; width: 100%; height: 36px; margin: 0 0 4px; padding: 0 10px; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: none; box-sizing: border-box; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; }
 .tpk-type:focus { border-bottom-color: #141a24; }
 .tpk-type::placeholder { color: #98a2b3; }

@@ -67,8 +67,9 @@
 
 /* The builder's ⋯ menus (SessionMenu, ExerciseRowMenu) on the Dropdown Menu:
    the same face the hand-built .pb-session-menu had. */
-.pb-menu { min-width: 236px; padding: 5px; border-radius: 10px; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); }
-.pb-menu [data-slot="dropdown-menu-item"] { gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }
+/* No edge, items 34px at 13.5px/600: the one floating-list look (6 Nov, Alex: A of docs/boards/admin-choices-mockup.html). */
+.pb-menu { min-width: 236px; padding: 5px; border: 0; border-radius: 10px; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); }
+.pb-menu [data-slot="dropdown-menu-item"] { gap: 9px; min-height: 34px; padding: 7px 10px; line-height: 20px; border-radius: 7px; font-size: 13.5px; font-weight: 600; color: #141a24; cursor: pointer; }
 .pb-menu [data-slot="dropdown-menu-item"] svg { width: 15px; height: 15px; color: #5b6474; }
 .pb-menu [data-slot="dropdown-menu-item"][data-variant="destructive"],
 .pb-menu [data-slot="dropdown-menu-item"][data-variant="destructive"] svg { color: #a32d2d; }

@@ -70,8 +70,9 @@ export default function CalendarBoard({
       <section className="rcl-col" aria-label="Month">
         <div className="rcl-head">
           <h2>{label}</h2>
-          <div className="rcl-pan">
-            <Link href={href(prevMonth)} scroll={false} className="trn-more" aria-label="Previous month">
+          {/* The Plan's ‹ Today › (6 Nov, Alex: docs/boards/admin-choices-mockup.html, B): ghost buttons, calendar.css. */}
+          <div className="rcl-pan rq-pan">
+            <Link href={href(prevMonth)} scroll={false} className="rd-btn ghost" aria-label="Previous month">
               <ChevronLeftIcon />
             </Link>
             {/* In this month, Today picks today at once (24 Oct, Alex: it did nothing on another day of the same month,
@@ -79,7 +80,7 @@ export default function CalendarBoard({
             <Link
               href="/admin/redesign/calendar"
               scroll={false}
-              className="trn-pill"
+              className="rd-btn ghost rq-today"
               onClick={(ev) => {
                 if (!cells.some((c) => c.inMonth && c.date === today)) return;
                 ev.preventDefault();
@@ -88,7 +89,7 @@ export default function CalendarBoard({
             >
               Today
             </Link>
-            <Link href={href(nextMonth)} scroll={false} className="trn-more" aria-label="Next month">
+            <Link href={href(nextMonth)} scroll={false} className="rd-btn ghost" aria-label="Next month">
               <ChevronRightIcon />
             </Link>
           </div>
