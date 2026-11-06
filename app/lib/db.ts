@@ -828,6 +828,9 @@ type PhotoSlot = {
   paused?: boolean;
   /** How to take this one (21 Oct, Alex): shown to the client when they add it. Kept in the row's extra jsonb. */
   hint?: string;
+  /** When it was first asked for (6 Nov, Alex: angles added on the fourth update showed as missing on the first three).
+   *  Absent on older angles: those count from their first photo. Kept in the row's extra jsonb. */
+  added_at?: string;
 };
 // "period" is the start-date of whatever bucket the coach's chosen upload
 // cadence puts this photo in — a Monday for weekly/biweekly, the 1st of the

@@ -4,16 +4,17 @@ import { usePicsAhead } from "../../../components/picsAhead";
 import { pic } from "../../../lib/pic";
 import { useEffect, useRef, useState } from "react";
 import type React from "react";
-import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { CameraIcon, ChevronDownIcon } from "../../../components/icons";
 import type { Sheet } from "./PicturesDraft";
 
-// Compare (21 Oct, Alex, from the Claude Design brief, in the admin's rules): two sheets, one angle, two photos.
+// Compare (21 Oct, Alex, from the Claude Design brief, in the admin's rules): two shape updates, one angle, two photos.
+// On the tab itself since 6 Nov (Alex: "the compare function is a step away… I want it in the main screen"), the
+// second section, under the update on top; it was a pop-up behind a Compare button.
 //
-// - Head: Compare, Side by side | Slider (the shared capsule, ink when chosen), the round ✕.
-// - Two week pickers across the width ("Week 1 ▾ vs Week 8 ▾"), the admin's floating menu (never the browser's
-//   <select>); picking the week the other side has swaps them.
+// - Head: Compare as the section's title, Side by side | Slider (the shared capsule, ink when chosen) on its right.
+// - Two pickers across the width ("Shape update 1 ▾ vs Shape update 4 ▾"), the admin's floating menu (never the
+//   browser's <select>); picking the one the other side has swaps them.
 // - The angle switch across the width, every angle an equal share, in the coach's order.
 // - Side by side: two 3:4 photos, each with its week and weigh-in under it (the change from the left beside the
 //   right one's). Slider: one stage, the left week over the right, a divider dragged or stepped with ← →.
@@ -32,7 +33,7 @@ function readSaved(clientId: number): Partial<Saved> {
   }
 }
 
-export default function CompareDialog({ clientId, sheets, initial, onOpenPhoto }: { clientId: number; sheets: Sheet[]; /** [earlier, later] to start on, when nothing is remembered. */ initial: string[]; /** A photo opened big (the lightbox), from these two. */ onOpenPhoto: (period: string, slotId: number) => void }) {
+export default function Compare({ clientId, sheets, initial, onOpenPhoto }: { clientId: number; sheets: Sheet[]; /** [earlier, later] to start on, when nothing is remembered. */ initial: string[]; /** A photo opened big (the lightbox), from these two. */ onOpenPhoto: (period: string, slotId: number) => void }) {
   const chrono = [...sheets].reverse();
   const has = (p: string | undefined | null): p is string => !!p && sheets.some((s) => s.period === p);
   // The angles any sheet has, in the coach's order (the newest sheet's first).
@@ -69,9 +70,11 @@ export default function CompareDialog({ clientId, sheets, initial, onOpenPhoto }
   const change = left?.weight != null && right?.weight != null ? Math.round((right.weight - left.weight) * 10) / 10 : null;
 
   return (
-    <DialogContent className="dlh cmp" aria-label="Compare shape updates">
-      <div className="cmp-head">
-        <DialogTitle className="dlh-title">Compare</DialogTitle>
+    <section className="rls-section rp-compare" aria-label="Compare shape updates">
+      <div className="trn-weekhead cmp-head">
+        <div>
+          <h2>Compare</h2>
+        </div>
         <div className="rd-btn-group cmp-view" role="radiogroup" aria-label="View">
           {(
             [
@@ -84,16 +87,13 @@ export default function CompareDialog({ clientId, sheets, initial, onOpenPhoto }
             </button>
           ))}
         </div>
-        <DialogClose className="dlh-x" aria-label="Close">
-          ✕
-        </DialogClose>
       </div>
-      <DialogDescription className="sr-only">Two sheets side by side, one angle at a time</DialogDescription>
 
+      <div className="rls-card cmp">
       <div className="cmp-weeks">
-        <WeekPicker label="First week" value={state.a} sheets={chrono} onPick={(p) => pick("a", p)} />
+        <WeekPicker label="First" value={state.a} sheets={chrono} onPick={(p) => pick("a", p)} />
         <span className="cmp-vs">vs</span>
-        <WeekPicker label="Second week" value={state.b} sheets={chrono} onPick={(p) => pick("b", p)} />
+        <WeekPicker label="Second" value={state.b} sheets={chrono} onPick={(p) => pick("b", p)} />
       </div>
 
       {angles.length > 1 && (
@@ -127,11 +127,12 @@ export default function CompareDialog({ clientId, sheets, initial, onOpenPhoto }
       ) : (
         <Reveal left={left} right={right} leftSrc={cellOf(left)?.src ?? null} rightSrc={cellOf(right)?.src ?? null} angle={angle?.label ?? ""} />
       )}
-    </DialogContent>
+      </div>
+    </section>
   );
 }
 
-/** A week to compare, picked from the admin's floating menu: the sheets oldest first, words only. */
+/** A shape update to compare, picked from the admin's floating menu: oldest first, words only. */
 function WeekPicker({ label, value, sheets, onPick }: { label: string; value: string; sheets: Sheet[]; onPick: (period: string) => void }) {
   const current = sheets.find((s) => s.period === value);
   return (
