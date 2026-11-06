@@ -16,9 +16,11 @@
 .cgh-empty { flex: none; margin: 14px 0 0; font-size: 13.5px; font-weight: 500; color: #98a2b3; }
 
 /* The gyms: hairline rows. */
-.cgh-list { flex: 0 1 auto; min-height: 0; overflow-y: auto; margin: 10px 0 0; padding: 0; scrollbar-width: thin; scrollbar-color: #d5dae3 transparent; }
-.cgh-list > .cgh-row + .cgh-row { border-top: 1px solid #eef0f3; }
-.cgh-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; column-gap: 12px; row-gap: 8px; align-items: center; padding: 12px 0; }
+/* The rows reach 10px past the words on each side (6 Nov, Alex): a gym lit on arrival (a session's gym face) wears the
+   rounded tint with room round its face and words, not flush on them. The hairlines stay at the words' width. */
+.cgh-list { flex: 0 1 auto; min-height: 0; overflow-y: auto; margin: 10px -10px 0; padding: 0; scrollbar-width: thin; scrollbar-color: #d5dae3 transparent; }
+.cgh-list > .cgh-row + .cgh-row::before { content: ""; position: absolute; top: 0; left: 10px; right: 10px; height: 1px; background: #eef0f3; }
+.cgh-row { position: relative; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; column-gap: 12px; row-gap: 8px; align-items: center; padding: 12px 10px; }
 
 .cgh-logo { object-fit: cover; }
 .cgh-initial { grid-column: 1; grid-row: 1; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 999px; background: #f5f6f8; font-size: 14px; font-weight: 600; color: #141a24; }
