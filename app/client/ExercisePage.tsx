@@ -130,6 +130,9 @@ export default function ExercisePage({
   // (or the reps) settles it for the rest of the exercise, and a set already logged today raises the bar for the others.
   const vouched = useRef({ weight: false, reps: false });
   const doubtOf = (v: Vals, todayKg: number, todayReps: number) => {
+    // A swap is a blank sheet (6 Nov, Alex: another machine "is going to feel heavier or less heavy"): never asked, not
+    // even against its own sets today.
+    if (swapped) return { weight: false, reps: false };
     const kgBar = Math.max(refKg ?? 0, todayKg);
     const repBar = Math.max(repTop ?? 0, todayReps);
     return {
