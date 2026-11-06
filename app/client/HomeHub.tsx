@@ -8,12 +8,14 @@ import PhaseCards, { TRACK_ICON, type HomePhase, type PhaseFoodToday } from "./P
 import { defaultPhaseCover } from "../lib/phaseCovers";
 import { type ProgressPics } from "./ProgressPicsCard";
 
-import type { HomeEvents } from "./EventsCard";
+import type { HomeEvent, HomeEvents } from "./EventsCard";
+import { eventTypeOf } from "../lib/eventTypes";
+import { isoWeekday } from "../lib/eventRepeat";
 import EventsTimelineCard from "./home/EventsTimelineCard";
 import type { CardCovers } from "./CardPictureSheet";
 import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
-import { clock, monthWords, weekdayWords } from "../lib/clientDates";
+import { clock, dayWords, monthWords, weekdayWords } from "../lib/clientDates";
 import CoachSays from "./CoachSays";
 import MeetingNotes from "./meetings/MeetingNotes";
 import type { LinkView } from "../lib/messageLinks";
@@ -188,16 +190,21 @@ export default function HomeHub({
     checkInCount && checkInCount.done < checkInCount.total ? "check-in" : null,
     progressPics?.status === "due" ? "pictures" : null,
   ].filter((x): x is string => !!x);
+  // What happens today, always last (6 Nov, Alex): an event on today, or one that starts today; a trip already under way
+  // is not today's any more. A repeating one on one of its days. Not a phase or a weight goal: they have their own.
+  const todayEvents = events.list
+    .filter((e) => !e.phase && !e.goal && (e.repeat ? e.start <= today && e.end >= today && e.repeat.days.includes(isoWeekday(today)) : e.start === today))
+    .sort((a, b) => a.id - b.id);
   return (
     <div className="hm">
       <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
       {/* Home's order since 3 Nov (Alex: option 3 of docs/boards/home-hierarchy-mockup.html, To focus on as B of
           home-focus-mockup.html): Today, what today asks (the session, the check-in, food, the shape update while one is
-          open); the phase cards, shorter; the weight, always; the coach (their latest and To focus on under it, always
+          open), then today's events, always last (6 Nov, Alex); the phase cards, shorter; the weight, always; the coach (their latest and To focus on under it, always
           open); then Events and Meetings. */}
       <div className="hm-body">
         {todoItems.length === 0 ? (
-          <TodayDone />
+          <TodayDone events={todayEvents} today={today} />
         ) : (
           <TodayList
             items={todoItems}
@@ -209,6 +216,7 @@ export default function HomeHub({
             today={today}
             coachName={coach.firstName}
             phaseName={lifestyle?.name ?? null}
+            events={todayEvents}
           />
         )}
         {/* "Your plan" (12 Oct): one swipe, lifestyle → training → nutrition, every card the same size.
@@ -249,7 +257,7 @@ export default function HomeHub({
 // ---- 0 · Today with nothing left to do (3 Nov, Alex: the audit's first point): the Today list's own look, no card. The
 // head, then one row: the done check in green and `All set for today`, nothing under it and no action.
 
-function TodayDone() {
+function TodayDone({ events, today }: { events: HomeEvent[]; today: string }) {
   return (
     <section className="hm-td" aria-label="Today">
       <span className="hm-td-head">Today</span>
@@ -263,8 +271,37 @@ function TodayDone() {
           <span className="hm-td-title">All set for today</span>
         </span>
       </div>
+      <TodayEvents events={events} today={today} />
     </section>
   );
+}
+
+// Today's events, the list's last rows (6 Nov, Alex: "always the last thing"): the event's own icon in its colour, its
+// title (its kind's name when it has none), the kind as the fact, with `Until 13 Nov` after it on one that runs on, and
+// View opening it on the Events screen.
+function TodayEvents({ events, today }: { events: HomeEvent[]; today: string }) {
+  const openEvents = useOpenEvents();
+  return events.map((e) => {
+    const t = eventTypeOf(e.kind);
+    const title = e.title.trim() || t.label;
+    const runsOn = !e.repeat && e.end > today;
+    return (
+      <button key={e.id} type="button" className="hm-td-row" onClick={() => openEvents?.(e.id)} aria-label={`${title}. View.`}>
+        <span className="hm-td-icon" style={{ color: t.color }} aria-hidden="true">
+          <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+            <path d={t.icon} />
+          </svg>
+        </span>
+        <span className="hm-td-text">
+          <span className="hm-td-title">{title}</span>
+          <span className="hm-td-fact">{runsOn ? <Bars parts={[t.label, `Until ${dayWords(e.end)}`]} /> : t.label}</span>
+        </span>
+        <span className="hm-td-act" aria-hidden="true">
+          View
+        </span>
+      </button>
+    );
+  });
 }
 
 // ---- 1b · Your plan, with no phase live: what is next, and a way to ask ----
@@ -330,7 +367,7 @@ function TodayRow({ kind, title, fact, action, ink = false, onClick }: { kind: k
   );
 }
 
-function TodayList({ items, session, checkInCount, checkIn, pics, clientId, today, coachName, phaseName }: { items: string[]; session: HomeSession; checkInCount: { done: number; total: number } | null; checkIn: CheckInForm | null; pics: ProgressPics; clientId: number; today: string; coachName: string; phaseName: string | null }) {
+function TodayList({ items, session, checkInCount, checkIn, pics, clientId, today, coachName, phaseName, events }: { items: string[]; session: HomeSession; checkInCount: { done: number; total: number } | null; checkIn: CheckInForm | null; pics: ProgressPics; clientId: number; today: string; coachName: string; phaseName: string | null; events: HomeEvent[] }) {
   const goToTab = useNavigateTab();
   const openCheckIn = useOpenCheckIn();
   const openPhotos = useOpenPhotos();
@@ -364,6 +401,7 @@ function TodayList({ items, session, checkInCount, checkIn, pics, clientId, toda
       {items.includes("pictures") && pics && (
         <TodayRow kind="shape" title="Shape update" fact={`${k} of ${n} photos`} action={k > 0 ? "Continue" : "Add"} onClick={() => openPhotos?.()} />
       )}
+      <TodayEvents events={events} today={today} />
       {logOpen && checkIn && <CheckInDialog clientId={clientId} form={checkIn} today={today} coachName={coachName} phaseName={phaseName} onClose={() => setLogOpen(false)} />}
     </section>
   );
