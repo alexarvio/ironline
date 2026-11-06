@@ -68,6 +68,10 @@ export default function Compare({ clientId, sheets, initial, onOpenPhoto }: { cl
   // switching the angle or swapping the weeks shows at once.
   usePicsAhead([cellOf(left)?.src, cellOf(right)?.src, ...(left?.cells ?? []).map((c) => c.src), ...(right?.cells ?? []).map((c) => c.src)], 1080, 0);
   const change = left?.weight != null && right?.weight != null ? Math.round((right.weight - left.weight) * 10) / 10 : null;
+  // A side without the angle's photo (6 Nov, Alex: the slider showed one photo alone): both places side by side, the
+  // empty one saying so. The slider comes back on its own with an angle both have; the choice itself is kept.
+  const bothIn = !!cellOf(left)?.src && !!cellOf(right)?.src;
+  const view: View = state.view === "slider" && bothIn ? "slider" : "side";
 
   return (
     <section className="rls-section rp-compare" aria-label="Compare shape updates">
@@ -82,7 +86,7 @@ export default function Compare({ clientId, sheets, initial, onOpenPhoto }: { cl
               ["slider", "Slider"],
             ] as const
           ).map(([v, label]) => (
-            <button key={v} type="button" role="radio" aria-checked={state.view === v} className={state.view === v ? "on" : ""} onClick={() => setState((s) => ({ ...s, view: v }))}>
+            <button key={v} type="button" role="radio" aria-checked={view === v} className={view === v ? "on" : ""} onClick={() => setState((s) => ({ ...s, view: v }))}>
               {label}
             </button>
           ))}
@@ -106,7 +110,7 @@ export default function Compare({ clientId, sheets, initial, onOpenPhoto }: { cl
         </div>
       )}
 
-      {state.view === "side" ? (
+      {view === "side" ? (
         <div className="cmp-side">
           {[left, right].map((sh, i) => {
             const c = cellOf(sh);
@@ -152,12 +156,14 @@ function WeekPicker({ label, value, sheets, onPick }: { label: string; value: st
   );
 }
 
-/** One photo, 3:4, the field behind it until it has loaded; a camera on the field when there is none. */
+/** One photo, 3:4, the field behind it until it has loaded; with none, its place on a dashed edge, the camera and
+ *  `Not taken`, as the client's Compare says it (6 Nov, Alex: "have that space highlighted"). */
 function Photo({ src, alt, onOpen }: { src: string | null; alt: string; onOpen?: () => void }) {
   if (!src)
     return (
-      <span className="cmp-photo none" aria-label={alt ? `${alt}, no photo` : "No photo"}>
+      <span className="cmp-photo none" aria-label={alt ? `${alt}, not taken` : "Not taken"}>
         <CameraIcon />
+        <span>Not taken</span>
       </span>
     );
   return (
