@@ -363,11 +363,11 @@ export default function EventsCard({ clientId, events: serverEvents, categories:
           <p className="rq-evlog-empty">None yet</p>
         ) : (
           // With more than a page, the rows keep a full page's height (21 Oct, Alex: the last page made the screen jump;
-          // .rd-steady): a row is 43px with its hairline (the 22px kind pill and 10px either side), over 12px of room.
+          // .rd-steady): a row is 53px with its hairline, the one list row (6 Nov, Alex), over 12px of room.
           // The date column only as wide as the log needs (21 Oct, Alex: too much empty room): a range's two dates, else one.
           <div
             className={`rd-rows${pages > 1 ? " rd-steady" : ""}`}
-            style={{ "--ev-start": `${logDateWidth(listed.map((e) => e.start))}px`, "--ev-end": listed.some((e) => e.repeat || e.start !== e.end) ? `${logDateWidth(listed.filter((e) => e.repeat || e.start !== e.end).map((e) => e.repeat?.until ?? e.end))}px` : "0px", "--ev-arrow": listed.some((e) => e.repeat || e.start !== e.end) ? "30px" : "0px", ...(pages > 1 ? { "--log-rows": PAGE, "--log-row": "43px", "--log-head": "12px" } : {}) } as React.CSSProperties}
+            style={{ "--ev-start": `${logDateWidth(listed.map((e) => e.start))}px`, "--ev-end": listed.some((e) => e.repeat || e.start !== e.end) ? `${logDateWidth(listed.filter((e) => e.repeat || e.start !== e.end).map((e) => e.repeat?.until ?? e.end))}px` : "0px", "--ev-arrow": listed.some((e) => e.repeat || e.start !== e.end) ? "30px" : "0px", ...(pages > 1 ? { "--log-rows": PAGE, "--log-row": "53px", "--log-head": "12px" } : {}) } as React.CSSProperties}
           >
             {onPage.map((e) => {
               const k = chromeOf(cats, e.kind);

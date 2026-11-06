@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Training cells</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Item 5 of the 6 Nov admin audit (docs/design-audit-2026-11-06-admin.md): an opened Training session, its logged
+     sets and its Last session / 30 days cells, drawn three ways with the same figures. Values copied from the app:
+     A from draft.css:150-155 and 247-251, B from training-hairline.css:58-68, C from Home's Strength (plain words). */
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --div:#EEF0F3; --page:#F5F6F8; --training:#3a3390; --green:#2f7a3f; --rust:#b8471f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ebef; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 60px; }
+  .intro { max-width: 1100px; margin: 0 auto 26px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .intro p { margin: 0; color: var(--sec); font-size: 13px; font-weight: 500; line-height: 1.55; max-width: 860px; }
+  .opt { max-width: 1100px; margin: 0 auto 30px; }
+  .lbl { display: flex; gap: 10px; align-items: baseline; margin: 0 0 4px 6px; }
+  .lbl b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; }
+  .lbl span { font-size: 15px; font-weight: 600; }
+  .why { margin: 0 6px 12px; color: var(--sec); font-size: 12.5px; font-weight: 500; line-height: 1.5; }
+  .page { padding: 22px 24px 24px; border-radius: 22px; background: var(--page); }
+  .shead { display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px; }
+  .shead h2 { margin: 0; font-size: 20px; font-weight: 600; }
+  .shead small { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .card { border-radius: 18px; background: #fff; border: 1px solid var(--line); overflow-x: auto; }
+  .cols, .row { min-width: 900px; }
+  .cols, .row { display: grid; grid-template-columns: minmax(170px, 1.4fr) 56px 64px 72px minmax(250px, 2.2fr) 110px 96px; align-items: center; column-gap: 14px; padding: 0 18px; }
+  .cols { height: 40px; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--sec); }
+  .cols .c { text-align: center; }
+  .row { min-height: 56px; border-top: 1px solid var(--div); }
+  .ex { font-size: 14.5px; font-weight: 600; }
+  .ex small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .num { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .num.quiet { color: var(--sec); font-weight: 500; }
+  .did { display: flex; flex-wrap: wrap; gap: 5px; }
+  .cell { display: flex; justify-content: center; }
+
+  /* A, as it is now: tinted filled blocks, 700, an off-palette green. */
+  .a .set { padding: 3px 8px; border-radius: 7px; background: #eceff3; font-size: 12px; font-weight: 600; color: #313851; font-variant-numeric: tabular-nums; }
+  .a .set small { font-size: 10.5px; color: #8b93a1; margin-left: 2px; }
+  .a .set.up { background: #dff3ea; color: #1b7a4b; }
+  .a .set.down { background: #fdf3ee; color: #b8471f; }
+  .a .set.extra { outline: 1px dashed #a0a7b3; outline-offset: -1px; }
+  .a .trend { display: inline-flex; align-items: center; justify-content: center; height: 28px; padding: 0 9px; border-radius: 8px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .a .trend.up { background: #dff3ea; color: #1b7a4b; }
+  .a .trend.down { background: #fdf3ee; color: #b8471f; }
+  .a .trend.same { background: #eceff3; color: #5b6474; }
+  .a .trend.none { color: #c3c9d2; font-weight: 500; }
+
+  /* B, outlined: no fill, a thin ring in the colour, 600, the app's green. Already in the code behind ?look=hairline. */
+  .b .set { padding: 3px 8px; border-radius: 7px; box-shadow: inset 0 0 0 1px var(--line); font-size: 12px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .b .set small { font-size: 10.5px; color: var(--muted); margin-left: 2px; }
+  .b .set.up { box-shadow: inset 0 0 0 1px currentColor; color: var(--green); }
+  .b .set.down { box-shadow: inset 0 0 0 1px currentColor; color: var(--rust); }
+  .b .set.extra { box-shadow: none; border: 1px dashed #c9cfd8; }
+  .b .trend { display: inline-flex; align-items: center; justify-content: center; height: 28px; padding: 0 9px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line); font-size: 13px; font-weight: 600; color: var(--sec); font-variant-numeric: tabular-nums; }
+  .b .trend.up { box-shadow: inset 0 0 0 1px currentColor; color: var(--green); }
+  .b .trend.down { box-shadow: inset 0 0 0 1px currentColor; color: var(--rust); }
+  .b .trend.none { box-shadow: none; color: #c3c9d2; font-weight: 500; }
+
+  /* C, words alone: the figure in its colour, no box or ring, as Home's Strength; a set's bar under it only when it is extra. */
+  .c .did { gap: 4px 14px; }
+  .c .set { font-size: 12.5px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .c .set small { font-size: 10.5px; color: var(--muted); margin-left: 2px; }
+  .c .set.up { color: var(--green); }
+  .c .set.down { color: var(--rust); }
+  .c .set.extra { text-decoration: underline dashed #c9cfd8; text-underline-offset: 4px; }
+  .c .trend { font-size: 13.5px; font-weight: 600; color: var(--sec); font-variant-numeric: tabular-nums; }
+  .c .trend.up { color: var(--green); }
+  .c .trend.down { color: var(--rust); }
+  .c .trend.none { color: #c3c9d2; font-weight: 500; }
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>Training: what the client did, three ways</h1>
+    <p>One opened session with the same figures each time: the sets the client logged (heavier than the plan green, lighter rust, an extra set dashed) and the Last session and 30 days cells. Home's Strength card shows the same kind of figure as plain green or rust words, which is why A stands out from the rest of the admin.</p>
+  </div>
+
+  <section class="opt a">
+    <div class="lbl"><b>A</b><span>As it is now</span></div>
+    <p class="why">Tinted filled blocks at weight 700, in a green (#1b7a4b) that isn't the app's (#2f7a3f). The only filled colour blocks left in the coach's admin.</p>
+    <div class="page">
+      <div class="shead"><h2>Upper push</h2><small>Tue, 4 Nov</small></div>
+      <div class="card">
+        <div class="cols"><span>Exercise</span><span>Sets</span><span>Kg</span><span>Reps</span><span>Did</span><span class="c">Last session</span><span class="c">30 days</span></div>
+        <div class="row"><span class="ex">Bench press<small>Barbell</small></span><span class="num">3</span><span class="num">80</span><span class="num quiet">8–10</span><span class="did"><span class="set up">82.5<small>×9</small></span><span class="set">80<small>×9</small></span><span class="set down">77.5<small>×8</small></span><span class="set extra">70<small>×10</small></span></span><span class="cell"><span class="trend up">+3.2%</span></span><span class="cell"><span class="trend up">+5.1%</span></span></div>
+        <div class="row"><span class="ex">Overhead press<small>Dumbbell</small></span><span class="num">3</span><span class="num">22</span><span class="num quiet">10–12</span><span class="did"><span class="set">22<small>×12</small></span><span class="set">22<small>×11</small></span><span class="set down">20<small>×10</small></span></span><span class="cell"><span class="trend down">−1.4%</span></span><span class="cell"><span class="trend same">0.0%</span></span></div>
+        <div class="row"><span class="ex">Cable fly<small>Cable</small></span><span class="num">3</span><span class="num">15</span><span class="num quiet">12–15</span><span class="did"><span class="set up">17.5<small>×12</small></span><span class="set up">17.5<small>×12</small></span><span class="set">15<small>×15</small></span></span><span class="cell"><span class="trend none">—</span></span><span class="cell"><span class="trend none">—</span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="opt b">
+    <div class="lbl"><b>B</b><span>Outlined</span></div>
+    <p class="why">No fill: a thin ring in the colour, weight 600, the app's green and rust. Already in the code, only switched off. Reads like the state pills and the marks on Training's rows.</p>
+    <div class="page">
+      <div class="shead"><h2>Upper push</h2><small>Tue, 4 Nov</small></div>
+      <div class="card">
+        <div class="cols"><span>Exercise</span><span>Sets</span><span>Kg</span><span>Reps</span><span>Did</span><span class="c">Last session</span><span class="c">30 days</span></div>
+        <div class="row"><span class="ex">Bench press<small>Barbell</small></span><span class="num">3</span><span class="num">80</span><span class="num quiet">8–10</span><span class="did"><span class="set up">82.5<small>×9</small></span><span class="set">80<small>×9</small></span><span class="set down">77.5<small>×8</small></span><span class="set extra">70<small>×10</small></span></span><span class="cell"><span class="trend up">+3.2%</span></span><span class="cell"><span class="trend up">+5.1%</span></span></div>
+        <div class="row"><span class="ex">Overhead press<small>Dumbbell</small></span><span class="num">3</span><span class="num">22</span><span class="num quiet">10–12</span><span class="did"><span class="set">22<small>×12</small></span><span class="set">22<small>×11</small></span><span class="set down">20<small>×10</small></span></span><span class="cell"><span class="trend down">−1.4%</span></span><span class="cell"><span class="trend same">0.0%</span></span></div>
+        <div class="row"><span class="ex">Cable fly<small>Cable</small></span><span class="num">3</span><span class="num">15</span><span class="num quiet">12–15</span><span class="did"><span class="set up">17.5<small>×12</small></span><span class="set up">17.5<small>×12</small></span><span class="set">15<small>×15</small></span></span><span class="cell"><span class="trend none">—</span></span><span class="cell"><span class="trend none">—</span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="opt c">
+    <div class="lbl"><b>C</b><span>Words alone</span></div>
+    <p class="why">The figure in its colour and nothing round it, as Home's Strength shows a change. The quietest; an extra set keeps a dashed line under it.</p>
+    <div class="page">
+      <div class="shead"><h2>Upper push</h2><small>Tue, 4 Nov</small></div>
+      <div class="card">
+        <div class="cols"><span>Exercise</span><span>Sets</span><span>Kg</span><span>Reps</span><span>Did</span><span class="c">Last session</span><span class="c">30 days</span></div>
+        <div class="row"><span class="ex">Bench press<small>Barbell</small></span><span class="num">3</span><span class="num">80</span><span class="num quiet">8–10</span><span class="did"><span class="set up">82.5<small>×9</small></span><span class="set">80<small>×9</small></span><span class="set down">77.5<small>×8</small></span><span class="set extra">70<small>×10</small></span></span><span class="cell"><span class="trend up">+3.2%</span></span><span class="cell"><span class="trend up">+5.1%</span></span></div>
+        <div class="row"><span class="ex">Overhead press<small>Dumbbell</small></span><span class="num">3</span><span class="num">22</span><span class="num quiet">10–12</span><span class="did"><span class="set">22<small>×12</small></span><span class="set">22<small>×11</small></span><span class="set down">20<small>×10</small></span></span><span class="cell"><span class="trend down">−1.4%</span></span><span class="cell"><span class="trend same">0.0%</span></span></div>
+        <div class="row"><span class="ex">Cable fly<small>Cable</small></span><span class="num">3</span><span class="num">15</span><span class="num quiet">12–15</span><span class="did"><span class="set up">17.5<small>×12</small></span><span class="set up">17.5<small>×12</small></span><span class="set">15<small>×15</small></span></span><span class="cell"><span class="trend none">—</span></span><span class="cell"><span class="trend none">—</span></span></div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

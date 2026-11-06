@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>List rows</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Item 2 of the 6 Nov admin audit (docs/design-audit-2026-11-06-admin.md): a list row is drawn three ways. Values
+     copied from the app: the full-width row from measurements.css:177-185 (.rls-cols, .rls-row, 52px); the inset row
+     from draft.css:125, 133-139 (.rd-rows padding 0 14px, .rd-cols 700 .1em #8b93a1, .rd-row #eceff3, 10px padding);
+     Lifestyle's check-in row from measurements.css:38-43 (.rm-td, 10px padding, 42px). */
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --div:#EEF0F3; --page:#F5F6F8; --rust:#b8471f; --green:#2f7a3f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ebef; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 60px; }
+  .intro { max-width: 980px; margin: 0 auto 26px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .intro p { margin: 0; color: var(--sec); font-size: 13px; font-weight: 500; line-height: 1.55; max-width: 860px; }
+  .opt { max-width: 980px; margin: 0 auto 30px; }
+  .lbl { display: flex; gap: 10px; align-items: baseline; margin: 0 0 4px 6px; }
+  .lbl b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; }
+  .lbl span { font-size: 15px; font-weight: 600; }
+  .why { margin: 0 6px 12px; color: var(--sec); font-size: 12.5px; font-weight: 500; line-height: 1.5; }
+  .page { padding: 22px 24px 24px; border-radius: 22px; background: var(--page); display: flex; flex-direction: column; gap: 22px; }
+  .shead { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; }
+  .shead h2 { margin: 0; font-size: 20px; font-weight: 600; }
+  .card { border-radius: 18px; background: #fff; border: 1px solid var(--line); overflow-x: auto; padding: 2px 0 8px; }
+  .cols, .row { min-width: 620px; }
+  .date { font-size: 13.5px; font-weight: 500; color: var(--body); font-variant-numeric: tabular-nums; }
+  .name { font-size: 14.5px; font-weight: 600; }
+  .grey { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .fig { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .fig.r { color: var(--rust); }
+  .tag { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(47,122,63,.35); font-size: 11.5px; font-weight: 600; color: var(--green); }
+  .ann { position: relative; }
+  .ann::after { content: attr(data-note); position: absolute; right: -8px; top: 50%; transform: translate(100%, -50%); font-size: 11px; font-weight: 600; color: #6d5bd0; white-space: nowrap; }
+
+  /* The full-width row (rls): heads 600 .16em #5b6474, rows 52px, the line across the whole card in #eef0f3. */
+  .full .cols { display: grid; align-items: center; min-height: 36px; padding: 4px 18px 0; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--sec); }
+  .full .row { display: grid; align-items: center; min-height: 52px; padding: 0 18px; border-top: 1px solid var(--div); }
+
+  /* The inset row (rd-rows): heads 700 .1em #8b93a1, the list set 14px in from both card edges, rows ~49px, lines #eceff3. */
+  .inset { padding: 0 14px 12px; }
+  .inset .cols { display: grid; align-items: center; padding: 6px 4px 8px 10px; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .inset .row { display: grid; align-items: center; padding: 14px 10px; border-top: 1px solid #eceff3; }
+
+  /* Lifestyle's check-in row (rm-td): the same heads as the inset one, rows 42px. */
+  .tight { padding: 0 14px 12px; }
+  .tight .cols { display: grid; align-items: center; padding: 6px 0 8px 10px; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .tight .row { display: grid; align-items: center; padding: 10px 0 10px 10px; border-top: 1px solid #eceff3; }
+
+  .g-supp { grid-template-columns: minmax(0, 1.4fr) 120px 140px 90px; }
+  .g-log { grid-template-columns: 130px minmax(0, 1fr) 90px 90px 90px; }
+  .g-chk { grid-template-columns: 130px 110px 110px 110px minmax(0, 1fr); }
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>List rows: three ways now, one way proposed</h1>
+    <p>The same coach admin draws a list row three ways. Look at where the lines between rows start (at the card's edge, or 14px in), how tall a row is, and the small grey column heads (bolder and lighter on two of them). On Nutrition two of the three sit on one page, one under the other.</p>
+  </div>
+
+  <section class="opt">
+    <div class="lbl"><b>NOW</b><span>Nutrition, as it is</span></div>
+    <p class="why">Supplements use the full-width row: lines from edge to edge, 52px rows, heads at 600 in a darker grey. The logs right under them use the inset row: lines start 14px in, rows a little shorter, heads bolder (700) and lighter. Two kinds of list, one above the other.</p>
+    <div class="page">
+      <div>
+        <div class="shead"><h2>Supplements</h2></div>
+        <div class="card full">
+          <div class="cols g-supp"><span>Supplement</span><span>Dose</span><span>When</span><span>Taken</span></div>
+          <div class="row g-supp"><span class="name">Creatine</span><span class="grey">5 g</span><span class="grey">Morning</span><span class="fig">6 of 7</span></div>
+          <div class="row g-supp"><span class="name">Vitamin D</span><span class="grey">2000 IU</span><span class="grey">With food</span><span class="fig">7 of 7</span></div>
+          <div class="row g-supp"><span class="name">Omega 3</span><span class="grey">2 caps</span><span class="grey">Evening</span><span class="fig r">3 of 7</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="shead"><h2>Alex&rsquo;s logs</h2></div>
+        <div class="card inset">
+          <div class="cols g-log"><span>Date</span><span>Day</span><span>Kcal</span><span>Protein</span><span>Carbs</span></div>
+          <div class="row g-log"><span class="date">Wed, 5 Nov</span><span class="grey">Training day</span><span class="fig">2,840</span><span class="fig">182 g</span><span class="fig">301 g</span></div>
+          <div class="row g-log"><span class="date">Tue, 4 Nov</span><span class="grey">Rest day</span><span class="fig">2,310</span><span class="fig r">121 g</span><span class="fig">240 g</span></div>
+          <div class="row g-log"><span class="date">Mon, 3 Nov</span><span class="grey">Training day</span><span class="fig">2,905</span><span class="fig">176 g</span><span class="fig">322 g</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="opt">
+    <div class="lbl"><b>NOW</b><span>Lifestyle check-ins, as it is</span></div>
+    <p class="why">A third version: the inset lines and bolder heads of the logs, and rows tighter still (42px).</p>
+    <div class="page">
+      <div>
+        <div class="shead"><h2>Check-ins</h2></div>
+        <div class="card tight">
+          <div class="cols g-chk"><span>Date</span><span>Weight</span><span>Sleep</span><span>Steps</span><span></span></div>
+          <div class="row g-chk"><span class="date">Wed, 5 Nov</span><span class="fig">90.8 kg</span><span class="fig">7 / 10</span><span class="fig">9,412</span><span></span></div>
+          <div class="row g-chk"><span class="date">Tue, 4 Nov</span><span class="fig">91.1 kg</span><span class="fig">6 / 10</span><span class="fig r">4,108</span><span></span></div>
+          <div class="row g-chk"><span class="date">Mon, 3 Nov</span><span class="fig">91.0 kg</span><span class="fig">8 / 10</span><span class="fig">11,230</span><span></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="opt">
+    <div class="lbl"><b>PROPOSED</b><span>One row everywhere</span></div>
+    <p class="why">The full-width row for every list (what Feed, Home's Activity, Business, Invoices and most tabs already use): lines from edge to edge, every row 52px, the small caps heads at 600 in the one grey. The three lists above, drawn the same way.</p>
+    <div class="page">
+      <div>
+        <div class="shead"><h2>Supplements</h2></div>
+        <div class="card full">
+          <div class="cols g-supp"><span>Supplement</span><span>Dose</span><span>When</span><span>Taken</span></div>
+          <div class="row g-supp"><span class="name">Creatine</span><span class="grey">5 g</span><span class="grey">Morning</span><span class="fig">6 of 7</span></div>
+          <div class="row g-supp"><span class="name">Vitamin D</span><span class="grey">2000 IU</span><span class="grey">With food</span><span class="fig">7 of 7</span></div>
+          <div class="row g-supp"><span class="name">Omega 3</span><span class="grey">2 caps</span><span class="grey">Evening</span><span class="fig r">3 of 7</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="shead"><h2>Alex&rsquo;s logs</h2></div>
+        <div class="card full">
+          <div class="cols g-log"><span>Date</span><span>Day</span><span>Kcal</span><span>Protein</span><span>Carbs</span></div>
+          <div class="row g-log"><span class="date">Wed, 5 Nov</span><span class="grey">Training day</span><span class="fig">2,840</span><span class="fig">182 g</span><span class="fig">301 g</span></div>
+          <div class="row g-log"><span class="date">Tue, 4 Nov</span><span class="grey">Rest day</span><span class="fig">2,310</span><span class="fig r">121 g</span><span class="fig">240 g</span></div>
+          <div class="row g-log"><span class="date">Mon, 3 Nov</span><span class="grey">Training day</span><span class="fig">2,905</span><span class="fig">176 g</span><span class="fig">322 g</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="shead"><h2>Check-ins</h2></div>
+        <div class="card full">
+          <div class="cols g-chk"><span>Date</span><span>Weight</span><span>Sleep</span><span>Steps</span><span></span></div>
+          <div class="row g-chk"><span class="date">Wed, 5 Nov</span><span class="fig">90.8 kg</span><span class="fig">7 / 10</span><span class="fig">9,412</span><span></span></div>
+          <div class="row g-chk"><span class="date">Tue, 4 Nov</span><span class="fig">91.1 kg</span><span class="fig">6 / 10</span><span class="fig r">4,108</span><span></span></div>
+          <div class="row g-chk"><span class="date">Mon, 3 Nov</span><span class="fig">91.0 kg</span><span class="fig">8 / 10</span><span class="fig">11,230</span><span></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
