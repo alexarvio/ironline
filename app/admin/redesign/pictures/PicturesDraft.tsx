@@ -6,14 +6,13 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { addPhotoSlotAction, remindProgressPicturesAction, removePhotoAngleAction, savePhotoSetupAction, sendChatMessageAction, setPhotoSlotPausedAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { SepJoin } from "../Sep";
 import Compare from "./Compare";
 import { Fold } from "../Fold";
 import { TodoStrip } from "../TodoStrip";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
-import { CameraIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CameraIcon, ChevronLeftIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { ConfirmDialog, MessageDialog, useClickAway } from "../training/TrainingDraft";
 import { GripIcon } from "../training/TrainingParts";
 import DateText from "../DateText";
@@ -617,21 +616,17 @@ function SetupDialog({ clientId, firstName, plan, onSaved }: { clientId: number;
                     </span>
                     <input className="rp-aname" data-angle={a.key} value={a.label} onChange={(e) => edit(a.key, { label: e.target.value })} maxLength={40} aria-label="Angle" aria-invalid={!a.label.trim() || twin?.key === a.key || undefined} />
                     <input className="rp-ahint" value={a.hint} onChange={(e) => edit(a.key, { hint: e.target.value })} maxLength={200} placeholder="Add an instruction" aria-label={`How to take ${a.label || "this angle"}`} />
-                    {a.paused && <em className="rp-apaused">Paused</em>}
-                    <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger className="trn-row-more rp-amore" aria-label={`More for ${a.label || "this angle"}`}>
-                        <MoreIcon />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="pb-menu">
-                        <DropdownMenuItem onSelect={() => edit(a.key, { paused: !a.paused })}>
-                          {a.paused ? <PlayIcon /> : <PauseIcon />} {a.paused ? "Resume" : "Pause"}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" onSelect={() => removeAngle(a.key)}>
-                          <TrashIcon /> Remove
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* An angle paused before has its word, a click asking for it again. */}
+                    {a.paused && (
+                      <button type="button" className="rp-apaused" onClick={() => edit(a.key, { paused: false })} title="Ask for it again">
+                        Paused
+                      </button>
+                    )}
+                    {/* Delete alone, a bin on hover (6 Nov, Alex: the ⋯ held more than was needed). Nothing goes before Save;
+                        an angle with photos asks for the tick there. */}
+                    <button type="button" className="trn-row-more rp-abin" onClick={() => removeAngle(a.key)} aria-label={`Remove ${a.label || "this angle"}`} title="Remove">
+                      <TrashIcon />
+                    </button>
                   </>
                 )}
               </SortableItem>
@@ -1044,15 +1039,6 @@ function SlidersIcon() {
       <circle cx="16" cy="6" r="2" />
       <circle cx="10" cy="12" r="2" />
       <circle cx="18" cy="18" r="2" />
-    </svg>
-  );
-}
-
-/** Pause, in the angle's menu. */
-function PauseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden="true">
-      <path d="M9 6v12M15 6v12" />
     </svg>
   );
 }
