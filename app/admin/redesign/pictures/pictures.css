@@ -153,6 +153,11 @@
    Side by side | Slider on its right, then one shared card: two pickers, the angle switch across the row in equal parts
    (the shared capsule, ink when chosen), then two 3:4 photos or the slider. */
 .rd.rp .rls-card.cmp.cmp { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px 18px; }
+/* Its insides one column as wide as the two photos and the gap between, in the middle of the card (6 Nov, Alex: on a
+   wide screen each photo sat in the middle of its own half, far apart; "have them closer together"): the pickers and
+   the angles over the photos, never wider. */
+.rd.rp .rls-card.cmp.cmp > * { width: 100%; max-width: calc(min(52vh, 560px) * 3 / 4 * 2 + 16px); align-self: center; }
+.rd.rp .rls-card.cmp .cmp-side { gap: 16px; }
 .rd.rp .cmp-head { display: flex; align-items: center; gap: 12px; }
 .rd.rp .cmp-head .cmp-view { margin-left: auto; }
 .cmp-weeks { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
