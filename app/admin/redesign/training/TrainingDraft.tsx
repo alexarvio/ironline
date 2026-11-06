@@ -44,7 +44,7 @@ import DatePick from "../DatePick";
 import { dayMonth } from "../../../lib/dayMonth";
 import { pic } from "../../../lib/pic";
 import { Sep, SepJoin } from "../Sep";
-import { useSaidSaved } from "../useSaveQueue";
+import { SaveStatus } from "../SaveStatus";
 import { useHoldRefresh } from "../holdRefresh";
 import { weekDue, type DotTrail } from "../dots";
 
@@ -652,7 +652,6 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
   }, [landing, router]);
   const weekFailed = Object.values(failed).some(Boolean);
   const weekSaving = anyPending || Object.values(saving).some(Boolean);
-  const saidSaved = useSaidSaved(weekSaving);
   // Changes waiting, saving or failed: the page doesn't read itself again meanwhile (RefreshOnReturn).
   useHoldRefresh(weekSaving || weekFailed);
   const retry = () => {
@@ -948,21 +947,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
               <span className={`trn-status ${program.status}`} style={stateTagStyle(program.status)}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
             )}
             {/* Every change saves itself (20 Oct); the status sits beside the title and its tag (21 Oct, Alex), as on Lifestyle and Nutrition. */}
-            {weekFailed ? (
-              <span className="trn-allsaved failed" role="alert">
-                Not saved<Sep />
-                <button type="button" onClick={retry}>
-                  Retry
-                </button>
-              </span>
-            ) : (
-              // Nothing until something is saved (22 Oct, Alex).
-              saidSaved && (
-                <span className={`trn-allsaved${weekSaving ? " saving" : ""}`} role="status">
-                  {weekSaving ? "Saving…" : "All changes saved"}
-                </span>
-              )
-            )}
+            {/* The shared SaveStatus, as Nutrition's (6 Nov, Alex: admin audit); the same look, written once. */}
+            <SaveStatus busy={weekSaving} failed={weekFailed} onRetry={retry} />
           </div>
           {/* The facts parted by a short upright line, not a dot (21 Oct, Alex); the dates last. */}
           <span className="trn-meta">
@@ -1961,7 +1947,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             + Add session
           </button>
         ) : (
-          <p className="rd-full trn-full">{MAX_SESSIONS} sessions is the most a week can hold.</p>
+          // A fact, not a sentence (6 Nov, Alex: admin audit; was "7 sessions is the most a week can hold.").
+          <p className="rd-full trn-full">Week full</p>
         )}
       </div>
 

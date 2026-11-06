@@ -66,6 +66,8 @@ export type OwedRow = {
   invoiceId: number;
   clientId: number | null;
   client: string;
+  /** The client's picture, for their face before the name (6 Nov, Alex: admin audit). */
+  avatarPath: string | null;
   number: string | null;
   issued: string | null;
   due: string | null;

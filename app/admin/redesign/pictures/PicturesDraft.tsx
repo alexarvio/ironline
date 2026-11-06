@@ -20,6 +20,7 @@ import { MonthRange } from "../MonthRange";
 import { SortableItem, SortableList } from "../Sortable";
 import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
 import { SaveStatus } from "../SaveStatus";
+import Pager from "../Pager";
 import { dayMonth, dayMonthTime, logDate } from "../../../lib/dayMonth";
 import { pic } from "../../../lib/pic";
 import { newOnceKey } from "../../../lib/onceKey";
@@ -72,7 +73,8 @@ export type DraftPictures = {
 
 type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "photo"; period: string; slotId: number } | { kind: "setup" } | { kind: "drop"; slotId: number; label: string } | null;
 
-const ROWS_SHOWN = 12;
+/** All shape updates pages 20 at a time under the shared Pager, as every log (6 Nov, Alex: admin audit; was Show all N). */
+const LOG_PAGE = 20;
 const REPEATS: { value: Cadence; label: string }[] = [
   { value: "weekly", label: "Week" },
   { value: "biweekly", label: "2 weeks" },
@@ -150,12 +152,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
   // Compare (6 Nov, Alex: on the page): the updates with a photo, the first beside the newest.
   const withPhotos = sheets.filter((s) => s.inCount > 0);
   const compareFrom = withPhotos.length >= 2 ? [withPhotos[withPhotos.length - 1].period, withPhotos[0].period] : [];
-  const [all, setAll] = useState(false);
-  const tableRef = useRef<HTMLDivElement>(null);
-  const showAll = () => {
-    setAll(true);
-    requestAnimationFrame(() => tableRef.current?.querySelectorAll<HTMLButtonElement>(".rp-trow")[ROWS_SHOWN]?.focus());
-  };
+  const [logPage, setLogPage] = useState(1);
   // + Add on the sheet (21 Oct, Alex): a new angle from the same search, saved at once; faded until the re-read brings it.
   const [addingTile, setAddingTile] = useState(false);
   const addTile = useRef<HTMLButtonElement>(null);
@@ -189,7 +186,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
       if (i < 0) return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        if (i >= ROWS_SHOWN) setAll(true);
+        setLogPage(Math.floor(i / LOG_PAGE) + 1);
         setOpenRow(m[1]);
         // Brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
         setTimeout(() => landOn(document.getElementById(`sheet-${m[1]}`)), 120);
@@ -214,7 +211,10 @@ function Pictures({ clientId, firstName, plan }: Props) {
 
   const active = plan.slots.filter((s) => !s.paused).length;
   const photoSheet = dlg?.kind === "photo" ? (sheets.find((x) => x.period === dlg.period) ?? null) : null;
-  const shownRows = all ? closed : closed.slice(0, ROWS_SHOWN);
+  const logPages = Math.max(1, Math.ceil(closed.length / LOG_PAGE));
+  const logAt = Math.min(logPage, logPages);
+  const logFrom = (logAt - 1) * LOG_PAGE;
+  const shownRows = closed.slice(logFrom, logFrom + LOG_PAGE);
   // The sheet's tiles: its angles, any just added, and + Add.
   const cols = topCells.length + shownPending.length + 1;
   // Each angle's word on how to take it (Setup), shown under its place.
@@ -373,7 +373,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
               <h2>All shape updates</h2>
             </div>
           </div>
-          <div ref={tableRef} className="rls-card rp-table">
+          <div className="rls-card rp-table">
             <div className="rp-thead" aria-hidden="true">
               <span>Date</span>
               <span>Name</span>
@@ -382,6 +382,9 @@ function Pictures({ clientId, firstName, plan }: Props) {
               <span className="end">State</span>
             </div>
             {closed.length === 0 && <p className="rls-none">None yet</p>}
+            {/* Past one page, a full page's height on every page (.rd-steady: a row 52px and its hairline), so the pager
+                under the card never moves (6 Nov, Alex: admin audit; rule §8). */}
+            <div className={logPages > 1 ? "rd-steady" : undefined} style={logPages > 1 ? ({ "--log-rows": LOG_PAGE, "--log-row": "53px", "--log-head": "0px" } as React.CSSProperties) : undefined}>
             {shownRows.map((sh) => {
               const st = stateOf(sh);
               const isOpen = openRow === sh.period;
@@ -427,12 +430,21 @@ function Pictures({ clientId, firstName, plan }: Props) {
                 </div>
               );
             })}
+            </div>
           </div>
-          {!all && closed.length > ROWS_SHOWN && (
-            <button type="button" className="rp-showall" onClick={showAll}>
-              Show all {closed.length}
-            </button>
-          )}
+          {/* The shared pager, floating under the card (rule §8). */}
+          <Pager
+            page={logAt}
+            pages={logPages}
+            from={logFrom}
+            shown={shownRows.length}
+            total={closed.length}
+            label="Shape update pages"
+            onPage={(p) => {
+              setLogPage(p);
+              setOpenRow(null);
+            }}
+          />
         </section>
       )}
 

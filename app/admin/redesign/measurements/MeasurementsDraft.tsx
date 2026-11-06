@@ -28,7 +28,8 @@ import { groupColour } from "../../../lib/categoryColors";
 import { defaultSummary, type MetricSummary } from "../../../lib/metricSummary";
 import { Sep, SepJoin } from "../Sep";
 import { Fold } from "../Fold";
-import { useHoldWhile, useSaidSaved } from "../useSaveQueue";
+import { useHoldWhile } from "../useSaveQueue";
+import { SaveStatus } from "../SaveStatus";
 import { landOn } from "../../../lib/landOn";
 import { monotoneSegments } from "../../../lib/monotoneCurve";
 
@@ -184,7 +185,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const running = useRef(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
-  const saidSaved = useSaidSaved(saving);
   const run = async () => {
     if (running.current) return;
     running.current = true;
@@ -473,22 +473,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                 </span>
               ))}
             {/* Every change saves itself (21 Oct); the status beside the title and its tag (Alex), as on Training and Nutrition. */}
-            {phaseId != null &&
-              (failed ? (
-                <span className="trn-allsaved failed" role="alert">
-                  Not saved<Sep />
-                  <button type="button" onClick={() => void run()}>
-                    Retry
-                  </button>
-                </span>
-              ) : (
-                // Nothing until something is saved (22 Oct, Alex).
-                saidSaved && (
-                  <span className={`trn-allsaved${saving ? " saving" : ""}`} role="status">
-                    {saving ? "Saving…" : "All changes saved"}
-                  </span>
-                )
-              ))}
+            {/* The shared SaveStatus, no copy of its own (6 Nov, Alex: admin audit). */}
+            {phaseId != null && <SaveStatus busy={saving} failed={failed} onRetry={() => void run()} />}
           </div>
           {plan.startDate && (
             // The facts parted by a thin upright line, not a dot (21 Oct, Alex), as the metrics' line under it.
@@ -1398,7 +1384,8 @@ function MetricGraph({ metric: m, series, rangeSwitch = null }: { metric: Logged
           </span>
           {rangeSwitch}
         </header>
-        <p className="rm-graph-empty">Nothing logged for {m.name} in this range.</p>
+        {/* The empty word alone (6 Nov, Alex: admin audit). */}
+        <p className="rm-graph-empty">Nothing logged</p>
       </section>
     );
   }
@@ -1479,15 +1466,16 @@ function MetricGraph({ metric: m, series, rangeSwitch = null }: { metric: Logged
           )}
         </div>
         <div className="rm-graph-dots" aria-hidden="true">
-          {/* No dots (as Home's Weight): the latest ringed in the colour, the period read ringed in ink. The latest pulses in
-              the colour (4 Nov, Alex: "on all the graphs actually... the last check-in, that's what pulsates"), Home's Weight's
-              pulse, drawn under the ring so its white middle stays clean; still while a period is read, as Home's. */}
+          {/* No dots (as Home's Weight) but the latest, pulsing (4 Nov, Alex: "on all the graphs actually"); the period read
+              ringed in ink. The latest a dot in the line's colour, pulsing, as Home's Weight (.rh-wnowdot), never a white ring; gone while a
+              period is read, as Home's (6 Nov, Alex: admin audit). */}
           {!shown && <b className="pulse" style={{ left: pct(x(last.i), W), top: pct(y(last.value), H), background: m.colour }} />}
-          <i className="last" style={{ left: pct(x(last.i), W), top: pct(y(last.value), H), borderColor: m.colour }} />
+          {!shown && <i className="last" style={{ left: pct(x(last.i), W), top: pct(y(last.value), H), background: m.colour }} />}
           {shown && <i className="on" style={{ left: pct(x(shown.i), W), top: pct(y(shown.value), H) }} />}
         </div>
         {shown && (
-          <span className={`rm-graph-pill${y(shown.value) < H * 0.3 ? " below" : ""}`} style={{ left: pct(x(shown.i), W), top: pct(y(shown.value), H) }}>
+          // In the room kept over the plot, never over the line, kept off the card's edges (as Home's .rh-wtip; 6 Nov, Alex: admin audit).
+          <span className="rm-graph-pill" style={{ left: `clamp(64px, ${pct(x(shown.i), W)}, calc(100% + 44px - 64px))` }}>
             <SepJoin parts={[`${n(shown.value)}${tail}`, shown.label]} />
           </span>
         )}

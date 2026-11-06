@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { PlayIcon, PlusIcon } from "../../../components/icons";
 import Pager from "../Pager";
+import { NeedFace } from "../NeedGroups";
 import { SepJoin } from "../Sep";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
 // Types only: businessBoard.ts re-exports the server's reader, which must never reach the browser.
@@ -664,15 +665,19 @@ function OwedLog({ owed, today, money }: { owed: BusinessBoard["owed"]; today: s
               <a className="rd-row-hit" href={SHEET(r.invoiceId)} target="_blank" rel="noopener noreferrer" title={r.number ? `Open ${r.number}` : "Open the invoice"}>
                 <span className="rd-logdate">{day ? logDate(day) : "–"}</span>
               </a>
-              <span className="rbz-who">
-                {r.clientId != null ? (
-                  <Link href={INVOICES(r.clientId)} className="rbz-name">
-                    {r.client}
-                  </Link>
-                ) : (
-                  <span className="rbz-name">{r.client}</span>
-                )}
-                {r.number && <span className="rbz-num">{r.number}</span>}
+              {/* The face (24px) before the name, as the Feed's (6 Nov, Alex: admin audit). */}
+              <span className="rbz-whoface">
+                <NeedFace name={r.client} src={r.avatarPath} />
+                <span className="rbz-who">
+                  {r.clientId != null ? (
+                    <Link href={INVOICES(r.clientId)} className="rbz-name">
+                      {r.client}
+                    </Link>
+                  ) : (
+                    <span className="rbz-name">{r.client}</span>
+                  )}
+                  {r.number && <span className="rbz-num">{r.number}</span>}
+                </span>
               </span>
               <span className={`rbz-when${w.late ? " late" : ""}`}>{w.text}</span>
               <span className="rbz-amt">{money.exact(r.amount)}</span>

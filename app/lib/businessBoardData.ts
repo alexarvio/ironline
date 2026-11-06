@@ -351,6 +351,8 @@ function owedOf(ctx: Ctx): BusinessBoard["owed"] {
       invoiceId: i.id,
       clientId: byId.has(i.client_id) ? i.client_id : null,
       client: invoiceClient(i, byId),
+      // Their face before the name, as every log with several people (6 Nov, Alex: admin audit).
+      avatarPath: byId.get(i.client_id)?.avatar_path ?? null,
       number: i.number ?? null,
       issued: issueDay(i),
       due,

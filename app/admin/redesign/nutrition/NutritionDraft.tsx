@@ -1397,7 +1397,8 @@ function DayRow({ day, open, due, grid, mealGrid, commentsOn, onToggle, onShot, 
         </span>
         {/* The row's one action: a message about this day (on hover), not a menu. */}
         <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
-          <button type="button" className="rd-btn ghost sm" onClick={onMessage} aria-label={`Message about ${logDate(day.date)}`} title="Message about this day">
+          {/* The shared 30px round row button every row uses (6 Nov, Alex: admin audit; one action, so no menu behind it). */}
+          <button type="button" className="trn-row-more" onClick={onMessage} aria-label={`Message about ${logDate(day.date)}`} title="Message about this day">
             <ChatIcon />
           </button>
         </span>

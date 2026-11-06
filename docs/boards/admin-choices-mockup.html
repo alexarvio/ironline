@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin choices</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Group 2 of the 6 Nov admin audit (docs/design-audit-2026-11-06-admin.md): the six that need Alex's eye. Values copied
+     from the app: the page #f4f7fc (rail.css:8, draft.css:5) beside the chat panel's #f5f6f8; the rail's lines and hover
+     (rail.css:26-135); the two dropdowns (ui.css:70 .pb-menu, the floating lists); ‹ Today › (Calendar's pills, plan.css:79
+     ghost); the three searches (the rail's pill, library.css:11, the Feed filter's line); Lifestyle's check-in rows. */
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --muted:#8b93a1; --faint:#98A2B3; --line:#E1E5EB; --btn:#DCE1E8; --div:#EEF0F3; --page:#F5F6F8; --rust:#b8471f; --green:#2f7a3f; --life:#a08a5c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e2e5ea; font-family: Archivo, system-ui, sans-serif; color: var(--ink); padding: 32px 16px 60px; }
+  .intro { max-width: 1080px; margin: 0 auto 10px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 6px; }
+  .intro p { margin: 0; color: var(--sec); font-size: 13px; font-weight: 500; line-height: 1.55; max-width: 880px; }
+  .part { max-width: 1080px; margin: 40px auto 6px; font-size: 13px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--sec); }
+  .ask { max-width: 1080px; margin: 0 auto 14px; color: var(--body); font-size: 14px; font-weight: 500; line-height: 1.5; }
+  .pair { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+  .lbl { display: flex; gap: 10px; align-items: baseline; margin: 0 0 4px 6px; }
+  .lbl b { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 600; }
+  .lbl span { font-size: 15px; font-weight: 600; }
+  .why { margin: 0 6px 10px; color: var(--sec); font-size: 12.5px; font-weight: 500; line-height: 1.5; min-height: 38px; }
+  .stage { border-radius: 18px; padding: 20px; background: var(--page); min-height: 150px; }
+  .card { border-radius: 18px; background: #fff; border: 1px solid var(--line); }
+  .pill { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 14px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--btn); font-size: 13px; font-weight: 600; color: var(--ink); }
+  .cap { display: inline-flex; padding: 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--btn); }
+  .cap span { height: 30px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 999px; font-size: 13px; color: var(--sec); }
+  .cap span.on { background: var(--ink); color: #fff; }
+
+  /* 1 page colour */
+  .split { display: grid; grid-template-columns: 1fr 230px; border-radius: 18px; overflow: hidden; min-height: 170px; }
+  .split .pg { padding: 18px; }
+  .split .chat { padding: 18px 14px; border-left: 1px solid var(--line); }
+  .split h4 { margin: 0 0 10px; font-size: 18px; font-weight: 600; }
+  .bubble { padding: 8px 12px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); font-size: 13px; font-weight: 500; margin: 0 0 8px; width: fit-content; max-width: 90%; }
+  .bubble.me { margin-left: auto; background: #E9ECF1; box-shadow: none; }
+
+  /* 2 rail */
+  .rail { width: 250px; border-radius: 16px; background: #fff; border: 1px solid var(--line); padding: 12px 10px; }
+  .rrow { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--body); }
+  .rrow.on { background: var(--ink); color: #fff; font-weight: 600; }
+  .rrow.hov-now { background: #f5f6f8; }
+  .rrow.hov-new { background: #fafbfd; }
+  .rrow i { font-style: normal; font-size: 12.5px; color: var(--rust); font-weight: 600; }
+  .rsep { height: 1px; background: var(--div); margin: 10px -10px; }
+  .rgap { height: 18px; }
+  .rhead { padding: 4px 12px 8px; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; color: var(--sec); }
+  .rcap { display: flex; margin: 0 4px 6px; padding: 3px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--btn); }
+  .rcap span { flex: 1; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 999px; font-size: 13px; color: var(--sec); }
+  .rcap span.on { background: var(--ink); color: #fff; font-weight: 600; }
+  .rcap.w500 span:not(.on) { font-weight: 500; }
+  .rcap.w600 span { font-weight: 600; }
+  .face { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: #eef0f3; font-size: 11px; font-weight: 600; color: var(--sec); margin-right: 8px; }
+
+  /* 3 menus */
+  .menu-a { width: 236px; padding: 5px; border-radius: 10px; background: #fff; box-shadow: 0 12px 28px rgba(20, 30, 50, .16); }
+  .menu-a div { display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 7px; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .menu-b { width: 236px; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, .35), 0 0 0 1px var(--line); }
+  .menu-b div { display: flex; align-items: center; height: 38px; padding: 0 12px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--ink); }
+  .menu-a div.h, .menu-b div.h { background: #fafbfd; }
+  .menu-a .red, .menu-b .red { color: #b42318; }
+
+  /* 4 today */
+  .nav { display: flex; align-items: center; gap: 6px; }
+  .navhead { display: flex; align-items: center; justify-content: space-between; }
+  .navhead h4 { margin: 0; font-size: 20px; font-weight: 600; }
+  .ghost { display: inline-flex; align-items: center; justify-content: center; height: 32px; min-width: 32px; padding: 0 8px; border-radius: 10px; font-size: 12.5px; font-weight: 600; color: var(--sec); }
+  .rnd { width: 36px; padding: 0; }
+
+  /* 5 search */
+  .s-rail { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); background: #fff; font-size: 13px; color: var(--faint); margin: 0 0 12px; }
+  .s-lib { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid var(--ink); border-radius: 10px; background: #fff; font-size: 14px; color: var(--faint); margin: 0 0 12px; }
+  .s-feed { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 2px; border-bottom: 1px solid var(--line); font-size: 13.5px; color: var(--faint); }
+  .s-one { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--ink); background: #fff; font-size: 13.5px; color: var(--faint); margin: 0 0 12px; }
+  .s-tag { font-size: 11px; font-weight: 600; color: var(--sec); margin: 0 0 4px 2px; }
+  svg.mag { width: 15px; height: 15px; flex: none; color: var(--muted); }
+
+  /* 6 lifestyle fold */
+  .cols6, .row6 { display: grid; grid-template-columns: 150px 100px 90px 90px minmax(0, 1fr); align-items: center; min-width: 470px; }
+  .wide { grid-template-columns: 1fr; }
+  .wide .card { overflow-x: auto; }
+  .cols6 { min-height: 36px; padding: 4px 18px 0; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--sec); }
+  .row6 { min-height: 52px; padding: 0 18px; border-top: 1px solid var(--div); }
+  .date6 { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 500; color: var(--body); }
+  .fig6 { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .chev { width: 12px; height: 12px; color: var(--muted); }
+  .chev.down { transform: rotate(90deg); }
+  .pen { width: 14px; height: 14px; color: var(--muted); }
+  .open6 { padding: 4px 18px 16px 44px; background: #fff; }
+  .wrote { font-size: 12px; font-weight: 500; color: var(--muted); margin: 0 0 4px; }
+  .said { font-size: 14px; font-weight: 500; color: var(--body); margin: 0 0 8px; }
+  .reply { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .pop { position: absolute; right: 30px; top: 70px; width: 250px; padding: 14px; border-radius: 16px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16,24,40,.35), 0 0 0 1px var(--line); }
+  .ink { display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>Six choices for the coach&rsquo;s screens</h1>
+    <p>The six smaller things from today&rsquo;s admin audit where there is a real choice. Each shows how it is now and what I&rsquo;d do; for the menus and ‹ Today › there are two ways, pick one.</p>
+  </div>
+
+  <!-- 1 -->
+  <div class="part">1 · The page colour</div>
+  <p class="ask">Every coach screen sits on a faintly blue grey (#f4f7fc); the chat panel that slides in beside it is the neutral grey of the rules (#f5f6f8). Side by side the page reads cooler.</p>
+  <div class="pair">
+    <div>
+      <div class="lbl"><b>NOW</b><span>Two greys side by side</span></div>
+      <p class="why">The page left, the chat panel right.</p>
+      <div class="split"><div class="pg" style="background:#f4f7fc"><h4>Training</h4><div class="card" style="height:90px"></div></div><div class="chat" style="background:#f5f6f8"><div class="bubble">Felt strong today</div><div class="bubble me">Great, keep it up</div></div></div>
+    </div>
+    <div>
+      <div class="lbl"><b>PROPOSED</b><span>One grey, the rules&rsquo; #F5F6F8</span></div>
+      <p class="why">The page and the chat panel the same; the cards still white on it.</p>
+      <div class="split"><div class="pg" style="background:#f5f6f8"><h4>Training</h4><div class="card" style="height:90px"></div></div><div class="chat" style="background:#f5f6f8"><div class="bubble">Felt strong today</div><div class="bubble me">Great, keep it up</div></div></div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="part">2 · The rail</div>
+  <p class="ask">The left menu parts its sections with lines, has its own hover grey, and its All | Needs you words change weight when you switch.</p>
+  <div class="pair">
+    <div>
+      <div class="lbl"><b>NOW</b><span>Lines, its own hover, words that change weight</span></div>
+      <p class="why">A line over Clients and over the coach at the foot; hovering is #f5f6f8 (shown on Calendar); All picked is 600, Needs you 500.</p>
+      <div class="stage"><div class="rail">
+        <div class="rrow on">Feed <i>1</i></div><div class="rrow hov-now">Calendar</div><div class="rrow">Phases <i>13</i></div><div class="rrow">Business</div>
+        <div class="rsep"></div><div class="rhead">CLIENTS</div><div class="rcap w500"><span class="on">All</span><span>Needs you</span></div>
+        <div class="rrow"><span><span class="face">A</span>Alex</span></div><div class="rrow"><span><span class="face">N</span>Nithit</span></div>
+        <div class="rsep"></div><div class="rrow"><span><span class="face">F</span>Finlay Chedd</span></div>
+      </div></div>
+    </div>
+    <div>
+      <div class="lbl"><b>PROPOSED</b><span>Space, the one hover, steady words</span></div>
+      <p class="why">Sections parted by room, as the screens are; the one row hover #fafbfd; both capsule words at 600 so nothing moves.</p>
+      <div class="stage"><div class="rail">
+        <div class="rrow on">Feed <i>1</i></div><div class="rrow hov-new">Calendar</div><div class="rrow">Phases <i>13</i></div><div class="rrow">Business</div>
+        <div class="rgap"></div><div class="rhead">CLIENTS</div><div class="rcap w600"><span class="on">All</span><span>Needs you</span></div>
+        <div class="rrow"><span><span class="face">A</span>Alex</span></div><div class="rrow"><span><span class="face">N</span>Nithit</span></div>
+        <div class="rgap"></div><div class="rrow"><span><span class="face">F</span>Finlay Chedd</span></div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="part">3 · Dropdown menus: pick one</div>
+  <p class="ask">The ⋯ menus (Training, Lifestyle, Nutrition, Meetings, Invoices, Plan, Library, the chat) and the floating lists (Feed&rsquo;s client filter, Calendar, Business, Phases, Settings) are drawn two ways. One should win.</p>
+  <div class="pair">
+    <div>
+      <div class="lbl"><b>A</b><span>The ⋯ menu&rsquo;s look</span></div>
+      <p class="why">Radius 10, a soft shadow and no edge, items at 600 and 34px. Compact.</p>
+      <div class="stage"><div class="menu-a"><div>Message</div><div class="h">Edit dates</div><div>New phase</div><div class="red">Delete phase</div></div></div>
+    </div>
+    <div>
+      <div class="lbl"><b>B</b><span>The floating list&rsquo;s look</span></div>
+      <p class="why">Radius 14, the pop-ups&rsquo; shadow and hairline (as the rules&rsquo; floating list, §6), items at 500 and 38px. Matches the pop-ups.</p>
+      <div class="stage"><div class="menu-b"><div>Message</div><div class="h">Edit dates</div><div>New phase</div><div class="red">Delete phase</div></div></div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="part">4 · ‹ Today ›: pick one</div>
+  <p class="ask">Calendar&rsquo;s month steps with white pills; the Plan and Phases step their timelines with plain grey buttons.</p>
+  <div class="pair">
+    <div>
+      <div class="lbl"><b>A</b><span>Calendar&rsquo;s: white 36px pills</span></div>
+      <p class="why">The same white pill as every header action; sits level with the 36px capsules.</p>
+      <div class="stage"><div class="navhead"><h4>Phases</h4><div class="nav"><span class="pill rnd">‹</span><span class="pill">Today</span><span class="pill rnd">›</span></div></div></div>
+    </div>
+    <div>
+      <div class="lbl"><b>B</b><span>Plan&rsquo;s: plain buttons</span></div>
+      <p class="why">No edge, 32px, Today at 12.5px grey. Quieter over the timeline.</p>
+      <div class="stage"><div class="navhead"><h4>Phases</h4><div class="nav"><span class="ghost">‹</span><span class="ghost">Today</span><span class="ghost">›</span></div></div></div>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="part">5 · Search fields</div>
+  <p class="ask">Three shapes for one thing.</p>
+  <div class="pair">
+    <div>
+      <div class="lbl"><b>NOW</b><span>The rail&rsquo;s, the Library&rsquo;s, the Feed filter&rsquo;s</span></div>
+      <p class="why">A 34px pill with a hairline; a 40px box with an ink edge and radius 10; a line under the words.</p>
+      <div class="stage">
+        <div class="s-tag">Rail</div><div class="s-rail"><svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>Search clients</div>
+        <div class="s-tag">Library</div><div class="s-lib"><svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>Search the library</div>
+        <div class="s-tag">Feed&rsquo;s client filter</div><div class="s-feed"><svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>Search clients</div>
+      </div>
+    </div>
+    <div>
+      <div class="lbl"><b>PROPOSED</b><span>One: the ink-edged bar, 36px, a pill</span></div>
+      <p class="why">The search the rules describe (the exercise search&rsquo;s ink edge), at the 36px of every control. Inside a floating list the plain line stays, as the rules allow.</p>
+      <div class="stage">
+        <div class="s-tag">Rail</div><div class="s-one"><svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>Search clients</div>
+        <div class="s-tag">Library</div><div class="s-one"><svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>Search the library</div>
+        <div class="s-tag">Feed&rsquo;s client filter (in its floating list)</div><div class="s-feed"><svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>Search clients</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="part">6 · Lifestyle&rsquo;s check-in rows</div>
+  <p class="ask">A behaviour, not just a look. On Nutrition and Meetings a row opens in place with its chevron; Lifestyle&rsquo;s check-ins never open, and a client&rsquo;s note pops up in a little card instead.</p>
+  <div class="pair wide">
+    <div>
+      <div class="lbl"><b>NOW</b><span>A note in a pop-up</span></div>
+      <p class="why">The pen on the row opens a floating card with the words and an ink Reply; the row itself doesn&rsquo;t open.</p>
+      <div class="stage" style="position:relative">
+        <div class="card"><div class="cols6"><span>Date</span><span>Weight</span><span>Sleep</span><span>Steps</span><span></span></div>
+          <div class="row6"><span class="date6">Wed, 5 Nov <svg class="pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h7M14.5 5.5l4 4L9 19H5v-4z"/></svg></span><span class="fig6">90.8 kg</span><span class="fig6">7 / 10</span><span class="fig6">9,412</span><span></span></div>
+          <div class="row6"><span class="date6">Tue, 4 Nov</span><span class="fig6">91.1 kg</span><span class="fig6">6 / 10</span><span class="fig6">4,108</span><span></span></div>
+        </div>
+        <div class="pop"><div class="wrote">Alex wrote</div><div class="said">&ldquo;Slept badly, neighbours again&rdquo;</div><span class="ink">Reply</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="lbl"><b>PROPOSED</b><span>The row opens, as Nutrition&rsquo;s</span></div>
+      <p class="why">A row with something in it gets the chevron after its date and opens in place: the client&rsquo;s note, then Reply in words to the chat. A row with nothing in it doesn&rsquo;t open (rule §8).</p>
+      <div class="stage">
+        <div class="card"><div class="cols6"><span>Date</span><span>Weight</span><span>Sleep</span><span>Steps</span><span></span></div>
+          <div class="row6"><span class="date6">Wed, 5 Nov <svg class="chev down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg><svg class="pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h7M14.5 5.5l4 4L9 19H5v-4z"/></svg></span><span class="fig6">90.8 kg</span><span class="fig6">7 / 10</span><span class="fig6">9,412</span><span></span></div>
+          <div class="open6"><div class="wrote">Alex wrote</div><div class="said">&ldquo;Slept badly, neighbours again&rdquo;</div><span class="reply">Reply</span></div>
+          <div class="row6"><span class="date6">Tue, 4 Nov</span><span class="fig6">91.1 kg</span><span class="fig6">6 / 10</span><span class="fig6">4,108</span><span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

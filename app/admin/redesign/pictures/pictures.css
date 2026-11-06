@@ -5,9 +5,11 @@
 .rd.rp { container: rp / inline-size; }
 
 /* ---- Header: the open sheet's tag, the Sheet setup pill. */
-.rd.rp .rp-tag { background: transparent; white-space: nowrap; }
-.rd.rp .rp-tag.open { color: #b8471f; box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.35); }
-.rd.rp .rp-tag.next { color: #8b93a1; box-shadow: inset 0 0 0 1px #e1e5eb; }
+/* Tinted as every tab's state tag (6 Nov, Alex: admin audit; Training's trn-status with stateTagStyle, rule §3), not an
+   outline: the open sheet rust on its 12% tint, the next one the grey tag's #5b6474 on #EEF0F3. */
+.rd.rp .rp-tag { box-shadow: none; white-space: nowrap; }
+.rd.rp .rp-tag.open { background: rgba(184, 71, 31, 0.12); color: #b8471f; }
+.rd.rp .rp-tag.next { background: #eef0f3; color: #5b6474; }
 /* Its words at 600 as Training's pills, its facts staying 500 grey (29 Oct, Alex). */
 .rd.rp .rp-setup-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px 0 10px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
 .rd.rp .rp-setup-btn:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
@@ -15,7 +17,8 @@
 .rd.rp .rp-setup-btn small { font-size: 12px; font-weight: 500; color: #8b93a1; }
 
 /* Small caps labels, the same everywhere on the tab. */
-.rp-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98a2b3; white-space: nowrap; }
+/* The admin's one small caps (6 Nov, Alex: admin audit; rule §2): 10.5px, 600, .16em, #5b6474 (was 10px #98a2b3). */
+.rp-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; white-space: nowrap; }
 
 /* A clean line to type on: no box, ink while typing; grows with its words. */
 .rd.rp .rp-line { display: block; width: 100%; min-height: 0; margin: 0; padding: 4px 0 6px; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; background: none; box-shadow: none; box-sizing: border-box; overflow: hidden; resize: none; font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.45; color: #141a24; outline: none; }
@@ -81,7 +84,8 @@
 .rd.rp .rp-comment-foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .rd.rp .rp-cancel { padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; }
 .rd.rp .rp-cancel:hover { color: #141a24; }
-.rd.rp .rp-save { height: 32px; padding: 0 16px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; cursor: pointer; }
+/* The note lines' small ink pill, 34px as Note to {client}'s Save and the chat's (6 Nov, Alex: admin audit; was 32px). */
+.rd.rp .rp-save { height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; cursor: pointer; }
 .rd.rp .rp-save:hover { background: #262e3b; }
 .rd.rp .rp-save:disabled { background: #c9cfd8; cursor: default; }
 /* What was said on the sheet before (23 Oct, Alex), over the line, read only, as the Nutrition photo's: when, then the words. */
@@ -117,8 +121,6 @@
 @container rp (max-width: 640px) {
   .rd.rp .rp-thead, .rd.rp .rp-trow { grid-template-columns: 112px minmax(0, 1fr) 96px 90px 104px; }
 }
-.rd.rp .rp-showall { align-self: flex-start; padding: 0 0 0 4px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
-.rd.rp .rp-showall:hover { color: #5b6474; }
 
 /* ---- Setup: the phase pop-up's .npd (month left, the dates and words right), the angles under them. */
 .npd.npd.rp-setupdlg .rp-anglesfield { margin-top: 22px; }

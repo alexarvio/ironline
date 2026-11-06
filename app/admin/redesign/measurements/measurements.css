@@ -96,7 +96,8 @@
 .rm-graph-delta.good, .rm-graph-pick-delta.good { color: #2f7a3f; }
 .rm-graph-delta.warn, .rm-graph-pick-delta.warn { color: #b42318; }
 .rm-graph-facts { margin-top: 2px; font-size: 12.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.rm-graph-plot { position: relative; flex: 1; min-height: 0; margin: 18px 44px 0 0; }
+/* 34px over the plot: the reading's pill sits in that room, never over the line (6 Nov, Alex: admin audit; Home's Weight). */
+.rm-graph-plot { position: relative; flex: 1; min-height: 0; margin: 34px 44px 0 0; }
 /* The chart fills what is left of the card: the svg is laid over the plot, so its own proportions never stretch the card. */
 .rm-graph-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
 .rm-graph-base { stroke: #EEF0F3; stroke-width: 1; }
@@ -109,16 +110,16 @@
 .rm-graph-yaxis span.goal { font-weight: 600; }
 .rm-graph-dots { position: absolute; inset: 0; pointer-events: none; }
 .rm-graph-dots i { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; box-sizing: border-box; }
-.rm-graph-dots i.last { border: 2px solid; background: #fff; }
+/* The latest a solid dot in the colour over its pulse, as Home's .rh-wnowdot (6 Nov, Alex: admin audit; was a white ring). */
+.rm-graph-dots i.last { z-index: 1; }
 .rm-graph-dots i.on { border: 2px solid #141a24; background: #fff; }
 /* The latest pulses in the group's colour (4 Nov, Alex: "on all the graphs actually... the last check-in, that's what
    pulsates"): Home's Weight dot's pulse (rh-wnowpulse: 1.8s, ×1 → ×2.8, its 45% colour at .9 → 0, so .405 here on the
-   solid colour), under the ring; still for reduced motion and while zoomed (globals.css). */
+   solid colour), under the dot; still for reduced motion and while zoomed (globals.css). */
 .rm-graph-dots b.pulse { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 999px; opacity: 0; animation: rm-graph-nowpulse 1.8s ease-out infinite; }
 @keyframes rm-graph-nowpulse { from { transform: scale(1); opacity: 0.405; } to { transform: scale(2.8); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .rm-graph-dots b.pulse { animation: none; } }
-.rm-graph-pill { position: absolute; transform: translate(-50%, -150%); padding: 4px 10px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
-.rm-graph-pill.below { transform: translate(-50%, 60%); }
+.rm-graph-pill { position: absolute; top: -30px; height: 24px; box-sizing: border-box; display: inline-flex; align-items: center; transform: translateX(-50%); padding: 0 9px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
 .rm-graph-strip { display: flex; gap: 2px; height: 6px; margin: 10px 44px 0 0; }
 .rm-graph-strip i { flex: 1 1 0; min-width: 2px; border-radius: 2px; background: #EEF0F3; }
 .rm-graph-axis { position: relative; height: 16px; margin: 8px 44px 0 0; }
