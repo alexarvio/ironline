@@ -3,6 +3,10 @@
 // screen and lit briefly (`.landed`, globals.css: a soft ink tint that fades over 2.4s). Client and coach alike.
 
 export const LANDED_MS = 2400;
+/** The lit tint's corners on a thing with none of its own (6 Nov, Alex: the gyms pop-up lit a square row, "it goes
+ *  against the design… we do use quite a lot of rounded corners"); a card or pill keeps its own. */
+const LANDED_RADIUS = "12px";
+const rounding = new WeakMap<HTMLElement, { inline: string; timer: number }>();
 
 /** Brings `el` into view and lights it for a moment. Safe to call with null (nothing there to land on). */
 export function landOn(el: Element | null | undefined, block: ScrollLogicalPosition = "center"): void {
@@ -13,6 +17,20 @@ export function landOn(el: Element | null | undefined, block: ScrollLogicalPosit
   // A reflow between, so landing on the same thing twice lights it again.
   void (el as HTMLElement).offsetWidth;
   el.classList.add("landed");
+  // Square corners are rounded while it is lit, then given back as they were.
+  const box = el as HTMLElement;
+  const was = rounding.get(box);
+  if (was) window.clearTimeout(was.timer);
+  else if (getComputedStyle(box).borderTopLeftRadius === "0px") {
+    rounding.set(box, { inline: box.style.borderRadius, timer: 0 });
+    box.style.borderRadius = LANDED_RADIUS;
+  }
+  const round = rounding.get(box);
+  if (round)
+    round.timer = window.setTimeout(() => {
+      box.style.borderRadius = round.inline;
+      rounding.delete(box);
+    }, LANDED_MS);
   window.setTimeout(() => el.classList.remove("landed"), LANDED_MS);
 }
 
