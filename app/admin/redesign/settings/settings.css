@@ -69,9 +69,11 @@
 .rd.rst .rd-picker.rst-pick:focus-visible, .rd.rst .rd-picker.rst-pick[data-state="open"] { border-bottom-color: #141a24; }
 .rd.rst .rd-picker.rst-pick > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rd.rst .rd-picker.rst-pick svg { flex: none; width: 16px; height: 16px; color: #8b93a1; }
-/* Its list floats over the page (portaled): six rows, then it scrolls inside (design rules 6). */
-body:has(.rd.rst) .rd-picker-menu.rd-picker-menu { max-height: min(252px, var(--radix-dropdown-menu-content-available-height, 252px)); padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; font-family: var(--font-archivo), system-ui, sans-serif; }
-body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"] { justify-content: space-between; gap: 12px; min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #141a24; }
+/* Its list floats over the page (portaled): six rows, then it scrolls inside (design rules 6). In the ⋯ menu's look
+   (6 Nov, Alex: docs/boards/admin-choices-mockup.html, A): radius 10, padding 5, the soft shadow and no edge, rows 34px at
+   13.5/600 with radius 7 (the chosen one's weight the same, so picking moves nothing). */
+body:has(.rd.rst) .rd-picker-menu.rd-picker-menu { max-height: min(214px, var(--radix-dropdown-menu-content-available-height, 214px)); padding: 5px; border: 0; border-radius: 10px; background: #fff; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; font-family: var(--font-archivo), system-ui, sans-serif; }
+body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"] { justify-content: space-between; gap: 12px; min-height: 34px; padding: 0 10px; border-radius: 7px; font-size: 13.5px; font-weight: 600; color: #141a24; }
 body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background: #f5f6f8; font-weight: 600; }
 body:has(.rd.rst) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font-size: 12px; font-weight: 500; color: #8b93a1; }
 

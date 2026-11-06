@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { Fragment, useContext, useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { addClientPhaseAction, applyMetricChangesAction, deletePhaseAction, deployPhaseNowAction, saveAndSchedulePhaseOrSayWhyAction, sendChatMessageAction, setCheckInDayAction, setMetricSummaryAction, setMonthlyCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientPhaseAction, applyMetricChangesAction, deletePhaseAction, deployPhaseNowAction, dismissHomeActionAction, markSeenAction, saveAndSchedulePhaseOrSayWhyAction, sendChatMessageAction, setCheckInDayAction, setMetricSummaryAction, setMonthlyCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
@@ -16,12 +16,12 @@ import { stateTagStyle } from "../../phaseChrome";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
 import PhaseSwitcher from "../PhaseSwitcher";
-import { TodoStrip } from "../TodoStrip";
+import { TodoContext, TodoStrip } from "../TodoStrip";
 import { useOpenChat } from "../ChatPanel";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
 import Pager from "../Pager";
-import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { newOnceKey } from "../../../lib/onceKey";
 import { groupColour } from "../../../lib/categoryColors";
@@ -347,6 +347,26 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
     ro.observe(el);
     return () => ro.disconnect();
   }, [show, logCadence, view.metrics.length, plan.notStarted]);
+  // The check-in row open on its note, `${cadence}:${period}`, one at a time (6 Nov, Alex: docs/boards/admin-choices-mockup.html).
+  const [openCheckin, setOpenCheckin] = useState<string | null>(null);
+  // Opening a row with their note is reading it, as a food day's (6 Nov, Alex): the to-do strip's Read row for that
+  // check-in goes, and the rail's number with it; the same marks its Read button makes.
+  const { items: todos } = useContext(TodoContext);
+  const toggleCheckin = (c: Cadence, period: string) => {
+    const k = `${c}:${period}`;
+    const opening = openCheckin !== k;
+    setOpenCheckin(opening ? k : null);
+    if (!opening) return;
+    const due = (todos ?? []).filter((i) => i.kind === "read" && i.href.endsWith(`#checkin-${c}-${period}`));
+    if (!due.length) return;
+    const ids = due.flatMap((i) => (i.eventId ? [i.eventId] : []));
+    const keys = due.filter((i) => !i.eventId).map((i) => i.key);
+    startTransition(async () => {
+      if (ids.length) await markSeenAction(clientId, { ids });
+      if (keys.length) await dismissHomeActionAction(clientId, keys);
+      router.refresh();
+    });
+  };
   // Arriving from a link in a message (#checkin-weekly, #checkin-weekly-2026-10-12; 21 Oct: it opened at the top):
   // that rhythm, the page holding that check-in, its row in view. On a later link that changes only the #part too.
   useEffect(() => {
@@ -365,6 +385,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         if (idx < 0) return;
         setLogPage(Math.floor(idx / PAGE) + 1);
         setShow("table");
+        // Unfolded too when it holds their note (6 Nov, Alex: a link lands on its thing, the page unfolds it).
+        setOpenCheckin(`${c}:${period}`);
         // Brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
         setTimeout(() => landOn(document.querySelector(`[data-checkin="${c}-${period}"]`)), 120);
       });
@@ -377,8 +399,9 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- on arrival and on a new #part only
   }, []);
-  // The client's note on a check-in sits by its date (a bubble); Reply there is a message linked to that check-in.
-  const replyTo = (period: string) => message({ label: `${CAD[logCadence].label} check-in · ${whenOf(period, logShown.periods.find((p) => p.key === period)?.label ?? period)}`, link: { kind: "checkin", section: logCadence, period } });
+  // The client's note on a check-in opens in place under its row (6 Nov, Alex: docs/boards/admin-choices-mockup.html,
+  // item 6, as Nutrition's days; was a pop-over by the date); Reply there is a message linked to that check-in.
+  const replyTo =(period: string) => message({ label: `${CAD[logCadence].label} check-in · ${whenOf(period, logShown.periods.find((p) => p.key === period)?.label ?? period)}`, link: { kind: "checkin", section: logCadence, period } });
 
   const [dlg, setDlg] = useState<Dlg>(null);
   // Messaging about a check-in, a metric or a note slides the chat in from
@@ -721,7 +744,16 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           ) : view.metrics.length === 0 ? (
             <p className="rls-none">None yet</p>
           ) : show === "table" ? (
-            <CheckinTable view={logPaged} whole={logShown} cadence={logCadence} summaryOf={(m) => rows.find((r) => r.id === m.id)?.summary ?? m.summary} onReply={replyTo} />
+            <CheckinTable
+              view={logPaged}
+              whole={logShown}
+              cadence={logCadence}
+              firstName={firstName}
+              summaryOf={(m) => rows.find((r) => r.id === m.id)?.summary ?? m.summary}
+              openKey={openCheckin}
+              onToggle={(period) => toggleCheckin(logCadence, period)}
+              onReply={replyTo}
+            />
           ) : (
             <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
           )}
@@ -1144,29 +1176,27 @@ function CreateMetric({ groups, initial, taken, onCreate, onCancel }: { groups: 
 
 // One grid for the whole table: the head, every row and the Change line are
 // cells of the same container, so a column cannot drift off its heading.
-/** The note the client left on a check-in: a bubble by the date; a click opens it, with Reply (a message linked to that check-in). */
-function NoteBubble({ text, onReply }: { text: string; onReply: () => void }) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button type="button" className="rm-notebtn" onClick={(e) => e.stopPropagation()} aria-label="Note from the client" title="Note from the client">
-          <NoteIcon />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent side="bottom" align="start" className="rm-notepop w-80" onClick={(e) => e.stopPropagation()}>
-        <p>{text}</p>
-        <div className="rm-notepop-foot">
-          {/* The one action, a small ink pill (21 Oct: was navy). */}
-          <button type="button" className="rm-reply" onClick={onReply}>
-            Reply
-          </button>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function CheckinTable({ view, whole, cadence, summaryOf, onReply }: { view: LoggedValues; /** Every period in the range shown, all pages: what each head sums up. */ whole: LoggedValues; cadence: Cadence; summaryOf: (m: LoggedMetric) => MetricSummary; onReply: (period: string) => void }) {
+function CheckinTable({
+  view,
+  whole,
+  cadence,
+  firstName,
+  summaryOf,
+  openKey,
+  onToggle,
+  onReply,
+}: {
+  view: LoggedValues;
+  /** Every period in the range shown, all pages: what each head sums up. */
+  whole: LoggedValues;
+  cadence: Cadence;
+  firstName: string;
+  summaryOf: (m: LoggedMetric) => MetricSummary;
+  /** The row open on its note, `${cadence}:${period}`. */
+  openKey: string | null;
+  onToggle: (period: string) => void;
+  onReply: (period: string) => void;
+}) {
   const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
   // Each column sums itself up in its head (21 Oct, Alex; rules §8: a summary lives in the column head, never a row
   // of data): its change from the first day shown to the last (weight), or its average (sleep, resting HR).
@@ -1215,22 +1245,59 @@ function CheckinTable({ view, whole, cadence, summaryOf, onReply }: { view: Logg
             </span>
           );
         })}
-        {view.periods.map((p, i) => (
-          <div key={p.key} className="contents">
-            <span className={`rm-td date${i === 0 ? " now" : ""}`} data-checkin={`${cadence}-${p.key}`}>
-              <span className="rd-logdate">{logWhen(p.key, p.label, cadence)}</span>
-              {view.notes[p.key] && <NoteBubble text={view.notes[p.key]} onReply={() => onReply(p.key)} />}
-            </span>
-            {view.metrics.map((m, j) => {
-              const v = valueFor(m.id, p.key);
-              return (
-                <span key={m.id} className={`rm-td${i === 0 ? " now" : ""}${v == null ? " none" : ""}${j === view.metrics.length - 1 ? " last" : ""}`}>
-                  {v == null ? "—" : n(v)}
+        {view.periods.map((p, i) => {
+          // A row that holds their note opens in place, as Nutrition's days (6 Nov, Alex: docs/boards/admin-choices-mockup.html,
+          // item 6; rules §8): the chevron right after the date, the note pen after it, the words only once open, with
+          // Reply there. A row with nothing more has no chevron and doesn't open.
+          const note = view.notes[p.key]?.trim() || null;
+          const open = !!note && openKey === `${cadence}:${p.key}`;
+          const when = logWhen(p.key, p.label, cadence);
+          return (
+            <Fragment key={p.key}>
+              {/* The row opens on a click anywhere; for the keyboard the date is the button. */}
+              <div className={`contents rm-tr${note ? " opens" : ""}${open ? " open" : ""}`} onClick={note ? () => onToggle(p.key) : undefined}>
+                <span className={`rm-td date${i === 0 ? " now" : ""}`} data-checkin={`${cadence}-${p.key}`}>
+                  {note ? (
+                    <>
+                      <button type="button" className="rd-row-hit" aria-expanded={open}>
+                        <span className="rd-logdate">{when}</span>
+                        <Fold open={open} />
+                      </button>
+                      <span className="rd-notemark" title={`A note from ${firstName}`} aria-label={`A note from ${firstName}`}>
+                        <NoteIcon />
+                      </span>
+                    </>
+                  ) : (
+                    <span className="rd-logdate">{when}</span>
+                  )}
                 </span>
-              );
-            })}
-          </div>
-        ))}
+                {view.metrics.map((m, j) => {
+                  const v = valueFor(m.id, p.key);
+                  return (
+                    <span key={m.id} className={`rm-td${i === 0 ? " now" : ""}${v == null ? " none" : ""}${j === view.metrics.length - 1 ? " last" : ""}`}>
+                      {v == null ? "—" : n(v)}
+                    </span>
+                  );
+                })}
+              </div>
+              {/* Under the row, across the card from the date column, on the shared fold (0fr → 1fr); closed it takes
+                  no room, so the steady log keeps its 53px a row. */}
+              {note && (
+                <div className={`rm-cn${open ? " open" : ""}`} inert={!open}>
+                  <div className="rm-cn-clip">
+                    <div className="rm-cn-in">
+                      <p className="rm-cn-wrote">{firstName} wrote</p>
+                      <p className="rm-cn-said">&ldquo;{note}&rdquo;</p>
+                      <button type="button" className="rm-cn-reply" onClick={() => onReply(p.key)}>
+                        Reply
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Fragment>
+          );
+        })}
       </div>
     </div>
   );

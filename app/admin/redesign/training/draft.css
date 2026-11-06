@@ -296,7 +296,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-prescribed-row b { font-size: 16px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
 .rd-prescribed-row b em { font-style: normal; font-size: 12px; font-weight: 500; color: #5b6474; }
 .rd-prescribed-note { margin: 0; font-size: 12.5px; color: #313851; }
-.pb-menu [data-slot="dropdown-menu-checkbox-item"], .pb-menu [data-slot="dropdown-menu-sub-trigger"] { gap: 9px; padding-top: 8px; padding-bottom: 8px; border-radius: 7px; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }
+.pb-menu [data-slot="dropdown-menu-checkbox-item"], .pb-menu [data-slot="dropdown-menu-sub-trigger"] { gap: 9px; min-height: 34px; padding-top: 7px; padding-bottom: 7px; line-height: 20px; border-radius: 7px; font-size: 13.5px; font-weight: 600; color: #141a24; cursor: pointer; }
 .pb-menu [data-slot="dropdown-menu-sub-trigger"] { padding-left: 10px; padding-right: 10px; }
 .pb-menu [data-slot="dropdown-menu-sub-trigger"] svg:first-child { width: 15px; height: 15px; color: #5b6474; }
 .rd-menu-hint { margin: 4px 10px 6px; font-size: 11px; color: #8b93a1; }
@@ -831,7 +831,7 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-row-main.has-chat { cursor: pointer; }
 /* The client's words in an opened session, and what they answered (ClientNote; 23 Oct, Alex: the blue band and navy
    Reply were the old way): as Lifestyle's and Nutrition's opened notes, no band, no tint, never navy. The chat icon at
-   1.6, "{First} wrote" grey, their words in quotes, Reply the check-ins' small ink pill (.rm-reply) right after them.
+   1.6, "{First} wrote" grey, their words in quotes, Reply in words right after them, as the check-ins' (.rm-cn-reply; 6 Nov, Alex: docs/boards/admin-choices-mockup.html).
    Held at the card's left while the table scrolls sideways. */
 /* On the right of the session, over the marks' end (25 Oct, Alex: "have this comment here on the right side"). */
 .rd-rows-scroll > .rd-cnote { min-width: 0; position: sticky; right: 0; }
@@ -842,9 +842,9 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 .rd-cnote-body { min-width: 0; line-height: 1.45; }
 .rd-cnote-who { font-size: 13px; font-weight: 500; color: #8b93a1; }
 .rd-cnote-words { font-size: 14px; font-weight: 500; color: #3a4250; white-space: pre-wrap; overflow-wrap: anywhere; }
-.rd-cnote-reply { flex: none; height: 30px; margin-left: 6px; padding: 0 14px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 12.5px; font-weight: 600; color: #fff; cursor: pointer; }
-.rd-cnote-reply:hover { background: #262e3b; }
-.rd-cnote-reply:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(20, 26, 36, 0.18); }
+.rd-cnote-reply { flex: none; margin-left: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }
+.rd-cnote-reply:hover { color: #3a4250; }
+.rd-cnote-reply:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
 .rd-exchat-reply { align-self: flex-start; }
 /* The whole session head opens and folds it (1 Oct), not only the chevron. */
 .rd-session-head { cursor: pointer; }

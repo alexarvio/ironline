@@ -39,11 +39,15 @@
 .rd.rcl .rcl-titled { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
 .rd.rcl .rcl-titled > span { font-size: 13px; font-weight: 500; color: #5b6474; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd.rcl .rcl-count { font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
-/* ‹ Today ›, as the Plan steps its timeline: everything on the line 36px, white with the hairline. */
-.rd.trn.rcl .rcl-pan { display: flex; align-items: center; gap: 6px; }
-.rd.trn.rcl .rcl-pan .trn-more, .rd.trn.rcl .rcl-pan .trn-pill { text-decoration: none; }
-.rd.trn.rcl .rcl-pan .trn-pill { padding: 0 14px; background: #fff; }
-.rd.trn.rcl .rcl-pan .trn-more:hover, .rd.trn.rcl .rcl-pan .trn-more:focus-visible, .rd.trn.rcl .rcl-pan .trn-pill:focus-visible { outline: none; box-shadow: inset 0 0 0 1px #141a24; }
+/* ‹ Today ›, the Plan's own (6 Nov, Alex: docs/boards/admin-choices-mockup.html, B): ghost buttons with no edge, 32px tall,
+   ‹ and › 32px square, Today 12.5px/600 grey with 12px each side, the soft neutral on hover. The Plan's classes
+   (rq-pan, rd-btn ghost, rq-today); written out in full here, as .rd.pln's rules don't reach this page. The head keeps its 36px. */
+.rd.trn.rcl .rcl-pan.rq-pan { display: flex; align-items: center; gap: 2px; }
+.rd.trn.rcl .rcl-pan .rd-btn.ghost { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 32px; min-width: 0; height: 32px; padding: 0; border: 0; border-radius: 999px; background: none; box-shadow: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.rd.trn.rcl .rcl-pan .rd-btn.ghost.rq-today { width: auto; padding: 0 12px; }
+.rd.trn.rcl .rcl-pan .rd-btn.ghost svg { width: 15px; height: 15px; }
+.rd.trn.rcl .rcl-pan .rd-btn.ghost:hover { background: #fafbfd; color: #141a24; }
+.rd.trn.rcl .rcl-pan .rd-btn.ghost:focus-visible { outline: none; box-shadow: inset 0 0 0 1px #141a24; color: #141a24; }
 @media (max-width: 1150px) {
   .rcl-page { height: auto; }
   .rd.rcl .rcl-cols { grid-template-columns: minmax(0, 1fr); }
@@ -191,15 +195,15 @@
 @keyframes cal-spin { to { transform: rotate(360deg); } }
 @media (max-width: 700px) { .npd.npd.cal-npd .cal-pair { grid-template-columns: minmax(0, 1fr); } }
 
-/* The client list floats over the pop-up (portalled), as the floating lists everywhere (design rules 6):
-   white, radius 14, the hairline ring, six rows then it scrolls inside. */
-.cal-drop.cal-drop { z-index: 60; display: flex; flex-direction: column; padding: 6px; border: 0; border-radius: 14px; outline: none; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; box-sizing: border-box; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
-.cal-drop.cal-drop { width: var(--radix-popover-trigger-width); min-width: 260px; max-width: min(560px, 100vw - 32px); max-height: calc(6 * 44px + 12px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
-.cal-opt { flex: none; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; text-align: left; cursor: pointer; }
+/* The client list floats over the pop-up (portalled), six rows then it scrolls inside (design rules 6), in the ⋯ menu's
+   look (6 Nov, Alex: docs/boards/admin-choices-mockup.html, A): radius 10, padding 5, the soft shadow and no edge, rows 34px. */
+.cal-drop.cal-drop { z-index: 60; display: flex; flex-direction: column; padding: 5px; border: 0; border-radius: 10px; outline: none; background: #fff; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); box-sizing: border-box; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+.cal-drop.cal-drop { width: var(--radix-popover-trigger-width); min-width: 260px; max-width: min(560px, 100vw - 32px); max-height: calc(6 * 34px + 10px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+.cal-opt { flex: none; display: flex; align-items: center; gap: 9px; height: 34px; padding: 0 10px; border: 0; border-radius: 7px; background: none; font: inherit; text-align: left; cursor: pointer; }
 /* One hover for every row and menu item (25 Oct, Alex): the exercise row's soft neutral; the chosen one keeps its grey. */
 .cal-opt:hover, .cal-opt:focus-visible { outline: none; background: #fafbfd; }
 .cal-opt[aria-selected="true"] { outline: none; background: #f5f6f8; }
-.cal-opt .cal-face { width: 28px; height: 28px; font-size: 12px; }
+.cal-opt .cal-face { width: 24px; height: 24px; font-size: 11px; }
 .cal-opt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .cal-opt-text b { overflow: hidden; font-size: 13.5px; font-weight: 600; color: #141a24; text-overflow: ellipsis; white-space: nowrap; }
 .cal-opt-text small { overflow: hidden; font-size: 12px; font-weight: 500; color: #8b93a1; text-overflow: ellipsis; white-space: nowrap; }

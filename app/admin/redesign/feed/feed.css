@@ -133,17 +133,19 @@
 .rfd-face { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; overflow: hidden; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font-size: 11px; font-weight: 600; color: #5b6474; }
 .rfd-face img { width: 100%; height: 100%; object-fit: cover; }
 .rfd-face.none { color: #98a2b3; }
-.rfd-drop { z-index: 60; display: flex; flex-direction: column; width: 280px; padding: 6px; border-radius: 14px; outline: none; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+/* The ⋯ menu's look (6 Nov, Alex: docs/boards/admin-choices-mockup.html, A): radius 10, padding 5, the soft shadow and no edge,
+   rows 34px at 13.5/600 with radius 7; the search line stays. */
+.rfd-drop { z-index: 60; display: flex; flex-direction: column; width: 280px; padding: 5px; border-radius: 10px; outline: none; background: #fff; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
 .rfd-drop-search { display: flex; align-items: center; gap: 8px; height: 40px; margin: 0 6px 4px; border-bottom: 1px solid #141a24; color: #8b93a1; }
 .rfd-drop-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; background: none; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; }
 .rfd-drop-search input::placeholder { color: #98a2b3; }
-.rfd-drop-list { display: flex; flex-direction: column; max-height: calc(6 * 44px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
-.rfd-opt { flex: none; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; text-align: left; cursor: pointer; }
-.rfd-opt b { min-width: 0; overflow: hidden; font-size: 14px; font-weight: 500; color: #141a24; white-space: nowrap; text-overflow: ellipsis; }
+.rfd-drop-list { display: flex; flex-direction: column; max-height: calc(6 * 34px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+.rfd-opt { flex: none; display: flex; align-items: center; gap: 9px; height: 34px; padding: 0 10px; border: 0; border-radius: 7px; background: none; font: inherit; text-align: left; cursor: pointer; }
+.rfd-opt b { min-width: 0; overflow: hidden; font-size: 13.5px; font-weight: 600; color: #141a24; white-space: nowrap; text-overflow: ellipsis; }
 .rfd-opt:hover, .rfd-opt:focus-visible { outline: none; background: #fafbfd; }
 .rfd-opt[aria-selected="true"] { background: #f5f6f8; }
 .rfd-opt[aria-selected="true"] b { font-weight: 600; }
-.rfd-opt .rfd-face { width: 28px; height: 28px; font-size: 12px; }
+.rfd-opt .rfd-face { width: 24px; height: 24px; font-size: 11px; }
 .rfd-drop-none { margin: 0; padding: 12px 10px; font-size: 13px; color: #8b93a1; }
 /* Activity: the face before each name (27 Oct, Alex). */
 .rd.rfd .rfd-who-cell { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
