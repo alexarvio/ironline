@@ -217,6 +217,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
   const shownRows = all ? closed : closed.slice(0, ROWS_SHOWN);
   // The sheet's tiles: its angles, any just added, and + Add.
   const cols = topCells.length + shownPending.length + 1;
+  // Each angle's word on how to take it (Setup), shown under its place.
+  const hintOf = (slotId: number) => plan.slots.find((x) => x.id === slotId)?.hint.trim() || null;
 
   return (
     <div className="rd trn rls rp">
@@ -288,6 +290,9 @@ function Pictures({ clientId, firstName, plan }: Props) {
                         </button>
                       )}
                     </div>
+                    {/* The word on how to take it, as the client reads it (6 Nov, Alex: "let me also see the notes that I put
+                        for the client for a specific picture"). Set in Setup. */}
+                    {hintOf(c.slotId) && <p className="rp-cap-hint" title={hintOf(c.slotId) ?? undefined}>{hintOf(c.slotId)}</p>}
                   </div>
                 );
               })}
@@ -322,6 +327,14 @@ function Pictures({ clientId, firstName, plan }: Props) {
                 )}
               </div>
             </div>
+            {/* The instructions for every angle, under the photos (6 Nov, Alex: "if I put a general one… I also want to be
+                able to see it there"). Set in Setup. */}
+            {plan.instructions.trim() && (
+              <p className="rp-instr">
+                <span className="rp-label">Instructions</span>
+                <span className="rp-instr-text">{plan.instructions.trim()}</span>
+              </p>
+            )}
             {top.live && (
             <div className="rp-foot">
               <span className="rp-weight">
