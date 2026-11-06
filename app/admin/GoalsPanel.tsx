@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { addClientGoalAction, removeClientGoalAction, reorderClientGoalsAction, toggleClientGoalAction, updateClientGoalAction } from "../lib/actions";
 import DragList from "../components/DragList";
+import { newOnceKey } from "../lib/onceKey";
 import type { GoalEditorOptions } from "../lib/queries";
 import { fmtDate, fmtNum, metricPace, type GoalTracking } from "../lib/goalView";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
@@ -194,12 +195,15 @@ export function GoalEditor({
     return "Shown as text only. You mark it done by hand.";
   })();
 
-  const submit = (formData: FormData) =>
+  const submit = (formData: FormData) => {
+    // A new goal's one-time key (6 Nov), made with the tap.
+    if (!goal) formData.set("onceKey", newOnceKey());
     start(async () => {
       if (goal) await updateClientGoalAction(formData);
       else await addClientGoalAction(formData);
       onClose();
     });
+  };
 
   const chip = (k: Kind, label: string, enabled = true) => (
     <button type="button" className={`ge-chip${kind === k ? " active" : ""}`} onClick={() => setKind(k)} disabled={!enabled} title={enabled ? undefined : "Nothing to track yet"}>

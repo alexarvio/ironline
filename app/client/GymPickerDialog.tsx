@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { clientAddGymAction, uploadGymLogoAction } from "../lib/actions";
+import { clientAddGymAction, clientRemoveGymAction, uploadGymLogoAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import { coverJpeg } from "../lib/coverJpeg";
 import { pic } from "../lib/pic";
 import { GYM_COLORS, GYM_COLOR_KEYS, GYM_KINDS, gymColor, initials, nextFreeColor, type GymColorKey, type GymKind } from "../lib/gymColors";
@@ -105,6 +106,9 @@ export default function GymPickerDialog({
   const [color, setColor] = useState<GymColorKey>(() => nextFreeColor(gyms));
   const [kind, setKind] = useState<GymKind>("gym");
   const [busy, setBusy] = useState(false);
+  // A second tap while the add is out is nothing; the add that didn't go keeps its key for Try again (6 Nov).
+  const addOut = useRef(false);
+  const lastAdd = useRef<{ key: string; sent: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const clean = name.trim().replace(/\s+/g, " ");
   const duplicate = clean.length >= 2 && list.some((g) => g.name.toLowerCase() === clean.toLowerCase() && !(once && g.once));
@@ -186,15 +190,28 @@ export default function GymPickerDialog({
   }, []);
 
   const add = async () => {
-    if (!valid) return;
+    if (!valid || addOut.current) return;
+    addOut.current = true;
     setBusy(true);
-    const r = await clientAddGymAction(dayId, clean, color, once ? "gym" : kind, once);
+    // Its one-time key, made as Add is tapped (6 Nov): sent again once the signal is back, or tried again unchanged after
+    // it didn't go, it adds one gym.
+    const sent = JSON.stringify([dayId, clean, color, once ? "gym" : kind, once]);
+    const onceKey = lastAdd.current?.sent === sent ? lastAdd.current.key : newOnceKey();
+    lastAdd.current = { key: onceKey, sent };
+    let r: Awaited<ReturnType<typeof clientAddGymAction>> | null;
+    try {
+      r = await clientAddGymAction(dayId, clean, color, once ? "gym" : kind, once, onceKey);
+    } catch {
+      r = null;
+    }
+    addOut.current = false;
     if (!r || "error" in r) {
       setBusy(false);
       setToast(r?.error ?? "Couldn't add the gym. Try again.");
       setTimeout(() => setToast(null), 3000);
       return;
     }
+    lastAdd.current = null;
     const logo = newLogo ? await sendLogo(r.id, newLogo.blob) : null;
     setBusy(false);
     const gym: GymOption = { id: r.id, name: r.name, color: r.color, kind: r.kind, sessions: 0, lastUsedAt: null, lastUsed: false, logo, once };
@@ -212,6 +229,51 @@ export default function GymPickerDialog({
     setColor(nextFreeColor([...list, gym]));
     setKind("gym");
     setAdding(false);
+  };
+  // Deleting a gym (6 Nov, Alex: "if I press on it then I can delete"): held half a second, its row asks in place,
+  // `Delete Muscle Factory?` with Cancel and Delete in words. Gone from the list; what was trained there keeps it.
+  const [asking, setAsking] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const held = useRef(false);
+  const endHold = () => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+  };
+  const ask = (id: number) => {
+    endHold();
+    held.current = true;
+    setAsking(id);
+    try {
+      navigator.vibrate?.(10);
+    } catch {}
+  };
+  const startHold = (id: number) => {
+    endHold();
+    held.current = false;
+    holdTimer.current = setTimeout(() => ask(id), 500);
+  };
+  useEffect(() => endHold, []);
+  const remove = async (id: number) => {
+    if (deleting) return;
+    setDeleting(true);
+    let ok = false;
+    try {
+      ok = await clientRemoveGymAction(id);
+    } catch {
+      ok = false;
+    }
+    setDeleting(false);
+    if (!ok) {
+      setToast("Couldn't delete the gym. Try again.");
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+    const rest = list.filter((g) => g.id !== id);
+    setList(rest);
+    setAsking(null);
+    if (selected === id) setSelected((rest.find((g) => g.lastUsed) ?? rest[0])?.id ?? null);
+    if (rest.length === 0) setAdding(true);
   };
   const go = () => {
     if (!chosen) return;
@@ -334,9 +396,59 @@ export default function GymPickerDialog({
               {list.map((g, i) => {
                 const c = GYM_COLORS[g.color];
                 const on = g.id === selected;
+                if (asking === g.id)
+                  return (
+                    <div key={g.id} className="gpk-ask" role="group" aria-label={`Delete ${g.name}?`}>
+                      <span className="gpk-badge" style={{ background: c.hex }} aria-hidden="true">
+                        <BadgeFace name={g.name} logo={g.logo} />
+                      </span>
+                      <span className="gpk-ask-q">Delete {g.name}?</span>
+                      <span className="gpk-ask-btns">
+                        <button type="button" onClick={() => setAsking(null)} disabled={deleting}>
+                          Cancel
+                        </button>
+                        <button type="button" className="gpk-ask-delete" onClick={() => void remove(g.id)} disabled={deleting}>
+                          Delete
+                        </button>
+                      </span>
+                    </div>
+                  );
                 return (
                   <div key={g.id} className="gpk-row-wrap">
-                  <button type="button" role="radio" aria-checked={on} aria-label={`${g.name}, ${meta(g)}`} tabIndex={on ? 0 : -1} className={`gpk-row${on ? " on" : ""}`} style={on ? { background: `rgba(${c.rgb},.07)`, boxShadow: `inset 0 0 0 2px ${c.hex}` } : undefined} onClick={() => setSelected(g.id)} onKeyDown={(e) => onRowKey(e, i)}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    aria-label={`${g.name}, ${meta(g)}`}
+                    tabIndex={on ? 0 : -1}
+                    className={`gpk-row${on ? " on" : ""}`}
+                    style={on ? { background: `rgba(${c.rgb},.07)`, boxShadow: `inset 0 0 0 2px ${c.hex}` } : undefined}
+                    onPointerDown={() => startHold(g.id)}
+                    onPointerUp={endHold}
+                    onPointerLeave={endHold}
+                    onPointerCancel={endHold}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      if (!held.current) ask(g.id);
+                    }}
+                    onClick={() => {
+                      // The tap that ends a hold only asks; it never picks the gym as well.
+                      if (held.current) {
+                        held.current = false;
+                        return;
+                      }
+                      setAsking(null);
+                      setSelected(g.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Delete" || e.key === "Backspace") {
+                        e.preventDefault();
+                        ask(g.id);
+                        return;
+                      }
+                      onRowKey(e, i);
+                    }}
+                  >
                     <span className={`gpk-badge${logoBusy === g.id ? " busy" : ""}`} style={{ background: c.hex }} aria-hidden="true">
                       <BadgeFace name={g.name} logo={g.logo} />
                       {on && <CameraDot />}
@@ -360,14 +472,6 @@ export default function GymPickerDialog({
                   </div>
                 );
               })}
-              <button type="button" className="gpk-addrow" onClick={() => openForm(false)}>
-                <span className="gpk-addrow-ico" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                </span>
-                Add a gym
-              </button>
               {/* Somewhere else today (6 Nov, Alex): named, trained at, and never in this list again. */}
               <button type="button" className="gpk-addrow" onClick={() => openForm(true)}>
                 <span className="gpk-addrow-ico" aria-hidden="true">
@@ -377,6 +481,15 @@ export default function GymPickerDialog({
                   </svg>
                 </span>
                 Just this once
+              </button>
+              {/* Last, under Just this once (6 Nov, Alex). */}
+              <button type="button" className="gpk-addrow" onClick={() => openForm(false)}>
+                <span className="gpk-addrow-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </span>
+                Add a gym
               </button>
             </div>
             <button type="button" className="gpk-primary gpk-start" disabled={!chosen} onClick={go}>

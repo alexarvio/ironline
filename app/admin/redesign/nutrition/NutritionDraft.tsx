@@ -23,6 +23,7 @@ import { TodoStrip } from "../TodoStrip";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
+import { newOnceKey } from "../../../lib/onceKey";
 import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
 import { Sep } from "../Sep";
 // The tab's status, Training's, shared with every tab that saves itself (3 Nov, Alex).
@@ -895,6 +896,7 @@ export default function NutritionDraft({
               f.set("clientId", String(clientId));
               f.set("text", text);
               f.set("link", JSON.stringify({ kind: "food", date: dlg.date, meal: photoOf.id }));
+              f.set("nonce", newOnceKey());
               act(() => sendChatMessageAction(f));
               toast.success("Comment sent", { description: `${firstName} gets a notification and sees it under ${photoOf.label.toLowerCase()}.` });
               close();
@@ -912,6 +914,7 @@ export default function NutritionDraft({
               f.set("clientId", String(clientId));
               f.set("text", text);
               f.set("link", JSON.stringify(link));
+              f.set("nonce", newOnceKey());
               act(() => sendChatMessageAction(f));
               toast.success("Sent", { description: `${firstName} gets it on Home, linked to ${label}.` });
             }}
@@ -959,8 +962,10 @@ export default function NutritionDraft({
             others={plan.planCtx.phases}
             programs={plan.planCtx.programs}
             onSave={(v) => {
+              const f = planPhaseForm({ clientId, ...v });
+              f.set("onceKey", newOnceKey());
               close();
-              act(() => addClientPhaseAction(planPhaseForm({ clientId, ...v })), `${v.name} drafted: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
+              act(() => addClientPhaseAction(f), `${v.name} drafted: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
             onSend={() => {}}
           />

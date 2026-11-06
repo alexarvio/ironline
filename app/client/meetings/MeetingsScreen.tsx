@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { requestMeetingAction, withdrawMeetingRequestAction } from "../../lib/actions";
+import { newOnceKey } from "../../lib/onceKey";
 import type React from "react";
 import { ChevronLeftIcon } from "../../components/icons";
 import RingEdge from "../../components/RingEdge";
@@ -403,8 +404,10 @@ function AskSheet({ clientId, coachFirst, onClose, onSent }: { clientId: number;
   const ok = about.trim().length > 0;
   const send = () => {
     if (!ok || pending) return;
+    // Its one-time key, made as Request is tapped (6 Nov): sent again once the signal is back, it asks once.
+    const onceKey = newOnceKey();
     startTransition(async () => {
-      const err = await requestMeetingAction(clientId, about, when);
+      const err = await requestMeetingAction(clientId, about, when, onceKey);
       if (err) return setError(err);
       onSent({ id: -Date.now(), about: about.trim(), whenSuits: when.trim() || null, createdAt: new Date().toISOString() });
     });

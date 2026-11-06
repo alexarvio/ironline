@@ -1105,6 +1105,16 @@ type ChatMessage = {
 
 /** A line between a coach and the company (23 Oct, Alex: Settings' Support, the owner's inbox on Coaches;
     lib/support.ts). One thread a coach; a problem is a line with where it happened and a screenshot. */
+/** A save taken once (lib/once.ts): its key, when, and what it answered, so a second arrival answers the same. */
+export type OnceKey = {
+  key: string;
+  at: number;
+  /** The save's answer as JSON; absent when it answered nothing. */
+  result?: unknown;
+  /** The save answered by sending the browser elsewhere: where, so a second arrival goes there too. */
+  redirect?: string;
+};
+
 export type SupportMessage = {
   id: number;
   /** The coach the thread is with (never the owner's own account). */
@@ -1406,6 +1416,9 @@ export type Data = {
   client_departures?: { id: number; coach_id: number | null; client_id: number; name: string; start: string | null; at: string; by: "coach" | "client" }[];
   // The coaches' threads with the company (23 Oct, lib/support.ts). Not a Postgres table of its own: kept in `kv`.
   support_messages?: SupportMessage[];
+  // Saves already taken, by their one-time key (6 Nov, lib/once.ts): a save sent again after the signal dropped answers
+  // as the first did instead of adding twice. Kept a day. Not a Postgres table of its own: kept in `kv`.
+  once_keys?: OnceKey[];
   _seq: Record<string, number>;
 };
 

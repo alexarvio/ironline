@@ -19,6 +19,7 @@ import AppAccessButton from "./AppAccessButton";
 import type { ClientAccess } from "../../../lib/access-actions";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
 import { pic } from "../../../lib/pic";
+import { newOnceKey } from "../../../lib/onceKey";
 import { SepJoin } from "../Sep";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { TrackIcon } from "../plan/PlanDraft";
@@ -464,7 +465,8 @@ export default function HomeDraft({
             label="Home"
             onSend={(text) => {
               setMsg(false);
-              act(() => sendChatMessageAction(fd({ clientId, text })), `Message to ${firstName}`);
+              const f = fd({ clientId, text, nonce: newOnceKey() });
+              act(() => sendChatMessageAction(f), `Message to ${firstName}`);
             }}
           />
         )}

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { NorCoachLogo } from "../components/NorCoachLogo";
 import DoneCheck from "../components/DoneCheck";
 import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
+import { newOnceKey } from "../lib/onceKey";
 import {
   addCustomFoodAction,
   addFoodEntryAction,
@@ -299,6 +300,8 @@ export default function FoodDiaryScreen({
     fd.set("clientId", String(clientId));
     fd.set("name", "New meal");
     fd.set("date", date);
+    // Its one-time key, made as + is tapped (6 Nov): sent again once the signal is back, it makes one meal.
+    fd.set("onceKey", newOnceKey());
     const id = addFoodMealAction(fd).catch(() => null);
     pendingMeal.current = { temp, id };
     void id.then((real) => {
@@ -912,6 +915,8 @@ export default function FoodDiaryScreen({
                           fd.set("clientId", String(clientId));
                           fd.set("date", date);
                           fd.set("name", name);
+                          // Its one-time key (6 Nov): sent again once the signal is back, it saves the day once.
+                          fd.set("onceKey", newOnceKey());
                           setNamingDay(false);
                           startLoad(async () => {
                             await saveDayAction(fd);
@@ -970,6 +975,8 @@ export default function FoodDiaryScreen({
                 fd.set("clientId", String(clientId));
                 fd.set("fromDate", last);
                 fd.set("toDate", date);
+                // Its one-time key (6 Nov): sent again once the signal is back, it copies the day once.
+                fd.set("onceKey", newOnceKey());
                 startLoad(async () => {
                   await copyFoodDayAction(fd);
                   await after();
@@ -980,6 +987,8 @@ export default function FoodDiaryScreen({
                 fd.set("clientId", String(clientId));
                 fd.set("id", String(id));
                 fd.set("date", date);
+                // Its one-time key (6 Nov): sent again once the signal is back, the saved day goes in once.
+                fd.set("onceKey", newOnceKey());
                 startLoad(async () => {
                   await addSavedDayAction(fd);
                   await after();
@@ -1254,6 +1263,8 @@ export default function FoodDiaryScreen({
                           fd.set("date", date);
                           fd.set("meal", meal.id);
                           fd.set("name", name);
+                          // Its one-time key (6 Nov): sent again once the signal is back, it saves the meal once.
+                          fd.set("onceKey", newOnceKey());
                           setSavingMeal(null);
                           startLoad(async () => {
                             await saveMealAction(fd);
@@ -1634,6 +1645,8 @@ function SearchPanel({
     fd.set("id", String(s.id));
     fd.set("date", date);
     fd.set("meal", meal);
+    // Its one-time key, made as the row is tapped (6 Nov): sent again once the signal is back, the meal goes in once.
+    fd.set("onceKey", newOnceKey());
     startCopy(async () => {
       await addSavedMealAction(fd);
       onCopied();
@@ -1863,6 +1876,8 @@ function AmountPanel({
     } else {
       fd.set("meal", meal);
       fd.set("foodId", food.id);
+      // Its one-time key, made as Add is tapped (6 Nov): sent again once the signal is back, the food goes in once.
+      fd.set("onceKey", newOnceKey());
       const temp: FoodEntryView = { id: -Date.now(), meal, food_id: food.id, name: food.name, grams: g1, serving: servingLabel, ...macros };
       apply((d) => ({ ...d, meals: d.meals.map((m) => (m.id === meal ? { ...m, entries: [...m.entries, temp] } : m)) }));
       onDone();
@@ -2030,6 +2045,8 @@ function CustomFoodPanel({ clientId, onCancel, onCreated }: { clientId: number; 
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     for (const [k, v] of Object.entries(form)) fd.set(k, v);
+    // Its one-time key, made as Add is tapped (6 Nov): sent again once the signal is back, it makes one food.
+    fd.set("onceKey", newOnceKey());
     start(async () => {
       const id = await addCustomFoodAction(fd);
       if (!id) return;

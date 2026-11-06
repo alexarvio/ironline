@@ -18,6 +18,7 @@ import { chatDraftThreadAction } from "./actions";
 import { chatTypingAction, deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { pic } from "../../../lib/pic";
+import { newOnceKey } from "../../../lib/onceKey";
 import type { LinkTargets } from "../../../lib/queries";
 import { Sep, SepJoin } from "../Sep";
 import LastActive from "../../../components/LastActive";
@@ -255,6 +256,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
     fd.set("text", "");
     fd.set("file", file);
     fd.set("quiet", "1");
+    // Its one-time key (6 Nov): sent again after a dropped signal, it is not posted twice.
+    fd.set("nonce", newOnceKey());
     if (link?.link) fd.set("link", JSON.stringify(link.link));
     if (replying) fd.set("replyTo", String(replying.id));
     act(

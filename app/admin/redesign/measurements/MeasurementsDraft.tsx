@@ -23,6 +23,7 @@ import Picker from "../Picker";
 import Pager from "../Pager";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
+import { newOnceKey } from "../../../lib/onceKey";
 import { groupColour } from "../../../lib/categoryColors";
 import { defaultSummary, type MetricSummary } from "../../../lib/metricSummary";
 import { Sep, SepJoin } from "../Sep";
@@ -728,6 +729,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               f.set("clientId", String(clientId));
               f.set("text", text);
               f.set("link", JSON.stringify(link));
+              f.set("nonce", newOnceKey());
               act(() => sendChatMessageAction(f));
               toast.success("Sent", { description: `${firstName} gets it on Home, linked to ${label}.` });
             }}
@@ -774,8 +776,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             others={plan.planCtx.phases}
             programs={plan.planCtx.programs}
             onSave={(v) => {
+              const f = planPhaseForm({ clientId, ...v });
+              f.set("onceKey", newOnceKey());
               close();
-              act(() => addClientPhaseAction(planPhaseForm({ clientId, ...v })), `${v.name} drafted: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
+              act(() => addClientPhaseAction(f), `${v.name} drafted: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
             onSend={() => {}}
           />

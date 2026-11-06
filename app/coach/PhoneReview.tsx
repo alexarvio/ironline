@@ -8,6 +8,7 @@ import { pathOf, simplify, STROKE, UNDERLAY, UNDERLAY_COLOR, unitFor, worthKeepi
 import { recordingSupported, setClipMuted, useReviewRecorder } from "../admin/redesign/media-review/useReviewRecorder";
 import type { PhoneReview as Review } from "../lib/coachPhone";
 import { dayMonth } from "../lib/dayMonth";
+import { newOnceKey } from "../lib/onceKey";
 import { useKeyboardInset } from "../client/useKeyboardInset";
 import { coachReviewAction } from "./actions";
 import { Facts, Icon, Sheet, type IconName } from "./parts";
@@ -223,6 +224,8 @@ function Reviewer({ review, chat = null, onBack, onSent }: { review: Review; cha
   const [progress, setProgress] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reviewTry = useRef<{ blob: Blob; key: string } | null>(null);
+  const wordsTry = useRef<{ what: string; key: string } | null>(null);
   const sendReview = async () => {
     const blob = recorder.blob;
     if (!blob || progress != null) return;
@@ -243,9 +246,14 @@ function Reviewer({ review, chat = null, onBack, onSent }: { review: Review; cha
       setProgress(null);
       return setError(err);
     }
-    const ok = await sendFormReviewAction(review.requestId, note.trim(), { durationMs: recorder.secs * 1000, annotations: drawn }).catch(() => false);
+    // A one-time key a recording (6 Nov): Send again after a failure keeps it, so a review that in fact landed is not
+    // posted twice.
+    const onceKey = reviewTry.current?.blob === blob ? reviewTry.current.key : newOnceKey();
+    reviewTry.current = { blob, key: onceKey };
+    const ok = await sendFormReviewAction(review.requestId, note.trim(), { durationMs: recorder.secs * 1000, annotations: drawn }, onceKey).catch(() => false);
     setProgress(null);
     if (!ok) return setError("The review is up, but the reply did not save. Try Send again.");
+    reviewTry.current = null;
     recorder.retake();
     onSent();
     onBack();
@@ -253,6 +261,9 @@ function Reviewer({ review, chat = null, onBack, onSent }: { review: Review; cha
   const sendWords = async () => {
     const clean = words.trim();
     if (!clean || busy) return;
+    // A one-time key a send (6 Nov); the same words sent again after "Not sent" keep the failed one's key.
+    const onceKey = wordsTry.current?.what === clean ? wordsTry.current.key : newOnceKey();
+    wordsTry.current = { what: clean, key: onceKey };
     setBusy(true);
     setError(null);
     const ok = chat
@@ -262,11 +273,13 @@ function Reviewer({ review, chat = null, onBack, onSent }: { review: Review; cha
           fd.set("text", clean);
           fd.set("replyTo", String(chat.replyTo));
           fd.set("quiet", "1");
+          fd.set("nonce", onceKey);
           return sendChatMessageAction(fd).then(() => true, () => false);
         })()
-      : await replyToMediaAction(review.requestId, clean).catch(() => false);
+      : await replyToMediaAction(review.requestId, clean, onceKey).catch(() => false);
     setBusy(false);
     if (!ok) return setError("Not sent. Check the connection and try again.");
+    wordsTry.current = null;
     onSent();
     onBack();
   };

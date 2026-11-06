@@ -22,6 +22,7 @@ import { Sep, SepJoin } from "../Sep";
 import { TimePick } from "../TimePick";
 import { Fold } from "../Fold";
 import { landOnSoon } from "../../../lib/landOn";
+import { newOnceKey } from "../../../lib/onceKey";
 import { TodoStrip } from "../TodoStrip";
 import { saveFocusAction, saveFocusDraftAction } from "../../../lib/focusActions";
 import type { CoachFocus, FocusGoalView } from "../../../lib/focus";
@@ -222,6 +223,22 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
     for (const [k, v] of Object.entries(o)) if (v != null) f.set(k, String(v));
     return f;
   };
+  // A recap line as an event (6 Nov, one-time key): a key a click, and a second click on the line while it is on its
+  // way is not taken.
+  const eventsOut = useRef(new Set<string>());
+  const addEvent = (m: { id: number; date: string }, line: string) => {
+    const k = `${m.id}\n${line}`;
+    if (eventsOut.current.has(k)) return;
+    eventsOut.current.add(k);
+    const onceKey = newOnceKey();
+    act(async () => {
+      try {
+        return await addEventFromMeetingNoteAction(fd({ meetingId: m.id, text: line, date: m.date, onceKey }));
+      } finally {
+        eventsOut.current.delete(k);
+      }
+    }, `Added to ${firstName}'s events: ${line}`);
+  };
   // ---- Autosave (23 Oct, Alex: as Training, Lifestyle and Nutrition): the words typed on a call go through one queue,
   // a moment after the typing stops or on leaving the field; the tab's status after its title says how it stands.
   const [refreshing, startRefresh] = useTransition();
@@ -418,7 +435,7 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
                 patchMeeting(m.id, f);
                 saveMeeting(m.id, f);
               }}
-              onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: m.id, text: line, date: m.date })), `Added to ${firstName}'s events: ${line}`)}
+              onAddEvent={(line) => addEvent(m, line)}
             />
           )}
         </div>
@@ -691,7 +708,7 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
                           patchMeeting(m.id, f);
                           saveMeeting(m.id, f);
                         }}
-                        onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: m.id, text: line, date: m.date })), `Added to ${firstName}'s events: ${line}`)}
+                        onAddEvent={(line) => addEvent(m, line)}
                         focus={
                           // The call holding the live list: typed in place, straight to the client, until the next call
                           // is completed. An older call: the list it set, as it ended, read only. None set: nothing.
@@ -719,8 +736,9 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
             label={dlg.label}
             onSend={(text) => {
               const label = dlg.label;
+              const f = fd({ clientId, text, nonce: newOnceKey() });
               close();
-              act(() => sendChatMessageAction(fd({ clientId, text })));
+              act(() => sendChatMessageAction(f));
               toast.success("Sent", { description: `${firstName} gets it on Home, about ${label}.` });
             }}
           />
@@ -740,8 +758,9 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
                 patchMeeting(dlg.reschedule.id, { ...v, over: undefined, toComplete: false, kind: v.meetingType, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" });
                 act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", meetingType: v.meetingType })), `Moved to ${dayMonth(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
               } else {
+                const onceKey = newOnceKey();
                 act(
-                  () => addMeetingAction(fd({ clientId, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", repeatWeeks: v.repeatWeeks, count: v.count, meetingType: v.meetingType })),
+                  () => addMeetingAction(fd({ clientId, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", repeatWeeks: v.repeatWeeks, count: v.count, meetingType: v.meetingType, onceKey })),
                   v.repeatWeeks
                     ? `${v.count} calls, ${v.repeatWeeks === 1 ? "weekly" : `every ${v.repeatWeeks} weeks`} from ${dayMonth(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees them on Home`
                     : `${v.topic || "Check-in call"} on ${dayMonth(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees it on Home`

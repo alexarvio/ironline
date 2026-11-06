@@ -6,6 +6,7 @@ import { CameraIcon, ChevronDownIcon, ChevronLeftIcon } from "../components/icon
 import { pageWindow } from "../lib/pager";
 import MessageAboutButton, { useMessageWho } from "./MessageAbout";
 import { editMealCommentAction, removeMealCommentAction, sendChatMessageAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 
 // What the client actually ate, day by day, inside the phase on screen.
 // Read-only: the log is the client's, and a coach quietly editing it would
@@ -278,6 +279,8 @@ function MealCommentBox({ date, meal }: { date: string; meal: LoggedMeal }) {
     fd.set("clientId", String(who.clientId));
     fd.set("text", text.trim());
     fd.set("link", JSON.stringify({ kind: "food", date, meal: meal.id }));
+    // Its one-time key (6 Nov): sent again after a dropped signal, it is not posted twice.
+    fd.set("nonce", newOnceKey());
     run(async () => {
       await sendChatMessageAction(fd);
       setText("");

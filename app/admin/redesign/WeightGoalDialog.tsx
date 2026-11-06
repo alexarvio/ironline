@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { DialogClose, DialogContent, DialogTitle } from "../../components/ui/dia
 import { WeightGoalIcon } from "../../components/icons";
 import { deleteWeightGoalAction, saveWeightGoalAction } from "../../lib/actions";
 import { dayMonth } from "../../lib/dayMonth";
+import { newOnceKey } from "../../lib/onceKey";
 import { kgFrom, kgIn, VERDICT_TONE, VERDICT_WORD, type WeightGoalView } from "../../lib/weightGoal";
 import DatePick from "./DatePick";
 import { SepJoin } from "./Sep";
@@ -58,10 +59,16 @@ export default function WeightGoalDialog({
   const changed = !goal || !weightSame || by !== goal.byDate;
   const ready = targetKg != null && /^\d{4}-\d{2}-\d{2}$/.test(by) && changed;
 
-  const save = () =>
+  const tried = useRef<{ what: string; key: string } | null>(null);
+  const save = () => {
+    // A new goal's one-time key (6 Nov), made with the tap; the same goal set again after a save that did not come back
+    // keeps it, so one that in fact landed is not set twice. A change to a goal needs none.
+    const what = JSON.stringify([targetKg, unit, by]);
+    const onceKey = goal ? undefined : tried.current?.what === what ? tried.current.key : newOnceKey();
+    if (onceKey) tried.current = { what, key: onceKey };
     start(async () => {
       if (targetKg == null) return;
-      const res = await saveWeightGoalAction(clientId, { targetKg, unit, byDate: by }, goal?.id);
+      const res = await saveWeightGoalAction(clientId, { targetKg, unit, byDate: by }, goal?.id, onceKey);
       if (!res) return;
       if ("error" in res) {
         setRefused(REFUSED[res.error] ?? REFUSED.invalid);
@@ -71,6 +78,7 @@ export default function WeightGoalDialog({
       toast(goal ? "Weight goal changed" : "Weight goal set");
       onDone();
     });
+  };
   const remove = () =>
     start(async () => {
       if (!goal) return;

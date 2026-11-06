@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, sendChatMessageAction, setMessageLinkAction } from "../lib/actions";
 import type { LinkView } from "../lib/messageLinks";
 import { uploadFirstOrThrow } from "../lib/uploadFirst";
+import { newOnceKey } from "../lib/onceKey";
 import type { LinkTargets } from "../lib/queries";
 import MessageReactions from "../components/MessageReactions";
 import VoiceRecordButton from "../components/VoiceRecordButton";
@@ -78,6 +79,8 @@ export default function MessagesWorkspace({
     fd.set("clientId", String(clientId));
     fd.set("text", text.trim());
     if (link) fd.set("link", JSON.stringify(link.link));
+    // Its one-time key (6 Nov): sent again after a dropped signal, it is not posted twice.
+    fd.set("nonce", newOnceKey());
     startTransition(async () => {
       await sendChatMessageAction(fd);
       setText("");
@@ -96,6 +99,7 @@ export default function MessagesWorkspace({
     fd.set("clientId", String(clientId));
     fd.set("text", "");
     fd.set("file", file);
+    fd.set("nonce", newOnceKey());
     // The file goes ahead to the server's disk; the send carries its handle (4 Nov, Alex: memory).
     // The upload is a plain fetch, so a dropped connection throws here; caught, or it took the whole page down (6 Nov).
     setFileFailed(false);

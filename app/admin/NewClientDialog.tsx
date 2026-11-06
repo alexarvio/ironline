@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { checkLoginEmailAction, createClientWithLoginAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import { ageFrom, DEFAULT_DIAL, DIAL_CODES, GenderPills, InfoRow, PhoneInput, Suffixed } from "./InfoRow";
 import AddressFields from "./AddressFields";
 import DatePick from "./redesign/DatePick";
@@ -118,11 +119,17 @@ export default function NewClientDialog({
     onClose();
     router.push(`/admin/redesign/home?client=${id}`);
   };
-  const create = () =>
-    !preview &&
+  // A one-time key a tap (6 Nov); Create again on the same form after a failure keeps the failed one's key, so a client
+  // that in fact got made is not made twice.
+  const tried = useRef<{ what: string; key: string } | null>(null);
+  const create = () => {
+    if (preview || saving) return;
+    const what = JSON.stringify(draft);
+    const onceKey = tried.current?.what === what ? tried.current.key : newOnceKey();
+    tried.current = { what, key: onceKey };
     start(async () => {
       setError(null);
-      const res = await createClientWithLoginAction({ ...draft, password: "", invite: false });
+      const res = await createClientWithLoginAction({ ...draft, password: "", invite: false }, onceKey);
       if (!res.ok) {
         setError(res.error);
         return;
@@ -130,6 +137,7 @@ export default function NewClientDialog({
       if (res.inviteFailed) setMade(res.clientId);
       else open(res.clientId);
     });
+  };
 
   const status = (() => {
     if (made != null) return { text: "Created, but the invite email didn't go out.", bad: true };

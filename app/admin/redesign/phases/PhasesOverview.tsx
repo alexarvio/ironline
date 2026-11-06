@@ -12,6 +12,7 @@ import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../../components
 import { EVENT_TYPES, isEventTypeId } from "../../../lib/eventTypes";
 import { dayMonth } from "../../../lib/dayMonth";
 import { pic } from "../../../lib/pic";
+import { newOnceKey } from "../../../lib/onceKey";
 import type { PhaseTrack } from "../../../lib/db";
 import { TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { gridFor, MoveDialog, PhaseDialog, phaseForm, TrackIcon, WINDOWS, type Win } from "../plan/PlanDraft";
@@ -365,8 +366,10 @@ export default function PhasesOverview({ data, needs = [], now }: { data: Phases
               setNewPhase(null);
               // The phase it follows leaves Ending soon: it is followed now.
               for (const p of client.phases) if (p.track === v.track && endingSoon(p, client.phases, today)) leave(p.id);
+              const f = phaseForm({ clientId: client.id, ...v });
+              f.set("onceKey", newOnceKey());
               start(async () => {
-                const added = await addClientPhaseAction(phaseForm({ clientId: client.id, ...v }));
+                const added = await addClientPhaseAction(f);
                 router.refresh();
                 toast(`${v.name} drafted on ${TRACK_LABEL[v.track]} for ${first(client.name)}: ${dayMonth(v.start)} – ${dayMonth(addDays(v.end, 6))}`, {
                   action: added
@@ -400,8 +403,9 @@ export default function PhasesOverview({ data, needs = [], now }: { data: Phases
             initialKind={newEvent.kind}
             onSave={(v) => {
               const client = newEvent.client;
+              const onceKey = newOnceKey();
               setNewEvent(null);
-              act(() => addClientEventAction(client.id, v), `Event for ${first(client.name)}: ${v.title}`);
+              act(() => addClientEventAction(client.id, v, onceKey), `Event for ${first(client.name)}: ${v.title}`);
             }}
             onDelete={() => setNewEvent(null)}
           />

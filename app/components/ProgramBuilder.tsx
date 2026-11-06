@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { addSessionAction } from "../lib/actions";
+import OnceKeySubmit from "./OnceKeySubmit";
 import {
   getAssignmentsForDay,
   listClientPhases,
@@ -737,9 +738,8 @@ export default function ProgramBuilder({
             <form action={addSessionAction} className="pb-add-session-form">
               <input type="hidden" name="clientId" value={clientId} />
               <input type="hidden" name="week" value={weekNumber} />
-              <button type="submit" className="pb-add-session">
-                + Add session
-              </button>
+              {/* The tap's one-time key (6 Nov): sent again once the signal is back, it adds one session. */}
+              <OnceKeySubmit className="pb-add-session">+ Add session</OnceKeySubmit>
             </form>
           ) : (
             <p className="pb-add-session-full">{MAX_SESSIONS_PER_WEEK} sessions is the most a week can hold.</p>

@@ -2,6 +2,7 @@ import { approveCoachAction, createCoachAction, declineCoachAction, removeCoachA
 import { getData } from "../lib/db";
 import { listCoachAccounts } from "../lib/queries";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
+import OnceKeyField from "./OnceKeyField";
 import { dayMonth } from "../lib/dayMonth";
 
 // The owner's Coaches page: every coach account, how many clients each has
@@ -134,6 +135,7 @@ export default function CoachesPanel({ ownerId, ok, error }: { ownerId: number; 
           </div>
         </div>
         <form action={createCoachAction} className="cp-add">
+          <OnceKeyField />
           <label className="cp-field">
             <span>Email</span>
             <input name="email" type="email" required autoComplete="off" />

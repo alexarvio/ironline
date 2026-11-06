@@ -6,6 +6,7 @@ import { coachOwnsExercise } from "../../../lib/tenancy";
 import { addCoachGroup, addCoachVideo, addExercise, listCoachVideos, renameCoachGroup, removeCoachVideo, renameCoachVideo, setExerciseArchived, setExerciseSubstitutes, setExerciseVariations, setExerciseVideoUrl, updateExercise } from "../../../lib/queries";
 import { deleteUpload, putUploadFromDisk } from "../../../lib/storage";
 import { persist } from "../../../lib/db";
+import { once, onceKeyOf } from "../../../lib/once";
 import { claimUpload, discardUpload, placeUpload, UPLOAD_CAPS } from "../../../lib/streamUpload";
 
 // The coach's Library page (5 Oct): an exercise's name, group and default
@@ -62,11 +63,15 @@ export async function renameLibraryGroupAction(slug: string, label: string): Pro
 }
 
 /** A group of the coach's own (14 Oct). Its slug, or null when the name is empty or taken. */
-export async function createLibraryGroupAction(label: string): Promise<string | null> {
+export async function createLibraryGroupAction(label: string, onceKey?: string): Promise<string | null> {
   const coach = await requireCoach();
-  const made = addCoachGroup(coach.id, String(label ?? ""));
-  revalidatePath("/admin");
-  return made?.slug ?? null;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the group the first made, never null
+  // for a name now taken by itself.
+  return once(`createLibraryGroupAction:${coach.id}`, onceKeyOf(onceKey), () => {
+    const made = addCoachGroup(coach.id, String(label ?? ""));
+    revalidatePath("/admin");
+    return made?.slug ?? null;
+  });
 }
 
 export async function archiveLibraryExerciseAction(exerciseId: number, archived: boolean): Promise<boolean> {
@@ -78,14 +83,17 @@ export async function archiveLibraryExerciseAction(exerciseId: number, archived:
 }
 
 /** A new exercise (or cardio movement, group "cardio") of the coach's own. Its id, or null. */
-export async function createLibraryExerciseAction(name: string, group: string, cue: string): Promise<number | null> {
+export async function createLibraryExerciseAction(name: string, group: string, cue: string, onceKey?: string): Promise<number | null> {
   const coach = await requireCoach();
   const clean = String(name ?? "").trim().slice(0, 60);
   if (!clean) return null;
-  const made = addExercise(coach.id, clean, String(group ?? "other"), null);
-  if (String(cue ?? "").trim()) updateExercise(made.id, { cue: String(cue) });
-  revalidatePath("/admin");
-  return made.id;
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the exercise the first made.
+  return once(`createLibraryExerciseAction:${coach.id}`, onceKeyOf(onceKey), () => {
+    const made = addExercise(coach.id, clean, String(group ?? "other"), null);
+    if (String(cue ?? "").trim()) updateExercise(made.id, { cue: String(cue) });
+    revalidatePath("/admin");
+    return made.id;
+  });
 }
 
 // ---- The coach's video library (5 Oct) ----

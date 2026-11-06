@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Dialog } from "../../components/ui/dialog";
 import { addClientPhaseAction } from "../../lib/actions";
+import { newOnceKey } from "../../lib/onceKey";
 import type { PhaseTrack } from "../../lib/db";
 import { PhaseDialog, phaseForm, type DraftPlan } from "./plan/PlanDraft";
 import { TodoStrip } from "./TodoStrip";
@@ -54,9 +55,11 @@ export default function NoPhase({ clientId, firstName, track, plan }: { clientId
             others={plan.phases}
             programs={plan.programs}
             onSave={(v) => {
+              const f = phaseForm({ clientId, ...v });
+              f.set("onceKey", newOnceKey());
               setOpen(false);
               start(async () => {
-                await addClientPhaseAction(phaseForm({ clientId, ...v }));
+                await addClientPhaseAction(f);
                 toast.success("Saved", { description: `${v.name} drafted` });
                 router.refresh();
               });

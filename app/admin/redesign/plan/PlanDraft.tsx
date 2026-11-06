@@ -24,6 +24,7 @@ import DatePick from "../DatePick";
 import { MonthRange } from "../MonthRange";
 import { TodoStrip } from "../TodoStrip";
 import { dayMonth } from "../../../lib/dayMonth";
+import { newOnceKey } from "../../../lib/onceKey";
 import { phaseDays, phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import { SortableItem, SortableList } from "../Sortable";
 import { Sep, SepJoin } from "../Sep";
@@ -583,8 +584,9 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               dlg.phase
                 ? () => {
                     const p = dlg.phase!;
+                    const onceKey = newOnceKey();
                     close();
-                    act(() => duplicateClientPhaseAction(p.id), `${p.name} copied as a new draft, from next Monday${p.track === "training" ? " (pick or build its programme)" : ""}`);
+                    act(() => duplicateClientPhaseAction(p.id, onceKey), `${p.name} copied as a new draft, from next Monday${p.track === "training" ? " (pick or build its programme)" : ""}`);
                   }
                 : undefined
             }
@@ -595,7 +597,9 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                 setPhases((prev) => prev.map((p) => (p.id === was.id ? { ...p, name: v.name, start_week: v.start, end_week: v.end } : p)));
                 act(() => updateClientPhaseAction(phaseForm({ id: was.id, ...v })), `${v.name}: ${shortDate(v.start)} – ${shortDate(addDays(v.end, 6))}`);
               } else {
-                act(() => addClientPhaseAction(phaseForm({ clientId, ...v })), `${v.name} drafted on ${TRACK_LABEL[v.track]}: ${shortDate(v.start)} – ${shortDate(addDays(v.end, 6))}`);
+                const f = phaseForm({ clientId, ...v });
+                f.set("onceKey", newOnceKey());
+                act(() => addClientPhaseAction(f), `${v.name} drafted on ${TRACK_LABEL[v.track]}: ${shortDate(v.start)} – ${shortDate(addDays(v.end, 6))}`);
               }
             }}
             onSend={(v) => {
@@ -657,7 +661,10 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               fd.set("text", v.text);
               if (v.tracking) fd.set("tracking", JSON.stringify(v.tracking));
               if (was) fd.set("id", String(was.id));
-              else fd.set("clientId", String(clientId));
+              else {
+                fd.set("clientId", String(clientId));
+                fd.set("onceKey", newOnceKey());
+              }
               act(() => (was ? updateClientGoalAction(fd) : addClientGoalAction(fd)), `Goal: ${v.text}`);
             }}
           />

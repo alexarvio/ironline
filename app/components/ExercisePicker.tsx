@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { addExerciseToLibraryAction, uploadExerciseVideoAction } from "../lib/actions";
 import { uploadFirst } from "../lib/uploadFirst";
+import { newOnceKey } from "../lib/onceKey";
 import { placePopover, type Placement } from "./popover";
 
 export type Group = { slug: string; label: string };
@@ -47,6 +48,8 @@ export default function ExercisePicker({
   const [selectedName, setSelectedName] = useState<string>("");
   const [addingNew, setAddingNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingOut = useRef(false);
+  const lostSave = useRef<{ key: string; sent: string } | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [video, setVideo] = useState<PendingVideo | null>(null);
   const [videoDialog, setVideoDialog] = useState(false);
@@ -102,10 +105,27 @@ export default function ExercisePicker({
   const defaultGroup = activeGroup ?? groups[0]?.slug ?? "other";
 
   const saveNew = async (formData: FormData) => {
+    // A second Add while this one is out is nothing (6 Nov): one tap, one key.
+    if (savingOut.current) return;
+    savingOut.current = true;
     setSaving(true);
     setSaveError(null);
     if (video?.kind === "link") formData.set("videoUrl", video.url);
-    const created = await addExerciseToLibraryAction(formData);
+    // Its one-time key, made as Save is tapped (6 Nov): sent again once the signal is back, or saved again unchanged
+    // after its answer was lost, it makes one exercise.
+    const sent = JSON.stringify([formData.get("name"), formData.get("muscleGroup"), formData.get("videoUrl")]);
+    const onceKey = lostSave.current?.sent === sent ? lostSave.current.key : newOnceKey();
+    formData.set("onceKey", onceKey);
+    let created: Awaited<ReturnType<typeof addExerciseToLibraryAction>>;
+    try {
+      created = await addExerciseToLibraryAction(formData);
+      lostSave.current = null;
+    } catch {
+      created = null;
+      lostSave.current = { key: onceKey, sent };
+      setSaveError("Not saved. Try again.");
+    }
+    savingOut.current = false;
     if (created && video?.kind === "file") {
       const fd = new FormData();
       fd.set("exerciseId", String(created.id));
@@ -209,7 +229,15 @@ export default function ExercisePicker({
 
             <div className="exercise-picker-foot">
               {addingNew ? (
-                <form className="exercise-picker-add-form" action={saveNew}>
+                <form
+                  className="exercise-picker-add-form"
+                  // Sent from the tap itself, not as a form action (6 Nov): actions queue, so a second Save ran after the
+                  // first and added the exercise again; here the guard and Saving… hold from the first tap.
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void saveNew(new FormData(e.currentTarget));
+                  }}
+                >
                   <input
                     name="name"
                     type="text"

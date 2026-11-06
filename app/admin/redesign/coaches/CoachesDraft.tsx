@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useRef, useState, useTransition, type FormEvent } from "react";
+import { newOnceKey } from "../../../lib/onceKey";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Toaster } from "../../../components/ui/toast";
@@ -269,11 +270,17 @@ function AddCoachDialog({ onDone }: { onDone: (email: string) => void }) {
   const [busy, start] = useTransition();
   const clean = email.trim().toLowerCase();
   const ready = EMAIL.test(clean) && password.length >= MIN && !busy;
+  // A one-time key a tap (6 Nov); sent again after a failure for the same coach, it keeps the failed one's key, so one
+  // that in fact landed is not added twice.
+  const failedAdd = useRef<{ what: string; key: string } | null>(null);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!ready) return;
+    const what = `${clean}\n${password}`;
+    const onceKey = failedAdd.current?.what === what ? failedAdd.current.key : newOnceKey();
     start(async () => {
-      const r = await settle(addCoach(clean, password));
+      const r = await settle(addCoach(clean, password, onceKey));
+      failedAdd.current = r.ok ? null : { what, key: onceKey };
       if (r.ok) onDone(clean);
       else setError(said(r.error));
     });

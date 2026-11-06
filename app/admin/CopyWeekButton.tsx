@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { copyProgramWeekAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 
 // Overwrites the week being edited with the previous one's plan, so it asks
 // first when there's something to lose. `fromLabel`/`toLabel` are the
@@ -23,10 +24,15 @@ export default function CopyWeekButton({
   targetHasContent: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
+  // Its one-time key, made as it is sent (6 Nov).
+  const copy = (fd: FormData) => {
+    fd.set("onceKey", newOnceKey());
+    return copyProgramWeekAction(fd);
+  };
 
   if (confirming) {
     return (
-      <form action={copyProgramWeekAction} className="pb-copy-confirm">
+      <form action={copy} className="pb-copy-confirm">
         <input type="hidden" name="clientId" value={clientId} />
         <input type="hidden" name="fromWeek" value={fromWeek} />
         <input type="hidden" name="toWeek" value={toWeek} />
@@ -50,7 +56,7 @@ export default function CopyWeekButton({
   }
 
   return (
-    <form action={copyProgramWeekAction}>
+    <form action={copy}>
       <input type="hidden" name="clientId" value={clientId} />
       <input type="hidden" name="fromWeek" value={fromWeek} />
       <input type="hidden" name="toWeek" value={toWeek} />

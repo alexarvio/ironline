@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { addPlanAction, deletePlanAction, setPlanArchivedAction, updatePlanAction } from "../../../lib/planActions";
 import type { InvoiceEvery } from "../../../lib/db";
+import { newOnceKey } from "../../../lib/onceKey";
 import { PLAN_EVERY, planFacts, type PlanChoice } from "../../../lib/planText";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog } from "../../../components/ui/dialog";
@@ -56,7 +57,10 @@ export default function PlansSettings({ plans, currency, vatFact }: { plans: Pla
     const v = { name, price: priceOf(draft.price), every: draft.every };
     const id = editing;
     setEditing(null);
-    if (id === "new") run(() => addPlanAction(v), (r) => (r ? `${name} added` : null));
+    if (id === "new") {
+      const onceKey = newOnceKey();
+      run(() => addPlanAction(v, onceKey), (r) => (r ? `${name} added` : null));
+    }
     else if (id) run(() => updatePlanAction(id, v), (r) => (r ? "Saved" : null));
   };
 

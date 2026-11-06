@@ -8,6 +8,7 @@ import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan
 import { addExerciseToLibraryAction, markProgramNoteSeenAction, markSeenAction, markVideoSeenAction, setRowDemoHiddenAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeProgramWeekAction, deletePhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { uploadFirst } from "../../../lib/uploadFirst";
+import { newOnceKey } from "../../../lib/onceKey";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
@@ -484,6 +485,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
   const [failed, setFailed] = useState<Record<number, boolean>>({});
   const inFlight = useRef<Record<number, boolean>>({});
   const again = useRef<Record<number, boolean>>({});
+  // A session's save that failed, with its one-time key (6 Nov, one-time key): it may in fact have landed and only its
+  // answer been lost, so its retry goes with the same key and adds nothing twice.
+  const lastFailed = useRef<Record<number, { key: string; payload: DayChangesPayload }>>({});
   const pendingRef = useRef(pending);
   const flushRef = useRef<(id: number) => void>(() => {});
   /** Two queues as one: what failed to save, under what came since (the newer wins). */
@@ -511,14 +515,50 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     inFlight.current[sessionId] = true;
     setSaving((x) => ({ ...x, [sessionId]: true }));
     setFailed((x) => ({ ...x, [sessionId]: false }));
+    // The save that failed before this goes again with its own key (6 Nov, one-time key): as it was, when nothing
+    // changed since; else first, on its own, when its adds still lead the queue, and the rest after it with a new key.
+    // So a save that in fact landed, its answer lost, adds nothing twice.
+    const before = lastFailed.current[sessionId];
+    delete lastFailed.current[sessionId];
+    const json = (v: unknown) => JSON.stringify(v ?? []);
+    let key = newOnceKey();
+    let first: { key: string; payload: DayChangesPayload } | null = null;
+    let send = payload;
+    let rest = p;
+    if (before && json(payload) === json(before.payload)) key = before.key;
+    else if (before) {
+      const exBefore = before.payload.added ?? [];
+      const caBefore = before.payload.cardio?.added ?? [];
+      const exNow = payload.added ?? [];
+      const caNow = payload.cardio?.added ?? [];
+      if ((exBefore.length || caBefore.length) && json(exNow.slice(0, exBefore.length)) === json(exBefore) && json(caNow.slice(0, caBefore.length)) === json(caBefore)) {
+        first = before;
+        send = { ...payload, added: exNow.slice(exBefore.length), cardio: { ...payload.cardio, added: caNow.slice(caBefore.length) } };
+        const gone = new Set([
+          ...p.added.filter((a) => a.kind === "exercise" && a.exerciseId != null).slice(0, exBefore.length).map((a) => a.key),
+          ...p.added.filter((a) => a.kind === "cardio").slice(0, caBefore.length).map((a) => a.key),
+        ]);
+        rest = { ...p, added: p.added.filter((a) => !gone.has(a.key)) };
+      }
+    }
+    let firstDone = false;
     const fail = (why: string) => {
       // Nothing of it was kept: the changes go back in the queue (under any made since) and the screen back to what is saved.
-      setPending((prev) => ({ ...prev, [sessionId]: mergePending(p, prev[sessionId] ?? emptyPending()) }));
+      // (The failed save before it, when it went first and landed, is not among them.)
+      lastFailed.current[sessionId] = first && !firstDone ? first : { key, payload: send };
+      setPending((prev) => ({ ...prev, [sessionId]: mergePending(firstDone ? rest : p, prev[sessionId] ?? emptyPending()) }));
       setSeenProgram("");
       setFailed((x) => ({ ...x, [sessionId]: true }));
       toast.error("Not saved", { description: why });
     };
-    void applyDayChangesAction(payload)
+    const sent = first
+      ? applyDayChangesAction(first.payload, first.key).then((r) => {
+          if (r && r.ok === false) return r;
+          firstDone = true;
+          return applyDayChangesAction(send, key);
+        })
+      : applyDayChangesAction(send, key);
+    void sent
       .then((r) => {
         if (r && r.ok === false) fail(r.error ?? "Something went wrong");
       })
@@ -816,10 +856,19 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     return !r || (lbs ? r.lbs : r.kg) || pendingCount(pend(id)) > 0 || !!saving[id];
   };
   // + Week's menu (20 Oct, Alex: the add-week pop-up was too black): Blank, or a copy of the week before the new one, or of the one on screen; added at once.
+  // One week a pick, its own one-time key (6 Nov): a pick while one is still on its way is not taken.
+  const addingWeek = useRef(false);
   const addWeek = (from: number | null) => {
+    if (addingWeek.current) return;
+    addingWeek.current = true;
     const n = weeks.length + 1;
+    const onceKey = newOnceKey();
     startTransition(async () => {
-      await addProgramWeekAction(fd({ clientId, programId: program.id, copyFrom: from }));
+      try {
+        await addProgramWeekAction(fd({ clientId, programId: program.id, copyFrom: from, onceKey }));
+      } finally {
+        addingWeek.current = false;
+      }
       savedToast(`Week ${n} added${from ? `, a copy of Week ${from}` : ""}`);
       router.push(`${window.location.pathname}?client=${clientId}&tab=training&program=${program.id}&week=${n}`, { scroll: false });
     });
@@ -1894,9 +1943,11 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             onClick={() => {
               const n = sessions.length + incoming + 1;
               setIncoming((k) => k + 1);
+              // Each tap is a session of its own, shown at once, with its own one-time key (6 Nov).
+              const onceKey = newOnceKey();
               act(async () => {
                 try {
-                  const r: unknown = await addSessionAction(fd({ clientId, week: weekNo(viewIdx) }));
+                  const r: unknown = await addSessionAction(fd({ clientId, week: weekNo(viewIdx), onceKey }));
                   // Refused: the placeholder goes; act says why.
                   if ((r && typeof r === "object" && "ok" in r && (r as { ok: boolean }).ok === false) || (typeof r === "string" && r)) setIncoming(0);
                   return r;
@@ -2071,7 +2122,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             onAsk={async (note, recurring) => {
               const rowId = dlg.rowId;
               const session = sessions.find((s) => s.rows.some((r) => r.id === rowId))?.name ?? "Session";
-              await requestExerciseVideoAction(rowId, note, recurring);
+              await requestExerciseVideoAction(rowId, note, recurring, newOnceKey());
               close();
               router.refresh();
               toast.success(recurring ? `Asked ${firstName} for a video, every ${session} session` : `Asked ${firstName} for a video`);
@@ -2096,8 +2147,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             where={`${sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}, ${week.label}`}
             onAsk={(note) => {
               const rowId = dlg.rowId;
+              const onceKey = newOnceKey();
               close();
-              act(() => requestExerciseVideoAction(rowId, note), "Video asked for"); // (3 Nov, Alex: the words mockup, no sentence after it)
+              act(() => requestExerciseVideoAction(rowId, note, undefined, onceKey), "Video asked for"); // (3 Nov, Alex: the words mockup, no sentence after it)
             }}
             onCancel={() => {
               const v = videos[dlg.rowId];
@@ -2119,7 +2171,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             onSend={(text) => {
               const link = dlg.link;
               close();
-              const f = fd({ clientId, text });
+              const f = fd({ clientId, text, nonce: newOnceKey() });
               f.set("link", JSON.stringify(link));
               act(() => sendChatMessageAction(f), `Message sent. It's on ${firstName}'s Home, linked to this.`);
             }}
@@ -2137,8 +2189,9 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
               const src = sessionById(dlg.sessionId)!;
               const n = sessions.length + 1;
               const target = to === "new" ? null : sessionById(to);
+              const onceKey = newOnceKey();
               close();
-              act(async () => (await settle([src.id]), copyProgramDayAction(fd({ fromDayId: src.id, toDayId: to === "new" ? "new" : to, applyToRemainingWeeks: also ? "1" : null }))), to === "new" ? `Added as Session ${n}${also && laterLabel ? `, and in ${laterLabel}` : ""}` : `Replaced ${target?.name ?? "session"}${also && laterLabel ? `, and in ${laterLabel}` : ""}`);
+              act(async () => (await settle([src.id]), copyProgramDayAction(fd({ fromDayId: src.id, toDayId: to === "new" ? "new" : to, applyToRemainingWeeks: also ? "1" : null, onceKey }))), to === "new" ? `Added as Session ${n}${also && laterLabel ? `, and in ${laterLabel}` : ""}` : `Replaced ${target?.name ?? "session"}${also && laterLabel ? `, and in ${laterLabel}` : ""}`);
             }}
           />
         )}
@@ -2196,9 +2249,11 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
               close();
               // Its list said No changes: nothing to apply.
               if (!targets.length) return;
+              // A one-time key a week reached (6 Nov), made with the tap.
+              const keys = targets.map(() => newOnceKey());
               act(async () => {
                 await settle(Object.keys(pendingRef.current).map(Number));
-                for (const to of targets) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to }));
+                for (const [i, to] of targets.entries()) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to, onceKey: keys[i] }));
               }, `${label} applied to ${toWords}`);
             }}
           />
@@ -2212,10 +2267,11 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             onConfirm={(also) => {
               const from = weekNo(dlg.from);
               const targets = also ? weeks.filter((w) => w.index >= viewIdx).map((w) => weekNo(w.index)) : [weekNo(viewIdx)];
+              const keys = targets.map(() => newOnceKey());
               close();
               act(async () => {
                 await settle(Object.keys(pendingRef.current).map(Number));
-                for (const to of targets) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to }));
+                for (const [i, to] of targets.entries()) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to, onceKey: keys[i] }));
               }, `Week ${dlg.from} copied to ${week.label}${also ? ` and ${laterLabel}` : ""}`);
             }}
           />
@@ -2390,7 +2446,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             focus={dlg.focus ?? null}
             today={today}
             onAdd={async (nm) => {
-              const made = await addGymAction(clientId, nm);
+              const made = await addGymAction(clientId, nm, newOnceKey());
               router.refresh();
               return made ? { id: made.id, name: made.name, home: gyms.length === 0, color: "#1d3466", rgb: "29,52,102", sessions8w: 0, lastSessionAt: null } : null;
             }}
@@ -2419,9 +2475,11 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             others={program.planCtx.phases}
             programs={program.planCtx.programs}
             onSave={(v) => {
+              const f = planPhaseForm({ clientId, ...v });
+              f.set("onceKey", newOnceKey());
               close();
               startTransition(async () => {
-                const made = await addClientPhaseAction(planPhaseForm({ clientId, ...v }));
+                const made = await addClientPhaseAction(f);
                 savedToast(`${v.name} drafted: ${v.programId ? "on its programme" : "a new programme"}`);
                 if (made?.programId) router.push(`${window.location.pathname}?client=${clientId}&tab=training&program=${made.programId}&week=1`, { scroll: false });
                 else router.refresh();
@@ -2783,6 +2841,7 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
                 const f = new FormData();
                 f.set("name", name);
                 f.set("muscleGroup", group);
+                f.set("onceKey", newOnceKey());
                 const made = await addExerciseToLibraryAction(f);
                 if (made) pick(made.name, made.id);
               }}

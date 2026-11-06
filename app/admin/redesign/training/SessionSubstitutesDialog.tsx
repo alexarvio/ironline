@@ -4,6 +4,7 @@ import "./substitutes.css";
 import { useMemo, useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { createLibraryExerciseAction } from "../library/actions";
+import { newOnceKey } from "../../../lib/onceKey";
 import type { Library } from "./TrainingDraft";
 import { Sep } from "../Sep";
 import { FEATURES } from "../../../lib/features";
@@ -92,7 +93,7 @@ export default function SessionSubstitutesDialog({
     const name = q.trim();
     if (!name || creating) return;
     setCreating(true);
-    const id = await createLibraryExerciseAction(name, group ?? "other", "");
+    const id = await createLibraryExerciseAction(name, group ?? "other", "", newOnceKey());
     setCreating(false);
     if (id == null) {
       setError("Couldn’t add it to the library.");

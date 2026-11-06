@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { markVideoSeenAction, removeVideoReplyAction, removeVideoRequestAction, requestExerciseVideoAction, sendVideoReplyAction } from "../lib/actions";
 import { TRACK_PALETTE } from "./phaseChrome";
 import { dayMonthTime } from "../lib/dayMonth";
+import { newOnceKey } from "../lib/onceKey";
 
 // Asking the client for a video of one exercise in one session, watching
 // what they send, and replying to it: a comment, a video (often a screen
@@ -98,11 +99,14 @@ export function VideoRequestDialog({
       : sent
         ? { text: `Sent ${when(request.sentAt!)}`, bg: "#e3f1e8", ink: "#1f6b43" }
         : { text: "Waiting", bg: "#fdf3e1", ink: "#8a5a12" };
-  const ask = () =>
+  const ask = () => {
+    // Its one-time key (6 Nov), made with the tap.
+    const onceKey = newOnceKey();
     run(async () => {
-      await requestExerciseVideoAction(assignmentId, note);
+      await requestExerciseVideoAction(assignmentId, note, undefined, onceKey);
       onClose();
     });
+  };
   const remove = () =>
     run(async () => {
       await removeVideoRequestAction(request!.id);

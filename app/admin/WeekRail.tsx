@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { addProgramWeekAction } from "../lib/actions";
+import { newOnceKey } from "../lib/onceKey";
 import { placePopover, type Placement } from "../components/popover";
 
 const ADD_POP_WIDTH = 172;
@@ -43,6 +44,18 @@ export default function WeekRail({
   onSelect: (week: number) => void;
 }) {
   const [addOpen, setAddOpen] = useState(false);
+  // A week a click, its one-time key made as it is sent (6 Nov); a click while one is on its way is not taken.
+  const addingWeek = useRef(false);
+  const addWeek = async (fd: FormData) => {
+    if (addingWeek.current) return;
+    addingWeek.current = true;
+    fd.set("onceKey", newOnceKey());
+    try {
+      await addProgramWeekAction(fd);
+    } finally {
+      addingWeek.current = false;
+    }
+  };
   const wrapRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const addRef = useRef<HTMLButtonElement>(null);
@@ -159,7 +172,7 @@ export default function WeekRail({
             </button>
           </div>
           <div className="pb-add-pop-actions">
-            <form action={addProgramWeekAction}>
+            <form action={addWeek}>
               <input type="hidden" name="clientId" value={clientId} />
               <input type="hidden" name="programId" value={programId ?? ""} />
               <button type="submit" className="pb-add-blank">
@@ -170,7 +183,7 @@ export default function WeekRail({
                 otherwise this is a no-op precisely when a coach reaches for
                 it, which is right after adding an empty week. */}
             {copyFromWeek != null && (
-              <form action={addProgramWeekAction}>
+              <form action={addWeek}>
                 <input type="hidden" name="clientId" value={clientId} />
                 <input type="hidden" name="programId" value={programId ?? ""} />
                 <input type="hidden" name="copyFrom" value={copyFromWeek} />

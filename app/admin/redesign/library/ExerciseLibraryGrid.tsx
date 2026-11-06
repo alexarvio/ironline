@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ChevronDownIcon, PlayIcon, SearchIcon } from "../../../components/icons";
 import { assignVideoToExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, uploadLibraryVideoAction } from "./actions";
 import { uploadFirst } from "../../../lib/uploadFirst";
+import { newOnceKey } from "../../../lib/onceKey";
 import type { LibraryItem } from "./load";
 import { useLibraryView, type LibraryFilter } from "./useLibraryView";
 import { Sep } from "../Sep";
@@ -89,7 +90,7 @@ export default function ExerciseLibraryGrid({
     const taken = new Set(groups.map((g) => g.label.toLowerCase()));
     let label = "Muscle group";
     for (let n = 2; taken.has(label.toLowerCase()); n++) label = `Muscle group ${n}`;
-    const slug = await createLibraryGroupAction(label);
+    const slug = await createLibraryGroupAction(label, newOnceKey());
     setAdding(false);
     if (!slug) {
       toast.error("Couldn't add a group.");

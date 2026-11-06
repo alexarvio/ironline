@@ -21,6 +21,7 @@ import {
   verifyPassword,
 } from "./auth";
 import { getData } from "./db";
+import { once, onceKeyOf } from "./once";
 import { deleteUserForClient } from "./auth";
 import { eraseClient } from "./erase";
 import { completePasswordReset, requestPasswordReset } from "./passwordReset";
@@ -181,12 +182,16 @@ export async function createCoachAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8) redirect(`${COACHES}&coachError=invalid`);
-  try {
-    createUser(email, password, "coach", null, true);
-  } catch {
-    redirect(`${COACHES}&coachError=taken`);
-  }
-  redirect(`${COACHES}&coachOk=added`);
+  // Taken once (6 Nov, one-time key): sent again after a dropped signal, it lands where the first did (added), never
+  // on "taken" by the account it made itself.
+  await once("createCoachAction", onceKeyOf(formData), () => {
+    try {
+      createUser(email, password, "coach", null, true);
+    } catch {
+      redirect(`${COACHES}&coachError=taken`);
+    }
+    redirect(`${COACHES}&coachOk=added`);
+  });
 }
 
 export async function resetCoachPasswordAction(formData: FormData) {

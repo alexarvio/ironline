@@ -199,16 +199,19 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     for (const [variationId, last] of byVariation) out.push({ variationId, ...last });
     return out;
   };
-  // A gym trained at once (6 Nov, Alex) is named on its sessions and in the gyms pop-up, never planned for.
-  const allGymRows = listClientGyms(clientId);
-  const gymRows = allGymRows.filter((g) => !g.once);
+  // A gym trained at once (6 Nov, Alex) is named on its sessions and in the gyms pop-up, never planned for. So is a
+  // deleted one (6 Nov, Alex: "make sure the data is saved on the coaching side"): its sessions keep its name and face,
+  // and the pop-up keeps it while it holds sessions, as `Deleted`.
+  const gymStatsAll = gymSessionStats(clientId);
+  const allGymRows = listClientGyms(clientId, true).filter((g) => !g.archived || (gymStatsAll.get(g.id)?.sessions ?? 0) > 0);
+  const gymRows = allGymRows.filter((g) => !g.once && !g.archived);
   const gymName = new Map(allGymRows.map((g) => [g.id, g.name] as const));
   // Home is the gym marked home (15 Oct: it used to be whichever came first), with each gym's colour and its sessions for the coach's gyms pop-up.
   const homeId = homeGymId(clientId);
-  const gymStats = sub("gyms", () => gymSessionStats(clientId));
+  const gymStats = sub("gyms", () => gymStatsAll);
   const gymCard = (g: (typeof allGymRows)[number]) => {
     const c = GYM_COLORS[isGymColor(g.color) ? g.color : "navy"];
-    return { id: g.id, name: g.name, home: g.id === homeId, color: c.hex, rgb: c.rgb, sessions8w: gymStats.get(g.id)?.sessions8w ?? 0, lastSessionAt: gymStats.get(g.id)?.lastUsedAt ?? null, logo: g.logo_path ?? null, kind: g.kind ?? "gym", ...(g.once ? { once: true } : {}) };
+    return { id: g.id, name: g.name, home: g.id === homeId && !g.archived, color: c.hex, rgb: c.rgb, sessions8w: gymStats.get(g.id)?.sessions8w ?? 0, lastSessionAt: gymStats.get(g.id)?.lastUsedAt ?? null, logo: g.logo_path ?? null, kind: g.kind ?? "gym", ...(g.once ? { once: true } : {}), ...(g.archived ? { deleted: true } : {}) };
   };
   const gyms = gymRows.map(gymCard);
   const allGyms = allGymRows.map(gymCard);

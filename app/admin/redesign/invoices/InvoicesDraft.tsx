@@ -14,6 +14,7 @@ import { ArrowRightIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "
 import DatePick from "../DatePick";
 import type { DraftInvoices } from "../loaders";
 import { dayMonth } from "../../../lib/dayMonth";
+import { newOnceKey } from "../../../lib/onceKey";
 import { SepJoin } from "../Sep";
 import { ConfirmDialog } from "../training/TrainingDraft";
 import { planPerPeriod } from "../../../lib/planText";
@@ -343,9 +344,10 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
             plan={plan}
             from={fromPlan && bill ? { lines: bill.lines, every: bill.every } : null}
             onCreate={(v) => {
+              const onceKey = newOnceKey();
               setAdding(false);
               start(async () => {
-                const id = await createInvoiceAction(clientId, { ...v, planId: fromPlan && bill ? bill.id : null });
+                const id = await createInvoiceAction(clientId, { ...v, planId: fromPlan && bill ? bill.id : null }, onceKey);
                 router.refresh();
                 const every = EVERY.find((e) => e.value === v.repeat);
                 if (id) toast.success(`${plan.defaults.nextNumber} created`, { description: v.repeat ? `${every?.long}, next ${dayMonth(firstNext(v.issueDate, v.repeat, plan.today))}` : undefined, action: { label: "Open", onClick: () => window.open(sheetHref(id), "_blank", "noopener") } });

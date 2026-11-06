@@ -13,6 +13,7 @@ import { ChatImage, ChatVideo, sized, withVideoFrame } from "../components/ChatM
 import { uploadFirstOrThrow } from "../lib/uploadFirst";
 import { ChatAttachmentRow, useChatAttachment } from "../components/ChatAttachment";
 import { dayMonth } from "../lib/dayMonth";
+import { newOnceKey } from "../lib/onceKey";
 import { useKeyboardInset } from "../client/useKeyboardInset";
 import { Avatar, Facts, Icon } from "./parts";
 import { ChatReview } from "./PhoneReview";
@@ -257,6 +258,8 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
     fd.set("text", "");
     fd.set("file", file);
     fd.set("quiet", "1");
+    // Its one-time key (6 Nov): sent again after a dropped signal, it is not posted twice.
+    fd.set("nonce", newOnceKey());
     if (replying) fd.set("replyTo", String(replying.id));
     try {
       // The file goes ahead to the server's disk; the send carries its handle (4 Nov, Alex: memory).

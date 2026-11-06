@@ -25,6 +25,7 @@ import { useHoldWhile, useSaveQueue } from "../useSaveQueue";
 import { SaveStatus } from "../SaveStatus";
 import { dayMonth, dayMonthTime, logDate } from "../../../lib/dayMonth";
 import { pic } from "../../../lib/pic";
+import { newOnceKey } from "../../../lib/onceKey";
 import { TRACK_LABEL, TRACK_PALETTE } from "../../phaseChrome";
 import { landOn } from "../../../lib/landOn";
 
@@ -120,10 +121,17 @@ function Pictures({ clientId, firstName, plan }: Props) {
   useHoldWhile(q.saving || q.failed || Object.values(drafts).some((v) => !!v.trim()));
   const setDraft = (period: string) => (v: string) => setDrafts((d) => (d[period] === v ? d : { ...d, [period]: v }));
   // Sent, it goes to the chat linked to that sheet (the client's link opens it), as the open sheet's always has.
+  // A one-time key a send (6 Nov); the same words sent again after "Not sent" keep the failed one's key, so a comment
+  // that in fact landed is not posted twice.
+  const failedComment = useRef<{ what: string; key: string } | null>(null);
   const sendComment = (sh: Sheet) => async (text: string) => {
-    const f = fd({ clientId, text });
+    const what = `${sh.period}\n${text}`;
+    const nonce = failedComment.current?.what === what ? failedComment.current.key : newOnceKey();
+    failedComment.current = { what, key: nonce };
+    const f = fd({ clientId, text, nonce });
     f.set("link", JSON.stringify({ kind: "photos", period: sh.period }));
     await sendChatMessageAction(f);
+    failedComment.current = null;
     reRead();
     toast.success("Sent", { description: `In the chat, linked to ${sh.title}.` });
   };
@@ -163,8 +171,10 @@ function Pictures({ clientId, firstName, plan }: Props) {
   const shownPending = pendingAngles.filter((l) => !plan.slots.some((x) => x.label.trim().toLowerCase() === l.toLowerCase()));
   const quickAdd = (label: string) => {
     setPendingAngles((xs) => [...xs, label]);
+    // Made with the pick, so the status's Retry of this save goes with the same one-time key (6 Nov).
+    const onceKey = newOnceKey();
     q.save(async () => {
-      await addPhotoSlotAction(fd({ clientId, label }));
+      await addPhotoSlotAction(fd({ clientId, label, onceKey }));
       return true;
     });
   };
@@ -447,7 +457,7 @@ function Pictures({ clientId, firstName, plan }: Props) {
             onSend={(text) => {
               const { label, link } = dlg;
               close();
-              const f = fd({ clientId, text });
+              const f = fd({ clientId, text, nonce: newOnceKey() });
               f.set("link", JSON.stringify(link));
               void sendChatMessageAction(f).then(reRead);
               toast.success("Sent", { description: `${firstName} gets it on Home, linked to ${label}.` });
