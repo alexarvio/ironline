@@ -82,7 +82,7 @@ export function icsDataUrl(v: { title: string; startMs: number; durationMin: num
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//NorCoach//Meetings//EN",
+    "PRODID:-//Norcoach//Meetings//EN",
     "BEGIN:VEVENT",
     `UID:ironline-${v.startMs}@ironline`,
     `DTSTAMP:${stamp(Date.now())}`,

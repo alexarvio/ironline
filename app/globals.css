@@ -8797,7 +8797,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
   letter-spacing: -0.01em;
 }
 
-/* The NorCoach logo (24 Oct, Alex: app/components/NorCoachLogo.tsx): the star
+/* The Norcoach logo (24 Oct, Alex: app/components/NorCoachLogo.tsx): the star
    and the wordmark, sized by the font size of wherever it sits and in its
    colour, so it is ink on the page and white over a photo. */
 .nc-logo { display: inline-flex; align-items: center; gap: 0.5em; line-height: 1; color: inherit; }
@@ -17375,7 +17375,7 @@ button.ci-hint { cursor: pointer; }
    the Android keyboard, which shortens the screen without making it wide. */
 @media (orientation: landscape) and (max-height: 500px) and (min-aspect-ratio: 3/2) {
   .phone-frame::after {
-    content: "Turn your phone upright to use NorCoach";
+    content: "Turn your phone upright to use Norcoach";
     position: fixed; inset: 0; z-index: 10000;
     display: flex; align-items: center; justify-content: center; padding: 24px;
     background: #F5F5F5; color: #333333;

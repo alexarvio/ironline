@@ -340,7 +340,7 @@ function CoachSupport({ initial }: { initial: SupportLine[] }) {
           onChange={setText}
           onSend={send}
           placeholder="Message"
-          label="Message to NorCoach"
+          label="Message to Norcoach"
           busy={busy}
           extra={
             <button

@@ -1,4 +1,4 @@
-// The NorCoach star, symmetrical: four arms at 90°, one length, each arm's
+// The Norcoach star, symmetrical: four arms at 90°, one length, each arm's
 // dark blade the same triangle (tip, shoulder, centre). The left and bottom
 // blades are joined: their outer edges run on until they meet on the 45° line.
 // The gaps are cut out of the shapes (an inset by half the gap, a round notch

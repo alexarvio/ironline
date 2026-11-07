@@ -105,7 +105,7 @@ export async function invoiceCheckout(account: string, v: { invoiceId: number; n
   return { id: s.id, url: s.url };
 }
 
-// ---- What coaches pay NorCoach (28 Oct, Alex; lib/billing.ts): a subscription on the platform's own account, so
+// ---- What coaches pay Norcoach (28 Oct, Alex; lib/billing.ts): a subscription on the platform's own account, so
 // these calls carry no Stripe-Account. The prices live in Stripe (STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY), so a new
 // price needs no deploy.
 
@@ -121,7 +121,7 @@ export type StripeSubscription = {
   items?: { data?: { current_period_end?: number; price?: { recurring?: { interval?: string } } }[] };
 };
 
-/** A coach's checkout for NorCoach: the price, a trial when they have not had one, the card asked for upfront. */
+/** A coach's checkout for Norcoach: the price, a trial when they have not had one, the card asked for upfront. */
 export async function subscriptionCheckout(v: { price: string; coachId: number; email: string; customer?: string; trialDays: number; successUrl: string; cancelUrl: string }): Promise<{ id: string; url: string }> {
   const meta = { coach_id: String(v.coachId) };
   const s = await call<{ id: string; url: string }>("POST", "/checkout/sessions", {

@@ -1,4 +1,4 @@
-// The NorCoach mark for the app: logonorcoach-joined.svg (Alex's star, the
+// The Norcoach mark for the app: logonorcoach-joined.svg (Alex's star, the
 // two lower blades joined) as clean ink shapes on nothing. The source paints
 // its gaps with a 23.27-wide light stroke over each blade; here each blade is
 // cut down by half that instead, so the gaps are real and the mark sits on

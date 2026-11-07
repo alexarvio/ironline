@@ -12,7 +12,7 @@ import { setViewZone } from "./viewZone";
 import { deleteUploadFolder } from "./storage";
 import { billingAccess, billingOn, requireBilling } from "./billing";
 
-// Authentication and authorization for NorCoach.
+// Authentication and authorization for Norcoach.
 //
 // Two roles, and the distinction matters for every query in the app:
 //   - "coach"  — one coach account (Finlay is one of them). Access to the CRM
@@ -185,7 +185,7 @@ export async function requireCoach(): Promise<SessionUser> {
   if (user.must_change_password) redirect("/login/change-password");
   // Signed up, not yet let in by the owner.
   if (user.pending) redirect("/auth/waiting");
-  // What they pay NorCoach (28 Oct, Alex; billing.ts): let in but not subscribed, the subscribe screen; a week unpaid,
+  // What they pay Norcoach (28 Oct, Alex; billing.ts): let in but not subscribed, the subscribe screen; a week unpaid,
   // read-only: every screen still reads, and a change (a server action's own body, or a form posted without one) takes
   // them to Billing instead of saving; a redirect, so no screen breaks over it. A page drawn again after an action is a
   // render, never refused. What stays open (chat, Support, read marks, billing) uses requireCoachAccount instead.
@@ -553,7 +553,7 @@ export function approveCoach(coachId: number): boolean {
   user.onboarding = true;
   persist();
   seedCoachLibrary(user.id);
-  // They pay NorCoach from here (28 Oct, Alex; billing.ts): the subscribe screen comes first, the trial with it. Not
+  // They pay Norcoach from here (28 Oct, Alex; billing.ts): the subscribe screen comes first, the trial with it. Not
   // while subscriptions are off: a coach let in then counts as one from before, free until the owner asks.
   if (billingOn()) requireBilling(user.id, true);
   return true;

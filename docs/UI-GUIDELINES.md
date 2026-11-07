@@ -1,4 +1,4 @@
-# NorCoach UI guidelines
+# Norcoach UI guidelines
 
 How the app looks, so a new screen matches the ones already there without discussion.
 

@@ -1,4 +1,4 @@
-# NorCoach client app · design rules
+# Norcoach client app · design rules
 
 Read this before touching any client screen. One hero language, one everyday language, nothing else. (The coach admin has its own: `docs/DESIGN-RULES-ADMIN.md`.)
 
@@ -88,6 +88,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 - Home's Meetings section is one shape (27 Oct, Alex: "always like when there is a next meeting booked… cleaner"): `Meetings` with All meetings on its right, the next call's row when one is booked, then `Last meeting | 25 Oct` and the Meeting summary fold; with nothing booked only the row is left out, never another heading.
 - Phase goals are off (23 Oct, Alex: To focus on replaces them; `FEATURES.phaseGoals` in app/lib/features.ts): no Objectives from {Coach} on the phase cards, Training, Nutrition or the check-in, and a phase's starts row on Events has nothing more, so it doesn't open. The stored goals are kept.
 - No position dots (except under the Home phase cards, brought back 16 Oct by Alex), no "See all" when a tap on the item already leads there, no explanation sentences.
+- The name is one word, `Norcoach` (7 Nov, Alex: "It's one word"), never `NorCoach`, wherever a person reads it: the app, emails, pushes, the website, the stores; the logo's `NORCOACH` stays as drawn, and code names (`NorCoachLogo`) stay as they are.
 - Words (3 Nov, Alex: docs/boards/words-mockup.html): facts, never a sentence that explains a feature (no line under a Settings switch unless something is wrong, then a short fact: `Blocked in phone settings`); an empty state is a word or two (`None yet`, `Nothing logged`, `Nothing planned`, `No sessions yet`); the coach by their first name everywhere, pushes too, `Coach` when there is none, never "your coach"; one thing one word: a swap is `Instead of {name}`, a video ask `{Coach} asked for a video`, then `Video sent`; skipping is `Couldn't train`; deleting asks in place (`Delete event?`, Cancel and Delete in words). Dates and times go through `clientDates` (app/lib/clientDates.ts: `dayWords`, `monthWords`, `weekdayWords`, `clock`, `clockRange`); no screen formats its own.
 
 ## 9. Before editing

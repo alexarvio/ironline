@@ -6,7 +6,7 @@ import type { BillingView } from "../../../lib/billing";
 import { dayMonth } from "../../../lib/dayMonth";
 import { Section } from "./SettingsForms";
 
-// Settings, Billing (28 Oct, Alex; lib/billing.ts): what the coach pays NorCoach. One card: NorCoach with Monthly or
+// Settings, Billing (28 Oct, Alex; lib/billing.ts): what the coach pays Norcoach. One card: Norcoach with Monthly or
 // Yearly after it and the state as its pill (Trial ink, Active green, Payment failed rust, Read-only red, Cancelled and
 // Free grey), the date that matters under it (the trial's end, the next charge, the plan's end, read-only from);
 // Manage billing, a white pill, opens Stripe's own page for the card, the plan, receipts and cancelling.
@@ -32,7 +32,7 @@ export default function BillingSettings({ view }: { view: BillingView }) {
           : null;
   return (
     <Section
-      title="NorCoach"
+      title="Norcoach"
       actions={
         <>
           {/* No live plan (never, or one that ended): Subscribe; Stripe's page can't start a new one. */}
@@ -53,7 +53,7 @@ export default function BillingSettings({ view }: { view: BillingView }) {
         <div className="rst-rows">
           <div className="rst-row">
             <span className="rst-row-main">
-              <b>{view.status === "free" ? "NorCoach" : view.interval === "year" ? "Yearly" : "Monthly"}</b>
+              <b>{view.status === "free" ? "Norcoach" : view.interval === "year" ? "Yearly" : "Monthly"}</b>
               {when && <small>{when}</small>}
             </span>
             <span className={`trn-state${pill.tone ? ` ${pill.tone}` : ""}`}>{pill.word}</span>

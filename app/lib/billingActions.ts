@@ -6,7 +6,7 @@ import { applySubscription, billingOn, canSubscribe, getBilling, keepCheckout, m
 import { billingPortal, cancelSubscription, customerSubscriptions, expireCheckout, subscriptionCheckout } from "./stripe";
 import { appUrl } from "./passwordReset";
 
-// What coaches pay NorCoach (28 Oct, Alex; lib/billing.ts). These open when nothing else does (requireCoachAccount):
+// What coaches pay Norcoach (28 Oct, Alex; lib/billing.ts). These open when nothing else does (requireCoachAccount):
 // a coach who has to subscribe, or whose plan lapsed, can always reach Stripe.
 
 /** The subscribe screen's Continue: Stripe's checkout for the plan picked, the trial with it when not had before.
@@ -61,7 +61,7 @@ export async function openBillingPortalAction(): Promise<{ url?: string; error?:
   }
 }
 
-/** The owner on Coaches: this coach pays NorCoach from now on, or uses it free. Free ends a live subscription on
+/** The owner on Coaches: this coach pays Norcoach from now on, or uses it free. Free ends a live subscription on
  *  Stripe too, so nothing is charged for a plan that says Free. */
 export async function setCoachPaysAction(coachId: number, pays: boolean): Promise<{ ok: boolean; error?: string }> {
   await requireOwner();

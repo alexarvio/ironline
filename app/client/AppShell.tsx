@@ -770,7 +770,7 @@ export default function AppShell({
                   {helpEmail && (
                     <a
                       className="app-menu-item app-menu-item-link"
-                      href={`mailto:${helpEmail}?subject=${encodeURIComponent("NorCoach app")}`}
+                      href={`mailto:${helpEmail}?subject=${encodeURIComponent("Norcoach app")}`}
                       onClick={() => setMenuOpen(false)}
                     >
                       <span className="app-menu-ico">
@@ -789,7 +789,7 @@ export default function AppShell({
                       Log out
                     </button>
                   </form>
-                  <span className="app-menu-footnote"><Bars parts={["NorCoach", "Full Potential Coaching"]} /></span>
+                  <span className="app-menu-footnote"><Bars parts={["Norcoach", "Full Potential Coaching"]} /></span>
                 </div>
               </nav>
             </>

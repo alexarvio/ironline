@@ -1,4 +1,4 @@
-// The NorCoach logo (24 Oct, Alex): his star (two lower blades joined) and
+// The Norcoach logo (24 Oct, Alex): his star (two lower blades joined) and
 // the NORCOACH wordmark, bold and condensed since 2 Nov (Alex: "a bulkier
 // font, like adidas, nike"; traced from his artwork), drawn inline so both
 // take the colour of the text round them (ink on the page, white over a photo).
@@ -29,7 +29,7 @@ export function NorCoachWordmark({ className }: Props) {
     client app's top bar on Home, Training and Nutrition). */
 export function NorCoachLogo({ className, word = false }: Props & { word?: boolean }) {
   return (
-    <span className={`nc-logo${className ? " " + className : ""}`} role="img" aria-label="NorCoach">
+    <span className={`nc-logo${className ? " " + className : ""}`} role="img" aria-label="Norcoach">
       {!word && <NorCoachMark className="nc-logo-mark" />}
       <NorCoachWordmark className="nc-logo-word" />
     </span>

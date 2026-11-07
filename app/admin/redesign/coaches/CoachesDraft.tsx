@@ -22,7 +22,7 @@ import SupportInbox from "./SupportInbox";
 // password as a state pill, and the owner's actions in words on hover (Remove and Decline ask first). Add coach and
 // Reset password are .dlh pop-ups on clean lines. Never any client's name or data. Ink, never navy; 500 and 600.
 
-export type CoachRow = { id: number; email: string; name: string; clients: number; lastActivity: string | null; mustChangePassword: boolean; owner: boolean; /** What they pay NorCoach (28 Oct; lib/billing.ts): whether they pay, and the state as its pill. */ pays: boolean; billing: { word: string; tone: string } };
+export type CoachRow = { id: number; email: string; name: string; clients: number; lastActivity: string | null; mustChangePassword: boolean; owner: boolean; /** What they pay Norcoach (28 Oct; lib/billing.ts): whether they pay, and the state as its pill. */ pays: boolean; billing: { word: string; tone: string } };
 export type SignUpRow = { id: number; email: string; name: string; business: string | null; at: string };
 
 // The server's own check (createCoachAction), so Add waits for what it would accept.
@@ -140,7 +140,7 @@ export default function CoachesDraft({ accounts, waiting, support, billingOn = f
                 <span>Clients</span>
                 <span>Client activity</span>
                 <span>Password</span>
-                <span>NorCoach</span>
+                <span>Norcoach</span>
                 <span />
               </div>
               {accounts.map((c) => {
@@ -170,9 +170,9 @@ export default function CoachesDraft({ accounts, waiting, support, billingOn = f
                         {/* The owner's own account isn't changed here. */}
                         {!c.owner && (
                           <>
-                            {/* Who pays NorCoach (28 Oct, Alex): a coach let in from now on pays; one from before, once asked. */}
+                            {/* Who pays Norcoach (28 Oct, Alex): a coach let in from now on pays; one from before, once asked. */}
                             {billingOn && (
-                              <button type="button" className="rco-act" disabled={busy === c.id} onClick={() => act(c.id, () => setCoachPaysAction(c.id, !c.pays).then((r): CoachOutcome => (r.ok ? { ok: "done", error: null } : { ok: null, error: r.error ?? "Not saved. Try again." })), c.pays ? `${c.name} uses NorCoach free` : `${c.name} pays from their next sign-in`)}>
+                              <button type="button" className="rco-act" disabled={busy === c.id} onClick={() => act(c.id, () => setCoachPaysAction(c.id, !c.pays).then((r): CoachOutcome => (r.ok ? { ok: "done", error: null } : { ok: null, error: r.error ?? "Not saved. Try again." })), c.pays ? `${c.name} uses Norcoach free` : `${c.name} pays from their next sign-in`)}>
                                 {c.pays ? "Make it free" : "Make them pay"}
                               </button>
                             )}

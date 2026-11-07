@@ -1,4 +1,4 @@
-# NorCoach mobile shell
+# Norcoach mobile shell
 
 The iPhone and Android app, built with Capacitor 8. It is a native wrapper that
 loads the live site (`server.url` in `capacitor.config.json`), so every push to

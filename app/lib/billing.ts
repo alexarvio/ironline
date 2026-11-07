@@ -1,8 +1,8 @@
 import { getData, persist, type CoachBilling } from "./db";
 import { stripeConfigured, type StripeSubscription } from "./stripe";
 
-// What coaches pay NorCoach (28 Oct, Alex): a subscription on the platform's own Stripe account, monthly or yearly,
-// money into NorCoach's account (the coaches' own clients pay the coaches through Connect; lib/payments.ts). Settled:
+// What coaches pay Norcoach (28 Oct, Alex): a subscription on the platform's own Stripe account, monthly or yearly,
+// money into Norcoach's account (the coaches' own clients pay the coaches through Connect; lib/payments.ts). Settled:
 //   - a 14-day trial, the card asked for upfront, one trial a coach;
 //   - asked after the owner lets a coach in: the admin waits on /auth/subscribe until they have subscribed;
 //   - a payment that fails, or a cancelled plan, leaves a week as it was (a warning in the rail), then read-only: every

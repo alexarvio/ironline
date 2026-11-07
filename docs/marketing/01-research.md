@@ -1,4 +1,4 @@
-# NorCoach · Market research (step 1)
+# Norcoach · Market research (step 1)
 
 Research for the copy method's step 1, adapted from e-commerce to B2B software: the buyer is the coach, a small-business owner buying a coaching platform. Done 26 Oct 2026 from public web sources.
 
