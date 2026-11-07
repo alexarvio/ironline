@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Illustrated avatar">
+<defs><clipPath id="c"><circle cx="32" cy="32" r="32"/></clipPath></defs>
+<g clip-path="url(#c)">
+<rect width="64" height="64" fill="#f3ead9"/>
+
+<path d="M8 66c0-13 10.4-21 24-21s24 8 24 21z" fill="#b88a2e"/>
+<path d="M26.6 36.6h10.8v8.6c0 3-2.4 5-5.4 5s-5.4-2-5.4-5z" fill="#633f2b"/>
+<ellipse cx="32" cy="27.8" rx="11.4" ry="13.4" fill="#6e4630"/>
+
+<path d="M19.8 27.8c-2.6-2.6-1.8-6.6 1-7.6-.8-3.4 1.8-6.2 5-5.4.8-3 4.4-4.6 7.2-2.8 2.6-1.8 6.4-.6 7 2.6 3.2-.4 5.4 2.6 4.4 5.6 2.8 1.2 3.2 5 .8 7.4-2.4-4.4-6.4-7.4-12.2-7.4s-10 3-13.2 7.6z" fill="#1b1310"/>
+</g>
+</svg>

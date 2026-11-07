@@ -154,7 +154,9 @@ h1, h2, h3 { font-weight: 600; }
 .browser-bar span { position: absolute; left: 50%; transform: translateX(-50%); padding: 3px 48px; border-radius: 7px; background: #1c1c1e; color: var(--dark-muted); font-size: 11.5px; }
 .browser-screen { position: relative; aspect-ratio: 1440 / 900; overflow: hidden; }
 .phone2 {
-  position: absolute; right: 0; bottom: 0; width: 300px; padding: 11px; border-radius: 54px; background: #0b0b0c;
+  /* Never taller than the browser beside it plus the room under it, so it can't climb into the words above at
+     tablet widths (7 Nov): (stage − 170) × .625 is the browser's height; × .288 + 72 turns that into a width. */
+  position: absolute; right: 0; bottom: 0; width: min(300px, calc((100% - 170px) * .288 + 72px)); padding: 11px; border-radius: 54px; background: #0b0b0c;
   box-shadow: 0 0 0 2px #4a4a4e, 0 0 0 3.5px #2a2a2d, 0 0 0 4.5px #5c5c61, 0 60px 100px -30px rgba(0,0,0,.85);
 }
 /* The side buttons: action and volume on the left, power on the right. */
@@ -192,9 +194,10 @@ h1, h2, h3 { font-weight: 600; }
 .a-row { padding: 5px 8px; }
 .a-row i, .a-me i { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #EEF0F3; font-style: normal; font-size: 10px; font-weight: 600; color: var(--muted); }
 .a-row.on { background: #EEF0F3; color: var(--ink); font-weight: 600; }
-.a-row i.pic, .a-face.pic { background: #c9d0db; }
-.a-row i.pic::after, .a-face.pic::after { content: "E"; color: #fff; }
-.a-new { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: auto; height: 32px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); font-size: 12px; font-weight: 600; }
+.a-row i.pic, .a-face.pic { background: url(img/avatars/emma.svg) center / cover; }
+/* The demo people are illustrated avatars (img/avatars, 7 Nov): a face with a picture is drawn without its letter.
+   Finlay's stands in until his photo comes; swap finlay.svg for it and every place follows. */
+.a-row i[style], .need .face[style] { background-size: cover; background-position: center; color: transparent; }.a-new { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: auto; height: 32px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); font-size: 12px; font-weight: 600; }
 .a-me { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 8px 6px 0; box-shadow: inset 0 1px 0 #EEF0F3; font-size: 12px; }
 .a-me i { width: 26px; height: 26px; background: var(--ink); color: #fff; }
 .a-me b { display: block; font-weight: 600; }
@@ -257,6 +260,15 @@ h1, h2, h3 { font-weight: 600; }
 .a-sr b { text-align: right; font-weight: 600; color: var(--green); font-variant-numeric: tabular-nums; }
 .a-sr b.neg { color: #b42318; }
 .a-wch { margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--body); }
+/* The weight goal in its Goal view (7 Nov, as the app since 2–4 Nov): the verdict pill after the title, the goal's
+   facts after the change, the latest weigh-in a pulsing Body blue dot, the goal a beige ring pulsing at its day. */
+.a-wch span { font-weight: 500; color: var(--muted); }
+.a-ok { margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px rgba(47,122,63,.35); font-style: normal; font-size: 10px; font-weight: 600; color: #2f7a3f; }
+.a-wdot, .a-wgoal { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; }
+.a-wdot { background: #2f5d8f; animation: wpulse 1.8s ease-out infinite; }
+.a-wgoal { width: 10px; height: 10px; margin: -5px 0 0 -5px; background: #fff; box-shadow: inset 0 0 0 2px #a08a5c; animation: gpulse 1.8s ease-out infinite; }
+@keyframes wpulse { 0% { box-shadow: 0 0 0 0 rgba(47,93,143,.45); } 100% { box-shadow: 0 0 0 9px rgba(47,93,143,0); } }
+@keyframes gpulse { 0% { box-shadow: inset 0 0 0 2px #a08a5c, 0 0 0 0 rgba(160,138,92,.45); } 100% { box-shadow: inset 0 0 0 2px #a08a5c, 0 0 0 9px rgba(160,138,92,0); } }
 .a-wbox { position: relative; height: 138px; margin-top: 6px; }
 .adm .a-wt { position: absolute; left: 0; top: 0; width: calc(100% - 26px); height: 120px; }
 .a-wt-y { position: absolute; right: 0; top: 0; height: 112px; display: flex; flex-direction: column; justify-content: space-between; font-size: 9.5px; color: var(--muted); }
@@ -342,10 +354,25 @@ h1, h2, h3 { font-weight: 600; }
 .c-face.lg { position: relative; flex: none; width: 38px; height: 38px; font-size: 15px; }
 .c-face.lg span { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--indigo); box-shadow: 0 0 0 2px var(--paper); }
 .cli .c-face.lg svg { width: 9px; height: 9px; color: #fff; }
-.c-latest small { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); }
-.c-latest small span { margin-left: 4px; font-weight: 500; }
-.c-latest b { display: block; font-size: 15px; font-weight: 600; }
-.c-latest p { font-size: 13px; color: var(--body); }
+/* Latest from Finlay as the app's coach note (7 Nov): the label in small caps, when after it, his words in ink, then
+   Open chat and View; To focus on open under it on a thin line, as the app's Home has it since 3 Nov. */
+.c-latest small { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--sub); }
+.c-latest small span { margin-left: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.c-latest p { margin-top: 2px; font-size: 15px; font-weight: 500; line-height: 21px; color: var(--ink); }
+.c-acts { display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; font-weight: 600; }
+.cli .c-latest .c-face.lg { width: 36px; height: 36px; }
+.c-fh { display: flex; align-items: center; gap: 6px; margin: 14px 24px 0 72px; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.cli .c-fh svg { width: 14px; height: 14px; }
+.cli .c-goals { margin: 4px 18px 0 78px; }
+.cli .c-goals p { font-size: 16px; }
+/* Today, first under the greeting (3 Nov in the app): what today asks, a row each, the action an 84px pill. */
+.c-today-h { margin: 16px 24px 0; font-size: 11.5px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
+.c-td { display: flex; align-items: center; gap: 14px; height: 56px; margin: 2px 24px 0; }
+.cli .c-td svg { flex: none; color: var(--beige); }
+.c-td div { flex: 1; min-width: 0; }
+.c-td b { display: block; font-size: 15px; font-weight: 500; }
+.c-td span { font-size: 12px; font-weight: 500; color: var(--muted); }
+.c-td em { display: grid; place-items: center; width: 84px; height: 36px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); font-style: normal; font-size: 13px; font-weight: 600; }
 .c-nav { position: absolute; left: 14px; right: 14px; bottom: 16px; display: flex; justify-content: space-around; align-items: center; height: 62px; border-radius: 31px; background: #fff; box-shadow: 0 12px 30px -12px rgba(16,24,40,.3), inset 0 0 0 1px var(--line); }
 .c-nav span { display: grid; justify-items: center; gap: 3px; font-size: 10.5px; color: var(--muted); }
 .c-nav .on { color: var(--ink); font-weight: 600; }
@@ -605,6 +632,18 @@ h1, h2, h3 { font-weight: 600; }
 .mk svg { width: 12px; height: 12px; }
 .mk.pb { color: var(--green); box-shadow: inset 0 0 0 1.5px var(--green); }
 .mk.vid { color: var(--green); box-shadow: inset 0 0 0 1.5px var(--green); }
+/* 7 Nov, the app as it is now: the client's note on a session (the pen in a grey ring, her words over the table with
+   Reply), and the gym the session was trained at, its face after the state pill (a row without one keeps the room). */
+.mk.note { color: var(--muted); box-shadow: inset 0 0 0 1px #DCE1E8; }
+.gym { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: rgba(29,122,112,.14); color: var(--teal); font-size: 10px; font-weight: 600; }
+.gym.empty { background: none; }
+.t-cnote { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 16px 6px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.t-cnote svg { width: 14px; height: 14px; color: var(--sub); }
+.t-cnote q { color: var(--body); }
+.t-cnote b { margin-left: 6px; font-weight: 600; color: var(--ink); }
+.a-pills small { font-size: 11px; font-weight: 500; color: var(--muted); }
+.a-pills .due { width: 6px; height: 6px; border-radius: 50%; background: var(--rust); }
+.t-th span:nth-child(8), .t-th span:nth-child(9) { text-align: center; white-space: nowrap; }
 .t-state { display: inline-flex; align-items: center; justify-content: center; width: 92px; height: 24px; border-radius: 999px; background: #fff; font-size: 11px; font-weight: 600; }
 .t-state.green { color: var(--green); box-shadow: inset 0 0 0 1px rgba(47,122,63,.35); }
 .t-state.grey { color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
@@ -674,7 +713,12 @@ h1, h2, h3 { font-weight: 600; }
 .n-figs b { font-size: 18px; }
 .n-row { display: flex; align-items: center; gap: 8px; height: 38px; font-size: 12.5px; box-shadow: inset 0 1px 0 #EEF0F3; }
 .n-row .dt { width: 86px; color: var(--body); }
-.n-row svg { width: 12px; height: 12px; color: var(--muted); margin-right: 8px; }
+.n-row { position: relative; }
+.n-row svg { width: 12px; height: 12px; color: var(--muted); margin-right: 30px; }
+/* Her note on a food day (7 Nov): the pen after the chevron and the rust dot while unread, in the room every row keeps
+   there, so the kcal still lines up. */
+.n-row svg.nmark { position: absolute; left: 114px; margin: 0; color: var(--sub); }
+.n-row .due { position: absolute; left: 131px; width: 6px; height: 6px; border-radius: 50%; background: var(--rust); }
 .n-row b { width: 90px; font-weight: 600; }
 .n-row .m { color: var(--muted); font-size: 11.5px; }
 
@@ -711,12 +755,13 @@ h1, h2, h3 { font-weight: 600; }
 .c-ring { position: relative; width: 82px; height: 82px; }
 .cli .c-ring svg { width: 82px; height: 82px; }
 .c-ring span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 600; }
-.c-note { margin: 18px 26px 0; }
-.c-nh { display: flex; align-items: center; gap: 10px; }
-.c-nh .c-face { width: 30px; height: 30px; font-size: 13px; }
-.c-nh b { font-size: 14px; font-weight: 600; }
-.c-nh span { margin-left: auto; font-size: 12px; color: var(--muted); }
-.c-note p { margin-top: 8px; font-size: 14px; line-height: 1.5; color: var(--body); }
+/* The coach's note as the app draws it everywhere (CoachSays): his face on the left, his name in small caps with the
+   day after it, his words in ink beside it (7 Nov). */
+.c-note { display: flex; gap: 12px; margin: 18px 26px 0; }
+.cli .c-note .c-face { flex: none; width: 36px; height: 36px; }
+.c-note small { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--sub); }
+.c-note small span { margin-left: 6px; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.c-note p { margin-top: 2px; font-size: 15px; font-weight: 500; line-height: 21px; color: var(--ink); }
 .c-sl { margin: 20px 26px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
 .c-sessions { position: relative; margin: 0 22px 0 26px; }
 .c-sessions::before { content: ""; position: absolute; left: 14px; top: 16px; bottom: 16px; width: 1px; background: #E1E5EB; }
@@ -847,3 +892,7 @@ h1, h2, h3 { font-weight: 600; }
   html { scroll-behavior: auto; }
   * { transition: none !important; }
 }
+
+/* Finlay's face wherever he appears (7 Nov): the illustrated stand-in until his photo comes; last, so it wins over
+   the ink discs above. */
+.a-me i, .cli .c-face, .fitem .face.coach { background: url(img/avatars/finlay.svg) center / cover; color: transparent; }
