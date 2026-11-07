@@ -18,7 +18,14 @@ export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 export type PerGroup = Record<MuscleGroup, number>;
 
 /** One day of the consistency strip. */
-export type ConsistencyDay = { date: string; trained: boolean; food: boolean; checkIn: boolean; /** Done in part (27 Oct, Alex): a session started and not finished, a day's check-in not all filled. */ trainedPart?: boolean; checkInPart?: boolean; /** A day still to come: a young phase shows 30 days all the same, filling in as they pass (21 Oct, Alex). */ future?: boolean };
+export type ConsistencyDay = { date: string; trained: boolean; food: boolean; checkIn: boolean; /** Done in part (27 Oct, Alex): a session started and not finished, a day's check-in not all filled. */ trainedPart?: boolean; checkInPart?: boolean; /** A day still to come: a young phase shows 30 days all the same, filling in as they pass (21 Oct, Alex). */ future?: boolean;
+  /** What a square opens (7 Nov, Alex: "if i click on a square here it takes me to that training or that check in… or
+      nutrition day"): the session trained that day (program_days.id, its week), the check-in sent that day (its rhythm and
+      period, null when it has none to land on). Filled by getHomeBoard; `links` are the hrefs loadHome makes of them. */
+  session?: { dayId: number; week: number };
+  checkInAt?: { section: "daily" | "weekly" | "monthly"; period: string | null; /** The lifestyle phase the metric is on, so the tab opens on it. */ phaseId: number | null };
+  links?: { trained?: string; food?: string; checkIn?: string };
+};
 
 /** A week of the consistency strip, for a long phase (over 8 weeks, 21 Oct, Alex): of its days in the phase so far
     (`days`; the current week up to today), how many had each. A week still to come is `future`, its counts 0. */
