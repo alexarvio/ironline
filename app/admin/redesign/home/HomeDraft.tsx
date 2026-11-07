@@ -3,6 +3,7 @@
 import Pager from "../Pager";
 import { useMemo, useRef, useState, useTransition, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { deleteClientConfirmedAction, sendChatMessageAction } from "../../../lib/actions";
 import { useOpenChat } from "../ChatPanel";
@@ -1328,10 +1329,14 @@ function ConsistencyCard({ days }: { days: HomeBoard["days"] }) {
                 <span className="rh-cons-label" title={c.label} aria-hidden="true">
                   <TrackIcon track={c.track} size={16} />
                 </span>
-                <span className="rh-cons-days" role="img" aria-label={said}>
+                <span className="rh-cons-days" role="group" aria-label={said}>
                   {days.map((d) => {
                     const part = !!(c.part && d[c.part]);
-                    return <span key={d.date} className={`rh-day${d[c.key] ? (part ? " on part" : " on") : ""}${d.future ? " ahead" : ""}`} title={d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? (part ? c.some : c.yes) : c.no}`} />;
+                    const cls = `rh-day${d[c.key] ? (part ? " on part" : " on") : ""}${d.future ? " ahead" : ""}`;
+                    const title = d.future ? `${dayMonth(d.date)}: to come` : `${dayMonth(d.date)}: ${d[c.key] ? (part ? c.some : c.yes) : c.no}`;
+                    // A done square opens that day's session, check-in or food day (7 Nov, Alex).
+                    const href = d[c.key] ? d.links?.[c.key] : undefined;
+                    return href ? <Link key={d.date} href={href} className={cls} title={title} aria-label={title} /> : <span key={d.date} className={cls} title={title} />;
                   })}
                 </span>
               </div>

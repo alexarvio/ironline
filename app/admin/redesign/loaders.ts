@@ -15,7 +15,7 @@ import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { clerkOn } from "../../lib/clerk";
 import { getCoachSettings, getInvoiceView, listInvoices, listInvoiceTemplates, invoiceRepeatViews, runRecurringInvoices, type FeedEvent, type HomeAction, type InvoiceView, listCoachVideos, exerciseClientCounts, listMeetings, activityWords, callThing, callOver, callToComplete } from "../../lib/queries";
-import { getHomeBoard, noteHomeLooked } from "../../lib/homeBoard";
+import { getHomeBoard, noteHomeLooked, type HomeBoard } from "../../lib/homeBoard";
 import { activityMarkOf } from "../../lib/activityMark";
 import { SERVER_TZ, zonedToUtc } from "../../lib/timezones";
 import { hasBankDetails, invoicingFor } from "../../lib/countries";
@@ -1274,7 +1274,37 @@ export function loadHome(clientId: number): DraftHome {
     panel,
     ...sub("plans", () => planOf(clientId)),
     events,
-    board,
+    board: sub("consistencyLinks", () => withDayLinks(clientId, board)),
+  };
+}
+
+/** Each Consistency square a way in (7 Nov, Alex: "if i click on a square here it takes me to that training or that check
+    in… or nutrition day"): the session in its programme and week, unfolded (#session-); the food day (#day-); the
+    check-in's row on its rhythm (#checkin-), else the Lifestyle tab. The tabs land on them as a message's link does. */
+function withDayLinks(clientId: number, board: HomeBoard): HomeBoard {
+  const tab = (name: string, rest = "") => `/admin/redesign/${name}?client=${clientId}${rest}`;
+  const programs = listPrograms(clientId);
+  const nutrition = listClientPhases(clientId).filter((p) => p.track === "nutrition");
+  const link = (d: HomeBoard["days"][number]): HomeBoard["days"][number] => {
+    if (d.future) return d;
+    const links: NonNullable<HomeBoard["days"][number]["links"]> = {};
+    if (d.trained) {
+      const s = d.session;
+      const p = s ? programs.find((x) => s.week >= x.start_week && s.week < x.start_week + x.total_weeks) : undefined;
+      links.trained = s && p ? tab("training", `&program=${p.id}&week=${s.week - p.start_week + 1}#session-${s.dayId}`) : tab("training");
+    }
+    // The log lists the days of the phase on screen, so a day of another nutrition phase opens on that phase.
+    if (d.food) {
+      const p = nutrition.find((x) => phaseCovers(x.start_week, x.end_week, d.date));
+      links.food = tab("nutrition", `${p ? `&phase=${p.id}` : ""}#day-${d.date}`);
+    }
+    if (d.checkIn) links.checkIn = d.checkInAt ? tab("measurements", `${d.checkInAt.phaseId != null ? `&phase=${d.checkInAt.phaseId}` : ""}#checkin-${d.checkInAt.section}${d.checkInAt.period ? `-${d.checkInAt.period}` : ""}`) : tab("measurements");
+    return { ...d, links };
+  };
+  return {
+    ...board,
+    days: board.days.map(link),
+    phaseDays: board.phaseDays?.by === "day" ? { ...board.phaseDays, days: board.phaseDays.days.map(link) } : board.phaseDays,
   };
 }
 

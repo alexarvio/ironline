@@ -14079,7 +14079,7 @@ function trainedSessions(clientId: number, ix: TrainingIndex = trainingIndex(cli
 export type ActivityDay = {
   date: string;
   /** The sessions done that day, as getWorkoutCalendar has them, with how many exercises and where. */
-  sessions: { title: string; minutes: number | null; finished: boolean; exercises: number; gym: string | null }[];
+  sessions: { title: string; minutes: number | null; finished: boolean; exercises: number; gym: string | null; /** Its session (program_days.id), for a link to it (7 Nov, Alex: Home's Consistency opens it). */ dayId?: number }[];
   /** The food diary's totals, or a typed day's calories alone. */
   food: { kcal: number; protein: number | null; carbs: number | null; fat: number | null } | null;
   /** What was checked in for that day, by name. */
@@ -14105,7 +14105,7 @@ export function getActivityCalendar(clientId: number): ActivityDay[] {
   const kept = getClient(clientId)?.kept_activity ?? [];
   const keptDays = new Set(kept.flatMap((k) => (k.kind === "training" ? [k.day_id] : [])));
   for (const s of [...sessionRecords(clientId).filter((s) => !keptDays.has(s.day_id)), ...kept.filter((k) => k.kind === "training")]) {
-    day(s.date).sessions.push({ title: s.title, minutes: s.minutes, finished: s.finished, exercises: s.exercises, gym: s.gym });
+    day(s.date).sessions.push({ title: s.title, minutes: s.minutes, finished: s.finished, exercises: s.exercises, gym: s.gym, dayId: s.day_id });
   }
 
   // Food: the diary's totals where there is a diary, else the typed calories.

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type React from "react";
+import { landOnSoon } from "../../../lib/landOn";
 import { ChevronRightIcon } from "../../../components/icons";
 import type { DraftRogue } from "./TrainingDraft";
 import { dayMonth } from "../../../lib/dayMonth";
@@ -27,6 +28,20 @@ const TAIL = 5;
 
 export default function RogueSessions({ items, firstName, grid, cols, unit, minW, kgOf }: { items: DraftRogue[]; firstName: string; grid: React.CSSProperties; cols: Cols; unit: string; minW: number; /** Kg into what the coach is reading in. */ kgOf: (kg: number | null) => number | null }) {
   const [open, setOpen] = useState<number | null>(null);
+  // A link to one (#session-ID; 7 Nov, Alex: Home's Consistency opens the day's session): it unfolds and is landed on.
+  const ids = items.map((r) => r.id).join(",");
+  useEffect(() => {
+    const arrive = () => {
+      const m = /^#session-(\d+)$/.exec(window.location.hash);
+      const id = m ? Number(m[1]) : null;
+      if (id == null || !ids.split(",").includes(String(id))) return;
+      setOpen(id);
+      landOnSoon(() => document.getElementById(`session-${id}`), "center", 160);
+    };
+    arrive();
+    window.addEventListener("hashchange", arrive);
+    return () => window.removeEventListener("hashchange", arrive);
+  }, [ids]);
   const shown = FIGURES.filter((k) => cols[k]);
   const label: Record<keyof Cols, string> = { sets: "Sets", weight: unit, reps: "Reps", rpe: "RPE", tempo: "Tempo", rest: "Rest" };
   // Nothing off the plan this week: no section at all (23 Oct, Alex).
@@ -43,7 +58,7 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
         const isOpen = open === r.id;
         const count = r.exercises.length + r.cardio.length;
         return (
-          <section key={r.id} className={`trn-rg${isOpen ? " open" : ""}`}>
+          <section key={r.id} id={`session-${r.id}`} className={`trn-rg${isOpen ? " open" : ""}`}>
             <div className="trn-rg-row" onClick={(e) => !(e.target as HTMLElement).closest("button") && setOpen(isOpen ? null : r.id)}>
               {/* The grip's room a planned session has (a done week's keeps it too), so the names stand in one column. */}
               <span className="trn-grip-slot" aria-hidden="true" />

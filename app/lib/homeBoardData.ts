@@ -540,7 +540,7 @@ function sinceOf(ctx: Ctx): HomeBoard["since"] {
   // Days with a check-in sent since: a daily reading on its day, a weekly or monthly one on the day it was sent (as
   // Consistency counts them), a measurement on its date. What the workout answers is not a check-in.
   const checkInDays = new Set<string>();
-  const defs = new Map(data.metric_definitions.filter((m) => m.client_id === ctx.clientId && !ctx.fedIds.has(m.id)).map((m) => [m.id, m] as const));
+  const defs = new Map(data.metric_definitions.filter((m) => m.client_id === ctx.clientId && !m.retired_at && !ctx.fedIds.has(m.id)).map((m) => [m.id, m] as const));
   for (const e of data.metric_entries) {
     const def = defs.get(e.metric_definition_id);
     if (!def || e.value == null) continue;
@@ -794,6 +794,36 @@ function weightOf(ctx: Ctx): HomeBoard["weight"] {
 function daysOf(ctx: Ctx, dates: string[] = lastDays(ctx.today)): HomeBoard["days"] {
   const setDays = new Set(ctx.sets.filter((s) => s.counts).map((s) => s.day));
   const asked = dailyAskedOn(ctx.clientId);
+  // What a square opens (7 Nov, Alex): the day's session (one the calendar has on it, else the one a set was logged in),
+  // and the check-in sent that day (a daily reading first, then a weekly, then a monthly).
+  const weekOf = new Map(ctx.days.map((d) => [d.id, d.week_number] as const));
+  const dayOfRow = new Map<number, number>();
+  for (const [dayId, rows] of ctx.byDay) for (const r of rows) dayOfRow.set(r.id, dayId);
+  const setSession = new Map<string, number>();
+  for (const s of ctx.sets) {
+    const dayId = dayOfRow.get(s.assignmentId);
+    if (s.counts && dayId != null && !setSession.has(s.day)) setSession.set(s.day, dayId);
+  }
+  const sessionOn = (date: string, d: ActivityDay | undefined) => {
+    const dayId = d?.sessions.find((s) => s.dayId != null && weekOf.has(s.dayId))?.dayId ?? setSession.get(date);
+    const week = dayId != null ? weekOf.get(dayId) : undefined;
+    return dayId != null && week != null ? { dayId, week } : undefined;
+  };
+  const RANK = { daily: 0, weekly: 1, monthly: 2 } as const;
+  const checkInOn = new Map<string, { section: "daily" | "weekly" | "monthly"; period: string | null; phaseId: number | null }>();
+  {
+    const data = getData();
+    const defs = new Map(data.metric_definitions.filter((m) => m.client_id === ctx.clientId && !ctx.fedIds.has(m.id)).map((m) => [m.id, m] as const));
+    for (const e of data.metric_entries) {
+      const def = defs.get(e.metric_definition_id);
+      if (!def || e.value == null) continue;
+      const section = def.frequency === "weekly" || def.frequency === "monthly" ? def.frequency : "daily";
+      const date = section === "daily" ? e.period : e.logged_at ? localDateStr(new Date(e.logged_at)) : null;
+      if (!date) continue;
+      const had = checkInOn.get(date);
+      if (!had || RANK[section] < RANK[had.section]) checkInOn.set(date, { section, period: e.period || null, phaseId: def.phase_id ?? null });
+    }
+  }
   return dates.map((date) => {
     const d = ctx.calendar.get(date);
     const trained = !!d?.sessions.length || setDays.has(date);
@@ -809,6 +839,8 @@ function daysOf(ctx: Ctx, dates: string[] = lastDays(ctx.today)): HomeBoard["day
       food: !!d?.food,
       checkIn: checked.length > 0,
       checkInPart: short,
+      session: trained ? sessionOn(date, d) : undefined,
+      checkInAt: checked.length > 0 ? checkInOn.get(date) : undefined,
     };
   });
 }
