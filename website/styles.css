@@ -156,14 +156,15 @@ h1, h2, h3 { font-weight: 600; }
 .phone2 {
   /* Never taller than the browser beside it plus the room under it, so it can't climb into the words above at
      tablet widths (7 Nov): (stage − 170) × .625 is the browser's height; × .288 + 72 turns that into a width. */
-  position: absolute; right: 0; bottom: 0; width: min(300px, calc((100% - 170px) * .288 + 72px)); padding: 11px; border-radius: 54px; background: #0b0b0c;
+  position: absolute; right: 0; bottom: 0; width: min(300px, calc((100% - 170px) * .288 + 72px)); padding: 11px; border-radius: 18% / 8.66%; background: #0b0b0c; container-type: inline-size;
   box-shadow: 0 0 0 2px #4a4a4e, 0 0 0 3.5px #2a2a2d, 0 0 0 4.5px #5c5c61, 0 60px 100px -30px rgba(0,0,0,.85);
 }
 /* The side buttons: action and volume on the left, power on the right. */
 .phone2::before, .phone2::after { content: ""; position: absolute; width: 4px; border-radius: 2px; background: #3d3d41; }
-.phone2::before { left: -8px; top: 17%; height: 7%; box-shadow: 0 calc(300px * .2) 0 #3d3d41, 0 calc(300px * .39) 0 #3d3d41; }
+.phone2::before { left: -8px; top: 17%; height: 7%; box-shadow: 0 21.6cqw 0 #3d3d41, 0 42.1cqw 0 #3d3d41; }
 .phone2::after { right: -8px; top: 26%; height: 13%; }
-.phone2-screen { position: relative; aspect-ratio: 390 / 844; overflow: hidden; border-radius: 44px; }
+/* The corners keep the iPhone’s share of the width at every size (7 Nov, Alex: shrunk, a fixed radius read rounder). */
+.phone2-screen { position: relative; aspect-ratio: 390 / 844; overflow: hidden; border-radius: 15.8% / 7.3%; }
 .scaled { position: absolute; left: 0; top: 0; transform-origin: 0 0; transform: scale(var(--k, .5)); }
 .stage svg { display: block; }
 
@@ -984,8 +985,7 @@ h1, h2, h3 { font-weight: 600; }
 @media (max-width: 1040px) {
   .tracks { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .tp { gap: 24px; }
-  .tp .phone2 { width: 230px; padding: 8px; border-radius: 42px; }
-  .tp .phone2-screen { border-radius: 34px; }
+  .tp .phone2 { width: 230px; padding: 8px; }
 }
 @media (max-width: 820px) {
   /* On a narrow screen the card keeps the app's proportions and scrolls sideways, as the Plan does. */
@@ -999,8 +999,7 @@ h1, h2, h3 { font-weight: 600; }
   .tp-switch button { padding: 0 14px; font-size: 13.5px; }
   .tp { flex-direction: column; gap: 20px; }
   .tp .browser { width: 100%; flex: none; border-radius: 10px; }
-  .tp .phone2 { width: 220px; padding: 7px; border-radius: 38px; }
-  .tp .phone2-screen { border-radius: 29px; }
+  .tp .phone2 { width: 220px; padding: 7px; }
 }
 
 /* ---- Narrow screens --------------------------------------------------------------- */
@@ -1027,10 +1026,9 @@ h1, h2, h3 { font-weight: 600; }
   .browser-bar i { width: 7px; height: 7px; }
   .browser-bar span { font-size: 9px; padding: 1px 22px; }
   .stage { padding-bottom: 300px; }
-  .phone2 { width: 190px; padding: 7px; border-radius: 36px; right: 10px; bottom: 50px; }
-  .phone2::before { left: -6px; width: 3px; box-shadow: 0 calc(190px * .2) 0 #3d3d41, 0 calc(190px * .39) 0 #3d3d41; }
+  .phone2 { width: 190px; padding: 7px; right: 10px; bottom: 50px; }
+  .phone2::before { left: -6px; width: 3px; }
   .phone2::after { right: -6px; width: 3px; }
-  .phone2-screen { border-radius: 29px; }
   .stage-cap { bottom: 0; }
   .sec { padding-top: 80px; }
   .week { padding: 20px; border-radius: 22px; }
