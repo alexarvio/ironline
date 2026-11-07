@@ -19412,6 +19412,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .tr-row-tile.unfinished { color: #a8761f; }
 .tr-row-title { font-weight: 600; color: #141a24; }
 .tr-row-sub { font-weight: 500; color: #8b93a1; }
+/* What the server refused from the phone's outbox (7 Nov): what and why, in rust, under the row's facts. */
+.tr-row-sub.tr-row-refused { display: block; color: #b8471f; }
 .tr-row-pill { font-weight: 600; }
 .tr-row-pill.next { background: #fff; box-shadow: inset 0 0 0 1px #DCE1E8; color: #141a24; }
 .tr-row-pill.done { color: #2f7a3f; }
@@ -19680,6 +19682,11 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw .wo-video-action { font-size: 12.5px; font-weight: 600; color: #141a24; }
 /* Saved on the open set (16 Oct, Alex): the green tick and the word alone, no pill. */
 .lw-saved, .lw-saved.lw-saved, .lw-open.saved.warm .lw-saved { padding: 0; background: none; box-shadow: none; }
+/* A set kept on the phone and not sent yet (7 Nov): the words alone, grey; it is no problem, so never rust. */
+.lw-saved.lw-saved.waiting { color: #8b93a1; }
+/* A set the server refused (7 Nov): a problem, so rust; a tap sends it again when sending again can help. */
+.lw-saved.lw-saved.refused { color: #b8471f; border: 0; font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+span.lw-saved.lw-saved.refused { cursor: default; }
 /* A session that happened reads as done (16 Oct, Alex): the list label carries a green tick ring and says Completed, each exercise that got all its sets swaps its number for a green-ringed tick, and one that didn't goes grey. Unfinished says so in amber. A session still to come keeps its navy numbers. */
 .so-screen.so-st-done .so-list-head h2, .so-screen.so-st-unfinished .so-list-head h2 { display: inline-flex; align-items: center; gap: 8px; }
 .so-screen.so-st-done .so-list-head h2 { color: #2f7a3f; }

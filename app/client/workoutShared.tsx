@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { clearCardioSwapAction, saveSkipReasonAction, setCardioDoneAction, setFreeCardioAction, swapCardioAction } from "../lib/actions";
+import { useEffect, useRef, useState } from "react";
+import { enqueueWorkout } from "../components/workoutOutbox";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import type { VideoAsk } from "./VideoAskSheet";
@@ -93,6 +93,17 @@ export type LibraryPick = { id: number; name: string; group: string };
 
 /** The exercise as it reads to the client: the swap's name when there is one. */
 export const shownName = (ex: SessionExercise) => ex.swap?.name ?? ex.name;
+
+/** A session as a discard leaves it (discardSession in queries.ts): not started, nothing logged, no swaps or warm-ups. */
+export const fresh = (d: SessionDay): SessionDay => ({
+  ...d,
+  startedAt: null,
+  endedAt: null,
+  sessionNote: "",
+  answers: {},
+  exercises: d.exercises.map((e) => ({ ...e, logs: [], warmups: [], swap: null })),
+  cardio: d.cardio.map((c) => ({ ...c, done: false, swap: null })),
+});
 
 // ---- Units. Weights are stored in kg; a machine marked in lbs is one tap
 // away. An exercise opens in what it was last logged in (kept with the
@@ -247,8 +258,10 @@ export function CoachNote({ assignmentId, note }: { assignmentId: number | null;
 // Cardio: the targets as tiles, the coach's note, one button to tick it
 // off, a second tap to undo. Bike taken: Swap says what was done instead
 // (the coach's alternatives, or typed), which ticks it off too (28 Sep).
-export function CardioCard({ cardio, index, readOnly = false, coachName = "Coach", sessionLabel = null, position = null, free = false, nextName = null, onNext }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: React.ReactNode; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean; /** What comes after it, for the line on the way there. */ nextName?: string | null; /** On to what's next, as an exercise moves on once its last set is in (23 Oct, Alex: Done on a cardio stayed put). */ onNext?: (line?: string) => void }) {
-  const [pending, startTransition] = useTransition();
+export function CardioCard({ cardio, index, session, readOnly = false, coachName = "Coach", sessionLabel = null, position = null, free = false, nextName = null, onNext }: { cardio: SessionCardio; index: number; /** The session it is in, as the screen knows it: its saves are kept on the phone until sent (7 Nov, workoutOutbox.ts). */ session: { dayId: number; startedAt: string | null }; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: React.ReactNode; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean; /** What comes after it, for the line on the way there. */ nextName?: string | null; /** On to what's next, as an exercise moves on once its last set is in (23 Oct, Alex: Done on a cardio stayed put). */ onNext?: (line?: string) => void }) {
+  // Done, the swap and the figures as the outbox has them: shown at once, sent behind (7 Nov), so nothing waits on the signal.
+  const save = (c: { kind: "cardioDone"; done: boolean } | { kind: "cardioSwap"; name: string | null } | { kind: "cardioFigure"; field: "time" | "pace" | "incline" | "distance"; value: string }) =>
+    enqueueWorkout({ ...c, cardioId: cardio.id, dayId: session.dayId, startedAt: session.startedAt });
   // Marked done: 1.4s, as an exercise's last set, then on to the next; taking it back in that time stays here.
   const nextTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestNext = useRef({ onNext, line: nextName ? `${cardio.swap ?? cardio.name} done, on to ${nextName}` : undefined });
@@ -265,7 +278,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Coach
     const marking = !cardio.done;
     if (nextTimer.current) clearTimeout(nextTimer.current);
     nextTimer.current = null;
-    startTransition(() => setCardioDoneAction(cardio.id, marking));
+    save({ kind: "cardioDone", done: marking });
     if (marking && latestNext.current.onNext) {
       nextTimer.current = setTimeout(() => {
         nextTimer.current = null;
@@ -276,7 +289,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Coach
   // What was done, typed in (a free session): kept here, saved as each box is left.
   const [did, setDid] = useState({ time: cardio.time, distance: cardio.distance, pace: cardio.pace, incline: cardio.incline });
   const saveDid = (k: keyof typeof did) => {
-    void setFreeCardioAction(cardio.id, { [k]: did[k] });
+    if (did[k] !== cardio[k]) save({ kind: "cardioFigure", field: k, value: did[k] });
   };
   const [swapOpen, setSwapOpen] = useState(false);
   const done = cardio.done;
@@ -305,7 +318,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Coach
             Instead of <b>{cardio.name}</b>
           </span>
           {!readOnly && (
-            <button type="button" onClick={() => startTransition(() => clearCardioSwapAction(cardio.id))}>
+            <button type="button" onClick={() => save({ kind: "cardioSwap", name: null })}>
               Undo
             </button>
           )}
@@ -336,7 +349,6 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Coach
         <button
           type="button"
           className={`wo-cardio-done${done ? " is-done" : ""}`}
-          disabled={pending}
           onClick={toggleDone}
         >
           {/* Just Done (21 Oct, Alex: no "tap to undo"); a tap on it still takes it back. */}
@@ -344,7 +356,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Coach
         </button>
       )}
       {!readOnly && !free && (
-        <button type="button" className="wo-cardio-swap" onClick={() => setSwapOpen(true)} disabled={pending}>
+        <button type="button" className="wo-cardio-swap" onClick={() => setSwapOpen(true)}>
           {cardio.swap ? "Change today's substitute" : "Substitute today"}
         </button>
       )}
@@ -358,7 +370,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Coach
           onSwap={(choice) => {
             setSwapOpen(false);
             const name = choice.libraryExerciseId != null ? cardio.alternatives[choice.libraryExerciseId]?.name : choice.customName;
-            if (name) startTransition(() => swapCardioAction(cardio.id, name));
+            if (name) save({ kind: "cardioSwap", name });
           }}
           onClose={() => setSwapOpen(false)}
         />
@@ -372,7 +384,6 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Coach
 export function SkipReason({ dayId, text, onSaved }: { dayId: number; text: string; onSaved?: () => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(text);
-  const [saving, start] = useTransition();
   const cancel = () => {
     setDraft(text);
     setEditing(false);
@@ -382,7 +393,8 @@ export function SkipReason({ dayId, text, onSaved }: { dayId: number; text: stri
     setEditing(false);
     setDraft(next);
     if (next === text.trim()) return;
-    start(() => saveSkipReasonAction(dayId, next));
+    // Kept on the phone until sent (7 Nov, workoutOutbox.ts); the day was never begun.
+    enqueueWorkout({ kind: "skip", text: next, dayId, startedAt: null });
     if (next) onSaved?.();
   };
   if (editing) {
@@ -421,7 +433,7 @@ export function SkipReason({ dayId, text, onSaved }: { dayId: number; text: stri
   }
   return text ? (
     <button type="button" className="ts-skip said" onClick={() => setEditing(true)}>
-      <span className="ts-skip-label"><Bars parts={["Couldn’t train", saving && "saving…"]} /></span>
+      <span className="ts-skip-label"><Bars parts={["Couldn’t train"]} /></span>
       <span className="ts-skip-text">{text}</span>
     </button>
   ) : (

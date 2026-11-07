@@ -1673,7 +1673,7 @@ export const STORE_MODE: "json" | "postgres" =
   !BUILDING && process.env.STORE === "postgres" && process.env.DATABASE_URL ? "postgres" : "json";
 
 // Reuse one in-memory copy across hot reloads in dev, always synced to disk on write.
-const globalForDb = globalThis as unknown as { _jsonDb?: Data; _ownersClaimed?: boolean; _stepsChecked?: boolean; _pgSave?: (data: Data) => void };
+const globalForDb = globalThis as unknown as { _jsonDb?: Data; _ownersClaimed?: boolean; _stepsChecked?: boolean; _pgSave?: (data: Data) => Promise<void> };
 
 /** The most steps a day can hold (the steps sync's own cap): more is a slip of the keyboard, never a walk. */
 export const MAX_DAY_STEPS = 200_000;
@@ -1697,8 +1697,9 @@ if (!globalForDb._jsonDb && STORE_MODE === "json") {
   globalForDb._ownersClaimed = true;
 }
 
-/** Postgres mode: the loaded store, and how a save reaches the database. */
-export function installStore(data: Data, pgSave: (data: Data) => void) {
+/** Postgres mode: the loaded store, and how a save reaches the database (its promise settles once that save, and any
+    asked for while it ran, is written; it already logs its own failure). */
+export function installStore(data: Data, pgSave: (data: Data) => Promise<void>) {
   globalForDb._jsonDb = data;
   globalForDb._ownersClaimed = true;
   globalForDb._pgSave = pgSave;
@@ -1747,7 +1748,17 @@ export function persist() {
   // as a safety copy for the first days after the switch; the nightly backup
   // (lib/backup.ts) has covered that since, so the file is left as it was.
   if (STORE_MODE === "json") save(data);
-  globalForDb._pgSave?.(data);
+  void globalForDb._pgSave?.(data);
+}
+
+/**
+ * persist(), and wait until the database holds it: for an answer that lets the phone throw its copy away (the workout's
+ * outbox), so a restart between the answer and the write never loses what was logged. Rejects when the write fails.
+ */
+export async function persistNow(): Promise<void> {
+  const data = getData();
+  if (STORE_MODE === "json") save(data);
+  await globalForDb._pgSave?.(data);
 }
 
 export function allocId(table: string): number {

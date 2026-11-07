@@ -8,7 +8,7 @@ import { isClientCall, takesClient } from "./calendarKinds";
 import { newerCallDone, noteFocus, setFocusOnComplete } from "./focus";
 
 import { redirect } from "next/navigation";
-import { getData, isStepsMetric, MAX_DAY_STEPS, persist, type CoachBusiness, type CoachInvoicing, type CoachNotify, type InvoiceEvery, type InvoiceLine, type MetricAskAt, type PhaseTrack } from "./db";
+import { getData, isStepsMetric, MAX_DAY_STEPS, persist, persistNow, type CoachBusiness, type CoachInvoicing, type CoachNotify, type InvoiceEvery, type InvoiceLine, type MetricAskAt, type PhaseTrack } from "./db";
 import { ASK_AT } from "./metricAskAt";
 import { isGymColor, isGymKind } from "./gymColors";
 import { listClientGyms } from "./queries";
@@ -4069,6 +4069,13 @@ export async function startSessionAction(programDayId: number, at?: string): Pro
 export async function endSessionAction(programDayId: number, opts?: { note?: string; at?: string; answers?: { id: string; value: number | string | null }[]; enjoyment?: number | null; adherence?: number | null }) {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return;
+  endSessionFor(owner, Number(programDayId), opts, (await getSessionUser())?.role === "client");
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+/** Ending a session, its caller checked: the note to the chat once per wording, and never from a coach's preview. */
+function endSessionFor(owner: number, programDayId: number, opts: { note?: string; at?: string; answers?: { id: string; value: number | string | null }[]; enjoyment?: number | null; adherence?: number | null } | undefined, fromClient: boolean) {
   const answers = Array.isArray(opts?.answers)
     ? opts.answers
     : [
@@ -4081,12 +4088,10 @@ export async function endSessionAction(programDayId: number, opts?: { note?: str
   // pointing at the session (1 Oct): it used to stay on the Training tab,
   // easy to miss. Once per wording, and never from a coach's preview.
   const after = getData().program_days.find((pd) => pd.id === Number(programDayId))?.session_note ?? "";
-  if (after && after !== before && (await getSessionUser())?.role === "client") {
+  if (after && after !== before && fromClient) {
     sendChatMessage(owner, "client", after, undefined, { kind: "session", dayId: Number(programDayId) });
     pushCoachMessage(owner, { text: after });
   }
-  revalidatePath("/client");
-  revalidatePath("/admin");
 }
 
 /** A training phase's workout questionnaire, in order (the Training tab). */
@@ -4238,6 +4243,173 @@ export async function saveSkipReasonAction(programDayId: number, text: string) {
   setSessionSkipReason(Number(programDayId), String(text ?? ""));
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+// ---- The workout's outbox (7 Nov, Alex: "Build offline saving"; app/components/workoutOutbox.ts). What a client saved
+// while training, kept on the phone until it was answered here, in the order made: each change is done as the action it
+// stands for would do it, and answered one by one. Sent twice (an answer lost, then a reload) it lands once: a set, a
+// note or a gym is a value; a start that has been, an end, a discard are checked against the session as it stands, so a
+// late copy never reopens an ended session or brings back the sets of one thrown away. Whoever the old actions let in
+// (the client, or their coach in the client's app, whose notes are never written and whose end sends no chat note, as
+// before); a page signed out keeps everything for the next try. "done" means written to the database, not only to
+// memory: the phone throws its copy away on it, so a restart in between must not lose it.
+
+export type WorkoutSaveResult = "done" | "stale" | { refused: string } | { done: true; startedAt: string };
+
+const OUTBOX_MAX = 200;
+const OUTBOX_BACK_MS = 8 * 86_400_000;
+
+export async function saveWorkoutAction(clientId: number, entries: unknown): Promise<{ ok: true; results: WorkoutSaveResult[] } | { ok: false; reason: "signed-out" | "not-client" }> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, reason: "signed-out" };
+  const owner = Number(clientId);
+  if (!Number.isInteger(owner) || !(await canAccessClient(owner))) return { ok: false, reason: "not-client" };
+  const fromClient = user.role === "client";
+  const list = (Array.isArray(entries) ? entries : []).slice(0, OUTBOX_MAX) as Record<string, unknown>[];
+  const data = getData();
+  const nowMs = Date.now();
+  // The phone's clock, kept to the last eight days and never ahead of the server's.
+  const clamped = (at: unknown): Date => {
+    const t = typeof at === "string" ? Date.parse(at) : NaN;
+    return new Date(Number.isFinite(t) ? Math.min(nowMs, Math.max(nowMs - OUTBOX_BACK_MS, t)) : nowMs);
+  };
+  const id = (v: unknown) => (typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null);
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+  const stamp = (v: unknown) => (typeof v === "string" && Number.isFinite(Date.parse(v)) ? v : null);
+  const dayById = (dayId: number | null) => (dayId == null ? undefined : data.program_days.find((pd) => pd.id === dayId && pd.client_id === owner));
+  const gymOk = (gymId: unknown) => {
+    const g = id(gymId);
+    return g != null && getClientIdForGym(g) === owner ? g : null;
+  };
+  // Thrown away or begun again since this was made: it belonged to a session that is no more.
+  const stale = (day: { session_started_at?: string | null }, startedAt: string | null) => {
+    if (startedAt == null) return false;
+    if (!day.session_started_at) return true;
+    return Date.parse(day.session_started_at) > Date.parse(startedAt);
+  };
+  // A start refused (another session going): the rest of that day says the same, never lost without a word.
+  const refusedDays = new Map<number, string>();
+  const results: WorkoutSaveResult[] = [];
+
+  const applyOne = (e: Record<string, unknown>): WorkoutSaveResult => {
+    const kind = typeof e?.kind === "string" ? e.kind : "";
+    const startedAt = stamp(e?.startedAt);
+    // The day the change is about, from the thing itself (an exercise's row, a cardio), never from the phone's word.
+    const assignment = kind === "set" || kind === "warmups" || kind === "note" || kind === "unit" || kind === "swap" ? data.workout_assignments.find((wa) => wa.id === id(e.assignmentId)) : undefined;
+    const cardio = kind === "cardioDone" || kind === "cardioSwap" || kind === "cardioFigure" ? (data.cardio_entries ?? []).find((c) => c.id === id(e.cardioId)) : undefined;
+    const day = assignment ? dayById(assignment.program_day_id) : cardio ? dayById(cardio.program_day_id) : dayById(id(e?.dayId));
+    // Gone (the coach took the exercise out), or not this client's. A rogue session already thrown away has nothing left
+    // to throw away.
+    if (!day || ((assignment || cardio) == null && !["gym", "start", "end", "discard", "skip"].includes(kind))) return kind === "discard" ? "stale" : { refused: "gone" };
+    // A note and a unit are the exercise's, not the session's: a discard never takes them and a refused start doesn't
+    // either, so nothing about the session holds them back.
+    const outlives = kind === "note" || kind === "unit";
+    if (!outlives) {
+      const refused = refusedDays.get(day.id);
+      if (refused) return { refused };
+    }
+    if (kind !== "start" && !outlives && stale(day, startedAt)) return "stale";
+    switch (kind) {
+      case "set": {
+        const setNumber = id(e.setNumber);
+        if (!assignment || setNumber == null || setNumber > 100) return { refused: "gone" };
+        const unit = e.unit === "lb" || e.unit === "kg" ? e.unit : null;
+        logSet(assignment.id, setNumber, num(e.weight), num(e.reps), num(e.rpe), gymOk(e.gymId), unit, clamped(e.at));
+        return "done";
+      }
+      case "warmups":
+        if (assignment && Array.isArray(e.sets)) setWarmupSets(assignment.id, (e.sets as { weight_kg?: unknown; reps?: unknown }[]).map((s) => ({ weight_kg: num(s?.weight_kg), reps: num(s?.reps) })));
+        return "done";
+      case "note": {
+        // "My notes" are the client's own: a coach in their app writes none (saveExerciseNoteAction's rule).
+        const exerciseId = assignment && fromClient ? getExerciseIdForAssignment(assignment.id) : null;
+        if (exerciseId != null) setClientExerciseNote(owner, exerciseId, str(e.text, 2000), gymOk(e.gymId));
+        return "done";
+      }
+      case "unit":
+        if (assignment && (e.unit === "kg" || e.unit === "lb")) setAssignmentUnit(assignment.id, e.unit);
+        return "done";
+      case "swap": {
+        if (!assignment) return { refused: "gone" };
+        const lib = id(e.libraryExerciseId);
+        const custom = str(e.customName, 200).trim();
+        if (lib == null && !custom) {
+          setExerciseSwap(assignment.id, null);
+          return "done";
+        }
+        // A library exercise must be the coach's own, as swapExerciseAction has it.
+        const coachId = getClient(owner)?.coach_id ?? null;
+        const libOk = lib != null && coachId != null && listExercises(coachId).some((x) => x.id === lib);
+        setExerciseSwap(assignment.id, { library_exercise_id: libOk ? lib : null, custom_name: libOk ? null : custom });
+        return "done";
+      }
+      case "cardioDone":
+        if (cardio) setCardioDone(cardio.id, e.done === true, clamped(e.at));
+        return "done";
+      case "cardioSwap":
+        if (cardio) setCardioSwap(cardio.id, typeof e.name === "string" && e.name.trim() ? e.name : null);
+        return "done";
+      case "cardioFigure": {
+        const field = e.field === "time" || e.field === "pace" || e.field === "incline" || e.field === "distance" ? e.field : null;
+        if (cardio && field) setFreeCardio(cardio.id, { [field]: str(e.value, 40) });
+        return "done";
+      }
+      case "gym": {
+        const gymId = gymOk(e.gymId);
+        if (gymId != null) pickGymForDay(day.id, gymId);
+        return "done";
+      }
+      case "start": {
+        const at = clamped(e.at).toISOString();
+        // Already taken (a second copy), or the session ended after it was tapped: nothing to start again.
+        if ((day.session_started_at && Date.parse(day.session_started_at) === Date.parse(at)) || (day.session_ended_at && Date.parse(day.session_ended_at) >= Date.parse(at))) return "done";
+        const r = startSession(day.id, at);
+        if (!r.ok) {
+          const why = r.other ? `Finish ${r.other} first` : "Couldn't start";
+          refusedDays.set(day.id, why);
+          return { refused: why };
+        }
+        // Already going from another start: the phone moves what waits for it onto that one.
+        return { done: true, startedAt: day.session_started_at ?? at };
+      }
+      case "end": {
+        const answers = (Array.isArray(e.answers) ? e.answers : [])
+          .slice(0, 50)
+          .map((a: { id?: unknown; value?: unknown }) => ({ id: str(a?.id, 40), value: typeof a?.value === "number" || typeof a?.value === "string" ? (a.value as number | string) : null }));
+        // An edit keeps the end the session has; a live end is when it was swiped, on the phone.
+        const at = e.edit === true && day.session_ended_at ? day.session_ended_at : clamped(e.endAt).toISOString();
+        endSessionFor(owner, day.id, { note: str(e.note, 2000), at, answers }, fromClient);
+        return "done";
+      }
+      case "discard":
+        // Only a session the phone knew as begun; a second copy finds it begun no more (stale, above).
+        if (startedAt == null) return "stale";
+        discardSession(day.id);
+        return "done";
+      case "skip":
+        setSessionSkipReason(day.id, str(e.text, 300), clamped(e.at));
+        return "done";
+      default:
+        return { refused: "gone" };
+    }
+  };
+
+  for (const e of list) {
+    try {
+      results.push(applyOne(e));
+    } catch (err) {
+      // One that cannot be done is answered, so it never holds up the rest of the session behind it.
+      console.error("saveWorkoutAction", err);
+      results.push({ refused: "Couldn't save" });
+    }
+  }
+  // Written, not only in memory, before the phone is told so. A failed write throws: the phone keeps the batch and
+  // tries again (each change lands once, above), and the next save writes the store's whole difference anyway.
+  await persistNow();
+  revalidatePath("/client");
+  revalidatePath("/admin");
+  return { ok: true, results };
 }
 
 // ---- Client avatar --------------------------------------------------------

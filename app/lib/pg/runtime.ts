@@ -65,12 +65,15 @@ async function start() {
   if (!hasData || changed) await writer.save(() => data as unknown as Row);
 
   installStore(data, (current) => {
-    writer.save(() => current as unknown as Row).catch((error) => {
+    const saved = writer.save(() => current as unknown as Row);
+    saved.catch((error) => {
       // The in-memory store is still right, and the next save writes
       // everything that differs, this change included.
       console.error("[store] saving to Postgres failed; the next save retries it:", error);
       import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error)).catch(() => {});
     });
+    // Handed back for persistNow(), which waits on it (and sees a failure); persist() lets it go.
+    return saved;
   });
   log(`ready: ${data.users.length} users, ${data.clients.length} clients`);
 }
