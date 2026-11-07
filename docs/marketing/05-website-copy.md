@@ -9,7 +9,7 @@ The home page at norcoachapp.com, written to the six necessary beliefs (`04-nece
 4. **How it works:** each client's whole plan on one screen (blocks of weeks across training, nutrition and lifestyle).
 5. **What your client feels (the spine, 7 Nov, Alex: "that's basically what NorCoach is about"):** your clients feel you're on top of their coaching. Six plain tiles: your name and photo on everything you send; notes right where they belong (block, session, exercise, meal); chat about the exact thing (link an exercise, meal or check-in); video feedback in your voice; goals on their home screen; see exactly what they see.
 6. **No AI** (short): nothing writes to your clients in your name (with the client's quote); the sums are ours, the coaching is yours.
-7. **Story**, 8. **Founding coaches** (what it means, said plainly), 9. **FAQ** (+ no signal in the gym; price explained), 10. **Closing.**
+7. **Story** (moved up 7 Nov, Alex: now straight after The problem, the client's side of it and what was built), 8. **Founding coaches** (what it means, said plainly), 9. **FAQ** (+ no signal in the gym; price explained), 10. **Closing.**
 Feature names only we understand (Needs you, Links that land, Draw & Talk, To focus on, phases, tracks) are gone from the page; each says what it does.
 
 **Conventions**
