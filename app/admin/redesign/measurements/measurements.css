@@ -51,6 +51,11 @@
    (6 Nov, Alex: docs/boards/admin-choices-mockup.html, item 6; was a bubble at the cell's right edge opening a pop-over). */
 .rm-td.date { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #3a4250; padding-left: 18px; }
 .rm-td.date .rd-notemark { margin-left: 0; }
+/* Their note still to read (the dot trail, 7 Nov, Alex): the rust dot after the note pen, as a food day's. */
+.rm-td.date > .rd-due { margin-left: -3px; }
+/* The same on a rhythm holding one, at the word's top right as a client tab's, moving nothing. */
+.rd-btn-group button:has(> .rm-cad-due) { position: relative; }
+.rm-cad-due { position: absolute; top: 3px; right: 4px; }
 /* A row that opens: the whole row is the click, the one row hover (#fafbfd) across it. */
 .rm-tr.opens > .rm-td { cursor: pointer; }
 .rm-tr.opens:hover > .rm-td { background: #fafbfd; }
