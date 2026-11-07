@@ -106,7 +106,7 @@ export async function sendApplicationEmail(a: Application): Promise<boolean> {
     ["Business", a.business || "–"],
     ["Clients", a.clients || "–"],
     ["Uses today", a.uses.join(", ") || "–"],
-    ["Hardest part of the week", a.hardest || "–"],
+    ["Bottlenecks in their business", a.hardest || "–"],
   ];
   const text = rows.map(([k, v]) => `${k}: ${v}`).join("\n") + "\n\nReply to this email to answer them.";
   const html = `<table style="border-collapse:collapse;font:15px/1.5 system-ui,sans-serif">${rows
