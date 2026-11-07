@@ -194,7 +194,7 @@ We'd rather have twenty coaches we know by name than two thousand we don't.
 
 **What if it breaks mid-workout?** Every set saves the moment it's entered, one by one. Nothing waits for the end of the session. **NEW 7 Nov:** `[Proof: an honest record, e.g. uptime since launch and sets lost (none), once we have it]`
 
-**Will anyone answer if something's wrong?** Yes. You write to us inside Norcoach and a person who builds it answers. **NEW 7 Nov:** Not a canned reply about clearing your cache. `[Decision: the response-time promise]`
+**How do I get support?** Yes. You write to us inside Norcoach and a person who builds it answers. **NEW 7 Nov:** Not a canned reply about clearing your cache. `[Decision: the response-time promise]`
 
 **NEW 7 Nov · Another app already tells me who needs me.** Some write you a summary of it. Norcoach gives you the thing itself, the video, the note, the check-in, open and ready to answer, and what your client gets back carries your face and your words.
 
