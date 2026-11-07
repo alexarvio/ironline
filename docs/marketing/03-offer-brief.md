@@ -111,8 +111,8 @@ New lead options with the positioning (27 Oct):
 
 From the 7 Nov research (the market's own words in the line):
 - **Your name is on the app. Make it an app that deserves it.** / Coaches told us what happens when it breaks: "WE are the ones left looking unprofessional."
-- **Your clients can tell.** / When a reply isn't really from you, they notice. In NorCoach every word they read is yours.
-- **Never just a thumbs up.** / Every set, check-in and video comes to you, so every client gets a real answer. (From the client who wrote: "my coach never really checked in, other than to give a "thumb's up"".)
+- **Your name is on it. Your face too.** / Every word your client reads in NorCoach is yours. (Kept off the lead: "Your clients can tell" opens the page on suspicion of the reader; it works lower down, as the client's side.)
+- **Every client hears from you.** / Every set, check-in and video comes to you, so every client gets a real answer. (Not "Never just a thumbs up": the chat's reactions clear a message from Needs you, so the app itself would break it. The client's "thumb's up" line stays as their words.)
 - **Leave without starting over.** / We move your clients and programmes for you. [Decision: the migration offer must be real before this runs.]
 
 Earlier options (26 Oct):
