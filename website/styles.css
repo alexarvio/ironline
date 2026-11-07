@@ -544,6 +544,16 @@ h1, h2, h3 { font-weight: 600; }
 .faq summary::-webkit-details-marker { display: none; }
 .faq summary svg { flex: none; width: 16px; height: 16px; color: var(--muted); transition: transform .28s var(--ease); }
 .faq details[open] summary svg { transform: rotate(90deg); }
+/* The answer folds as the app's do (7 Nov, Alex): rows 0fr → 1fr over 340ms on the fold's curve, the words fading in and
+   settling 4px down, the chevron turning with it; the open one folds as another opens (the script at the foot). */
+.faq .a-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .34s cubic-bezier(.22, 1, .36, 1); }
+.faq .a-in { min-height: 0; overflow: hidden; }
+.faq .a-fold .a { opacity: 0; transform: translateY(-4px); transition: opacity .22s ease, transform .34s cubic-bezier(.22, 1, .36, 1); }
+.faq details.on .a-fold { grid-template-rows: 1fr; }
+.faq details.on .a-fold .a { opacity: 1; transform: none; }
+.faq details[open]:not(.on) summary svg { transform: none; }
+.faq details.on summary svg { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .faq .a-fold, .faq .a-fold .a { transition: none; } }
 .faq summary:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 4px; }
 .faq .a { padding: 0 26px 24px 54px; max-width: 760px; font-size: 15.5px; line-height: 1.65; color: var(--body); }
 
