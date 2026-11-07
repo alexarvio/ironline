@@ -1,6 +1,6 @@
 # NorCoach · Website copy (step 5)
 
-The home page at norcoachapp.com, written to the six necessary beliefs (`04-necessary-beliefs.md`) in order, plus the application page and the founder letter. For coaches buying NorCoach. First draft 26 Oct 2026; the site built from it (`website/index.html`, 28 Oct) took the positioning (premium, "the personal coaching app", "Coach better. Then coach more.", no AI between coach and client). **7 Nov: this file now follows the site's sections and brings in the deep research** (`07`, quotes checked in `08`). Lines marked **NEW 7 Nov** are not on the site yet.
+The home page at norcoachapp.com, written to the six necessary beliefs (`04-necessary-beliefs.md`) in order, plus the application page and the founder letter. For coaches buying NorCoach. First draft 26 Oct 2026; the site built from it (`website/index.html`, 28 Oct) took the positioning (premium, "the personal coaching app", "Coach better. Then coach more.", no AI between coach and client). **7 Nov: this file now follows the site's sections and brings in the deep research** (`07`, quotes checked in `08`). Lines marked **NEW 7 Nov** went onto the site the same day, except the "it's your name on it" paragraph in section 5 (it waits for real uptime proof and the move offer) and the hero lines to test.
 
 **Conventions**
 - `[Belief n]` marks which belief a section moves the reader along. Not shown on the page.
