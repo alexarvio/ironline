@@ -1,6 +1,6 @@
 # NorCoach · Offer brief (step 3)
 
-Built from `01-research.md` and `02-avatar.md` on the method's Offer Brief Template. The buyer is the coach (Avatar 1). **[Decision]** marks something only Alex can settle; the brief proposes an answer so the copy can be drafted. Written 26 Oct 2026; positioning added 28 Oct from Alex's call on 27 Oct.
+Built from `01-research.md` and `02-avatar.md` on the method's Offer Brief Template. The buyer is the coach (Avatar 1). **[Decision]** marks something only Alex can settle; the brief proposes an answer so the copy can be drafted. Written 26 Oct 2026; positioning added 28 Oct from Alex's call on 27 Oct. **Updated 7 Nov** from the deep research (`07-deep-research-report.md`, quotes checked in `08-research-checks.md`); the new parts say "7 Nov".
 
 ---
 
@@ -32,6 +32,8 @@ The product is **NorCoach**; these are names for the offer and for the parts the
 - carry it on **proof** and a **real story** (a real coach, a real client, a founder they can talk to);
 - take the **opposite side** of the newest spent claims: everyone now says "AI" and "scale"; NorCoach says personal and quality. A clear enemy (automation that fakes attention) is itself a stage-5 move.
 
+**7 Nov: the enemy now has a name.** In 2026 the leaders moved AI into the coach's own job and sell it as capacity: Trainerize bought FitMetrics (AI check-ins, 3 Sep 2026; its blog prices a 200-client coach at "roughly $1,200 a month in tooling costs, versus about $10,500" for hiring coaches), Everfit says "Respond faster with AI-drafted replies in your voice", Kahunas' Crew drafts programmes and tells the coach "Who needs you today, and why". Two cautions from the research: coaches don't object to AI on principle (they complain about outages, support and lock-in), so attack *replies the client can tell aren't yours*, not technology; and Kahunas already sells a "who needs you" list, so Needs you alone isn't new. What is: the coach reads it themselves, no AI summary in between, and the client sees the coach's own face and words.
+
 ## Big Idea
 **"Coach every client like they're your only one."**
 
@@ -55,6 +57,8 @@ Alternative: **a second pair of eyes on every client.**
 **"The scattered signal."** The signs that a client needs you are already there: the third week on the same weight, a missed check-in, a video sent on Tuesday, a note that their knee hurt again, a food day that fell apart. But they're scattered across a Sheet, a Drive folder, WhatsApp and MyFitnessPal, and nothing brings them to you. So you only find them when you go looking, client by client, row by row, and at 10 to 20 clients there's no longer time to look. That's why it "worked at ten": not because you got worse, but because the signal got buried.
 
 Why the existing apps didn't fix it: they moved the scattered places into one login, but they still show you *screens*, not *signals*. You still open each client, check each log, and build the picture yourself. (Plus: bugs that lose the very data the signal comes from, and support that doesn't answer.)
+
+**7 Nov, the second half of the problem, in the coach's own words:** the app carries the coach's name, so when it fails, the coach looks bad ("WE are the ones left looking unprofessional"), and years of programmes inside it keep them there ("coaches are trapped by the amount of work they've invested into the ecosystem"). The newest answer, AI that writes the check-in reply, swaps one risk for another: clients notice ("felt automated and AI-generated, rather than coming from a coach who genuinely knew my journey") and leave.
 
 ## Potential UMS (unique mechanism of the solution)
 **"Every signal comes to you."** NorCoach works the picture out from what clients log, and brings each sign to the coach, landing on the exact thing:
@@ -105,6 +109,12 @@ New lead options with the positioning (27 Oct):
 - **The personal coaching app.** / For coaches who'd rather be better than bigger.
 - **Everyone else is adding AI. We're adding you.** / NorCoach puts the coach on every screen the client opens.
 
+From the 7 Nov research (the market's own words in the line):
+- **Your name is on the app. Make it an app that deserves it.** / Coaches told us what happens when it breaks: "WE are the ones left looking unprofessional."
+- **Your clients can tell.** / When a reply isn't really from you, they notice. In NorCoach every word they read is yours.
+- **Never just a thumbs up.** / Every set, check-in and video comes to you, so every client gets a real answer. (From the client who wrote: "my coach never really checked in, other than to give a "thumb's up"".)
+- **Leave without starting over.** / We move your clients and programmes for you. [Decision: the migration offer must be real before this runs.]
+
 Earlier options (26 Oct):
 1. **Coach every client like they're your only one.** / NorCoach brings every set, check-in and video to you, so nobody falls through the cracks and your Sundays come back.
 2. **It worked at ten clients. Then it didn't.** / The spreadsheet didn't get worse. The signal got buried. NorCoach brings it back to you.
@@ -118,14 +128,15 @@ Earlier options (26 Oct):
 ## Objections (with the answer the copy should give)
 1. **"Sheets are free and I can make them do anything."** Free until it costs you a client. At €130–€250 a client a month, keeping one more client a year pays for NorCoach many times over. And a sheet can't tell you who needs you.
 2. **"My clients won't download another app."** One app replaces the sheet, WhatsApp, Drive and MyFitnessPal for them; logging a set is a few taps. [Proof needed: Finlay's clients' adoption, a client quote.]
-3. **"I've switched before; moving 40 clients is a nightmare."** [Decision] Offer to move them for founding coaches: we set up your clients and programmes with you.
+3. **"I've switched before; moving 40 clients is a nightmare."** [Decision] Offer to move them for founding coaches: we set up your clients and programmes with you. (7 Nov: the research makes this the biggest objection: coaches stay on tools they dislike because rebuilding programmes and video libraries is the work they can't face. "It is going to take me a lot of time and work to move my clients and my data to a new system". The migration offer is worth deciding first.)
 4. **"What happens to my data if I leave?"** Your data is yours: Settings exports every client's data as one file, any time (built). [Decision] Say how long it's kept after you leave.
 5. **"Do I trust a new tool with my clients' data and payments?"** Built with a real coach and his clients over months; [verify before claiming hosting: the app runs in Amsterdam, but the database is still in the US, so "EU-hosted" isn't true yet]; payments through Stripe, never stored by us; you can message the founder.
-6. **"Will it break mid-workout like the last one?"** Sets save as they're entered, set by set. [Proof: uptime/no data loss to date.]
+6. **"Will it break mid-workout like the last one?"** Sets save as they're entered, set by set. [Proof: uptime/no data loss to date.] (7 Nov: outages plus canned support are the main reason coaches leave in 2026's reviews, so this answer carries more weight than any feature. An honest record (uptime, how fast Support answered) beats a promise.)
 7. **"Will anyone answer when it does?"** In-app Support straight to the founder; no ticket bots. [Decision: response-time promise.]
 8. **"Pricing by client count punishes me for growing."** [Decision] Price so growth isn't punished: flat, or very gentle steps; no paid add-ons for core features.
 9. **"Will it make my coaching feel automated?"** The opposite: no AI between you and your clients; every review is your voice and your drawing; your face on everything you did in their app; it removes admin, not you.
-13. **"Everyone has AI now. Isn't no AI behind the times?"** Your clients pay for you, not a model; the ones who notice an AI reply leave (the research's "felt automated and AI-generated"). NorCoach does the arithmetic (PBs, trends, next weights) and leaves the coaching to you.
+13. **"Everyone has AI now. Isn't no AI behind the times?"** Your clients pay for you, not a model; the ones who notice an AI reply leave (the research's "felt automated and AI-generated"). NorCoach does the arithmetic (PBs, trends, next weights) and leaves the coaching to you. (7 Nov: frame it as protecting the relationship and the coach's name, never as being against technology; coaches who like AI for their own admin shouldn't feel judged.)
+15. **"Kahunas already tells me who needs me."** (7 Nov) Theirs is an AI summary of your clients; ours is the actual thing waiting (the video, the note, the check-in), opened on the spot, and your client sees your face and words, not a drafted reply.
 14. **"Premium price, for what?"** [Decision, with pricing] Keeping one client longer pays for it; no add-ons; the founder on Support; we move your clients for you. Premium is the client's experience of you, not a feature count.
 10. **"Does it work in my country, my currency?"** [Verify] Euro and pound invoicing, Stripe payouts; the app in English.
 11. **"My clients log food in MyFitnessPal."** NorCoach has its own food diary with a clean catalogue of everyday foods in grams; nothing to pay extra for. [Note: no MyFitnessPal sync, by choice.]
@@ -170,5 +181,7 @@ Earlier options (26 Oct):
 - **Words to avoid:** "scale your business", "grow to 100 clients", "automate your coaching", "AI". Say quality, personal, every client.
 - **The emotional order of the page:** the stance (scale on quality, you in every client's pocket) → recognition (your Sunday) → the real reason (the scattered signal) → the mechanism → no AI between you → the story (Finlay and Alex) → proof → objections → apply.
 - **Look:** premium and quiet: the app's own paper, ink and Archivo, large dark areas in soft black `#1c1c1e`, real screens, real faces (photos of Alex and Finlay needed).
-- **Words to use (the market's own):** check-ins, form check, clients going quiet, stalled, on top of every client, sheet by sheet, Sundays, "in my corner".
-- **Next:** bring `04-necessary-beliefs.md` and `05-website-copy.md` in line with the positioning above.
+- **Words to use (the market's own):** check-ins, form check, clients going quiet, stalled, on top of every client, sheet by sheet, Sundays, "in my corner". From the 7 Nov research: unprofessional, trapped, canned or copy-and-paste replies, outages, client history, programmes, "another number", "read from a script", "personal and tailored", "my system".
+- **Competitors in the copy (7 Nov):** the reviews quoted are public, but on the main page describe what happened, not who it happened to. Named quotes belong on comparison pages, if at all, exactly as written and dated.
+- **Proof the research says we still lack:** interviews with 5 coaches (15–50 clients) and 5 clients, asking clients directly whether they ever suspected an AI reply; Reddit threads read first-hand.
+- **Next:** bring `04-necessary-beliefs.md` and `05-website-copy.md` in line with the positioning above and the 7 Nov research.

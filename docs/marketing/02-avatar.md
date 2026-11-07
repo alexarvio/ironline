@@ -1,6 +1,6 @@
 # NorCoach · Avatar sheet (step 2)
 
-Built from `01-research.md` on the method's Avatar Sheet Template, adapted to a software buyer. Two avatars: the **coach** (who buys) and, shorter, the **coach's client** (who the coach is afraid of losing). Every quote is verbatim from the research, with its source there; **[Inference]** marks what is concluded rather than found. Written 26 Oct 2026; to be sharpened with Finlay's answers (`00-questions-for-finlay.md`) and a manual pass on Reddit and coaching Facebook groups.
+Built from `01-research.md` on the method's Avatar Sheet Template, adapted to a software buyer. Two avatars: the **coach** (who buys) and, shorter, the **coach's client** (who the coach is afraid of losing). Every quote is verbatim from the research, with its source there; **[Inference]** marks what is concluded rather than found. Written 26 Oct 2026; to be sharpened with Finlay's answers (`00-questions-for-finlay.md`) and a manual pass on Reddit and coaching Facebook groups. **Updated 7 Nov 2026** from the deep research (`07-deep-research-report.md`), using only quotes checked on their live page (`08-research-checks.md`).
 
 ---
 
@@ -25,7 +25,9 @@ Built from `01-research.md` on the method's Avatar Sheet Template, adapted to a 
    - Check-in day is a marathon ("Tuesday-night check-in marathon"); the business only grows by adding more hours.
    - Messages arrive on their personal phone at all hours ("20 people messaging her 24 7").
    - The tools they tried were meant to fix this but added clicks: "Too many button clicks to enter workout results."
-3. **They can't trust the tools they've tried**
+3. **They can't trust the tools they've tried, and it's their name that suffers** (the loudest pain in 2026's reviews)
+   - Outages land on the coach, not the vendor: "clients start messaging asking what is going on and ultimately WE are the ones left looking unprofessional." (TrueCoach review, May 2026); "Makes my trainers look like clowns" (Trainerize review, 2026).
+   - They stay out of sunk work, not loyalty: "coaches are trapped by the amount of work they've invested into the ecosystem while reliability and customer support continue to decline." / "the main reason I've stayed is that it took me such a long time to add my own videos and build out my 3 month programme."
    - Bugs that lose a client's data at the worst moment: "Closes out, wipes the set history, then tells them they worked out for 60 seconds."
    - Support that answers with templates since the big apps were bought by investment firms; price cliffs and paid add-ons ("charging an extra 50 dollars for automation is ridiculous").
    - Coach phone apps that don't really work ("Coach app is next to useless"), so they're tied to a laptop.
@@ -44,6 +46,9 @@ Built from `01-research.md` on the method's Avatar Sheet Template, adapted to a 
 - **Pride in being a real coach.** They believe individual attention is what they sell; anything that makes them feel like a template-shifter or an "app coach" hurts their identity.
 - **Fear of being found out as stretched thin.** The day a client feels unseen, they lose them, and they know clients can tell ("No one there even knows who I am" is what their clients write about other coaches).
 - **Switching fatigue and distrust.** Many have been burned by one platform already; trust and quick human support matter more than another feature list.
+- **They name the tool, not the client (7 Nov).** Coaches describe their problem as reliability, support and admin. They don't say "my clients feel processed"; the clients say it. And coaches rarely object to AI on principle: where they mention it, it's about quality ("The integrated ai still has a long way to go before being useful"). So "no AI" only lands when it is shown through the client's eyes and the coach's reputation. **[Inference from the research]**
+- **Where it breaks (7 Nov).** Vendors and coaches put the slip at roughly 25 to 40 clients for a solo coach without a system: check-in replies slip first, then programme updates, then admin ("Managing 40+ clients on spreadsheets was leading straight to burnout"). Most coaches on platforms are smaller: in Coachway's Nordic data (Aug 2026, 201 coaches) 81% run fewer than 20 active clients, so a coach with 20 to 60 is already in the top fifth. Clients stay 4.3 months on average there, with the steepest loss in months 3 to 6.
+- **Not every coach wants small (7 Nov).** Some welcome volume and AI as capacity, and vendors sell exactly that (Trainerize's own blog, 3 Sep 2026: a coach with 200 clients at "roughly $1,200 a month in tooling costs, versus about $10,500" for hiring coaches). Our buyer is the coach who'd rather be better than bigger; the copy shouldn't pretend that is everyone.
 
 ### 💬 General direct client quotes (here: the coach's own words)
 - "Trainerize centralized all my programming, macro tracking, and client check-ins"
@@ -78,6 +83,7 @@ Built from `01-research.md` on the method's Avatar Sheet Template, adapted to a 
 - "Now I have the time, money, and freedom to be with my family and to do what I truly love to do."
 
 ### 🚩 Key emotional fears & deep frustrations
+- **Looking unprofessional in front of their own clients (7 Nov: the strongest fear in the new research):** "WE are the ones left looking unprofessional." / "That is an embarrassing level of customer handling for a company providing business critical software." / support suggesting they "tell clients to screenshot their workouts beforehand. Imagine a professional company asking that."
 - **Losing a paying client because something broke or because they didn't notice:** "I lost a paying client—$2,200 AUD gone." / "We have had multiple clients leave because of how bad this app is"
 - **Being one more coach who "says the same thing every week"**, with clients spotting automated or AI-sounding replies.
 - **Burning out and leaving the job they love:** "If you burn out and leave the industry, you are not helping people in this industry at all anymore."
@@ -106,6 +112,8 @@ Short, because the client doesn't buy NorCoach; but the coach buys to keep this 
 - **Tool pain:** "it is the worst app I have used in terms of workout tracking." / "I'd like an easier way to track sets and reps, charts that clearly show strength improvements over time." / spreadsheets on a phone mid-set.
 - **What they love:** "I finally feel like I've got someone in my corner who I can be accountable to" / a coach who asks what is and isn't working / feedback on their own lift.
 - **What they fear:** paying for coaching that turns out to be a template and automated replies ("felt automated and AI-generated").
+- **How they judge a coach (7 Nov):** by signs of attention, rarely by the programme itself: did the coach check in, listen, reply in their own voice. Let down: "my coach never really checked in, other than to give a "thumb's up" when an exercise routine was completed" (Trainerize review, May 2026); "unprofessional coaches that take your money and read from a script" (July 2026); "the feedback and responses felt automated and AI-generated, rather than coming from a coach who genuinely knew my journey. For the amount I was paying, I expected more personalised guidance and interaction." (Empower review, Jun 2026, a returning client who then left). Looked after: "It never felt like I was receiving copied-and-pasted responses, there was a mixture of texts and voice notes" (Jul 2026).
+- **They judge the coach by the app too:** "I wouldn't agree to work with a personal trainer again if they were using TrueCoach. It's essentially money down the drain as you have no control over and no way to save or export your workouts." (2023)
 - **[Inference] What wins them:** proof the coach looked: a reply that names their numbers, a programme that changes when they stall, a video of their own lift with the coach's drawing and voice over it.
 
 ---
@@ -115,3 +123,4 @@ Short, because the client doesn't buy NorCoach; but the coach buys to keep this 
 - **The emotional core:** coaches don't buy software to save time; they buy it so no client ever feels unseen, without giving up their evenings.
 - **The founder's story fits exactly:** the client who could feel his coach couldn't keep up, and the coach running it all in Google Sheets, sheet by sheet.
 - **Must be answered head-on:** trust (new tool, who's behind it, will anyone answer), switching pain (moving clients, data), and "will my clients use it".
+- **From the 7 Nov research:** lead with what the coach already feels (their name on an app that lets them down, years of work trapped in a platform), then make them feel the client's side they don't yet name (clients can tell when a reply isn't really from them). "No AI" is the proof of that promise, not the headline on its own.
