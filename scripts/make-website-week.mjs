@@ -66,7 +66,7 @@ const board = `
         </div>
       </div>`;
 
-const html = `<div class="week" role="img" aria-label="One ordinary week: Tom's note in row 41 of his sheet, Sara's sore knee under 31 unread WhatsApp messages, James's deadlift video in Instagram, Emma asking for a call by email. In NorCoach the four are one list, Needs you, each with its reason and the button that answers it.">${scraps}
+const html = `<div class="week" role="img" aria-label="One ordinary week: Tom's note in row 41 of his sheet, Sara's sore knee under 31 unread WhatsApp messages, James's deadlift video in Instagram, Emma asking for a call by email. In Norcoach the four are one list, Needs you, each with its reason and the button that answers it.">${scraps}
 
       <svg class="arrow" viewBox="0 0 60 24" aria-hidden="true"><use href="#i-arrow"/></svg>
 ${board}

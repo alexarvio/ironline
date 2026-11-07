@@ -176,7 +176,7 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
       <NativeCoachRedirect />
       {/* Back at the window, the page reads itself again (23 Oct, Alex): what the client logged meanwhile shows. */}
       <RefreshOnReturn />
-      {/* The NorCoach logo over the coach's business (24 Oct, Alex), as on the sign-in card. */}
+      {/* The Norcoach logo over the coach's business (24 Oct, Alex), as on the sign-in card. */}
       <div className="rr-brand">
         <NorCoachLogo className="rr-logo" />
         <span className="rr-brand-text">
@@ -184,7 +184,7 @@ export default function RedesignRail({ rail, clientId, settings = false }: { rai
           <small>Coach workstation</small>
         </span>
       </div>
-      {/* What they pay NorCoach (28 Oct, Alex; lib/billing.ts): a payment that failed, then read-only, as a fact and its
+      {/* What they pay Norcoach (28 Oct, Alex; lib/billing.ts): a payment that failed, then read-only, as a fact and its
           way to the fix (Settings, Billing). Nothing while it is paid. */}
       {(rail.billing.state === "grace" || rail.billing.state === "readonly") && (
         <Link href="/admin/redesign/settings#billing" className="rr-billing">

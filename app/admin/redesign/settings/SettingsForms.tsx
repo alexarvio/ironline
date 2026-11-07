@@ -210,7 +210,7 @@ function AccountPassword({ email }: { email: string }) {
 }
 
 // ---- The coach's logo (28 Oct, Alex; lib/brandMark.ts): made into the faint mark behind every screen, theirs and
-// their clients', in place of the NorCoach star. Saved at once, not on the page's bar (a file, as Account's actions):
+// their clients', in place of the Norcoach star. Saved at once, not on the page's bar (a file, as Account's actions):
 // the card shows the mark as it will sit, Upload (Replace) as a white pill, Remove in words, asking first.
 export function LogoSettings({ mark }: { mark: string | null }) {
   const router = useRouter();
@@ -240,7 +240,7 @@ export function LogoSettings({ mark }: { mark: string | null }) {
           </HelpTip>
         </span>
       }
-      fact={mark ? "Behind every screen" : "NorCoach's star for now"}
+      fact={mark ? "Behind every screen" : "Norcoach's star for now"}
       actions={
         <>
           <label className={`trn-pill rst-pill${busy ? " busy" : ""}`}>
@@ -258,14 +258,14 @@ export function LogoSettings({ mark }: { mark: string | null }) {
       <div className="rls-card rst-card rst-logo">
         {/* The mark on the page's grey, a little stronger than on the screens so it reads here. */}
         {/* eslint-disable-next-line @next/next/no-img-element -- the coach's own upload */}
-        <img className={`rst-logo-mark${mark ? "" : " star"}`} src={mark ?? "/brand/mark.svg"} alt={mark ? "Your logo as the mark behind your screens" : "The NorCoach star"} />
+        <img className={`rst-logo-mark${mark ? "" : " star"}`} src={mark ?? "/brand/mark.svg"} alt={mark ? "Your logo as the mark behind your screens" : "The Norcoach star"} />
         {error && <small className="rst-err">{error}</small>}
       </div>
       <Dialog open={asking} onOpenChange={setAsking}>
         {asking && (
           <ConfirmDialog
             title="Remove your logo?"
-            description="The NorCoach star comes back behind your screens and your clients'."
+            description="The Norcoach star comes back behind your screens and your clients'."
             confirm="Remove"
             danger
             onConfirm={() => {

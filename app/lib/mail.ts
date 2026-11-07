@@ -47,25 +47,25 @@ async function send(to: string, subject: string, text: string, html: string, wha
 export async function sendPasswordResetEmail({ to, resetUrl }: { to: string; resetUrl: string }): Promise<boolean> {
   if (!mailConfigured()) return false;
   const text = [
-    "Someone asked to reset the password for your NorCoach account.",
+    "Someone asked to reset the password for your Norcoach account.",
     "",
     `Choose a new password: ${resetUrl}`,
     "",
     "The link works once, for the next hour. If you didn't ask for this, ignore this email: your password stays as it is.",
   ].join("\n");
-  const html = `<p>Someone asked to reset the password for your NorCoach account.</p>
+  const html = `<p>Someone asked to reset the password for your Norcoach account.</p>
 <p><a href="${escape(resetUrl)}">Choose a new password</a></p>
 <p>The link works once, for the next hour. If you didn&rsquo;t ask for this, ignore this email: your password stays as it is.</p>`;
-  return send(to, "Reset your NorCoach password", text, html, "password reset");
+  return send(to, "Reset your Norcoach password", text, html, "password reset");
 }
 
 /** The invite's words, as text and as HTML: sent below, and shown on the onboarding board. */
 export function inviteEmail({ to, firstName, coachName, password, signInUrl }: { to: string; firstName: string; coachName: string; password: string; signInUrl: string }) {
-  const subject = "Your NorCoach login";
+  const subject = "Your Norcoach login";
   const text = [
     `Hi ${firstName},`,
     "",
-    `${coachName} has set up your NorCoach account.`,
+    `${coachName} has set up your Norcoach account.`,
     "",
     `Sign in at ${signInUrl}`,
     `Email: ${to}`,
@@ -74,8 +74,8 @@ export function inviteEmail({ to, firstName, coachName, password, signInUrl }: {
     "The app asks you to choose your own password the first time you sign in.",
   ].join("\n");
   const html = `<p>Hi ${escape(firstName)},</p>
-<p>${escape(coachName)} has set up your NorCoach account.</p>
-<p><a href="${escape(signInUrl)}">Sign in to NorCoach</a><br>
+<p>${escape(coachName)} has set up your Norcoach account.</p>
+<p><a href="${escape(signInUrl)}">Sign in to Norcoach</a><br>
 Email: <b>${escape(to)}</b><br>
 Temporary password: <b style="letter-spacing:0.04em">${escape(password)}</b></p>
 <p>The app asks you to choose your own password the first time you sign in.</p>`;
@@ -112,16 +112,16 @@ export async function sendApplicationEmail(a: Application): Promise<boolean> {
   const html = `<table style="border-collapse:collapse;font:15px/1.5 system-ui,sans-serif">${rows
     .map(([k, v]) => `<tr><td style="padding:4px 16px 4px 0;color:#5b6474;vertical-align:top">${escape(k)}</td><td style="padding:4px 0;white-space:pre-wrap">${escape(v)}</td></tr>`)
     .join("")}</table><p style="font:14px system-ui,sans-serif;color:#5b6474">Reply to this email to answer them.</p>`;
-  return send(to, `Founding coach application: ${a.name}${a.clients ? ` (${a.clients} clients)` : ""}`, text, html, "application", { fromName: "NorCoach website", replyTo: a.email });
+  return send(to, `Founding coach application: ${a.name}${a.clients ? ` (${a.clients} clients)` : ""}`, text, html, "application", { fromName: "Norcoach website", replyTo: a.email });
 }
 
 /** A coach who signed up is let in by the owner. Resolves false rather than throwing: they are in either way. */
 export async function sendCoachApprovedEmail({ to, name, signInUrl }: { to: string; name: string; signInUrl: string }): Promise<boolean> {
   if (!mailConfigured()) return false;
   const first = name.split(" ")[0] || name;
-  const text = [`Hi ${first},`, "", "Your NorCoach coach account is ready.", "", `Sign in: ${signInUrl}`].join("\n");
+  const text = [`Hi ${first},`, "", "Your Norcoach coach account is ready.", "", `Sign in: ${signInUrl}`].join("\n");
   const html = `<p>Hi ${escape(first)},</p>
-<p>Your NorCoach coach account is ready.</p>
-<p><a href="${escape(signInUrl)}">Sign in to NorCoach</a></p>`;
-  return send(to, "You're in: your NorCoach coach account", text, html, "coach approved", { fromName: "NorCoach" });
+<p>Your Norcoach coach account is ready.</p>
+<p><a href="${escape(signInUrl)}">Sign in to Norcoach</a></p>`;
+  return send(to, "You're in: your Norcoach coach account", text, html, "coach approved", { fromName: "Norcoach" });
 }

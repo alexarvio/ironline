@@ -7,7 +7,7 @@ import { applySubscription, coachForBilling, keepCustomer } from "../../../lib/b
 //   the coaches' accounts (Connect, STRIPE_WEBHOOK_SECRET), events with `account` set:
 //     checkout.session.completed / .async_payment_succeeded  an invoice was paid
 //     account.updated                                         a coach's account can (or no longer can) take payments
-//   the platform's own (STRIPE_BILLING_WEBHOOK_SECRET, 28 Oct), what coaches pay NorCoach (lib/billing.ts):
+//   the platform's own (STRIPE_BILLING_WEBHOOK_SECRET, 28 Oct), what coaches pay Norcoach (lib/billing.ts):
 //     checkout.session.completed (mode subscription)          a coach subscribed
 //     customer.subscription.created / .updated / .deleted     its state: trial, paid, failed, cancelled
 // Only a signed body is read; no session (the proxy lets this path through).

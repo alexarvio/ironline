@@ -1,4 +1,4 @@
-# NorCoach · Avatar sheet (step 2)
+# Norcoach · Avatar sheet (step 2)
 
 Built from `01-research.md` on the method's Avatar Sheet Template, adapted to a software buyer. Two avatars: the **coach** (who buys) and, shorter, the **coach's client** (who the coach is afraid of losing). Every quote is verbatim from the research, with its source there; **[Inference]** marks what is concluded rather than found. Written 26 Oct 2026; to be sharpened with Finlay's answers (`00-questions-for-finlay.md`) and a manual pass on Reddit and coaching Facebook groups. **Updated 7 Nov 2026** from the deep research (`07-deep-research-report.md`), using only quotes checked on their live page (`08-research-checks.md`).
 
@@ -105,7 +105,7 @@ Built from `01-research.md` on the method's Avatar Sheet Template, adapted to a 
 
 ## Avatar 2 · The coach's client: "the client who wants to be seen" (secondary)
 
-Short, because the client doesn't buy NorCoach; but the coach buys to keep this person. Useful for the App Store listing and for coaches introducing the app to their clients.
+Short, because the client doesn't buy Norcoach; but the coach buys to keep this person. Useful for the App Store listing and for coaches introducing the app to their clients.
 
 - **Who:** pays a coach €130–€250 a month; trains 3 to 5 times a week; wants results and accountability; logs on their phone between sets. (The founder is one.)
 - **Core pain:** feeling unseen. "No one there even knows who I am." / "Feels like they say the same thing every week during check in." / "She didn't keep tabs on my progression as much as she should have."

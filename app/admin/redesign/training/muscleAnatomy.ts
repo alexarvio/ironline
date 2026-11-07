@@ -1,6 +1,6 @@
 // The muscle map's anatomy plate (2 Nov, Alex: docs/boards/muscle-map-v2.html, "opaque anatomy plates, front and back,
 // greys and ink, fibres colour in purple by load"), the board's generator ported as pure functions: no DOM, no colour.
-// Drawn for NorCoach (no third-party artwork or path data); proportions follow the classic eight-heads figure (chin at 1,
+// Drawn for Norcoach (no third-party artwork or path data); proportions follow the classic eight-heads figure (chin at 1,
 // nipples 2, navel ~2.8, crotch 4, knee 6), the muscles placed from standard anterior and posterior plates. Each muscle is
 // a patch between its two borders; its fibres are interpolated between them, so they run origin to insertion (the
 // pectoral heads fan to the humerus). The screen (MuscleMap.tsx) colours each patch by its key; styles `mm-` in draft.css.

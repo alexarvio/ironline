@@ -1288,7 +1288,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           Log out
         </button>
       </form>
-      <div className="settings-footnote"><Bars parts={["NorCoach", "Full Potential Coaching"]} /></div>
+      <div className="settings-footnote"><Bars parts={["Norcoach", "Full Potential Coaching"]} /></div>
       </div>
     </div>
   );

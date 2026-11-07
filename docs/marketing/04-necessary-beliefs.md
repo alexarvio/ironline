@@ -1,4 +1,4 @@
-# NorCoach · Necessary beliefs (step 4)
+# Norcoach · Necessary beliefs (step 4)
 
 The few beliefs a coach must hold before they apply. Built from `01-research.md`, `02-avatar.md` and `03-offer-brief.md`. Per the method: marketing is an argument, not a list of words; every section of the website and every ad leads the coach one step along these, in this order, to the offer. Written 26 Oct 2026; **brought in line with the positioning (27 Oct) and the deep research (7 Nov, `07`, quotes checked in `08`)**. Quotes below are only ones checked on their live page.
 
@@ -23,19 +23,19 @@ For each: the belief, what the coach believes today instead, and how we prove it
 
 ### 4. "I believe that the apps I know either still make me go looking, or now answer my clients for me, and both put my name at risk."
 - **What they believe now:** "apps are all the same" (so why switch again), "I just need the market leader", or "AI replies will let me take more clients".
-- **Why it matters:** a stage-5 market. Without this belief NorCoach is one more "all-in-one", and the newest offer on the table (AI that drafts the check-in reply, sold as capacity) looks like the answer.
+- **Why it matters:** a stage-5 market. Without this belief Norcoach is one more "all-in-one", and the newest offer on the table (AI that drafts the check-in reply, sold as capacity) looks like the answer.
 - **Proof, in three parts:**
   - *Screens, not signals:* you still open each client and build the picture yourself.
   - *Your name is on it:* when the app breaks, the coach answers for it. "WE are the ones left looking unprofessional" (a coach on their platform's outages, May 2026); and years of programmes keep them there: "coaches are trapped by the amount of work they've invested into the ecosystem while reliability and customer support continue to decline" (the same coach).
   - *Clients can tell:* "the feedback and responses felt automated and AI-generated, rather than coming from a coach who genuinely knew my journey" (a client who then left, Jun 2026).
   - No vendor named on the page; the pattern, not the brand. Never "AI is bad": coaches who use AI for their own admin mustn't feel judged. The point is that the reply the client reads should be the coach's.
 
-### 5. "I believe that NorCoach brings every sign to me, already worked out, and keeps me, not a bot, in front of my clients, so I can coach forty the way I coached five."
+### 5. "I believe that Norcoach brings every sign to me, already worked out, and keeps me, not a bot, in front of my clients, so I can coach forty the way I coached five."
 - **What they believe now:** "every app claims that", and "another app already shows me who needs me".
 - **Why it matters:** this is the unique mechanism of the solution. At least one other app now sells a "who needs you" list, written by AI; ours is the thing itself, opened where the coach can answer it, and the client sees the coach's own face and words.
 - **Proof:** show, don't claim. Short screen recordings: a logged set turning into a PB and a strength trend; the Needs you list clearing itself; a chat link landing on the exact set; Draw & Talk on a real lift; To focus on on the client's home screen; the coach's face on what they did in the client's app. Then Finlay: how he uses it with his clients.
 
-### 6. "I believe that NorCoach is made by people I can reach and trust, that it won't let me down in front of my clients, and that moving to it costs me little."
+### 6. "I believe that Norcoach is made by people I can reach and trust, that it won't let me down in front of my clients, and that moving to it costs me little."
 - **What they believe now:** "Do I trust a new tool from someone I've never met?", "will this one go down too?" and "rebuilding my programmes last time was a nightmare".
 - **Why it matters:** in 2026's reviews coaches leave platforms over outages, canned support and lock-in, and stay out of sunk work. Trust and an easy move are the final gate, and the move is the biggest single objection.
 - **Proof:** the founders by name and face (Alex and Finlay) and a real way to message them; sets that save as they're entered; an honest record (uptime, how fast Support answered) [Proof]; we move their clients and programmes in with them [Decision]; every client's data exported as one file, any time (built); a founding price kept for life [Decision].

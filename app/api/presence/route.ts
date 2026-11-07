@@ -3,7 +3,7 @@ import { getSessionUser, isOwner } from "../../lib/auth";
 import { listPresence } from "../../lib/presence";
 
 // Who is in the app right now, for /admin/presence (9 Oct). The owner only since 4 Nov (Alex: "something for dev now,
-// coaches won't need it"): it lists everyone on NorCoach, other coaches' clients included.
+// coaches won't need it"): it lists everyone on Norcoach, other coaches' clients included.
 // Polling this does not count as being somewhere: the dashboard is left
 // open beside the work, and it must not show the owner as "in the app".
 export const dynamic = "force-dynamic";

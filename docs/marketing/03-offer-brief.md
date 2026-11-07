@@ -1,20 +1,20 @@
-# NorCoach · Offer brief (step 3)
+# Norcoach · Offer brief (step 3)
 
 Built from `01-research.md` and `02-avatar.md` on the method's Offer Brief Template. The buyer is the coach (Avatar 1). **[Decision]** marks something only Alex can settle; the brief proposes an answer so the copy can be drafted. Written 26 Oct 2026; positioning added 28 Oct from Alex's call on 27 Oct. **Updated 7 Nov** from the deep research (`07-deep-research-report.md`, quotes checked in `08-research-checks.md`); the new parts say "7 Nov".
 
 ---
 
 ## Positioning (27 Oct, Alex)
-- **Premium.** NorCoach is not the cheap option or the biggest feature list. It is for coaches who sell one-on-one coaching at a good price and want it to feel that way to the client.
+- **Premium.** Norcoach is not the cheap option or the biggest feature list. It is for coaches who sell one-on-one coaching at a good price and want it to feel that way to the client.
 - **"The personal coaching app."** The category line, under the logo and in the hero. No AI between coach and client: nothing writes to a client in the coach's name, nothing coaches for them.
-- **"Scale on quality."** The market (vendors and mentorships alike) sells "scale your business": more clients, more automation, more templates. NorCoach says the opposite: grow by being better for every client, not by being thinner across more of them. Quantity follows quality (clients stay, refer, pay more).
+- **"Scale on quality."** The market (vendors and mentorships alike) sells "scale your business": more clients, more automation, more templates. Norcoach says the opposite: grow by being better for every client, not by being thinner across more of them. Quantity follows quality (clients stay, refer, pay more).
 - **Why it's true, from the source:** Finlay left Trainerize (a while ago) because of too much AI. In one-on-one coaching the personal touch is the product.
 - **Product proof:** the coach's face is on everything the coach did in the client's app: the note on a phase, every message, To focus on, the latest message on Home. The client sees a person, not a platform.
 - **The hero:** sells to the coach, so it shows the coach's side first: their view (Needs you, a client's PB) paired with the client's phone showing the coach's face and note. Line: **"You, in every client's pocket."**
 
 ## Potential product name ideas
-The product is **NorCoach**; these are names for the offer and for the parts the copy leans on.
-- **The offer:** "Founding Coaches" (early access, a limited first group, a price kept for life). Alternatives: "First 50", "NorCoach Early Access".
+The product is **Norcoach**; these are names for the offer and for the parts the copy leans on.
+- **The offer:** "Founding Coaches" (early access, a limited first group, a price kept for life). Alternatives: "First 50", "Norcoach Early Access".
 - **The video review** (the Coach's Eye gap): "Draw & Talk", "Form Review", "Coach's Lens", "Review on video".
 - **The Feed's "Needs you"** (what the coach owes, in order): "Needs you", "Today's list", "Who needs you".
 - **The automatic strength picture** (PBs, strength trends per muscle group, worked out from every logged set): "Strength, worked out", "Every set counted".
@@ -30,7 +30,7 @@ The product is **NorCoach**; these are names for the offer and for the parts the
 - don't lead with the category claim, features lists or "save X hours";
 - lead with **identification** (the coach recognises their own Sunday evening and their own fear) and a **specific mechanism** they haven't heard;
 - carry it on **proof** and a **real story** (a real coach, a real client, a founder they can talk to);
-- take the **opposite side** of the newest spent claims: everyone now says "AI" and "scale"; NorCoach says personal and quality. A clear enemy (automation that fakes attention) is itself a stage-5 move.
+- take the **opposite side** of the newest spent claims: everyone now says "AI" and "scale"; Norcoach says personal and quality. A clear enemy (automation that fakes attention) is itself a stage-5 move.
 
 **7 Nov: the enemy now has a name.** In 2026 the leaders moved AI into the coach's own job and sell it as capacity: Trainerize bought FitMetrics (AI check-ins, 3 Sep 2026; its blog prices a 200-client coach at "roughly $1,200 a month in tooling costs, versus about $10,500" for hiring coaches), Everfit says "Respond faster with AI-drafted replies in your voice", Kahunas' Crew drafts programmes and tells the coach "Who needs you today, and why". Two cautions from the research: coaches don't object to AI on principle (they complain about outages, support and lock-in), so attack *replies the client can tell aren't yours*, not technology; and Kahunas already sells a "who needs you" list, so Needs you alone isn't new. What is: the coach reads it themselves, no AI summary in between, and the client sees the coach's own face and words.
 
@@ -49,7 +49,7 @@ Alternatives to test:
 - "Your clients can tell when you're stretched. Now they can't."
 
 ## Metaphor
-**The coach's notebook that reads itself.** Before apps, a coach wrote down every set in a notebook and noticed when a client stalled. Spreadsheets kept the notebook but made the coach read it row by row; apps added screens but still left the coach to go looking. NorCoach is the notebook that reads itself and taps you on the shoulder: who stalled, who hit a PB, whose video is waiting, whose check-in came in.
+**The coach's notebook that reads itself.** Before apps, a coach wrote down every set in a notebook and noticed when a client stalled. Spreadsheets kept the notebook but made the coach read it row by row; apps added screens but still left the coach to go looking. Norcoach is the notebook that reads itself and taps you on the shoulder: who stalled, who hit a PB, whose video is waiting, whose check-in came in.
 
 Alternative: **a second pair of eyes on every client.**
 
@@ -61,8 +61,8 @@ Why the existing apps didn't fix it: they moved the scattered places into one lo
 **7 Nov, the second half of the problem, in the coach's own words:** the app carries the coach's name, so when it fails, the coach looks bad ("WE are the ones left looking unprofessional"), and years of programmes inside it keep them there ("coaches are trapped by the amount of work they've invested into the ecosystem"). The newest answer, AI that writes the check-in reply, swaps one risk for another: clients notice ("felt automated and AI-generated, rather than coming from a coach who genuinely knew my journey") and leave.
 
 ## Potential UMS (unique mechanism of the solution)
-**"Every signal comes to you."** NorCoach works the picture out from what clients log, and brings each sign to the coach, landing on the exact thing:
-1. **Every set counted.** Clients log every set; NorCoach works out PBs (heaviest within the rep target), strength trends per exercise and per muscle group (estimated one-rep max, 7 and 30 days), and moves the next week's weights on from what was actually lifted. No row-by-row checking.
+**"Every signal comes to you."** Norcoach works the picture out from what clients log, and brings each sign to the coach, landing on the exact thing:
+1. **Every set counted.** Clients log every set; Norcoach works out PBs (heaviest within the rep target), strength trends per exercise and per muscle group (estimated one-rep max, 7 and 30 days), and moves the next week's weights on from what was actually lifted. No row-by-row checking.
 2. **Needs you.** One list of what the coach owes, in order: a reply, a video to review, a check-in note, an empty week, a call asked for. It clears itself when done.
 3. **Links that land.** Every message, notification and Feed row opens the exact set, meal, check-in day or photo sheet, unfolded and lit, never just a screen to search.
 4. **Draw & Talk review.** The client sends a lift from the exercise or in the chat; the coach slows it down, draws on it and talks over it, and the recording goes straight back to them. The tool coaches lost when Coach's Eye was shut down, built into the coaching app.
@@ -73,16 +73,16 @@ Together: the coach sees every client the way they could when they had five, and
 
 ## Guru
 **A real coach and his client, not a software company.**
-- **Finlay** (Full Potential Coaching), the coach NorCoach was built with and for; uses it every day with real clients. [Decision] Get his permission and a quote; ideally a short video of him using it.
+- **Finlay** (Full Potential Coaching), the coach Norcoach was built with and for; uses it every day with real clients. [Decision] Get his permission and a quote; ideally a short video of him using it.
 - **Alex**, the founder, who was Finlay's client first: the person who felt the problem from the client's side. A founder coaches can message directly is itself the answer to the trust objection.
 
 ## Discovery story
-Alex was Finlay's client. Finlay is a good coach, but he ran everything in Excel and Google Sheets: sheet by sheet, client by client, checking every set's weight and RPE by hand. He'd tried coaching apps and dropped them; he left Trainerize because it had too much AI in it, and in one-on-one coaching the personal touch is the whole job. As a client, Alex could feel it: some weeks his coach just wasn't on top of him. Not because Finlay didn't care, but because one person reading spreadsheets can't keep up with every client. One day they got talking about it. Finlay said he was looking for "a CRM situation". Alex said: "Let me try and build it for you." NorCoach is that: built with one coach, for every client to feel seen.
+Alex was Finlay's client. Finlay is a good coach, but he ran everything in Excel and Google Sheets: sheet by sheet, client by client, checking every set's weight and RPE by hand. He'd tried coaching apps and dropped them; he left Trainerize because it had too much AI in it, and in one-on-one coaching the personal touch is the whole job. As a client, Alex could feel it: some weeks his coach just wasn't on top of him. Not because Finlay didn't care, but because one person reading spreadsheets can't keep up with every client. One day they got talking about it. Finlay said he was looking for "a CRM situation". Alex said: "Let me try and build it for you." Norcoach is that: built with one coach, for every client to feel seen.
 
 [Decision] Finlay's other answers (the other apps and why, when he left Trainerize, his week of admin) go in here once he's back (`00-questions-for-finlay.md`). Trainerize and its AI is known (27 Oct, Alex).
 
 ## Product
-**NorCoach**, for online and hybrid coaches. What the coach gets today:
+**Norcoach**, for online and hybrid coaches. What the coach gets today:
 - **The Plan:** phases on one timeline (Lifestyle, Training, Nutrition), scheduled or live, now with indefinite phases that run week by week.
 - **Training:** programmes week by week; clients log every set on their phone; PBs, 7/30-day strength trends and weight progression worked out automatically; rogue (off-plan) sessions shown too; after-workout questions.
 - **Video review:** clients send videos from an exercise or the chat; the coach reviews with drawing and voice, on the laptop or the phone.
@@ -107,26 +107,26 @@ New lead options with the positioning (27 Oct):
 - **Scale on quality.** / The personal coaching app. Every set, check-in and video comes to you, and every client sees you, not a bot.
 - **You, in every client's pocket.** / Your face on every note, message and goal in their app. No AI in between.
 - **The personal coaching app.** / For coaches who'd rather be better than bigger.
-- **Everyone else is adding AI. We're adding you.** / NorCoach puts the coach on every screen the client opens.
+- **Everyone else is adding AI. We're adding you.** / Norcoach puts the coach on every screen the client opens.
 
 From the 7 Nov research (the market's own words in the line):
 - **Your name is on the app. Make it an app that deserves it.** / Coaches told us what happens when it breaks: "WE are the ones left looking unprofessional."
-- **Your name is on it. Your face too.** / Every word your client reads in NorCoach is yours. (Kept off the lead: "Your clients can tell" opens the page on suspicion of the reader; it works lower down, as the client's side.)
+- **Your name is on it. Your face too.** / Every word your client reads in Norcoach is yours. (Kept off the lead: "Your clients can tell" opens the page on suspicion of the reader; it works lower down, as the client's side.)
 - **Every client hears from you.** / Every set, check-in and video comes to you, so every client gets a real answer. (Not "Never just a thumbs up": the chat's reactions clear a message from Needs you, so the app itself would break it. The client's "thumb's up" line stays as their words.)
 - **Leave without starting over.** / We move your clients and programmes for you. [Decision: the migration offer must be real before this runs.]
 
 Earlier options (26 Oct):
-1. **Coach every client like they're your only one.** / NorCoach brings every set, check-in and video to you, so nobody falls through the cracks and your Sundays come back.
-2. **It worked at ten clients. Then it didn't.** / The spreadsheet didn't get worse. The signal got buried. NorCoach brings it back to you.
+1. **Coach every client like they're your only one.** / Norcoach brings every set, check-in and video to you, so nobody falls through the cracks and your Sundays come back.
+2. **It worked at ten clients. Then it didn't.** / The spreadsheet didn't get worse. The signal got buried. Norcoach brings it back to you.
 3. **Your clients can tell when you're stretched.** / See every set, every stall and every video the moment it matters, without reading a single spreadsheet row.
 4. **Built by a client who could feel his coach drowning in spreadsheets.** / So we built the coaching app his coach actually uses.
 5. **The notebook that reads itself.** / PBs, stalls, check-ins and videos come to you, already worked out.
 6. **Draw on their lift. Talk them through it. Send.** / Video review, built into your coaching, not bolted on.
-7. **Stop checking. Start coaching.** / NorCoach works out the numbers from every logged set and tells you who needs you today.
+7. **Stop checking. Start coaching.** / Norcoach works out the numbers from every logged set and tells you who needs you today.
 8. **Nobody falls through the cracks.** / One list of who needs you, and every link lands on the exact set, meal or video.
 
 ## Objections (with the answer the copy should give)
-1. **"Sheets are free and I can make them do anything."** Free until it costs you a client. At €130–€250 a client a month, keeping one more client a year pays for NorCoach many times over. And a sheet can't tell you who needs you.
+1. **"Sheets are free and I can make them do anything."** Free until it costs you a client. At €130–€250 a client a month, keeping one more client a year pays for Norcoach many times over. And a sheet can't tell you who needs you.
 2. **"My clients won't download another app."** One app replaces the sheet, WhatsApp, Drive and MyFitnessPal for them; logging a set is a few taps. [Proof needed: Finlay's clients' adoption, a client quote.]
 3. **"I've switched before; moving 40 clients is a nightmare."** [Decision] Offer to move them for founding coaches: we set up your clients and programmes with you. (7 Nov: the research makes this the biggest objection: coaches stay on tools they dislike because rebuilding programmes and video libraries is the work they can't face. "It is going to take me a lot of time and work to move my clients and my data to a new system". The migration offer is worth deciding first.)
 4. **"What happens to my data if I leave?"** Your data is yours: Settings exports every client's data as one file, any time (built). [Decision] Say how long it's kept after you leave.
@@ -135,11 +135,11 @@ Earlier options (26 Oct):
 7. **"Will anyone answer when it does?"** In-app Support straight to the founder; no ticket bots. [Decision: response-time promise.]
 8. **"Pricing by client count punishes me for growing."** [Decision] Price so growth isn't punished: flat, or very gentle steps; no paid add-ons for core features.
 9. **"Will it make my coaching feel automated?"** The opposite: no AI between you and your clients; every review is your voice and your drawing; your face on everything you did in their app; it removes admin, not you.
-13. **"Everyone has AI now. Isn't no AI behind the times?"** Your clients pay for you, not a model; the ones who notice an AI reply leave (the research's "felt automated and AI-generated"). NorCoach does the arithmetic (PBs, trends, next weights) and leaves the coaching to you. (7 Nov: frame it as protecting the relationship and the coach's name, never as being against technology; coaches who like AI for their own admin shouldn't feel judged.)
+13. **"Everyone has AI now. Isn't no AI behind the times?"** Your clients pay for you, not a model; the ones who notice an AI reply leave (the research's "felt automated and AI-generated"). Norcoach does the arithmetic (PBs, trends, next weights) and leaves the coaching to you. (7 Nov: frame it as protecting the relationship and the coach's name, never as being against technology; coaches who like AI for their own admin shouldn't feel judged.)
 15. **"Kahunas already tells me who needs me."** (7 Nov) Theirs is an AI summary of your clients; ours is the actual thing waiting (the video, the note, the check-in), opened on the spot, and your client sees your face and words, not a drafted reply.
 14. **"Premium price, for what?"** [Decision, with pricing] Keeping one client longer pays for it; no add-ons; the founder on Support; we move your clients for you. Premium is the client's experience of you, not a feature count.
 10. **"Does it work in my country, my currency?"** [Verify] Euro and pound invoicing, Stripe payouts; the app in English.
-11. **"My clients log food in MyFitnessPal."** NorCoach has its own food diary with a clean catalogue of everyday foods in grams; nothing to pay extra for. [Note: no MyFitnessPal sync, by choice.]
+11. **"My clients log food in MyFitnessPal."** Norcoach has its own food diary with a clean catalogue of everyday foods in grams; nothing to pay extra for. [Note: no MyFitnessPal sync, by choice.]
 12. **"I don't have time to learn a new system."** [Proof needed: setup time for Finlay; a short walkthrough video.]
 
 ## Belief chains (what the coach has to believe to buy)
@@ -147,8 +147,8 @@ Earlier options (26 Oct):
 2. At my size, I can't see every client properly any more, however hard I work; it isn't a discipline problem.
 3. The reason is that the signs a client needs me are scattered and buried, and nothing brings them to me.
 4. The apps I know moved my data into one login but still make me go looking, and the newer ones put AI between me and my clients; neither fixes it, and the second makes it worse.
-5. NorCoach brings every sign to me (sets worked out, Needs you, links that land, Draw & Talk) and puts my face, not a bot, on what my clients see, so I can coach forty like I coached five: I grow on quality, not quantity.
-6. NorCoach is built by people I can trust and reach, and trying it is low-risk (they'll move my clients, my data stays mine).
+5. Norcoach brings every sign to me (sets worked out, Needs you, links that land, Draw & Talk) and puts my face, not a bot, on what my clients see, so I can coach forty like I coached five: I grow on quality, not quantity.
+6. Norcoach is built by people I can trust and reach, and trying it is low-risk (they'll move my clients, my data stays mine).
 
 (The step 4 doc turns these into at most six "I believe that…" statements.)
 

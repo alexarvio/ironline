@@ -57,7 +57,7 @@ const bricolage = localFont({
   variable: "--font-bricolage",
   display: "swap",
 });
-// Kirana: the "NorCoach" wordmark at the top left of the client app.
+// Kirana: the "Norcoach" wordmark at the top left of the client app.
 const kirana = localFont({
   src: "./fonts/Kirana-Regular.ttf",
   variable: "--font-brand",

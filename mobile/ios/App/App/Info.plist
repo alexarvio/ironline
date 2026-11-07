@@ -5,9 +5,9 @@
   <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>NorCoach reads your daily step count so your steps log themselves for your coach.</string>
+	<string>Norcoach reads your daily step count so your steps log themselves for your coach.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>NorCoach does not write to Apple Health.</string>
+	<string>Norcoach does not write to Apple Health.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

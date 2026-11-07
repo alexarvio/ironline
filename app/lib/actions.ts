@@ -4440,7 +4440,7 @@ export async function uploadCoachLogoAction(formData: FormData): Promise<{ ok: t
   return { ok: true };
 }
 
-/** Back to the NorCoach star. */
+/** Back to the Norcoach star. */
 export async function removeCoachLogoAction(): Promise<void> {
   const coach = await requireCoach();
   for (const old of removeCoachLogo(coach.id)) await deleteUpload(old);

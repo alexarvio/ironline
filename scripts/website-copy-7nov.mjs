@@ -36,7 +36,7 @@ s = s.slice(0, sixStart) + `<div class="six four">` +
   `
     </div>
     ` + s.slice(sixEnd);
-swapBetween(`<p class="lede">That's what NorCoach is for: your name,`, `</p>`, `<p class="lede">That's what NorCoach is built for. Four things make the difference.</p>`);
+swapBetween(`<p class="lede">That's what Norcoach is for: your name,`, `</p>`, `<p class="lede">That's what Norcoach is built for. Four things make the difference.</p>`);
 
 // 4. In Emma's app: drawn as the app's notifications (NotificationsScreen.tsx, globals.css .ntf-*).
 const P = {

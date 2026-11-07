@@ -4,7 +4,7 @@ import { DATA_DIR, getData, persist } from "./db";
 import { loadSharp } from "./sharpSetup";
 
 // The coach's logo behind the screens (28 Oct, Alex: "their logo would be the one in the background"). Where the
-// NorCoach star sits very faint today (the client's Home, every chat, every admin screen, the coach's phone), a coach
+// Norcoach star sits very faint today (the client's Home, every chat, every admin screen, the coach's phone), a coach
 // who uploaded a logo has it there instead: the coach on their own screens, their clients on theirs. None, the star.
 //
 // The upload is made into what the star is: one dark shape on nothing, in the star's box (448 × 430), so every screen

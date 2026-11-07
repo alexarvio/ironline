@@ -117,7 +117,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     notifications: join([notify.chat === false && notify.video === false ? "Phone off" : "Phone on", notify.quiet ? `quiet ${notify.quietFrom ?? "22:00"}–${notify.quietTo ?? "07:00"}` : null]),
     preferences: join([units, timezone]),
     data: "Export",
-    // What they pay NorCoach (28 Oct): the plan and its state in a word.
+    // What they pay Norcoach (28 Oct): the plan and its state in a word.
     billing: billing.status === "free" ? "Free" : join([billing.interval === "year" ? "Yearly" : billing.interval ? "Monthly" : null, billing.access.state === "readonly" ? "Read-only" : billing.status === "trialing" ? "Trial" : billing.status === "active" ? "Active" : billing.access.state === "grace" ? "Payment failed" : "Not started"]),
   };
 

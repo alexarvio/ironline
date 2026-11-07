@@ -1,13 +1,13 @@
-# NorCoach · Website copy (step 5)
+# Norcoach · Website copy (step 5)
 
-The home page at norcoachapp.com, written to the six necessary beliefs (`04-necessary-beliefs.md`) in order, plus the application page and the founder letter. For coaches buying NorCoach. First draft 26 Oct 2026; the site built from it (`website/index.html`, 28 Oct) took the positioning (premium, "the personal coaching app", "Coach better. Then coach more.", no AI between coach and client). **7 Nov: this file now follows the site's sections and brings in the deep research** (`07`, quotes checked in `08`). Lines marked **NEW 7 Nov** went onto the site the same day, except the "it's your name on it" paragraph in section 5 (it waits for real uptime proof and the move offer) and the hero lines to test.
+The home page at norcoachapp.com, written to the six necessary beliefs (`04-necessary-beliefs.md`) in order, plus the application page and the founder letter. For coaches buying Norcoach. First draft 26 Oct 2026; the site built from it (`website/index.html`, 28 Oct) took the positioning (premium, "the personal coaching app", "Coach better. Then coach more.", no AI between coach and client). **7 Nov: this file now follows the site's sections and brings in the deep research** (`07`, quotes checked in `08`). Lines marked **NEW 7 Nov** went onto the site the same day, except the "it's your name on it" paragraph in section 5 (it waits for real uptime proof and the move offer) and the hero lines to test.
 
 **7 Nov, later: the page was rewritten in plain words and restructured** (Alex: "all over the place… no structure"; two first-time readers, then a third, flagged what a coach reading it cold wouldn't get). Since then `website/index.html` is the copy itself; the sections below are the earlier draft and its reasoning. The page now runs:
-1. **Hero:** "Scale the quality of your online coaching." / "NorCoach is one tool to run your whole online coaching business. It was built by a client and his coach, around one idea: every client should feel their coaching is made for them." (7 Nov, Alex: the first paragraph carries only the strongest things: what it is, who built it, the idea; details like the name and photo belong further down.) Apply for early access. Under it: "Used every day by Finlay, an online coach in Amsterdam, and his clients." Caption: "Your laptop, and your client's phone."
+1. **Hero:** "Scale the quality of your online coaching." / "Norcoach is one tool to run your whole online coaching business. It was built by a client and his coach, around one idea: every client should feel their coaching is made for them." (7 Nov, Alex: the first paragraph carries only the strongest things: what it is, who built it, the idea; details like the name and photo belong further down.) Apply for early access. Under it: "Used every day by Finlay, an online coach in Amsterdam, and his clients." Caption: "Your laptop, and your client's phone."
 2. **The problem** (the four problem sections merged into one): clients quit when they feel their coach stopped paying attention; at twenty-five clients replies go out late; the two client quotes; a third gone by month six (source in small print, no competitor named).
-3. **Why it happens:** the warning signs lost across sheets, chats and forms; the picture labelled "In NorCoach: who needs you today".
+3. **Why it happens:** the warning signs lost across sheets, chats and forms; the picture labelled "In Norcoach: who needs you today".
 4. **How it works:** each client's whole plan on one screen (blocks of weeks across training, nutrition and lifestyle).
-5. **What your client feels (the spine, 7 Nov, Alex: "that's basically what NorCoach is about"):** your clients feel you're on top of their coaching. Six plain tiles: your name and photo on everything you send; notes right where they belong (block, session, exercise, meal); chat about the exact thing (link an exercise, meal or check-in); video feedback in your voice; goals on their home screen; see exactly what they see.
+5. **What your client feels (the spine, 7 Nov, Alex: "that's basically what Norcoach is about"):** your clients feel you're on top of their coaching. Six plain tiles: your name and photo on everything you send; notes right where they belong (block, session, exercise, meal); chat about the exact thing (link an exercise, meal or check-in); video feedback in your voice; goals on their home screen; see exactly what they see.
 6. **No AI** (short): nothing writes to your clients in your name (with the client's quote); the sums are ours, the coaching is yours.
 7. **Story** (moved up 7 Nov, Alex: now straight after The problem, the client's side of it and what was built), 8. **Founding coaches** (what it means, said plainly), 9. **FAQ** (+ no signal in the gym; price explained), 10. **Closing.**
 Feature names only we understand (Needs you, Links that land, Draw & Talk, To focus on, phases, tracks) are gone from the page; each says what it does.
@@ -22,7 +22,7 @@ Feature names only we understand (Needs you, Links that land, Draw & Talk, To fo
 ---
 
 ## Top bar
-NorCoach logo · How it works · Our story · FAQ · **Sign in** (→ app.norcoachapp.com) · **Apply** (ink pill)
+Norcoach logo · How it works · Our story · FAQ · **Sign in** (→ app.norcoachapp.com) · **Apply** (ink pill)
 
 ---
 
@@ -30,7 +30,7 @@ NorCoach logo · How it works · Our story · FAQ · **Sign in** (→ app.norcoa
 
 # Scale the quality of your online coaching.
 
-NorCoach is where you run your one-on-one coaching: programmes, check-ins, nutrition and chat, on your laptop and your clients' phones. Every day it shows you which clients need you, and why. So every client gets your full attention, even as you take on more.
+Norcoach is where you run your one-on-one coaching: programmes, check-ins, nutrition and chat, on your laptop and your clients' phones. Every day it shows you which clients need you, and why. So every client gets your full attention, even as you take on more.
 
 (7 Nov, Alex: the old hero, "The personal coaching app" over "Coach better. Then coach more.", read as weak and its line as all over the place. The rule from it: say what it is, what it does, what you get, in that order, in plain words a coach reading it for the first time understands.)
 
@@ -80,7 +80,7 @@ You're not a worse coach than you were at five clients. You're one person, readi
 
 ### The signs a client needs you are all there. They're just scattered.
 
-(The site's four cards: Tom's squat stuck at 80 kg for three weeks in row 41 of his sheet; Sara's knee in WhatsApp under 30 other messages; James's deadlift sent Tuesday somewhere in a chat; Emma's check-in missing from a form that doesn't know who didn't send. Then NorCoach's Needs you and "On their screens" with the same four, worked out for you.)
+(The site's four cards: Tom's squat stuck at 80 kg for three weeks in row 41 of his sheet; Sara's knee in WhatsApp under 30 other messages; James's deadlift sent Tuesday somewhere in a chat; Emma's check-in missing from a form that doesn't know who didn't send. Then Norcoach's Needs you and "On their screens" with the same four, worked out for you.)
 
 Every one of those is a client who needs you this week. You'll find them if you go looking, client by client. At forty clients, there's no time to look. That's the problem: not your effort. The signal is scattered, and nothing brings it to you.
 
@@ -102,7 +102,7 @@ You don't need more screens. You need the signs to come to you, so you can be th
 
 ---
 
-## 6. How NorCoach works `[Belief 5]`
+## 6. How Norcoach works `[Belief 5]`
 
 ### Every client on a plan you can see.
 
@@ -140,7 +140,7 @@ Coaching runs in phases, on three tracks: Lifestyle, Training and Nutrition. Eac
 
 **Your face on everything you did.** A note on their phase, a reply, their three goals, the latest on their home screen: each one wears your face, so they always know a person is behind it.
 
-**The arithmetic is ours. The coaching is yours.** Bests, trends and next week's weights are plain sums from what they logged, shown to you to decide on. NorCoach takes the reading of spreadsheets off you, not the coaching.
+**The arithmetic is ours. The coaching is yours.** Bests, trends and next week's weights are plain sums from what they logged, shown to you to decide on. Norcoach takes the reading of spreadsheets off you, not the coaching.
 
 **NEW 7 Nov** (replacing the site's "Clients now notice… and they leave", which says the section 5 quote twice and rests on one review): Use whatever you like for your own admin. What your client reads is yours. In one-on-one coaching, the personal touch is the product.
 
@@ -156,7 +156,7 @@ Coaching runs in phases, on three tracks: Lifestyle, Training and Nutrition. Eac
 >
 > One day we got talking about it. He said he was looking for "a CRM situation". I said, let me try and build it for you.
 >
-> NorCoach is what we built, together, with his clients using it every day.
+> Norcoach is what we built, together, with his clients using it every day.
 >
 > **Alex**, founder
 
@@ -166,7 +166,7 @@ Coaching runs in phases, on three tracks: Lifestyle, Training and Nutrition. Eac
 
 ## 9. Founding coaches `[Belief 6]`
 
-### We're opening NorCoach to a small group of founding coaches.
+### We're opening Norcoach to a small group of founding coaches.
 
 We'd rather have twenty coaches we know by name than two thousand we don't.
 
@@ -186,19 +186,19 @@ We'd rather have twenty coaches we know by name than two thousand we don't.
 
 **My clients won't download another app.** It replaces the sheet, the WhatsApp thread, the Drive folder and the food tracker for them. One app on iPhone or Android, and logging a set takes a few taps. `[Proof: Finlay's clients' adoption]`
 
-**Spreadsheets are free.** They are, until a client leaves because they felt unseen. One client kept a year longer pays for NorCoach many times over. And a spreadsheet can't tell you who needs you.
+**Spreadsheets are free.** They are, until a client leaves because they felt unseen. One client kept a year longer pays for Norcoach many times over. And a spreadsheet can't tell you who needs you.
 
-**NEW 7 Nov** (replacing "Everyone has AI now. Isn't no AI behind the times?", which made NorCoach sound against technology) **· Can I still use AI for my own work?** Of course. Use whatever helps you plan, write or run the business. NorCoach just never writes to your clients in your name: what they read is from you. It does the arithmetic (bests, trends, next week's weights) and leaves the coaching to you.
+**NEW 7 Nov** (replacing "Everyone has AI now. Isn't no AI behind the times?", which made Norcoach sound against technology) **· Can I still use AI for my own work?** Of course. Use whatever helps you plan, write or run the business. Norcoach just never writes to your clients in your name: what they read is from you. It does the arithmetic (bests, trends, next week's weights) and leaves the coaching to you.
 
 **I've switched apps before. Moving everyone was a nightmare.** As a founding coach you don't move anyone. We bring your clients and programmes over with you. `[Decision: the migration offer, and what can be imported from which apps; promise client history only where it's real]`
 
 **What if it breaks mid-workout?** Every set saves the moment it's entered, one by one. Nothing waits for the end of the session. **NEW 7 Nov:** `[Proof: an honest record, e.g. uptime since launch and sets lost (none), once we have it]`
 
-**Will anyone answer if something's wrong?** Yes. You write to us inside NorCoach and a person who builds it answers. **NEW 7 Nov:** Not a canned reply about clearing your cache. `[Decision: the response-time promise]`
+**Will anyone answer if something's wrong?** Yes. You write to us inside Norcoach and a person who builds it answers. **NEW 7 Nov:** Not a canned reply about clearing your cache. `[Decision: the response-time promise]`
 
-**NEW 7 Nov · Another app already tells me who needs me.** Some write you a summary of it. NorCoach gives you the thing itself, the video, the note, the check-in, open and ready to answer, and what your client gets back carries your face and your words.
+**NEW 7 Nov · Another app already tells me who needs me.** Some write you a summary of it. Norcoach gives you the thing itself, the video, the note, the check-in, open and ready to answer, and what your client gets back carries your face and your words.
 
-**Do my clients need a separate food app?** No. NorCoach has its own food diary, with everyday foods by the gram, at no extra cost.
+**Do my clients need a separate food app?** No. Norcoach has its own food diary, with everyday foods by the gram, at no extra cost.
 
 **What does it cost?** Founding coaches start with a 14-day free trial, then a founding price that never goes up for them. No paid add-ons. We'll share the price on your call. `[Decision: the price; pricing, no add-ons]`
 
@@ -217,7 +217,7 @@ Founding coaches get their clients moved in with them and a direct line to the p
 ---
 
 ## Footer
-NorCoach · Privacy · Support · Sign in · © 2026 Arvio Enterprises LLC
+Norcoach · Privacy · Support · Sign in · © 2026 Arvio Enterprises LLC
 
 ---
 
@@ -242,7 +242,7 @@ A few questions so we can set you up properly. We read every one.
 
 # Founder letter (`/story`, optional, longer version of section 8)
 
-### Why we built NorCoach
+### Why we built Norcoach
 
 I've been coached by Finlay for `[Proof: how long]`. He's the reason I train the way I do. `[Confirm: Alex's words]`
 
@@ -252,7 +252,7 @@ From my side, as his client, I could feel when he was stretched. `[Confirm: what
 
 So I asked him what he actually needed. Not more features. He needed the things that matter to come to him: who stalled, whose video is waiting, whose check-in came in, who hasn't trained this week. And he needed his clients to feel coached, every day, by him, not by a bot writing in his name.
 
-We built NorCoach with his clients, week by week, for months. `[Confirm: how long]` Every screen has been used by a real coach on real people before you'll see it.
+We built Norcoach with his clients, week by week, for months. `[Confirm: how long]` Every screen has been used by a real coach on real people before you'll see it.
 
 If you coach, I'd love to hear what your week looks like. Write to me: `[Decision: contact]`.
 

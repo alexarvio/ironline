@@ -1,8 +1,8 @@
 <!-- Claude Research's report from 06-deep-research-prompt.md, run 7 Nov 2026, pasted as it came. Quote checks: 08-research-checks.md. -->
 
-# NorCoach Market Research: What Online Coaches and Their Clients Say About Software, AI, Quality and Burnout (November 2026)
+# Norcoach Market Research: What Online Coaches and Their Clients Say About Software, AI, Quality and Burnout (November 2026)
 
-The evidence supports NorCoach's "scale on quality" position on one point: in the public record, coaches leave platforms over reliability, support and lock-in, not over AI. The "it felt automated" complaint is real, but it comes from clients. Coaches mostly don't object to AI, and vendors sell it to them as capacity.
+The evidence supports Norcoach's "scale on quality" position on one point: in the public record, coaches leave platforms over reliability, support and lock-in, not over AI. The "it felt automated" complaint is real, but it comes from clients. Coaches mostly don't object to AI, and vendors sell it to them as capacity.
 
 ## TL;DR
 
@@ -50,7 +50,7 @@ Short names: TrueCoach TP = https://uk.trustpilot.com/review/truecoach.co · Tra
 | Nordic platform sample | €181 per client per month (interquartile range €134–€255); median 5 active clients per coach (mean 17.2); average tenure 4.3 months | Coachway first-party data, Aug 2026: 201 Nordic coach accounts in Denmark, Norway, Sweden and Finland; 1,563 pricing records; 5,666 clients (vendor; read on the live page) |
 | Client prices seen | $250/month; $1,500 (≈€1,305) for 12 weeks; £170/month (≈€196) | Teamblind; Trustpilot 2026 |
 
-[Inference] The PTDC data is from 2021 and self-selected, and it is the only large survey found. There is no recent data on hours, years coaching or how coaches got into coaching. Coachway's data (Markus Evers, Aug 2026, n=201 Nordic coaches) found that "81% of online fitness coaches run fewer than 20 active clients; 4% run 100 or more". The largest roster was one coach with 295 clients. Most platform accounts therefore sit at or below the bottom of NorCoach's 10–60 band.
+[Inference] The PTDC data is from 2021 and self-selected, and it is the only large survey found. There is no recent data on hours, years coaching or how coaches got into coaching. Coachway's data (Markus Evers, Aug 2026, n=201 Nordic coaches) found that "81% of online fitness coaches run fewer than 20 active clients; 4% run 100 or more". The largest roster was one coach with 295 clients. Most platform accounts therefore sit at or below the bottom of Norcoach's 10–60 band.
 
 ### Q2. Attitudes
 
@@ -117,7 +117,7 @@ Short names: TrueCoach TP = https://uk.trustpilot.com/review/truecoach.co · Tra
 
 > "These online PT's have these automated apps that works for them to help their clients while they work out how to entice the next paying clients who will pay and fall for it." — Rachel Andrews (GB) | Empower TP | 2026-04 | [Page, sub-agent] | client
 
-In-group/out-group language: "AWFUL online coaches", "goober online", "read from a script", "automated apps", "guru", "paid-for-system". Good coaches define themselves against "generic", "automated" and "template". [Inference] The client prejudice, that online coaches are busy chasing the next sale, fits NorCoach exactly. But it is a client belief, and coaches may not apply it to themselves.
+In-group/out-group language: "AWFUL online coaches", "goober online", "read from a script", "automated apps", "guru", "paid-for-system". Good coaches define themselves against "generic", "automated" and "template". [Inference] The client prejudice, that online coaches are busy chasing the next sale, fits Norcoach exactly. But it is a client belief, and coaches may not apply it to themselves.
 
 ### Q7. Core beliefs [Inference, built from the quotes above]
 
@@ -203,7 +203,7 @@ Prices were not checked on vendor pricing pages in November 2026. All figures ar
 
 **Everfit.** Smart Response: "AI-generated drafts that match your coaching tone". Coaches can set the "Tone of voice", and with "Auto-generate response" on, "drafts appear automatically"; "50 free credits per month". Also Olly AI Assistant, Olly Voice and an AI Workout Builder. Marketing: "save 60% on admin and 10x their productivity"; "Coaching will never be the same." Trustpilot 2.8/5 (16 reviews). Price and coach quotes not captured.
 
-**Kahunas.** "pay-per-seat pricing from $5 down to $0.50" per client. Crew is "included from 50 clients": "Ora tells you which clients need you first, Moss drafts programs and meal plans from your library, and Whim answers questions about your clients"; "Crew suggests and drafts only." Trustpilot 4.8 (457). Note: Kahunas already sells a "clear list of who needs you and why" with an AI summary. That is NorCoach's "Needs you" idea, so NorCoach has to stand apart on having no AI and on how the client app feels.
+**Kahunas.** "pay-per-seat pricing from $5 down to $0.50" per client. Crew is "included from 50 clients": "Ora tells you which clients need you first, Moss drafts programs and meal plans from your library, and Whim answers questions about your clients"; "Crew suggests and drafts only." Trustpilot 4.8 (457). Note: Kahunas already sells a "clear list of who needs you and why" with an AI summary. That is Norcoach's "Needs you" idea, so Norcoach has to stand apart on having no AI and on how the client app feels.
 
 **Others.** My PT Hub Premium is $59/month with unlimited clients (G2); Trustpilot 4.4. PT Distinction: Trustpilot 4.7. CoachRx, Exercise.com, TrainHeroic, Hevy Coach, Harbiz, Coach Catalyst, Harley AI, TrainerFu and ProCoach were not researched.
 
@@ -226,7 +226,7 @@ Not found: a coach caught sending ChatGPT replies; a programme sent to the wrong
 
 > "When it works it is amazing. But it is constantly down or crashing or unable to load which affects workouts." — Shannon Tussey | Trainerize TP | 2026-06 | [Page]
 
-Coaches believe software helps with admin and delivery. No coach in the sample said software made them a better coach. Long-time users are jaded by decline after acquisition. **Sophistication: high.** Every platform leads with "#1", "save time", "scale", and now AI. **Awareness: problem- and product-aware.** But coaches frame the problem as reliability and admin, not as client attention slipping. [Inference] NorCoach has to make coaches aware of a problem they don't currently name, clients feeling processed, using the client quotes as proof.
+Coaches believe software helps with admin and delivery. No coach in the sample said software made them a better coach. Long-time users are jaded by decline after acquisition. **Sophistication: high.** Every platform leads with "#1", "save time", "scale", and now AI. **Awareness: problem- and product-aware.** But coaches frame the problem as reliability and admin, not as client attention slipping. [Inference] Norcoach has to make coaches aware of a problem they don't currently name, clients feeling processed, using the client quotes as proof.
 
 ---
 
@@ -305,7 +305,7 @@ Coachway also markets its automations as "rules-based scheduling, not an AI writ
 
 Vendor estimates: Coachway's capacity tool gives "about 40 clients" at 30 minutes each and says "Most coaches find quality starts slipping when they pack capacity above roughly 85 to 90 percent" (https://coachway.io/tools/client-capacity-calculator/). LVLUP's case study (likely a composite): "Every time she pushed past 25, something slipped. A check-in went unanswered for three days, a client's deload week didn't get programmed, an invoice never went out." (https://lvlup-app.com/blog/how-many-clients-can-an-online-coach-handle). Kickoff wants coaches "to scale to 50-100 clients over the course of a year." On memory: "The same coach with thirty clients knows names, recent session notes, and little else" (https://blog.walterclayton.com/coach-client-ratio-monitoring-quality-coaches/, [Snippet]).
 
-What slips first: check-in replies, then programme updates, then admin and invoices. [Inference] For solo coaches without systems, 25–40 clients is where quality slips. That sits inside NorCoach's 10–60 band and supports the "Needs you" list as the core promise.
+What slips first: check-in replies, then programme updates, then admin and invoices. [Inference] For solo coaches without systems, 25–40 clients is where quality slips. That sits inside Norcoach's 10–60 band and supports the "Needs you" list as the core promise.
 
 ### Q18. Data for and against "scale on quality"
 
@@ -404,7 +404,7 @@ Counts are occurrences in this sample of about 60 reviews and posts. They are no
 
 ---
 
-## Angles for NorCoach
+## Angles for Norcoach
 
 **1. "Your name is on the app. Make sure the app deserves it."** Loasby ("left looking unprofessional"), Hebert ("clowns"), and clients judging coaches by their software ("I wouldn't agree to work with a personal trainer again if they were using TrueCoach"). This is the coach's loudest pain, and it ties directly to the branded app.
 
@@ -414,7 +414,7 @@ Counts are occurrences in this sample of about 60 reviews and posts. They are no
 
 **4. "Fewer, better-kept clients."** The burned-out coach thread (volume playbook, then decline; "Lowering prices didn't fix lead quality"), Coachway's retention data (4.3-month average tenure, worst churn in months 3–6), and Barbell Logic's referral growth. The business case: keeping a client from month 4 to month 9 is worth more than signing a new one.
 
-**5. "Leave without starting over."** Four coaches name rebuilding programmes and history as why they stay; clients complain they can't export their data. [Inference] Migration help and open export could answer the switching objection. These are product promises for NorCoach to confirm, not established facts.
+**5. "Leave without starting over."** Four coaches name rebuilding programmes and history as why they stay; clients complain they can't export their data. [Inference] Migration help and open export could answer the switching objection. These are product promises for Norcoach to confirm, not established facts.
 
 **Counter-evidence, stated plainly.** Some coaches want volume and AI ("grow exponentially", "scaling my business"), and the PTDC's highest earners had 100+ clients. ABC says, with no data behind it, that "some FitMetrics customers reported doubling — and in some cases quadrupling — their coaching capacity" (Athletech News, 4 Sept 2026), and no backlash from coaches was found. No coach in this sample objected to AI on principle, so "no AI" alone will not move coaches; it has to be tied to client experience and reputation. Only one client review complains about AI specifically. The broader client complaint is feeling *generic*, which coaches cause without AI too.
 

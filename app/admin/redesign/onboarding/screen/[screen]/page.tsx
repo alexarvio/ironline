@@ -69,7 +69,7 @@ export default async function OnboardingScreen({ params }: { params: Promise<{ s
           <div className="ob-mail">
             <div className="ob-mail-head">
               <span className="ob-mail-subject">{mail.subject}</span>
-              <span className="ob-mail-from">{rail.coach.name} · via NorCoach</span>
+              <span className="ob-mail-from">{rail.coach.name} · via Norcoach</span>
             </div>
             {/* The email exactly as sent; the words are ours (lib/mail.ts), with every value escaped there. */}
             <div className="ob-mail-body" dangerouslySetInnerHTML={{ __html: mail.html }} />

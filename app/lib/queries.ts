@@ -8433,7 +8433,7 @@ export function logCoachActivity(
   if (opts.kind !== "reminder" && worthABuzz) {
     const user = data.users.find((u) => u.role === "client" && u.client_id === clientId);
     if (user) {
-      // The phone shows "NorCoach" and the icon above this already, so the
+      // The phone shows "Norcoach" and the icon above this already, so the
       // title says what kind of news it is and the body what happened.
       const coach = getCoachDisplayName(clientId);
       const title =
