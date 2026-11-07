@@ -11,6 +11,8 @@ import { NorCoachMark } from "../components/NorCoachLogo";
 
 /** Played on this page load. A module's state lives as long as the page, so a reload starts it over. */
 let played = false;
+/** The least time from opening before the logo spins off (7 Nov, Alex). */
+const HOLD_MS = 1200;
 export const openingPlayed = () => played;
 
 /** The paper and the star, as loading.tsx and the page draw it, so the swap between them is never seen. */
@@ -37,13 +39,19 @@ export default function OpeningSplash() {
     if (!opening) return;
     // No early return when played: dev runs an effect twice, and the second run must still start the exit.
     played = true;
-    // Hydrated: the app can be tapped. Two frames so it is painted under the paper before the paper goes.
-    let raf = requestAnimationFrame(() => {
-      raf = requestAnimationFrame(() => setState("leaving"));
-    });
+    // Hydrated: the app can be tapped. The logo stays until 1.2s from opening at the least (7 Nov, Alex: "insanely
+    // fast"; a laptop is ready in a blink), then two frames so the app is painted under the paper before it goes.
+    const hold = Math.max(0, HOLD_MS - performance.now());
+    let raf = 0;
+    const start = window.setTimeout(() => {
+      raf = requestAnimationFrame(() => {
+        raf = requestAnimationFrame(() => setState("leaving"));
+      });
+    }, hold);
     // Should an animation never end (a background tab, say), the app still shows.
-    const done = window.setTimeout(() => setState("gone"), 1400);
+    const done = window.setTimeout(() => setState("gone"), hold + 1800);
     return () => {
+      clearTimeout(start);
       cancelAnimationFrame(raf);
       clearTimeout(done);
     };
