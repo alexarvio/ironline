@@ -21364,9 +21364,10 @@ button.chat-att-main { cursor: pointer; }
 /* Opening (7 Nov, Alex: "the norcoach logo on like a blank screen and then when it is done, an animation at it spins
    off and then the app appears"; OpeningSplash.tsx, loading.tsx): the phone shell's launch screen exactly, the ink star
    on its paper #f8f9fb, centred, as wide as the launch image draws it (15.6% of the screen's long side, the svg's own
-   margin on top), so the hand-off from the native screen is never seen. Ready, the star winds back a touch, then spins
-   away shrinking as it fades (460ms), and the paper fades off the app as the star goes (from 260ms): 560ms in all.
-   Reduced motion: the paper fades, no spin. Should the app never say it is ready, the paper goes by itself after 8s. */
+   margin on top), so the hand-off from the native screen is never seen. Ready, and 1.2s from opening at the least (7
+   Nov, Alex: "insanely fast"), the star winds back a touch, then spins away shrinking as it fades (900ms), and the
+   paper fades off the app as the star goes (from 550ms): 950ms in all. Reduced motion: the paper fades, no spin.
+   Should the app never say it is ready, the paper goes by itself after 8s. */
 .nc-open {
   position: fixed; inset: 0; z-index: 2147483000;
   display: grid; place-items: center;
@@ -21374,8 +21375,8 @@ button.chat-att-main { cursor: pointer; }
   animation: nc-open-safe 1ms linear 8s forwards;
 }
 .nc-open-star { width: min(16vmax, 160px); height: auto; display: block; will-change: transform, opacity; }
-.nc-open.leaving { pointer-events: none; animation: nc-open-off 300ms ease 260ms forwards; }
-.nc-open.leaving .nc-open-star { animation: nc-open-spin 460ms forwards; }
+.nc-open.leaving { pointer-events: none; animation: nc-open-off 400ms ease 550ms forwards; }
+.nc-open.leaving .nc-open-star { animation: nc-open-spin 900ms forwards; }
 @keyframes nc-open-spin {
   0% { transform: rotate(0deg) scale(1); opacity: 1; animation-timing-function: cubic-bezier(.22, 1, .36, 1); }
   16% { transform: rotate(-14deg) scale(1.06); opacity: 1; animation-timing-function: cubic-bezier(.5, 0, .45, 1); }
