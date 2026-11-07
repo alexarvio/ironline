@@ -551,30 +551,49 @@ h1, h2, h3 { font-weight: 600; }
 
 /* ---- Built on phases (28 Oct, Alex): the Plan's timeline, the three tracks, and a
    switch showing the coach's tab and the client's screen for each. ---------- */
-.pl { --lab: 132px; position: relative; margin-top: 40px; padding: 20px 24px 30px; background: #fff; border-radius: 22px; box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
-.pl-axis, .pl-lane { display: flex; align-items: center; }
-.pl-lab { flex: none; width: var(--lab); display: flex; align-items: center; gap: 8px; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
-.pl-lab svg { width: 15px; height: 15px; }
-.pl-grid { position: relative; flex: 1; min-width: 0; }
-.pl-axis .pl-grid { height: 22px; }
-.pl-axis .pl-grid span { position: absolute; top: 0; font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
-.pl-lane { height: 56px; }
-.pl-lane .pl-grid { height: 44px; overflow: hidden; background: repeating-linear-gradient(90deg, transparent 0 calc(100% / 18 - 1px), #F1F3F6 calc(100% / 18 - 1px) calc(100% / 18)); }
-.pl-bar {
-  position: absolute; top: 3px; height: 38px; padding: 4px 10px; border-radius: 10px; overflow: hidden; white-space: nowrap;
-  display: flex; flex-direction: column; justify-content: center; color: var(--ink);
-  background: color-mix(in srgb, var(--c) 10%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 50%, #fff);
-}
-.pl-bar b { font-size: 12.5px; font-weight: 600; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; }
-.pl-bar span { font-size: 10.5px; color: var(--muted); }
-.pl-bar em { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); padding: 3px 8px; border-radius: 999px; background: #fff; font-style: normal; font-size: 10.5px; font-weight: 600; color: var(--c); }
-.pl-bar.next { background: #fff; }
-.pl-bar.past { filter: grayscale(1); opacity: .45; }
-.pl-bar.past b, .pl-bar.past span { visibility: hidden; }
-.pl-now { position: absolute; top: 44px; bottom: 24px; width: 0; border-left: 1.5px solid var(--ink); }
-.pl-now i { position: absolute; left: -5px; top: -10px; width: 9px; height: 9px; border-radius: 50%; background: var(--ink); animation: pl-pulse 2s ease-in-out infinite; }
-.pl-now span { position: absolute; left: -12px; bottom: -17px; font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
-@keyframes pl-pulse { 50% { box-shadow: 0 0 0 5px rgba(20,26,36,.12); } }
+/* The plan mock is the Plan tab's Phases card (7 Nov, Alex: "make it as accurate as possible"; timelineParts.tsx,
+   plan.css, phaseChrome.ts): its title and controls over a hairline card, small caps months, week numbers over their
+   Mondays, a lane a track with its icon, bars tinted in the track while live (the weeks gone shaded), blue while
+   scheduled, a draft dashed peach, each with its state pill, and the now line in ink with its pulsing dot. */
+.pq { --pq-lab: 108px; margin-top: 40px; }
+.pq-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.pq-head > b { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.pq-tools { display: flex; align-items: center; gap: 10px; }
+.pq-pan { display: inline-flex; align-items: center; gap: 4px; color: var(--sub); }
+.pq-pan svg { width: 16px; height: 16px; }
+.pq-pan em { padding: 0 6px; font-style: normal; font-size: 12.5px; font-weight: 600; }
+.pq-cap { display: inline-flex; padding: 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE1E8; font-size: 12.5px; font-weight: 600; }
+.pq-cap span { padding: 6px 12px; border-radius: 999px; color: var(--body); }
+.pq-cap .on { background: var(--ink); color: #fff; }
+.pq-add { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE1E8; font-size: 12.5px; font-weight: 600; }
+.pq-add svg { width: 14px; height: 14px; }
+.pq-card { position: relative; padding: 8px 14px 10px; border: 1px solid #e1e5eb; border-radius: 18px; background: #fff; overflow: hidden; }
+.pq-row { display: grid; grid-template-columns: var(--pq-lab) minmax(0, 1fr); align-items: stretch; }
+.pq-grid { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); }
+.pq-month { padding: 4px 8px 2px; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #5b6474; border-left: 1px solid #eef0f3; }
+.pq-week { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0 8px; border-left: 1px solid #f1f3f6; }
+.pq-week b { font-size: 12px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.pq-week small { font-size: 10.5px; font-weight: 500; color: #98a2b3; white-space: nowrap; }
+.pq-week.now b, .pq-week.now small { color: var(--ink); }
+.pq-body { position: relative; }
+.pq-body .pq-row { padding: 6px 0; }
+.pq-lab { display: flex; align-items: center; gap: 7px; padding: 0 8px 0 10px; font-size: 12.5px; font-weight: 600; }
+.pq-lab svg { width: 15px; height: 15px; flex: none; }
+.pq-body .pq-grid > * { grid-row: 1; }
+.pq-cell { min-height: 38px; border-left: 1px solid #f1f3f6; }
+.pq-bar { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; min-width: 0; margin: 3px 1px; padding: 0 12px 0 14px; border: 1px solid; border-radius: 10px; overflow: hidden; }
+.pq-bar.clip-start { border-left: 0; border-radius: 0 10px 10px 0; margin-left: 0; }
+.pq-bar.clip-end { border-right: 0; border-radius: 10px 0 0 10px; margin-right: 0; }
+.pq-el { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(20, 26, 36, .06); }
+.pq-main { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 4px 0; line-height: 1.2; }
+.pq-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pq-meta { font-size: 10.5px; font-weight: 500; opacity: .8; white-space: nowrap; }
+.pq-pill { position: relative; flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 500; white-space: nowrap; }
+.pq-pill b { font-weight: 600; }
+.pq-pill .sep { height: 9px; margin: 0 2px; background: currentColor; opacity: .35; }
+.pq-now { position: absolute; top: 0; bottom: 0; z-index: 3; width: 1.5px; margin-left: -.75px; background: var(--ink); }
+.pq-now::before { content: ""; position: absolute; top: -2px; left: 50%; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); transform: translateX(-50%); animation: pq-pulse 2s ease-out infinite; }
+@keyframes pq-pulse { 0% { box-shadow: 0 0 0 0 rgba(20, 26, 36, .4); } 70% { box-shadow: 0 0 0 7px rgba(20, 26, 36, 0); } 100% { box-shadow: 0 0 0 0 rgba(20, 26, 36, 0); } }
 
 .tracks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin-top: 32px; }
 .tracks .tk { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--c); }
@@ -831,10 +850,11 @@ h1, h2, h3 { font-weight: 600; }
   .tp .phone2-screen { border-radius: 34px; }
 }
 @media (max-width: 820px) {
-  .pl { --lab: 40px; padding: 16px 14px; }
-  .pl-lab { font-size: 0; letter-spacing: 0; }
-  .pl-bar b { font-size: 11px; }
-  .pl-bar span, .pl-bar em { display: none; }
+  /* On a narrow screen the card keeps the app's proportions and scrolls sideways, as the Plan does. */
+  .pq-head { flex-wrap: wrap; }
+  .pq-pan, .pq-cap { display: none; }
+  .pq-card { overflow-x: auto; }
+  .pq-card > * { min-width: 820px; }
 }
 @media (max-width: 600px) {
   .tp-switch { margin-top: 48px; }
