@@ -21392,10 +21392,10 @@ html.nc-framed .nc-open { display: none; }
 
 /* Admin opening (7 Nov, Alex: "while it's loading, just the logo. And once it's loaded, just the name appears from behind
    and boom… everything centered"; app/admin/AdminOpening.tsx, mounted by app/admin/layout.tsx): the star alone in the
-   middle of the paper while the admin loads, held 0.9s from opening at the least. Ready, the star gives a quick punch
+   middle of the paper while the admin loads, held 1.8s from opening at the least. Ready, the star gives a quick punch
    and the NORCOACH word shoots out from behind it, its room growing as it comes so star and word stay centred as one,
-   the logo's own gap and sizes (both 1em, .nc-logo), 650ms on the fold curve; the whole logo holds a moment, then the
-   paper fades off the admin as the logo lifts a touch: 1.55s in all. Reduced motion: the logo whole from the start, the
+   the logo's own gap and sizes (both 1em, .nc-logo), 1.3s on the fold curve; the whole logo holds a second, then the
+   paper fades off the admin as the logo lifts a touch: 3.1s in all (7 Nov, Alex: "double the amount of time"). Reduced motion: the logo whole from the start, the
    word fading in, then the paper. Should the admin never say it is ready, the paper goes by itself after 8s. */
 .nc-boot {
   position: fixed; inset: 0; z-index: 2147483000;
@@ -21407,11 +21407,11 @@ html.nc-framed .nc-open { display: none; }
 .nc-boot-star { position: relative; z-index: 1; flex: none; display: block; height: 1em; width: auto; }
 .nc-boot-wordwrap { flex: none; display: block; width: 0; height: 1em; margin-left: 0; overflow: hidden; }
 .nc-boot-word { display: block; height: 1em; width: 5.682em; transform: translateX(-100%); opacity: 0; }
-.nc-boot.revealing { pointer-events: none; animation: nc-boot-off 400ms ease 1150ms forwards; }
-.nc-boot.revealing .nc-boot-logo { animation: nc-boot-lift 400ms ease 1150ms forwards; }
-.nc-boot.revealing .nc-boot-star { animation: nc-boot-punch 650ms cubic-bezier(.22, 1, .36, 1) forwards; }
-.nc-boot.revealing .nc-boot-wordwrap { animation: nc-boot-wrap 650ms cubic-bezier(.22, 1, .36, 1) forwards; }
-.nc-boot.revealing .nc-boot-word { animation: nc-boot-word 650ms cubic-bezier(.22, 1, .36, 1) forwards; }
+.nc-boot.revealing { pointer-events: none; animation: nc-boot-off 800ms ease 2300ms forwards; }
+.nc-boot.revealing .nc-boot-logo { animation: nc-boot-lift 800ms ease 2300ms forwards; }
+.nc-boot.revealing .nc-boot-star { animation: nc-boot-punch 1300ms cubic-bezier(.22, 1, .36, 1) forwards; }
+.nc-boot.revealing .nc-boot-wordwrap { animation: nc-boot-wrap 1300ms cubic-bezier(.22, 1, .36, 1) forwards; }
+.nc-boot.revealing .nc-boot-word { animation: nc-boot-word 1300ms cubic-bezier(.22, 1, .36, 1) forwards; }
 @keyframes nc-boot-punch { 0% { transform: scale(1); } 14% { transform: scale(.86); } 45% { transform: scale(1.06); } 100% { transform: scale(1); } }
 @keyframes nc-boot-wrap { to { width: 5.682em; margin-left: .5em; } }
 @keyframes nc-boot-word { 0% { transform: translateX(-100%); opacity: 0; } 25% { opacity: 1; } 100% { transform: none; opacity: 1; } }

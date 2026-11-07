@@ -10,8 +10,8 @@ import { useEffect, useState } from "react";
 import { NorCoachMark, NorCoachWordmark } from "../components/NorCoachLogo";
 
 let played = false;
-/** The least time from opening before the word comes out, so the star alone is seen (7 Nov, Alex). */
-const HOLD_MS = 900;
+/** The least time from opening before the word comes out, so the star alone is seen (7 Nov, Alex; doubled: "make it last double the amount of time"). */
+const HOLD_MS = 1800;
 
 export default function AdminOpening() {
   const [state, setState] = useState<"on" | "revealing" | "gone">(() => (played ? "gone" : "on"));
@@ -30,7 +30,7 @@ export default function AdminOpening() {
       });
     }, hold);
     // Should an animation never end (a background tab, say), the admin still shows.
-    const done = window.setTimeout(() => setState("gone"), hold + 2600);
+    const done = window.setTimeout(() => setState("gone"), hold + 4500);
     return () => {
       clearTimeout(start);
       cancelAnimationFrame(raf);
