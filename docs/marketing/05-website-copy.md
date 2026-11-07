@@ -198,7 +198,7 @@ We'd rather have twenty coaches we know by name than two thousand we don't.
 
 **NEW 7 Nov · Another app already tells me who needs me.** Some write you a summary of it. Norcoach gives you the thing itself, the video, the note, the check-in, open and ready to answer, and what your client gets back carries your face and your words.
 
-**Do my clients need a separate food app?** No. Norcoach has its own food diary, with everyday foods by the gram, at no extra cost.
+**Do my clients need a separate food app?** No, they don't need one. Norcoach has an extensive food library built in for your clients to use.
 
 **What does it cost?** Founding coaches start with a 14-day free trial, then a founding price that never goes up for them. No paid add-ons. We'll share the price on your call. `[Decision: the price; pricing, no add-ons]`
 
