@@ -101,7 +101,7 @@ Alex was Finlay's client. Finlay is a good coach, but he ran everything in Excel
 What it deliberately is not: no AI between coach and client, nothing written or decided in the coach's name (the market now spots and resents it, and Finlay left Trainerize over it); not built to "scale" a coach into a template factory; no add-on paywalls for core features [Decision, see pricing]. What it does work out is arithmetic from what the client logged (PBs, trends, the next weight), shown to the coach to decide on.
 
 ## Potential headline / subheadline ideas
-Chosen (28 Oct): **Coach better. Then coach more.** Others in the same spirit: "Better coaching. More clients.", "Raise your coaching. Then your roster.", "More clients. Not less of you."
+Chosen (7 Nov, Alex): **Scale the quality of your online coaching.** It replaced "Coach better. Then coach more." (28 Oct), which carried too little weight; "The personal coaching app" is off the page too. Others in the same spirit: "Better coaching. More clients.", "Raise your coaching. Then your roster.", "More clients. Not less of you."
 
 New lead options with the positioning (27 Oct):
 - **Scale on quality.** / The personal coaching app. Every set, check-in and video comes to you, and every client sees you, not a bot.

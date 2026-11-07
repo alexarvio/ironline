@@ -18,17 +18,17 @@ NorCoach logo · How it works · Our story · FAQ · **Sign in** (→ app.norcoa
 
 ## 1. Hero `[Beliefs 1 and 5]`
 
-*The personal coaching app*
+# Scale the quality of your online coaching.
 
-# Coach better. Then coach more.
+NorCoach is where you run your one-on-one coaching: programmes, check-ins, nutrition and chat, on your laptop and your clients' phones. Every day it shows you which clients need you, and why. So every client gets your full attention, even as you take on more.
 
-NorCoach brings every set, check-in and video to you, and puts your face, not a bot, on everything your clients see. Every client gets more of you, and you get the room to take on more clients. Coach forty the way you coached five.
+(7 Nov, Alex: the old hero, "The personal coaching app" over "Coach better. Then coach more.", read as weak and its line as all over the place. The rule from it: say what it is, what it does, what you get, in that order, in plain words a coach reading it for the first time understands.)
 
 **[Apply to be a founding coach]** · See how it works ↓
 
 *Built with a coach and his clients. Not in a boardroom.*
 
-The coach's screen (a client's Home) beside the client's phone with the coach's face on what he did: **You, in every client's pocket.** *Your face on everything you did.*
+The coach's screen (a client's Home) beside the client's phone, captioned: **Your laptop, and your client's phone.** The notes, replies and goals they see carry your name and photo. (Was "You, in every client's pocket. Your face on everything you did.", which only made sense to us.)
 
 Hero lines to test against it (from the 7 Nov research): **Your name is on it. Your face too.** / **Every client hears from you.** (Not "Never just a thumbs up": the chat has reactions, and a reaction clears a message from Needs you, so the app itself would break that promise. Keep the client's thumb's-up quote in section 2 as their words, not as ours.)
 
