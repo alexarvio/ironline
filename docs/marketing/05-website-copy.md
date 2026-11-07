@@ -2,6 +2,16 @@
 
 The home page at norcoachapp.com, written to the six necessary beliefs (`04-necessary-beliefs.md`) in order, plus the application page and the founder letter. For coaches buying NorCoach. First draft 26 Oct 2026; the site built from it (`website/index.html`, 28 Oct) took the positioning (premium, "the personal coaching app", "Coach better. Then coach more.", no AI between coach and client). **7 Nov: this file now follows the site's sections and brings in the deep research** (`07`, quotes checked in `08`). Lines marked **NEW 7 Nov** went onto the site the same day, except the "it's your name on it" paragraph in section 5 (it waits for real uptime proof and the move offer) and the hero lines to test.
 
+**7 Nov, later: the page was rewritten in plain words and restructured** (Alex: "all over the place… no structure"; two first-time readers, then a third, flagged what a coach reading it cold wouldn't get). Since then `website/index.html` is the copy itself; the sections below are the earlier draft and its reasoning. The page now runs:
+1. **Hero:** "Scale the quality of your online coaching." / NorCoach replaces your spreadsheets and WhatsApp with one app; built so every client feels you're on top of their coaching (your name and photo on everything you send; who needs you each day, and why). Apply for early access. Caption: "Your laptop, and your client's phone."
+2. **The problem** (the four problem sections merged into one): clients quit when they feel their coach stopped paying attention; at twenty-five clients replies go out late; the two client quotes; a third gone by month six (source in small print, no competitor named).
+3. **Why it happens:** the warning signs lost across sheets, chats and forms; the picture labelled "In NorCoach: who needs you today".
+4. **How it works:** each client's whole plan on one screen (blocks of weeks across training, nutrition and lifestyle).
+5. **What your client feels (the spine, 7 Nov, Alex: "that's basically what NorCoach is about"):** your clients feel you're on top of their coaching. Six plain tiles: your name and photo on everything you send; notes right where they belong (block, session, exercise, meal); chat about the exact thing (link an exercise, meal or check-in); video feedback in your voice; goals on their home screen; see exactly what they see.
+6. **No AI** (short): nothing writes to your clients in your name (with the client's quote); the sums are ours, the coaching is yours.
+7. **Story**, 8. **Founding coaches** (what it means, said plainly), 9. **FAQ** (+ no signal in the gym; price explained), 10. **Closing.**
+Feature names only we understand (Needs you, Links that land, Draw & Talk, To focus on, phases, tracks) are gone from the page; each says what it does.
+
 **Conventions**
 - `[Belief n]` marks which belief a section moves the reader along. Not shown on the page.
 - `[REC n]` is a short silent screen recording (6 to 12 seconds, looping) made from the real app with demo clients; scripts at the end.
