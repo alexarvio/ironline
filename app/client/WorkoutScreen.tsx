@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDismiss } from "./useDismiss";
-import { discardSessionAction, endSessionAction, setExerciseUnitAction } from "../lib/actions";
+import { enqueueWorkout } from "../components/workoutOutbox";
+import { useKeptDraft } from "../components/chatOutbox";
 import { ChatIcon, ChevronLeftIcon, NOTE_ICON_PATHS } from "../components/icons";
 import { useOpenMessages } from "./CheckInContext";
 import type { GymOption } from "./GymPickerDialog";
@@ -199,48 +200,60 @@ export default function WorkoutScreen({
   };
   const openMessages = useOpenMessages();
   const currentNote = currentEx ? ((gymId != null ? currentEx.gymNotes?.[gymId] : "") || currentEx.myNote).trim() : "";
-  const [, startTransition] = useTransition();
   const gymName = day.gyms.find((g) => g.id === gymId)?.name ?? null;
+  // Every save here is kept on the phone until the server has it (7 Nov, Alex: offline saving; workoutOutbox.ts).
+  const session = { dayId: day.key, startedAt: day.startedAt };
 
-  // Ending and discarding.
-  const [note, setNote] = useState(day.sessionNote);
+  // Ending and discarding. The note to the coach is kept on the phone as it is typed (7 Nov), so a closed app or a
+  // reload before the swipe never loses it; what the session already says shows when nothing was kept.
+  const noteKey = `session-note.${day.key}`;
+  const [note, setNote] = useKeptDraft(noteKey);
+  useEffect(() => {
+    const t = setTimeout(() => setNote((cur) => cur || day.sessionNote, false), 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on opening
+  }, []);
+  // Gone from the phone once it is in the outbox: the end carries it from there.
+  const dropKeptNote = () => {
+    try {
+      window.localStorage.removeItem(`norcoach.draft.${noteKey}`);
+    } catch {}
+  };
   // The coach's questions before ending, each optional: 1 to 10, a second tap takes the answer back.
   const [answers, setAnswers] = useState<Record<string, number | string | null>>(day.answers);
   const [ending, setEnding] = useState(false);
+  const answerList = () => day.questions.map((q) => ({ id: q.id, value: answers[q.id] ?? null }));
   const end = () => {
     if (ending) return;
     setEnding(true);
     // A free session ended with nothing in it is not kept (19 Oct): it goes, as when left empty.
     if (day.free && day.exercises.length === 0 && day.cardio.length === 0) {
+      enqueueWorkout({ kind: "discard", ...session });
+      dropKeptNote();
       onDiscarded();
-      startTransition(async () => {
-        await discardSessionAction(day.key);
-      });
       return;
     }
-    startTransition(async () => {
-      await endSessionAction(day.key, { note, answers: day.questions.map((q) => ({ id: q.id, value: answers[q.id] ?? null })) });
-      setTimeout(onEnded, 900);
-    });
+    // Ended on the phone at the swipe, signal or none; the saved toast follows as it always did.
+    enqueueWorkout({ kind: "end", note, answers: answerList(), endAt: new Date().toISOString(), edit: false, ...session });
+    dropKeptNote();
+    setTimeout(onEnded, 900);
   };
   // Editing: the note and answers saved, ended_at given back as it was.
   const saveEdit = () => {
     if (ending) return;
     setEnding(true);
-    startTransition(async () => {
-      await endSessionAction(day.key, { note, at: day.endedAt ?? undefined, answers: day.questions.map((q) => ({ id: q.id, value: answers[q.id] ?? null })) });
-      onEdited?.();
-    });
+    enqueueWorkout({ kind: "end", note, answers: answerList(), endAt: day.endedAt ?? new Date().toISOString(), edit: true, ...session });
+    dropKeptNote();
+    onEdited?.();
   };
   const discard = () => {
     setMenuOpen(false);
     if (!window.confirm(`Discard ${day.title}? Logged sets will be deleted.`)) return;
     // At once (19 Oct, Alex: it took seconds): the screen closes now and the
     // server's discard, and the page it rebuilds, follow behind.
+    enqueueWorkout({ kind: "discard", ...session });
+    dropKeptNote();
     onDiscarded();
-    startTransition(async () => {
-      await discardSessionAction(day.key);
-    });
   };
 
   // The chat (about the exercise on screen, when there is one) and the ⋯.
@@ -405,6 +418,7 @@ export default function WorkoutScreen({
                 exercise={day.exercises[p.index]}
                 index={p.index + 1}
                 total={day.exercises.length}
+                session={session}
                 sessionLabel={editing ? <Bars parts={["Editing", day.title]} /> : day.title}
                 gymId={gymId}
                 coachName={coachName}
@@ -440,6 +454,7 @@ export default function WorkoutScreen({
                 <CardioCard
                   cardio={day.cardio[p.index]}
                   index={day.exercises.length + p.index + 1}
+                  session={session}
                   coachName={coachName}
                   sessionLabel={editing ? <Bars parts={["Editing", day.title]} /> : day.title}
                   position={{ n: p.index + 1, total: day.cardio.length }}
@@ -487,7 +502,7 @@ export default function WorkoutScreen({
                         <span className="wo-check-name" aria-hidden="true">
                           {name}
                         </span>
-                        {showUnit && ex && <CheckUnit key={`${ex.id}:${ex.unit ?? "kg"}`} ex={ex} disabled={locked} />}
+                        {showUnit && ex && <CheckUnit key={`${ex.id}:${ex.unit ?? "kg"}`} ex={ex} session={session} disabled={locked} />}
                         <span className={`wo-check-status${complete ? " done" : count ? " part" : ""}`} aria-hidden="true">
                           {status}
                         </span>
@@ -601,13 +616,13 @@ function MenuIcon({ kind }: { kind: keyof typeof MENU_ICONS }) {
 
 // Kg or lbs on the finish list, beside Done (21 Oct, Alex): the words alone, the one on in ink, the other grey; a tap
 // switches the exercise's logged sets (the weights stay kg) and it opens in it next time. Shown at once, saved behind.
-function CheckUnit({ ex, disabled }: { ex: SessionExercise; disabled: boolean }) {
+function CheckUnit({ ex, session, disabled }: { ex: SessionExercise; session: { dayId: number; startedAt: string | null }; disabled: boolean }) {
   const [unit, setUnit] = useState<WeightUnit>(ex.unit ?? "kg");
-  const [, start] = useTransition();
   const pick = (u: WeightUnit) => {
     if (disabled || u === unit) return;
     setUnit(u);
-    start(() => setExerciseUnitAction(ex.id, u));
+    // Kept on the phone until sent (7 Nov, workoutOutbox.ts), after the sets it reads.
+    enqueueWorkout({ kind: "unit", assignmentId: ex.id, unit: u, ...session });
   };
   // The unit it was logged in alone (23 Oct, Alex: no "lbs" beside "kg"); a tap switches it.
   const other: WeightUnit = unit === "kg" ? "lb" : "kg";

@@ -3,8 +3,9 @@
 import { Fragment, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Bars } from "./Bars";
-import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, pickGymAction, removeFreeSessionAction, startSessionAction } from "../lib/actions";
+import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, removeFreeSessionAction } from "../lib/actions";
 import { newOnceKey } from "../lib/onceKey";
+import { applyWorkoutOutbox, clearNotSaved, enqueueWorkout, notSavedWords, useWorkoutOutbox } from "../components/workoutOutbox";
 import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
@@ -12,7 +13,7 @@ import { CompassIcon } from "../components/icons";
 import RingEdge from "../components/RingEdge";
 import DoneCheck from "../components/DoneCheck";
 import { useFocusRef, useNavigateTab, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
-import { clock, durationMinutes, elapsedMs, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type LibraryPick, type SessionCardio, type SessionDay, type SessionExercise } from "./workoutShared";
+import { clock, durationMinutes, elapsedMs, fresh, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type LibraryPick, type SessionCardio, type SessionDay, type SessionExercise } from "./workoutShared";
 
 // The week's sessions as rows on the Training tab. A finished session (swiped
 // to its end) opens in place with its sets (16 Oct); any other row opens the
@@ -34,17 +35,6 @@ function readView(): View {
     return null;
   }
 }
-/** A session as a discard leaves it (discardSession in queries.ts): not started, nothing logged, no swaps or warm-ups. */
-const fresh = (d: SessionDay): SessionDay => ({
-  ...d,
-  startedAt: null,
-  endedAt: null,
-  sessionNote: "",
-  answers: {},
-  exercises: d.exercises.map((e) => ({ ...e, logs: [], warmups: [], swap: null })),
-  cardio: d.cardio.map((c) => ({ ...c, done: false, swap: null })),
-});
-
 function writeView(v: View) {
   try {
     if (v) window.sessionStorage.setItem(VIEW_KEY, JSON.stringify(v));
@@ -95,16 +85,30 @@ export default function TrainingDayList({
   const [freeAdds, setFreeAdds] = useState<{ dayId: number; ex: SessionExercise }[]>([]);
   const [freeCardio, setFreeCardio] = useState<{ dayId: number; c: SessionCardio }[]>([]);
   const [goneFree, setGoneFree] = useState<number[]>([]);
-  const withFree = [...serverDays, ...(localFree && !serverDays.some((d) => d.key === localFree.key) ? [localFree] : [])]
+  const merged = [...serverDays, ...(localFree && !serverDays.some((d) => d.key === localFree.key) ? [localFree] : [])]
     .filter((d) => !goneFree.includes(d.key))
     .map((d) => {
       const adds = freeAdds.filter((a) => a.dayId === d.key && !d.exercises.some((e) => e.id === a.ex.id)).map((a) => a.ex);
       const cardio = freeCardio.filter((a) => a.dayId === d.key && !d.cardio.some((c) => c.id === a.c.id)).map((a) => a.c);
       return adds.length || cardio.length ? { ...d, exercises: [...d.exercises, ...adds], cardio: [...d.cardio, ...cardio] } : d;
     });
+  // What was logged and is still on its way (7 Nov, Alex: offline saving; workoutOutbox.ts) laid over the server's days,
+  // so a reload, a refresh or a page the server built before it landed never snaps back: the sets, the swaps, the
+  // cardio, the gym, the start, the end, a discard. After the rogue session's own rows, so its sets show on them too.
+  const outbox = useWorkoutOutbox();
+  const withFree = applyWorkoutOutbox(merged, outbox.overlay);
   const days = discardedHere == null ? withFree : withFree.map((d) => (masked(d) ? fresh(d) : d));
-  const liveSession =
-    serverLive && ((discardedHere && serverLive.id === discardedHere.dayId && serverLive.startedAt === discardedHere.startedAt) || goneFree.includes(serverLive.id)) ? null : serverLive;
+  // The session going, as the days say once what waits has landed: a start waiting makes it so, an end or a discard
+  // waiting ends it.
+  const liveSession = (() => {
+    const live = (d: SessionDay) => !!d.startedAt && !d.endedAt;
+    if (serverLive) {
+      const here = days.find((d) => d.key === serverLive.id);
+      return goneFree.includes(serverLive.id) || (here && !live(here)) ? null : serverLive;
+    }
+    const d = days.find(live);
+    return d ? { id: d.key, label: d.title, startedAt: d.startedAt!, week: d.week } : null;
+  })();
   const [view, setViewState] = useState<View>(null);
   // Put back from storage after a reload: shown in place, not slid in.
   const [restored, setRestored] = useState(false);
@@ -113,9 +117,10 @@ export default function TrainingDayList({
     setViewState(v);
     writeView(v);
   };
-  // The gym picked for the open session; the server's answer takes over.
-  const [gymPick, setGymPick] = useState<{ dayId: number; gymId: number | null } | null>(null);
-  const [toast, setToast] = useState<{ title: string; facts: string[] } | null>(null);
+  // name: the session's (or "Changes"); dayId: whose saves it waits on. Read live against the outbox, so it says
+  // "saved" with the done check only once the server has it, and "Not sent yet" while it waits.
+  const [toast, setToast] = useState<{ name: string; dayId: number; facts: string[] } | null>(null);
+  const toastWaiting = toast != null && outbox.entries.some((e) => e.dayId === toast.dayId);
   const [, startTransition] = useTransition();
   const [startProblem, setStartProblem] = useState<string | null>(null);
 
@@ -153,38 +158,46 @@ export default function TrainingDayList({
   }, [toast]);
 
   const openDay = view ? days.find((d) => d.key === view.dayId) ?? null : null;
-  const gymIdFor = (d: SessionDay) => (gymPick?.dayId === d.key ? gymPick.gymId : d.gymId);
+  // The gym and the start go through the outbox (7 Nov, workoutOutbox.ts): drawn at once from the days it lays over,
+  // kept on the phone until sent, in the order made (the gym before the sets it moves).
+  const gymIdFor = (d: SessionDay) => d.gymId;
   const pickGym = (d: SessionDay, g: GymOption) => {
     const logged = loggedSets(d);
     const current = gymIdFor(d);
     if (logged > 0 && current != null && current !== g.id && !window.confirm(`Move the ${logged} set${logged === 1 ? "" : "s"} logged in this session to ${g.name}?`)) return;
-    setGymPick({ dayId: d.key, gymId: g.id });
-    void pickGymAction(d.key, g.id);
+    enqueueWorkout({ kind: "gym", gymId: g.id, dayId: d.key, startedAt: d.startedAt });
   };
   // Straight into the workout (14 Oct, Alex): the screen used to wait for the
   // server's answer, seconds on a phone, the whole page rebuilding behind it.
-  // Now it opens at once with the start stamped here; the server takes the
-  // same stamp, and only a refusal (another session still going) brings the
-  // overview back with the reason.
-  const [startedHere, setStartedHere] = useState<{ dayId: number; at: string } | null>(null);
+  // Now it opens at once with the start stamped here, signal or none (7 Nov);
+  // the server takes the same stamp, and only a refusal (another session still
+  // going) brings the overview back with the reason.
   const start = (d: SessionDay, g: GymOption | null) => {
-    if (g) {
-      setGymPick({ dayId: d.key, gymId: g.id });
-      void pickGymAction(d.key, g.id);
-    }
+    if (g) enqueueWorkout({ kind: "gym", gymId: g.id, dayId: d.key, startedAt: d.startedAt });
     const at = new Date().toISOString();
     setStartProblem(null);
-    setStartedHere({ dayId: d.key, at });
+    enqueueWorkout({ kind: "start", dayId: d.key, startedAt: at }, at);
     setView({ dayId: d.key, screen: "workout" });
-    startTransition(async () => {
-      const r = await startSessionAction(d.key, at);
-      if (!r.ok) {
-        setStartedHere(null);
-        setView({ dayId: d.key, screen: "overview" });
-        setStartProblem(r.other ? `Finish ${r.other} first.` : "Couldn't start the session.");
-      }
-    });
   };
+  // A start the server refused (another session still going): back to the overview with the reason, once, and the
+  // row says what was not saved.
+  const refusalsSeen = useRef<{ from: number; keys: Set<string> }>({ from: Infinity, keys: new Set() });
+  useEffect(() => {
+    refusalsSeen.current.from = Date.now();
+  }, []);
+  useEffect(() => {
+    const seen = refusalsSeen.current;
+    // Only one refused while this page is open; one kept from before is the row's to say.
+    const n = outbox.notSaved.find((x) => x.start && Date.parse(x.at) >= seen.from && !seen.keys.has(`${x.dayId}|${x.at}`));
+    if (!n) return;
+    const t = setTimeout(() => {
+      seen.keys.add(`${n.dayId}|${n.at}`);
+      setStartProblem(`${notSavedWords(n)[1]}.`);
+      if (view?.dayId === n.dayId && view.screen === "workout") setView({ dayId: n.dayId, screen: "overview" });
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new refusal only
+  }, [outbox.notSaved]);
 
   // A free session: made on the server, then straight into its workout, empty,
   // on its "Add an exercise" page. Refused while another session is going.
@@ -297,9 +310,22 @@ export default function TrainingDayList({
           // A session swiped to its end (16 Oct, Alex) opens in place with what was done; the full screen is a link inside.
           const ended = (status === "done" || status === "unfinished") && !!d.endedAt;
           const isOpen = ended && expanded === d.key;
+          // Kept on the phone and not sent yet (7 Nov): one grey fact after the bar. Refused by the server: in rust, what
+          // and why, until the row is opened.
+          const waiting = outbox.entries.some((e) => e.dayId === d.key);
+          const refused = outbox.notSaved.find((n) => n.dayId === d.key) ?? null;
           return (
             <Fragment key={d.key}>
-            <button type="button" className={`tr-row ${tone}${isOpen ? " open" : ""}`} onClick={() => (ended ? setExpanded((k) => (k === d.key ? null : d.key)) : setView({ dayId: d.key, screen: d.free ? "workout" : "overview" }))} aria-expanded={ended ? isOpen : undefined}>
+            <button
+              type="button"
+              className={`tr-row ${tone}${isOpen ? " open" : ""}`}
+              onClick={() => {
+                if (refused) clearNotSaved(d.key);
+                if (ended) setExpanded((k) => (k === d.key ? null : d.key));
+                else setView({ dayId: d.key, screen: d.free ? "workout" : "overview" });
+              }}
+              aria-expanded={ended ? isOpen : undefined}
+            >
               <span className={`tr-row-tile ${tone}`}>
                 {/* Done, the one done check (3 Nov, Alex), on the tile's page-colour disc so the spine stays hidden. */}
                 {tone === "done" ? (
@@ -314,8 +340,13 @@ export default function TrainingDayList({
               <span className="tr-row-main">
                 <span className="tr-row-title">{d.title}</span>
                 <span className="tr-row-sub">
-                  <Bars parts={sub} />
+                  <Bars parts={[...sub, waiting && "Not sent yet"]} />
                 </span>
+                {refused && (
+                  <span className="tr-row-sub tr-row-refused" role="alert">
+                    <Bars parts={notSavedWords(refused)} />
+                  </span>
+                )}
               </span>
               {(status !== "upcoming" || isNext || logged > 0) && (
               <span className={`tr-row-pill ${tone}`}>
@@ -422,16 +453,19 @@ export default function TrainingDayList({
       {toast && host && createPortal(
         // Where the in-progress pill was, in its white hairline look (3 Nov, Alex): the done check drawn in its ring, what was
         // saved, its facts parted by bars.
+        // Still on the phone (no signal yet): no check and no "saved", the fact says so; it turns once the server has it.
         <div className="tr-toast" role="status">
-          <span className="tr-toast-check" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12.5l4.5 4.5L19 7.5" />
-            </svg>
-          </span>
-          <b className="tr-toast-title">{toast.title}</b>
-          {toast.facts.length > 0 && (
+          {!toastWaiting && (
+            <span className="tr-toast-check" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12.5l4.5 4.5L19 7.5" />
+              </svg>
+            </span>
+          )}
+          <b className="tr-toast-title">{toastWaiting ? toast.name : `${toast.name} saved`}</b>
+          {(toast.facts.length > 0 || toastWaiting) && (
             <small className="tr-toast-facts">
-              <Bars parts={toast.facts} />
+              <Bars parts={[...toast.facts, toastWaiting && "Not sent yet"]} />
             </small>
           )}
         </div>,
@@ -441,7 +475,7 @@ export default function TrainingDayList({
       {openDay && host && view?.screen === "overview" && createPortal(
         <SessionOverview
           still={restored}
-          day={{ ...openDay, gymId: gymIdFor(openDay) }}
+          day={openDay}
           pastWeek={pastWeek}
           currentWeek={currentWeek}
           liveElsewhere={liveSession && liveSession.id !== openDay.key ? liveSession.label : null}
@@ -467,7 +501,7 @@ export default function TrainingDayList({
       {openDay && host && (view?.screen === "workout" || (view?.screen === "edit" && openDay.endedAt)) && createPortal(
         <WorkoutScreen
           key={`${openDay.key}:${view.screen}`}
-          day={openDay.startedAt == null && startedHere?.dayId === openDay.key ? { ...openDay, startedAt: startedHere.at } : openDay}
+          day={openDay}
           editing={view.screen === "edit"}
           gymId={gymIdFor(openDay)}
           onPickGym={(g) => pickGym(openDay, g)}
@@ -483,7 +517,7 @@ export default function TrainingDayList({
             const sets = loggedSets(openDay);
             setView(null);
             // The facts alone, parted by bars (3 Nov, Alex: the hairline look; no sentence on who can see it).
-            setToast({ title: `${openDay.title} saved`, facts: [...(minutes != null ? [`${minutes} min`] : []), `${sets} set${sets === 1 ? "" : "s"}`] });
+            setToast({ name: openDay.title, dayId: openDay.key, facts: [...(minutes != null ? [`${minutes} min`] : []), `${sets} set${sets === 1 ? "" : "s"}`] });
           }}
           onDiscarded={() => {
             // A free session discarded is gone, not put back as unstarted.
@@ -493,14 +527,12 @@ export default function TrainingDayList({
               setView(null);
               return;
             }
-            const at = openDay.startedAt ?? (startedHere?.dayId === openDay.key ? startedHere.at : null);
-            if (at) setDiscardedHere({ dayId: openDay.key, startedAt: at });
-            if (startedHere?.dayId === openDay.key) setStartedHere(null);
+            if (openDay.startedAt) setDiscardedHere({ dayId: openDay.key, startedAt: openDay.startedAt });
             setView({ dayId: openDay.key, screen: "overview" });
           }}
           onEdited={() => {
             setView({ dayId: openDay.key, screen: "overview" });
-            setToast({ title: "Changes saved", facts: [] });
+            setToast({ name: "Changes", dayId: openDay.key, facts: [] });
           }}
         />,
         host

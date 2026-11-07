@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type React from "react";
-import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAction, swapExerciseAction } from "../lib/actions";
+import { useOffline } from "next/offline";
+import { enqueueWorkout, useWorkoutOutbox } from "../components/workoutOutbox";
 import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel as labelOf, type Unit } from "../lib/units";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
@@ -63,7 +64,10 @@ export default function ExercisePage({
   onSetLogged,
   tools = null,
   free = false,
+  session,
 }: {
+  /** The session it is in, as the screen knows it: every save here is kept on the phone until sent (7 Nov, workoutOutbox.ts). */
+  session: { dayId: number; startedAt: string | null };
   /** In a free session (19 Oct): no coach, so no targets line. */
   free?: boolean;
   /** The workout's chat and ⋯, on this exercise's own row (2 Oct): what is said there is about the exercise. */
@@ -213,13 +217,15 @@ export default function ExercisePage({
     setSeenWarm(warmKey);
     setWarm([...exercise.warmups.map((w) => warmFrom(w, true)), ...warm.filter((r) => !r.saved)]);
   }
-  const [, startTransition] = useTransition();
   const warmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warmPending = useRef<Warm[] | null>(null);
   const persistWarm = (rows: Warm[]) => {
     if (warmTimer.current) clearTimeout(warmTimer.current);
+    warmPending.current = rows;
     warmTimer.current = setTimeout(() => {
+      warmPending.current = null;
       const sets = rows.filter((r) => r.saved).map((r) => ({ weight_kg: r.entered.weightKg, reps: r.entered.reps }));
-      startTransition(() => saveWarmupSetsAction(exercise.id, sets));
+      enqueueWorkout({ kind: "warmups", assignmentId: exercise.id, sets, ...session });
     }, SAVE_DEBOUNCE_MS);
   };
   const addWarm = () => {
@@ -236,11 +242,17 @@ export default function ExercisePage({
     if (current === `w${i}`) setCurrent(null);
   };
 
+  // What waits in the outbox (workoutOutbox.ts), and what the server refused for a set on this page.
+  const { entries: waiting, refused: refusedSlots } = useWorkoutOutbox();
+  /** A set the server refused or found stale (it never landed): not done, said in rust, logged again by a tap. */
+  const refusedOf = (n: number): string | null => refusedSlots[`set:${exercise.id}:${n}`] ?? null;
+
   // ---- The rows, in order: warm-ups, then the working sets.
   const workRows = Array.from({ length: workCount }, (_, i) => i + 1).map((n): Row => {
     const entered = enteredOf(n);
-    // A set held on a question is not done (27 Oct, Alex: it read Saved and the exercise moved on).
-    return { id: `s${n}`, kind: "work", n, label: String(n), plan: planOf(n), entered, saved: isSaved(entered) && doubt?.n !== n, extra: n > exercise.sets };
+    // A set held on a question is not done (27 Oct, Alex: it read Saved and the exercise moved on), nor one the server
+    // refused.
+    return { id: `s${n}`, kind: "work", n, label: String(n), plan: planOf(n), entered, saved: isSaved(entered) && doubt?.n !== n && refusedOf(n) == null, extra: n > exercise.sets };
   });
   const doneCount = workRows.filter((r) => r.saved).length;
   const allDone = workRows.length > 0 && doneCount === workRows.length;
@@ -262,31 +274,39 @@ export default function ExercisePage({
     /* a page is one exercise for its whole life */
   }
 
-  // ---- Saving: 300ms after the last change, when weight and reps are in.
+  // ---- Saving: 300ms after the last change, when weight and reps are in. Kept on the phone until the server has it
+  // (7 Nov, Alex: offline saving; workoutOutbox.ts), and sent from there in the order made, so a set logged with no
+  // signal stays logged through a closed app or a reload and goes once the signal is back.
   const saveTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
-  const [saving, setSaving] = useState<number[]>([]);
-  const [failed, setFailed] = useState(false);
+  // What each waiting timer will send, so leaving the page inside the 300ms still sends it.
+  const savePending = useRef<Map<number, Vals>>(new Map());
   const sendSet = (n: number, v: Vals) => {
-    const fd = new FormData();
-    fd.set("assignmentId", String(exercise.id));
-    fd.set("setNumber", String(n));
-    fd.set("gymId", gymId == null ? "" : String(gymId));
-    fd.set("weight", v.weightKg == null ? "" : String(v.weightKg));
-    fd.set("reps", v.reps == null ? "" : String(v.reps));
-    fd.set("rpe", v.rpe == null ? "" : String(v.rpe));
-    fd.set("unit", unitNow.current);
-    setSaving((s) => [...s, n]);
-    logSetAction(fd)
-      .then(() => {
-        setFailed(false);
-        onSetLogged?.();
-      })
-      .catch(() => setFailed(true))
-      .finally(() => setSaving((s) => s.filter((m) => m !== n)));
+    savePending.current.delete(n);
+    saveTimers.current.delete(n);
+    enqueueWorkout({ kind: "set", assignmentId: exercise.id, setNumber: n, gymId, weight: v.weightKg, reps: v.reps, rpe: v.rpe, unit: unitNow.current, ...session });
+    onSetLogged?.();
   };
+  // A set still on its way: "Saving" a moment, then "Not sent yet" in grey once it has waited 3s or the phone is
+  // offline; "Saved" once the server has answered.
+  const offline = useOffline();
+  const waitingSince = (n: number) => {
+    const slot = `set:${exercise.id}:${n}`;
+    for (let i = waiting.length - 1; i >= 0; i--) if (waiting[i].slot === slot) return Date.parse(waiting[i].at);
+    return null;
+  };
+  // The clock that says when 3s have passed for the open set (read once it has, not every render).
+  const [lateFrom, setLateFrom] = useState<number | null>(null);
+  const openN = typeof current === "string" && current.startsWith("s") ? Number(current.slice(1)) : null;
+  const openSince = openN != null && Number.isFinite(openN) ? waitingSince(openN) : null;
+  useEffect(() => {
+    if (openSince == null) return;
+    const t = setTimeout(() => setLateFrom(openSince), Math.max(0, openSince + 3000 - Date.now()));
+    return () => clearTimeout(t);
+  }, [openSince]);
   const scheduleSave = (n: number, v: Vals) => {
     const t = saveTimers.current.get(n);
     if (t) clearTimeout(t);
+    savePending.current.set(n, v);
     saveTimers.current.set(n, setTimeout(() => sendSet(n, v), SAVE_DEBOUNCE_MS));
   };
   // ---- Advancing: 1.4s after the open set is in (and still open), it folds
@@ -307,11 +327,24 @@ export default function ExercisePage({
       buzz(4);
     }, ms);
   };
+  // Leaving the page (back to the overview, the app closing it) while a save waits on its 300ms: it goes now, not never.
+  const flushOnLeave = useRef(() => {});
+  useEffect(() => {
+    flushOnLeave.current = () => {
+      savePending.current.forEach((v, n) => sendSet(n, v));
+      if (warmPending.current) {
+        const rows = warmPending.current;
+        warmPending.current = null;
+        enqueueWorkout({ kind: "warmups", assignmentId: exercise.id, sets: rows.filter((r) => r.saved).map((r) => ({ weight_kg: r.entered.weightKg, reps: r.entered.reps })), ...session });
+      }
+    };
+  });
   useEffect(
     () => () => {
       if (advanceTimer.current) clearTimeout(advanceTimer.current);
       if (warmTimer.current) clearTimeout(warmTimer.current);
       saveTimers.current.forEach((t) => clearTimeout(t));
+      flushOnLeave.current();
     },
     []
   );
@@ -371,6 +404,7 @@ export default function ExercisePage({
       if (d.weight || d.reps) {
         const t = saveTimers.current.get(row.n);
         if (t) clearTimeout(t);
+        savePending.current.delete(row.n);
         if (advanceTimer.current) clearTimeout(advanceTimer.current);
         setDoubt({ n: row.n, ...d });
         return;
@@ -471,12 +505,18 @@ export default function ExercisePage({
     setNoteOpen(false);
     if (next === myNote.trim()) return;
     setSavedNote(next);
-    const fd = new FormData();
-    fd.set("assignmentId", String(exercise.id));
-    fd.set("gymId", gymId == null ? "" : String(gymId));
-    fd.set("text", next);
-    startTransition(() => saveExerciseNoteAction(fd));
+    enqueueWorkout({ kind: "note", assignmentId: exercise.id, gymId, text: next, ...session });
   };
+  // Swapped for the day, or taken back: kept on the phone until sent, before the sets logged on it (7 Nov).
+  const saveSwap = (choice: { libraryExerciseId: number | null; customName: string | null } | null) =>
+    enqueueWorkout({
+      kind: "swap",
+      assignmentId: exercise.id,
+      libraryExerciseId: choice?.libraryExerciseId ?? null,
+      customName: choice?.customName ?? null,
+      name: choice ? (choice.libraryExerciseId != null ? exercise.alternatives.find((a) => a.id === choice.libraryExerciseId)?.name ?? null : choice.customName) : null,
+      ...session,
+    });
 
   // ---- Swap, video, the demo.
   const [swapOpen, setSwapOpen] = useState(false);
@@ -614,7 +654,7 @@ export default function ExercisePage({
           <span>
             Instead of <b>{exercise.name}</b>
           </span>
-          <button type="button" onClick={() => startTransition(() => clearSwapAction(exercise.id))}>
+          <button type="button" onClick={() => saveSwap(null)}>
             Undo
           </button>
         </div>
@@ -719,7 +759,11 @@ export default function ExercisePage({
                 </Fold>
               );
             }
-            const busy = row.kind === "work" && saving.includes(row.n);
+            // On its way: "Saving" a moment; past 3s, or with no signal, "Not sent yet" in grey (kept on the phone).
+            const since = row.kind === "work" ? waitingSince(row.n) : null;
+            const late = since != null && (offline || lateFrom === since);
+            // Refused by the server (it never landed): rust, the set not done; a tap sends it again unless it cannot help.
+            const refusedWhy = row.kind === "work" && since == null ? refusedOf(row.n) : null;
             return (
               <Fold key={row.id} state={state}>
               <div className={`lw-open${row.saved ? " saved" : ""}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" && !free ? " extra" : ""}`}>
@@ -738,15 +782,27 @@ export default function ExercisePage({
                       <path d="m6 15 6-6 6 6" />
                     </svg>
                   </button>
+                  {refusedWhy != null &&
+                    (refusedWhy === "gone" || refusedWhy === "stale" ? (
+                      <span className="lw-saved refused" role="status">
+                        Not saved
+                      </span>
+                    ) : (
+                      <button type="button" className="lw-saved refused" onClick={() => sendSet(row.n, row.entered)} title="Try again">
+                        Not saved
+                      </button>
+                    ))}
                   {row.saved && (
-                    <span className="lw-saved" role="status">
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="m5 12.5 4.5 4.5L19 7.5" />
-                      </svg>
-                      {busy ? "Saving" : "Saved"}
+                    <span className={`lw-saved${late ? " waiting" : ""}`} role="status">
+                      {!late && (
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="m5 12.5 4.5 4.5L19 7.5" />
+                        </svg>
+                      )}
+                      {late ? "Not sent yet" : since != null ? "Saving" : "Saved"}
                     </span>
                   )}
-                  {row.extra && !row.saved && (
+                  {row.extra && !row.saved && refusedWhy == null && (
                     <button type="button" className="lw-remove" onClick={() => (row.kind === "warm" ? removeWarm(row.n - 1) : removeExtra(row))} aria-label={`Remove ${row.kind === "warm" ? "warm-up" : "extra set"} ${row.n}`}>
                       Remove
                     </button>
@@ -793,7 +849,6 @@ export default function ExercisePage({
         <button type="button" className="lw-addset" onClick={addSet}>
           + Add a set
         </button>
-        {failed && <div className="lw-offline">Couldn&rsquo;t save. Trying again on your next change</div>}
       </div>
 
       {swapped ? null : noteOpen ? (
@@ -854,7 +909,7 @@ export default function ExercisePage({
           photoSent={!!exercise.videoRequest && exercise.videoRequest.about === "swap" && !!exercise.videoRequest.src}
           onSwap={(choice) => {
             setSwapOpen(false);
-            startTransition(() => swapExerciseAction(exercise.id, choice));
+            saveSwap(choice);
           }}
           onPhoto={() => {
             setSwapOpen(false);

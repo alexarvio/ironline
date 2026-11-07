@@ -28,6 +28,7 @@ import CheckInDialog, { type CheckInForm } from "./CheckInDialog";
 import "./home/today.css";
 import { Bars } from "./Bars";
 import type { HomeFocus } from "../lib/focus";
+import { useDayLive } from "../components/workoutOutbox";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
@@ -434,6 +435,8 @@ function TodayList({ items, session, checkInCount, checkIn, pics, clientId, toda
   const [logOpen, setLogOpen] = useState(false);
   const n = pics ? Math.max(1, pics.total) : 0;
   const k = pics ? Math.min(n, pics.uploaded) : 0;
+  // Start or Resume as Training has it, a start or an end still on its way from the phone counted (7 Nov, workoutOutbox.ts).
+  const live = useDayLive(session?.dayId ?? null, !!session?.live);
   return (
     <section className="hm-td" aria-label="Today">
       <span className="hm-td-head">Today</span>
@@ -443,7 +446,7 @@ function TodayList({ items, session, checkInCount, checkIn, pics, clientId, toda
           title={session.name}
           // The exercises alone, no time estimate (4 Nov, Alex: "take that out").
           fact={`${session.exercises} exercises`}
-          action={session.live ? "Resume" : "Start"}
+          action={live ? "Resume" : "Start"}
           ink
           onClick={() => goToTab?.("training", session.dayId)}
         />

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { landOnSoon } from "../lib/landOn";
 import { useDismiss } from "./useDismiss";
 import { useKeyboardInset } from "./useKeyboardInset";
-import { saveSkipReasonAction } from "../lib/actions";
+import { enqueueWorkout } from "../components/workoutOutbox";
 import { pic } from "../lib/pic";
 import { ChevronLeftIcon } from "../components/icons";
 import DoneCheck from "../components/DoneCheck";
@@ -96,14 +96,12 @@ export default function SessionOverview({
   useDismiss(menuOpen, () => setMenuOpen(false));
   const [skipOpen, setSkipOpen] = useState(false);
   const [skipDraft, setSkipDraft] = useState(day.skipReason);
-  const [skipSaving, startSkip] = useTransition();
+  // Kept on the phone and sent behind (7 Nov, workoutOutbox.ts): the sheet closes at once, signal or none.
   const submitSkip = (value: string = skipDraft) => {
     const next = value.trim();
-    startSkip(async () => {
-      await saveSkipReasonAction(day.key, next);
-      setSkipOpen(false);
-      if (next) onBack();
-    });
+    enqueueWorkout({ kind: "skip", text: next, dayId: day.key, startedAt: null });
+    setSkipOpen(false);
+    if (next) onBack();
   };
   const pill = STATUS_LABEL[status];
   const pillClass = status;
@@ -287,8 +285,8 @@ export default function SessionOverview({
               placeholder="Holiday, work trip, sick, injured, no time…"
               onChange={(e) => setSkipDraft(e.target.value)}
             />
-            <button type="button" className="wo-sheet-btn" disabled={!skipDraft.trim() || skipSaving} onClick={() => submitSkip()}>
-              {skipSaving ? "Sending…" : "Send"}
+            <button type="button" className="wo-sheet-btn" disabled={!skipDraft.trim()} onClick={() => submitSkip()}>
+              Send
             </button>
             {/* Remove in red words, as every destructive word (3 Nov, Alex: the words audit). */}
             {day.skipReason && (

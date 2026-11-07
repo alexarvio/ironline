@@ -44,6 +44,12 @@ export function localStamp(d: Date = new Date()): string {
   return `${localDateStr(d)} ${t(d.getHours())}:${t(d.getMinutes())}:${t(d.getSeconds())}`;
 }
 
+/** A stamp the phone sent (a Date or an ISO string) as a Date; none or unreadable, now. */
+function stampDate(at: Date | string | null | undefined): Date {
+  const t = at instanceof Date ? at.getTime() : typeof at === "string" ? Date.parse(at) : NaN;
+  return Number.isFinite(t) ? new Date(t) : new Date();
+}
+
 export function localDateStr(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -1871,7 +1877,9 @@ export function logSet(
   reps: number | null,
   rpeActual: number | null,
   gymId: number | null = null,
-  unit: "kg" | "lb" | null = null
+  unit: "kg" | "lb" | null = null,
+  /** When it was done, on the phone (7 Nov: a set kept offline arrives later); a new row only. */
+  at: Date | string | null = null
 ) {
   const data = getData();
   // Logging a set number that already has a row corrects that row rather
@@ -1895,7 +1903,7 @@ export function logSet(
     rpe_actual: rpeActual,
     // Local server time, the same clock localDateStr() reads: an ISO/UTC stamp
     // put a 6am session on the previous day for anyone east of Greenwich.
-    logged_at: localStamp(),
+    logged_at: localStamp(stampDate(at)),
     gym_id: gymId,
     ...(unit ? { unit } : {}),
   });
@@ -10651,14 +10659,14 @@ export function getExerciseHistory(assignmentId: number, limit = 3): ExerciseHis
 }
 
 /** The client's reason for not doing a session; empty text clears it. */
-export function setSessionSkipReason(programDayId: number, text: string) {
+export function setSessionSkipReason(programDayId: number, text: string, at: Date | string | null = null) {
   const data = getData();
   const day = data.program_days.find((pd) => pd.id === programDayId);
   if (!day) return;
   const next = text.trim().slice(0, 300);
   if (next) {
     day.skip_reason = next;
-    day.skip_reason_at = new Date().toISOString();
+    day.skip_reason_at = stampDate(at).toISOString();
   } else {
     delete day.skip_reason;
     delete day.skip_reason_at;
@@ -11004,13 +11012,13 @@ export function isCardioDone(entryId: number): boolean {
 }
 
 // Tick or untick a cardio entry. A double tap is idempotent either way.
-export function setCardioDone(entryId: number, done: boolean) {
+export function setCardioDone(entryId: number, done: boolean, at: Date | string | null = null) {
   const data = getData();
   data.cardio_logs = data.cardio_logs ?? [];
   const clientId = getClientIdForCardio(entryId);
   if (clientId == null) return;
   const has = data.cardio_logs.some((l) => l.cardio_entry_id === entryId);
-  if (done && !has) data.cardio_logs.push({ id: allocId("cardio_logs"), cardio_entry_id: entryId, client_id: clientId, done_at: localStamp() });
+  if (done && !has) data.cardio_logs.push({ id: allocId("cardio_logs"), cardio_entry_id: entryId, client_id: clientId, done_at: localStamp(stampDate(at)) });
   else if (!done && has) data.cardio_logs = data.cardio_logs.filter((l) => l.cardio_entry_id !== entryId);
   else return;
   persist();

@@ -3,6 +3,7 @@
 import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransition, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
 import { markCoachNotesReadAction, markNotificationReadAction } from "../lib/actions";
+import { useWorkoutOutboxRunner } from "../components/workoutOutbox";
 import type { NotificationCategory } from "../lib/notificationTypes";
 import { goalItemId } from "../lib/weightGoal";
 import { logoutAction } from "../lib/auth-actions";
@@ -221,6 +222,9 @@ export default function AppShell({
     if (initialPush === "messages") void markCoachNotesReadAction(clientId).catch(() => {});
   }, [initialPush, readOnly, clientId]);
   const pushView: PushView = chosenPush !== undefined ? chosenPush : !readOnly && storedPush === "food" && foodDiary ? "food" : null;
+  // The workout's saves kept on the phone go from here (7 Nov, workoutOutbox.ts): on opening, the signal back, the app
+  // back in front. Never in the coach's phone preview: there nothing is read, shown or sent.
+  useWorkoutOutboxRunner(clientId, !readOnly);
   // The event Events opens on, from a notification (10 Oct); cleared when the screen closes.
   const [eventFocus, setEventFocus] = useState<number | null>(null);
   const openEventsAt = events
