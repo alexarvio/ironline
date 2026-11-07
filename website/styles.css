@@ -971,3 +971,6 @@ h1, h2, h3 { font-weight: 600; }
 .scrap.wa { transform: rotate(1.2deg); }
 .scrap.ig { transform: rotate(-1.2deg); }
 .scrap.em { transform: rotate(.8deg); }
+/* The two chats fill their cards to the bottom, as the apps' own windows do (7 Nov, Alex: half of Sara's was blank). */
+.scrap.wa, .scrap.ig { display: flex; flex-direction: column; }
+.wa-body, .ig-body { flex: 1; }
