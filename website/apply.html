@@ -32,7 +32,6 @@
     <div class="apply-side">
       <p class="eyebrow">Founding coaches</p>
       <h1 class="h2" style="margin-top: 14px">Apply to be a founding coach.</h1>
-      <p>A few questions so we can set you up properly. We read every one, and we reply within a day to set up a short call.</p>
     </div>
 
     <div class="card">
@@ -57,8 +56,6 @@
             <label class="chip"><input type="checkbox" name="uses" value="other"><span>Other</span></label>
           </div>
         </fieldset>
-        <!-- No competitor named on our pages (7 Nov): the app's name is typed. It rides along in uses. -->
-        <label class="field"><span class="label">Which one</span><input class="input" name="which" maxlength="34"></label>
         <label class="field"><span class="label">The hardest part of your week</span><textarea class="textarea" name="hardest"></textarea></label>
         <!-- Left empty by people, filled by bots: the server drops anything with it. -->
         <input class="trap" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
@@ -103,8 +100,7 @@
     var data = {
       name: name.value, email: email.value, business: form.elements.business.value,
       clients: picked ? picked.value : "",
-      uses: Array.prototype.map.call(form.querySelectorAll("input[name=uses]:checked"), function (i) { return i.value; })
-        .concat(form.elements.which.value.trim() ? ["which: " + form.elements.which.value.trim()] : []),
+      uses: Array.prototype.map.call(form.querySelectorAll("input[name=uses]:checked"), function (i) { return i.value; }),
       hardest: form.elements.hardest.value, website: form.elements.website.value
     };
     button.disabled = true;
