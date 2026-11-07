@@ -184,27 +184,25 @@ We'd rather have twenty coaches we know by name than two thousand we don't.
 
 ## 10. FAQ `[Belief 6]`
 
-**My clients won't download another app.** It replaces the sheet, the WhatsApp thread, the Drive folder and the food tracker for them. One app on iPhone or Android, and logging a set takes a few taps. `[Proof: Finlay's clients' adoption]`
+**7 Nov (Alex):** rewritten as the questions a coach would actually type. Out: "Can I still use AI for my own work?" (nobody needs our permission) and "Spreadsheets are free." (made up, not from the research). From the research: moving clients over (the biggest objection), losing sets mid-workout, canned support, another app for clients, trust in a small company. Finlay to add questions from a coach's side. The page (website/index.html) is the source.
 
-**Spreadsheets are free.** They are, until a client leaves because they felt unseen. One client kept a year longer pays for Norcoach many times over. And a spreadsheet can't tell you who needs you.
+**Do my clients need to download anything?** Just Norcoach on their phone. It replaces the spreadsheet, the WhatsApp thread, the Drive folder and the food tracker, so they end up with fewer apps, not more.
 
-**NEW 7 Nov** (replacing "Everyone has AI now. Isn't no AI behind the times?", which made Norcoach sound against technology) **· Can I still use AI for my own work?** Of course. Use whatever helps you plan, write or run the business. Norcoach just never writes to your clients in your name: what they read is from you. It does the arithmetic (bests, trends, next week's weights) and leaves the coaching to you.
+**How do I move my clients over?** You add each client yourself in a few minutes, and short guides show you how. As a founding coach, we set your account up with you on a call and add your first clients together.
 
-**I've switched apps before. Moving everyone was a nightmare.** As a founding coach you don't move anyone. We bring your clients and programmes over with you. `[Decision: the migration offer, and what can be imported from which apps; promise client history only where it's real]`
+**What if the app crashes during a workout?** Nothing is lost. Every set saves the moment it is entered, one by one, so nothing waits for the end of the session.
 
-**What if it breaks mid-workout?** Every set saves the moment it's entered, one by one. Nothing waits for the end of the session. **NEW 7 Nov:** `[Proof: an honest record, e.g. uptime since launch and sets lost (none), once we have it]`
-
-**How do I get support?** Yes. You write to us inside Norcoach and a person who builds it answers. **NEW 7 Nov:** Not a canned reply about clearing your cache. `[Decision: the response-time promise]`
-
-**NEW 7 Nov · Another app already tells me who needs me.** Some write you a summary of it. Norcoach gives you the thing itself, the video, the note, the check-in, open and ready to answer, and what your client gets back carries your face and your words.
+**What if there is no signal in the gym?** Your client keeps logging. Their sets stay on the phone and are sent as soon as the signal is back, even if they close the app in between.
 
 **Do my clients need a separate food app?** No, they don't need one. Norcoach has an extensive food library built in for your clients to use.
 
-**What does it cost?** Founding coaches start with a 14-day free trial, then a founding price that never goes up for them. No paid add-ons. We'll share the price on your call. `[Decision: the price; pricing, no add-ons]`
+**How do I get support?** Write to us from Support in Norcoach's settings, or report a problem with a screenshot. The people who build Norcoach read it and answer you themselves.
+
+**How is it different from other coaching apps?** It is built around you, not around AI. Norcoach shows you who needs you and opens the actual video, note or check-in, ready for your reply. Everything your client reads comes from you.
+
+**What does it cost?** A 14-day free trial, then a monthly price we'll tell you on a short intro call, before you pay anything. Founding coaches keep that price for good, and nothing is a paid add-on.
 
 **Is my clients' data safe?** Your clients' data is yours: only you and your clients see it, and you can export all of it whenever you like. Payments go through Stripe and card details are never stored by us.
-
----
 
 ## 11. Closing `[Belief 1, again]`
 
