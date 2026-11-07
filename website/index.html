@@ -204,48 +204,65 @@
       <h2 class="h2">With twenty-plus clients, the warning signs get lost across your sheets, chats and forms.</h2>
     </div>
 
-    <div class="week" role="img" aria-label="One ordinary week: Tom's stalled squat in row 41 of a sheet, Sara's sore knee in WhatsApp, James's deadlift video somewhere in a chat, Emma's missing check-in. In NorCoach they come to one place.">
+    <div class="week" role="img" aria-label="One ordinary week: Tom's note in row 41 of his sheet, Sara's sore knee under 31 unread WhatsApp messages, James's deadlift video in Instagram, Emma asking for a call by email. In NorCoach the four are one list, Needs you, each with its reason and the button that answers it.">
       <div class="scraps" aria-hidden="true">
-        <div class="scrap">
-          <div class="scrap-src">Google Sheets | Tom</div>
-          <div class="sheet num"><span>Wk 4</span><span>80 kg</span><span>8</span><span>Wk 5</span><span>80 kg</span><span>8</span><span>Wk 6</span><span>80 kg</span><span>8</span></div>
-          <div class="scrap-foot">row 41</div>
+        <div class="scrap gs">
+          <div class="gs-bar"><span class="gs-doc"></span><b>Tom | Training log</b></div>
+          <div class="gs-grid">
+            <span class="c h"></span><span class="c h">A</span><span class="c h">B</span><span class="c h">C</span><span class="c h">D</span>
+            <span class="c n">39</span><span class="c">Wk 6</span><span class="c">Back squat</span><span class="c r">80 × 8</span><span class="c"></span>
+            <span class="c n">40</span><span class="c"></span><span class="c">Bench press</span><span class="c r">60 × 8</span><span class="c"></span>
+            <span class="c n on">41</span><span class="c"></span><span class="c">Incline DB</span><span class="c r">24 × 10</span><span class="c sel">left shoulder felt tight</span>
+            <span class="c n">42</span><span class="c"></span><span class="c">Cable fly</span><span class="c r">15 × 12</span><span class="c"></span>
+          </div>
         </div>
-        <div class="scrap">
-          <div class="scrap-src">WhatsApp | Sara</div>
-          <div class="bubble">knee hurt again on the lunges</div>
-          <div class="scrap-foot">under 30 other messages</div>
+        <div class="scrap wa">
+          <div class="wa-bar"><span class="nf" style="background-image:url(img/avatars/sara.svg)"></span><b>Sara</b><span>online</span></div>
+          <div class="wa-body">
+            <span class="wa-unread">31 unread messages</span>
+            <p class="wa-in">knee hurt again on the lunges<small>21:14</small></p>
+            <p class="wa-in">should I skip them tomorrow?<small>21:15</small></p>
+          </div>
         </div>
-        <div class="scrap">
-          <div class="scrap-src">Chat | James</div>
-          <div class="vid"><span><svg><use href="#i-play"/></svg></span></div>
-          <div class="scrap-foot">deadlift, sent Tuesday</div>
+        <div class="scrap ig">
+          <div class="ig-bar"><span class="nf" style="background-image:url(img/avatars/james.svg)"></span><b>james.moore</b></div>
+          <div class="ig-body">
+            <span class="ig-day">Tue 18:42</span>
+            <div class="ig-vid"><span><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></span><em>0:24</em></div>
+            <p class="ig-in">deadlift, form ok?</p>
+          </div>
         </div>
-        <div class="scrap">
-          <div class="scrap-src">Google Form | Check-in</div>
-          <div class="bubble num">14 responses</div>
-          <div class="scrap-foot">Emma's isn't one of them. The form doesn't know.</div>
+        <div class="scrap em">
+          <div class="em-bar"><b>Inbox</b><span>48</span></div>
+          <div class="em-row"><i></i><b>Stripe</b><span>Your payout is on its way</span></div>
+          <div class="em-row unread"><i></i><b>Emma Clarke</b><span>Call this week? Could we do a quick one…</span></div>
+          <div class="em-row"><i></i><b>Instagram</b><span>You have 6 new followers</span></div>
         </div>
       </div>
 
       <svg class="arrow" viewBox="0 0 60 24" aria-hidden="true"><use href="#i-arrow"/></svg>
 
       <div class="board" aria-hidden="true">
-        <div class="desk-title">In NorCoach: who needs you today <span class="num">2</span></div>
-        <div class="needs">
-          <div class="need"><span class="face" style="background-image:url(img/avatars/sara.svg)"></span><span class="what"><b>Sara</b><q>knee hurt again…</q></span><span class="act"><svg><use href="#i-reply"/></svg>Reply</span></div>
-          <div class="need"><span class="face" style="background-image:url(img/avatars/james.svg)"></span><span class="what"><b>James</b>Video of Deadlift</span><span class="act"><svg><use href="#i-pen"/></svg>Review</span></div>
+        <div class="desk-title">Needs you <span class="ncount">4</span></div>
+        <div class="ng">
+          <div class="ng-head msg"><svg viewBox="0 0 18 18"><path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" d="M2.5 4.8a1.3 1.3 0 0 1 1.3-1.3h10.4a1.3 1.3 0 0 1 1.3 1.3v6.3a1.3 1.3 0 0 1-1.3 1.3H7.3L4 15.2v-2.8H3.8a1.3 1.3 0 0 1-1.3-1.3V4.8z"/></svg>Messages<small>1</small></div>
+          <div class="ng-card">
+            <div class="nr"><span class="nf" style="background-image:url(img/avatars/sara.svg)"></span><b class="nm">Sara Novak</b><span class="th"><span class="wh">Message</span><q>knee hurt again on the lunges</q></span><span class="wt late">2 days</span><span class="na" title="Reply"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M10 8L5 12l5 4M5 12h9a5 5 0 0 1 5 5"/></svg></span></div>
+          </div>
+          <div class="ng-head trn"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>Training<small>2</small></div>
+          <div class="ng-card">
+            <div class="nr"><span class="nf" style="background-image:url(img/avatars/james.svg)"></span><b class="nm">James Moore</b><span class="th"><span class="wh">Video of Deadlift</span></span><span class="wt">1 day</span><span class="na" title="Review"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></span></div>
+            <div class="nr"><span class="nf" style="background-image:url(img/avatars/tom.svg)"></span><b class="nm">Tom Baker</b><span class="th"><span class="wh">Note on Upper A</span><q>left shoulder felt tight</q></span><span class="wt">today</span><span class="na" title="Read"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span></div>
+          </div>
+          <div class="ng-head mtg"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 7h11v10H4zM15 10l5-3v10l-5-3"/></svg>Meetings<small>1</small></div>
+          <div class="ng-card">
+            <div class="nr"><span class="nf" style="background-image:url(img/avatars/emma.svg)"></span><b class="nm">Emma Clarke</b><span class="th"><span class="wh">Asked for a call</span><q>this week if you can</q></span><span class="wt">today</span><span class="na" title="Book"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/></svg></span></div>
+          </div>
         </div>
-        <div class="board-sub">Worth a look</div>
-        <div class="needs">
-          <div class="need"><span class="face" style="background-image:url(img/avatars/tom.svg)"></span><span class="what"><b>Tom</b>Back squat</span><span class="state rust">Stalling</span></div>
-          <div class="need"><span class="face" style="background-image:url(img/avatars/emma.svg)"></span><span class="what"><b>Emma</b>Checked in <span class="num">3 of 7</span> days</span><span class="state grey">Missed</span></div>
-        </div>
-        <p class="week-foot">Added the moment a client logs or sends something.</p>
       </div>
     </div>
 
-    <p class="reason">A stalled lift in a sheet, a sore knee in WhatsApp, a video in a chat, a check-in that never came. Each one is a client who needs you this week, and you only find them if you go looking, client by client. <b>NorCoach puts them in one list, with the reason, so nothing waits for you to find it.</b></p>
+    <p class="reason">A note in a sheet, a sore knee under 31 unread messages, a video in your DMs, a call asked for by email. Each one is a client who needs you this week, and you only find them if you go looking, client by client. <b>NorCoach puts them in one list, with the reason, so nothing waits for you to find it.</b></p>
   </div>
 </section>
 

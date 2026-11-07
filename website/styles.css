@@ -396,7 +396,7 @@ h1, h2, h3 { font-weight: 600; }
 
 /* ---- The scattered week ---------------------------------------------------- */
 .week {
-  display: grid; grid-template-columns: minmax(0, 1fr) 60px minmax(0, 400px); align-items: center; gap: 32px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 48px minmax(0, 460px); align-items: center; gap: 32px;
   margin-top: 44px; padding: 48px; border-radius: 28px; background: #fff; box-shadow: inset 0 0 0 1px var(--line);
 }
 .scraps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
@@ -405,19 +405,65 @@ h1, h2, h3 { font-weight: 600; }
 .scrap:nth-child(2) { transform: rotate(1.2deg); margin-top: 24px; }
 .scrap:nth-child(3) { transform: rotate(1deg); }
 .scrap:nth-child(4) { transform: rotate(-1deg); margin-top: 24px; }
-.scrap-src { font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
-.scrap-foot { margin-top: 8px; font-size: 12px; color: var(--muted); }
-.sheet { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); font-size: 12px; color: var(--body); }
-.sheet span { padding: 6px 0; box-shadow: inset 0 -1px 0 var(--line); }
-.sheet span:nth-last-child(-n+3) { box-shadow: none; }
-.bubble { margin-top: 10px; display: inline-block; padding: 9px 12px; border-radius: 12px; background: #fff; font-size: 13.5px; line-height: 1.4; }
-.vid { margin-top: 10px; height: 70px; border-radius: 10px; background: var(--dark); display: grid; place-items: center; }
-.vid span { width: 28px; height: 28px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.5); display: grid; place-items: center; }
-.vid svg { width: 10px; height: 10px; color: #fff; margin-left: 2px; }
+/* The four places, as they look (7 Nov, Alex: "it doesn't look like a chat"): a Google Sheet with its grid and the
+   note in the cell, WhatsApp with its wallpaper and unread banner, an Instagram DM with the video, an inbox row. */
+.scrap { padding: 0; overflow: hidden; background: #fff; box-shadow: 0 0 0 1px var(--line), 0 14px 30px -18px rgba(16,24,40,.28); font-size: 12px; }
+.scrap b { font-weight: 600; }
+.nf { flex: none; display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: #EEF0F3 center / cover; }
+.gs-bar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: #f8fafd; box-shadow: inset 0 -1px 0 #e3e6ea; font-size: 12px; }
+.gs-doc { width: 12px; height: 15px; border-radius: 2px; background: #1e8e3e; box-shadow: inset 0 0 0 3px #1e8e3e, inset 0 5px 0 3px #fff; }
+.gs-grid { display: grid; grid-template-columns: 22px .7fr 1.2fr .9fr 1.6fr; font-size: 11px; color: #202124; }
+.gs-grid .c { height: 24px; padding: 0 6px; line-height: 24px; white-space: nowrap; overflow: hidden; box-shadow: inset -1px -1px 0 #e3e6ea; }
+.gs-grid .h, .gs-grid .n { background: #f8f9fa; color: #5f6368; text-align: center; padding: 0; font-size: 10px; }
+.gs-grid .n.on { background: #d3e3fd; color: #0b57d0; }
+.gs-grid .r { text-align: right; }
+.gs-grid .sel { box-shadow: inset 0 0 0 2px #0b57d0; background: #fff; }
+.wa-bar, .ig-bar { display: flex; align-items: center; justify-content: flex-start; gap: 8px; padding: 8px 12px; text-align: left; }
+.wa-bar { background: #f0f2f5; }
+.wa-bar > span:last-child { margin-left: auto; font-size: 10.5px; color: #667781; }
+.wa-body { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 10px 12px 12px; background: #efeae2; }
+.wa-unread { align-self: center; padding: 3px 10px; border-radius: 8px; background: #fff; font-size: 10.5px; color: #54656f; box-shadow: 0 1px 1px rgba(11,20,26,.08); }
+.wa-in { max-width: 88%; padding: 6px 9px 5px; border-radius: 0 8px 8px 8px; background: #fff; font-size: 12.5px; line-height: 1.35; color: #111b21; box-shadow: 0 1px 1px rgba(11,20,26,.1); }
+.wa-in small { margin-left: 8px; font-size: 9.5px; color: #667781; }
+.ig-bar { box-shadow: inset 0 -1px 0 #efefef; }
+.ig-body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 12px 12px; }
+.ig-day { align-self: center; font-size: 10px; color: #737373; }
+.ig-vid { position: relative; display: grid; place-items: center; width: 92px; height: 120px; border-radius: 16px; background: linear-gradient(160deg, #3a3f47, #15181d); }
+.ig-vid span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.22); }
+.ig-vid svg { width: 12px; height: 12px; color: #fff; margin-left: 2px; }
+.ig-vid em { position: absolute; left: 8px; bottom: 6px; font-style: normal; font-size: 9.5px; color: #fff; }
+.ig-in { padding: 7px 11px; border-radius: 18px; background: #efefef; font-size: 12.5px; color: #000; }
+.em-bar { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; box-shadow: inset 0 -1px 0 #eceff1; font-size: 12px; }
+.em-bar span { font-size: 10.5px; color: #5f6368; }
+.em-row { display: grid; grid-template-columns: 8px 78px minmax(0, 1fr); align-items: center; gap: 8px; height: 30px; padding: 0 12px; box-shadow: inset 0 -1px 0 #f1f3f4; font-size: 11px; color: #5f6368; }
+.em-row b, .em-row span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.em-row b { font-weight: 500; color: #3c4043; }
+.em-row.unread { background: #f2f6fc; }
+.em-row.unread b, .em-row.unread span { font-weight: 600; color: #202124; }
+.em-row.unread i { width: 7px; height: 7px; border-radius: 50%; background: #0b57d0; }
 .arrow { width: 60px; height: 24px; color: var(--faint); }
 .board { background: #F5F6F8; border-radius: 20px; padding: 22px; }
 .board .desk-title { font-size: 17px; }
-.board-sub { margin-top: 18px; font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--sub); }
+/* The same four as the app's Feed shows them (NeedGroups.tsx, feed.css): Needs you with its rust count, the groups
+   under small-caps heads in their colour, each a rust-edged card, a row the face, name, the thing and their words,
+   how long it has waited, and the action as its icon in a round white button. */
+.ncount { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px rgba(184,71,31,.35); font-size: 12px !important; font-weight: 600 !important; color: var(--rust) !important; }
+.ng { display: flex; flex-direction: column; margin-top: 6px; }
+.ng-head { display: flex; align-items: center; gap: 7px; margin: 14px 0 7px 2px; font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+.ng-head svg { width: 13px; height: 13px; }
+.ng-head small { font-size: 10px; letter-spacing: .08em; color: var(--faint); }
+.ng-head.msg { color: #5b6474; } .ng-head.trn { color: var(--indigo); } .ng-head.mtg { color: #2f6fd6; }
+.ng-card { border: 1.5px solid var(--rust); border-radius: 14px; background: #fbf1ec; overflow: hidden; }
+.nr { display: grid; grid-template-columns: 22px 92px minmax(0, 1fr) 42px 28px; align-items: center; gap: 8px; min-height: 46px; padding: 0 9px 0 11px; font-size: 12px; }
+.nr + .nr { border-top: 1px solid rgba(184,71,31,.16); }
+.nr .nm { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nr .th { display: flex; gap: 7px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.nr .wh { flex: none; font-weight: 500; }
+.nr q { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.nr .wt { text-align: center; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.nr .wt.late { font-weight: 600; color: var(--rust); }
+.nr .na { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px #DCE1E8; }
+.nr .na svg { width: 14px; height: 14px; }
 .state { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: #fff; font-size: 11.5px; font-weight: 600; }
 .state.rust { color: var(--rust); box-shadow: inset 0 0 0 1px rgba(184,71,31,.4); }
 .state.green { color: var(--green); box-shadow: inset 0 0 0 1px rgba(47,122,63,.35); }
@@ -916,3 +962,12 @@ h1, h2, h3 { font-weight: 600; }
 /* Finlay's face wherever he appears (7 Nov): the illustrated stand-in until his photo comes; last, so it wins over
    the ink discs above. */
 .a-me i, .cli .c-face, .fitem .face.coach { background: url(img/avatars/finlay.svg) center / cover; color: transparent; }
+
+/* The scattered week's places (7 Nov): the sheet and the inbox across the column, the two chats side by side between them,
+   so each has the room its own app gives it; tilted a little, as things lying about. */
+.scraps .scrap { margin-top: 0; }
+.scrap.gs, .scrap.em { grid-column: 1 / -1; }
+.scrap.gs { transform: rotate(-1deg); }
+.scrap.wa { transform: rotate(1.2deg); }
+.scrap.ig { transform: rotate(-1.2deg); }
+.scrap.em { transform: rotate(.8deg); }
