@@ -292,12 +292,14 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   };
   const countOf = (c: Cadence) => rows.filter((r) => r.frequency === c).length;
   // Daily / Weekly / Monthly, on the metrics and on the check-ins, each switching only its own section.
-  const rhythmToggle = (value: Cadence, set: (c: Cadence) => void, counts: boolean) => (
+  const rhythmToggle = (value: Cadence, set: (c: Cadence) => void, counts: boolean, due?: (c: Cadence) => boolean) => (
     <div className="rd-btn-group" role="group" aria-label="Rhythm">
       {CADENCES.map((c) => (
         <button key={c} type="button" className={value === c ? "on" : ""} aria-pressed={value === c} onClick={() => set(c)}>
           {CAD[c].label}
           {counts && countOf(c) > 0 && <small className="rm-cad-count">{countOf(c)}</small>}
+          {/* A note of theirs to read in another rhythm: the dot at the word's top right, as a client tab's (moves nothing). */}
+          {due?.(c) && value !== c && <i className="rd-due rm-cad-due" role="img" aria-label="needs you" />}
         </button>
       ))}
     </div>
@@ -352,12 +354,17 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   // Opening a row with their note is reading it, as a food day's (6 Nov, Alex): the to-do strip's Read row for that
   // check-in goes, and the rail's number with it; the same marks its Read button makes.
   const { items: todos } = useContext(TodoContext);
+  // Their notes still to read, as the strip lists them: the dot trail's last steps on this tab (7 Nov, Alex), the rhythm
+  // holding one and its row, each a rust dot until the row is opened.
+  const dueReads = (todos ?? []).filter((i) => i.kind === "read" && i.tab === "measurements");
+  const dueOn = (c: Cadence, period: string) => dueReads.filter((i) => i.href.endsWith(`#checkin-${c}-${period}`));
+  const dueIn = (c: Cadence) => dueReads.some((i) => i.href.includes(`#checkin-${c}-`));
   const toggleCheckin = (c: Cadence, period: string) => {
     const k = `${c}:${period}`;
     const opening = openCheckin !== k;
     setOpenCheckin(opening ? k : null);
     if (!opening) return;
-    const due = (todos ?? []).filter((i) => i.kind === "read" && i.href.endsWith(`#checkin-${c}-${period}`));
+    const due = dueOn(c, period);
     if (!due.length) return;
     const ids = due.flatMap((i) => (i.eventId ? [i.eventId] : []));
     const keys = due.filter((i) => !i.eventId).map((i) => i.key);
@@ -727,7 +734,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                 </button>
               ))}
             </div>
-            {rhythmToggle(logCadence, setLogCadence, false)}
+            {rhythmToggle(logCadence, setLogCadence, false, dueIn)}
           </div>
         </div>
         {/* As tall as its fullest page (.rd-steady): a row is 53px with its hairline, under a 50px head; the card's 1px edges and
@@ -753,6 +760,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               openKey={openCheckin}
               onToggle={(period) => toggleCheckin(logCadence, period)}
               onReply={replyTo}
+              isDue={(period) => dueOn(logCadence, period).length > 0}
             />
           ) : (
             <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
@@ -1185,6 +1193,7 @@ function CheckinTable({
   openKey,
   onToggle,
   onReply,
+  isDue,
 }: {
   view: LoggedValues;
   /** Every period in the range shown, all pages: what each head sums up. */
@@ -1196,6 +1205,8 @@ function CheckinTable({
   openKey: string | null;
   onToggle: (period: string) => void;
   onReply: (period: string) => void;
+  /** Their note on this row still to read (the dot trail's last step). */
+  isDue: (period: string) => boolean;
 }) {
   const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
   // Each column sums itself up in its head (21 Oct, Alex; rules §8: a summary lives in the column head, never a row
@@ -1251,6 +1262,7 @@ function CheckinTable({
           // Reply there. A row with nothing more has no chevron and doesn't open.
           const note = view.notes[p.key]?.trim() || null;
           const open = !!note && openKey === `${cadence}:${p.key}`;
+          const due = !!note && isDue(p.key);
           const when = logWhen(p.key, p.label, cadence);
           return (
             <Fragment key={p.key}>
@@ -1262,10 +1274,13 @@ function CheckinTable({
                       <button type="button" className="rd-row-hit" aria-expanded={open}>
                         <span className="rd-logdate">{when}</span>
                         <Fold open={open} />
+                        {due && <span className="sr-only">, needs you</span>}
                       </button>
                       <span className="rd-notemark" title={`A note from ${firstName}`} aria-label={`A note from ${firstName}`}>
                         <NoteIcon />
                       </span>
+                      {/* The dot trail's last step (dots.ts): their note still to read; opening the row reads it, as a food day's. */}
+                      {due && <i className="rd-due" role="img" aria-label="needs you" />}
                     </>
                   ) : (
                     <span className="rd-logdate">{when}</span>
