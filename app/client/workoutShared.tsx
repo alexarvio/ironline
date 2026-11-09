@@ -264,7 +264,7 @@ export function CoachNote({ assignmentId, note }: { assignmentId: number | null;
 // Cardio: the targets as tiles, the coach's note, one button to tick it
 // off, a second tap to undo. Bike taken: Swap says what was done instead
 // (the coach's alternatives, or typed), which ticks it off too (28 Sep).
-export function CardioCard({ cardio, index, session, readOnly = false, coachName = "Coach", sessionLabel = null, position = null, free = false, nextName = null, onNext }: { cardio: SessionCardio; index: number; /** The session it is in, as the screen knows it: its saves are kept on the phone until sent (7 Nov, workoutOutbox.ts). */ session: { dayId: number; startedAt: string | null }; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: React.ReactNode; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean; /** What comes after it, for the line on the way there. */ nextName?: string | null; /** On to what's next, as an exercise moves on once its last set is in (23 Oct, Alex: Done on a cardio stayed put). */ onNext?: (line?: string) => void }) {
+export function CardioCard({ cardio, index, session, readOnly = false, coachName = "Coach", sessionLabel = null, position = null, free = false, nextName = null, request = null, onNext }: { /** The ⋯ menu asking for the substitute (9 Nov, Alex: Mark as done alone on the page). */ request?: { n: number } | null; cardio: SessionCardio; index: number; /** The session it is in, as the screen knows it: its saves are kept on the phone until sent (7 Nov, workoutOutbox.ts). */ session: { dayId: number; startedAt: string | null }; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: React.ReactNode; position?: { n: number; total: number } | null; /** A free session's cardio (19 Oct): no targets; the client fills in what they did. */ free?: boolean; /** What comes after it, for the line on the way there. */ nextName?: string | null; /** On to what's next, as an exercise moves on once its last set is in (23 Oct, Alex: Done on a cardio stayed put). */ onNext?: (line?: string) => void }) {
   // Done, the swap and the figures as the outbox has them: shown at once, sent behind (7 Nov), so nothing waits on the signal.
   const save = (c: { kind: "cardioDone"; done: boolean } | { kind: "cardioSwap"; name: string | null } | { kind: "cardioFigure"; field: "time" | "pace" | "incline" | "distance"; value: string }) =>
     enqueueWorkout({ ...c, cardioId: cardio.id, dayId: session.dayId, startedAt: session.startedAt });
@@ -298,6 +298,11 @@ export function CardioCard({ cardio, index, session, readOnly = false, coachName
     if (did[k] !== cardio[k]) save({ kind: "cardioFigure", field: k, value: did[k] });
   };
   const [swapOpen, setSwapOpen] = useState(false);
+  const [seenRequest, setSeenRequest] = useState(request?.n ?? 0);
+  if (request && request.n !== seenRequest) {
+    setSeenRequest(request.n);
+    setSwapOpen(true);
+  }
   const done = cardio.done;
   // Drawn like an exercise page (19 Oct, Alex: the cardio was still the old boxed card): the eyebrow,
   // the name large, the targets as the exercise page's table (3 Nov, Alex), the coach's note, then Mark as done.
@@ -359,11 +364,6 @@ export function CardioCard({ cardio, index, session, readOnly = false, coachName
         >
           {/* Just Done (21 Oct, Alex: no "tap to undo"); a tap on it still takes it back. */}
           {done ? "Done" : "Mark as done"}
-        </button>
-      )}
-      {!readOnly && !free && (
-        <button type="button" className="wo-cardio-swap" onClick={() => setSwapOpen(true)}>
-          {cardio.swap ? "Change today's substitute" : "Substitute today"}
         </button>
       )}
       {swapOpen && (

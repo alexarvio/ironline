@@ -4137,12 +4137,12 @@ export async function discardSessionAction(programDayId: number) {
 
 // ---- Free sessions (19 Oct): see createFreeSession in queries.ts.
 /** Starts an empty session in this week, off the plan; refused while another is going. */
-export async function createFreeSessionAction(clientId: number, at?: string, onceKey?: string): Promise<{ ok: true; id: number } | { ok: false; other?: string }> {
+export async function createFreeSessionAction(clientId: number, at?: string, onceKey?: string, gymId?: number | null): Promise<{ ok: true; id: number } | { ok: false; other?: string }> {
   if (!(await canAccessClient(Number(clientId)))) return { ok: false };
   // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the session the first started,
   // never "Finish Rogue session first".
   return once(`createFreeSessionAction:${Number(clientId)}`, onceKeyOf(onceKey), () => {
-    const r = createFreeSession(Number(clientId), getCurrentWeekNumber(Number(clientId)), stampOrNow(at));
+    const r = createFreeSession(Number(clientId), getCurrentWeekNumber(Number(clientId)), stampOrNow(at), gymId == null ? null : Number(gymId));
     if (r.ok) revalidatePath("/admin");
     return r;
   });
