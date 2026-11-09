@@ -7,7 +7,7 @@ import { enqueueWorkout, useWorkoutOutbox } from "../components/workoutOutbox";
 import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel as labelOf, type Unit } from "../lib/units";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
-import { CoachNote, shownName, TargetTable, targetColumns, type SessionExercise } from "./workoutShared";
+import { CoachNote, lastSetsHere, shownName, TargetTable, targetColumns, type SessionExercise } from "./workoutShared";
 import { isAssisted } from "../lib/progressRules";
 import CoachSays from "./CoachSays";
 import { Bars } from "./Bars";
@@ -109,6 +109,7 @@ export default function ExercisePage({
   // The weight for the gym trained at: a machine there is its own machine,
   // so each gym carries its own weight forward.
   const gymWeight = (gymId != null ? exercise.gymTargets?.[gymId] : null) ?? exercise.targetWeight;
+  const lastHere = lastSetsHere(exercise, gymId);
   // A free session always asks the weight: nothing prescribed says it's a bodyweight exercise.
   const askWeight = exercise.targetWeight != null || free;
   // Swapped for something else: the targets were set for the prescribed exercise, so none carry over (4 Nov, Alex:
@@ -123,13 +124,13 @@ export default function ExercisePage({
   // numbers, unsaved, until the client says it is right, so nothing (the weight rule, next week) builds on a slip. A
   // weight over 40% (and 5 kg) above the best last time, else above the target; reps over double the target's top
   // (else last time's most). Lighter or fewer is never asked. A figure said right is not asked again this session.
-  const lastBestKg = swapped ? 0 : Math.max(0, ...(exercise.lastSets?.sets ?? []).map((st) => st.weight ?? 0));
+  const lastBestKg = swapped ? 0 : Math.max(0, ...(lastHere?.sets ?? []).map((st) => st.weight ?? 0));
   const refKg = swapped ? null : lastBestKg > 0 ? lastBestKg : targetWeight;
   const refFrom: "last" | "target" = lastBestKg > 0 ? "last" : "target";
   const repTop = (() => {
     if (swapped) return null;
     const asked = (exercise.reps.match(/\d+/g) ?? []).map(Number);
-    const top = asked.length ? Math.max(...asked) : Math.max(0, ...(exercise.lastSets?.sets ?? []).map((st) => st.reps ?? 0));
+    const top = asked.length ? Math.max(...asked) : Math.max(0, ...(lastHere?.sets ?? []).map((st) => st.reps ?? 0));
     return top > 0 ? top : null;
   })();
   const [doubt, setDoubt] = useState<{ n: number; weight: boolean; reps: boolean } | null>(null);
@@ -155,7 +156,7 @@ export default function ExercisePage({
   // RPE is off the set rows (14 Oct, Alex, after Strava): weight and reps only, side by side, typed (the − and + went the same day; the arrow keys still step). A figure logged before stays in the data.
   const askRpe = false;
   // Swapped for the day, last time was another lift.
-  const last = swapped ? null : exercise.lastSets;
+  const last = swapped ? null : lastHere;
   const lastOf = (n: number) => last?.sets.find((s) => s.setNumber === n) ?? null;
   // "8-10" → 8, "12" → 12: the reps the plan asks for.
   const repLow = (() => {

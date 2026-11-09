@@ -60,6 +60,8 @@ export type SessionExercise = {
   gymNotes?: Record<number, string>;
   /** The sets from the last time the client did this exercise. */
   lastSets: { date: string; sets: LastSet[] } | null;
+  /** Last time at each gym (9 Nov, Alex): the gym you are at first, so a switch of gym shows its numbers at once. */
+  lastSetsAt?: Record<number, { date: string; sets: LastSet[] } | null>;
   /** An assisted lift (its library exercise or variation says so): more weight is more help. */
   assisted?: boolean;
   /** The last few sessions of it, most recent first. */
@@ -93,6 +95,8 @@ export type LibraryPick = { id: number; name: string; group: string };
 
 /** The exercise as it reads to the client: the swap's name when there is one. */
 export const shownName = (ex: SessionExercise) => ex.swap?.name ?? ex.name;
+/** Last time as read at the gym the session is at now (9 Nov, Alex). */
+export const lastSetsHere = (ex: SessionExercise, gymId: number | null) => (gymId != null && ex.lastSetsAt && gymId in ex.lastSetsAt ? ex.lastSetsAt[gymId] : ex.lastSets);
 
 /** A session as a discard leaves it (discardSession in queries.ts): not started, nothing logged, no swaps or warm-ups. */
 export const fresh = (d: SessionDay): SessionDay => ({

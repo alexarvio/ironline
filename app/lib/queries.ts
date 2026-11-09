@@ -10766,26 +10766,36 @@ const dayDate = (pd: ProgramDay, logs: SetLog[]) => (pd.session_ended_at ?? logs
 /** The sets from the last time the client did this exercise: the same gym
     when there is a session there, else the most recent anywhere. */
 export function getLastSets(assignmentId: number, gymId: number | null): { date: string; sets: LastSet[] } | null {
+  return lastSetsPicker(assignmentId)(gymId);
+}
+
+/** Last time at each of these gyms, the history read once: a session switched to another gym has its numbers already. */
+export function getLastSetsByGym(assignmentId: number, gymIds: number[]): Record<number, { date: string; sets: LastSet[] } | null> {
+  const pick = lastSetsPicker(assignmentId);
+  return Object.fromEntries(gymIds.map((id) => [id, pick(id)]));
+}
+
+function lastSetsPicker(assignmentId: number): (gymId: number | null) => { date: string; sets: LastSet[] } | null {
   const history = exerciseHistoryFor(assignmentId);
-  if (!history.length) return null;
-  // The same session in an earlier week first (week 4's session 2 against week
-  // 3's session 2): an exercise in two sessions a week, one heavy and one
-  // light, otherwise compared each with the other and the change flipped
-  // sign week to week. Then the same gym, then the most recent anywhere.
+  if (!history.length) return () => null;
   const data = getData();
   const wa = data.workout_assignments.find((x) => x.id === assignmentId);
   const own = wa ? data.program_days.find((pd) => pd.id === wa.program_day_id) : undefined;
-  const sameGym = (h: (typeof history)[number]) => gymId != null && (h.logs[0]?.gym_id ?? null) === gymId;
+  const home = own ? homeGymId(own.client_id) : null;
   const sameSlot = history.filter((h) => h.day.day_of_week === own?.day_of_week);
   // Another session from an earlier week before this week's: Thursday's
   // compares with last Thursday, not with Monday's.
   const earlier = history.filter((h) => own == null || h.day.week_number < own.week_number);
-  // No earlier week at all (the phase's first week, or the exercise is new
-  // to it): the latest session anywhere, this week's included, so the
-  // second time in a week starts from the first (11 Oct).
-  const pick = sameSlot.find(sameGym) || sameSlot[0] || earlier.find(sameGym) || earlier[0] || history.find(sameGym) || history[0];
-  if (!pick) return null;
-  return { date: dayDate(pick.day, pick.logs), sets: pick.logs.map(setView) };
+  return (gymId) => {
+    // The gym you are at first (9 Nov, Alex: 110 from Muscle Factory opened at Trainmore under its own 100; a machine is
+    // another machine), and only with the lift never done there, another gym's. Within either: the same session in an
+    // earlier week (an exercise in two sessions a week, one heavy and one light, otherwise compared each with the other),
+    // then any earlier week, then the latest anywhere, this week's included, so the second time in a week starts from the
+    // first (11 Oct). A set with no gym on it is the home gym's.
+    const atGym = (h: (typeof history)[number]) => gymId != null && (h.logs[0]?.gym_id ?? home) === gymId;
+    const pick = sameSlot.find(atGym) || earlier.find(atGym) || history.find(atGym) || sameSlot[0] || earlier[0] || history[0];
+    return pick ? { date: dayDate(pick.day, pick.logs), sets: pick.logs.map(setView) } : null;
+  };
 }
 
 /** Kg or lbs for this exercise: what the client last logged it in. This

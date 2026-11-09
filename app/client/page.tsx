@@ -39,6 +39,7 @@ import {
   effectiveAlternatives,
   exerciseGroup,
   getLastSets,
+  getLastSetsByGym,
   getExerciseUnit,
   getLatestClientExerciseNotes,
   getExerciseHistory,
@@ -894,6 +895,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   })),
                   note: { text: a.notes, dateLabel: noteDateLabel(a.note_at), unread: !!a.notes && !a.note_read },
                   lastSets: getLastSets(a.id, gymId),
+                  lastSetsAt: !day.free && allGyms.length > 1 ? getLastSetsByGym(a.id, allGyms.map((g) => g.id)) : undefined,
                   history: getExerciseHistory(a.id, 3),
                 })),
                 };
