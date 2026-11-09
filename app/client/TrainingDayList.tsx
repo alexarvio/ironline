@@ -244,10 +244,22 @@ export default function TrainingDayList({
   const [adding, setAdding] = useState(false);
   const [rogueGym, setRogueGym] = useState(false);
   const [copyBusy, setCopyBusy] = useState(false);
-  const [openWhenHere, setOpenWhenHere] = useState<number | null>(null);
+  const [openWhenHere, setOpenWhenHere] = useState<{ id: number; gym: GymOption | null } | null>(null);
+  // Duplicate (9 Nov, Alex): which session, which gym, then straight into the workout.
+  const [copyGymFor, setCopyGymFor] = useState<number | null>(null);
+  const chooseDuplicate = (key: number) => {
+    setAdding(false);
+    if (liveSession) {
+      setStartProblem(`Finish ${liveSession.label} first.`);
+      return;
+    }
+    const regular = (serverDays.find((d) => d.key === key)?.gyms ?? []).filter((g) => !g.once);
+    if (regular.length === 1) void duplicate(key, regular[0]);
+    else setCopyGymFor(key);
+  };
   // An answer lost on the way keeps its key, so the next tap on that session and a late landing are one duplicate.
   const copyUnanswered = useRef<{ source: number; key: string } | null>(null);
-  const duplicate = async (sourceKey: number) => {
+  const duplicate = async (sourceKey: number, gym: GymOption | null) => {
     if (copyBusy) return;
     setCopyBusy(true);
     setStartProblem(null);
@@ -266,13 +278,14 @@ export default function TrainingDayList({
       setStartProblem("Couldn't duplicate it. Try again.");
       return;
     }
-    setOpenWhenHere(r.id);
+    setOpenWhenHere({ id: r.id, gym });
   };
   // Opened the moment the page has it (the action reads the page again).
   useEffect(() => {
-    if (openWhenHere == null || !serverDays.some((d) => d.key === openWhenHere)) return;
+    const made = openWhenHere ? serverDays.find((d) => d.key === openWhenHere.id) : null;
+    if (!openWhenHere || !made) return;
     // Never over something opened meanwhile.
-    if (!view) setView({ dayId: openWhenHere, screen: "overview" });
+    if (!view) start(made, openWhenHere.gym);
     setOpenWhenHere(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- when the page has it
   }, [openWhenHere, serverDays]);
@@ -466,10 +479,27 @@ export default function TrainingDayList({
             if (place && regular.length !== 1) setRogueGym(true);
             else startFree(regular[0] ?? null);
           }}
-          onDuplicate={(key) => void duplicate(key)}
+          onDuplicate={chooseDuplicate}
           onClose={() => !copyBusy && setAdding(false)}
         />
       )}
+
+      {copyGymFor != null && (() => {
+        const source = serverDays.find((d) => d.key === copyGymFor);
+        return source ? (
+          <GymPickerDialog
+            gyms={source.gyms}
+            gymId={source.gymId}
+            mode="start"
+            dayId={source.key}
+            onPick={(g) => {
+              setCopyGymFor(null);
+              void duplicate(source.key, g);
+            }}
+            onClose={() => setCopyGymFor(null)}
+          />
+        ) : null;
+      })()}
 
       {rogueGym && (() => {
         const place = serverDays.find((d) => !d.free);

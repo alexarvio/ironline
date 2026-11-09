@@ -8,6 +8,7 @@ import { coverJpeg } from "../lib/coverJpeg";
 import { pic } from "../lib/pic";
 import { GYM_COLORS, GYM_COLOR_KEYS, GYM_KINDS, gymColor, initials, nextFreeColor, type GymColorKey, type GymKind } from "../lib/gymColors";
 import RingEdge from "../components/RingEdge";
+import "./gyms.css";
 
 // Which gym the session is at (13 Oct, "Gym rows"): a centred pop-up over
 // the dimmed session overview, the first step of starting a workout.
@@ -249,7 +250,7 @@ export default function GymPickerDialog({
 
   const tint = adding ? GYM_COLORS[color] : gymColor(chosen?.color);
   const currentName = list.find((g) => g.id === gymId)?.name ?? null;
-  const title = adding ? (once ? "Just this once" : firstGym ? "Where do you train?" : "Add a gym") : mode === "switch" ? "Switch gym" : "Where are you training?";
+  const title = adding ? (once ? "One-time gym" : firstGym ? "Where do you train?" : "Add a gym") : mode === "switch" ? "Switch gym" : "Where are you training?";
   const openForm = (asOnce: boolean) => {
     setOnce(asOnce);
     setAdding(true);
@@ -384,7 +385,9 @@ export default function GymPickerDialog({
                   </div>
                 );
               })}
-              {/* Somewhere else today (6 Nov, Alex): named, trained at, and never in this list again. */}
+              {/* The two ways to add, side by side (9 Nov, Alex: "sharing 50 50 the space"). Somewhere else today (6 Nov, Alex):
+                  named, trained at, and never in this list again. */}
+              <div className="gpk-addpair">
               <button type="button" className="gpk-addrow" onClick={() => openForm(true)}>
                 <span className="gpk-addrow-ico" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
@@ -392,9 +395,8 @@ export default function GymPickerDialog({
                     <circle cx="12" cy="10" r="2.3" />
                   </svg>
                 </span>
-                Just this once
+                One-time gym
               </button>
-              {/* Last, under Just this once (6 Nov, Alex). */}
               <button type="button" className="gpk-addrow" onClick={() => openForm(false)}>
                 <span className="gpk-addrow-ico" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
@@ -403,6 +405,7 @@ export default function GymPickerDialog({
                 </span>
                 Add a gym
               </button>
+              </div>
             </div>
             <button type="button" className="gpk-primary gpk-start" disabled={!chosen} onClick={go}>
               <span className="gpk-dot" aria-hidden="true" />

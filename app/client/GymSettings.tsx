@@ -23,7 +23,7 @@ const hours = (min: number) => {
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return h < 10 && m ? `${h} h ${m}` : `${h} h`;
+  return h < 10 && m ? `${h} h ${String(m).padStart(2, "0")}` : `${h} h`;
 };
 /** Home, Once or Deleted, then more. */
 const state = (g: GymDashboard) => (g.deleted ? "Deleted" : g.once ? "Once" : g.home ? "Home" : null);
@@ -112,6 +112,7 @@ function GymPage({ gym, busy, failed, onBack, onBringBack, onChange }: { gym: Gy
   const tint = gymColor(gym.color ?? undefined);
   const [editing, setEditing] = useState(false);
   const [asking, setAsking] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [notDeleted, setNotDeleted] = useState(false);
   // The picture: a plain button on a hidden field, so the phone's own picker opens in one tap (4 Nov, Alex).
@@ -169,7 +170,49 @@ function GymPage({ gym, busy, failed, onBack, onBringBack, onChange }: { gym: Gy
         <div className="cn-header-titles">
           <h1 className="cn-title">Gym</h1>
         </div>
-        <span className="cn-icon-spacer" aria-hidden="true" />
+        {/* Edit and Delete in the ⋯ (9 Nov, Alex), Delete asking in the menu itself as a chat message's does. */}
+        {gym.deleted ? (
+          <span className="cn-icon-spacer" aria-hidden="true" />
+        ) : (
+          <div className="gy-more">
+            <button type="button" className="cn-icon-btn" onClick={() => (setMenuOpen((o) => !o), setAsking(false))} aria-label="More" aria-expanded={menuOpen}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.7" />
+                <circle cx="12" cy="12" r="1.7" />
+                <circle cx="19" cy="12" r="1.7" />
+              </svg>
+            </button>
+            {menuOpen && (
+              <>
+                <span className="gy-menu-back" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+                <div className="gy-menu" role="menu">
+                  {asking ? (
+                    <>
+                      <span className="gy-menu-q">Delete {gym.name}?</span>
+                      <span className="gy-foot-btns">
+                        <button type="button" className="gy-word" disabled={deleting} onClick={() => setAsking(false)}>
+                          Cancel
+                        </button>
+                        <button type="button" className="gy-word red" disabled={deleting} onClick={() => void remove()}>
+                          Delete
+                        </button>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" role="menuitem" className="gy-menu-row" onClick={() => (setMenuOpen(false), setEditing(true))}>
+                        Edit
+                      </button>
+                      <button type="button" role="menuitem" className="gy-menu-row red" onClick={() => setAsking(true)}>
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </header>
       <main className="gy-body">
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onPicture(e)} />
@@ -229,34 +272,13 @@ function GymPage({ gym, busy, failed, onBack, onBringBack, onChange }: { gym: Gy
           </>
         )}
         {(failed || notDeleted) && <div className="gy-hero-error gy-foot-error">{failed ? "Not brought back. Try again" : "Not deleted. Try again"}</div>}
-        <div className="gy-foot">
-          {gym.deleted ? (
+        {gym.deleted && (
+          <div className="gy-foot">
             <button type="button" className="gy-word" disabled={busy} onClick={onBringBack}>
               Bring back
             </button>
-          ) : asking ? (
-            <>
-              <span className="gy-foot-q">Delete {gym.name}?</span>
-              <span className="gy-foot-btns">
-                <button type="button" className="gy-word" disabled={deleting} onClick={() => setAsking(false)}>
-                  Cancel
-                </button>
-                <button type="button" className="gy-word red" disabled={deleting} onClick={() => void remove()}>
-                  Delete
-                </button>
-              </span>
-            </>
-          ) : (
-            <>
-              <button type="button" className="gy-word" onClick={() => setEditing(true)}>
-                Edit
-              </button>
-              <button type="button" className="gy-word red" onClick={() => setAsking(true)}>
-                Delete
-              </button>
-            </>
-          )}
-        </div>
+          </div>
+        )}
       </main>
       {editing && <EditGym gym={gym} onClose={() => setEditing(false)} onSaved={onChange} />}
     </div>
@@ -298,15 +320,15 @@ function EditGym({ gym, onClose, onSaved }: { gym: GymDashboard; onClose: () => 
       <div className="gpk-card" role="dialog" aria-modal="true" aria-labelledby="gy-edit-title" style={{ "--g": tint.hex, "--g-rgb": tint.rgb } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
         <div className="gpk-content gpk-add">
           <div className="gpk-head center">
-            <button type="button" className="gpk-round" onClick={onClose} aria-label="Back">
+            <h2 id="gy-edit-title" className="gpk-title sm ads-title">
+              Edit gym
+            </h2>
+            <button type="button" className="gpk-round" onClick={onClose} aria-label="Close">
               <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m14.5 6-6 6 6 6" />
+                <path d="M6 6l12 12M18 6 6 18" />
               </svg>
               <RingEdge size={32} />
             </button>
-            <h2 id="gy-edit-title" className="gpk-title sm">
-              Edit gym
-            </h2>
           </div>
           <label className="gpk-field">
             <span className="gpk-label">Gym name</span>

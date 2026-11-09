@@ -10,6 +10,10 @@
 .tr-row-copy { display: inline-flex; margin-left: 6px; vertical-align: -1px; color: #3a3390; }
 .tr-row-copy svg { width: 14px; height: 14px; }
 .tr-body .tr-row.tr-add { min-height: 0; }
+.gpk-addpair { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gpk-addpair .gpk-addrow { min-width: 0; gap: 6px; padding: 0 8px; justify-content: center; white-space: nowrap; }
+.gpk-addpair .gpk-addrow-ico { width: 20px; height: 20px; margin: 0; }
+.ads-title { flex: 1; min-width: 0; }
 .ads-note { margin: 0; font-size: 12px; font-weight: 500; color: #8b93a1; }
 .ads-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
 .ads-row-fact { font-size: 12px; font-weight: 500; color: #8b93a1; }
@@ -55,6 +59,13 @@ button.gy-hero-badge:disabled { cursor: default; }
 .gy-foot-error { margin: auto 12px 0; }
 .gy-foot-error + .gy-foot { margin-top: 0; }
 .gy-foot { margin-top: auto; padding: 14px 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gy-more { position: relative; justify-self: end; }
+.gy-menu-back { position: fixed; inset: 0; z-index: 4; }
+.gy-menu { position: absolute; top: 100%; right: 0; z-index: 5; min-width: 190px; padding: 6px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB, 0 14px 30px -14px rgba(20, 30, 50, 0.28); display: flex; flex-direction: column; }
+.gy-menu-row { height: 42px; padding: 0 12px; border: 0; border-radius: 9px; background: none; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.gy-menu-row.red { color: #b42318; }
+.gy-menu-q { padding: 8px 12px 2px; font-size: 14px; font-weight: 600; color: #141a24; }
+.gy-menu .gy-foot-btns { justify-content: flex-end; padding: 0 12px; }
 .gy-foot-q { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gy-foot-btns { flex: none; display: flex; gap: 16px; }
 @media (prefers-reduced-motion: reduce) { .gy-hero-badge.busy { animation: none; } }

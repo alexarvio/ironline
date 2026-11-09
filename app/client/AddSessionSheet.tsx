@@ -33,15 +33,24 @@ export default function AddSessionSheet({
       <div className="gpk-card" role="dialog" aria-modal="true" aria-labelledby="ads-title" onClick={(e) => e.stopPropagation()}>
         <div className="gpk-content">
           <div className="gpk-head center">
-            <button type="button" className="gpk-round" onClick={() => (picking ? setPicking(false) : onClose())} aria-label={picking ? "Back" : "Close"}>
+            {picking && (
+              <button type="button" className="gpk-round" onClick={() => setPicking(false)} aria-label="Back">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m14.5 6-6 6 6 6" />
+                </svg>
+                <RingEdge size={32} />
+              </button>
+            )}
+            <h2 id="ads-title" className="gpk-title sm ads-title">
+              {picking ? "Duplicate which?" : "Add a session"}
+            </h2>
+            {/* The ✕ on the right, as every pop-up's. */}
+            <button type="button" className="gpk-round" onClick={onClose} aria-label="Close">
               <svg viewBox="0 0 24 24" aria-hidden="true">
-                {picking ? <path d="m14.5 6-6 6 6 6" /> : <path d="M6 6l12 12M18 6 6 18" />}
+                <path d="M6 6l12 12M18 6 6 18" />
               </svg>
               <RingEdge size={32} />
             </button>
-            <h2 id="ads-title" className="gpk-title sm">
-              {picking ? "Duplicate which?" : "Add a session"}
-            </h2>
           </div>
           <div className="gpk-rows">
             {picking ? (
