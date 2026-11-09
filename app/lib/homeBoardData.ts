@@ -27,7 +27,6 @@ import {
   WEIGHT_NAME,
   workoutFed,
   type ActivityDay,
-  isRogue,
 } from "./queries";
 import { phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 import { invoicingFor } from "./countries";
@@ -221,8 +220,7 @@ function context(clientId: number, today: string, withCalendar = true): Ctx {
     return a.exercise_id && exercises.has(a.exercise_id) ? `${a.exercise_id}:${a.variation_id ?? ""}` : null;
   };
 
-  // A rogue session counts for nothing on the board (9 Nov, Alex: "independent… not compared or used on charts"); a duplicate is a session.
-  const days = data.program_days.filter((d) => d.client_id === clientId && !isRogue(d));
+  const days = data.program_days.filter((d) => d.client_id === clientId);
   const dayIds = new Set(days.map((d) => d.id));
   const byDay = new Map<number, AssignmentRow[]>();
   const assignments = new Map<number, AssignmentRow>();
@@ -793,12 +791,9 @@ function weightOf(ctx: Ctx): HomeBoard["weight"] {
 
 /** Trained: a counted set logged that day (as the training tile counts a session), or a session the calendar has on it
     (ended there, done in full, or kept from before a coach's edit). Checked in: anything but what the workout answers. */
-const rogueDayIds = (clientId: number) => new Set(getData().program_days.filter((d) => d.client_id === clientId && isRogue(d)).map((d) => d.id));
-
 function daysOf(ctx: Ctx, dates: string[] = lastDays(ctx.today)): HomeBoard["days"] {
   const setDays = new Set(ctx.sets.filter((s) => s.counts).map((s) => s.day));
   const asked = dailyAskedOn(ctx.clientId);
-  const rogue = rogueDayIds(ctx.clientId);
   // What a square opens (7 Nov, Alex): the day's session (one the calendar has on it, else the one a set was logged in),
   // and the check-in sent that day (a daily reading first, then a weekly, then a monthly).
   const weekOf = new Map(ctx.days.map((d) => [d.id, d.week_number] as const));
@@ -831,8 +826,7 @@ function daysOf(ctx: Ctx, dates: string[] = lastDays(ctx.today)): HomeBoard["day
   }
   return dates.map((date) => {
     const d = ctx.calendar.get(date);
-    const planned = (d?.sessions ?? []).filter((s) => s.dayId == null || !rogue.has(s.dayId));
-    const trained = planned.length > 0 || setDays.has(date);
+    const trained = !!d?.sessions.length || setDays.has(date);
     const checked = (d?.checkIns ?? []).filter((n) => !ctx.fedNames.has(n));
     // Done in part (27 Oct, Alex): trained with no session finished in full; checked in with a daily metric asked that
     // day left empty while others were filled (a weekly or monthly send alone, or a day with no daily ask, is whole).
@@ -841,7 +835,7 @@ function daysOf(ctx: Ctx, dates: string[] = lastDays(ctx.today)): HomeBoard["day
     return {
       date,
       trained,
-      trainedPart: trained && !planned.some((s) => s.finished),
+      trainedPart: trained && !d?.sessions.some((s) => s.finished),
       food: !!d?.food,
       checkIn: checked.length > 0,
       checkInPart: short,
@@ -862,8 +856,7 @@ function thirtyDaysOf(ctx: Ctx): HomeBoard["days"] {
   const take = (d: string) => {
     if (d && d <= ctx.today && (!first || d < first)) first = d;
   };
-  const rogue = rogueDayIds(ctx.clientId);
-  for (const [date, d] of ctx.calendar) if (d.sessions.some((s) => s.dayId == null || !rogue.has(s.dayId)) || d.food || d.checkIns.some((n) => !ctx.fedNames.has(n))) take(date);
+  for (const [date, d] of ctx.calendar) if (d.sessions.length || d.food || d.checkIns.some((n) => !ctx.fedNames.has(n))) take(date);
   for (const s of ctx.sets) if (s.counts) take(s.day);
   const since: string = first ?? ctx.today;
   if (since <= floor) return last;

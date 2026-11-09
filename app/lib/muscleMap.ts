@@ -103,9 +103,7 @@ export function muscleMapFor(clientId: number, programId: number | null): Muscle
     }
     for (const a of assignments) {
       const n = counted.get(a.id);
-      const onDay = dayById.get(a.program_day_id);
-      // A rogue session counts for nothing (9 Nov, Alex); a duplicate's sets are sets.
-      if (!n || (onDay?.free && onDay.copy_of == null)) continue;
+      if (!n) continue;
       const d = done(a);
       credit(phaseLoad, d.name, d.w, n);
     }
