@@ -314,6 +314,8 @@ import {
   addClientGym,
   saveGymLogo,
   removeClientGym,
+  restoreClientGym,
+  updateClientGym,
   getClientIdForGym,
   pickGymForDay,
   setSessionSkipReason,
@@ -3933,8 +3935,8 @@ export async function clientAddGymAction(programDayId: number, name: string, col
   });
 }
 
-/** The client deletes one of their gyms from the picker (6 Nov, Alex: hold it, then Delete). It leaves the picker and
- *  the coach's plans as the coach's Remove does; what was trained there keeps its gym. True once it is gone. */
+/** The client deletes one of their gyms from its page in Settings (9 Nov, Alex; held in the picker before). It leaves the
+ *  picker and the coach's plans as the coach's Remove does; what was trained there keeps its gym. True once it is gone. */
 export async function clientRemoveGymAction(gymId: number): Promise<boolean> {
   const owner = getClientIdForGym(Number(gymId));
   if (owner == null || !(await canAccessClient(owner))) return false;
@@ -3942,6 +3944,26 @@ export async function clientRemoveGymAction(gymId: number): Promise<boolean> {
   revalidatePath("/client");
   revalidatePath("/admin");
   return true;
+}
+
+/** Bring back a deleted gym, from Settings (9 Nov, Alex). True once it is back. */
+export async function clientRestoreGymAction(gymId: number): Promise<boolean> {
+  const owner = getClientIdForGym(Number(gymId));
+  if (owner == null || !(await canAccessClient(owner))) return false;
+  const ok = restoreClientGym(Number(gymId));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+  return ok;
+}
+
+/** The gym's name, colour and type, from its page in Settings (9 Nov, Alex). Back with why not, or null once saved. */
+export async function clientUpdateGymAction(gymId: number, name: string, color: string, kind: string): Promise<string | null> {
+  const owner = getClientIdForGym(Number(gymId));
+  if (owner == null || !(await canAccessClient(owner))) return "Not signed in.";
+  const why = updateClientGym(Number(gymId), String(name ?? ""), isGymColor(color) ? color : undefined, isGymKind(kind) ? kind : undefined);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+  return why;
 }
 
 /** The client's picture for one of their gyms (17 Oct): square, already shrunk in the browser. Back with its path. */

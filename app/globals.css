@@ -20394,6 +20394,13 @@ span.lw-saved.lw-saved.refused { cursor: default; }
 .lw-row.lw-row .lw-row-u { font-size: 15px; }
 .lw-row.lw-row .lw-row-x { font-size: 18px; }
 .lw-row.lw-row .lw-row-rpe { font-size: 13px; }
+/* The open set's figures centred (9 Nov, Alex: "only centering… the current set… if its collapsed move it to the left"):
+   on the row's true middle; a collapsed set's stay on the left, by the spine. */
+.lw-fields.lw-fields { justify-content: center; padding-left: 0; }
+.lw-fields.lw-fields .lw-step, .lw-fields.lw-fields .lw-step + .lw-step { justify-content: center; }
+.lw-fields.lw-fields .lw-value { align-items: center; }
+.lw-fields.lw-fields .lw-num-input { text-align: center; }
+.lw-fields.lw-fields .lw-num-mirror { left: 50%; transform: translateX(-50%); }
 .lw-row.lw-row.done { color: #2f7a3f; }
 .lw-row.lw-row.done .lw-row-badge { box-shadow: none; --ring: #82ad8b; outline: 0; }
 .lw-row.lw-row.done .lw-row-badge svg { stroke: #82ad8b; }
@@ -21198,6 +21205,9 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 .ci-day.ci-day + .ci-day::after { content: none; }
 .ci-one .ci-bar.stuck.stuck { background: rgba(245, 246, 248, 0.94); box-shadow: none; }
 .cn-screen:has(.st-body) .cn-header { background: #F5F6F8; }
+/* One tone all the way down (9 Nov, Alex: a sudden change half way): the page was squeezed to the screen's height, so its colour stopped there and the layer's paper showed under it. */
+.cn-screen .cn-body.cn-body-settings { background: #F5F6F8; }
+.cn-body-settings .settings-dark { flex: none; }
 /* No dot under the picked day (3 Nov, Alex: "we already have the circle indicating which day we are in"); a logged day
    keeps its small dot. */
 .fdi-day-dot.fdi-day-dot.on { background: transparent; }

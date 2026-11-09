@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { clientAddGymAction, clientRemoveGymAction, uploadGymLogoAction } from "../lib/actions";
+import { clientAddGymAction, uploadGymLogoAction } from "../lib/actions";
 import { newOnceKey } from "../lib/onceKey";
 import { coverJpeg } from "../lib/coverJpeg";
 import { pic } from "../lib/pic";
@@ -37,8 +37,8 @@ export type GymOption = {
 };
 
 // A gym's picture, square and small (17 Oct): tap the badge to add or change it.
-const shrink = (file: File) => coverJpeg(file, 320, 320);
-async function sendLogo(gymId: number, blob: Blob): Promise<string | null> {
+export const shrink = (file: File) => coverJpeg(file, 320, 320);
+export async function sendLogo(gymId: number, blob: Blob): Promise<string | null> {
   const fd = new FormData();
   fd.set("gymId", String(gymId));
   fd.set("file", new File([blob], "gym.jpg", { type: "image/jpeg" }));
@@ -46,12 +46,12 @@ async function sendLogo(gymId: number, blob: Blob): Promise<string | null> {
 }
 
 /** The badge's face: the picture when there is one, else the initials. */
-function BadgeFace({ name, logo }: { name: string; logo?: string | null }) {
+export function BadgeFace({ name, logo }: { name: string; logo?: string | null }) {
   return logo ? <img className="gpk-badge-img" src={pic(logo, 480)} alt="" draggable={false} /> : <>{initials(name)}</>;
 }
 
 /** The little camera in the badge's corner that says it can take a picture. */
-const CameraDot = () => (
+export const CameraDot = () => (
   <span className="gpk-badge-cam" aria-hidden="true">
     <svg viewBox="0 0 24 24">
       <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7H8l1.5-2.5h5L16 7h3.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z" />
@@ -230,51 +230,6 @@ export default function GymPickerDialog({
     setKind("gym");
     setAdding(false);
   };
-  // Deleting a gym (6 Nov, Alex: "if I press on it then I can delete"): held half a second, its row asks in place,
-  // `Delete Muscle Factory?` with Cancel and Delete in words. Gone from the list; what was trained there keeps it.
-  const [asking, setAsking] = useState<number | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const held = useRef(false);
-  const endHold = () => {
-    if (holdTimer.current) clearTimeout(holdTimer.current);
-    holdTimer.current = null;
-  };
-  const ask = (id: number) => {
-    endHold();
-    held.current = true;
-    setAsking(id);
-    try {
-      navigator.vibrate?.(10);
-    } catch {}
-  };
-  const startHold = (id: number) => {
-    endHold();
-    held.current = false;
-    holdTimer.current = setTimeout(() => ask(id), 500);
-  };
-  useEffect(() => endHold, []);
-  const remove = async (id: number) => {
-    if (deleting) return;
-    setDeleting(true);
-    let ok = false;
-    try {
-      ok = await clientRemoveGymAction(id);
-    } catch {
-      ok = false;
-    }
-    setDeleting(false);
-    if (!ok) {
-      setToast("Couldn't delete the gym. Try again.");
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-    const rest = list.filter((g) => g.id !== id);
-    setList(rest);
-    setAsking(null);
-    if (selected === id) setSelected((rest.find((g) => g.lastUsed) ?? rest[0])?.id ?? null);
-    if (rest.length === 0) setAdding(true);
-  };
   const go = () => {
     if (!chosen) return;
     try {
@@ -396,23 +351,6 @@ export default function GymPickerDialog({
               {list.map((g, i) => {
                 const c = GYM_COLORS[g.color];
                 const on = g.id === selected;
-                if (asking === g.id)
-                  return (
-                    <div key={g.id} className="gpk-ask" role="group" aria-label={`Delete ${g.name}?`}>
-                      <span className="gpk-badge" style={{ background: c.hex }} aria-hidden="true">
-                        <BadgeFace name={g.name} logo={g.logo} />
-                      </span>
-                      <span className="gpk-ask-q">Delete {g.name}?</span>
-                      <span className="gpk-ask-btns">
-                        <button type="button" onClick={() => setAsking(null)} disabled={deleting}>
-                          Cancel
-                        </button>
-                        <button type="button" className="gpk-ask-delete" onClick={() => void remove(g.id)} disabled={deleting}>
-                          Delete
-                        </button>
-                      </span>
-                    </div>
-                  );
                 return (
                   <div key={g.id} className="gpk-row-wrap">
                   <button
@@ -423,35 +361,11 @@ export default function GymPickerDialog({
                     tabIndex={on ? 0 : -1}
                     className={`gpk-row${on ? " on" : ""}`}
                     style={on ? { background: `rgba(${c.rgb},.07)`, boxShadow: `inset 0 0 0 2px ${c.hex}` } : undefined}
-                    onPointerDown={() => startHold(g.id)}
-                    onPointerUp={endHold}
-                    onPointerLeave={endHold}
-                    onPointerCancel={endHold}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      if (!held.current) ask(g.id);
-                    }}
-                    onClick={() => {
-                      // The tap that ends a hold only asks; it never picks the gym as well.
-                      if (held.current) {
-                        held.current = false;
-                        return;
-                      }
-                      setAsking(null);
-                      setSelected(g.id);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Delete" || e.key === "Backspace") {
-                        e.preventDefault();
-                        ask(g.id);
-                        return;
-                      }
-                      onRowKey(e, i);
-                    }}
+                    onClick={() => setSelected(g.id)}
+                    onKeyDown={(e) => onRowKey(e, i)}
                   >
                     <span className={`gpk-badge${logoBusy === g.id ? " busy" : ""}`} style={{ background: c.hex }} aria-hidden="true">
                       <BadgeFace name={g.name} logo={g.logo} />
-                      {on && <CameraDot />}
                     </span>
                     <span className="gpk-row-text">
                       <span className="gpk-row-name">{g.name}</span>
@@ -467,8 +381,6 @@ export default function GymPickerDialog({
                       )}
                     </span>
                   </button>
-                  {/* Over the picked row's badge, beside the row rather than inside it: a button can't hold a button. */}
-                  {on && <button type="button" className="gpk-badge-pick" onClick={() => choosePicture(g.id)} aria-label={g.logo ? `Change ${g.name}'s picture` : `Add a picture of ${g.name}`} />}
                   </div>
                 );
               })}

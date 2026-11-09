@@ -59,6 +59,7 @@ export default function ExercisePage({
   coachName,
   coachPhoto = null,
   nextName = null,
+  goesToName = null,
   onNext,
   request = null,
   onSetLogged,
@@ -82,6 +83,8 @@ export default function ExercisePage({
   coachPhoto?: string | null;
   /** The exercise (or cardio) after this one. */
   nextName?: string | null;
+  /** Where Next really goes (a skipped one too), for the done toast. */
+  goesToName?: string | null;
   /** Every set is in: on to the next page, with a line for the toast. */
   onNext?: (toast?: string) => void;
   /** An ask from the workout's ⋯ menu, for this exercise. */
@@ -353,9 +356,9 @@ export default function ExercisePage({
   // and names sit in a ref, so the timer survives the re-renders of the
   // save landing and the server's refresh (13 Oct: they used to cancel it).
   const doneSeen = useRef(allDone);
-  const latest = useRef({ onNext, line: nextName ? `${shownName(exercise)} done, on to ${nextName}` : undefined });
+  const latest = useRef({ onNext, line: goesToName ? `${shownName(exercise)} done, on to ${goesToName}` : undefined });
   useEffect(() => {
-    latest.current = { onNext, line: nextName ? `${shownName(exercise)} done, on to ${nextName}` : undefined };
+    latest.current = { onNext, line: goesToName ? `${shownName(exercise)} done, on to ${goesToName}` : undefined };
   });
   const jumpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -640,7 +643,7 @@ export default function ExercisePage({
         </div>
         <div className="wo-ex-title-row">
           {/* Next up only with an exercise ahead (19 Oct, Alex); a free session with nothing after says nothing, not "Last exercise". */}
-          {(nextName || !free) && (
+          {(nextName || (!free && index === total)) && (
             <div className="wo-nextup">
               <span className="wo-nextup-label">{nextName ? "Next up" : "Last exercise"}</span>
               {nextName && <span className="wo-nextup-name">{nextName}</span>}

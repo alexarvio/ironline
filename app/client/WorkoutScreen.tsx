@@ -306,6 +306,23 @@ export default function WorkoutScreen({
     for (let j = 0; j < Math.min(i, wrap); j++) if (!pageDone(pages[j])) return j;
     return wrap;
   };
+  // "Next up" names only what is ahead (9 Nov, Alex: "Lat Pull In… that's the first exercise and we are on the last one"):
+  // going back to one skipped is where Next goes, never what comes next.
+  const nextAheadName = (i: number) => {
+    const wrap = pages.length - 1;
+    for (let j = i + 1; j < wrap; j++) {
+      const n = pages[j];
+      if (pageDone(n)) continue;
+      if (n.kind === "exercise") return shownName(day.exercises[n.index]);
+      if (n.kind === "cardio") return day.cardio[n.index].name;
+    }
+    return null;
+  };
+  /** Where Next really goes, for the done toast: a skipped one too. */
+  const goesToName = (i: number) => {
+    const n = pages[nextOpen(i)];
+    return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;
+  };
   const pageStarted = (p: Page) => p.kind === "exercise" && loggedCount(day.exercises[p.index]) > 0;
 
   return (
@@ -423,10 +440,8 @@ export default function WorkoutScreen({
                 gymId={gymId}
                 coachName={coachName}
                 coachPhoto={coachPhoto}
-                nextName={(() => {
-                  const n = pages[nextOpen(i)];
-                  return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;
-                })()}
+                nextName={nextAheadName(i)}
+                goesToName={goesToName(i)}
                 onNext={(line) => {
                   if (line) setToast(line);
                   jumpTo(nextOpen(i));
@@ -460,10 +475,7 @@ export default function WorkoutScreen({
                   position={{ n: p.index + 1, total: day.cardio.length }}
                   free={!!day.free && !editing}
                   // On to what's next once it's done, as an exercise does (23 Oct, Alex).
-                  nextName={(() => {
-                    const n = pages[nextOpen(i)];
-                    return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;
-                  })()}
+                  nextName={goesToName(i)}
                   onNext={(line) => {
                     if (line) setToast(line);
                     jumpTo(nextOpen(i));
