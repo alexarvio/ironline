@@ -47,7 +47,7 @@ function placeOf(data: Data, v: Request) {
   const a = data.workout_assignments.find((w) => w.id === v.assignment_id);
   const d = a ? data.program_days.find((x) => x.id === a.program_day_id) : undefined;
   const name = a ? data.exercises.find((e) => e.id === a.exercise_id)?.name ?? "Exercise" : "Exercise";
-  const session = d ? (d.free ? "Rogue session" : d.label?.trim() || `Session ${d.day_of_week}`) : "Session";
+  const session = d ? (d.free && d.copy_of == null ? "Rogue session" : d.label?.trim() || `Session ${d.day_of_week}`) : "Session";
   const program = d ? data.training_programs.find((p) => p.client_id === d.client_id && d.week_number >= p.start_week && d.week_number < p.start_week + p.total_weeks) : undefined;
   const weekNo = d ? (program ? d.week_number - program.start_week + 1 : d.week_number) : null;
   return { a, d, exercise: v.about === "swap" ? `Swap for ${name}` : name, session, weekNo };

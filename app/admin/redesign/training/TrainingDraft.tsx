@@ -121,18 +121,20 @@ export type DraftRow = {
 };
 /** swap: what the client did instead; alternatives: what the coach offers (names, with a note). */
 export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean; swap?: string | null; alternatives?: { name: string; note: string }[] };
-export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; /** The gym it was trained at, for its face on the row (6 Nov, Alex). */ gymId?: number | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[]; /** The later weeks (screen index) with this session's slot and nothing logged in it: what "Also delete it from" reaches. */ laterWeeks?: number[] };
+export type DraftSession = { /** Duplicates of it the client trained this week (9 Nov, Alex). */ copies?: number[]; id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; /** The gym it was trained at, for its face on the row (6 Nov, Alex). */ gymId?: number | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[]; /** The later weeks (screen index) with this session's slot and nothing logged in it: what "Also delete it from" reaches. */ laterWeeks?: number[] };
 /** A workout the client ended, with what they answered on ending it (the answers feed). */
 export type DraftAnswered = { dayId: number; weekIdx: number; weekLabel: string; name: string; ended: string; duration: number | null; gym: string | null; note: string | null; answers: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[] };
 /** A rogue session as the coach sees it: when, how long, and what was logged. */
 export type DraftRogue = {
   id: number;
+  /** A duplicate of a planned session: its name. Null: a rogue session. */
+  copyOf: string | null;
   started: string | null;
   ended: string | null;
   duration: number | null;
   note: string | null;
-  exercises: { id: number; name: string; sets: { n: number; kg: number | null; reps: number | null }[] }[];
-  cardio: { id: number; name: string; time: string; distance: string; pace: string; incline: string; done: boolean }[];
+  exercises: { id: number; name: string; /** Swapped on a duplicate: what was planned. */ insteadOf?: string | null; sets: { n: number; kg: number | null; reps: number | null }[] }[];
+  cardio: { id: number; name: string; insteadOf?: string | null; time: string; distance: string; pace: string; incline: string; done: boolean }[];
 };
 
 export type DraftProgram = {
@@ -165,7 +167,7 @@ export type DraftProgram = {
   liveIdx: number;
   /** trained: each session completed; missed: begun and left unfinished; skipped: the client said they couldn't do it. Neither: not started. */
   /** print: what a copy of the week would carry, so a week the same as another offers no copy of it. */
-  weeks: { index: number; label: string; print: string; trained: boolean[]; missed: boolean[]; skipped: boolean[]; state: "past" | "live" | "ahead" }[];
+  weeks: { index: number; label: string; print: string; trained: boolean[]; missed: boolean[]; skipped: boolean[]; /** Duplicates and rogue sessions the client trained that week. */ duplicates?: number; rogues?: number; state: "past" | "live" | "ahead" }[];
   sessions: DraftSession[];
   /**
    * What the applies would change, read for the week loaded (`week`, its index) as their confirms read it
@@ -1271,6 +1273,11 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                 {/* What wants the coach, in the exercise rows' order (24 Oct, Alex): from the right the swap, the video or photo,
                     their note, then extra sets and a personal best. */}
                 <span className="trn-row-flags">
+                  {(s.copies?.length ?? 0) > 0 && (
+                    <button type="button" className="rd-copydot" title={`${firstName} did this session again this week`} aria-label={`${firstName} did this session again this week. Open`} onClick={(e) => { e.stopPropagation(); const h = `#session-${s.copies![0]}`; if (window.location.hash === h) window.dispatchEvent(new HashChangeEvent("hashchange")); else window.location.hash = h; }}>
+                      <CopyIcon />
+                    </button>
+                  )}
                   {(() => {
                     const n = rows.filter((r) => r.pb).length;
                     return n > 0 ? (
@@ -3488,6 +3495,8 @@ function WeeksLegend() {
       {row("skipped", <><b>Skipped</b>: they said they couldn&rsquo;t do it.</>)}
       {row("none", <><b>Not completed</b>: never started, and the week is over.</>)}
       {row("", <><b>To do</b>: not started yet, the week still on or to come.</>)}
+      {row("dup", <><b>Duplicate</b>: a session they did again.</>)}
+      {row("rogue", <><b>Rogue session</b>: their own workout, off the plan.</>)}
     </div>
   );
 }
@@ -3510,6 +3519,7 @@ function TrainingLegend() {
       {row(<span className="rd-tag note"><NoteIcon /></span>, <><b>Their note</b> on the session.</>)}
       {row(<span className="rd-extradot static">+2</span>, <><b>Extra sets</b> beyond what you set.</>)}
       {row(<span className="rd-pbdot">PB</span>, <><b>Personal best</b>: heavier than ever, reps on target.</>)}
+      {row(<span className="rd-copydot static"><CopyIcon /></span>, <><b>Duplicated</b>: they did this session again this week.</>)}
       {row(<i className="rd-due" />, <><b>Needs you</b>: something here waits for you.</>)}
       <div className="rd-legend-head">What they did</div>
       {/* The colours alone, one size (25 Oct, Alex: "the boxes with colors but without the numbers… same size"). */}

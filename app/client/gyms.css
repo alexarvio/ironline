@@ -6,6 +6,13 @@
 .st-fold-chev svg { width: 16px; height: 16px; }
 .st-fold-chev.open { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) { .st-fold-chev { transition: none; } }
+/* The + under the week's sessions and a duplicate's mark (9 Nov, Alex). */
+.tr-row-copy { display: inline-flex; margin-left: 6px; vertical-align: -1px; color: #3a3390; }
+.tr-row-copy svg { width: 14px; height: 14px; }
+.tr-body .tr-row.tr-add { min-height: 0; }
+.ads-note { margin: 0; font-size: 12px; font-weight: 500; color: #8b93a1; }
+.ads-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.ads-row-fact { font-size: 12px; font-weight: 500; color: #8b93a1; }
 .gy-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 8px; }
 .gy-row { display: flex; align-items: center; gap: 12px; min-height: 48px; }
 .gy-row-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }

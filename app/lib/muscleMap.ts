@@ -117,7 +117,9 @@ export function muscleMapFor(clientId: number, programId: number | null): Muscle
     week = Math.min(Math.max(getProgramCurrentWeekIndex(program), 1), program.total_weeks);
     const weekNumber = program.start_week + week - 1;
     for (const a of assignments) {
-      if (dayById.get(a.program_day_id)?.week_number !== weekNumber) continue;
+      const onDay = dayById.get(a.program_day_id);
+      // What the programme plans: not a duplicate the client made (9 Nov).
+      if (onDay?.week_number !== weekNumber || onDay.free) continue;
       const p = planned(a);
       credit(splitLoad, p.name, p.w, Math.max(0, Number(a.sets) || 0));
     }

@@ -629,7 +629,7 @@ export function applyWorkoutOutbox(days: SessionDay[], list: readonly WorkoutEnt
       }
       case "discard":
         // A rogue session discarded is gone altogether, as on the server.
-        if (d.free) gone.add(d.key);
+        if (d.free || d.copy) gone.add(d.key);
         next = fresh(d);
         break;
       case "skip":

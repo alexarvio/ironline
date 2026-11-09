@@ -94,7 +94,7 @@ function compare(clientId: number, gone: Set<number>) {
     for (const [id, logs] of logsOf) {
       const wa = waOf.get(id);
       const day = wa ? dayOf.get(wa.program_day_id) : undefined;
-      if (!wa || !day || wa.swap || day.free || wa.exercise_id === 0 || wa.exercise_id !== row.exercise_id || day.client_id !== clientId || gone.has(day.id)) continue;
+      if (!wa || !day || wa.swap || (day.free && day.copy_of == null) || wa.exercise_id === 0 || wa.exercise_id !== row.exercise_id || day.client_id !== clientId || gone.has(day.id)) continue;
       if (!laterSlot(dest, day)) continue;
       const assisted = assistedRow(exById.get(wa.exercise_id), wa.variation_id);
       const lanes = new Map<Lane, typeof logs>();

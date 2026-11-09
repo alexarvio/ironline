@@ -111,6 +111,9 @@ type ProgramDay = {
   session_answers?: SessionAnswer[];
   /** A free session (19 Oct): one the client made to train off the plan, not one the coach planned. Left out of every week's plan (getWeek, getPublishedWeek); see createFreeSession. */
   free?: boolean;
+  /** A duplicate of this planned session (9 Nov, Alex: "do a workout twice in a week"): `free` too, so the plan counts it
+      in nothing, but it has the session's own exercises and targets (`isRogue` in queries.ts tells the two apart). */
+  copy_of?: number;
 };
 // A multi-week training program — the coach picks a name and a length
 // (total_weeks) up front; program_days for weeks [start_week, start_week +
@@ -384,6 +387,8 @@ export type ClientGym = {
   once?: boolean;
   /** Deleted while it was home: the gym that took over, so Bring back can make it home again (9 Nov, Alex). */
   home_to?: number;
+  /** When it was deleted: it can be brought back for 30 days (9 Nov, Alex). None on a gym deleted before that was kept. */
+  archived_at?: string;
 };
 
 // The client's note about a whole programme, for the coach. One per

@@ -3,13 +3,14 @@
 import { Fragment, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Bars } from "./Bars";
-import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, removeFreeSessionAction } from "../lib/actions";
+import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, duplicateSessionAction, removeFreeSessionAction } from "../lib/actions";
 import { newOnceKey } from "../lib/onceKey";
 import { applyWorkoutOutbox, clearNotSaved, enqueueWorkout, notSavedWords, useWorkoutOutbox } from "../components/workoutOutbox";
 import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
-import { CompassIcon } from "../components/icons";
+import { CopyIcon, PlusIcon } from "../components/icons";
+import AddSessionSheet from "./AddSessionSheet";
 import RingEdge from "../components/RingEdge";
 import DoneCheck from "../components/DoneCheck";
 import { useFocusRef, useNavigateTab, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
@@ -239,6 +240,41 @@ export default function TrainingDayList({
       }
     });
   };
+  // The + under the week's sessions (9 Nov, Alex): a rogue session, or one of this week's again.
+  const [adding, setAdding] = useState(false);
+  const [copyBusy, setCopyBusy] = useState(false);
+  const [openWhenHere, setOpenWhenHere] = useState<number | null>(null);
+  // An answer lost on the way keeps its key, so the next tap on that session and a late landing are one duplicate.
+  const copyUnanswered = useRef<{ source: number; key: string } | null>(null);
+  const duplicate = async (sourceKey: number) => {
+    if (copyBusy) return;
+    setCopyBusy(true);
+    setStartProblem(null);
+    const onceKey = copyUnanswered.current?.source === sourceKey ? copyUnanswered.current.key : newOnceKey();
+    copyUnanswered.current = { source: sourceKey, key: onceKey };
+    const r = await Promise.race([
+      duplicateSessionAction(sourceKey, onceKey, serverDays.find((d) => d.key === sourceKey)?.title).then((answer) => {
+        if (copyUnanswered.current?.key === onceKey) copyUnanswered.current = null;
+        return answer;
+      }),
+      new Promise<{ ok: false }>((resolve) => setTimeout(() => resolve({ ok: false }), 10000)),
+    ]).catch(() => ({ ok: false as const }));
+    setCopyBusy(false);
+    setAdding(false);
+    if (!r.ok) {
+      setStartProblem("Couldn't duplicate it. Try again.");
+      return;
+    }
+    setOpenWhenHere(r.id);
+  };
+  // Opened the moment the page has it (the action reads the page again).
+  useEffect(() => {
+    if (openWhenHere == null || !serverDays.some((d) => d.key === openWhenHere)) return;
+    // Never over something opened meanwhile.
+    if (!view) setView({ dayId: openWhenHere, screen: "overview" });
+    setOpenWhenHere(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- when the page has it
+  }, [openWhenHere, serverDays]);
   const freeAddLost = useRef<{ key: string; sent: string } | null>(null);
   /** An exercise into the open free session: drawn the moment the server gives it an id. */
   const addFree = async (dayId: number, pick: { exerciseId: number | null; name: string; group: string }): Promise<number | null> => {
@@ -278,7 +314,7 @@ export default function TrainingDayList({
   // Live: this week's live session, or the one elsewhere for the resume bar.
   const liveDay = days.find((d) => d.startedAt && !d.endedAt) ?? null;
   const now = useTicker(!!liveSession && !view);
-  const nextKey = currentWeek ? days.find((d) => sessionStatus(d, false) === "upcoming")?.key ?? null : null;
+  const nextKey = currentWeek ? days.find((d) => !d.copy && sessionStatus(d, false) === "upcoming")?.key ?? null : null;
 
   const [host, setHost] = useState<HTMLElement | null>(null);
   // The finished session open in place, if any.
@@ -338,7 +374,14 @@ export default function TrainingDayList({
                 )}
               </span>
               <span className="tr-row-main">
-                <span className="tr-row-title">{d.title}</span>
+                <span className="tr-row-title">
+                  {d.title}
+                  {d.copy && (
+                    <span className="tr-row-copy" role="img" aria-label="Duplicate">
+                      <CopyIcon />
+                    </span>
+                  )}
+                </span>
                 <span className="tr-row-sub">
                   <Bars parts={[...sub, waiting && "Not sent yet"]} />
                 </span>
@@ -402,19 +445,26 @@ export default function TrainingDayList({
             On the same line as the week's sessions, but its ring empty: no
             number, so it doesn't read as one more to do this week. */}
         {currentWeek && (
-          <button type="button" className="tr-row tr-free" onClick={startFree} disabled={freeBusy} aria-label="Rogue session">
+          <button type="button" className="tr-row tr-free tr-add" onClick={() => setAdding(true)} disabled={freeBusy || copyBusy} aria-label="Add a session">
             <span className="tr-row-tile free" aria-hidden="true">
-              <CompassIcon size={20} rim={false} />
+              <PlusIcon />
             </span>
-            {/* Its name alone; Starting… only while it opens (3 Nov, Alex: the words audit). */}
-            <span className="tr-row-main">
-              <span className="tr-row-title">Rogue session</span>
-              {freeBusy && <span className="tr-row-sub">Starting…</span>}
-            </span>
-            <span className="tr-row-chev" aria-hidden="true" />
           </button>
         )}
       </div>
+
+      {adding && (
+        <AddSessionSheet
+          sessions={serverDays.filter((d) => !d.free && !d.copy).map((d) => ({ key: d.key, title: d.title, exercises: d.exercises.length, cardio: d.cardio.length }))}
+          busy={freeBusy || copyBusy}
+          onRogue={() => {
+            setAdding(false);
+            startFree();
+          }}
+          onDuplicate={(key) => void duplicate(key)}
+          onClose={() => !copyBusy && setAdding(false)}
+        />
+      )}
 
       {startProblem && (
         <p className="tr-start-problem" role="alert">
@@ -482,6 +532,11 @@ export default function TrainingDayList({
           coachName={coachName}
           picture={headerPicture}
           onBack={() => {
+            // A duplicate left without starting it is taken away: nothing was asked of it yet.
+            if (openDay.copy && !openDay.startedAt && !openDay.endedAt) {
+              dropFree(openDay.key);
+              return;
+            }
             setView(null);
             // Opened from a link in the chat: Back goes back to the chat, once.
             if (openDay.key === focus && trainingFocus?.fromChat && chatDone !== trainingFocus && openMessages) {
@@ -521,7 +576,7 @@ export default function TrainingDayList({
           }}
           onDiscarded={() => {
             // A free session discarded is gone, not put back as unstarted.
-            if (openDay.free) {
+            if (openDay.free || openDay.copy) {
               setGoneFree((g) => [...g, openDay.key]);
               if (localFree?.key === openDay.key) setLocalFree(null);
               setView(null);

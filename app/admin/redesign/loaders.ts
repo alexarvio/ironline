@@ -318,6 +318,9 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       trained: dots.map((x) => x.done),
       missed: dots.map((x) => x.missed),
       skipped: dots.map((x) => x.skipped),
+      // What the client added to the week (9 Nov, Alex): a bar each after the plan's, in their own colours.
+      duplicates: freeOf(n).filter((f) => f.copy_of != null && f.session_started_at).length,
+      rogues: freeOf(n).filter((f) => f.copy_of == null && f.session_started_at).length,
       state: (allOver || i + 1 < liveIdx ? "past" : i + 1 === liveIdx ? "live" : "ahead") as "past" | "live" | "ahead",
     };
   }));
@@ -327,7 +330,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   // first: the Training tab's answers feed under the questionnaire (6 Oct).
   const answersFeed = sub("answers", () => Array.from({ length: program.total_weeks }, (_, i) => {
     const n = program.start_week + i;
-    return weekOf(n)
+    // A duplicate's answers too, as it asks them (9 Nov).
+    return [...weekOf(n), ...freeOf(n).filter((f) => f.copy_of != null)]
       .map((d, si) => ({ d, si }))
       .filter(({ d }) => d.session_ended_at)
       .map(({ d, si }) => {
@@ -445,14 +449,15 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     const setsLogged = rows.reduce((t, r) => t + r.logged.length + (r.swapInfo?.sets.length ?? 0), 0);
     const gym = rows.flatMap((r) => [...r.logged, ...(r.swapInfo?.sets ?? [])]).find((l) => l.gym)?.gym ?? null;
     // Where it was trained, for the gym's face on the session row (6 Nov, Alex).
-    const gymId = gym != null ? allGymRows.find((g) => g.name === gym)?.id ?? null : null;
+    // By its id where a set has one: a gym deleted 30 days ago and a new one can share a name.
+    const gymId = gym != null ? rowsOf(d.id).flatMap((a) => logsOf(a.id)).find((l) => l.gym_id != null)?.gym_id ?? allGymRows.find((g) => g.name === gym)?.id ?? null : null;
     const duration = d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null;
     // The later weeks "Also delete it from" would reach (20 Oct, Alex: it offered weeks that never had this session): the same slot, nothing logged.
     const laterWeeks = laterSameSlotSessionsIn(ix, d.id)
       .map((id) => (ix.dayById.get(id) ?? getData().program_days.find((x) => x.id === id))?.week_number)
       .filter((n): n is number => n != null)
       .map((n) => n - program.start_week + 1);
-    return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, gymId, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })), laterWeeks };
+    return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, gymId, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })), laterWeeks, copies: freeOf(d.week_number).filter((f) => f.copy_of === d.id && f.session_started_at).map((f) => f.id) };
   }));
 
   // The client's rogue sessions (19 Oct, Alex): workouts of their own, off
@@ -465,16 +470,19 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         .filter((d) => d.session_started_at)
         .map((d) => ({
           id: d.id,
+          copyOf: d.copy_of != null ? d.label ?? "Session" : null,
           started: d.session_started_at ?? null,
           ended: d.session_ended_at ?? null,
           duration: d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null,
           note: d.session_note ?? null,
           exercises: rowsOf(d.id).map((a) => ({
             id: a.id,
-            name: a.exercise_name ?? "Exercise",
+            // Swapped on a duplicate, the sets are what they did instead.
+            name: (a.swap ? (a.swap.library_exercise_id != null ? getData().exercises.find((e) => e.id === a.swap!.library_exercise_id)?.name : null) ?? a.swap.custom_name : null) ?? a.exercise_name ?? "Exercise",
+            insteadOf: a.swap ? a.exercise_name ?? null : null,
             sets: [...logsOf(a.id)].sort((x, y) => x.set_number - y.set_number).map((l) => ({ n: l.set_number, kg: l.weight_kg, reps: l.reps })),
           })),
-          cardio: cardioOf(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, distance: c.distance ?? "", pace: c.pace, incline: c.incline, done: ticked(c.id) })),
+          cardio: cardioOf(d.id).map((c) => ({ id: c.id, name: c.swap?.name ?? c.name, insteadOf: c.swap ? c.name : null, time: c.time, distance: c.distance ?? "", pace: c.pace, incline: c.incline, done: ticked(c.id) })),
         }));
       if (list.length) rogue[i + 1] = list;
     }
