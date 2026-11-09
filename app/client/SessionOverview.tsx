@@ -32,6 +32,7 @@ import {
   type SessionCardio,
   type SessionDay,
   type SessionExercise,
+  lastSetsHere,
 } from "./workoutShared";
 
 // A session on its own screen, before, during and after: what the coach set
@@ -328,7 +329,8 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
   const top = (sets: { weight: number | null }[]) => sets.reduce<number | null>((m, s) => (s.weight != null && (m == null || s.weight > m) ? s.weight : m), null);
   const nowTop = top(exercise.logs);
   // Swapped, last time was another lift (as the exercise page reads it): no change against it (4 Nov, review).
-  const thenTop = exercise.lastSets && !swapped ? top(exercise.lastSets.sets) : null;
+  const lastHere = lastSetsHere(exercise, gymId);
+  const thenTop = lastHere && !swapped ? top(lastHere.sets) : null;
   const delta = nowTop != null && thenTop != null ? roundTo(nowTop - thenTop, 2) : null;
   const [open, setOpen] = useState(landed);
   const cardRef = useRef<HTMLDivElement>(null);
