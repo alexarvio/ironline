@@ -13,10 +13,9 @@ import type { MuscleMapData } from "../../../lib/muscles";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
-import { CalendarIcon, ChatIcon, NoteIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, NoteIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CompassIcon, CopyIcon, DumbbellIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
 import HelpTip from "../HelpTip";
-import RogueSessions from "./RogueSessions";
 import ClientNote from "./ClientNote";
 import MuscleMap from "./MuscleMap";
 import ApplyChangesDialog from "./ApplyChanges";
@@ -125,18 +124,6 @@ export type DraftSession = { /** Duplicates of it the client trained this week (
 /** A workout the client ended, with what they answered on ending it (the answers feed). */
 export type DraftAnswered = { dayId: number; weekIdx: number; weekLabel: string; name: string; ended: string; duration: number | null; gym: string | null; note: string | null; answers: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[] };
 /** A rogue session as the coach sees it: when, how long, and what was logged. */
-export type DraftRogue = {
-  id: number;
-  /** A duplicate of a planned session: its name. Null: a rogue session. */
-  copyOf: string | null;
-  started: string | null;
-  ended: string | null;
-  duration: number | null;
-  note: string | null;
-  exercises: { id: number; name: string; /** Swapped on a duplicate: what was planned. */ insteadOf?: string | null; sets: { n: number; kg: number | null; reps: number | null }[] }[];
-  cardio: { id: number; name: string; insteadOf?: string | null; time: string; distance: string; pace: string; incline: string; done: boolean }[];
-};
-
 export type DraftProgram = {
   id: number;
   /** The muscle map (2 Nov, Alex; lib/muscleMap.ts): per muscle, its sets and the exercises behind them, this phase and this week's split. */
@@ -178,7 +165,10 @@ export type DraftProgram = {
   /** The weeks whose copy would change the week on screen (25 Oct), as Apply to the rest reads a change. */
   copyIn?: { week: number; kg: number[]; lbs: number[] } | null;
   /** The client's rogue sessions (19 Oct), by week index: their own workouts off the plan, read only. */
-  rogue: Record<number, DraftRogue[]>;
+  /** The week's duplicates, drawn as its sessions, read only (9 Nov, Alex). */
+  copySessions?: DraftSession[];
+  /** The week's rogue sessions, drawn the same way. */
+  rogueSessions?: DraftSession[];
   /** The client's body weight now (latest reading, else their starting weight; 23 Oct): what an assisted lift really lifts is this less the help. */
   bodyKg: number | null;
   gyms: Gym[];
@@ -291,7 +281,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     });
   // Compared by content: every refresh hands in new objects with the same
   // values, and resetting on those collapsed panels and threw work away.
-  const sessionsKey = JSON.stringify(program.sessions);
+  const sessionsKey = JSON.stringify([program.sessions, program.copySessions ?? [], program.rogueSessions ?? []]);
   const [seenProgram, setSeenProgram] = useState(sessionsKey);
   // Sessions being added: shown at once (20 Oct, Alex: Add session waited for the save and the page's read), until the read brings the real ones.
   const [incoming, setIncoming] = useState(0);
@@ -367,6 +357,13 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
   // looked at (sessions open, what the client did, their videos and notes, replies to them); nothing that changes the
   // plan is offered: no adding, removing, reordering, renaming or copying, and its figures and notes read, not typed.
   const weekLocked = program.status === "past" || week.state === "past";
+  // The loaded week's duplicates (a week added on this screen has none).
+  // Kept per week as the server sends them, so a week come back to on this screen still has its own.
+  const extrasSeen = useRef<Record<string, { copies: DraftSession[]; rogues: DraftSession[] }>>({});
+  extrasSeen.current[`${program.id}:${program.weekIdx}`] = { copies: program.copySessions ?? [], rogues: program.rogueSessions ?? [] };
+  const extras = extrasSeen.current[`${program.id}:${viewIdx}`];
+  const copySessions = extras?.copies ?? [];
+  const rogueSessions = extras?.rogues ?? [];
   const [stash, setStash] = useState<Record<number, DraftSession[]>>({});
   const isLocal = (index: number) => index === viewIdx || index in stash;
   const [pending, setPending] = useState<Record<number, Pending>>({});
@@ -763,11 +760,11 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
       if (clear) clearTimeout(clear);
     };
   }, []);
-  const [videos, setVideos] = useState<Record<number, DraftRow["video"]>>(() => Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
+  const [videos, setVideos] = useState<Record<number, DraftRow["video"]>>(() => Object.fromEntries([...program.sessions, ...(program.copySessions ?? []), ...(program.rogueSessions ?? [])].flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
   const [seenVideos, setSeenVideos] = useState(sessionsKey);
   if (seenVideos !== sessionsKey) {
     setSeenVideos(sessionsKey);
-    setVideos(Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
+    setVideos(Object.fromEntries([...program.sessions, ...(program.copySessions ?? []), ...(program.rogueSessions ?? [])].flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
     setDemos({});
   }
   // New until opened; opening it is saved, so it stays read until the client writes again (30 Sep).
@@ -789,7 +786,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     act(() => renameProgramAction(fd({ programId: program.id, name: v })), `Renamed to ${v}`);
   };
   const close = () => setDlg(null);
-  const rowById = (id: number) => sessions.flatMap((s) => s.rows).find((r) => r.id === id) ?? null;
+  const rowById = (id: number) => [...sessions, ...copySessions, ...rogueSessions].flatMap((s) => s.rows).find((r) => r.id === id) ?? null;
   // Taking a row or a cardio off, once the warning is confirmed (20 Oct, Alex).
   const takeOff = (sessionId: number, what: { row?: number; cardio?: number }) => {
     setDlg(null);
@@ -883,317 +880,27 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     .filter((w): w is (typeof weeks)[number] => !!w && w.trained.length > 0)
     .map((w) => ({ index: w.index, sessions: w.trained.length }));
 
-  return (
-    // An ended programme is every week done (weekLocked), not a page where every control sleeps (23 Oct, Alex): its
-    // sessions open and its videos play. The header's Ended tag says it; no note under it.
-    <div className="rd trn">
-      {/* ---- Header (19 Oct restructure): the programme's name, its switcher (▾) and state, its weeks and dates; on the right the goals and note pills, the unit and the menu. */}
-      <header className="trn-head">
-        <div className="trn-head-main">
-          <span className="trn-eyebrow">Training</span>
-          <div className="trn-name-row">
-            <h1 className="trn-name">
-              {renaming != null ? (
-                <input
-                  className="trn-name-input"
-                  value={renaming}
-                  autoFocus
-                  maxLength={60}
-                  size={Math.max(8, renaming.length + 1)}
-                  onChange={(e) => setRenaming(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitRename();
-                    if (e.key === "Escape") setRenaming(null);
-                  }}
-                  onBlur={commitRename}
-                  aria-label="Phase name"
-                />
-              ) : (
-                <>
-                  {/* Click the name to type it (20 Oct, Alex); the ▾ beside it switches programme. */}
-                  {/* An ended programme is read, not changed (23 Oct, Alex): its name is words. */}
-                  {program.status === "past" ? (
-                    <span className="trn-name-btn ro">{shownName}</span>
-                  ) : (
-                    <button type="button" className="trn-name-btn" onClick={() => setRenaming(shownName)} title="Rename">
-                      {shownName}
-                    </button>
-                  )}
-                  <PhaseSwitcher name="" currentId={program.id} items={program.programs} hrefFor={(id) => `/admin/redesign/training?client=${clientId}&program=${id}`} dueIds={Object.keys(dots?.training.weeks ?? {}).map(Number)} label="Switch programme" newLabel="New programme" onNew={() => setDlg({ kind: "newProgram" })} />
-                </>
-              )}
-            </h1>
-            {/* The state is where its actions live (20 Oct, Alex): a draft or a scheduled programme's tag opens what can be done with it. */}
-            {program.status === "draft" || program.status === "scheduled" ? (
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className={`trn-status trn-status-btn ${program.status}`} style={stateTagStyle(program.status)} aria-label={`${stateLabel(program.status)}: change`}>
-                  {stateLabel(program.status)}
-                  <ChevronDownIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="pb-menu">
-                  {program.status === "draft" ? (
-                    startHasCome ? (
-                      <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Make it live</DropdownMenuItem>
-                    ) : (
-                      // A draft starting later: on its start, or this week instead (20 Oct, Alex).
-                      <>
-                        <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Schedule it</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setDlg({ kind: "liveNow" })}>Make it live now</DropdownMenuItem>
-                      </>
-                    )
-                  ) : (
-                    <>
-                      <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Make it live now</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setDlg({ kind: "backToDraft" })}>Back to draft</DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <span className={`trn-status ${program.status}`} style={stateTagStyle(program.status)}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
-            )}
-            {/* Every change saves itself (20 Oct); the status sits beside the title and its tag (21 Oct, Alex), as on Lifestyle and Nutrition. */}
-            {/* The shared SaveStatus, as Nutrition's (6 Nov, Alex: admin audit); the same look, written once. */}
-            <SaveStatus busy={weekSaving} failed={weekFailed} onRetry={retry} />
-          </div>
-          {/* The facts parted by a short upright line, not a dot (21 Oct, Alex); the dates last. */}
-          <span className="trn-meta">
-            <span>{program.openEnded ? "Indefinite" : `${weeks.length} ${weeks.length === 1 ? "week" : "weeks"}`}</span>
-            {program.startDate && (
-              <span className="trn-meta-part">
-                {program.openEnded ? `from ${fmtDate(program.startDate)}` : fmtDate(program.startDate)}
-                {program.endDate && !program.openEnded && ` – ${fmtDate(program.endDate)}`}
-              </span>
-            )}
+  // Duplicates and rogue sessions (9 Nov, Alex): their title and icon on the page, then cards as the week's, read only.
+  const extraSection = (list: DraftSession[], title: string, icon: React.ReactNode, tone: string) =>
+    list.length === 0 ? null : (
+      <section className="trn-rogue-sec" aria-label={title}>
+        <div className="trn-rogue-head">
+          <span className={`trn-rogue-ico ${tone}`} aria-hidden="true">
+            {icon}
           </span>
+          <h2>{title}</h2>
+          <span className="trn-rogue-count">{list.length}</span>
         </div>
-        <div className="trn-head-actions">
-          {/* The client's note on the programme sits with the header's actions, so the week strip has the whole row. */}
-          {program.note && (
-            // One of the header's own pills (3 Nov, Alex: the audit; it was a 34px box at 700): the chat icon and `Note from
-            // Paula`, its day grey after it, the shared 6px rust dot while unread.
-            <button type="button" className="trn-pill rd-note" onClick={() => {
-              setDlg({ kind: "note" });
-              // Opened is read: the dot goes, and stays gone until the client writes again.
-              if (!noteSeen) {
-                setOpenedNote(noteKey);
-                void markProgramNoteSeenAction(program.id);
-              }
-            }} title={`${firstName}'s note on this programme`}>
-              <NoteIcon />
-              Note from {firstName}
-              <small>{program.note.when}</small>
-              {!noteSeen && <span className="rd-due" aria-label="Not read yet" />}
-            </button>
-          )}
-          {/* The goals and note as pills (they were two full-width bars), one pop-over under them. */}
-          {program.phaseId != null && <GoalsNotePills firstName={firstName} phaseId={program.phaseId} goals={program.goals} note={program.coachNote} locked={program.status === "past"} />}
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="trn-more" aria-label="More for the programme">
-              <MoreIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => setDlg({ kind: "gyms" })}>
-                <DumbbellIcon /> Client gyms
-              </DropdownMenuItem>
-              {program.status !== "past" && (
-                <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>
-                  <CalendarIcon /> Edit dates
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => setDlg({ kind: "newProgram" })}>
-                <PlusIcon /> New programme
-              </DropdownMenuItem>
-              {/* Deleting the phase from here too (20 Oct, Alex), not only from Plan. */}
-              {program.phaseId != null && (
-                <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "deletePhase" })}>
-                  <TrashIcon /> Delete phase
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="rd-sessions trn-list">
+          <SortableList ids={list.map((s) => s.id)} label="session" onMove={() => {}}>
+            {list.map((s, i, all) => sessionCard(s, i, all, true))}
+          </SortableList>
         </div>
-      </header>
-      {/* What the coach owes here (2 Nov, Alex): an empty week, a video to review, a note to read. A session's on the week
-          showing opens in place; on another week, that week comes and the session opens once it is here. */}
-      <TodoStrip
-        tab="training"
-        onAct={(item) => {
-          const to = new URL(item.href, window.location.origin);
-          // A session (Review, Read), or the week's Add session (a live phase with no sessions).
-          if (!/^#session(-\d+|s$)/.test(to.hash)) return false;
-          if (Number(to.searchParams.get("program")) === program.id && Number(to.searchParams.get("week")) === viewIdx) goToHash(to.hash);
-          else {
-            landAfterWeek.current = to.hash;
-            router.push(item.href);
-          }
-          return true;
-        }}
-      />
+      </section>
+    );
 
-      {/* ---- The weeks: a card each, one bar a session, NOW on this calendar week. Its ? (27 Oct, Alex) at the top right,
-          on the fact line's level, says what the bars mean. */}
-      <div className="trn-rail-wrap">
-        <span className="trn-rail-help">
-          <HelpTip title="What the bars on a week mean" wide untitled>
-            <WeeksLegend />
-          </HelpTip>
-        </span>
-      <WeekRail
-        weeks={weeks}
-        viewIdx={viewIdx}
-        dateOf={weekDate}
-        hrefFor={(index) => `/admin/redesign/training?client=${clientId}&program=${program.id}&week=${index}`}
-        isLocal={isLocal}
-        onShow={showWeek}
-        onAdd={addWeek}
-        // No new week once every week is done: an ended programme, or a live one whose weeks have run out (a week added
-        // there would come back done, and locked empty).
-        canAdd={program.status !== "past" && weeks.some((w) => w.state !== "past")}
-        indefinite={!!program.openEnded && program.status !== "past"}
-        addFrom={addFrom}
-        due={(index) => weekDue(dots, program.id, index)}
-      />
-      </div>
-
-      {/* ---- The muscle map (2 Nov, Alex): what each muscle got this phase and in this week's split, a row that opens. */}
-      {program.muscleMap && <MuscleMap data={program.muscleMap} />}
-
-      {/* ---- The week's sessions. */}
-      <div className="trn-weekhead">
-        <div>
-          <h2>Week {week.index}</h2>
-          <span>
-            {/* No date here (20 Oct, Alex): the week rail above already dates every week. */}
-            {week.trained.filter(Boolean).length} of {week.trained.length} sessions done
-          </span>
-        </div>
-        <div className="trn-weekhead-actions">
-          {/* Any week with nothing logged can go (20 Oct, Alex: it was only the last); a live programme's only from the weeks still to come. The ones after move up. */}
-          {/* A done week (weekLocked) offers none of the week's own actions: no remove, no copy here, no Apply to the rest. */}
-          {!weekLocked && weeks.length > 1 && (program.status !== "live" || week.state === "ahead") && !week.trained.some(Boolean) && !week.missed.some(Boolean) && sessions.every((x) => x.setsLogged === 0) && (
-            // The bin alone (23 Oct, Alex); its words in the tooltip and for a screen reader. It asks first.
-            <button type="button" className="trn-btn ghost trn-iconbtn" onClick={() => setDlg({ kind: "removeWeek" })} aria-label="Remove week" title="Remove week">
-              <TrashIcon />
-            </button>
-          )}
-          {/* No "Copy week 4 here" on a later week (4 Nov, Alex: a week changed on purpose was offered the week before over
-              it, one click from undoing the edit). A new week copies one through + Week; week 1 keeps Copy from… to fill a
-              programme's first week from another. */}
-          {!weekLocked && weeks.length > 1 && viewIdx === 1 && copyFromChoices.length > 0 && (
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger className="trn-btn">
-                <CopyIcon /> Copy from…
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="pb-menu">
-                {copyFromChoices.map((w) => (
-                  <DropdownMenuItem key={w.index} onSelect={() => setDlg({ kind: "copyWeek", from: w.index })}>
-                    Week {w.index}
-                    <small className="rd-menu-inuse">{w.trained.length} {w.trained.length === 1 ? "session" : "sessions"}</small>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          {/* Build one week, fill the rest in one go (20 Oct, Alex). */}
-          {!weekLocked && later.length > 0 && sessions.length > 0 && forwardChanges && (
-            // The weeks it reaches, said on the button (4 Nov, Alex: "make it a bit more self-explanatory"; it was "Apply to
-            // the rest" since 23 Oct): "Apply to weeks 6–13", only the weeks it would really change.
-            <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyForward" })} title={`Apply ${week.label}'s changes to ${forwardLabel}`} aria-label={`Apply ${week.label}'s changes to ${forwardLabel}`}>
-              <CopyIcon /> Apply to {forwardLabel || "later weeks"}
-            </button>
-          )}
-          {/* Which columns the week's tables show, beside KG/LBS (21 Oct, Alex: it was in the programme's ··· menu). */}
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="trn-btn" aria-label="Columns shown">
-              <ColumnsIcon /> Columns
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="pb-menu rd-colmenu">
-                  {/* Exercises | Cardio across the top; one side's columns at a time. */}
-                  <div className="rd-coltabs" role="tablist" onKeyDown={(e) => e.stopPropagation()}>
-                    {(["exercises", "cardio"] as const).map((k) => (
-                      <button key={k} type="button" role="tab" aria-selected={colTab === k} className={colTab === k ? "on" : ""} onClick={() => setColTab(k)}>
-                        {k === "exercises" ? "Exercises" : "Cardio"}
-                      </button>
-                    ))}
-                  </div>
-                  {colTab === "exercises" ? (
-                    <>
-                      {(
-                        [
-                          ["sets", "Sets"],
-                          ["weight", "Weight"],
-                          ["reps", "Reps"],
-                          ["rpe", "RPE"],
-                          ["tempo", "Tempo"],
-                          ["rest", "Rest"],
-                        ] as const
-                      ).map(([k, label]) => (
-                        <DropdownMenuCheckboxItem
-                          key={k}
-                          checked={cols[k]}
-                          disabled={!cols[k] && onCount >= MAX_COLS}
-                          onCheckedChange={(v) => {
-                            setCols((c) => ({ ...c, [k]: !!v }));
-                            setTouched((t) => ({ ...t, [k]: true }));
-                          }}
-                          onSelect={(e) => e.preventDefault()}
-                        >
-                          {label}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={() => draftOnly("Custom column")}>
-                        <PlusIcon /> Custom column
-                      </DropdownMenuItem>
-                    </>
-                  ) : (
-                    <>
-                      {(
-                        [
-                          ["time", "Time"],
-                          ["pace", "Pace"],
-                          ["incline", "Incline"],
-                          ["distance", "Distance"],
-                        ] as const
-                      ).map(([k, label]) => (
-                        <DropdownMenuCheckboxItem key={k} checked={ccols[k]} onCheckedChange={(v) => setCcols((c) => ({ ...c, [k]: !!v }))} onSelect={(e) => e.preventDefault()}>
-                          {label}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </>
-                  )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {/* KG / LBS beside the sessions it changes (20 Oct, Alex: it was in the programme's header); the shared
-              capsule, .rd-btn-group (29 Oct, Alex). */}
-          <div className="rd-btn-group" role="radiogroup" aria-label="Unit">
-            {(["kg", "lbs"] as const).map((u) => (
-              <button key={u} type="button" role="radio" aria-checked={unit === u} className={unit === u ? "on" : ""} onClick={() => setLbs(u === "lbs")}>
-                {u.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          {/* What the marks and the colours in a session mean (25 Oct, Alex: "a legend… inside a question mark", on the
-              right of KG / LBS, no title over it). */}
-          <HelpTip title="What the marks and colours in a session mean" wide untitled>
-            <TrainingLegend />
-          </HelpTip>
-        </div>
-      </div>
-
-      {/* One card, a 60px row a session; the row opens the session's table under it. */}
-      <div className="rd-sessions trn-list">
-        <SortableList
-          ids={sessions.map((s) => s.id)}
-          label="session"
-          onMove={(ids) => {
-            setSessions(ids.map((id) => sessions.find((x) => x.id === id)!));
-            act(() => reorderSessionsAction(clientId, weekNo(viewIdx), ids as number[]), "Session order changed");
-          }}
-        >
-        {sessions.map((s, _i, all) => {
+  // One session's card (a duplicate's and a rogue session's too, read only: 9 Nov, Alex). `weekLocked` here is this card's.
+  const sessionCard = (s: DraftSession, _i: number, all: DraftSession[], weekLocked: boolean) => {
           const p = pend(s.id);
           const isOpen = open === s.id;
           // Where it was trained (6 Nov, Alex): the gym's face after the state pill, its room kept on every row of a week
@@ -1918,7 +1625,319 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
               )}
             </SortableItem>
           );
-        })}
+  };
+
+  return (
+    // An ended programme is every week done (weekLocked), not a page where every control sleeps (23 Oct, Alex): its
+    // sessions open and its videos play. The header's Ended tag says it; no note under it.
+    <div className="rd trn">
+      {/* ---- Header (19 Oct restructure): the programme's name, its switcher (▾) and state, its weeks and dates; on the right the goals and note pills, the unit and the menu. */}
+      <header className="trn-head">
+        <div className="trn-head-main">
+          <span className="trn-eyebrow">Training</span>
+          <div className="trn-name-row">
+            <h1 className="trn-name">
+              {renaming != null ? (
+                <input
+                  className="trn-name-input"
+                  value={renaming}
+                  autoFocus
+                  maxLength={60}
+                  size={Math.max(8, renaming.length + 1)}
+                  onChange={(e) => setRenaming(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") setRenaming(null);
+                  }}
+                  onBlur={commitRename}
+                  aria-label="Phase name"
+                />
+              ) : (
+                <>
+                  {/* Click the name to type it (20 Oct, Alex); the ▾ beside it switches programme. */}
+                  {/* An ended programme is read, not changed (23 Oct, Alex): its name is words. */}
+                  {program.status === "past" ? (
+                    <span className="trn-name-btn ro">{shownName}</span>
+                  ) : (
+                    <button type="button" className="trn-name-btn" onClick={() => setRenaming(shownName)} title="Rename">
+                      {shownName}
+                    </button>
+                  )}
+                  <PhaseSwitcher name="" currentId={program.id} items={program.programs} hrefFor={(id) => `/admin/redesign/training?client=${clientId}&program=${id}`} dueIds={Object.keys(dots?.training.weeks ?? {}).map(Number)} label="Switch programme" newLabel="New programme" onNew={() => setDlg({ kind: "newProgram" })} />
+                </>
+              )}
+            </h1>
+            {/* The state is where its actions live (20 Oct, Alex): a draft or a scheduled programme's tag opens what can be done with it. */}
+            {program.status === "draft" || program.status === "scheduled" ? (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger className={`trn-status trn-status-btn ${program.status}`} style={stateTagStyle(program.status)} aria-label={`${stateLabel(program.status)}: change`}>
+                  {stateLabel(program.status)}
+                  <ChevronDownIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="pb-menu">
+                  {program.status === "draft" ? (
+                    startHasCome ? (
+                      <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Make it live</DropdownMenuItem>
+                    ) : (
+                      // A draft starting later: on its start, or this week instead (20 Oct, Alex).
+                      <>
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Schedule it</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "liveNow" })}>Make it live now</DropdownMenuItem>
+                      </>
+                    )
+                  ) : (
+                    <>
+                      <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Make it live now</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setDlg({ kind: "backToDraft" })}>Back to draft</DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <span className={`trn-status ${program.status}`} style={stateTagStyle(program.status)}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
+            )}
+            {/* Every change saves itself (20 Oct); the status sits beside the title and its tag (21 Oct, Alex), as on Lifestyle and Nutrition. */}
+            {/* The shared SaveStatus, as Nutrition's (6 Nov, Alex: admin audit); the same look, written once. */}
+            <SaveStatus busy={weekSaving} failed={weekFailed} onRetry={retry} />
+          </div>
+          {/* The facts parted by a short upright line, not a dot (21 Oct, Alex); the dates last. */}
+          <span className="trn-meta">
+            <span>{program.openEnded ? "Indefinite" : `${weeks.length} ${weeks.length === 1 ? "week" : "weeks"}`}</span>
+            {program.startDate && (
+              <span className="trn-meta-part">
+                {program.openEnded ? `from ${fmtDate(program.startDate)}` : fmtDate(program.startDate)}
+                {program.endDate && !program.openEnded && ` – ${fmtDate(program.endDate)}`}
+              </span>
+            )}
+          </span>
+        </div>
+        <div className="trn-head-actions">
+          {/* The client's note on the programme sits with the header's actions, so the week strip has the whole row. */}
+          {program.note && (
+            // One of the header's own pills (3 Nov, Alex: the audit; it was a 34px box at 700): the chat icon and `Note from
+            // Paula`, its day grey after it, the shared 6px rust dot while unread.
+            <button type="button" className="trn-pill rd-note" onClick={() => {
+              setDlg({ kind: "note" });
+              // Opened is read: the dot goes, and stays gone until the client writes again.
+              if (!noteSeen) {
+                setOpenedNote(noteKey);
+                void markProgramNoteSeenAction(program.id);
+              }
+            }} title={`${firstName}'s note on this programme`}>
+              <NoteIcon />
+              Note from {firstName}
+              <small>{program.note.when}</small>
+              {!noteSeen && <span className="rd-due" aria-label="Not read yet" />}
+            </button>
+          )}
+          {/* The goals and note as pills (they were two full-width bars), one pop-over under them. */}
+          {program.phaseId != null && <GoalsNotePills firstName={firstName} phaseId={program.phaseId} goals={program.goals} note={program.coachNote} locked={program.status === "past"} />}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="trn-more" aria-label="More for the programme">
+              <MoreIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="pb-menu">
+              <DropdownMenuItem onSelect={() => setDlg({ kind: "gyms" })}>
+                <DumbbellIcon /> Client gyms
+              </DropdownMenuItem>
+              {program.status !== "past" && (
+                <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>
+                  <CalendarIcon /> Edit dates
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setDlg({ kind: "newProgram" })}>
+                <PlusIcon /> New programme
+              </DropdownMenuItem>
+              {/* Deleting the phase from here too (20 Oct, Alex), not only from Plan. */}
+              {program.phaseId != null && (
+                <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "deletePhase" })}>
+                  <TrashIcon /> Delete phase
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+      {/* What the coach owes here (2 Nov, Alex): an empty week, a video to review, a note to read. A session's on the week
+          showing opens in place; on another week, that week comes and the session opens once it is here. */}
+      <TodoStrip
+        tab="training"
+        onAct={(item) => {
+          const to = new URL(item.href, window.location.origin);
+          // A session (Review, Read), or the week's Add session (a live phase with no sessions).
+          if (!/^#session(-\d+|s$)/.test(to.hash)) return false;
+          if (Number(to.searchParams.get("program")) === program.id && Number(to.searchParams.get("week")) === viewIdx) goToHash(to.hash);
+          else {
+            landAfterWeek.current = to.hash;
+            router.push(item.href);
+          }
+          return true;
+        }}
+      />
+
+      {/* ---- The weeks: a card each, one bar a session, NOW on this calendar week. Its ? (27 Oct, Alex) at the top right,
+          on the fact line's level, says what the bars mean. */}
+      <div className="trn-rail-wrap">
+        <span className="trn-rail-help">
+          <HelpTip title="What the bars on a week mean" wide untitled>
+            <WeeksLegend />
+          </HelpTip>
+        </span>
+      <WeekRail
+        weeks={weeks}
+        viewIdx={viewIdx}
+        dateOf={weekDate}
+        hrefFor={(index) => `/admin/redesign/training?client=${clientId}&program=${program.id}&week=${index}`}
+        isLocal={isLocal}
+        onShow={showWeek}
+        onAdd={addWeek}
+        // No new week once every week is done: an ended programme, or a live one whose weeks have run out (a week added
+        // there would come back done, and locked empty).
+        canAdd={program.status !== "past" && weeks.some((w) => w.state !== "past")}
+        indefinite={!!program.openEnded && program.status !== "past"}
+        addFrom={addFrom}
+        due={(index) => weekDue(dots, program.id, index)}
+      />
+      </div>
+
+      {/* ---- The muscle map (2 Nov, Alex): what each muscle got this phase and in this week's split, a row that opens. */}
+      {program.muscleMap && <MuscleMap data={program.muscleMap} />}
+
+      {/* ---- The week's sessions. */}
+      <div className="trn-weekhead">
+        <div>
+          <h2>Week {week.index}</h2>
+          <span>
+            {/* No date here (20 Oct, Alex): the week rail above already dates every week. */}
+            {week.trained.filter(Boolean).length} of {week.trained.length} sessions done
+          </span>
+        </div>
+        <div className="trn-weekhead-actions">
+          {/* Any week with nothing logged can go (20 Oct, Alex: it was only the last); a live programme's only from the weeks still to come. The ones after move up. */}
+          {/* A done week (weekLocked) offers none of the week's own actions: no remove, no copy here, no Apply to the rest. */}
+          {!weekLocked && weeks.length > 1 && (program.status !== "live" || week.state === "ahead") && !week.trained.some(Boolean) && !week.missed.some(Boolean) && sessions.every((x) => x.setsLogged === 0) && (
+            // The bin alone (23 Oct, Alex); its words in the tooltip and for a screen reader. It asks first.
+            <button type="button" className="trn-btn ghost trn-iconbtn" onClick={() => setDlg({ kind: "removeWeek" })} aria-label="Remove week" title="Remove week">
+              <TrashIcon />
+            </button>
+          )}
+          {/* No "Copy week 4 here" on a later week (4 Nov, Alex: a week changed on purpose was offered the week before over
+              it, one click from undoing the edit). A new week copies one through + Week; week 1 keeps Copy from… to fill a
+              programme's first week from another. */}
+          {!weekLocked && weeks.length > 1 && viewIdx === 1 && copyFromChoices.length > 0 && (
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger className="trn-btn">
+                <CopyIcon /> Copy from…
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="pb-menu">
+                {copyFromChoices.map((w) => (
+                  <DropdownMenuItem key={w.index} onSelect={() => setDlg({ kind: "copyWeek", from: w.index })}>
+                    Week {w.index}
+                    <small className="rd-menu-inuse">{w.trained.length} {w.trained.length === 1 ? "session" : "sessions"}</small>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {/* Build one week, fill the rest in one go (20 Oct, Alex). */}
+          {!weekLocked && later.length > 0 && sessions.length > 0 && forwardChanges && (
+            // The weeks it reaches, said on the button (4 Nov, Alex: "make it a bit more self-explanatory"; it was "Apply to
+            // the rest" since 23 Oct): "Apply to weeks 6–13", only the weeks it would really change.
+            <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyForward" })} title={`Apply ${week.label}'s changes to ${forwardLabel}`} aria-label={`Apply ${week.label}'s changes to ${forwardLabel}`}>
+              <CopyIcon /> Apply to {forwardLabel || "later weeks"}
+            </button>
+          )}
+          {/* Which columns the week's tables show, beside KG/LBS (21 Oct, Alex: it was in the programme's ··· menu). */}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="trn-btn" aria-label="Columns shown">
+              <ColumnsIcon /> Columns
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="pb-menu rd-colmenu">
+                  {/* Exercises | Cardio across the top; one side's columns at a time. */}
+                  <div className="rd-coltabs" role="tablist" onKeyDown={(e) => e.stopPropagation()}>
+                    {(["exercises", "cardio"] as const).map((k) => (
+                      <button key={k} type="button" role="tab" aria-selected={colTab === k} className={colTab === k ? "on" : ""} onClick={() => setColTab(k)}>
+                        {k === "exercises" ? "Exercises" : "Cardio"}
+                      </button>
+                    ))}
+                  </div>
+                  {colTab === "exercises" ? (
+                    <>
+                      {(
+                        [
+                          ["sets", "Sets"],
+                          ["weight", "Weight"],
+                          ["reps", "Reps"],
+                          ["rpe", "RPE"],
+                          ["tempo", "Tempo"],
+                          ["rest", "Rest"],
+                        ] as const
+                      ).map(([k, label]) => (
+                        <DropdownMenuCheckboxItem
+                          key={k}
+                          checked={cols[k]}
+                          disabled={!cols[k] && onCount >= MAX_COLS}
+                          onCheckedChange={(v) => {
+                            setCols((c) => ({ ...c, [k]: !!v }));
+                            setTouched((t) => ({ ...t, [k]: true }));
+                          }}
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          {label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => draftOnly("Custom column")}>
+                        <PlusIcon /> Custom column
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <>
+                      {(
+                        [
+                          ["time", "Time"],
+                          ["pace", "Pace"],
+                          ["incline", "Incline"],
+                          ["distance", "Distance"],
+                        ] as const
+                      ).map(([k, label]) => (
+                        <DropdownMenuCheckboxItem key={k} checked={ccols[k]} onCheckedChange={(v) => setCcols((c) => ({ ...c, [k]: !!v }))} onSelect={(e) => e.preventDefault()}>
+                          {label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </>
+                  )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* KG / LBS beside the sessions it changes (20 Oct, Alex: it was in the programme's header); the shared
+              capsule, .rd-btn-group (29 Oct, Alex). */}
+          <div className="rd-btn-group" role="radiogroup" aria-label="Unit">
+            {(["kg", "lbs"] as const).map((u) => (
+              <button key={u} type="button" role="radio" aria-checked={unit === u} className={unit === u ? "on" : ""} onClick={() => setLbs(u === "lbs")}>
+                {u.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          {/* What the marks and the colours in a session mean (25 Oct, Alex: "a legend… inside a question mark", on the
+              right of KG / LBS, no title over it). */}
+          <HelpTip title="What the marks and colours in a session mean" wide untitled>
+            <TrainingLegend />
+          </HelpTip>
+        </div>
+      </div>
+
+      {/* One card, a 60px row a session; the row opens the session's table under it. */}
+      <div className="rd-sessions trn-list">
+        <SortableList
+          ids={sessions.map((s) => s.id)}
+          label="session"
+          onMove={(ids) => {
+            setSessions(ids.map((id) => sessions.find((x) => x.id === id)!));
+            act(() => reorderSessionsAction(clientId, weekNo(viewIdx), ids as number[]), "Session order changed");
+          }}
+        >
+        {sessions.map((s, i, all) => sessionCard(s, i, all, weekLocked))}
         </SortableList>
         {Array.from({ length: incoming }, (_, i) => (
           <section key={`incoming-${i}`} className="rd-session trn-incoming" aria-busy="true">
@@ -1966,8 +1985,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         )}
       </div>
 
-      {/* The client's own workouts this week, off the plan (19 Oct): read only, slim rows under the week's card. */}
-      <RogueSessions items={program.rogue[viewIdx] ?? []} firstName={firstName} grid={colStyle} cols={cols} unit={unit} minW={tableMinW} kgOf={(kg) => (kg == null ? null : half(lbs ? kg * LB : kg))} />
+      {extraSection(copySessions, "Duplicates", <CopyIcon />, "copy")}
+      {extraSection(rogueSessions, "Rogue sessions", <CompassIcon size={18} />, "rogue")}
 
       {/* ---- What the client rates as a workout ends, and what they answered (was the workout questionnaire). */}
       <AfterWorkoutCheck
@@ -2110,7 +2129,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         {dlg?.kind === "video" && rowById(dlg.rowId) && reviewable(videos[dlg.rowId]) && (
           <MediaReviewModal
             key={`${dlg.rowId}-${videos[dlg.rowId]!.requestId}`}
-            review={reviewOf(rowById(dlg.rowId)!, videos[dlg.rowId]!, sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId)) ?? null, viewIdx, firstName, (kg) => `${kgOf(kg, lbs)} ${unit}`)}
+            review={reviewOf(rowById(dlg.rowId)!, videos[dlg.rowId]!, [...sessions, ...copySessions, ...rogueSessions].find((s) => s.rows.some((r) => r.id === dlg.rowId)) ?? null, viewIdx, firstName, (kg) => `${kgOf(kg, lbs)} ${unit}`)}
             onClose={close}
           />
         )}

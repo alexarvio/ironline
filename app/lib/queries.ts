@@ -10353,6 +10353,8 @@ export function removeFreeSession(programDayId: number) {
   if (!day?.free) return;
   const ids = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id));
   data.set_logs = data.set_logs.filter((sl) => !ids.has(sl.workout_assignment_id));
+  // Its video asks and anything sent on it go with its rows, so nothing is left waiting on a row that isn't there.
+  data.video_requests = data.video_requests.filter((r) => !ids.has(r.assignment_id));
   data.workout_assignments = data.workout_assignments.filter((wa) => wa.program_day_id !== day.id);
   const cardio = new Set((data.cardio_entries ?? []).filter((c) => c.program_day_id === day.id).map((c) => c.id));
   data.cardio_logs = (data.cardio_logs ?? []).filter((c) => !cardio.has(c.cardio_entry_id));
@@ -14552,8 +14554,6 @@ export function setVideoRequestRecurring(id: number, on: boolean): boolean {
 
 /** Requests this session's exercises inherit from recurring ones on earlier sessions of the same name. */
 export function resolveRecurringVideoAsks(day: ProgramDay, assignments: WorkoutAssignment[]) {
-  // Asked of the plan's sessions, not a duplicate of one (9 Nov).
-  if (day.copy_of != null) return;
   const data = getData();
   const label = (day.label ?? "").trim().toLowerCase();
   if (!label) return;
