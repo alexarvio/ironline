@@ -386,7 +386,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     }
     return list;
   };
-  const sessions = sub("sessions", () => days.map((d, si) => {
+  const buildSession = (d: (typeof days)[number], si: number) => {
     const assignments = rowsOf(d.id);
     const videos = videoRequestsFor(assignments.map((a) => a.id));
     const rows = assignments.map((a) => {
@@ -457,35 +457,22 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       .filter((n): n is number => n != null)
       .map((n) => n - program.start_week + 1);
     return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, gymId, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })), laterWeeks, copies: freeOf(d.week_number).filter((f) => f.copy_of === d.id && f.session_started_at).map((f) => f.id) };
-  }));
+  };
+  const sessions = sub("sessions", () => days.map(buildSession));
+  // Duplicates are built as the week's sessions are (9 Nov, Alex: "build it just like a regular session").
+  const copySessions = sub("copySessions", () => freeOf(weekNumber).filter((f) => f.copy_of != null && f.session_started_at).map(buildSession));
+  // Rogue sessions the same (9 Nov, Alex: "pretty much like this"): what the client logged is all there is to plan, so a
+  // set added as they go is no extra set.
+  const rogueSessions = sub("rogueSessions", () =>
+    freeOf(weekNumber)
+      .filter((f) => f.copy_of == null && f.session_started_at)
+      .map(buildSession)
+      .map((s) => {
+        const rows = s.rows.map((r) => ({ ...r, sets: Math.max(r.sets, ...r.logged.map((l) => l.set)) }));
+        return { ...s, rows, setsPlanned: rows.reduce((t, r) => t + r.sets, 0) };
+      })
+  );
 
-  // The client's rogue sessions (19 Oct, Alex): workouts of their own, off
-  // the plan, by week of the programme. Not sessions of the week (they count
-  // in nothing); shown under it, read only, with what was done.
-  const rogue: DraftProgram["rogue"] = {};
-  sub("rogue", () => {
-    for (let i = 0; i < program.total_weeks; i++) {
-      const list = freeOf(program.start_week + i)
-        .filter((d) => d.session_started_at)
-        .map((d) => ({
-          id: d.id,
-          copyOf: d.copy_of != null ? d.label ?? "Session" : null,
-          started: d.session_started_at ?? null,
-          ended: d.session_ended_at ?? null,
-          duration: d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null,
-          note: d.session_note ?? null,
-          exercises: rowsOf(d.id).map((a) => ({
-            id: a.id,
-            // Swapped on a duplicate, the sets are what they did instead.
-            name: (a.swap ? (a.swap.library_exercise_id != null ? getData().exercises.find((e) => e.id === a.swap!.library_exercise_id)?.name : null) ?? a.swap.custom_name : null) ?? a.exercise_name ?? "Exercise",
-            insteadOf: a.swap ? a.exercise_name ?? null : null,
-            sets: [...logsOf(a.id)].sort((x, y) => x.set_number - y.set_number).map((l) => ({ n: l.set_number, kg: l.weight_kg, reps: l.reps })),
-          })),
-          cardio: cardioOf(d.id).map((c) => ({ id: c.id, name: c.swap?.name ?? c.name, insteadOf: c.swap ? c.name : null, time: c.time, distance: c.distance ?? "", pace: c.pace, incline: c.incline, done: ticked(c.id) })),
-        }));
-      if (list.length) rogue[i + 1] = list;
-    }
-  });
 
   // What Apply to the rest and each session's Apply to remaining weeks would change, as their confirms read it, so
   // neither is offered when it would change nothing (23 Oct, Alex: "once I apply and there are no other changes, the
@@ -532,9 +519,10 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     liveIdx,
     weeks,
     sessions,
+    copySessions,
+    rogueSessions,
     apply: applyFrom ? { week: weekIdx, ...applyFrom } : null,
     copyIn: copyIn ? { week: weekIdx, ...copyIn } : null,
-    rogue,
     bodyKg,
     gyms,
     allGyms,

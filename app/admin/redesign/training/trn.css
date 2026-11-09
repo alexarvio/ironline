@@ -49,7 +49,7 @@
 /* Urgent (Home's Needs you): the danger red, at its siblings' strength. */
 .rd.trn .trn-state.bad { box-shadow: inset 0 0 0 1px rgba(180, 35, 24, 0.3); color: #b42318; }
 /* Down a column one width, the word centred (29 Oct, Alex): the week's session cards and the Rogue sessions rows. */
-.rd.trn .rd-session-head .trn-state, .rd.trn .trn-rg-row .trn-state { justify-content: center; min-width: 96px; box-sizing: border-box; }
+.rd.trn .rd-session-head .trn-state { justify-content: center; min-width: 96px; box-sizing: border-box; }
 
 /* ---- Header */
 .rd.trn .trn-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; min-height: 76px; }
@@ -375,9 +375,6 @@ body:has(.dlh) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background:
 /* ---- Rogue sessions: a label row, then slim rows of their own */
 /* A section of its own (23 Oct, Alex): one white card as the After-workout check, its title and count in its head, a session a row; gone when there are none. */
 /* A real 1px border (6 Nov, Alex: admin audit; rule §8); its head is the check's, 2px shorter inside it, so the card keeps its height. */
-/* Each a card of its own, as the week's sessions (9 Nov, Alex: "structured like the sessions, just under different titles"). */
-.rd.trn .trn-rogue { display: flex; flex-direction: column; gap: 8px; margin-top: 0; }
-.rd.trn .trn-rg { border: 1px solid var(--trn-line); border-radius: 18px; background: #fff; overflow: hidden; }
 .rd.trn .trn-rogue-sec { display: flex; flex-direction: column; gap: 12px; }
 .rd.trn .trn-rogue-head { display: flex; align-items: center; gap: 8px; }
 .rd.trn .trn-rogue-head h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
@@ -388,9 +385,6 @@ body:has(.dlh) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background:
 .rd.trn .trn-rogue-count { font-size: 13px; font-weight: 500; color: var(--trn-muted); font-variant-numeric: tabular-nums; }
 /* No line under the card's head (4 Nov, Alex: "not aligned, inconsistencies"; a heading is parted by space), a hairline
    between one rogue session and the next. */
-.rd.trn .trn-rg-row { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 0 14px 0 10px; cursor: pointer; }
-.rd.trn .trn-rg-when { font-size: 13px; font-weight: 500; color: var(--trn-sec); white-space: nowrap; }
-.rd.trn .trn-rg.open > .rd-rows { border-top: 0; }
 
 /* ---- After-workout check: one table (20 Oct, Alex). The head: the title, how many workouts, + Add on the right.
    Under it the questions are the columns, each head with its average and a ✕ on hover; the latest three workouts, the rest under Show all. */

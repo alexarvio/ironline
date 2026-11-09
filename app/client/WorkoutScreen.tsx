@@ -398,13 +398,10 @@ export default function WorkoutScreen({
                     </button>
                   )}
                   {/* A photo or a video for the coach, unasked (9 Oct): a question about the form, the machine they found. */}
-                  {/* The coach reviews a video on a planned session's row; a duplicate has none (9 Nov). */}
-                  {!day.copy && (
-                    <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("media")}>
-                      <MenuIcon kind="media" />
-                      Send a photo or video
-                    </button>
-                  )}
+                  <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("media")}>
+                    <MenuIcon kind="media" />
+                    Send a photo or video
+                  </button>
                   {/* The note for yourself fourth, after the swap (30 Sep); not on a substitute, whose note would be the replaced exercise's (17 Oct). */}
                   {!currentEx.swap && !day.free && (
                     <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("note")}>
