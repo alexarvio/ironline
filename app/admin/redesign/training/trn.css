@@ -139,9 +139,9 @@
 .rd.trn .trn-bars { display: flex; gap: 4px; height: 3px; }
 .rd.trn .trn-bars i { flex: 1; height: 3px; border-radius: 2px; background: var(--trn-line); }
 .rd.trn .trn-bars i.on { background: var(--trn-green); }
-/* What the client added to the week (9 Nov, Alex): after the plan's bars, a duplicate in training purple, a rogue session in slate. */
+/* What the client added to the week (9 Nov, Alex): after the plan's bars, a duplicate in training purple, a rogue session in rose. */
 .rd.trn .trn-bars i.dup { background: #3a3390; }
-.rd.trn .trn-bars i.rogue { background: #5b6474; }
+.rd.trn .trn-bars i.rogue { background: #c2417a; }
 .rd.trn .trn-week-foot { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; font-weight: 500; color: var(--trn-muted); }
 .rd.trn .trn-week.add { border-color: var(--trn-btnline); background: transparent; box-shadow: none; }
 .rd.trn .trn-week.add .trn-week-name { font-weight: 600; color: var(--trn-navy); }
@@ -383,6 +383,7 @@ body:has(.dlh) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background:
 .rd.trn .trn-rogue-head h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
 .rd.trn .trn-rogue-ico { display: inline-flex; color: var(--trn-sec); }
 .rd.trn .trn-rogue-ico.copy { color: #3a3390; }
+.rd.trn .trn-rogue-ico.rogue { color: #c2417a; }
 .rd.trn .trn-rogue-ico svg { width: 18px; height: 18px; }
 .rd.trn .trn-rogue-count { font-size: 13px; font-weight: 500; color: var(--trn-muted); font-variant-numeric: tabular-nums; }
 /* No line under the card's head (4 Nov, Alex: "not aligned, inconsistencies"; a heading is parted by space), a hairline
@@ -521,7 +522,7 @@ html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { border-color: 
 .trn-legend-bar.skipped { background: #b8471f; }
 .trn-legend-bar.none { background: rgba(184, 71, 31, 0.35); }
 .trn-legend-bar.dup { background: #3a3390; }
-.trn-legend-bar.rogue { background: #5b6474; }
+.trn-legend-bar.rogue { background: #c2417a; }
 /* The week on screen is its ink edge alone, no shadow under it (27 Oct, Alex). */
 html .rd.trn .trn-rail .trn-week.on.on, html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { border-color: var(--trn-ink); box-shadow: inset 0 0 0 0.5px var(--trn-ink); }
 /* An Indefinite programme's last card (27 Oct, Alex: mockup D): the + Week card's shape, ∞ and Indefinite in it, no click. */
