@@ -382,6 +382,8 @@ export type ClientGym = {
   logo_path?: string | null;
   /** Trained at once (6 Nov, Alex: a day pass on holiday): out of the picker's list and never where a session starts. */
   once?: boolean;
+  /** Deleted while it was home: the gym that took over, so Bring back can make it home again (9 Nov, Alex). */
+  home_to?: number;
 };
 
 // The client's note about a whole programme, for the coach. One per

@@ -33,6 +33,7 @@ import {
   getLogsForAssignment,
   getLastWarmupSets,
   gymSessionStats,
+  gymDashboards,
   currentGymId,
   getClientCardPictures,
   effectiveAlternatives,
@@ -128,6 +129,8 @@ import { categorize, isListed, titleAndBody } from "../lib/notificationTypes";
 import DeleteAccountRow from "./DeleteAccountRow";
 import { clerkOn } from "../lib/clerk";
 import MyDetailsCard from "./MyDetailsCard";
+import GymSettings from "./GymSettings";
+import SettingsFold from "./SettingsFold";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import AppShell, { AppTab, type Arrival, type PhoneScreen } from "./AppShell";
 import NativeCoachRedirect from "../coach/NativeCoachRedirect";
@@ -1223,6 +1226,8 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         )}
       </section>
 
+      <GymSettings gyms={gymDashboards(CLIENT_ID)} />
+
       <section className="home-dark-section">
         <span className="home-dark-section-title">Preferences</span>
         <div className="home-dark-rows">
@@ -1249,8 +1254,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       </section>
 
       {/* The pictures behind the Home cards (12 Oct): the client's own from their camera roll, or the coach's. Press and hold a card on Home does the same. */}
-      <section className="home-dark-section">
-        <span className="home-dark-section-title">Card pictures</span>
+      <SettingsFold title="Card pictures">
         <div className="home-dark-rows">
           <CardPicturesRows
             clientId={CLIENT_ID}
@@ -1264,7 +1268,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
             })}
           />
         </div>
-      </section>
+      </SettingsFold>
 
       <ConnectedApps coachName={getCoachFirstName(CLIENT_ID)} />
 

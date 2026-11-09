@@ -1,0 +1,53 @@
+/* Gyms in Settings and a gym's own page (9 Nov, Alex: B of docs/boards/gym-settings-mockup.html). */
+/* A Settings section that takes one row until it is opened (9 Nov, Alex: Gyms and Card pictures, "it occupies too much space"). */
+.settings-dark .home-dark-section.home-dark-section.st-fold { padding-top: 10px; }
+.st-fold-head { width: 100%; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.st-fold-chev { display: inline-flex; color: #8b93a1; transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1); }
+.st-fold-chev svg { width: 16px; height: 16px; }
+.st-fold-chev.open { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .st-fold-chev { transition: none; } }
+.gy-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 8px; }
+.gy-row { display: flex; align-items: center; gap: 12px; min-height: 48px; }
+.gy-row-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.gy-row.gone .gy-badge, .gy-row.gone .gy-row-text { opacity: 0.45; filter: grayscale(1); }
+.gy-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gy-row-name { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gy-row-fact { font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.gy-row-open > svg { flex: none; width: 16px; height: 16px; color: #8b93a1; }
+.gy-word { flex: none; height: 40px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.gy-word.red { color: #b42318; }
+.gy-word:disabled { opacity: 0.45; cursor: default; }
+.gy-badge { flex: none; position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; color: #fff; font-size: 14px; font-weight: 600; }
+
+.gy-screen, .gy-screen .cn-header { background: #F5F6F8; }
+.gy-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; }
+.gy-hero { display: flex; flex-direction: column; align-items: center; margin: 4px 0 26px; }
+.gy-hero-badge { width: 64px; height: 64px; padding: 0; border: 0; font: inherit; font-size: 24px; margin-bottom: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.gy-hero-badge:disabled { cursor: default; }
+.gy-hero-badge.busy { animation: gy-breathe 1.2s ease-in-out infinite; }
+.gy-hero-badge .gpk-badge-cam { width: 24px; height: 24px; right: -2px; bottom: -2px; }
+.gy-hero-badge .gpk-badge-cam svg { width: 14px; height: 14px; }
+@keyframes gy-breathe { 50% { opacity: 0.5; } }
+.gy-hero-name { font-size: 18px; font-weight: 600; color: #141a24; text-align: center; }
+.gy-hero-fact { margin-top: 3px; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.gy-hero-error { margin-top: 8px; font-size: 12px; font-weight: 500; color: #b8471f; }
+.gy-big { display: flex; justify-content: space-between; padding: 0 12px; margin-bottom: 28px; }
+.gy-big > div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.gy-big strong { font-size: 30px; font-weight: 300; line-height: 1.1; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gy-big span, .gy-sec { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98A2B3; }
+.gy-sec { display: block; margin: 0 12px 12px; color: #141a24; }
+.gy-months { display: flex; align-items: flex-end; gap: 10px; height: 72px; margin: 0 12px 6px; border-bottom: 1px solid #E1E5EB; }
+.gy-months i { flex: 1; min-width: 0; box-sizing: border-box; border-top: 2px solid var(--g); background: rgba(var(--g-rgb), 0.1); }
+.gy-months i.none { border-top: 0; background: none; }
+.gy-mlab { display: flex; gap: 10px; margin: 0 12px 26px; font-size: 11px; font-weight: 500; color: #8b93a1; }
+.gy-mlab span { flex: 1; min-width: 0; text-align: center; }
+.gy-ex { display: flex; justify-content: space-between; gap: 16px; padding: 0 12px 12px; font-size: 14px; font-weight: 500; color: #141a24; }
+.gy-ex span:first-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gy-ex span:last-child { flex: none; font-size: 12px; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.gy-body > * { flex-shrink: 0; }
+.gy-foot-error { margin: auto 12px 0; }
+.gy-foot-error + .gy-foot { margin-top: 0; }
+.gy-foot { margin-top: auto; padding: 14px 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gy-foot-q { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gy-foot-btns { flex: none; display: flex; gap: 16px; }
+@media (prefers-reduced-motion: reduce) { .gy-hero-badge.busy { animation: none; } }

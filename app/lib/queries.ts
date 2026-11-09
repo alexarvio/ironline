@@ -9834,7 +9834,11 @@ export function addClientGym(clientId: number, name: string, color?: string, kin
   const data = getData();
   const same = listClientGyms(clientId, true).find((g) => g.name.toLowerCase() === clean.toLowerCase());
   if (same) {
-    same.archived = false;
+    // Named under Just this once, a deleted gym is that one visit: no weights move (9 Nov).
+    if (same.archived && once) {
+      same.archived = false;
+      same.once = true;
+    } else if (same.archived) restoreClientGym(same.id);
     if (color) same.color = color;
     if (kind) same.kind = kind;
     // Added as a regular gym, a gym trained at once becomes one; picked once again, a regular gym stays one.
@@ -9844,6 +9848,7 @@ export function addClientGym(clientId: number, name: string, color?: string, kin
   }
   const gym: ClientGym = { id: allocId("client_gyms"), client_id: clientId, name: clean, created_at: new Date().toISOString(), last_used_at: null, archived: false, ...(color ? { color } : {}), ...(kind ? { kind } : {}), ...(once ? { once: true } : {}) };
   data.client_gyms.push(gym);
+  takeHomeFromDeleted(gym);
   persist();
   return gym;
 }
@@ -9856,23 +9861,75 @@ export function addClientGym(clientId: number, name: string, color?: string, kin
 export function removeClientGym(gymId: number) {
   const gym = (getData().client_gyms ?? []).find((g) => g.id === gymId);
   if (!gym) return;
-  const others = listClientGyms(gym.client_id).filter((g) => g.id !== gymId);
-  // The home gym going: the most used of the rest takes over (15 Oct).
+  // Never a gym trained at once (9 Nov): it is never planned for, so it can't be home.
+  const others = listClientGyms(gym.client_id).filter((g) => g.id !== gymId && !g.once);
+  // The home gym going: the most used of the rest takes over (15 Oct). It remembers who took over, so bringing it back
+  // makes it home again (9 Nov, Alex: a slip on the main gym).
   if (homeGymId(gym.client_id) === gymId && others.length > 0) {
     const stats = gymSessionStats(gym.client_id);
     const next = [...others].sort((a, b) => (stats.get(b.id)?.sessions ?? 0) - (stats.get(a.id)?.sessions ?? 0) || a.id - b.id)[0];
     setHomeGym(next.id);
+    gym.home_to = next.id;
   }
   gym.archived = true;
   persist();
 }
 
-/** For the picker's rows (13 Oct): sessions trained at each gym, and when the last was. A day counts for the gym of its sets. */
-export function gymSessionStats(clientId: number): Map<number, { sessions: number; lastUsedAt: string | null; /** Sessions in the last 56 days (15 Oct, the coach's gyms pop-up). */ sessions8w: number }> {
-  const since = new Date(Date.now() - 56 * 86400000).toISOString();
+/** Home left on a deleted gym (it went with no regular gym to hand over to): the next regular gym takes it. */
+function takeHomeFromDeleted(gym: ClientGym) {
+  if (gym.once || gym.archived) return;
+  const home = homeGymId(gym.client_id);
+  if (home != null && home !== gym.id && listClientGyms(gym.client_id, true).find((g) => g.id === home)?.archived) setHomeGym(gym.id);
+}
+
+/** A deleted gym back in the picker (9 Nov, Alex), with its weights, sets and picture as they were; home again when it was
+ *  home and the gym that took over still is. */
+export function restoreClientGym(gymId: number): boolean {
+  const gym = (getData().client_gyms ?? []).find((g) => g.id === gymId);
+  if (!gym) return false;
+  gym.archived = false;
+  const handedTo = gym.home_to;
+  delete gym.home_to;
+  if (handedTo != null && homeGymId(gym.client_id) === handedTo) {
+    setHomeGym(gym.id);
+    // The gym that stood in held the home weight only because it was home: where it is the same figure it follows home
+    // again, so a slip undone leaves no frozen copies.
+    const data = getData();
+    const days = new Set(data.program_days.filter((pd) => pd.client_id === gym.client_id).map((pd) => pd.id));
+    for (const wa of data.workout_assignments) {
+      const e = wa.gym_targets?.[handedTo];
+      if (!days.has(wa.program_day_id) || !e || e.pinned || e.kg !== wa.target_weight_kg) continue;
+      const rest = { ...wa.gym_targets };
+      delete rest[handedTo];
+      wa.gym_targets = rest;
+    }
+  } else takeHomeFromDeleted(gym);
+  persist();
+  return true;
+}
+
+/** The gym's name, colour and type, from its page in Settings (9 Nov, Alex). Back with why not, or null once saved. */
+export function updateClientGym(gymId: number, name: string, color?: ClientGym["color"], kind?: ClientGym["kind"]): string | null {
+  const gym = (getData().client_gyms ?? []).find((g) => g.id === gymId);
+  if (!gym) return "Couldn't save the gym.";
+  const clean = name.trim().replace(/\s+/g, " ").slice(0, 40);
+  if (clean.length < 2) return "Give the gym a name.";
+  // A deleted gym that holds nothing isn't listed anywhere, so it holds no name either.
+  const stats = gymSessionStats(gym.client_id);
+  if (listClientGyms(gym.client_id, true).some((g) => g.id !== gymId && g.name.toLowerCase() === clean.toLowerCase() && (!g.archived || (stats.get(g.id)?.sessions ?? 0) > 0))) return `You already have a gym called ${clean}`;
+  gym.name = clean;
+  if (color) gym.color = color;
+  if (kind) gym.kind = kind;
+  persist();
+  return null;
+}
+
+/** Which gym each of a client's sessions was at: the gym of its first set (no gym on a set is the home gym's), else, for a
+ *  finished session with only cardio done, the gym picked for it. A rogue session is tied to no gym (19 Oct, Alex). */
+function sessionGyms(clientId: number) {
   const data = getData();
   const home = homeGymId(clientId);
-  const days = new Map(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => [pd.id, pd]));
+  const days = new Map(data.program_days.filter((pd) => pd.client_id === clientId && !pd.free).map((pd) => [pd.id, pd]));
   const dayOf = new Map(data.workout_assignments.filter((wa) => days.has(wa.program_day_id)).map((wa) => [wa.id, wa.program_day_id]));
   const dayGym = new Map<number, number>();
   for (const sl of data.set_logs) {
@@ -9881,6 +9938,132 @@ export function gymSessionStats(clientId: number): Map<number, { sessions: numbe
     const g = sl.gym_id ?? home;
     if (g != null) dayGym.set(d, g);
   }
+  const entryDay = new Map((data.cardio_entries ?? []).filter((c) => days.has(c.program_day_id)).map((c) => [c.id, c.program_day_id]));
+  const cardioDone = new Set((data.cardio_logs ?? []).flatMap((l) => (entryDay.has(l.cardio_entry_id) ? [entryDay.get(l.cardio_entry_id)!] : [])));
+  for (const pd of days.values()) if (!dayGym.has(pd.id) && pd.gym_id != null && pd.session_ended_at && cardioDone.has(pd.id)) dayGym.set(pd.id, pd.gym_id);
+  return { home, days, dayGym };
+}
+
+/** A gym's page in Settings (9 Nov, Alex: "how many times we have worked out there and how many sets and how much time"). */
+export type GymDashboard = {
+  id: number;
+  name: string;
+  color: string | null;
+  kind: NonNullable<ClientGym["kind"]>;
+  logo: string | null;
+  home: boolean;
+  once: boolean;
+  deleted: boolean;
+  sessions: number;
+  /** Working sets there: with reps or a weight, warm-ups apart. */
+  sets: number;
+  minutes: number;
+  /** The first session there, YYYY-MM-DD; null, none yet. */
+  since: string | null;
+  /** Up to the last six months since the first session, oldest first. */
+  months: { month: string; sessions: number }[];
+  /** The three exercises with the most sets there, as done (a swap counts as what replaced it). */
+  top: { name: string; sets: number }[];
+};
+
+/** A session running longer than this was left open, not trained: its time counts for nothing. */
+const LONGEST_SESSION_MIN = 6 * 60;
+
+/** Every gym for Settings: home first, then the most trained at; those trained at once, then deleted, after them. A deleted
+ *  or once-only gym with nothing trained there is left out. */
+export function gymDashboards(clientId: number): GymDashboard[] {
+  const data = getData();
+  const { home, days, dayGym } = sessionGyms(clientId);
+  const gyms = listClientGyms(clientId, true);
+  const rows = new Map(data.workout_assignments.filter((wa) => days.has(wa.program_day_id)).map((wa) => [wa.id, wa]));
+  const library = new Map(data.exercises.map((e) => [e.id, e.name]));
+  // A swapped row's sets are the substitute's, as Home's and the Training tab's read them.
+  const doneName = (wa: (typeof data.workout_assignments)[number]) => {
+    const swapped = wa.swap ? ((wa.swap.library_exercise_id != null ? library.get(wa.swap.library_exercise_id) : null) ?? wa.swap.custom_name) : null;
+    return swapped ?? library.get(wa.exercise_id) ?? wa.custom_name ?? "Exercise";
+  };
+  const sets = new Map<number, number>();
+  const byExercise = new Map<number, Map<string, number>>();
+  const firstLog = new Map<number, string>();
+  for (const sl of data.set_logs) {
+    const wa = rows.get(sl.workout_assignment_id);
+    if (!wa) continue;
+    const had = firstLog.get(wa.program_day_id);
+    if (!had || sl.logged_at < had) firstLog.set(wa.program_day_id, sl.logged_at);
+    if (!((sl.reps ?? 0) > 0 || (sl.weight_kg ?? 0) > 0)) continue;
+    const g = sl.gym_id ?? home;
+    if (g == null) continue;
+    sets.set(g, (sets.get(g) ?? 0) + 1);
+    const names = byExercise.get(g) ?? new Map<string, number>();
+    const name = doneName(wa);
+    names.set(name, (names.get(name) ?? 0) + 1);
+    byExercise.set(g, names);
+  }
+  const sessions = new Map<number, number>();
+  const minutes = new Map<number, number>();
+  const trainedOn = new Map<number, string[]>();
+  for (const [dayId, g] of dayGym) {
+    const pd = days.get(dayId)!;
+    sessions.set(g, (sessions.get(g) ?? 0) + 1);
+    const at = pd.session_started_at ?? pd.session_ended_at ?? firstLog.get(dayId);
+    if (at) trainedOn.set(g, [...(trainedOn.get(g) ?? []), localDateStr(new Date(at))]);
+    if (pd.session_started_at && pd.session_ended_at) {
+      const m = Math.round((Date.parse(pd.session_ended_at) - Date.parse(pd.session_started_at)) / 60000);
+      if (m > 0 && m <= LONGEST_SESSION_MIN) minutes.set(g, (minutes.get(g) ?? 0) + m);
+    }
+  }
+  const thisMonth = localDateStr().slice(0, 7);
+  const monthsOf = (dates: string[], endsNow: boolean) => {
+    if (!dates.length) return [];
+    const sorted = [...dates].sort();
+    const first = sorted[0].slice(0, 7);
+    const end = endsNow ? thisMonth : sorted[sorted.length - 1].slice(0, 7);
+    const out: { month: string; sessions: number }[] = [];
+    let y = Number(end.slice(0, 4));
+    let m = Number(end.slice(5, 7));
+    for (let i = 0; i < 6; i++) {
+      const month = `${y}-${String(m).padStart(2, "0")}`;
+      if (month < first) break;
+      out.unshift({ month, sessions: dates.filter((d) => d.startsWith(month)).length });
+      if (--m === 0) {
+        m = 12;
+        y -= 1;
+      }
+    }
+    return out;
+  };
+  const place = (g: GymDashboard) => (g.deleted ? 3 : g.once ? 2 : g.home ? 0 : 1);
+  return gyms
+    .filter((g) => (!g.archived && !g.once) || (sessions.get(g.id) ?? 0) > 0 || (sets.get(g.id) ?? 0) > 0)
+    .map((g): GymDashboard => {
+      const dates = trainedOn.get(g.id) ?? [];
+      return {
+        id: g.id,
+        name: g.name,
+        color: g.color ?? null,
+        kind: g.kind ?? "gym",
+        logo: g.logo_path ?? null,
+        home: g.id === home && !g.archived,
+        once: !!g.once,
+        deleted: !!g.archived,
+        sessions: sessions.get(g.id) ?? 0,
+        sets: sets.get(g.id) ?? 0,
+        minutes: minutes.get(g.id) ?? 0,
+        since: dates.length ? [...dates].sort()[0] : null,
+        months: monthsOf(dates, !g.archived && !g.once),
+        top: [...(byExercise.get(g.id) ?? new Map<string, number>())]
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .slice(0, 3)
+          .map(([name, n]) => ({ name, sets: n })),
+      };
+    })
+    .sort((a, b) => place(a) - place(b) || b.sessions - a.sessions || a.id - b.id);
+}
+
+/** For the picker's rows (13 Oct): sessions trained at each gym, and when the last was. A day counts for the gym of its sets. */
+export function gymSessionStats(clientId: number): Map<number, { sessions: number; lastUsedAt: string | null; /** Sessions in the last 56 days (15 Oct, the coach's gyms pop-up). */ sessions8w: number }> {
+  const since = new Date(Date.now() - 56 * 86400000).toISOString();
+  const { days, dayGym } = sessionGyms(clientId);
   const out = new Map<number, { sessions: number; lastUsedAt: string | null; sessions8w: number }>();
   for (const [d, g] of dayGym) {
     const pd = days.get(d)!;
