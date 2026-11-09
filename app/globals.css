@@ -20398,9 +20398,10 @@ span.lw-saved.lw-saved.refused { cursor: default; }
    on the row's true middle; a collapsed set's stay on the left, by the spine. */
 .lw-fields.lw-fields { justify-content: center; padding-left: 0; }
 .lw-fields.lw-fields .lw-step, .lw-fields.lw-fields .lw-step + .lw-step { justify-content: center; }
-.lw-fields.lw-fields .lw-value { align-items: center; }
-.lw-fields.lw-fields .lw-num-input { text-align: center; }
-.lw-fields.lw-fields .lw-num-mirror { left: 50%; transform: translateX(-50%); }
+/* The figures on the right of their line, typed from the right (9 Nov, Alex); the pair of them stays centred. */
+.lw-fields.lw-fields .lw-value { align-items: flex-end; }
+.lw-fields.lw-fields .lw-num-input { text-align: right; }
+.lw-fields.lw-fields .lw-num-mirror { left: auto; right: 0; }
 .lw-row.lw-row.done { color: #2f7a3f; }
 .lw-row.lw-row.done .lw-row-badge { box-shadow: none; --ring: #82ad8b; outline: 0; }
 .lw-row.lw-row.done .lw-row-badge svg { stroke: #82ad8b; }
@@ -20756,7 +20757,9 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
    spread over the width; fewer sit from the left, 32px apart. The hairline is the grid's own background at the foot of
    the names' row (14px of words and 6px under them). */
 .lw-target-grid { display: grid; column-gap: 32px; justify-content: start; background: linear-gradient(#E1E5EB, #E1E5EB) 0 20px / 100% 1px no-repeat; }
-.lw-target-grid.spread { justify-content: space-between; column-gap: 12px; }
+/* Every column evenly apart, however many the coach filled in (9 Nov, Alex: the words and figures left in theirs). */
+.lw-target-grid.spread { justify-content: space-evenly; column-gap: 12px; }
+
 .lw-target-h { padding-bottom: 6px; font-size: 10px; font-weight: 600; line-height: 14px; letter-spacing: 0.14em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; }
 .lw-target-v { padding-top: 8px; font-size: 18px; font-weight: 600; line-height: 24px; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
