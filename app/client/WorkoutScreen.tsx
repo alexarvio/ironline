@@ -193,6 +193,7 @@ export default function WorkoutScreen({
   const [gymOpen, setGymOpen] = useState(false);
   // The exercise on screen, for the menu's note / warm-up / swap and the chat.
   const currentEx = current.kind === "exercise" ? day.exercises[current.index] : null;
+  const currentCardio = current.kind === "cardio" ? day.cardio[current.index] : null;
   const [request, setRequest] = useState<(ExerciseRequest & { page: number }) | null>(null);
   const ask = (kind: ExerciseRequest["kind"]) => {
     setMenuOpen(false);
@@ -271,7 +272,7 @@ export default function WorkoutScreen({
       )}
       {/* Editing, nothing to put in it on a cardio or the wrap up without gyms. */}
       {/* No ⋯ over an empty menu (19 Oct, Alex: a blank white box): editing has no Discard, a free session no Change gym, the wrap up no exercise. */}
-      {!(editing && !ex && (day.gyms.length === 0 || day.free)) && (
+      {!(editing && !ex && day.gyms.length === 0) && (
       <button type="button" className={cls} onClick={toggleMenu} aria-label="More" aria-expanded={menuOpen}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none" />
@@ -371,7 +372,7 @@ export default function WorkoutScreen({
             <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
             <div className="wo-menu" role="menu" style={menuAt ? { top: menuAt.top, right: menuAt.right } : undefined}>
               {/* A free session (19 Oct, Alex): no Change gym, no Substitute today, no note for yourself; it is all the client's own already. */}
-              {day.gyms.length > 0 && !day.free && (
+              {day.gyms.length > 0 && (
                 <button
                   type="button"
                   role="menuitem"
@@ -411,11 +412,17 @@ export default function WorkoutScreen({
                   )}
                 </>
               )}
+              {currentCardio && !day.free && (
+                <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("swap")}>
+                  <MenuIcon kind="swap" />
+                  {currentCardio.swap ? "Change today's substitute" : "Substitute today"}
+                </button>
+              )}
               {/* Editing a finished session: no Discard, it is kept. */}
               {!editing && (
                 <>
                   {/* The line only between something and Discard (19 Oct): alone, Discard has none over it. */}
-                  {((day.gyms.length > 0 && !day.free) || currentEx) && <div className="wo-menu-divider" />}
+                  {(day.gyms.length > 0 || currentEx || (currentCardio && !day.free)) && <div className="wo-menu-divider" />}
                   <button type="button" role="menuitem" className="wo-menu-row ico danger" onClick={discard}>
                     <MenuIcon kind="discard" />
                     Discard session
@@ -476,6 +483,7 @@ export default function WorkoutScreen({
                   free={!!day.free && !editing}
                   // On to what's next once it's done, as an exercise does (23 Oct, Alex).
                   nextName={goesToName(i)}
+                  request={request?.page === i ? request : null}
                   onNext={(line) => {
                     if (line) setToast(line);
                     jumpTo(nextOpen(i));

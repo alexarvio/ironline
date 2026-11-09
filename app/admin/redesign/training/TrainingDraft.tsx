@@ -118,7 +118,7 @@ export type DraftRow = {
 };
 /** swap: what the client did instead; alternatives: what the coach offers (names, with a note). */
 export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean; swap?: string | null; alternatives?: { name: string; note: string }[] };
-export type DraftSession = { /** Duplicates of it the client trained this week (9 Nov, Alex). */ copies?: number[]; id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; /** The gym it was trained at, for its face on the row (6 Nov, Alex). */ gymId?: number | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[]; /** The later weeks (screen index) with this session's slot and nothing logged in it: what "Also delete it from" reaches. */ laterWeeks?: number[] };
+export type DraftSession = { /** Duplicates of it the client trained this week (9 Nov, Alex). */ copies?: number[]; /** A duplicate or a rogue session, drawn under the week's. */ extra?: "copy" | "rogue"; id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; /** The gym it was trained at, for its face on the row (6 Nov, Alex). */ gymId?: number | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[]; /** The later weeks (screen index) with this session's slot and nothing logged in it: what "Also delete it from" reaches. */ laterWeeks?: number[] };
 /** A workout the client ended, with what they answered on ending it (the answers feed). */
 export type DraftAnswered = { dayId: number; weekIdx: number; weekLabel: string; name: string; ended: string; duration: number | null; gym: string | null; note: string | null; answers: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[] };
 /** A rogue session as the coach sees it: when, how long, and what was logged. */
@@ -876,6 +876,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     .filter((w): w is (typeof weeks)[number] => !!w && w.trained.length > 0)
     .map((w) => ({ index: w.index, sessions: w.trained.length }));
 
+  const allSessions = [...sessions, ...copySessions, ...rogueSessions];
+
   // Duplicates and rogue sessions (9 Nov, Alex): their title and icon on the page, then cards as the week's, read only.
   const extraSection = (list: DraftSession[], title: string, icon: React.ReactNode, tone: string) =>
     list.length === 0 ? null : (
@@ -904,12 +906,13 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
           const gymFace = s.gymId != null ? (program.allGyms ?? gyms).find((g) => g.id === s.gymId) ?? null : null;
           const gymCol = all.some((x) => x.gymId != null);
           const name = p.renamed ?? s.name;
-          const complete = s.setsPlanned > 0 && s.setsLogged >= s.setsPlanned && s.cardio.every((c) => c.done);
+          // A rogue session has no plan to fall short of: done once ended.
+          const complete = s.extra === "rogue" ? !!s.ended : s.setsPlanned > 0 && s.setsLogged >= s.setsPlanned && s.cardio.every((c) => c.done);
           // The states worth a word: done, skipped, or begun and left with
           // sets or cardio still to log (ended early, or partly logged), as
           // the client's app calls it too.
           // In progress while the client is in it (sets logged, not ended); Unfinished once ended short.
-          const status = s.skip ? { text: "Skipped", cls: "warn" } : complete ? { text: "Completed", cls: "good" } : s.ended ? { text: "Unfinished", cls: "warn" } : s.setsLogged > 0 ? { text: "In progress", cls: "live" } : { text: "Not started", cls: "idle" };
+          const status = s.skip ? { text: "Skipped", cls: "warn" } : complete ? { text: "Completed", cls: "good" } : s.ended ? { text: "Unfinished", cls: "warn" } : s.setsLogged > 0 || s.extra ? { text: "In progress", cls: "live" } : { text: "Not started", cls: "idle" };
           const rows = orderOf(s)
             .map((id) => s.rows.find((r) => r.id === id)!)
             .filter((r) => r && !p.removed.includes(r.id));
@@ -1997,7 +2000,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         {dlg?.kind === "progress" && rowById(dlg.rowId) && (
           (() => {
             const row = rowById(dlg.rowId)!;
-            const session = sessions.find((x) => x.rows.some((r) => r.id === row.id));
+            const session = allSessions.find((x) => x.rows.some((r) => r.id === row.id));
             return (
               <ExerciseProgressDialog
                 exerciseName={row.name}
@@ -2062,11 +2065,11 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
           <SessionSubstitutesDialog
             row={rowById(dlg.rowId)!}
             firstName={firstName}
-            session={sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}
+            session={allSessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}
             library={library}
             onSave={async (list, hidden) => {
               const row = rowById(dlg.rowId)!;
-              const session = sessions.find((s) => s.rows.some((r) => r.id === row.id))?.name ?? "this session";
+              const session = allSessions.find((s) => s.rows.some((r) => r.id === row.id))?.name ?? "this session";
               // A session's own picks replace the library's (15 Oct); an empty list means the library's are offered.
               await setExerciseAlternativesAction(row.id, list.map((x) => ({ exerciseId: x.exerciseId, note: x.note })), list.length > 0, hidden);
               close();
@@ -2134,7 +2137,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             existing={videos[dlg.rowId] ? { note: videos[dlg.rowId]!.note ?? "", recurring: !!videos[dlg.rowId]!.recurring } : null}
             onAsk={async (note, recurring) => {
               const rowId = dlg.rowId;
-              const session = sessions.find((s) => s.rows.some((r) => r.id === rowId))?.name ?? "Session";
+              const session = allSessions.find((s) => s.rows.some((r) => r.id === rowId))?.name ?? "Session";
               await requestExerciseVideoAction(rowId, note, recurring, newOnceKey());
               close();
               router.refresh();
@@ -2157,7 +2160,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             row={rowById(dlg.rowId)!}
             video={videos[dlg.rowId] ?? null}
             firstName={firstName}
-            where={`${sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}, ${week.label}`}
+            where={`${allSessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}, ${week.label}`}
             onAsk={(note) => {
               const rowId = dlg.rowId;
               const onceKey = newOnceKey();
@@ -3220,7 +3223,7 @@ function reviewOf(row: DraftRow, video: NonNullable<DraftRow["video"]>, session:
     requestId: video.requestId,
     unseen: video.state === "in",
     client: { firstName, name: firstName, avatarPath: null },
-    exercise: { name: row.name, session: session?.name ?? "Session", week: weekNo, day: session?.number ?? 1 },
+    exercise: { name: row.name, session: session?.name ?? "Session", week: weekNo, day: session ? session.number : 1 },
     requested: !video.fromClient,
     media: [{ kind: video.media, url: video.src! }],
     sentAt: video.sentAt ?? null,

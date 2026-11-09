@@ -786,8 +786,12 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
                     {review.exercise.session.toUpperCase()}
                     <Sep />
                     WK {review.exercise.week}
-                    <Sep />
-                    DAY {review.exercise.day}
+                    {review.exercise.day > 0 && (
+                      <>
+                        <Sep />
+                        DAY {review.exercise.day}
+                      </>
+                    )}
                   </span>
                   <span className={`mrv-req${review.requested ? " asked" : ""}`}>{review.requested ? "You asked for this" : "Sent unasked"}</span>
                 </div>
@@ -918,8 +922,12 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
                     {review.exercise.session.toUpperCase()}
                     <Sep />
                     WK {review.exercise.week}
-                    <Sep />
-                    DAY {review.exercise.day}
+                    {review.exercise.day > 0 && (
+                      <>
+                        <Sep />
+                        DAY {review.exercise.day}
+                      </>
+                    )}
                   </span>
                   <span className={`mrv-req${review.requested ? " asked" : ""}`}>{review.requested ? "You asked for this" : "Sent unasked"}</span>
                 </div>

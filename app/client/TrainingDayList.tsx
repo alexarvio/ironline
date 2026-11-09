@@ -6,7 +6,7 @@ import { Bars } from "./Bars";
 import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, duplicateSessionAction, removeFreeSessionAction } from "../lib/actions";
 import { newOnceKey } from "../lib/onceKey";
 import { applyWorkoutOutbox, clearNotSaved, enqueueWorkout, notSavedWords, useWorkoutOutbox } from "../components/workoutOutbox";
-import type { GymOption } from "./GymPickerDialog";
+import GymPickerDialog, { type GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
 import { CopyIcon, PlusIcon } from "../components/icons";
@@ -207,7 +207,7 @@ export default function TrainingDayList({
   // next tap sends its key again and a late landing and that tap are one session (a late start answers that session
   // again). Any answer ends it, and the tap after is a new key.
   const freeUnanswered = useRef<string | null>(null);
-  const startFree = () => {
+  const startFree = (gym: GymOption | null) => {
     if (freeBusy) return;
     const at = new Date().toISOString();
     const onceKey = freeUnanswered.current ?? newOnceKey();
@@ -221,7 +221,7 @@ export default function TrainingDayList({
         const r = await Promise.race([
           // Any answer ends the key, a late one too (6 Nov, review): kept after a late start, a tap hours later would
           // have opened that session again instead of a new one. A late start shows as the session going.
-          createFreeSessionAction(clientId, at, onceKey).then((answer) => {
+          createFreeSessionAction(clientId, at, onceKey, gym?.id ?? null).then((answer) => {
             if (freeUnanswered.current === onceKey) freeUnanswered.current = null;
             return answer;
           }),
@@ -233,7 +233,7 @@ export default function TrainingDayList({
         }
         if (freeUnanswered.current === onceKey) freeUnanswered.current = null;
         const like = serverDays.find((d) => !d.free) ?? serverDays[0];
-        setLocalFree({ key: r.id, index: days.length + 1, week: like?.week ?? 1, title: "Rogue session", exercises: [], cardio: [], skipReason: "", startedAt: at, endedAt: null, sessionNote: "", questions: like?.questions ?? [], answers: {}, gyms: [], gymId: null, free: true });
+        setLocalFree({ key: r.id, index: days.length + 1, week: like?.week ?? 1, title: "Rogue session", exercises: [], cardio: [], skipReason: "", startedAt: at, endedAt: null, sessionNote: "", questions: like?.questions ?? [], answers: {}, gyms: like?.gyms ?? (gym ? [gym] : []), gymId: gym?.id ?? null, free: true });
         setView({ dayId: r.id, screen: "workout" });
       } finally {
         setFreeBusy(false);
@@ -242,6 +242,7 @@ export default function TrainingDayList({
   };
   // The + under the week's sessions (9 Nov, Alex): a rogue session, or one of this week's again.
   const [adding, setAdding] = useState(false);
+  const [rogueGym, setRogueGym] = useState(false);
   const [copyBusy, setCopyBusy] = useState(false);
   const [openWhenHere, setOpenWhenHere] = useState<number | null>(null);
   // An answer lost on the way keeps its key, so the next tap on that session and a late landing are one duplicate.
@@ -459,12 +460,33 @@ export default function TrainingDayList({
           busy={freeBusy || copyBusy}
           onRogue={() => {
             setAdding(false);
-            startFree();
+            // Which gym, as a session asks (9 Nov, Alex: it counts there): one gym is no question.
+            const place = serverDays.find((d) => !d.free) ?? null;
+            const regular = (place?.gyms ?? []).filter((g) => !g.once);
+            if (place && regular.length !== 1) setRogueGym(true);
+            else startFree(regular[0] ?? null);
           }}
           onDuplicate={(key) => void duplicate(key)}
           onClose={() => !copyBusy && setAdding(false)}
         />
       )}
+
+      {rogueGym && (() => {
+        const place = serverDays.find((d) => !d.free);
+        return place ? (
+          <GymPickerDialog
+            gyms={place.gyms}
+            gymId={place.gymId}
+            mode="start"
+            dayId={place.key}
+            onPick={(g) => {
+              setRogueGym(false);
+              startFree(g);
+            }}
+            onClose={() => setRogueGym(false)}
+          />
+        ) : null;
+      })()}
 
       {startProblem && (
         <p className="tr-start-problem" role="alert">

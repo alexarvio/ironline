@@ -460,7 +460,11 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   };
   const sessions = sub("sessions", () => days.map(buildSession));
   // Duplicates are built as the week's sessions are (9 Nov, Alex: "build it just like a regular session").
-  const copySessions = sub("copySessions", () => freeOf(weekNumber).filter((f) => f.copy_of != null && f.session_started_at).map(buildSession));
+  const copySessions = sub("copySessions", () => freeOf(weekNumber).filter((f) => f.copy_of != null && f.session_started_at).map((f, i) => {
+    // Its number is the session it copies.
+    const at = days.findIndex((x) => x.id === f.copy_of);
+    return { ...buildSession(f, at >= 0 ? at : i), extra: "copy" as const };
+  }));
   // Rogue sessions the same (9 Nov, Alex: "pretty much like this"): what the client logged is all there is to plan, so a
   // set added as they go is no extra set.
   const rogueSessions = sub("rogueSessions", () =>
@@ -469,7 +473,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       .map(buildSession)
       .map((s) => {
         const rows = s.rows.map((r) => ({ ...r, sets: Math.max(r.sets, ...r.logged.map((l) => l.set)) }));
-        return { ...s, rows, setsPlanned: rows.reduce((t, r) => t + r.sets, 0) };
+        return { ...s, rows, setsPlanned: rows.reduce((t, r) => t + r.sets, 0), number: 0, extra: "rogue" as const };
       })
   );
 
