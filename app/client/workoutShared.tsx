@@ -482,7 +482,7 @@ export function TargetTable({ cols }: { cols: [string, string][] }) {
   return (
     <div className="lw-target">
       <span className="lw-target-label">Target</span>
-      <div className={`lw-target-grid${cols.length >= 5 ? " spread" : ""}${cols.length >= 6 ? " dense" : ""}`} style={{ gridTemplateColumns: `repeat(${cols.length}, max-content)` }}>
+      <div className={`lw-target-grid spread${cols.length >= 6 ? " dense" : ""}`} style={{ gridTemplateColumns: `repeat(${cols.length}, minmax(0, 1fr))` }}>
         {cols.map(([name]) => (
           <span key={`h${name}`} className="lw-target-h">
             {name}
