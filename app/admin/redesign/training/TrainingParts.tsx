@@ -271,6 +271,12 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
               {w.trained.map((t, i) => (
                 <i key={i} className={t ? "on" : w.skipped?.[i] ? "skipped" : w.missed?.[i] ? "part" : w.state === "past" ? "none" : ""} />
               ))}
+              {Array.from({ length: w.duplicates ?? 0 }, (_, i) => (
+                <i key={`d${i}`} className="dup" />
+              ))}
+              {Array.from({ length: w.rogues ?? 0 }, (_, i) => (
+                <i key={`r${i}`} className="rogue" />
+              ))}
             </span>
             <span className="trn-week-foot">
               <span>{dateOf(w.index) ?? ""}</span>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type React from "react";
 import { landOnSoon } from "../../../lib/landOn";
-import { ChevronRightIcon } from "../../../components/icons";
+import { ChevronRightIcon, CompassIcon, CopyIcon } from "../../../components/icons";
 import type { DraftRogue } from "./TrainingDraft";
 import { dayMonth } from "../../../lib/dayMonth";
 import { SepJoin } from "../Sep";
@@ -44,31 +44,35 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
   }, [ids]);
   const shown = FIGURES.filter((k) => cols[k]);
   const label: Record<keyof Cols, string> = { sets: "Sets", weight: unit, reps: "Reps", rpe: "RPE", tempo: "Tempo", rest: "Rest" };
-  // Nothing off the plan this week: no section at all (23 Oct, Alex).
-  if (items.length === 0) return null;
-  return (
-    // A section of its own, as the After-workout check (23 Oct, Alex: the small-caps line read as that card's
-    // title): one white card, its title and count in its head, a rogue session a row.
-    <section className="rg trn-rogue" aria-labelledby="trn-rogue-h">
-      <div className="trn-check-head">
-        <h2 id="trn-rogue-h">Rogue sessions</h2>
-        <span className="trn-rogue-count">{items.length}</span>
-      </div>
-      {items.map((r) => {
+  // Nothing off the plan this week: no section at all (23 Oct, Alex). Duplicates and rogue sessions each a section of
+  // their own (9 Nov, Alex): the title and its icon on the page, the rows in one white card.
+  const group = (list: DraftRogue[], title: string, icon: React.ReactNode, tone: string) =>
+    list.length === 0 ? null : (
+      <section className="trn-rogue-sec" aria-label={title}>
+        <div className="trn-rogue-head">
+          <span className={`trn-rogue-ico ${tone}`} aria-hidden="true">
+            {icon}
+          </span>
+          <h2>{title}</h2>
+          <span className="trn-rogue-count">{list.length}</span>
+        </div>
+        <div className="rg trn-rogue">{list.map(row)}</div>
+      </section>
+    );
+  const row = (r: DraftRogue) => {
         const isOpen = open === r.id;
-        const count = r.exercises.length + r.cardio.length;
         return (
           <section key={r.id} id={`session-${r.id}`} className={`trn-rg${isOpen ? " open" : ""}`}>
             <div className="trn-rg-row" onClick={(e) => !(e.target as HTMLElement).closest("button") && setOpen(isOpen ? null : r.id)}>
               {/* The grip's room a planned session has (a done week's keeps it too), so the names stand in one column. */}
               <span className="trn-grip-slot" aria-hidden="true" />
               <span className="trn-row-name">
-                <b>Rogue session</b>
+                <b>{r.copyOf ?? "Rogue session"}</b>
                 <small>
-                  {count} {count === 1 ? "exercise" : "exercises"}
+                  <SepJoin parts={[`${r.exercises.length} ${r.exercises.length === 1 ? "exercise" : "exercises"}`, r.cardio.length > 0 && `${r.cardio.length} cardio`]} />
                 </small>
                 {/* The fold right after the title and its fact, as a planned session's (4 Nov, Alex: "not aligned, inconsistencies"). */}
-                <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : r.id)} aria-expanded={isOpen} aria-label={isOpen ? "Fold rogue session" : "Open rogue session"}>
+                <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : r.id)} aria-expanded={isOpen} aria-label={`${isOpen ? "Fold" : "Open"} ${r.copyOf ?? "rogue session"}`}>
                   <span className={`trn-chev${isOpen ? " open" : ""}`} aria-hidden="true">
                     <ChevronRightIcon />
                   </span>
@@ -97,7 +101,10 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
                   <div key={e.id} className="rd-row">
                     <div className="rd-row-main static" style={grid}>
                       <span />
-                      <span className="rd-ex">{e.name}</span>
+                      <span className="rd-ex">
+                        {e.name}
+                        {e.insteadOf && <small className="rg-tag"> Instead of {e.insteadOf}</small>}
+                      </span>
                       {shown.map((k) => (
                         <span key={k} className="rg-fig">
                           {k === "sets" ? e.sets.length || "–" : k === "weight" ? each(e.sets.map((s) => kgOf(s.kg))) : k === "reps" ? each(e.sets.map((s) => s.reps)) : ""}
@@ -116,7 +123,7 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
                       <div className="rd-row-main static" style={grid}>
                         <span />
                         <span className="rd-ex">
-                          {c.name} <small className="rg-tag">Cardio</small>
+                          {c.name} <small className="rg-tag">{c.insteadOf ? `Instead of ${c.insteadOf}` : "Cardio"}</small>
                         </span>
                         <span className="rg-fig rg-span" style={{ gridColumn: `3 / span ${Math.max(1, shown.length)}` }}>
                           {bits.length ? <SepJoin parts={bits} /> : c.done ? "Done" : "Not logged"}
@@ -131,7 +138,12 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
             )}
           </section>
         );
-      })}
-    </section>
+  };
+  if (items.length === 0) return null;
+  return (
+    <>
+      {group(items.filter((r) => r.copyOf != null), "Duplicates", <CopyIcon />, "copy")}
+      {group(items.filter((r) => r.copyOf == null), "Rogue sessions", <CompassIcon size={18} />, "rogue")}
+    </>
   );
 }

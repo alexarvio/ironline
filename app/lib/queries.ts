@@ -86,6 +86,7 @@ export type ProgramDay = {
   session_answers?: SessionAnswer[];
   /** A free session (19 Oct): one the client made to train off the plan, not one the coach planned. Left out of every week's plan (getWeek, getPublishedWeek); see createFreeSession. */
   free?: boolean;
+  copy_of?: number;
 };
 export type WorkoutAssignment = {
   id: number;
@@ -2084,7 +2085,7 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   if (!day) return;
   // Nor do a free session's (19 Oct): its exercises are names, all exercise 0,
   // and 88 kg logged on one became the target of every free exercise after it.
-  if (day.free || wa.exercise_id === 0) return;
+  if (isRogue(day) || wa.exercise_id === 0) return;
   const logs = data.set_logs.filter((sl) => sl.workout_assignment_id === wa.id);
   if (logs.length === 0) return;
   const home = homeGymId(day.client_id);
@@ -3036,12 +3037,13 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
   };
 
   // "Session 2 · Push A (Week 3)", with the week counted inside its programme.
-  const dayTitle = (day: { client_id: number; week_number: number; day_of_week: number; label: string | null; free?: boolean }) => {
+  const dayTitle = (day: { client_id: number; week_number: number; day_of_week: number; label: string | null; free?: boolean; copy_of?: number }) => {
     const program = data.training_programs.find(
       (p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks
     );
     const week = program ? programWeekLabel(program, day.week_number) : `Week ${day.week_number}`;
-    if (day.free) return `Rogue session (${week})`;
+    if (isRogue(day)) return `Rogue session (${week})`;
+    if (day.copy_of != null) return `Duplicate of ${day.label ?? "a session"} (${week})`;
     return `Session ${day.day_of_week}${day.label ? ` · ${day.label}` : ""} (${week})`;
   };
   /** " for 15/10" when the day a row is about isn't the day it is dated (a check-in sent late); nothing on its own day
@@ -3103,7 +3105,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       dayId: day.id,
       target: { kind: "session", dayId: day.id, week: day.week_number },
       text: `${verb} ${dayTitle(day)}${facts.length ? ` · ${facts.join(", ")}` : ""}`,
-      thing: `${verb.charAt(0).toUpperCase()}${verb.slice(1)} ${day.free ? "a rogue session" : `Session ${day.day_of_week}`}`,
+      thing: `${verb.charAt(0).toUpperCase()}${verb.slice(1)} ${sessionWords(day)}`,
       quote: note,
       session: news.state,
     });
@@ -3120,7 +3122,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       dayId: day.id,
       target: { kind: "session", dayId: day.id, week: day.week_number },
       text: `couldn't do ${dayTitle(day)}`,
-      thing: `Couldn't do ${day.free ? "a rogue session" : `Session ${day.day_of_week}`}`,
+      thing: `Couldn't do ${sessionWords(day)}`,
       note: day.skip_reason,
     });
   }
@@ -9832,11 +9834,12 @@ export function addClientGym(clientId: number, name: string, color?: string, kin
   const clean = name.trim().replace(/\s+/g, " ").slice(0, 40);
   if (!clean) return null;
   const data = getData();
-  const same = listClientGyms(clientId, true).find((g) => g.name.toLowerCase() === clean.toLowerCase());
+  const same = listClientGyms(clientId, true).find((g) => !gymGone(g) && g.name.toLowerCase() === clean.toLowerCase());
   if (same) {
     // Named under Just this once, a deleted gym is that one visit: no weights move (9 Nov).
     if (same.archived && once) {
       same.archived = false;
+      delete same.archived_at;
       same.once = true;
     } else if (same.archived) restoreClientGym(same.id);
     if (color) same.color = color;
@@ -9872,8 +9875,14 @@ export function removeClientGym(gymId: number) {
     gym.home_to = next.id;
   }
   gym.archived = true;
+  gym.archived_at = new Date().toISOString();
   persist();
 }
+
+/** How long a deleted gym can be brought back (9 Nov, Alex). After it the gym is gone from the client's app for good; what
+ *  was trained there stays in the history, and on the coach's side under its name. */
+const GYM_KEPT_MS = 30 * 86400000;
+const gymGone = (g: ClientGym) => !!g.archived && !!g.archived_at && Date.now() - Date.parse(g.archived_at) > GYM_KEPT_MS;
 
 /** Home left on a deleted gym (it went with no regular gym to hand over to): the next regular gym takes it. */
 function takeHomeFromDeleted(gym: ClientGym) {
@@ -9886,8 +9895,9 @@ function takeHomeFromDeleted(gym: ClientGym) {
  *  home and the gym that took over still is. */
 export function restoreClientGym(gymId: number): boolean {
   const gym = (getData().client_gyms ?? []).find((g) => g.id === gymId);
-  if (!gym) return false;
+  if (!gym || gymGone(gym)) return false;
   gym.archived = false;
+  delete gym.archived_at;
   const handedTo = gym.home_to;
   delete gym.home_to;
   if (handedTo != null && homeGymId(gym.client_id) === handedTo) {
@@ -9916,7 +9926,7 @@ export function updateClientGym(gymId: number, name: string, color?: ClientGym["
   if (clean.length < 2) return "Give the gym a name.";
   // A deleted gym that holds nothing isn't listed anywhere, so it holds no name either.
   const stats = gymSessionStats(gym.client_id);
-  if (listClientGyms(gym.client_id, true).some((g) => g.id !== gymId && g.name.toLowerCase() === clean.toLowerCase() && (!g.archived || (stats.get(g.id)?.sessions ?? 0) > 0))) return `You already have a gym called ${clean}`;
+  if (listClientGyms(gym.client_id, true).some((g) => g.id !== gymId && g.name.toLowerCase() === clean.toLowerCase() && !gymGone(g) && (!g.archived || (stats.get(g.id)?.sessions ?? 0) > 0))) return `You already have a gym called ${clean}`;
   gym.name = clean;
   if (color) gym.color = color;
   if (kind) gym.kind = kind;
@@ -9929,7 +9939,7 @@ export function updateClientGym(gymId: number, name: string, color?: ClientGym["
 function sessionGyms(clientId: number) {
   const data = getData();
   const home = homeGymId(clientId);
-  const days = new Map(data.program_days.filter((pd) => pd.client_id === clientId && !pd.free).map((pd) => [pd.id, pd]));
+  const days = new Map(data.program_days.filter((pd) => pd.client_id === clientId && !isRogue(pd)).map((pd) => [pd.id, pd]));
   const dayOf = new Map(data.workout_assignments.filter((wa) => days.has(wa.program_day_id)).map((wa) => [wa.id, wa.program_day_id]));
   const dayGym = new Map<number, number>();
   for (const sl of data.set_logs) {
@@ -10034,7 +10044,7 @@ export function gymDashboards(clientId: number): GymDashboard[] {
   };
   const place = (g: GymDashboard) => (g.deleted ? 3 : g.once ? 2 : g.home ? 0 : 1);
   return gyms
-    .filter((g) => (!g.archived && !g.once) || (sessions.get(g.id) ?? 0) > 0 || (sets.get(g.id) ?? 0) > 0)
+    .filter((g) => !gymGone(g) && ((!g.archived && !g.once) || (sessions.get(g.id) ?? 0) > 0 || (sets.get(g.id) ?? 0) > 0))
     .map((g): GymDashboard => {
       const dates = trainedOn.get(g.id) ?? [];
       return {
@@ -10146,9 +10156,9 @@ export function getLastWarmupSets(assignmentId: number): { weight_kg: number | n
   const data = getData();
   const wa = data.workout_assignments.find((x) => x.id === assignmentId);
   const day = wa && data.program_days.find((pd) => pd.id === wa.program_day_id);
-  if (!wa || !day || wa.exercise_id === 0 || day.free) return [];
+  if (!wa || !day || wa.exercise_id === 0 || isRogue(day)) return [];
   const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd]));
-  const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
+  const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 1000 + pd.day_of_week;
   let best: { when: number; sets: { weight_kg: number | null; reps: number | null }[] } | null = null;
   for (const other of data.workout_assignments) {
     if (other.exercise_id !== wa.exercise_id || !other.warmup_sets?.length || other.swap || (other.variation_id ?? null) !== (wa.variation_id ?? null)) continue;
@@ -10184,7 +10194,7 @@ export function liveSessionFor(clientId: number): { id: number; label: string; s
   // the week's sessions with something in them, an empty day or a rogue session not counted.
   const shown = getPublishedWeek(clientId, day.week_number).filter((pd) => !pd.free && (getAssignmentsForDay(pd.id).length > 0 || listCardioForDay(pd.id).length > 0));
   const idx = shown.findIndex((pd) => pd.id === day.id);
-  return { id: day.id, label: day.free ? "Rogue session" : day.label || `Session ${idx + 1}`, startedAt: day.session_started_at!, week: day.week_number };
+  return { id: day.id, label: isRogue(day) ? "Rogue session" : day.label || `Session ${idx + 1}`, startedAt: day.session_started_at!, week: day.week_number };
 }
 
 // A session begun and forgotten (13 Oct, Roziena): its clock ran for days,
@@ -10226,11 +10236,44 @@ export function createFreeSession(clientId: number, week: number, at: string): {
   const data = getData();
   const live = liveSessionFor(clientId);
   if (live) return { ok: false, other: live.label };
-  const free = data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week && pd.free).length;
-  const day: ProgramDay = { id: allocId("program_days"), client_id: clientId, week_number: week, day_of_week: 100 + free, label: "Rogue session", status: "published", free: true, session_started_at: at };
+  const day: ProgramDay = { id: allocId("program_days"), client_id: clientId, week_number: week, day_of_week: nextFreeSlot(clientId, week), label: "Rogue session", status: "published", free: true, session_started_at: at };
   data.program_days.push(day);
   persist();
   return { ok: true, id: day.id };
+}
+
+/** A free session's place after the week's planned ones: past the highest used, so a discard never frees one for reuse. */
+function nextFreeSlot(clientId: number, week: number): number {
+  return Math.max(99, ...getData().program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week && pd.free).map((pd) => pd.day_of_week)) + 1;
+}
+
+/** A rogue session, the client's own: a free session that isn't a duplicate of a planned one. */
+export function isRogue(d: { free?: boolean; copy_of?: number }): boolean {
+  return !!d.free && d.copy_of == null;
+}
+
+/** How the Feed names a session in a sentence. */
+const sessionWords = (d: { free?: boolean; copy_of?: number; label: string | null; day_of_week: number }) =>
+  isRogue(d) ? "a rogue session" : d.copy_of != null ? `a duplicate of ${d.label ?? "a session"}` : `Session ${d.day_of_week}`;
+
+/**
+ * This week's planned session again (9 Nov, Alex: "do a workout twice in a week"): its exercises, targets and cardio as
+ * they stand, nothing the client did on it (no swap, no warm-ups). A free session underneath, so the plan's counting leaves
+ * it out and it never reads as missed. Null when it can't be: not this client's week, or nothing in it.
+ */
+export function duplicateSession(sourceId: number, week: number, name?: string): number | null {
+  const data = getData();
+  const source = data.program_days.find((pd) => pd.id === sourceId);
+  if (!source || source.free || source.week_number !== week) return null;
+  const rows = data.workout_assignments.filter((wa) => wa.program_day_id === source.id);
+  const cardio = (data.cardio_entries ?? []).filter((c) => c.program_day_id === source.id);
+  if (rows.length === 0 && cardio.length === 0) return null;
+  const day: ProgramDay = { id: allocId("program_days"), client_id: source.client_id, week_number: week, day_of_week: nextFreeSlot(source.client_id, week), label: source.label || name?.trim().slice(0, 80) || `Session ${source.day_of_week}`, status: "published", free: true, copy_of: source.id };
+  data.program_days.push(day);
+  for (const wa of rows) data.workout_assignments.push({ ...copiedWeights(wa), warmup_sets: undefined, swap: undefined, id: allocId("workout_assignments"), program_day_id: day.id });
+  for (const c of cardio) data.cardio_entries.push({ ...c, swap: undefined, id: allocId("cardio_entries"), program_day_id: day.id });
+  persist();
+  return day.id;
 }
 
 /** The client's free sessions in a week, oldest first. */
@@ -10406,7 +10449,7 @@ export function endSession(programDayId: number, at: string, note: string, answe
   const day = data.program_days.find((pd) => pd.id === programDayId);
   if (!day) return;
   // A free session's exercises are as many sets as were logged: there was no plan to fall short of.
-  if (day.free) {
+  if (isRogue(day)) {
     for (const wa of data.workout_assignments) {
       if (wa.program_day_id !== day.id) continue;
       const done = data.set_logs.filter((sl) => sl.workout_assignment_id === wa.id).length;
@@ -10737,10 +10780,10 @@ function exerciseHistoryFor(assignmentId: number): { day: ProgramDay; logs: SetL
   // A free session's exercise (19 Oct) is a name only, every one of them
   // exercise 0: it has no "last time", or each would carry the weights of
   // whatever free exercise came before (88 kg on a hip abduction).
-  if (wa.exercise_id === 0 || day.free) return [];
+  if (wa.exercise_id === 0 || isRogue(day)) return [];
   const exerciseId = wa.exercise_id;
   const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd]));
-  const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
+  const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 1000 + pd.day_of_week;
   // This phase only (9 Oct): the programme whose weeks hold this day. An
   // earlier phase's sets are not "last time", even of the same exercise.
   const program = data.training_programs.find((p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks);
@@ -10782,10 +10825,13 @@ function lastSetsPicker(assignmentId: number): (gymId: number | null) => { date:
   const wa = data.workout_assignments.find((x) => x.id === assignmentId);
   const own = wa ? data.program_days.find((pd) => pd.id === wa.program_day_id) : undefined;
   const home = own ? homeGymId(own.client_id) : null;
-  const sameSlot = history.filter((h) => h.day.day_of_week === own?.day_of_week);
+  // A duplicate's last time is simply the last time, the session it copies this week included.
+  // A duplicate done on an earlier week is that session's own last time.
+  const slotOf = (pd: { day_of_week: number; copy_of?: number }) => (pd.copy_of != null ? data.program_days.find((x) => x.id === pd.copy_of)?.day_of_week ?? pd.day_of_week : pd.day_of_week);
+  const sameSlot = own?.copy_of != null ? [] : history.filter((h) => slotOf(h.day) === own?.day_of_week);
   // Another session from an earlier week before this week's: Thursday's
   // compares with last Thursday, not with Monday's.
-  const earlier = history.filter((h) => own == null || h.day.week_number < own.week_number);
+  const earlier = own?.copy_of != null ? [] : history.filter((h) => own == null || h.day.week_number < own.week_number);
   return (gymId) => {
     // The gym you are at first (9 Nov, Alex: 110 from Muscle Factory opened at Trainmore under its own 100; a machine is
     // another machine), and only with the lift never done there, another gym's. Within either: the same session in an
@@ -10820,10 +10866,10 @@ export function carriedVideoReply(assignmentId: number): VideoRequest | null {
   const earlier = exerciseHistoryFor(assignmentId).map((h) => h.logs[0]?.workout_assignment_id).filter((x): x is number => x != null);
   const wa = data.workout_assignments.find((x) => x.id === assignmentId);
   const day = wa && data.program_days.find((pd) => pd.id === wa.program_day_id);
-  if (!wa || !day || wa.exercise_id === 0 || day.free) return null;
+  if (!wa || !day || wa.exercise_id === 0 || isRogue(day)) return null;
   // Every earlier row of the same exercise in this phase, logged or not.
   const exerciseId = wa.swap ? wa.swap.library_exercise_id : wa.exercise_id;
-  const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
+  const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 1000 + pd.day_of_week;
   const program = data.training_programs.find((p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks);
   const rows = data.workout_assignments.filter((o) => {
     if (o.id === assignmentId) return false;
@@ -14250,7 +14296,7 @@ export function getWorkoutCalendar(clientId: number): WorkoutDay[] {
 /** getWorkoutCalendar's sessions one by one, with the session they are. */
 function trainedSessions(clientId: number, ix: TrainingIndex = trainingIndex(clientId)): { date: string; dayId: number; title: string; minutes: number | null; finished: boolean }[] {
   const out: { date: string; dayId: number; title: string; minutes: number | null; finished: boolean }[] = [];
-  const title = (d: { label: string | null; day_of_week: number; free?: boolean }) => (d.free ? "Rogue session" : d.label?.trim() || `Session ${d.day_of_week}`);
+  const title = (d: { label: string | null; day_of_week: number; free?: boolean; copy_of?: number }) => (isRogue(d) ? "Rogue session" : d.label?.trim() || `Session ${d.day_of_week}`);
   // Their sessions read once (trainingIndex), not the whole store per session (23 Oct, speed).
   for (const d of ix.daysOf.get(clientId) ?? []) {
     if (d.session_ended_at) {
@@ -14506,6 +14552,8 @@ export function setVideoRequestRecurring(id: number, on: boolean): boolean {
 
 /** Requests this session's exercises inherit from recurring ones on earlier sessions of the same name. */
 export function resolveRecurringVideoAsks(day: ProgramDay, assignments: WorkoutAssignment[]) {
+  // Asked of the plan's sessions, not a duplicate of one (9 Nov).
+  if (day.copy_of != null) return;
   const data = getData();
   const label = (day.label ?? "").trim().toLowerCase();
   if (!label) return;

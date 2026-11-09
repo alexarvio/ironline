@@ -88,6 +88,8 @@ export type SessionDay = {
   gymId: number | null;
   /** The client's own session off the plan (19 Oct): no targets, exercises added as they go. */
   free?: boolean;
+  /** A duplicate of a planned session (9 Nov, Alex): trained as one, gone if left unstarted or discarded. */
+  copy?: boolean;
 };
 
 /** The coach's library as a free session offers it: what can be added. */

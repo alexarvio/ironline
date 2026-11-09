@@ -10,6 +10,7 @@ import { logoutAction } from "../lib/auth-actions";
 import {
   getAssignmentsForDay,
   getFreeSessions,
+  isRogue,
   getClient,
   listClientEvents,
   carriedVideoReply,
@@ -683,7 +684,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
   const trainingDays = days.filter((d) => d.assignments.length > 0 || listCardioForDay(d.day.id).length > 0);
   // The client's own free sessions this week (19 Oct), after the plan's: drawn like them, counted in none of the figures above.
   const freeDays = getFreeSessions(CLIENT_ID, week)
-    .filter((day) => !!day.session_started_at)
+    // A duplicate shows from when it is made, this week; a rogue session from when it starts.
+    .filter((day) => !!day.session_started_at || (day.copy_of != null && week === getCurrentWeekNumber(CLIENT_ID) && trainingDays.some((t) => t.day.id === day.copy_of)))
     .map((day) => ({ day, assignments: getAssignmentsForDay(day.id) }));
   const stats = weekStats(CLIENT_ID, week);
   const dayTarget = stats.totalDays || 7;
@@ -816,6 +818,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
               clientId={CLIENT_ID}
               library={[...library.values()].map((e) => ({ id: e.id, name: e.name, group: exerciseGroup(e) }))}
               days={[...trainingDays, ...freeDays].map(({ day, assignments }, i) => {
+                const rogue = isRogue(day);
                 const gymId = dayGymId(day.id);
                 // Videos the coach asked for in this session.
                 // Ask every session (15 Oct): requests this session inherits from recurring ones are made here, as the app loads it.
@@ -827,16 +830,17 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                 return {
                 key: day.id,
                 index: i + 1,
-                free: !!day.free,
+                free: rogue,
+                copy: day.copy_of != null,
                 week: week - (program?.start_week ?? 1) + 1,
                 // A free session has no gym (19 Oct, Alex): it is not tied to a place, and its sets carry none.
-                gyms: day.free ? [] : dayGyms.map((g) => ({ id: g.id, name: g.name, color: isGymColor(g.color) ? g.color : "navy", kind: g.kind ?? "gym", sessions: gymStats.get(g.id)?.sessions ?? 0, lastUsedAt: gymStats.get(g.id)?.lastUsedAt ?? null, lastUsed: g.id === lastGymId, logo: g.logo_path ?? null, ...(g.once ? { once: true } : {}) })),
-                gymId: day.free ? null : gymId,
+                gyms: rogue ? [] : dayGyms.map((g) => ({ id: g.id, name: g.name, color: isGymColor(g.color) ? g.color : "navy", kind: g.kind ?? "gym", sessions: gymStats.get(g.id)?.sessions ?? 0, lastUsedAt: gymStats.get(g.id)?.lastUsedAt ?? null, lastUsed: g.id === lastGymId, logo: g.logo_path ?? null, ...(g.once ? { once: true } : {}) })),
+                gymId: rogue ? null : gymId,
                 // The coach's own name for the session. Without one it is
                 // numbered by its place in the week; the weekday is never
                 // shown here, so a session skipped to another day still
                 // reads correctly.
-                title: day.free ? "Rogue session" : day.label || `Session ${i + 1}`,
+                title: rogue ? "Rogue session" : day.label || `Session ${i + 1}`,
                 skipReason: day.skip_reason ?? "",
                 startedAt: day.session_started_at ?? null,
                 endedAt: day.session_ended_at ?? null,
@@ -862,7 +866,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   reps: a.reps,
                   // Assisted by the library's exercise or variation, as the weight rule reads it, whatever the row is called.
                   assisted: assistedRow(library.get(a.exercise_id), a.variation_id),
-                  targetWeight: day.free ? null : a.target_weight_kg,
+                  targetWeight: rogue ? null : a.target_weight_kg,
                   unit: getExerciseUnit(a.id),
                   targetRpe: a.rpe_target,
                   tempo: a.tempo,
@@ -872,7 +876,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   // The coach's demo for this prescription wins; the exercise
                   // library's own video is the fallback.
                   // Swapped (17 Oct): the substitute's own demo from the library, or none; the original's would show the wrong exercise.
-                  videoUrl: day.free ? null : a.swap ? (a.swap.library_exercise_id != null ? library.get(a.swap.library_exercise_id)?.video_url ?? null : null) : a.demo_hidden ? null : a.exercise_video_url ?? a.demo_url ?? null,
+                  videoUrl: rogue ? null : a.swap ? (a.swap.library_exercise_id != null ? library.get(a.swap.library_exercise_id)?.video_url ?? null : null) : a.demo_hidden ? null : a.exercise_video_url ?? a.demo_url ?? null,
                   myNote: myNotes.get(a.exercise_id) || latestNotes.get(a.exercise_id) || "",
                   warmups: (a.warmup_sets ?? []).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
                   lastWarmups: getLastWarmupSets(a.id).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
@@ -884,7 +888,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                     const reply = c ? videoReplies.find((x) => x.id === c.id) ?? null : null;
                     return c && reply ? { id: c.id, note: null, src: null, sentAt: null, reply, carried: true } : null;
                   })(),
-                  gymTargets: !day.free && allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, targetAtGym(a, g.id, home)])) : undefined,
+                  gymTargets: !rogue && allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, targetAtGym(a, g.id, home)])) : undefined,
                   gymNotes: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, notesByGym.get(g.id)?.get(a.exercise_id) ?? ""])) : undefined,
                   logs: getLogsForAssignment(a.id).map((l) => ({
                     id: l.id,
@@ -895,7 +899,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   })),
                   note: { text: a.notes, dateLabel: noteDateLabel(a.note_at), unread: !!a.notes && !a.note_read },
                   lastSets: getLastSets(a.id, gymId),
-                  lastSetsAt: !day.free && allGyms.length > 1 ? getLastSetsByGym(a.id, allGyms.map((g) => g.id)) : undefined,
+                  lastSetsAt: !rogue && allGyms.length > 1 ? getLastSetsByGym(a.id, allGyms.map((g) => g.id)) : undefined,
                   history: getExerciseHistory(a.id, 3),
                 })),
                 };

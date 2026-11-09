@@ -324,6 +324,7 @@ import {
   saveProgramWorkoutQuestions,
   discardSession,
   createFreeSession,
+  duplicateSession,
   addFreeExercise,
   addFreeCardio,
   setFreeCardio,
@@ -4144,6 +4145,19 @@ export async function createFreeSessionAction(clientId: number, at?: string, onc
     const r = createFreeSession(Number(clientId), getCurrentWeekNumber(Number(clientId)), stampOrNow(at));
     if (r.ok) revalidatePath("/admin");
     return r;
+  });
+}
+
+/** This week's session again (9 Nov, Alex). Answers with the new session's id. Needs signal, as a rogue session does. */
+export async function duplicateSessionAction(programDayId: number, onceKey?: string, name?: string): Promise<{ ok: true; id: number } | { ok: false }> {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || !(await canAccessClient(owner))) return { ok: false };
+  return once(`duplicateSessionAction:${owner}`, onceKeyOf(onceKey), (): { ok: true; id: number } | { ok: false } => {
+    const id = duplicateSession(Number(programDayId), getCurrentWeekNumber(owner), typeof name === "string" ? name : undefined);
+    if (id == null) return { ok: false };
+    revalidatePath("/client");
+    revalidatePath("/admin");
+    return { ok: true, id };
   });
 }
 
