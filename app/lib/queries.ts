@@ -690,7 +690,8 @@ export function migrateDaysToSessions() {
 /** Dates (YYYY-MM-DD) the client logged at least one set on: their training days. */
 export function trainingDates(clientId: number): Set<string> {
   const data = getData();
-  const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+  // A rogue session counts for nothing (9 Nov, Alex).
+  const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId && !isRogue(pd)).map((pd) => pd.id));
   const assignmentIds = new Set(data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id));
   return new Set(data.set_logs.filter((sl) => assignmentIds.has(sl.workout_assignment_id)).map((sl) => sl.logged_at.slice(0, 10)));
 }
@@ -5384,7 +5385,7 @@ export function getStrengthSeries(clientId: number, days: number) {
     data.workout_assignments
       .filter((wa) => {
         const day = data.program_days.find((pd) => pd.id === wa.program_day_id);
-        return day?.client_id === clientId;
+        return day?.client_id === clientId && !isRogue(day);
       })
       .map((wa) => wa.id)
   );
@@ -8776,7 +8777,7 @@ export function computeReportSections(
   return sections.map((s): ReportSectionData => {
     switch (s.type) {
       case "training": {
-        const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+        const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId && !isRogue(pd)).map((pd) => pd.id));
         const assignmentIds = new Set(
           data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id)
         );
