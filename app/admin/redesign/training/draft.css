@@ -1372,7 +1372,7 @@ span.rd-demo { cursor: default; }
 .rd-nav button::after { content: attr(data-label); height: 0; overflow: hidden; visibility: hidden; font-weight: 600; pointer-events: none; user-select: none; }
 /* An empty card holds its empty word in the middle of its height, on the left as every row's words (2 Nov, Alex: "more
    space below it than above it… center it, but left"): the same room over and under it. */
-.rd.rls .rls-none, .rd.rt .rt-none { padding-top: 16px; padding-bottom: 16px; }
+.rd.rd.rls .rls-none, .rd.rd.rt .rt-none { padding-top: 16px; padding-bottom: 16px; }
 /* The card's own foot room (6px under its last row) goes when the empty word is all it holds, so the word sits midway. */
 .rd.rd .rls-card.rls-card:has(> .rls-none:only-child), .rd.rd .rls-card.rls-card:has(> .rt-none:only-child), .rd.rd .rls-card.rls-card:has(> .rp-tnone:only-child) { padding-top: 0; padding-bottom: 0; }
 /* Every row's words and marks on its true middle (2 Nov, Alex: "not centered… it makes us feel cheap"): the outline is a
