@@ -363,6 +363,8 @@ import {
   removeSavedDayFood,
   setSavedDayPicture,
   removeSavedDayPicture,
+  setSavedDayCover,
+  removeSavedDayCover,
   createSavedMeal,
   deleteSavedDay,
   addSavedDay,
@@ -4944,6 +4946,9 @@ export async function renameSavedDayAction(formData: FormData): Promise<boolean>
   return done;
 }
 
+/** The key that means the day's own picture rather than one of its cards'. */
+const DAY_COVER = "@cover";
+
 /** A card on a saved day, changed as a day's card is. True once the server has it. */
 export async function changeSavedDayCardAction(formData: FormData): Promise<boolean> {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
@@ -4975,7 +4980,7 @@ export async function changeSavedDayCardAction(formData: FormData): Promise<bool
       case "food-remove":
         return Number.isInteger(index) && removeSavedDayFood(clientId, id, key, index, foodId);
       case "picture-remove":
-        gone = removeSavedDayPicture(clientId, id, key);
+        gone = key === DAY_COVER ? removeSavedDayCover(clientId, id) : removeSavedDayPicture(clientId, id, key);
         return true;
       default:
         return false;
@@ -4996,7 +5001,7 @@ export async function uploadSavedDayPictureAction(formData: FormData): Promise<b
   const fitted = await fitPhoto(original);
   const buffer = fitted?.bytes ?? original;
   const type = fitted?.type ?? (file.type || "image/jpeg");
-  const saved = setSavedDayPicture(clientId, id, key, buffer, type);
+  const saved = key === DAY_COVER ? setSavedDayCover(clientId, id, buffer, type) : setSavedDayPicture(clientId, id, key, buffer, type);
   if (!saved) return false;
   for (const was of saved.gone) await deleteUpload(was);
   await putUpload(saved.path, buffer, type);
