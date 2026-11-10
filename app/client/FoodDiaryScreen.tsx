@@ -15,6 +15,7 @@ import {
   addSavedMealAction,
   addSavedMealCardAction,
   deleteSavedDayAction,
+  saveDayAction,
   copyFoodDayAction,
   deleteSavedMealAction,
   saveMealAction,
@@ -400,6 +401,8 @@ export default function FoodDiaryScreen({
   const [askRemove, setAskRemove] = useState<number | null>(null);
   // The saved day whose × was tapped, likewise.
   const [askForgetDay, setAskForgetDay] = useState<number | null>(null);
+  // Save this day, on the Saved days screen: the pill turned into its name box.
+  const [namingDay, setNamingDay] = useState(false);
   // Saved days or Saved meals, the screen to pick from (10 Nov, Alex).
   const [savedScreen, setSavedScreen] = useState<"days" | "meals" | null>(null);
   const savedRow = useRef<HTMLDivElement>(null);
@@ -953,6 +956,7 @@ export default function FoodDiaryScreen({
                           onClick={() => {
                             setSavedScreen(null);
                             setAskForgetDay(null);
+                            setNamingDay(false);
                           }}
                           aria-label="Back"
                         >
@@ -972,6 +976,63 @@ export default function FoodDiaryScreen({
                           )
                         ) : (
                           <>
+                            {/* Save this day (10 Nov, Alex): at the top of the list it lands in. A day already saved says so. */}
+                            {diary.savedDayAs && diary.savedDayId != null ? (
+                              <div className="fdi-saved-day fdi-saved-this">
+                                <span className="fdi-copy-main">
+                                  <span className="fdi-copy-name">{dayTitle}</span>
+                                  <span className="fdi-copy-sub">Saved as {diary.savedDayAs}</span>
+                                </span>
+                                <button type="button" className="fdi-copy-use" onClick={() => forget(diary.savedDayId!)} disabled={loading}>
+                                  Unsave
+                                </button>
+                              </div>
+                            ) : diary.meals.some((m) => m.entries.length > 0) ? (
+                              namingDay ? (
+                                <form
+                                  className="fdi-saved-name fdi-saved-this"
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
+                                    if (!name) return;
+                                    const fd = new FormData();
+                                    fd.set("clientId", String(clientId));
+                                    fd.set("date", date);
+                                    fd.set("name", name);
+                                    // Its one-time key (6 Nov): sent again once the signal is back, it saves the day once.
+                                    fd.set("onceKey", newOnceKey());
+                                    setNamingDay(false);
+                                    startLoad(async () => {
+                                      await saveDayAction(fd);
+                                      const next = await getFoodDiaryAction(clientId, date);
+                                      if (next) setDiary((d) => (d.date === date ? next : d));
+                                    });
+                                  }}
+                                >
+                                  <input
+                                    name="name"
+                                    type="text"
+                                    placeholder="Name this day"
+                                    maxLength={40}
+                                    autoComplete="off"
+                                    autoFocus
+                                    aria-label="Name for the saved day"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Escape") setNamingDay(false);
+                                    }}
+                                    onBlur={(e) => {
+                                      if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingDay(false);
+                                    }}
+                                  />
+                                  <button type="submit">Save</button>
+                                </form>
+                              ) : (
+                                <button type="button" className="fdi-saved-pill fdi-saved-this" onClick={() => setNamingDay(true)} disabled={loading}>
+                                  <BookmarkIcon />
+                                  <span>Save this day</span>
+                                </button>
+                              )
+                            ) : null}
                             {last && (
                               <div className="fdi-saved-day">
                                 <span className="fdi-copy-main">
