@@ -609,10 +609,8 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
           }}
         >
           <div ref={threadInner} className="rm-thread-inner">
-          {days.length === 0 ? (
-            // The empty word on the left, midway down, as every card's (6 Nov, Alex: admin audit; rule §1, rls-none).
-            <p className="rm-empty">None yet</p>
-          ) : (
+          {/* An empty thread says nothing (10 Nov, Alex). */}
+          {(
             days.map((d) => (
               <div key={d.day} className="rm-day">
                 <span className="rm-day-label">{d.day}</span>

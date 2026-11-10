@@ -353,6 +353,8 @@ import {
   copyFoodMeal,
   copyFoodDay,
   saveDay,
+  createSavedDay,
+  createSavedMeal,
   deleteSavedDay,
   addSavedDay,
   addSavedMealCard,
@@ -4896,6 +4898,32 @@ export async function saveMealAction(formData: FormData) {
   });
 }
 
+/** Create a meal or Create a day (10 Nov, Alex): named, built from nothing, its foods as the client picked them. */
+export async function createSavedAction(formData: FormData): Promise<boolean> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const name = String(formData.get("name") ?? "").trim().slice(0, 40);
+  const kind = formData.get("kind") === "day" ? "day" : "meal";
+  let raw: unknown;
+  try {
+    raw = JSON.parse(String(formData.get("items") ?? "[]"));
+  } catch {
+    return false;
+  }
+  if (!name || !Array.isArray(raw)) return false;
+  const items = (raw as Record<string, unknown>[]).slice(0, 100).map((i) => ({
+    meal: String(i?.meal ?? ""),
+    foodId: String(i?.foodId ?? ""),
+    grams: Number(i?.grams),
+    serving: typeof i?.serving === "string" ? i.serving.slice(0, 60) : null,
+  }));
+  return once(`createSavedAction:${clientId}`, onceKeyOf(formData), () => {
+    const made = (kind === "day" ? createSavedDay(clientId, name, items) : createSavedMeal(clientId, name, items)) != null;
+    // The diary reads its day from the page when it next opens.
+    if (made) revalidatePath("/client");
+    return made;
+  });
+}
+
 export async function deleteSavedMealAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const id = Number(formData.get("id"));
@@ -4925,6 +4953,7 @@ export async function addSavedMealCardAction(formData: FormData) {
   await once(`addSavedMealCardAction:${clientId}`, onceKeyOf(formData), () => {
     addSavedMealCard(clientId, id, date);
     revalidatePath("/admin");
+    revalidatePath("/client");
   });
 }
 
@@ -4977,6 +5006,7 @@ export async function saveDayAction(formData: FormData) {
   // Taken once (6 Nov, one-time key): sent again after a dropped signal, it saves no second day.
   await once(`saveDayAction:${clientId}`, onceKeyOf(formData), () => {
     saveDay(clientId, date, name);
+    revalidatePath("/client");
   });
 }
 
@@ -4985,6 +5015,7 @@ export async function deleteSavedDayAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id)) return;
   deleteSavedDay(clientId, id);
+  revalidatePath("/client");
 }
 
 export async function addSavedDayAction(formData: FormData) {
@@ -4996,6 +5027,7 @@ export async function addSavedDayAction(formData: FormData) {
   await once(`addSavedDayAction:${clientId}`, onceKeyOf(formData), () => {
     addSavedDay(clientId, id, date);
     revalidatePath("/admin");
+    revalidatePath("/client");
   });
 }
 
