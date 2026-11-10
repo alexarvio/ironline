@@ -300,8 +300,7 @@ export type SavedMeal = {
   was_foods?: string[];
 };
 // Training day or rest day, as the client set it on the food diary for a
-// date: which targets the day counts down from. Absent: by whether a set
-// was logged that day.
+// date: which targets the day counts down from. Absent: a training day.
 export type FoodDay = {
   id: number;
   client_id: number;

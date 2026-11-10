@@ -353,6 +353,7 @@ import {
   copyFoodMeal,
   copyFoodDay,
   saveDay,
+  releaseEmptyRestDay,
   createBlankSavedDay,
   renameSavedDay,
   addSavedDayCard,
@@ -4828,10 +4829,11 @@ function diaryDateOk(date: string, daysBack = 30): boolean {
   return date <= today && date >= localDateStr(floor);
 }
 
-export async function getFoodDiaryAction(clientId: number, date: string): Promise<FoodDiaryView | null> {
+export async function getFoodDiaryAction(clientId: number, date: string, opening = false): Promise<FoodDiaryView | null> {
   const owner = await requireClientAccess(Number(clientId));
   // Reading reaches back a year (24 Oct, Alex: a coach's link to an older day opened today); writing keeps its 30 days.
   if (!diaryDateOk(String(date), 366)) return null;
+  if (opening) releaseEmptyRestDay(owner, String(date));
   return getFoodDiary(owner, String(date));
 }
 

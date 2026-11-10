@@ -73,12 +73,16 @@
 
 /* The deploy (10 Nov, Alex): the list goes under the page's colour while the day's cards come down (SavedDayScreen). */
 .fdi-dayscreen .fdc-meal { transform-origin: top center; }
-.app-layer.fdi-dayscreen.deploy { animation: fdi-day-cover 0.24s ease both; }
-@keyframes fdi-day-cover { from { background-color: transparent; } }
+/* Only opacity and transform move here (10 Nov, Alex: "they lag quite a lot"): a fading background repainted the whole screen, list and all, every frame. */
+.fdi-saved-screen.fdi-dayscreen.cn-screen, .fdi-dayscreen .cn-header { background: none; }
+.fdi-day-cover { position: absolute; inset: 0; z-index: 0; background: #F5F6F8; will-change: opacity; }
+.fdi-dayscreen > .cn-header { position: relative; z-index: 2; }
+.fdi-dayscreen > .cn-body { position: relative; z-index: 1; }
+.fdi-dayscreen.deploy .fdi-day-cover { animation: fdi-day-in 0.24s ease both; }
 .fdi-dayscreen.deploy .cn-header, .fdi-dayscreen.deploy .fdi-day-head { animation: fdi-day-in 0.3s ease 0.1s both; }
 .fdi-dayscreen.deploy .fdi-add-meal, .fdi-dayscreen.deploy .fdi-day-foot { animation: fdi-day-in 0.3s ease 0.6s both; }
 @keyframes fdi-day-in { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .app-layer.fdi-dayscreen.deploy, .fdi-dayscreen.deploy .cn-header, .fdi-dayscreen.deploy .fdi-day-head, .fdi-dayscreen.deploy .fdi-add-meal, .fdi-dayscreen.deploy .fdi-day-foot { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .fdi-dayscreen.deploy .fdi-day-cover, .fdi-dayscreen.deploy .cn-header, .fdi-dayscreen.deploy .fdi-day-head, .fdi-dayscreen.deploy .fdi-add-meal, .fdi-dayscreen.deploy .fdi-day-foot { animation: none; } }
 .fdi-make-failed { flex: 1; font-size: 13px; font-weight: 500; color: #b8471f; }
 .fdi-make-save { height: 44px; padding: 0 26px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .fdi-make-save:disabled { opacity: 0.35; cursor: default; }
@@ -101,7 +105,7 @@
 .fdc-card.fdc-card.shut { cursor: default; }
 
 /* The picture and its bottom shade; under them, always, the texture: no food in it, so it never shows the wrong meal. */
-.fdc-bg { position: absolute; inset: 0; isolation: isolate; overflow: hidden; border-radius: inherit; pointer-events: none; background-color: #232b2a; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 220px; }
+.fdc-bg { position: absolute; inset: 0; isolation: isolate; overflow: hidden; border-radius: inherit; pointer-events: none; background-color: #232b2a; background-image: url("/img/card-grain.webp"); background-size: 220px; }
 .fdc-bg img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; -webkit-touch-callout: none; }
 .fdc-bg::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(10, 14, 20, 0.05) 20%, rgba(10, 14, 20, 0.78) 100%); }
 .fdc-card.bare .fdc-bg::before { background: radial-gradient(120% 130% at 85% 0%, rgba(29, 122, 112, 0.34), transparent 62%); }
