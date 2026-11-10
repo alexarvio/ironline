@@ -3943,6 +3943,19 @@ export async function clientRemoveGymAction(gymId: number): Promise<boolean> {
   return true;
 }
 
+/** The client's home gym, from its page in Settings (10 Nov, Alex). True once it is home. A deleted gym or one trained at once can't be. */
+export async function clientMakeHomeGymAction(gymId: number): Promise<boolean> {
+  const id = Number(gymId);
+  const owner = getClientIdForGym(id);
+  if (owner == null || !(await canAccessClient(owner))) return false;
+  const gym = listClientGyms(owner).find((g) => g.id === id);
+  if (!gym || gym.once) return false;
+  setHomeGym(id);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+  return true;
+}
+
 /** Bring back a deleted gym, from Settings (9 Nov, Alex). True once it is back. */
 export async function clientRestoreGymAction(gymId: number): Promise<boolean> {
   const owner = getClientIdForGym(Number(gymId));

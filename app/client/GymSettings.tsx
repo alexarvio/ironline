@@ -8,7 +8,7 @@ import RingEdge from "../components/RingEdge";
 import { Bars } from "./Bars";
 import SettingsFold from "./SettingsFold";
 import { BadgeFace, CameraDot, sendLogo, shrink } from "./GymPickerDialog";
-import { clientRemoveGymAction, clientRestoreGymAction, clientUpdateGymAction } from "../lib/actions";
+import { clientMakeHomeGymAction, clientRemoveGymAction, clientRestoreGymAction, clientUpdateGymAction } from "../lib/actions";
 import { GYM_COLORS, GYM_COLOR_KEYS, GYM_KINDS, gymColor, type GymColorKey, type GymKind } from "../lib/gymColors";
 import { dayWords, monthWords } from "../lib/clientDates";
 import type { GymDashboard } from "../lib/queries";
@@ -102,12 +102,12 @@ export default function GymSettings({ gyms }: { gyms: GymDashboard[] }) {
           ))}
         </div>
       )}
-      {shown && host && createPortal(<GymPage key={shown.id} gym={shown} busy={busy === shown.id} failed={notBack === shown.id} onBack={() => setOpen(null)} onBringBack={() => void bringBack(shown.id)} onChange={(p) => patch(shown.id, p)} />, host)}
+      {shown && host && createPortal(<GymPage key={shown.id} gym={shown} busy={busy === shown.id} failed={notBack === shown.id} onBack={() => setOpen(null)} onBringBack={() => void bringBack(shown.id)} onChange={(p) => patch(shown.id, p)} onMadeHome={() => setList((l) => l.map((g) => ({ ...g, home: g.id === shown.id })))} />, host)}
     </SettingsFold>
   );
 }
 
-function GymPage({ gym, busy, failed, onBack, onBringBack, onChange }: { gym: GymDashboard; busy: boolean; failed: boolean; onBack: () => void; onBringBack: () => void; onChange: (p: Partial<GymDashboard>) => void }) {
+function GymPage({ gym, busy, failed, onBack, onBringBack, onChange, onMadeHome }: { gym: GymDashboard; busy: boolean; failed: boolean; onBack: () => void; onBringBack: () => void; onChange: (p: Partial<GymDashboard>) => void; onMadeHome: () => void }) {
   const router = useRouter();
   const tint = gymColor(gym.color ?? undefined);
   const [editing, setEditing] = useState(false);
@@ -138,6 +138,27 @@ function GymPage({ gym, busy, failed, onBack, onBringBack, onChange }: { gym: Gy
       return;
     }
     onChange({ logo });
+    router.refresh();
+  };
+  const [homing, setHoming] = useState(false);
+  const [notHome, setNotHome] = useState(false);
+  const makeHome = async () => {
+    if (homing) return;
+    setHoming(true);
+    setNotHome(false);
+    let ok = false;
+    try {
+      ok = await clientMakeHomeGymAction(gym.id);
+    } catch {
+      ok = false;
+    }
+    setHoming(false);
+    setMenuOpen(false);
+    if (!ok) {
+      setNotHome(true);
+      return;
+    }
+    onMadeHome();
     router.refresh();
   };
   const remove = async () => {
@@ -203,6 +224,11 @@ function GymPage({ gym, busy, failed, onBack, onBringBack, onChange }: { gym: Gy
                       <button type="button" role="menuitem" className="gy-menu-row" onClick={() => (setMenuOpen(false), setEditing(true))}>
                         Edit
                       </button>
+                      {!gym.home && !gym.once && (
+                        <button type="button" role="menuitem" className="gy-menu-row" disabled={homing} onClick={() => void makeHome()}>
+                          Make home
+                        </button>
+                      )}
                       <button type="button" role="menuitem" className="gy-menu-row red" onClick={() => setAsking(true)}>
                         Delete
                       </button>
@@ -271,7 +297,7 @@ function GymPage({ gym, busy, failed, onBack, onBringBack, onChange }: { gym: Gy
             ))}
           </>
         )}
-        {(failed || notDeleted) && <div className="gy-hero-error gy-foot-error">{failed ? "Not brought back. Try again" : "Not deleted. Try again"}</div>}
+        {(failed || notDeleted || notHome) && <div className="gy-hero-error gy-foot-error">{failed ? "Not brought back. Try again" : notHome ? "Not made home. Try again" : "Not deleted. Try again"}</div>}
         {gym.deleted && (
           <div className="gy-foot">
             <button type="button" className="gy-word" disabled={busy} onClick={onBringBack}>
