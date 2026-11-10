@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransition, type SyntheticEvent } from "react";
+import { pic } from "../lib/pic";
 import { useRouter } from "next/navigation";
 import { markCoachNotesReadAction, markNotificationReadAction } from "../lib/actions";
 import { useWorkoutOutboxRunner } from "../components/workoutOutbox";
@@ -212,6 +213,16 @@ export default function AppShell({
   // they hang off something on the tab underneath.
   const storedPush = useSyncExternalStore(subscribePush, readPush, () => null);
   // A pushed screen opens only when this client has it (no diary, no Food; no invoices, no Invoices).
+  // Today's meal pictures and the saved meals' fetched ahead (10 Nov, Alex: as the chat's), a moment after the app is up, so
+  // the food diary opens on them.
+  const mealPictures = foodDiary && !readOnly ? [...new Set([...foodDiary.meals.map((m) => m.picture), ...foodDiary.saved.map((s) => s.picture)].filter((p): p is string => !!p))].slice(0, 24).join("\n") : "";
+  useEffect(() => {
+    if (!mealPictures) return;
+    const t = setTimeout(() => {
+      for (const p of mealPictures.split("\n")) new window.Image().src = pic(p, 1080);
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [mealPictures]);
   const canPush = (v: PushView) => !(v === "invoices" && !invoices) && !(v === "food" && !foodDiary) && !(v === "meetings" && !meetings) && !(v === "events" && !events);
   const [chosenPush, setChosenPush] = useState<PushView | undefined>(initialPush && canPush(initialPush) ? initialPush : undefined);
   // The link has done its job: a reload opens the app as usual. (The preview keeps its address: it is read again in place.)

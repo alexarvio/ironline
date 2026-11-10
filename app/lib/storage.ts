@@ -328,7 +328,8 @@ const smallCache = (key: string) => (keptForGood(key) ? FOR_GOOD : A_DAY);
 // A small copy is for good too when its name is never used again (23 Oct): a
 // card picture's and a support screenshot's are a stamp each, and a stamped
 // path ("?v=") names one version of a photo that keeps its file name.
-const namedOnce = (key: string) => keptForGood(key) || /^(covers|support)\//.test(key);
+// A meal's picture since 9 Nov: a stamp in its name (saveMealPhoto), so the phone keeps it for good.
+const namedOnce = (key: string) => keptForGood(key) || /^(covers|support)\//.test(key) || /^meals\/.+-\d{13}\.[a-z]+$/i.test(key);
 const webp = (bytes: Buffer, cache: string) =>
   new Response(new Uint8Array(bytes), { headers: { "Content-Type": "image/webp", "Content-Length": String(bytes.length), "Cache-Control": cache } });
 
@@ -605,7 +606,7 @@ export async function prepareAllChatMedia(): Promise<number> {
   const data = getData();
   let made = 0;
   const seen = new Set<string>();
-  const items: { path: string; type: "image" | "video"; chat: boolean }[] = [];
+  const items: { path: string; type: "image" | "video"; chat: boolean; card?: boolean }[] = [];
   for (const m of data.chat_messages) {
     if (!m.media_path || (m.media_type !== "image" && m.media_type !== "video")) continue;
     if (m.media_thumb || seen.has(m.media_path)) continue;
@@ -616,6 +617,12 @@ export async function prepareAllChatMedia(): Promise<number> {
     if (!v.file_path || seen.has(v.file_path)) continue;
     seen.add(v.file_path);
     items.push({ path: v.file_path, type: v.media === "photo" ? "image" : "video", chat: false });
+  }
+  // A meal's picture, day's or saved, from before they had a preview (10 Nov, Alex): the card draws its 1080 as well.
+  for (const p of [...data.meal_photos.filter((m) => !m.thumb).map((m) => m.file_path), ...data.saved_meals.filter((m) => m.picture && !m.picture_thumb).map((m) => m.picture!)]) {
+    if (seen.has(p)) continue;
+    seen.add(p);
+    items.push({ path: p, type: "image", chat: true, card: true });
   }
   for (const it of items) {
     const key = keyOf(it.path);
@@ -631,6 +638,10 @@ export async function prepareAllChatMedia(): Promise<number> {
       if (it.chat) {
         looked.add(key);
         await keepLook(it.path, bytes);
+      }
+      if (it.card) {
+        const wide = smallKey(key, 1080);
+        if (wide && !(await readUpload(wide))) await once(wide, () => makeSmall(key, wide, 1080));
       }
     } catch (error) {
       console.warn(`[uploads] could not prepare ${key}:`, error instanceof Error ? error.message : error);

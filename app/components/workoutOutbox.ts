@@ -34,6 +34,8 @@ type EntryBase = {
 
 export type WorkoutChange =
   | { kind: "set"; assignmentId: number; setNumber: number; gymId: number | null; weight: number | null; reps: number | null; rpe: number | null; unit: "kg" | "lb" }
+  /** How many sets the exercise has now (`− Remove a set`, 10 Nov, Alex): a value; sets past it go. */
+  | { kind: "rows"; assignmentId: number; rows: number }
   | { kind: "warmups"; assignmentId: number; sets: { weight_kg: number | null; reps: number | null }[] }
   | { kind: "note"; assignmentId: number; gymId: number | null; text: string }
   | { kind: "unit"; assignmentId: number; unit: "kg" | "lb" }
@@ -79,10 +81,19 @@ const lockName = (clientId: number) => `norcoach.workout.send.${clientId}`;
 /** A note and a unit are the exercise's, not the session's: a discard never takes them (as on the server). */
 const outlivesSession = (e: { kind: string }) => e.kind === "note" || e.kind === "unit";
 
+/** A set taken off: what the server said of it goes with it, so a set added back in its place starts clean. */
+export function forgetRefused(slot: string) {
+  if (!refusedSlots[slot]) return;
+  refusedSlots = Object.fromEntries(Object.entries(refusedSlots).filter(([k]) => k !== slot));
+  write();
+}
+
 export function slotOf(c: WorkoutChangeIn): string {
   switch (c.kind) {
     case "set":
       return `set:${c.assignmentId}:${c.setNumber}`;
+    case "rows":
+      return `rows:${c.assignmentId}`;
     case "warmups":
       return `warm:${c.assignmentId}`;
     case "note":
@@ -274,7 +285,8 @@ export function enqueueWorkout(change: WorkoutChangeIn, at: string = new Date().
     if (!dropped.some((e) => e.kind === "start")) entries = [...entries, entry];
   } else {
     const last = entries[entries.length - 1];
-    if (last && last.slot === entry.slot && !inFlight.has(last.id)) {
+    // A lower count deletes sets, so it is never folded into a higher one after it (10 Nov: remove then add, offline).
+    if (last && last.slot === entry.slot && !inFlight.has(last.id) && !(last.kind === "rows" && entry.kind === "rows" && entry.rows > last.rows)) {
       letGo([last]);
       entries = [...entries.slice(0, -1), entry];
     } else entries = [...entries, entry];
@@ -585,6 +597,7 @@ export function applyWorkoutOutbox(days: SessionDay[], list: readonly WorkoutEnt
     let next: SessionDay = d;
     switch (e.kind) {
       case "set":
+      case "rows":
       case "warmups":
       case "note":
       case "unit":
@@ -597,7 +610,8 @@ export function applyWorkoutOutbox(days: SessionDay[], list: readonly WorkoutEnt
           const kept = x.logs.find((l) => l.setNumber === e.setNumber);
           const log = { id: kept?.id ?? -(e.assignmentId * 100 + e.setNumber), setNumber: e.setNumber, weight: e.weight, reps: e.reps, rpe: e.rpe };
           y = { ...x, unit: e.unit, logs: kept ? x.logs.map((l) => (l.setNumber === e.setNumber ? log : l)) : [...x.logs, log] };
-        } else if (e.kind === "warmups") y = { ...x, warmups: e.sets.map((w) => ({ weight: w.weight_kg, reps: w.reps })) };
+        } else if (e.kind === "rows") y = { ...x, sets: Math.min(x.coachSets ?? x.sets, e.rows), logs: x.logs.filter((l) => l.setNumber <= e.rows) };
+        else if (e.kind === "warmups") y = { ...x, warmups: e.sets.map((w) => ({ weight: w.weight_kg, reps: w.reps })) };
         else if (e.kind === "note") y = e.gymId != null ? { ...x, gymNotes: { ...(x.gymNotes ?? {}), [e.gymId]: e.text } } : { ...x, myNote: e.text };
         else if (e.kind === "unit") y = { ...x, unit: e.unit };
         else y = { ...x, swap: e.libraryExerciseId == null && !e.customName ? null : { libraryExerciseId: e.libraryExerciseId, name: e.name ?? e.customName ?? "Another exercise" } };

@@ -6,6 +6,10 @@
 .fdc-meal.fdc-meal, .fdc-meal.fdc-meal.lifted { border-radius: 20px; }
 
 .fdc-card.fdc-card { position: relative; flex: none; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end; height: 132px; padding: 14px; border-radius: 20px; color: #fff; cursor: pointer; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+/* Add a meal's Copy a meal (10 Nov, Alex): every saved meal as its card, scrolling inside the pop-up. */
+.ams-cards { display: flex; flex-direction: column; gap: 8px; max-height: min(62vh, 520px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.ams-card.fdc-card.fdc-card { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; }
+.ams-name { position: relative; z-index: 1; font-size: 18px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Nothing to open. */
 .fdc-card.fdc-card.shut { cursor: default; }
 

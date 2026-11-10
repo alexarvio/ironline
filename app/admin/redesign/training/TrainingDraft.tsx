@@ -70,6 +70,8 @@ export type PickedVariation = { id: number; name: string; cue?: string; /** Its 
 export type CardioMove = { name: string; cue: string };
 export type DraftRow = {
   id: number;
+  /** Sets of the coach's the client took off this session (10 Nov, Alex). */
+  removed?: number;
   /** The library exercise behind the row: demos are set per exercise. */
   exerciseId: number;
   /** The exercise's variation asked for (close grip…); its name is already in `name`. */
@@ -469,7 +471,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
           name: p.renamed ?? s.name,
           rows: all,
           cardio: [...s.cardio.filter((c) => !p.cardioRemoved.includes(c.id)).map((c) => ({ ...c, ...(p.cardioEdits[c.id] ?? {}) })), ...addedCardio],
-          setsPlanned: all.reduce((t, r) => t + r.sets, 0),
+          setsPlanned: all.reduce((t, r) => t + Math.max(1, r.sets - (r.removed ?? 0)), 0),
         };
       })
     );
@@ -931,12 +933,12 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             video: rows.some((r) => videoIn(r.id)),
             swap: rows.some((r) => r.swap),
             // Sets the client added beyond the prescription (12 Oct, "Add a set").
-            extra: rows.some((r) => extraOf(r) > 0),
+            extra: rows.some((r) => extraOf(r) > 0 || minusOf(r) > 0),
             pb: rows.some((r) => !!r.pb),
           };
           // The most marks one row of the session has, so every row's marks end at one edge (24 Oct, Alex).
           const flagWidth = (() => {
-            const most = Math.max(0, ...rows.map((r) => [r.pb, extraOf(r) > 0, flagCols.chat && r.exerciseChat.some((m) => !m.mine), videoIn(r.id), r.swap].filter(Boolean).length));
+            const most = Math.max(0, ...rows.map((r) => [r.pb, extraOf(r) > 0 || minusOf(r) > 0, flagCols.chat && r.exerciseChat.some((m) => !m.mine), videoIn(r.id), r.swap].filter(Boolean).length));
             return most > 0 ? most * 22 + (most - 1) * 6 + 8 : 0;
           })();
           return (
@@ -993,6 +995,14 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                     return n > 0 ? (
                       <span className="rd-pbdot" title={`${n} personal best${n === 1 ? "" : "s"} in this session`} aria-label={`${n} personal best${n === 1 ? "" : "s"}`}>
                         PB{n > 1 ? ` ${n}` : ""}
+                      </span>
+                    ) : null;
+                  })()}
+                  {(() => {
+                    const n = rows.reduce((t, r) => t + minusOf(r), 0);
+                    return n > 0 ? (
+                      <span className="rd-extradot minus static" title={`${firstName} took off ${n} set${n === 1 ? "" : "s"} in this session`} aria-label={`${n} set${n === 1 ? "" : "s"} taken off`}>
+                        −{n}
                       </span>
                     ) : null;
                   })()}
@@ -1249,6 +1259,11 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                                   PB
                                 </span>
                               )}
+                              {minusOf(r) > 0 && (
+                                  <span className="rd-extradot minus static" title={`${firstName} took off ${minusOf(r)} set${minusOf(r) === 1 ? "" : "s"}: ${r.sets} prescribed, ${r.sets - minusOf(r)} kept`} aria-label={`${minusOf(r)} set${minusOf(r) === 1 ? "" : "s"} taken off`}>
+                                    −{minusOf(r)}
+                                  </span>
+                                )}
                               {extraOf(r) > 0 && (
                                   <span className="rd-extradot static" title={`${firstName} added ${extraOf(r)} extra set${extraOf(r) === 1 ? "" : "s"}: ${r.sets} prescribed, ${r.sets + extraOf(r)} done`} aria-label={`${extraOf(r)} extra set${extraOf(r) === 1 ? "" : "s"}`}>
                                     +{extraOf(r)}
@@ -3496,6 +3511,8 @@ function NoteDialog({ firstName, note, onSeen }: { firstName: string; note: { te
 
 /** Sets the client logged beyond the prescription ("Add a set", 12 Oct). A swapped row's sets are the swap's. */
 const extraOf = (r: { sets: number; swap: string | null; logged: { set: number }[] }) => (r.swap ? 0 : r.logged.filter((l) => l.set > r.sets).length);
+/** Sets of the prescription the client took off this session (`− Remove a set`, 10 Nov, Alex). A swapped row is the swap's. */
+const minusOf = (r: { swap: string | null; removed?: number }) => (r.swap ? 0 : r.removed ?? 0);
 
 /** The legend behind the ? by KG / LBS (25 Oct, Alex): each mark and colour drawn as the session draws it, with a few
     words; in the marks' own order. Classes `.rd-legend` (draft.css). */
@@ -3540,6 +3557,7 @@ function TrainingLegend() {
       {row(<span className="rd-flag chat"><ChatIcon /></span>, <><b>They wrote</b> about it in the chat.</>)}
       {row(<span className="rd-tag note"><NoteIcon /></span>, <><b>Their note</b> on the session.</>)}
       {row(<span className="rd-extradot static">+2</span>, <><b>Extra sets</b> beyond what you set.</>)}
+      {row(<span className="rd-extradot minus static">−1</span>, <><b>Sets taken off</b> what you set.</>)}
       {row(<span className="rd-pbdot">PB</span>, <><b>Personal best</b>: heavier than ever, reps on target.</>)}
       {row(<span className="rd-copydot static"><CopyIcon /></span>, <><b>Duplicated</b>: they did this session again this week.</>)}
       {row(<i className="rd-due" />, <><b>Needs you</b>: something here waits for you.</>)}

@@ -203,6 +203,8 @@ export type MealPhoto = {
   meal: string;
   file_path: string; // public URL path, e.g. /uploads/meals/5/2026-09-21/breakfast.jpg
   uploaded_at: string;
+  /** A tiny blurry preview as a data URI, made with its small copies (10 Nov, Alex: as the chat's). */
+  thumb?: string | null;
 };
 // The coach asking for a video of one exercise in one session, and the
 // client's answer. One per prescription: a request is for that session only,
@@ -285,6 +287,8 @@ export type SavedMeal = {
   created_at: string;
   /** The meal's own picture (9 Nov, Alex): a public path, the same file as the day's photo it was taken from; it comes back every day the meal is added. */
   picture?: string | null;
+  /** Its tiny blurry preview, as MealPhoto.thumb. */
+  picture_thumb?: string | null;
 };
 // Training day or rest day, as the client set it on the food diary for a
 // date: which targets the day counts down from. Absent: by whether a set
@@ -535,6 +539,9 @@ type WorkoutAssignment = {
   exercise_id: number;
   order_index: number;
   sets: number;
+  // Sets of `sets` the client took off for this session (10 Nov, Alex: `− Remove a set`, the coach's −1). `sets` stays the
+  // coach's; what the row asks is setsDue. Never carried to another week or a copy.
+  sets_removed?: number;
   reps: string;
   target_weight_kg: number | null;
   rpe_target: number | null;
