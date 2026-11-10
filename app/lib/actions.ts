@@ -364,6 +364,12 @@ import {
   pushFoodDayToCalorieLog,
   saveMeal,
   deleteSavedMeal,
+  renameSavedMeal,
+  addSavedMealFood,
+  updateSavedMealFood,
+  removeSavedMealFood,
+  setSavedMealPicture,
+  removeSavedMealPicture,
   addSavedMeal,
   rememberOffProducts,
   getOffFoodByCode,
@@ -4842,7 +4848,10 @@ export async function removeFoodMealAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const id = Number(String(formData.get("meal") ?? "").replace(/^m:/, ""));
   if (!Number.isInteger(id)) return;
-  removeFoodMeal(clientId, id);
+  const date = String(formData.get("date") ?? "");
+  for (const was of removeFoodMeal(clientId, id, /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null) ?? []) await deleteUpload(was);
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }
 
 export async function copyFoodMealAction(formData: FormData) {
@@ -4930,6 +4939,67 @@ export async function deleteSavedMealAction(formData: FormData) {
   if (!Number.isInteger(id)) return;
   // Its picture's file goes only when nothing else shows it.
   for (const was of deleteSavedMeal(clientId, id)) await deleteUpload(was);
+  revalidatePath("/client");
+}
+
+// A saved meal changed on its own card (10 Nov, Alex). True once the server has it, so the card can say when it hasn't.
+export async function renameSavedMealAction(formData: FormData): Promise<boolean> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id)) return false;
+  const done = renameSavedMeal(clientId, id, String(formData.get("name") ?? ""));
+  if (done) revalidatePath("/client");
+  return done;
+}
+
+export async function changeSavedMealFoodAction(formData: FormData): Promise<boolean> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  const op = String(formData.get("op") ?? "");
+  const index = Number(formData.get("index"));
+  const foodId = String(formData.get("foodId") ?? "");
+  const grams = Number(formData.get("grams"));
+  const serving = String(formData.get("serving") ?? "") || null;
+  if (!Number.isInteger(id) || !foodId) return false;
+  // Its one-time key: sent again, the food goes in once.
+  const done = await once(`changeSavedMealFoodAction:${clientId}`, onceKeyOf(formData), () => {
+    if (op === "add") return addSavedMealFood(clientId, id, { foodId, grams, serving });
+    if (!Number.isInteger(index)) return false;
+    if (op === "update") return updateSavedMealFood(clientId, id, index, foodId, grams, serving);
+    if (op === "remove") return removeSavedMealFood(clientId, id, index, foodId);
+    return false;
+  });
+  if (done) revalidatePath("/client");
+  return done;
+}
+
+export async function uploadSavedMealPictureAction(formData: FormData): Promise<boolean> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  const file = formData.get("file") as File | null;
+  if (!Number.isInteger(id) || !file || file.size === 0) return false;
+  const original = Buffer.from(await file.arrayBuffer());
+  const fitted = await fitPhoto(original);
+  const buffer = fitted?.bytes ?? original;
+  const type = fitted?.type ?? (file.type || "image/jpeg");
+  const saved = setSavedMealPicture(clientId, id, buffer, type);
+  if (!saved) return false;
+  for (const was of saved.gone) await deleteUpload(was);
+  await putUpload(saved.path, buffer, type);
+  await prepareChatMedia(saved.path, "image", buffer);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return true;
+}
+
+export async function removeSavedMealPictureAction(formData: FormData): Promise<boolean> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id)) return false;
+  for (const was of removeSavedMealPicture(clientId, id)) await deleteUpload(was);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return true;
 }
 
 export async function addSavedMealAction(formData: FormData) {

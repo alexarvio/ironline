@@ -18,7 +18,9 @@ export function SavedMealCards({ saved, busy, picture, onCopy }: { saved: SavedM
             {/* eslint-disable-next-line @next/next/no-img-element -- the client’s own upload */}
             {s.picture && <img src={picture(s.picture)} alt="" draggable={false} decoding="async" style={s.thumb ? { backgroundImage: `url(${s.thumb})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} />}
           </span>
-          <span className="ams-name">{s.name}</span>
+          <span className="fdc-name">
+            <span className="fdc-title">{s.name}</span>
+          </span>
           <span className="fdc-figs">
             <b>{s.kcal.toLocaleString("en-GB")} kcal</b>
             <span>P {s.protein}</span>
@@ -31,6 +33,35 @@ export function SavedMealCards({ saved, busy, picture, onCopy }: { saved: SavedM
   );
 }
 
+/** Deleting a meal, from a ⋯ on its card (10 Nov, Alex: "a pop up asking for confirmation"): the day's and a saved meal's. */
+export function DeleteMealDialog({ name, onCancel, onDelete }: { name: string; onCancel: () => void; onDelete: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  return createPortal(
+    <div className="gpk-overlay" onClick={onCancel}>
+      <div className="gpk-card" role="alertdialog" aria-modal="true" aria-labelledby="ams-delete-title" onClick={(e) => e.stopPropagation()}>
+        <div className="gpk-content">
+          <h2 id="ams-delete-title" className="gpk-title sm ams-delete-title">
+            Delete {name}?
+          </h2>
+          <div className="ams-ask">
+            <button type="button" className="ams-cancel" onClick={onCancel} autoFocus>
+              Cancel
+            </button>
+            <button type="button" className="ams-delete" onClick={onDelete}>
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // Add a meal (10 Nov, Alex): New meal or Copy a meal, in the gym picker's voice; Copy a meal shows every saved meal as the
 // card it is in the diary, its picture and figures, and a tap puts it on the day as a card of its own.
 export default function AddMealSheet({
@@ -39,8 +70,10 @@ export default function AddMealSheet({
   picture,
   onNew,
   onCopy,
+  failed = false,
   onClose,
 }: {
+  failed?: boolean;
   saved: SavedMealCard[];
   busy: boolean;
   /** The sized copy of a saved meal's picture. */
@@ -82,7 +115,14 @@ export default function AddMealSheet({
             saved.length === 0 ? (
               <p className="ads-note">None yet</p>
             ) : (
-              <SavedMealCards saved={saved} busy={busy} picture={picture} onCopy={onCopy} />
+              <>
+                <SavedMealCards saved={saved} busy={busy} picture={picture} onCopy={onCopy} />
+                {failed && (
+                  <p className="fdi-photo-failed" role="alert">
+                    Not added. Try again
+                  </p>
+                )}
+              </>
             )
           ) : (
             <div className="gpk-rows">

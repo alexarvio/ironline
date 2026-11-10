@@ -17,6 +17,9 @@
 /* The body is a flex column: what is in it scrolls, it never squeezes. */
 .fdi-saved-screen .cn-body > * { flex: none; }
 .fdi-saved-screen .ams-cards { max-height: none; overflow: visible; gap: 10px; }
+/* Saved meals are the day's cards (10 Nov, Alex); the screen's title already says what they are. */
+.fdi-saved-screen .fdc-meals.fdc-meals::before { content: none; }
+.fdi-saved-screen .fdc-meals.fdc-meals { margin-top: 10px; }
 .fdi-saved-day { display: flex; align-items: center; gap: 12px; min-height: 60px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .fdi-saved-screen .fdi-copy-name { font-size: 15px; font-weight: 500; color: #141a24; }
 .fdi-saved-screen .fdi-copy-sub { font-size: 12px; font-weight: 500; color: #8b93a1; }
@@ -64,7 +67,12 @@
 /* Add a meal's Copy a meal (10 Nov, Alex): every saved meal as its card, scrolling inside the pop-up. */
 .ams-cards { display: flex; flex-direction: column; gap: 8px; max-height: min(62vh, 520px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .ams-card.fdc-card.fdc-card { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; }
-.ams-name { position: relative; z-index: 1; font-size: 18px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Delete a meal: the pop-up's title and its two words. */
+.ams-delete-title.ams-delete-title { font-size: 18px; font-weight: 600; color: #141a24; overflow-wrap: anywhere; }
+.ams-ask { display: flex; justify-content: flex-end; align-items: center; gap: 24px; }
+.ams-cancel, .ams-delete { height: 44px; padding: 0 2px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.ams-cancel { color: #5b6474; }
+.ams-delete { color: #b8471f; }
 /* Nothing to open. */
 .fdc-card.fdc-card.shut { cursor: default; }
 
