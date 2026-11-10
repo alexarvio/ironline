@@ -198,6 +198,7 @@ export default function NutritionTargetsCard({
           )}
 
           {/* The coach's water goal (28 Oct, Alex: set on Nutrition, never shown): the same on both days, so outside the swipe. */}
+          <div className={`nd-wsrow${waterL != null && waterL > 0 && footer ? " both" : ""}`}>
           {waterL != null && waterL > 0 && (
             <div className="nd-water">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -209,6 +210,7 @@ export default function NutritionTargetsCard({
           )}
 
           {footer}
+          </div>
         </section>
       </div>
     </>
