@@ -27,7 +27,7 @@ import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 import { cleanRepeat, openEnd, type EventRepeat } from "./eventRepeat";
 import { deleteUpload } from "./storage";
 import { setsDue } from "./setsDue";
-import { assistedRow, beforeStop, copiedWeights, isReset, laneKg, laneOfGym, laneTypedAt, laterSlot, liftOf, raisedTo, repFloor, setsSinceReset, stopAfter, writeLane, type Lane } from "./targetRule";
+import { assistedRow, beforeStop, copiedWeights, isReset, laneKg, laneOfGym, laneTypedAt, laterSlot, liftOf, raisedTo, repWindow, setsSinceReset, stopAfter, writeLane, type Lane } from "./targetRule";
 import { FEATURES } from "./features";
 import { daysBetween, weightGoalViews, type WeightGoalView } from "./weightGoal";
 import type { WeightGoal } from "./db";
@@ -2129,15 +2129,15 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   // same week. Occurrences the client has already logged against are left
   // alone, and a target the coach planned higher than the logged weight stays.
   // Only a set in the rep range counts (4 Nov, Alex: 70 kg × 8 against 10–12
-  // raised weeks 6–13 to 70): its reps reach the bottom of this row's reps.
+  // raised weeks 6–13 to 70; 10 Nov, Alex: over the top doesn't count either).
   const rows = exerciseOccurrences(day.client_id, wa.exercise_id);
   const logged = new Set(data.set_logs.map((sl) => sl.workout_assignment_id));
   const later = rows.filter((o) => o.row.id !== wa.id && laterSlot(o.slot, day) && !logged.has(o.row.id));
-  const minReps = repFloor(wa.reps);
+  const range = repWindow(wa.reps);
 
   let changed = false;
   for (const [lane, laneLogs] of byGym) {
-    const lift = liftOf(setsSinceReset(laneLogs, wa, lane), laneKg(wa, lane), lane, assisted, minReps);
+    const lift = liftOf(setsSinceReset(laneLogs, wa, lane), laneKg(wa, lane), lane, assisted, range);
     if (!lift) continue;
     const stop = stopAfter(day, rows, lane);
     for (const o of later) {

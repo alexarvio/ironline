@@ -14,8 +14,9 @@ import { isAssisted } from "./progressRules";
 // (carryReset, queries.ts); from it on, what the client lifts moves them again.
 //
 // A weight moves up only on a set that is heavier and in the range (4 Nov, Alex: "it has to have a higher weight, but it
-// also needs to be within the range"): a set counts only when its reps reach the bottom of the logged row's target reps
-// (repFloor), so 70 kg × 8 against 10–12 moves nothing. And the coach's own figure is kept beside a raised one (coach_kg,
+// also needs to be within the range"; 10 Nov, Alex: "keep it within rep range"): a set counts only when its reps sit
+// inside the logged row's target reps (repWindow), so 70 kg × 8 and 70 kg × 15 against 10–12 move nothing, and a single
+// figure is a goal to reach (12 or more against "12"). And the coach's own figure is kept beside a raised one (coach_kg,
 // set at the first raise, cleared when the coach types the weight again), so the Apply confirm compares the coach's
 // numbers alone (applyPreviewData.ts) and never reads the rule's raise as a change of theirs.
 
@@ -30,18 +31,24 @@ type GymEntry = { kg: number | null; set_at?: string | null; pinned?: boolean; c
 /** A row's weights, as stored. `coach_kg` as a gym entry's, for the home lane. */
 export type Weights = { target_weight_kg: number | null; target_set_at?: string | null; target_pinned?: boolean; coach_kg?: number | null; gym_targets?: Record<string, GymEntry> };
 
+/** The reps a set needs to count for the weight. `max` is Infinity when the target has no top. */
+export type RepWindow = { min: number; max: number };
+
 /**
- * The bottom of a row's target reps, the least a set needs to count for the weight (4 Nov, Alex): "10-12" and "10–12"
- * 10, "12" and "12+" 12, "8-10/side" 8, the first number ("3x10" the reps, 10). Null asks nothing: AMRAP, empty, no number, or a time
- * ("30s", "1 min", "0:45"), whose reps aren't reps.
+ * The reps a set needs to count for the weight (4 Nov and 10 Nov, Alex): "10-12" and "10–12" 10 to 12, "8-10/side" 8
+ * to 10, "3x8-10" 8 to 10. A single figure is a goal to reach, no top: "12" and "12+" 12 or more, "3x10" 10 or more.
+ * Null asks nothing: AMRAP, empty, no number, or a time ("30s", "1 min", "0:45"), whose reps aren't reps.
  */
-export function repFloor(reps: string | null | undefined): number | null {
+export function repWindow(reps: string | null | undefined): RepWindow | null {
   const t = (reps ?? "").trim();
   if (!t || /:\d|\d\s*(?:s|secs?|seconds?|m|mins?|minutes?)\b/i.test(t)) return null;
   // "3x10" is sets by reps: the reps.
-  const m = /^\s*\d+\s*[x×]\s*(\d+)/i.exec(t) ?? /(\d+)/.exec(t);
-  const n = m ? Number(m[1]) : 0;
-  return n > 0 ? n : null;
+  const rest = t.replace(/^\d+\s*[x×]\s*(?=\d)/i, "");
+  const range = /(\d+)\s*(?:-|–|—|to)\s*(\d+)/i.exec(rest);
+  const first = range ? Number(range[1]) : Number(/(\d+)/.exec(rest)?.[1] ?? 0);
+  if (!(first > 0)) return null;
+  const top = range ? Number(range[2]) : 0;
+  return { min: first, max: top >= first ? top : Infinity };
 }
 
 /** The coach's own figure in a lane: the one kept beside a raise, else the lane's weight as it is. */
@@ -95,12 +102,12 @@ export function setsSinceReset<S extends { logged_at: string }>(sets: S[], row: 
 }
 
 /**
- * What one logged row's sets in a lane carry forward, or null. Only sets whose reps reach `minReps` (the row's
- * repFloor; null asks none) count (4 Nov, Alex). The home lane needs a weight met; another gym with no weight of its
- * own takes what was lifted there as its weight going forward.
+ * What one logged row's sets in a lane carry forward, or null. Only sets whose reps sit inside `range` (the row's
+ * repWindow; null asks none) count (4 Nov and 10 Nov, Alex). The home lane needs a weight met; another gym with no
+ * weight of its own takes what was lifted there as its weight going forward.
  */
-export function liftOf(sets: { weight_kg: number | null; reps?: number | null; logged_at: string }[], own: number | null, lane: Lane, assisted: boolean, minReps: number | null): Lift | null {
-  const counted = sets.filter((s) => s.weight_kg != null && (minReps == null || (s.reps != null && s.reps >= minReps)));
+export function liftOf(sets: { weight_kg: number | null; reps?: number | null; logged_at: string }[], own: number | null, lane: Lane, assisted: boolean, range: RepWindow | null): Lift | null {
+  const counted = sets.filter((s) => s.weight_kg != null && (range == null || (s.reps != null && s.reps >= range.min && s.reps <= range.max)));
   const weights = counted.map((s) => s.weight_kg as number);
   if (weights.length === 0) return null;
   const best = assisted ? Math.min(...weights) : Math.max(...weights);
