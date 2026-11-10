@@ -1493,7 +1493,19 @@ export default async function ClientPage({
     const today = localDateStr();
     const all = listMeetings(CLIENT_ID).filter((m) => m.status !== "cancelled");
     const events = listClientEvents(CLIENT_ID);
-    const upcoming = all.filter((m) => m.status === "scheduled" && m.date >= today).map((m) => clientMeetingView(m, events));
+    // A repeating call shows its next one alone (11 Nov, Alex: "it should only show the next one"); the one after comes
+    // once that one is over or done.
+    const seen = new Set<number>();
+    const upcoming = all
+      .filter((m) => m.status === "scheduled" && m.date >= today)
+      .sort((a, b) => (a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date)))
+      .filter((m) => {
+        if (m.series_id == null) return true;
+        if (seen.has(m.series_id)) return false;
+        seen.add(m.series_id);
+        return true;
+      })
+      .map((m) => clientMeetingView(m, events));
     const past = all.filter((m) => m.status !== "scheduled" || m.date < today).map((m) => clientMeetingView(m, events));
     return { upcoming, past, request: openMeetingRequest(CLIENT_ID) };
   })();
