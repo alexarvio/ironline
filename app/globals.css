@@ -21099,6 +21099,20 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
 .nd .nd-water-title { flex: 1; font-size: 15px; font-weight: 600; color: #141a24; }
 .nd .nd-water-goal { font-size: 15px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; }
 .nd .nd-water + .nd-supps { margin-top: 8px; }
+/* Water and Supplements side by side (10 Nov, Alex: "wasting space on top of each other"); Supplements on the left,
+   so its list opens across the whole width with the thin line down from its own icon, what is under it sliding as it always has. */
+.nd .nd-wsrow.both { --wsw: 140px; display: grid; grid-template-columns: minmax(0, 1fr) var(--wsw); column-gap: 8px; align-items: start; margin-top: 12px; }
+.nd .nd-wsrow.both .nd-water { box-sizing: border-box; gap: 8px; min-height: 56px; margin: 0; padding: 0 12px; border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.nd .nd-wsrow.both .nd-water-title, .nd .nd-wsrow.both .nd-supps-title { font-size: 14px; }
+.nd .nd-wsrow.both .nd-water-goal { font-size: 14px; }
+.nd .nd-wsrow.both .nd-water + .nd-supps { order: -1; min-width: 0; margin: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+.nd .nd-wsrow.both .nd-supps-toggle { gap: 6px; min-width: 0; padding: 0 12px; border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.nd .nd-wsrow.both .nd-supps-toggle::before { width: 18px; height: 18px; background-size: 18px; }
+.nd .nd-wsrow.both .nd-supps-title { white-space: nowrap; }
+.nd .nd-wsrow.both .nd-supps-fold { width: calc(100% + 8px + var(--wsw)); }
+.nd .nd-wsrow.both .nd-supps-list::before { left: 21px; }
+@media (max-width: 374px) { .nd .nd-wsrow.both { --wsw: 116px; } .nd .nd-wsrow.both .nd-water svg { display: none; } }
+@media (max-width: 339px) { .nd .nd-wsrow.both .nd-supps-toggle::before { display: none; } .nd .nd-wsrow.both .nd-supps-title { font-size: 13px; } }
 
 /* ---- The subscribe screen (28 Oct, Alex; app/auth/subscribe): Monthly | Yearly as the capsule (white, hairline, the
    picked one ink, its pill sliding), the price big at 600 with what it is per in grey, the trial a grey line. */
