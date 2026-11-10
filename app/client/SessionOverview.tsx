@@ -323,7 +323,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
   // exercise's unit. Swapped, a naked sheet (4 Nov, Alex: "when we swap an exercise, it should just be a naked sheet"):
   // the targets were set for the exercise it replaced, so none show, as on the exercise page.
   const swapped = exercise.swap != null;
-  const targets = swapped ? [] : targetColumns({ sets: exercise.sets, reps: exercise.reps, weightKg: targetWeight, unit: exercise.unit ?? "kg", rpe: exercise.targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance });
+  const targets = swapped ? [] : targetColumns({ sets: exercise.coachSets ?? exercise.sets, reps: exercise.reps, weightKg: targetWeight, unit: exercise.unit ?? "kg", rpe: exercise.targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance });
   const ask = exercise.videoRequest;
   // Against the last time: the heaviest set then and now.
   const top = (sets: { weight: number | null }[]) => sets.reduce<number | null>((m, s) => (s.weight != null && (m == null || s.weight > m) ? s.weight : m), null);

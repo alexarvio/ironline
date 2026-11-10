@@ -105,6 +105,7 @@ import {
 import TrainingDayList from "./TrainingDayList";
 
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
+import { setsDue } from "../lib/setsDue";
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
 import { FOCUS_NOTE, homeFocus } from "../lib/focus";
 import type { HomeEvent, HomeEvents } from "./EventsCard";
@@ -454,7 +455,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
     for (let w = current; w >= 1; w--) {
       const days = getWeekDays(CLIENT_ID, w).filter((d) => d.assignments.length > 0);
       if (days.length === 0) break;
-      const done = days.some(({ day, assignments }) => !!day.session_ended_at || assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets));
+      const done = days.some(({ day, assignments }) => !!day.session_ended_at || assignments.every((a) => getLogsForAssignment(a.id).length >= setsDue(a)));
       if (!done) {
         if (w === current) continue;
         break;
@@ -694,7 +695,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
   // rule the coach's Complete uses. One ended with sets missing is
   // unfinished: not counted as done, and not still "left" either.
   const complete = ({ day, assignments }: (typeof trainingDays)[number]) =>
-    assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets) && listCardioForDay(day.id).every((c) => isCardioDone(c.id));
+    assignments.every((a) => getLogsForAssignment(a.id).length >= setsDue(a)) && listCardioForDay(day.id).every((c) => isCardioDone(c.id));
   const sessionsDone = trainingDays.filter(complete).length;
   const unfinished = trainingDays.filter((d) => !!d.day.session_ended_at && !complete(d)).length;
   const pct = Math.round((Math.min(sessionsDone, dayTarget) / dayTarget) * 100);
@@ -863,7 +864,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                       return { id: x.exercise_id, name: variation ? `${e.name} · ${variation.name}` : e.name, note: x.note, video: variation?.video_url ?? e.video_url };
                     }),
                   group: library.has(a.exercise_id) ? exerciseGroup(library.get(a.exercise_id)!) : "other",
-                  sets: a.sets,
+                  sets: setsDue(a),
+                  coachSets: a.sets,
                   reps: a.reps,
                   // Assisted by the library's exercise or variation, as the weight rule reads it, whatever the row is called.
                   assisted: assistedRow(library.get(a.exercise_id), a.variation_id),
@@ -1539,7 +1541,7 @@ export default async function ClientPage({
     return (
       trainingDays.length > 0 &&
       // A day skipped with a reason is settled, the same as a finished one.
-      trainingDays.every((d) => !!d.day.skip_reason || d.assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets))
+      trainingDays.every((d) => !!d.day.skip_reason || d.assignments.every((a) => getLogsForAssignment(a.id).length >= setsDue(a)))
     );
   });
 

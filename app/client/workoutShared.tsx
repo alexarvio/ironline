@@ -33,6 +33,8 @@ export type SessionExercise = {
   /** The exercise's muscle group (14 Oct): the swap pop-up's colour. */
   group: string;
   sets: number;
+  /** The coach's count, when the client took sets off (`sets` is what the row asks now, 10 Nov, Alex). */
+  coachSets?: number;
   reps: string;
   targetWeight: number | null;
   /** Kg or lbs, as this exercise was last logged; null when no set says. */
@@ -107,7 +109,7 @@ export const fresh = (d: SessionDay): SessionDay => ({
   endedAt: null,
   sessionNote: "",
   answers: {},
-  exercises: d.exercises.map((e) => ({ ...e, logs: [], warmups: [], swap: null })),
+  exercises: d.exercises.map((e) => ({ ...e, sets: e.coachSets ?? e.sets, logs: [], warmups: [], swap: null })),
   cardio: d.cardio.map((c) => ({ ...c, done: false, swap: null })),
 });
 

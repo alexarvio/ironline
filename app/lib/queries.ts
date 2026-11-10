@@ -26,6 +26,7 @@ import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 import { cleanRepeat, openEnd, type EventRepeat } from "./eventRepeat";
 import { deleteUpload } from "./storage";
+import { setsDue } from "./setsDue";
 import { assistedRow, beforeStop, copiedWeights, isReset, laneKg, laneOfGym, laneTypedAt, laterSlot, liftOf, raisedTo, repFloor, setsSinceReset, stopAfter, writeLane, type Lane } from "./targetRule";
 import { FEATURES } from "./features";
 import { daysBetween, weightGoalViews, type WeightGoalView } from "./weightGoal";
@@ -96,6 +97,8 @@ export type WorkoutAssignment = {
   exercise_id: number;
   order_index: number;
   sets: number;
+  /** Sets the client took off this session (setsDue). */
+  sets_removed?: number;
   reps: string;
   target_weight_kg: number | null;
   rpe_target: number | null;
@@ -1550,7 +1553,7 @@ export function sessionCompleteIn(ix: TrainingIndex, programDayId: number): bool
   return (
     assignments.every((a) => {
       const logged = new Set((ix.logsByRow.get(a.id) ?? []).map((l) => l.set_number));
-      return Array.from({ length: a.sets }, (_, i) => i + 1).every((n) => logged.has(n));
+      return Array.from({ length: setsDue(a) }, (_, i) => i + 1).every((n) => logged.has(n));
     }) && cardio.every((c) => ix.ticked.has(c.id))
   );
 }
@@ -1623,7 +1626,7 @@ export function copyProgramWeek(clientId: number, fromWeek: number, toWeek: numb
       // The prescription only: what the client did (warm-ups, a swap) stays on the week they did it. The coach's weights
       // come with when they were typed, never a reset (copiedWeights, 23 Oct): what the client lifts from the reset on
       // moves the copies.
-      data.workout_assignments.push({ ...copiedWeights(wa), warmup_sets: undefined, swap: undefined, id, program_day_id: dest.id });
+      data.workout_assignments.push({ ...copiedWeights(wa), sets_removed: undefined, warmup_sets: undefined, swap: undefined, id, program_day_id: dest.id });
       // Custom columns are part of the plan too, so they come along.
       for (const v of data.assignment_custom_values.filter((v) => v.workout_assignment_id === wa.id)) {
         data.assignment_custom_values.push({
@@ -1721,6 +1724,24 @@ export function addExerciseToDay(
   persist();
 }
 
+/** How many sets an exercise has this session (10 Nov, Alex: `− Remove a set`, and Add a set putting one back): a value,
+    so sent twice it lands once. Sets past it are deleted; a row under the coach's count remembers how many it is short,
+    for their −1. A rogue session has no plan to fall short of: its count is simply this. */
+export function setExerciseRows(assignmentId: number, rows: number) {
+  const data = getData();
+  const wa = data.workout_assignments.find((x) => x.id === assignmentId);
+  if (!wa) return;
+  const day = data.program_days.find((pd) => pd.id === wa.program_day_id);
+  const left = Math.max(1, Math.floor(rows));
+  // Only ever down on a rogue: sets added are the page's until logged, as ever, so the count never jumps past them.
+  if (day && isRogue(day)) wa.sets = Math.min(wa.sets, left);
+  else if (left < wa.sets) wa.sets_removed = wa.sets - left;
+  else delete wa.sets_removed;
+  data.set_logs = data.set_logs.filter((sl) => sl.workout_assignment_id !== wa.id || sl.set_number <= left);
+  persist();
+  progressTargetFromLogs(wa.id);
+}
+
 export function removeAssignment(assignmentId: number) {
   const data = getData();
   const was = data.workout_assignments.find((wa) => wa.id === assignmentId);
@@ -1753,6 +1774,7 @@ export function updateAssignmentFields(
   }
   const weighed = "target_weight_kg" in fields && fields.target_weight_kg !== assignment.target_weight_kg;
 
+  if (fields.sets != null && fields.sets !== assignment.sets) delete assignment.sets_removed;
   Object.assign(assignment, fields);
   // A weight the coach types is theirs, and on a running plan a reset: see typeWeight.
   if (weighed) typeWeight(assignment, null, assignment.target_weight_kg);
@@ -2533,7 +2555,7 @@ export function getCompletedDaysForClient(clientId: number, limit = 10): Complet
     let completedAt: string | null = null;
     const allDone = assignments.every((a) => {
       const logs = data.set_logs.filter((l) => l.workout_assignment_id === a.id);
-      if (logs.length < a.sets) return false;
+      if (logs.length < setsDue(a)) return false;
       logs.forEach((l) => {
         if (!completedAt || l.logged_at > completedAt!) completedAt = l.logged_at;
       });
@@ -2988,7 +3010,7 @@ export function sessionNews(
     .sort((a, b) => a.ms - b.ms);
   const seen = new Map<number, number>();
   const ticked = new Set<number>();
-  const setsIn = () => assignments.every((a) => (seen.get(a.id) ?? 0) >= a.sets);
+  const setsIn = () => assignments.every((a) => (seen.get(a.id) ?? 0) >= setsDue(a));
   if (assignments.length > 0 || cardio.length > 0) {
     for (const m of moments) {
       if (m.set != null) seen.set(m.set, (seen.get(m.set) ?? 0) + 1);
@@ -3093,7 +3115,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
     const verb = news.state === "completed" ? "completed" : news.state === "ended" ? "ended" : "did part of";
     const note = day.session_note?.trim() || null;
     if (note) sessionNotes.set(day.id, note);
-    const done = assignments.filter((wa) => logs.filter((l) => l.workout_assignment_id === wa.id).length >= wa.sets).length;
+    const done = assignments.filter((wa) => logs.filter((l) => l.workout_assignment_id === wa.id).length >= setsDue(wa)).length;
     const facts = [
       assignments.length ? (news.state === "completed" ? plural(assignments.length, "exercise") : `${done} of ${plural(assignments.length, "exercise")}`) : null,
       logs.length ? plural(logs.length, "set") : null,
@@ -6304,6 +6326,17 @@ export function setChatMediaLook(path: string, look: MediaLook) {
     n++;
     chatChanged(m.client_id);
   }
+  // A meal's picture too (10 Nov, Alex: as the chat's), on the day's photo and on any saved meal showing the same file.
+  for (const p of getData().meal_photos) {
+    if (p.file_path !== path) continue;
+    p.thumb = look.thumb;
+    n++;
+  }
+  for (const s of getData().saved_meals) {
+    if (s.picture !== path) continue;
+    s.picture_thumb = look.thumb;
+    n++;
+  }
   if (n) persist();
 }
 /** A chat file some message shows with no look yet. */
@@ -7309,7 +7342,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[], ix?: Trainin
       const sessions = weekIn(rows(), clientId, lastWeek).filter((d) => assignmentsForDayIn(rows(), d.id).length > 0 || cardioForDayIn(rows(), d.id).length > 0);
       const missed = sessions.filter((d) => {
         const as = assignmentsForDayIn(rows(), d.id);
-        const done = as.every((a) => logsForAssignmentIn(rows(), a.id).length >= a.sets) && cardioForDayIn(rows(), d.id).every((c) => cardioDoneIn(rows(), c.id));
+        const done = as.every((a) => logsForAssignmentIn(rows(), a.id).length >= setsDue(a)) && cardioForDayIn(rows(), d.id).every((c) => cardioDoneIn(rows(), c.id));
         return !done && !d.skip_reason;
       });
       // Two or more (12 Oct): one missed session in a week is life, not a signal.
@@ -10291,7 +10324,7 @@ export function duplicateSession(sourceId: number, week: number, name?: string):
   if (rows.length === 0 && cardio.length === 0) return null;
   const day: ProgramDay = { id: allocId("program_days"), client_id: source.client_id, week_number: week, day_of_week: nextFreeSlot(source.client_id, week), label: source.label || name?.trim().slice(0, 80) || `Session ${source.day_of_week}`, status: "published", free: true, copy_of: source.id };
   data.program_days.push(day);
-  for (const wa of rows) data.workout_assignments.push({ ...copiedWeights(wa), warmup_sets: undefined, swap: undefined, id: allocId("workout_assignments"), program_day_id: day.id });
+  for (const wa of rows) data.workout_assignments.push({ ...copiedWeights(wa), sets_removed: undefined, warmup_sets: undefined, swap: undefined, id: allocId("workout_assignments"), program_day_id: day.id });
   for (const c of cardio) data.cardio_entries.push({ ...c, swap: undefined, id: allocId("cardio_entries"), program_day_id: day.id });
   persist();
   return day.id;
@@ -10558,6 +10591,7 @@ export function discardSession(programDayId: number) {
     if (!ids.has(wa.id)) continue;
     delete wa.warmup_sets;
     delete wa.swap;
+    delete wa.sets_removed;
   }
   const cardioIds = new Set(listCardioForDay(day.id).map((c) => c.id));
   data.cardio_logs = (data.cardio_logs ?? []).filter((c) => !cardioIds.has(c.cardio_entry_id));
@@ -11078,7 +11112,7 @@ export function copyProgramDay(fromDayId: number, toDayId: number) {
     const id = allocId("workout_assignments");
     // The prescription only: what the client did (warm-ups, a swap) stays on the week they did it, and a reset stays on
     // the row the coach typed it on (copiedWeights, 23 Oct).
-    data.workout_assignments.push({ ...copiedWeights(wa), warmup_sets: undefined, swap: undefined, id, program_day_id: dest.id });
+    data.workout_assignments.push({ ...copiedWeights(wa), sets_removed: undefined, warmup_sets: undefined, swap: undefined, id, program_day_id: dest.id });
     for (const v of data.assignment_custom_values.filter((v) => v.workout_assignment_id === wa.id)) {
       data.assignment_custom_values.push({ ...v, id: allocId("assignment_custom_values"), workout_assignment_id: id });
     }
@@ -11387,6 +11421,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
         if (!typed.notes) target.note_kind = null;
       }
       const weighed = "target_weight_kg" in typed && typed.target_weight_kg !== target.target_weight_kg;
+      if ("sets" in typed && typed.sets !== target.sets) delete target.sets_removed;
       Object.assign(target, typed);
       // A weight the coach types is theirs, and on a running plan a reset (a later week's copy of the edit its carry):
       // see typeWeight.
@@ -11932,7 +11967,7 @@ export function getUpNextSession(clientId: number): UpNextSession | null {
   // settled, as a fully logged one is: Home moves on to the next. One begun
   // and not ended is the one to come back to.
   const index = days.findIndex(({ day, assignments }) =>
-    !day.skip_reason && !day.session_ended_at && !assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
+    !day.skip_reason && !day.session_ended_at && !assignments.every((a) => getLogsForAssignment(a.id).length >= setsDue(a))
   );
   if (index < 0) return null;
   const { day, assignments } = days[index];
@@ -11940,7 +11975,7 @@ export function getUpNextSession(clientId: number): UpNextSession | null {
     dayId: day.id,
     name: day.label || `Session ${index + 1}`,
     exercises: assignments.length,
-    sets: assignments.reduce((sum, a) => sum + a.sets, 0),
+    sets: assignments.reduce((sum, a) => sum + setsDue(a), 0),
     live: !!day.session_started_at && !day.session_ended_at,
     liveStartedAt: day.session_started_at && !day.session_ended_at ? day.session_started_at : null,
     weekNow: (() => {
@@ -11949,7 +11984,7 @@ export function getUpNextSession(clientId: number): UpNextSession | null {
     })(),
     sessionIndex: index + 1,
     sessionCount: days.length,
-    estMinutes: Math.max(5, Math.round(assignments.reduce((t, a) => t + a.sets * ((a.rest_seconds ?? 90) + 45), 0) / 60 / 5) * 5),
+    estMinutes: Math.max(5, Math.round(assignments.reduce((t, a) => t + setsDue(a) * ((a.rest_seconds ?? 90) + 45), 0) / 60 / 5) * 5),
   };
 }
 
@@ -12810,13 +12845,13 @@ export function copyFoodMeal(clientId: number, fromDate: string, fromMeal: strin
   return rows.length;
 }
 
-export type SavedMealView = { id: number; name: string; kcal: number; count: number; names: string[] };
+export type SavedMealView = { id: number; name: string; kcal: number; protein: number; carbs: number; fat: number; picture: string | null; thumb: string | null; count: number; names: string[] };
 
 export function listSavedMeals(clientId: number): SavedMealView[] {
   return getData()
     .saved_meals.filter((m) => m.client_id === clientId)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    .map((m) => ({ id: m.id, name: m.name, kcal: Math.round(m.items.reduce((s, i) => s + i.kcal, 0)), count: m.items.length, names: [...new Set(m.items.map((i) => i.name))] }));
+    .map((m) => ({ id: m.id, name: m.name, kcal: Math.round(m.items.reduce((s, i) => s + i.kcal, 0)), protein: Math.round(m.items.reduce((s, i) => s + i.protein, 0)), carbs: Math.round(m.items.reduce((s, i) => s + i.carbs, 0)), fat: Math.round(m.items.reduce((s, i) => s + i.fat, 0)), picture: m.picture ?? null, thumb: m.picture_thumb ?? null, count: m.items.length, names: [...new Set(m.items.map((i) => i.name))] }));
 }
 
 /** One meal on one day, kept under a name to add again. */
@@ -12833,7 +12868,10 @@ export function saveMeal(clientId: number, date: string, meal: FoodMeal, name: s
   };
   // The day's photo becomes the saved meal's picture (9 Nov, Alex): the same file, so nothing is copied.
   const photo = getMealPhoto(clientId, date, meal);
-  if (photo) row.picture = photo;
+  if (photo) {
+    row.picture = photo;
+    row.picture_thumb = getData().meal_photos.find((p) => p.file_path === photo)?.thumb ?? null;
+  }
   data.saved_meals.push(row);
   // And the slot now is that meal: its card takes the name, its camera the saved meal.
   for (const e of rows) e.saved_meal_id = row.id;
@@ -12880,13 +12918,15 @@ function dropUnusedMealPictures(paths: (string | null | undefined)[]): string[] 
 }
 
 /** Where a meal id from another day (or a saved day) lands on a date: itself when it is a standard meal or already on that day, else an added meal of the same name on that day, made if needed; Snacks when the source meal is gone. */
-function mealOnDay(clientId: number, meal: string, date: string): string {
+function mealOnDay(clientId: number, meal: string, date: string, taken: Set<string> = new Set()): string {
   if (hasFoodMeal(clientId, meal, date)) return meal;
   const data = getData();
   const source = meal.startsWith("m:") ? data.food_meals.find((m) => m.id === Number(meal.slice(2)) && m.client_id === clientId) : null;
   if (!source) return "snacks";
-  const twin = data.food_meals.find((m) => m.client_id === clientId && m.date === date && m.name.toLowerCase() === source.name.toLowerCase());
-  return `m:${twin ? twin.id : addFoodMeal(clientId, source.name, date).id}`;
+  const twin = data.food_meals.find((m) => m.client_id === clientId && m.date === date && m.name.toLowerCase() === source.name.toLowerCase() && !taken.has(`m:${m.id}`));
+  const landed = `m:${twin ? twin.id : addFoodMeal(clientId, source.name, date).id}`;
+  taken.add(landed);
+  return landed;
 }
 
 /** A saved meal's foods and amounts into a meal on a day, logged now. */
@@ -12898,6 +12938,14 @@ export function addSavedMeal(clientId: number, id: number, date: string, meal: F
   for (const i of saved.items) data.food_entries.push({ id: allocId("food_entries"), client_id: clientId, date, meal, ...i, logged_at: now, saved_meal_id: saved.id });
   persist();
   return saved.items.length;
+}
+
+/** Add a meal, Copy a meal (10 Nov, Alex): a saved meal on a day as a card of its own, under its name. */
+export function addSavedMealCard(clientId: number, id: number, date: string): number {
+  const saved = getData().saved_meals.find((m) => m.id === id && m.client_id === clientId);
+  if (!saved) return 0;
+  const slot = addFoodMeal(clientId, saved.name, date);
+  return addSavedMeal(clientId, id, date, `m:${slot.id}`);
 }
 
 export type SavedDayView = { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null };
@@ -12944,8 +12992,9 @@ export function addSavedDay(clientId: number, id: number, date: string): number 
   if (!saved) return 0;
   const now = new Date().toISOString();
   const landing = new Map<string, string>();
+  const taken = new Set<string>();
   for (const i of saved.items) {
-    if (!landing.has(i.meal)) landing.set(i.meal, mealOnDay(clientId, i.meal, date));
+    if (!landing.has(i.meal)) landing.set(i.meal, mealOnDay(clientId, i.meal, date, taken));
     data.food_entries.push({ id: allocId("food_entries"), client_id: clientId, date, ...i, meal: landing.get(i.meal)!, logged_at: now });
   }
   if (saved.items.length) persist();
@@ -12958,8 +13007,9 @@ export function copyFoodDay(clientId: number, fromDate: string, toDate: string):
   const rows = listFoodEntries(clientId, fromDate);
   const now = new Date().toISOString();
   const landing = new Map<string, string>();
+  const taken = new Set<string>();
   for (const e of rows) {
-    if (!landing.has(e.meal)) landing.set(e.meal, mealOnDay(clientId, e.meal, toDate));
+    if (!landing.has(e.meal)) landing.set(e.meal, mealOnDay(clientId, e.meal, toDate, taken));
     data.food_entries.push({ ...e, id: allocId("food_entries"), date: toDate, meal: landing.get(e.meal)!, logged_at: now });
   }
   if (rows.length) persist();
@@ -13065,7 +13115,7 @@ export function isSessionComplete(programDayId: number): boolean {
   return (
     assignments.every((a) => {
       const logged = new Set(getLogsForAssignment(a.id).map((l) => l.set_number));
-      return Array.from({ length: a.sets }, (_, i) => i + 1).every((n) => logged.has(n));
+      return Array.from({ length: setsDue(a) }, (_, i) => i + 1).every((n) => logged.has(n));
     }) && cardio.every((c) => isCardioDone(c.id))
   );
 }
@@ -13340,6 +13390,7 @@ export function saveMealPhoto(clientId: number, date: string, meal: string, buff
   if (row) {
     row.file_path = publicPath;
     row.uploaded_at = new Date().toISOString();
+    delete row.thumb;
   } else {
     data.meal_photos.push({ id: allocId("meal_photos"), client_id: clientId, date, meal, file_path: publicPath, uploaded_at: new Date().toISOString() });
   }
@@ -13347,6 +13398,7 @@ export function saveMealPhoto(clientId: number, date: string, meal: string, buff
   if (saved) {
     was.push(saved.picture);
     saved.picture = publicPath;
+    delete saved.picture_thumb;
   }
   const gone = dropUnusedMealPictures(was);
   persist();
@@ -13366,7 +13418,10 @@ export function removeMealPhoto(clientId: number, date: string, meal: string): s
   const shown = saved?.picture ?? row?.file_path;
   if (!shown) return [];
   if (row?.file_path === shown) data.meal_photos = data.meal_photos.filter((p) => p !== row);
-  if (saved?.picture) delete saved.picture;
+  if (saved?.picture) {
+    delete saved.picture;
+    delete saved.picture_thumb;
+  }
   const gone = dropUnusedMealPictures([shown]);
   persist();
   return gone;
@@ -13382,7 +13437,7 @@ export type FoodDiaryView = {
   /** Both days' targets, so Training day | Rest day switches on the phone at once (4 Nov, Alex: it took 1-2 s). */
   targets: { training: FoodDiaryView["target"]; rest: FoodDiaryView["target"] };
   eaten: { kcal: number; protein: number; carbs: number; fat: number };
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null; /** The saved meal that filled this slot (added or saved from it), while it still holds just that meal; the card then wears its name. */ savedMealId: number | null; /** The client's picture of this meal that day, when they took one. */ photo: string | null; /** What the card shows: the linked saved meal's picture, else that day's photo. */ picture: string | null; /** What the coach said about this meal. */ comments: MealComment[] }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null; /** The saved meal that filled this slot (added or saved from it), while it still holds just that meal; the card then wears its name. */ savedMealId: number | null; /** The client's picture of this meal that day, when they took one. */ photo: string | null; /** What the card shows: the linked saved meal's picture, else that day's photo. */ picture: string | null; /** That picture's tiny preview, there at once. */ thumb: string | null; /** What the coach said about this meal. */ comments: MealComment[] }[];
   recent: FoodOption[];
   /** The client's saved meals, newest first. */
   saved: SavedMealView[];
@@ -13835,7 +13890,7 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
       const linked = savedMealOfRows(rows, savedMeals);
       const savedAs = linked?.name ?? (rows.length ? savedKeys.find((s) => s.key === key)?.name ?? null : null);
       const photo = photos.get(m.id) ?? null;
-      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs, savedMealId: linked?.id ?? null, photo, picture: linked?.picture ?? photo, comments: comments.get(m.id) ?? [] };
+      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs, savedMealId: linked?.id ?? null, photo, picture: linked?.picture ?? photo, thumb: (linked?.picture ? linked.picture_thumb : null) ?? getData().meal_photos.find((p) => p.file_path === (linked?.picture ?? photo))?.thumb ?? null, comments: comments.get(m.id) ?? [] };
     }),
     recent: recentFoods(clientId),
     saved: listSavedMeals(clientId),

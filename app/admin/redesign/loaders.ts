@@ -1,4 +1,5 @@
 import { GYM_COLORS, isGymColor } from "../../lib/gymColors";
+import { setsDue } from "../../lib/setsDue";
 import { billingAccess, billingOn, type BillingAccess } from "../../lib/billing";
 import { chatRev } from "../../lib/chatBus";
 import { clientLastActive } from "../../lib/presence";
@@ -269,7 +270,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       const as = rowsOf(d.id);
       const cs = cardioOf(d.id);
       if (as.length === 0 && cs.length === 0) return { done: false, missed: false, skipped: false };
-      const done = as.every((a) => logsOf(a.id).length >= a.sets) && cs.every((c) => ticked(c.id));
+      const done = as.every((a) => logsOf(a.id).length >= setsDue(a)) && cs.every((c) => ticked(c.id));
       const skipped = !done && !!d.skip_reason;
       const begun = !!d.session_ended_at || as.some((a) => logsOf(a.id).length > 0) || cs.some((c) => ticked(c.id));
       return { done, missed: !done && !skipped && begun, skipped };
@@ -406,6 +407,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         // Assisted by the exercise's name or its variation's (23 Oct), for the progress pop-up.
         assisted: assistedRow(a),
         sets: a.sets,
+        // Sets of the coach's the client took off this session (10 Nov, Alex): the row's −1.
+        removed: a.sets_removed ?? 0,
         reps: a.reps ?? "",
         kg: a.target_weight_kg,
         gymKg: gyms.map((g) => ({ gym: g.name, kg: a.gym_targets?.[g.id]?.kg ?? a.target_weight_kg })),
@@ -443,7 +446,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       };
     });
     const cardio = cardioOf(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: ticked(c.id), swap: c.swap?.name ?? null, alternatives: (c.alternatives ?? []).map((a) => ({ name: a.name, note: a.note ?? "" })) }));
-    const setsPlanned = rows.reduce((t, r) => t + r.sets, 0);
+    const setsPlanned = rows.reduce((t, r) => t + setsDue({ sets: r.sets, sets_removed: r.removed }), 0);
     // A swapped exercise's sets still count as done for the session.
     const setsLogged = rows.reduce((t, r) => t + r.logged.length + (r.swapInfo?.sets.length ?? 0), 0);
     const gym = rows.flatMap((r) => [...r.logged, ...(r.swapInfo?.sets ?? [])]).find((l) => l.gym)?.gym ?? null;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import AddMealSheet from "./AddMealSheet";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { NorCoachLogo } from "../components/NorCoachLogo";
@@ -13,6 +14,7 @@ import {
   addFoodMealAction,
   addSavedDayAction,
   addSavedMealAction,
+  addSavedMealCardAction,
   deleteSavedDayAction,
   saveDayAction,
   copyFoodDayAction,
@@ -111,9 +113,9 @@ export type FoodDiaryProps = {
   eaten: Macros;
   dayType: "training" | "rest";
   loggedKcal: number | null;
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null; /** The saved meal that filled this slot, while it still holds just that meal. */ savedMealId: number | null; photo: string | null; /** What the card shows: the saved meal's picture, else that day's photo. */ picture: string | null; comments: { id: number; text: string; when: string }[] }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null; /** The saved meal that filled this slot, while it still holds just that meal. */ savedMealId: number | null; photo: string | null; /** What the card shows: the saved meal's picture, else that day's photo. */ picture: string | null; /** That picture's tiny preview, there at once. */ thumb: string | null; comments: { id: number; text: string; when: string }[] }[];
   recent: FoodOptionView[];
-  saved: { id: number; name: string; kcal: number; count: number; names: string[] }[];
+  saved: { id: number; name: string; kcal: number; protein: number; carbs: number; fat: number; picture: string | null; thumb: string | null; count: number; names: string[] }[];
   savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null }[];
   savedDayAs: string | null;
   savedDayId: number | null;
@@ -300,7 +302,7 @@ export default function FoodDiaryScreen({
   const addMealNow = () => {
     releaseKeyboardHold();
     const temp: FoodMeal = `new-${Date.now()}`;
-    setDiary((d) => ({ ...d, meals: [...d.meals, { id: temp, label: "New meal", own: true, kcal: 0, protein: 0, carbs: 0, fat: 0, entries: [], savedAs: null, savedMealId: null, photo: null, picture: null, comments: [] }] }));
+    setDiary((d) => ({ ...d, meals: [...d.meals, { id: temp, label: "New meal", own: true, kcal: 0, protein: 0, carbs: 0, fat: 0, entries: [], savedAs: null, savedMealId: null, photo: null, picture: null, thumb: null, comments: [] }] }));
     setNamingId(temp);
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -319,6 +321,25 @@ export default function FoodDiaryScreen({
       }
       setDiary((d) => ({ ...d, meals: d.meals.map((m) => (m.id === temp ? { ...m, id: real } : m)) }));
       setNamingId((n) => (n === temp ? real : n));
+    });
+  };
+  // Add a meal (10 Nov, Alex): New meal or Copy a meal, first.
+  const [addingMeal, setAddingMeal] = useState(false);
+  const copyMealCard = (id: number) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("id", String(id));
+    fd.set("date", date);
+    // Its one-time key: sent again once the signal is back, the card goes in once.
+    fd.set("onceKey", newOnceKey());
+    startLoad(async () => {
+      await addSavedMealCardAction(fd);
+      const next = await getFoodDiaryAction(clientId, date);
+      if (next) {
+        setDiary(next);
+        setFolded(new Set(next.meals.map((m) => m.id)));
+      }
+      setAddingMeal(false);
     });
   };
   // Leaving the name box: an empty or untouched name means the meal was not wanted.
@@ -425,7 +446,18 @@ export default function FoodDiaryScreen({
     photoFor.current = meal;
     photoInput.current?.click();
   };
+  // The photo just picked (10 Nov, Alex: as fast as the chat): on the card at once from the phone's own copy while it goes
+  // up, then behind the server's until that is in, so the card never goes blank.
+  const [picked, setPicked] = useState<Record<string, string>>({});
+  const pickedUrls = useRef<string[]>([]);
+  useEffect(() => () => pickedUrls.current.forEach((u) => URL.revokeObjectURL(u)), []);
+  const pickedOf = (meal: FoodMeal) => picked[`${date}|${meal}`] ?? null;
   const sendPhoto = (meal: FoodMeal, file: File) => {
+    const local = URL.createObjectURL(file);
+    pickedUrls.current.push(local);
+    const slot = `${date}|${meal}`;
+    setPicked((p) => ({ ...p, [slot]: local }));
+    const forget = () => setPicked((p) => (p[slot] === local ? Object.fromEntries(Object.entries(p).filter(([k]) => k !== slot)) : p));
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("date", date);
@@ -438,9 +470,13 @@ export default function FoodDiaryScreen({
         await uploadMealPhotoAction(fd);
         const next = await getFoodDiaryAction(clientId, date);
         if (next) setDiary(next);
-        if (!next?.meals.find((m) => m.id === meal)?.picture) setPhotoFailed(meal);
+        if (!next?.meals.find((m) => m.id === meal)?.picture) {
+          setPhotoFailed(meal);
+          forget();
+        }
       } catch {
         setPhotoFailed(meal);
+        forget();
       } finally {
         setPhotoBusy(null);
       }
@@ -1004,7 +1040,10 @@ export default function FoodDiaryScreen({
                 const next = await getFoodDiaryAction(clientId, date);
                 if (next) {
                   setDiary(next);
-                  setFolded(new Set());
+                  // Every card of the day in sight (10 Nov, Alex): the list folds away and each card is shut, as one open at
+                  // a time would have them; it used to open some and not others.
+                  setCopyOpen(false);
+                  setFolded(new Set(next.meals.map((m) => m.id)));
                 }
               };
               const copyLast = () => {
@@ -1146,11 +1185,16 @@ export default function FoodDiaryScreen({
                     className={`fdi-meal fdc-meal${open ? " open" : ""}${drag?.from === index ? " lifted" : ""}${drag ? " shifting" : ""}`}
                     style={{ transform: shiftFor(index) }}
                   >
-                    <div className={`fdc-card${meal.picture ? "" : " bare"}${filled ? "" : " shut"}`} onClick={(e) => tapCard(e, meal)}>
+                    <div className={`fdc-card${meal.picture || (photoBusy === meal.id && pickedOf(meal.id)) ? "" : " bare"}${filled ? "" : " shut"}`} onClick={(e) => tapCard(e, meal)}>
                       {/* The picture, else the plain texture of the shade under it: never a photo of food that isn't this meal. */}
                       <div className="fdc-bg" aria-hidden="true">
                         {/* eslint-disable-next-line @next/next/no-img-element -- the client’s own upload */}
-                        {meal.picture && <img src={pic(meal.picture, 1080)} alt="" draggable={false} />}
+                        {photoBusy === meal.id && pickedOf(meal.id) ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- the phone's own copy, just picked
+                          <img src={pickedOf(meal.id)!} alt="" draggable={false} />
+                        ) : (
+                          meal.picture && <CardPicture src={pic(meal.picture, 1080)} under={pickedOf(meal.id) ?? meal.thumb} />
+                        )}
                       </div>
                       {/* A meal being named is its name box alone (3 Nov, Alex: "only show the icons once the name has been
                           saved"); left blank, it goes. */}
@@ -1434,7 +1478,7 @@ export default function FoodDiaryScreen({
               })}
             </section>
 
-            <button type="button" className="fdi-add-meal fdc-add" onClick={addMealNow} disabled={namingId != null}>
+            <button type="button" className="fdi-add-meal fdc-add" onClick={() => setAddingMeal(true)} disabled={namingId != null}>
               <PlusIcon />
               Add a meal
             </button>
@@ -1442,6 +1486,19 @@ export default function FoodDiaryScreen({
         </div>
       </main>
 
+      {addingMeal && (
+        <AddMealSheet
+          saved={diary.saved}
+          busy={loading}
+          picture={(p) => pic(p, 1080)}
+          onNew={() => {
+            setAddingMeal(false);
+            addMealNow();
+          }}
+          onCopy={copyMealCard}
+          onClose={() => setAddingMeal(false)}
+        />
+      )}
       {shownPhoto?.picture && (
         <div className="fdi-photo-scrim" role="presentation" onClick={closePhoto}>
           <div className="fdi-photo-sheet" role="dialog" aria-modal="true" aria-label={`Your picture of ${cardTitle(shownPhoto)}`} onClick={(e) => e.stopPropagation()}>
@@ -1614,6 +1671,12 @@ function FactTile({ name, value, format, unit, color }: { name: string; value: n
 }
 
 // On a meal's card: the kcal, then protein, carbs and fat small (9 Nov, Alex). They run to their new values.
+/** A card's picture over its preview (10 Nov, Alex: as the chat's): the preview is on the data, there before the picture. */
+function CardPicture({ src, under }: { src: string; under: string | null }) {
+  // eslint-disable-next-line @next/next/no-img-element -- the client’s own upload
+  return <img src={src} alt="" draggable={false} decoding="async" style={under ? { backgroundImage: `url(${under})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} />;
+}
+
 function CardFigures({ meal, title }: { meal: FoodDiaryProps["meals"][number]; title: string }) {
   const kcal = useTween(meal.kcal);
   const protein = useTween(meal.protein);

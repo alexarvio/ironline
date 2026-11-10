@@ -141,6 +141,7 @@ import {
   markReportOpened,
   listCoachVideos,
   logSet,
+  setExerciseRows,
   setAssignmentUnit,
   OTHER_ITEMS,
   removeReportTemplateSection,
@@ -354,6 +355,7 @@ import {
   saveDay,
   deleteSavedDay,
   addSavedDay,
+  addSavedMealCard,
   hasFoodMeal,
   getFoodDiary,
   setFoodDayType,
@@ -1607,6 +1609,8 @@ export async function uploadMealPhotoAction(formData: FormData) {
   // What it replaced goes, when nothing else shows it (a saved meal may still hold the day's old photo).
   for (const was of gone) await deleteUpload(was);
   await putUpload(saved, buffer, type);
+  // Its small copies and preview made before the card is told (10 Nov, Alex: as the chat's), so the first look never waits.
+  await prepareChatMedia(saved, "image", buffer);
   revalidatePath("/admin");
 }
 
@@ -4341,7 +4345,7 @@ export async function saveWorkoutAction(clientId: number, entries: unknown): Pro
     const kind = typeof e?.kind === "string" ? e.kind : "";
     const startedAt = stamp(e?.startedAt);
     // The day the change is about, from the thing itself (an exercise's row, a cardio), never from the phone's word.
-    const assignment = kind === "set" || kind === "warmups" || kind === "note" || kind === "unit" || kind === "swap" ? data.workout_assignments.find((wa) => wa.id === id(e.assignmentId)) : undefined;
+    const assignment = kind === "set" || kind === "rows" || kind === "warmups" || kind === "note" || kind === "unit" || kind === "swap" ? data.workout_assignments.find((wa) => wa.id === id(e.assignmentId)) : undefined;
     const cardio = kind === "cardioDone" || kind === "cardioSwap" || kind === "cardioFigure" ? (data.cardio_entries ?? []).find((c) => c.id === id(e.cardioId)) : undefined;
     const day = assignment ? dayById(assignment.program_day_id) : cardio ? dayById(cardio.program_day_id) : dayById(id(e?.dayId));
     // Gone (the coach took the exercise out), or not this client's. A rogue session already thrown away has nothing left
@@ -4361,6 +4365,12 @@ export async function saveWorkoutAction(clientId: number, entries: unknown): Pro
         if (!assignment || setNumber == null || setNumber > 100) return { refused: "gone" };
         const unit = e.unit === "lb" || e.unit === "kg" ? e.unit : null;
         logSet(assignment.id, setNumber, num(e.weight), num(e.reps), num(e.rpe), gymOk(e.gymId), unit, clamped(e.at));
+        return "done";
+      }
+      case "rows": {
+        const rows = id(e.rows);
+        if (!assignment || rows == null || rows > 100) return { refused: "gone" };
+        setExerciseRows(assignment.id, rows);
         return "done";
       }
       case "warmups":
@@ -4903,6 +4913,18 @@ export async function addSavedMealAction(formData: FormData) {
   // Taken once (6 Nov, one-time key): sent again after a dropped signal, its foods are not added twice.
   await once(`addSavedMealAction:${clientId}`, onceKeyOf(formData), () => {
     addSavedMeal(clientId, id, date, meal);
+  });
+}
+
+/** Add a meal, Copy a meal (10 Nov, Alex): the saved meal as a new card on the day. */
+export async function addSavedMealCardAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  const date = String(formData.get("date") ?? "");
+  if (!Number.isInteger(id) || !diaryDateOk(date)) return;
+  await once(`addSavedMealCardAction:${clientId}`, onceKeyOf(formData), () => {
+    addSavedMealCard(clientId, id, date);
+    revalidatePath("/admin");
   });
 }
 

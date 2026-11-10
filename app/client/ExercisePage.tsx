@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type React from "react";
 import { useOffline } from "next/offline";
-import { enqueueWorkout, useWorkoutOutbox } from "../components/workoutOutbox";
+import { enqueueWorkout, useWorkoutOutbox, forgetRefused } from "../components/workoutOutbox";
 import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel as labelOf, type Unit } from "../lib/units";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
@@ -316,6 +316,7 @@ export default function ExercisePage({
   // ---- Advancing: 1.4s after the open set is in (and still open), it folds
   // and the next one still to do opens. Another change restarts the wait.
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceRow = useRef<RowId | null>(null);
   // The latest rows, for the timer: the one it was set from still had the
   // set it was folding as open, so the last set of an exercise used to
   // find itself and stay open (13 Oct).
@@ -324,6 +325,7 @@ export default function ExercisePage({
     liveFirstUnsaved.current = firstUnsaved;
   });
   const scheduleAdvance = (id: RowId, ms = ADVANCE_MS) => {
+    advanceRow.current = id;
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => {
       advanceTimer.current = null;
@@ -474,20 +476,47 @@ export default function ExercisePage({
   };
   const addSet = () => {
     const n = workCount + 1;
-    setExtraAdded((e) => Math.max(e, maxLogged - exercise.sets) + 1);
+    // One taken off earlier comes back before anything counts as extra (10 Nov, Alex: −1 then +1 is the coach's count).
+    if (exercise.sets < (exercise.coachSets ?? exercise.sets)) enqueueWorkout({ kind: "rows", assignmentId: exercise.id, rows: n, ...session });
+    else setExtraAdded((e) => Math.max(e, maxLogged - exercise.sets) + 1);
+    setAskRemove(false);
     if (!rows.some((r) => !r.saved)) setCurrent(`s${n}`);
   };
-  const removeExtra = (row: Row) => {
-    setExtraAdded((e) => Math.max(0, e - 1));
-    const { [row.n]: _gone, ...rest } = draftsNow.current;
+  // `− Remove a set` (10 Nov, Alex): always the last one on the list, so no set changes its number. One with figures in
+  // it asks in place first. An extra set never saved is the phone's alone; every other goes through the outbox.
+  const [askRemove, setAskRemove] = useState(false);
+  const removeLast = () => {
+    const last = workCount;
+    if (last <= 1) return;
+    const t = saveTimers.current.get(last);
+    if (t) clearTimeout(t);
+    saveTimers.current.delete(last);
+    savePending.current.delete(last);
+    if (advanceRow.current === `s${last}` && advanceTimer.current) {
+      clearTimeout(advanceTimer.current);
+      advanceTimer.current = null;
+    }
+    forgetRefused(`set:${exercise.id}:${last}`);
+    if (doubt?.n === last) setDoubt(null);
+    const { [last]: _gone, ...rest } = draftsNow.current;
     void _gone;
     draftsNow.current = rest;
     setDrafts((d) => {
       const next = { ...d };
-      delete next[row.n];
+      delete next[last];
       return next;
     });
-    if (current === row.id) setCurrent(firstUnsaved());
+    const extra = last > exercise.sets;
+    if (extra) setExtraAdded((e) => Math.max(0, Math.max(e, maxLogged - exercise.sets) - 1));
+    if (!extra || logOf(last)) enqueueWorkout({ kind: "rows", assignmentId: exercise.id, rows: last - 1, ...session });
+    setAskRemove(false);
+    if (current === `s${last}`) setCurrent(workRows.find((r) => r.n < last && !r.saved)?.id ?? null);
+    buzz(10);
+  };
+  const tapRemove = () => {
+    const v = enteredOf(workCount, draftsNow.current);
+    if (v.weightKg != null || v.reps != null) setAskRemove(true);
+    else removeLast();
   };
 
   // ---- Your note: the one for the gym trained at; where that gym has none,
@@ -717,7 +746,7 @@ export default function ExercisePage({
             One helper and one table for the session overview and the cardio page too (3 Nov, Alex). Swapped, a naked
             sheet (4 Nov, Alex: "when we swap an exercise, it should just be a naked sheet"): the targets were set for the
             exercise it replaced, so no table at all. */}
-        {!free && !swapped && <TargetTable cols={targetColumns({ sets: exercise.sets, reps: exercise.reps, weightKg: targetWeight, unit, rpe: targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance })} />}
+        {!free && !swapped && <TargetTable cols={targetColumns({ sets: exercise.coachSets ?? exercise.sets, reps: exercise.reps, weightKg: targetWeight, unit, rpe: targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance })} />}
         <div className="lw-card-head">
           <span className="lw-eyebrow">Sets</span>
           <span className={`lw-progress${allDone ? " done" : ""}`}>
@@ -806,8 +835,8 @@ export default function ExercisePage({
                       {late ? "Not sent yet" : since != null ? "Saving" : "Saved"}
                     </span>
                   )}
-                  {row.extra && !row.saved && refusedWhy == null && (
-                    <button type="button" className="lw-remove" onClick={() => (row.kind === "warm" ? removeWarm(row.n - 1) : removeExtra(row))} aria-label={`Remove ${row.kind === "warm" ? "warm-up" : "extra set"} ${row.n}`}>
+                  {row.kind === "warm" && !row.saved && refusedWhy == null && (
+                    <button type="button" className="lw-remove" onClick={() => removeWarm(row.n - 1)} aria-label={`Remove warm-up ${row.n}`}>
                       Remove
                     </button>
                   )}
@@ -850,9 +879,30 @@ export default function ExercisePage({
           })}
         </div>
 
-        <button type="button" className="lw-addset" onClick={addSet}>
-          + Add a set
-        </button>
+        <div className="lw-setacts">
+          {askRemove ? (
+            <>
+              <span className="lw-setask">Remove set {workCount}?</span>
+              <button type="button" className="lw-setword" onClick={() => setAskRemove(false)}>
+                Cancel
+              </button>
+              <button type="button" className="lw-setword red" onClick={removeLast}>
+                Remove
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="lw-addset" onClick={addSet}>
+                + Add a set
+              </button>
+              {workCount > 1 && (
+                <button type="button" className="lw-addset" onClick={tapRemove}>
+                  − Remove a set
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {swapped ? null : noteOpen ? (

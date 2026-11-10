@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { setsDue } from "../lib/setsDue";
 import { addSessionAction } from "../lib/actions";
 import OnceKeySubmit from "./OnceKeySubmit";
 import {
@@ -214,7 +215,7 @@ export default function ProgramBuilder({
         !isEmpty &&
         assignments.every((a) => {
           const logged = new Set(getLogsForAssignment(a.id).map((l) => l.set_number));
-          return Array.from({ length: a.sets }, (_, i) => i + 1).every((n) => logged.has(n));
+          return Array.from({ length: setsDue(a) }, (_, i) => i + 1).every((n) => logged.has(n));
         }) &&
         listCardioForDay(day.id).every((c) => isCardioDone(c.id));
       const summary = isEmpty
