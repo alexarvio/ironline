@@ -1057,7 +1057,7 @@ export default function FoodDiaryScreen({
                               <PlusIcon />
                               <span>Create a meal</span>
                             </button>
-                            {diary.saved.length > 0 ? (
+                            {diary.saved.length > 0 && (
                               <SavedMealList
                                 clientId={clientId}
                                 date={date}
@@ -1072,8 +1072,6 @@ export default function FoodDiaryScreen({
                                 onUse={copyMealCard}
                                 useFailed={copyFailed}
                               />
-                            ) : (
-                              <p className="fdi-saved-none">None yet</p>
                             )}
                           </>
                         ) : (
@@ -1175,7 +1173,7 @@ export default function FoodDiaryScreen({
                                 )}
                               </div>
                             ))}
-                            {diary.savedDays.length > 0 ? <p className="fdi-saved-foot">Hold a saved day to forget it</p> : !last && <p className="fdi-saved-none">None yet</p>}
+                            {diary.savedDays.length > 0 && <p className="fdi-saved-foot">Hold a saved day to forget it</p>}
                           </>
                         )}
                       </main>

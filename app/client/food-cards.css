@@ -61,8 +61,7 @@
 .fdi-saved-name input { flex: 1; min-width: 0; box-sizing: border-box; height: 44px; padding: 0 14px; border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 16px; font-weight: 500; color: #141a24; outline: none; }
 .fdi-saved-name input:focus { box-shadow: inset 0 0 0 1px #141a24; }
 .fdi-saved-name button { flex: none; height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-.fdi-saved-foot, .fdi-saved-none { margin: 16px 0 0; font-size: 12px; font-weight: 500; color: #8b93a1; }
-.fdi-saved-none { font-size: 13px; }
+.fdi-saved-foot { margin: 16px 0 0; font-size: 12px; font-weight: 500; color: #8b93a1; }
 
 /* Add a meal's Copy a meal (10 Nov, Alex): every saved meal as its card, scrolling inside the pop-up. */
 .ams-cards { display: flex; flex-direction: column; gap: 8px; max-height: min(62vh, 520px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
