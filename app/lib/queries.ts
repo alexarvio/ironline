@@ -12807,13 +12807,14 @@ export function listFoodMeals(clientId: number, date: string): { id: FoodMeal; l
   const withFood = new Set(data.food_entries.filter((e) => e.client_id === clientId && e.date === date).map((e) => e.meal));
   const extra = data.food_meals
     .filter((m) => m.client_id === clientId && (m.date === date || withFood.has(`m:${m.id}`)))
-    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    // The newest on top (10 Nov, Alex: "you always have the new one at the top"), until the client drags it elsewhere.
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .map((m) => ({ id: `m:${m.id}`, label: m.name, own: true }));
-  const all = [...FOOD_MEALS.map((m) => ({ ...m, own: false })), ...extra];
+  const all = [...extra, ...FOOD_MEALS.map((m) => ({ ...m, own: false }))];
   const order = getClient(clientId)?.meal_order;
   if (!order?.length) return all;
   const rank = new Map(order.map((id, i) => [id, i]));
-  return all.map((m, i) => ({ m, i })).sort((a, b) => (rank.get(a.m.id) ?? 1000 + a.i) - (rank.get(b.m.id) ?? 1000 + b.i)).map((x) => x.m);
+  return all.map((m, i) => ({ m, i })).sort((a, b) => (rank.get(a.m.id) ?? (a.m.own ? -1000 : 1000) + a.i) - (rank.get(b.m.id) ?? (b.m.own ? -1000 : 1000) + b.i)).map((x) => x.m);
 }
 
 /** The meals in the order the client put them; ids not theirs are ignored, missing ones keep their place at the end. */
@@ -12990,7 +12991,18 @@ export function addSavedDayCard(clientId: number, id: number, key: string, name:
   if (!day || !clean || !/^c:\d+$/.test(key)) return false;
   day.cards = cardsOfSavedDay(day);
   if (day.cards.some((c) => c.key === key)) return true;
-  day.cards.push({ key, name: clean });
+  day.cards.unshift({ key, name: clean });
+  persist();
+  return true;
+}
+
+/** The cards in the order dragged; keys not on the day are ignored, any left out keep their place at the end. */
+export function reorderSavedDayCards(clientId: number, id: number, keys: string[]): boolean {
+  const day = savedDayOf(clientId, id);
+  if (!day) return false;
+  const cards = cardsOfSavedDay(day);
+  const placed = keys.flatMap((k) => cards.filter((c) => c.key === k));
+  day.cards = [...new Set([...placed, ...cards])];
   persist();
   return true;
 }

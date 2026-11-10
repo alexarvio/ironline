@@ -357,6 +357,7 @@ import {
   createBlankSavedDay,
   renameSavedDay,
   addSavedDayCard,
+  reorderSavedDayCards,
   renameSavedDayCard,
   removeSavedDayCard,
   addSavedDayFood,
@@ -4968,6 +4969,8 @@ export async function changeSavedDayCardAction(formData: FormData): Promise<bool
     switch (op) {
       case "card-add":
         return addSavedDayCard(clientId, id, key, name);
+      case "card-order":
+        return reorderSavedDayCards(clientId, id, String(formData.get("order") ?? "").split(","));
       case "card-rename":
         return renameSavedDayCard(clientId, id, key, name);
       case "card-remove": {
