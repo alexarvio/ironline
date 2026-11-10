@@ -4925,6 +4925,7 @@ export async function addSavedMealCardAction(formData: FormData) {
   await once(`addSavedMealCardAction:${clientId}`, onceKeyOf(formData), () => {
     addSavedMealCard(clientId, id, date);
     revalidatePath("/admin");
+    revalidatePath("/client");
   });
 }
 
@@ -4977,6 +4978,7 @@ export async function saveDayAction(formData: FormData) {
   // Taken once (6 Nov, one-time key): sent again after a dropped signal, it saves no second day.
   await once(`saveDayAction:${clientId}`, onceKeyOf(formData), () => {
     saveDay(clientId, date, name);
+    revalidatePath("/client");
   });
 }
 
@@ -4985,6 +4987,7 @@ export async function deleteSavedDayAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id)) return;
   deleteSavedDay(clientId, id);
+  revalidatePath("/client");
 }
 
 export async function addSavedDayAction(formData: FormData) {
@@ -4996,6 +4999,7 @@ export async function addSavedDayAction(formData: FormData) {
   await once(`addSavedDayAction:${clientId}`, onceKeyOf(formData), () => {
     addSavedDay(clientId, id, date);
     revalidatePath("/admin");
+    revalidatePath("/client");
   });
 }
 

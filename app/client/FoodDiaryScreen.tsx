@@ -869,6 +869,7 @@ export default function FoodDiaryScreen({
                   // Every card of the day in sight (10 Nov, Alex): back on the diary with each card shut, as one open at a time
                   // would have them; it used to open some and not others.
                   setSavedScreen(null);
+                  setNamingDay(false);
                   setPanel(null);
                   setFolded(new Set(next.meals.map((m) => m.id)));
                 }
