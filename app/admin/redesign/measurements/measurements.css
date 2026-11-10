@@ -191,10 +191,10 @@
 /* ---- The Lifestyle tab as Training (21 Oct, Alex): Training's header and pills (.rd.trn), each section's
    title and status on the page, its content in one white card with a hairline, toggles in ink. */
 .rd.trn.rls > .trn-head { margin-bottom: -4px; }
-.rd.rls .rls-section { display: flex; flex-direction: column; gap: 12px; }
-.rd.rls .rls-section > .trn-weekhead { margin-bottom: 0; }
+.rd.rls .rls-section, .rd.trn .rls-section { display: flex; flex-direction: column; gap: 12px; }
+.rd.rls .rls-section > .trn-weekhead, .rd.trn .rls-section > .trn-weekhead { margin-bottom: 0; }
 /* A real 1px edge, not an inset shadow (21 Oct, Alex): a row's white was painting over the hairline at its ends. */
-.rd.rls .rls-card { position: relative; padding: 2px 0 8px; border: 1px solid #e1e5eb; border-radius: 18px; background: #fff; overflow: hidden; }
+.rd.rls .rls-card, .rd.trn .trn-list > .rls-card, .rd.trn .rls-section > .rls-card { position: relative; padding: 2px 0 8px; border: 1px solid #e1e5eb; border-radius: 18px; background: #fff; overflow: hidden; }
 .rd.rls .trn-weekhead-actions .trn-btn svg { width: 14px; height: 14px; color: #8b93a1; }
 
 /* Tracked metrics: column heads in small caps, a row a metric with a hairline between, ··· on hover. */
@@ -219,7 +219,12 @@
 .rd.rls .rls-add { display: inline-flex; align-items: center; gap: 6px; height: 36px; margin: 6px 0 0 8px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }
 .rd.rls .rls-add:hover { background: #f5f6f8; }
 .rd.rls .rls-add svg { width: 14px; height: 14px; }
-.rd.rls .rls-empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 4px 18px; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
+/* An empty box with its action (No phase yet + New phase; 9 Nov, Alex): the one height and the words where every empty
+   box has them (.rls-none, draft.css), its pill on the right, in the card's middle. */
+.rd.rls .rls-empty, .rd.trn .rls-empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; box-sizing: border-box; height: 51.5px; padding: 0 9px 0 18px; font-size: 13px; font-weight: 500; line-height: 19.5px; color: #8b93a1; }
+/* + Metric as the box's action: the white pill the other boxes' actions are (9 Nov, Alex). */
+.rd.rls .rls-empty .rls-add { height: 32px; margin: 0; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; }
+.rd.rls .rls-empty .rls-add:hover, .rd.rls .rls-empty .rls-add.on { background: #fff; box-shadow: inset 0 0 0 1px #141a24; }
 .rd.rls .rls-none { margin: 0; padding: 14px 18px 6px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 
 /* Adding a metric: + Metric opens a dropdown with the search bar at its top (21 Oct, Alex), its edge in ink;

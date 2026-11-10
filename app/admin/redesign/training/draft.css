@@ -1373,8 +1373,12 @@ span.rd-demo { cursor: default; }
 /* An empty card holds its empty word in the middle of its height, on the left as every row's words (2 Nov, Alex: "more
    space below it than above it… center it, but left"): the same room over and under it. */
 .rd.rd.rls .rls-none, .rd.rd.rt .rt-none { padding-top: 16px; padding-bottom: 16px; }
+/* Every empty box one way (9 Nov, Alex: "those boxes are all different sizes… I need them all to be the same"): a card
+   holding its empty word alone is 53.5px on every tab, the words 19px from its outer edge, midway down. Tripled, so no
+   tab's own rule can win or lose by the order the stylesheets land in. With an action it is .rls-empty (measurements.css). */
+.rd.rd.rd .rls-card.rls-card > .rls-none:only-child { margin: 0; padding: 16px 18px; font-size: 13px; font-weight: 500; line-height: 19.5px; color: #8b93a1; }
 /* The card's own foot room (6px under its last row) goes when the empty word is all it holds, so the word sits midway. */
-.rd.rd .rls-card.rls-card:has(> .rls-none:only-child), .rd.rd .rls-card.rls-card:has(> .rt-none:only-child), .rd.rd .rls-card.rls-card:has(> .rp-tnone:only-child) { padding-top: 0; padding-bottom: 0; }
+.rd.rd .rls-card.rls-card:has(> .rls-none:only-child), .rd.rd .rls-card.rls-card:has(> .rls-empty:only-child), .rd.rd .rls-card.rls-card:has(> .rt-none:only-child), .rd.rd .rls-card.rls-card:has(> .rp-tnone:only-child) { padding: 0; }
 /* Every row's words and marks on its true middle (2 Nov, Alex: "not centered… it makes us feel cheap"): the outline is a
    real border, so it takes its own room rather than lying over the first row's top and the last row's foot, and the line
    between rows is the row's own top edge, outside the room the row centres in. */

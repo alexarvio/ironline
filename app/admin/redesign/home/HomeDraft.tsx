@@ -339,7 +339,7 @@ export default function HomeDraft({
         {/* Always a full page tall (21 Oct, Alex): another kind or the last page never moves the pager. A full page is as
             many rows as All can show (up to 20), as Lifestyle's check-ins: a new client's three rows keep a short card.
             53px a row with its hairline; the first has none but the card's two 1px edges add one. */}
-        <div className="rls-card rh-card rd-steady" style={{ "--log-rows": Math.max(1, Math.min(PAGE, home.events.length)), "--log-row": "53px", "--log-head": "1px" } as CSSProperties}>
+        <div className={`rls-card rh-card${home.events.length > 0 ? " rd-steady" : ""}`} style={{ "--log-rows": Math.max(1, Math.min(PAGE, home.events.length)), "--log-row": "53px", "--log-head": "1px" } as CSSProperties}>
           {shown.length === 0 ? (
             <p className="rls-none">None yet</p>
           ) : (

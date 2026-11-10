@@ -148,9 +148,8 @@
 /* No tint behind a row being typed in (21 Oct, Alex): the words and their line alone, as the title's rename. */
 .rd.rnt .rls-row:hover { background: none; }
 /* The log's five figures are the shared figures card (`.rls-figs`, measurements.css; 3 Nov, Alex): low protein rust, as `b.warn`
-   there. The unit grey right after the figure. With no day logged the log card is None yet alone, on the card's own edge. */
+   there. The unit grey right after the figure. With no day logged the log card is None yet alone, the shared empty box (draft.css). */
 .rd.rnt .rn-figs .rls-fig b em { margin-left: 5px; font-size: 13px; font-style: normal; font-weight: 500; letter-spacing: 0; color: #8b93a1; }
-.rd.rnt .rls-card.rls-log > .rls-none:only-child { padding: 21px 18px 15px; }
 .rd.rnt .rls-log .rd-cols { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
 /* The logs drawn as the supplements over them and every list (6 Nov, Alex: one list row): the card's own padding, the
    line between days edge to edge in #eef0f3, a day 52px with its content on the row's middle, the date and the heads

@@ -1948,8 +1948,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             </div>
           </section>
         ))}
-        {/* A done week with nothing in it says so in a word (23 Oct). */}
-        {weekLocked ? (sessions.length === 0 ? <p className="trn-none">None</p> : null) : sessions.length + incoming < MAX_SESSIONS ? (
+        {/* A done week with nothing in it says so in a word (23 Oct), in the one empty box (9 Nov, Alex). */}
+        {weekLocked ? (sessions.length === 0 ? <div className="rls-card"><p className="rls-none">None</p></div> : null) : sessions.length + incoming < MAX_SESSIONS ? (
           <button
             // Where the strip's Add sessions lands (2 Nov: a live phase with no sessions).
             id="sessions"

@@ -364,8 +364,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
 
       {/* ---- All sheets, newest first, the closed ones (the open one is at the top until it is done): a log, the rows
           together as every log in the app (21 Oct, Alex). A row opens in place on its photos (the chevron after its title). */}
-      {/* Always there (23 Oct, Alex: to see where the sheets will go, before any is uploaded or even open): its heads and
-          None yet until the first sheet closes. */}
+      {/* Always there (23 Oct, Alex: to see where the sheets will go, before any is uploaded or even open). Until the first
+          sheet closes it is the one empty box, None yet alone (9 Nov, Alex: no column heads over nothing). */}
       {(
         <section className="rls-section">
           <div className="trn-weekhead">
@@ -374,6 +374,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
             </div>
           </div>
           <div className="rls-card rp-table">
+            {closed.length === 0 ? <p className="rls-none">None yet</p> : (
+            <>
             <div className="rp-thead" aria-hidden="true">
               <span>Date</span>
               <span>Name</span>
@@ -381,7 +383,6 @@ function Pictures({ clientId, firstName, plan }: Props) {
               <span>Weight</span>
               <span className="end">State</span>
             </div>
-            {closed.length === 0 && <p className="rls-none">None yet</p>}
             {/* Past one page, a full page's height on every page (.rd-steady: a row 52px and its hairline), so the pager
                 under the card never moves (6 Nov, Alex: admin audit; rule §8). */}
             <div className={logPages > 1 ? "rd-steady" : undefined} style={logPages > 1 ? ({ "--log-rows": LOG_PAGE, "--log-row": "53px", "--log-head": "0px" } as React.CSSProperties) : undefined}>
@@ -431,6 +432,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
               );
             })}
             </div>
+            </>
+            )}
           </div>
           {/* The shared pager, floating under the card (rule §8). */}
           <Pager

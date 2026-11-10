@@ -626,17 +626,27 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           ) : past && shown.length === 0 ? (
             // Ended with nothing on this rhythm: the one word, no + Metric (6 Nov, Alex: an ended phase look-only).
             <p className="rls-none">None</p>
+          ) : shown.length === 0 ? (
+            // Nothing asked on this rhythm: the one empty box, + Metric on its right (9 Nov, Alex; rls-empty).
+            <div className="rls-empty">
+              <span>None yet</span>
+              {adding ? (
+                <AddMetricRow library={plan.library} groups={plan.groups} have={rows.map((r) => r.name.toLowerCase())} onAdd={addMetric} onClose={() => setAdding(false)} alignEnd />
+              ) : (
+                <button type="button" className="rls-add" onClick={() => setAdding(true)}>
+                  <PlusIcon /> Metric
+                </button>
+              )}
+            </div>
           ) : (
             <>
-              {shown.length > 0 && (
-                <div className="rls-cols" aria-hidden="true" style={grid}>
-                  <span />
-                  <span>Metric</span>
-                  <span>Group</span>
-                  <span>Last</span>
-                  <span />
-                </div>
-              )}
+              <div className="rls-cols" aria-hidden="true" style={grid}>
+                <span />
+                <span>Metric</span>
+                <span>Group</span>
+                <span>Last</span>
+                <span />
+              </div>
               <SortableList ids={shown.map((m) => m.id)} label="metric" onMove={moveShown}>
                 {shown.map((m) => {
                   // Just added: there, faded and still, until the save gives it its number.
@@ -964,7 +974,7 @@ function RemoveMetricDialog({ metric: m, firstName, onRemove, onClose }: { metri
  *  search bar. Type for matches; the chevron opens the groups, a group its
  *  metrics. The list floats over the page, six rows then it scrolls, Create
  *  pinned at its foot. A pick becomes a row and the bar stays for the next. */
-function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: DraftMeasurements["library"]; groups: DraftMeasurements["groups"]; have: string[]; onAdd: (name: string, unit: string, group: string) => void; onClose: () => void }) {
+function AddMetricRow({ library, groups, have, onAdd, onClose, alignEnd = false }: { library: DraftMeasurements["library"]; groups: DraftMeasurements["groups"]; have: string[]; onAdd: (name: string, unit: string, group: string) => void; onClose: () => void; /** The list opens from the button's right end, for a + Metric on a card's right. */ alignEnd?: boolean }) {
   const [q, setQ] = useState("");
   const [browse, setBrowse] = useState(false);
   const [pack, setPack] = useState<string | null>(null);
@@ -1020,7 +1030,7 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
         <PopoverContent
           ref={pop}
           className="rd-addpop rls-findpop"
-          align="start"
+          align={alignEnd ? "end" : "start"}
           sideOffset={6}
           // Straight into the search: the bar is in the panel, which mounts after the row does.
           onOpenAutoFocus={(e) => {
