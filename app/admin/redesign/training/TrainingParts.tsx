@@ -382,92 +382,108 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
   const minW = 110 + 180 + labels.length * 210;
   const rows = all ? answers.slice(0, limit) : answers.slice(0, PREVIEW);
 
+  const addMenu = !locked && !full && sugs.length > 0 && (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger className="trn-q-plus">+ Add</DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="pb-menu trn-q-menu">
+        {sugs.map((p) => (
+          <DropdownMenuItem key={p.id} onSelect={() => add(p)}>
+            {p.label}
+            <small className="rd-menu-inuse">1–10</small>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  // No questions: the one empty box, its title on the page over it as every section's (9 Nov, Alex: "I need them all to be
+  // the same"; rls-empty, measurements.css).
+  if (labels.length === 0) {
+    return (
+      <section className="rls-section" aria-labelledby="trn-check-h">
+        <div className="trn-weekhead">
+          <h2 id="trn-check-h">After-workout check</h2>
+        </div>
+        <div className="rls-card">
+          <div className="rls-empty">
+            <span>No questions yet</span>
+            {addMenu}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     // One table (20 Oct, Alex: the averages jumped from the head row into the table when Answers opened, and the card
     // read as three things): the questions are its columns, each with its average in its head; the latest workouts under them.
     <section className="trn-check" aria-labelledby="trn-check-h">
       <div className="trn-check-head">
         <h2 id="trn-check-h">After-workout check</h2>
-        {!locked && !full && sugs.length > 0 && (
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="trn-q-plus">+ Add</DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="pb-menu trn-q-menu">
-              {sugs.map((p) => (
-                <DropdownMenuItem key={p.id} onSelect={() => add(p)}>
-                  {p.label}
-                  <small className="rd-menu-inuse">1–10</small>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        {addMenu}
       </div>
 
-      {labels.length === 0 ? (
-        <p className="trn-ans-empty">No questions yet</p>
-      ) : (
-        <div className="trn-ans-scroll">
-          <div className="trn-ans-table" style={{ minWidth: minW }}>
-            <div className="trn-ans-row trn-ans-cols" style={grid}>
-              <span>Date</span>
-              <span>Session</span>
-              {/* A question's head: its name, its average, and ✕ on hover to stop asking it (a removed one keeps its column, without the ✕). */}
-              {labels.map((l) => {
-                const q = list.find((x) => x.label === l);
-                const a = avg(l);
-                return (
-                  <span key={l} className={`trn-ans-q${q ? "" : " gone"}`}>
-                    <span className="trn-ans-qname">{l}</span>
-                    {q && q.kind && q.kind !== "scale" && <small>{q.kind === "number" ? q.unit || "Value" : "Text"}</small>}
-                    {a != null && <em className="trn-ans-avgval">Avg {a}</em>}
-                    {q && !locked && (
-                      <button type="button" className="trn-ans-x" aria-label={`Stop asking ${l}`} title={`Stop asking ${l}`} onClick={() => (answered(l) ? setRemoving(q) : remove(q))}>
-                        ✕
-                      </button>
-                    )}
-                  </span>
-                );
-              })}
-            </div>
-            {answers.length === 0 ? (
-              <div className="trn-ans-row trn-ans-nil">No answers yet</div>
-            ) : (
-              rows.map((it) => (
-                <Link key={it.dayId} href={href(it)} scroll={false} className="trn-ans-row" style={grid} title={`Open ${it.name}, ${it.weekLabel}`}>
-                  <span className="rd-logdate">{logDate(it.ended)}</span>
-                  <span className="trn-ans-session">
-                    {it.name} <small>{it.weekLabel}</small>
-                  </span>
-                  {labels.map((l) => (
-                    <span key={l} className="trn-ans-val" title={cell(it, l)}>
-                      {cell(it, l)}
-                    </span>
-                  ))}
-                </Link>
-              ))
-            )}
+      <div className="trn-ans-scroll">
+        <div className="trn-ans-table" style={{ minWidth: minW }}>
+          <div className="trn-ans-row trn-ans-cols" style={grid}>
+            <span>Date</span>
+            <span>Session</span>
+            {/* A question's head: its name, its average, and ✕ on hover to stop asking it (a removed one keeps its column, without the ✕). */}
+            {labels.map((l) => {
+              const q = list.find((x) => x.label === l);
+              const a = avg(l);
+              return (
+                <span key={l} className={`trn-ans-q${q ? "" : " gone"}`}>
+                  <span className="trn-ans-qname">{l}</span>
+                  {q && q.kind && q.kind !== "scale" && <small>{q.kind === "number" ? q.unit || "Value" : "Text"}</small>}
+                  {a != null && <em className="trn-ans-avgval">Avg {a}</em>}
+                  {q && !locked && (
+                    <button type="button" className="trn-ans-x" aria-label={`Stop asking ${l}`} title={`Stop asking ${l}`} onClick={() => (answered(l) ? setRemoving(q) : remove(q))}>
+                      ✕
+                    </button>
+                  )}
+                </span>
+              );
+            })}
           </div>
-          {answers.length > PREVIEW && (
-            <div className="trn-ans-foot">
-              {all && answers.length > limit && (
-                <button type="button" className="trn-ans-more" onClick={() => setLimit((n) => n + 10)}>
-                  Show more
-                </button>
-              )}
-              <button
-                type="button"
-                className="trn-ans-more"
-                onClick={() => {
-                  setAll((v) => !v);
-                  setLimit(10);
-                }}
-              >
-                {all ? "Show fewer" : `Show all ${answers.length}`}
-              </button>
-            </div>
+          {answers.length === 0 ? (
+            <div className="trn-ans-row trn-ans-nil">No answers yet</div>
+          ) : (
+            rows.map((it) => (
+              <Link key={it.dayId} href={href(it)} scroll={false} className="trn-ans-row" style={grid} title={`Open ${it.name}, ${it.weekLabel}`}>
+                <span className="rd-logdate">{logDate(it.ended)}</span>
+                <span className="trn-ans-session">
+                  {it.name} <small>{it.weekLabel}</small>
+                </span>
+                {labels.map((l) => (
+                  <span key={l} className="trn-ans-val" title={cell(it, l)}>
+                    {cell(it, l)}
+                  </span>
+                ))}
+              </Link>
+            ))
           )}
         </div>
-      )}
+        {answers.length > PREVIEW && (
+          <div className="trn-ans-foot">
+            {all && answers.length > limit && (
+              <button type="button" className="trn-ans-more" onClick={() => setLimit((n) => n + 10)}>
+                Show more
+              </button>
+            )}
+            <button
+              type="button"
+              className="trn-ans-more"
+              onClick={() => {
+                setAll((v) => !v);
+                setLimit(10);
+              }}
+            >
+              {all ? "Show fewer" : `Show all ${answers.length}`}
+            </button>
+          </div>
+        )}
+      </div>
       <Dialog open={removing != null} onOpenChange={(o) => !o && setRemoving(null)}>
         {removing && (
           <ConfirmDialog

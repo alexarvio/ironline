@@ -254,7 +254,7 @@
 .rd.rh .rh-side-line b { flex: none; font-size: 13px; font-weight: 500; color: #141a24; }
 .rd.rh .rh-side-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .rd.rh .rh-side-missed { flex: none; font-weight: 600; color: #b8471f; }
-.rd.rh .rh-side-none { color: #98a2b3; }
+.rd.rh .rh-side-none { color: #8b93a1; }
 
 /* ---- Activity: rows in one card, no line above the first (design rules 8), the whole row a way in. On a narrow
    page the kinds' capsule scrolls inside its row rather than widening the page. */

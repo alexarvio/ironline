@@ -256,7 +256,4 @@
 .rd.rp .rp-cap-remove:focus-visible { outline: none; text-decoration: underline; text-decoration-color: #c5ccd8; text-underline-offset: 4px; }
 @media (hover: none) { .rd.rp .rp-cap-remove { opacity: 1; } }
 
-/* All sheets before any has closed (23 Oct): its heads, then None yet as a row, the shared empty word (`.rls-none`, 3 Nov).
-   An empty card is the word alone on the left, midway down (2 Nov, Alex): 16px over and under, 18px in (the card's own
-   room goes in draft.css); measurements.css's 14/6 can land after draft.css here, so it is said again. */
-.rd.rp .rls-card > .rls-none:only-child, .rd.rp .rls-card.rp-table > .rls-none { padding: 16px 18px; }
+/* All sheets before any has closed: None yet alone, the one empty box (9 Nov, Alex; draft.css). */

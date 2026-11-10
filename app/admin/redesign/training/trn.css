@@ -68,8 +68,6 @@
 /* An ended programme's name is words, not a field (23 Oct). */
 .rd.trn .trn-name-btn.ro { cursor: default; }
 .rd.trn .trn-name-btn.ro:hover { border-bottom-color: transparent; }
-/* A done week with no sessions (23 Oct). */
-.rd.trn .trn-none { margin: 2px 4px 0; font-size: 14px; font-weight: 500; color: var(--trn-muted); }
 /* Typing in it keeps the title's height (21 Oct: it grew 2px and the row moved). */
 .rd.trn .trn-name-input { max-width: 100%; height: 32px; padding: 0; border: 0; border-bottom: 1px solid var(--trn-ink); border-radius: 0; background: none; box-sizing: border-box; font: inherit; font-size: 26px; font-weight: 600; line-height: 31px; letter-spacing: -0.01em; color: var(--trn-ink); outline: none; }
 /* The state tag wears its state's colours (stateTagStyle, inline): Live green, Scheduled blue, Draft peach, Past grey (20 Oct, Alex). */
@@ -395,7 +393,6 @@ body:has(.dlh) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background:
 .rd.trn .trn-check-head { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 11px 0 17px; }
 .rd.trn .trn-check-head h2 { margin: 0; font-size: 15px; font-weight: 600; white-space: nowrap; }
 .rd.trn .trn-check-head .trn-q-plus { margin-left: auto; }
-.rd.trn .trn-ans-empty { margin: 0; padding: 0 18px 16px; font-size: 13px; font-weight: 500; color: var(--trn-muted); }
 .rd.trn .trn-ans-q { display: inline-flex; align-items: center; gap: 8px; }
 .rd.trn .trn-ans-qname { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .rd.trn .trn-ans-q small { font-size: 10.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--trn-faint); }
@@ -442,7 +439,6 @@ body:has(.dlh) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background:
 .rd.trn .trn-ans-row { border-top-color: var(--trn-line); }
 /* Inside the check's 1px border (6 Nov, Alex: admin audit), 1px less in from each side, so the columns stay where they were. */
 .rd.trn .trn-check .trn-ans-row { padding: 0 17px; }
-.rd.trn .trn-check .trn-ans-empty { padding: 0 17px 16px; }
 .rd.trn .trn-ans-avgval { flex: none; font-style: normal; color: var(--trn-ink); }
 .rd.trn .trn-ans-session { color: var(--trn-ink); font-weight: 600; }
 .rd.trn .trn-ans-session small { margin-left: 6px; font-weight: 500; color: var(--trn-muted); }
