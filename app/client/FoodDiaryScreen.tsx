@@ -2695,7 +2695,8 @@ const DEFAULT_DAY_CARDS: EditCard[] = [
   { key: "dinner", name: "Dinner", picture: null, thumb: null, items: [] },
   { key: "snacks", name: "Snacks", picture: null, thumb: null, items: [] },
 ];
-const DAY_EASE = "cubic-bezier(.22, 1, .36, 1)";
+// A soft start: with an ease-out the far cards jumped 50px a frame at first, which reads as lag.
+const DAY_EASE = "cubic-bezier(.32, 0, .16, 1)";
 
 // Inside a day (10 Nov, Alex: A of docs/boards/saved-cards-mockup.html): its name as the page's title, Rename and Delete in
 // the ⋯ at the top. A tap on its card deploys it (10 Nov, Alex: "bum bum bum, they expand"): the cards come out from behind
@@ -2782,7 +2783,7 @@ function SavedDayScreen({
       el.style.willChange = "transform";
       const start = { transform: starts[i], ...(from.el ? {} : { opacity: 0 }) };
       const end = { transform: "none", ...(from.el ? {} : { opacity: 1 }) };
-      const move = el.animate([start, end], { duration: 540, delay: 80 + i * 90, easing: DAY_EASE, fill: "backwards" });
+      const move = el.animate([start, end], { duration: 640, delay: 60 + i * 70, easing: DAY_EASE, fill: "backwards" });
       move.onfinish = () => rest(el);
       running.push(move);
     });
