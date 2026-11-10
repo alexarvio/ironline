@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "../lib/auth";
 import { touchPresence } from "../lib/presence";
 import { getData } from "../lib/db";
-import { logoutAction } from "../lib/auth-actions";
 import {
   getAssignmentsForDay,
   getFreeSessions,
@@ -1142,8 +1141,8 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       </header>
 
       <div className="st-body">
-      {/* In order of use (10 Nov, Alex): yours (details, gyms, card pictures, each one row until pressed), then how the app
-          behaves, what it connects to, your data. */}
+      {/* Six rows, each opening (10 Nov, Alex), in order of use: yours (details, gyms, card pictures), then how the app
+          behaves, what it connects to, your data. Log out is on the burger. */}
       <MyDetailsCard
         clientId={CLIENT_ID}
         email={profile.email ?? null}
@@ -1171,8 +1170,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         </div>
       </SettingsFold>
 
-      <section className="home-dark-section">
-        <span className="home-dark-section-title">Preferences</span>
+      <SettingsFold title="Preferences">
         <div className="home-dark-rows">
           <PushToggle publicKey={pushKey} nativeReady={fcmConfigured()} />
           {toggleDefs.map((t) => {
@@ -1194,12 +1192,11 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
             );
           })}
         </div>
-      </section>
+      </SettingsFold>
 
       <ConnectedApps coachName={getCoachFirstName(CLIENT_ID)} />
 
-      <section className="home-dark-section">
-        <span className="home-dark-section-title">Data</span>
+      <SettingsFold title="Data">
         <div className="home-dark-rows">
           <div className="settings-data-row">
             <div className="home-dark-row-title">Export my data</div>
@@ -1212,14 +1209,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           </a>
           <DeleteAccountRow coachName={getCoachFirstName(CLIENT_ID)} passwordless={clerkOn()} />
         </div>
-      </section>
-
-      <form action={logoutAction}>
-        <button type="submit" className="settings-logout-btn">
-          Log out
-        </button>
-      </form>
-      <div className="settings-footnote"><Bars parts={["Norcoach", "Full Potential Coaching"]} /></div>
+      </SettingsFold>
       </div>
     </div>
   );
