@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
-import AddMealSheet from "./AddMealSheet";
+import AddMealSheet, { SavedMealCards } from "./AddMealSheet";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { NorCoachLogo } from "../components/NorCoachLogo";
-import DoneCheck from "../components/DoneCheck";
 import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
 import { newOnceKey } from "../lib/onceKey";
 import {
@@ -16,16 +15,13 @@ import {
   addSavedMealAction,
   addSavedMealCardAction,
   deleteSavedDayAction,
-  saveDayAction,
   copyFoodDayAction,
   deleteSavedMealAction,
   saveMealAction,
   getFoodDiaryAction,
-  logCaloriesAction,
   lookupBarcodeAction,
   searchPackagedAction,
   removeFoodEntryAction,
-  pushFoodDayAction,
   removeFoodMealAction,
   removeMealPhotoAction,
   uploadMealPhotoAction,
@@ -336,10 +332,12 @@ export default function FoodDiaryScreen({
       await addSavedMealCardAction(fd);
       const next = await getFoodDiaryAction(clientId, date);
       if (next) {
-        setDiary(next);
+        setDiary((d) => (d.date === date ? next : d));
+        setPanel(null);
         setFolded(new Set(next.meals.map((m) => m.id)));
       }
       setAddingMeal(false);
+      setSavedScreen(null);
     });
   };
   // Leaving the name box: an empty or untouched name means the meal was not wanted.
@@ -397,15 +395,24 @@ export default function FoodDiaryScreen({
     });
   };
   // Naming the day to save it.
-  const [namingDay, setNamingDay] = useState(false);
   // A typed figure's Edit: the strip becomes the box again.
-  const [quickKcal, setQuickKcal] = useState(false);
   // The row whose bin was tapped: it becomes the question until answered.
   const [askRemove, setAskRemove] = useState<number | null>(null);
   // The saved day whose × was tapped, likewise.
   const [askForgetDay, setAskForgetDay] = useState<number | null>(null);
-  // The Copy a day card, folded until opened.
-  const [copyOpen, setCopyOpen] = useState(false);
+  // Saved days or Saved meals, the screen to pick from (10 Nov, Alex).
+  const [savedScreen, setSavedScreen] = useState<"days" | "meals" | null>(null);
+  const savedRow = useRef<HTMLDivElement>(null);
+  // The diary out of reach of the keyboard and a screen reader while its screen is over it, as a gym's page does.
+  const savedOpen = !!savedScreen;
+  useEffect(() => {
+    const layer = savedRow.current?.closest<HTMLElement>(".app-layer");
+    if (!layer || !savedOpen) return;
+    layer.inert = true;
+    return () => {
+      layer.inert = false;
+    };
+  }, [savedOpen]);
   useDropOnTapOutside(askRemove != null, setAskRemove);
   useDropOnTapOutside(askForgetDay != null, setAskForgetDay);
   const forgetHold = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -722,7 +729,6 @@ export default function FoodDiaryScreen({
   const relative = diary.dateLabel === "Today" || diary.dateLabel === "Yesterday" ? diary.dateLabel : null;
   const dayTitle = relative ?? weekday;
   const daySub = `${relative ? `${weekday} ` : ""}${dayWords(date, { long: true })}`;
-  const dayWord = relative ? relative.toLowerCase() : weekday;
 
   return (
     <div className="fdi-screen app-layer-main">
@@ -843,190 +849,6 @@ export default function FoodDiaryScreen({
             dayType={diary.dayType}
             onDayType={chooseDay}
           />
-          {/* Pushing the day's calories into the log the coach reads: the
-              client decides when the day is done, today or later. */}
-          {(() => {
-            const total = Math.round(diary.eaten.kcal);
-            const logged = diary.loggedKcal;
-            // No food on the day, the calories typed in as one figure (5 Oct).
-            const typed = total === 0 && logged != null;
-            const same = logged != null && (logged === total || typed);
-            const logTyped = (raw: string) => {
-              const fd = new FormData();
-              fd.set("clientId", String(clientId));
-              fd.set("date", date);
-              fd.set("kcal", raw);
-              fd.set("dayType", diary.dayType);
-              setQuickKcal(false);
-              startLoad(async () => {
-                await logCaloriesAction(fd);
-                const next = await getFoodDiaryAction(clientId, date);
-                if (next) setDiary(next);
-              });
-            };
-            const push = () => {
-              const fd = new FormData();
-              fd.set("clientId", String(clientId));
-              fd.set("date", date);
-              startLoad(async () => {
-                await pushFoodDayAction(fd);
-                const next = await getFoodDiaryAction(clientId, date);
-                if (next) setDiary(next);
-              });
-            };
-            return (
-              <>
-              {/* Nothing added for the day: the strip is the box to type the
-                  day's calories as one figure (5 Oct); food added shows its
-                  total here instead. Edit opens a typed figure again. */}
-              {total === 0 && (!typed || quickKcal) ? (
-                <form
-                  className="fdi-push fdi-push-kcal"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const raw = String(new FormData(e.currentTarget).get("kcal") ?? "").replace(/[\s.,]/g, "");
-                    if (raw && !/^\d{1,5}$/.test(raw)) return;
-                    if (!raw && logged == null) return;
-                    logTyped(raw);
-                  }}
-                >
-                  <span className="fdi-quick-kcal">
-                    <input
-                      key={date}
-                      name="kcal"
-                      type="text"
-                      inputMode="numeric"
-                      placeholder={`Kcal eaten ${relative ? dayWord : `on ${weekday}`}`}
-                      defaultValue={logged != null ? String(logged) : ""}
-                      maxLength={6}
-                      autoComplete="off"
-                      autoFocus={quickKcal}
-                      aria-label={`Calories eaten ${relative ? dayWord : `on ${weekday}`}`}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") setQuickKcal(false);
-                      }}
-                    />
-                    <small>kcal</small>
-                  </span>
-                  <button type="submit" className="fdi-push-btn" disabled={loading}>
-                    Log
-                  </button>
-                </form>
-              ) : (
-              <div className={`fdi-push${same ? " done" : ""}`}>
-                <span className="fdi-push-text">
-                  {typed ? (
-                    <>
-                      <b>{n(logged)} kcal</b> logged for {dayWord}
-                    </>
-                  ) : same ? (
-                    <>
-                      <b>{n(total)} kcal</b> logged for {dayWord}
-                    </>
-                  ) : logged != null ? (
-                    <>
-                      <Bars parts={[<><b>{n(total)} kcal</b> eaten</>, `${n(logged)} logged`]} />
-                    </>
-                  ) : (
-                    <>
-                      <b>{n(total)} kcal</b> eaten {relative ? dayWord : `on ${weekday}`}
-                    </>
-                  )}
-                </span>
-                {total > 0 && !same && (
-                  <button type="button" className="fdi-push-btn" onClick={push} disabled={loading}>
-                    {logged != null ? "Update log" : "Log"}
-                  </button>
-                )}
-                {typed && (
-                  <button type="button" className="fdi-push-edit" onClick={() => setQuickKcal(true)} disabled={loading}>
-                    Edit
-                  </button>
-                )}
-                {/* Logged, the one done check (3 Nov, Alex), after the bookmark. */}
-                {same && <DoneCheck size={22} className="fdi-push-tick" />}
-                {/* Keeping the whole day to log again: outline to save, filled once it is. */}
-                {total > 0 &&
-                  (diary.savedDayAs && diary.savedDayId != null ? (
-                    <button
-                      type="button"
-                      className="fdi-push-mark saved"
-                      title={`Saved as ${diary.savedDayAs} · tap to unsave`}
-                      aria-label={`Saved as ${diary.savedDayAs}. Unsave`}
-                      disabled={loading}
-                      onClick={() => {
-                        const fd = new FormData();
-                        fd.set("clientId", String(clientId));
-                        fd.set("id", String(diary.savedDayId));
-                        startLoad(async () => {
-                          await deleteSavedDayAction(fd);
-                          const next = await getFoodDiaryAction(clientId, date);
-                          if (next) setDiary(next);
-                        });
-                      }}
-                    >
-                      <BookmarkIcon filled />
-                    </button>
-                  ) : (
-                    <button type="button" className="fdi-push-mark" onClick={() => setNamingDay(true)} disabled={loading} aria-label="Save this day to log again">
-                      <BookmarkIcon />
-                    </button>
-                  ))}
-              </div>
-              )}
-              {/* Naming the day to save it: a row that folds out under the strip. */}
-              <div className={`fdi-fold fdi-push-fold${namingDay ? "" : " folding"}`} aria-hidden={!namingDay}>
-                <div className="fdi-fold-inner">
-                  <div className="fdi-push-name-row">
-                    {namingDay && (
-                      <form
-                        className="fdi-push-name"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
-                          if (!name) return;
-                          const fd = new FormData();
-                          fd.set("clientId", String(clientId));
-                          fd.set("date", date);
-                          fd.set("name", name);
-                          // Its one-time key (6 Nov): sent again once the signal is back, it saves the day once.
-                          fd.set("onceKey", newOnceKey());
-                          setNamingDay(false);
-                          startLoad(async () => {
-                            await saveDayAction(fd);
-                            const next = await getFoodDiaryAction(clientId, date);
-                            if (next) setDiary(next);
-                          });
-                        }}
-                      >
-                        <input
-                          id="fdi-save-day-name"
-                          name="name"
-                          type="text"
-                          placeholder="Name this day"
-                          maxLength={40}
-                          autoComplete="off"
-                          autoFocus
-                          aria-label="Name for the saved day"
-                          onKeyDown={(e) => {
-                            if (e.key === "Escape") setNamingDay(false);
-                          }}
-                          onBlur={(e) => {
-                            if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingDay(false);
-                          }}
-                        />
-                        <button type="submit" className="fdi-push-btn">
-                          Save
-                        </button>
-                      </form>
-                    )}
-                  </div>
-                </div>
-              </div>
-              </>
-            );
-          })()}
-
           <div className="nd-body fdi-list">
             {/* One card, folded, holding the days that can be copied onto this
                 one: the last day with food, and the days the client saved.
@@ -1039,10 +861,12 @@ export default function FoodDiaryScreen({
               const after = async () => {
                 const next = await getFoodDiaryAction(clientId, date);
                 if (next) {
-                  setDiary(next);
-                  // Every card of the day in sight (10 Nov, Alex): the list folds away and each card is shut, as one open at
-                  // a time would have them; it used to open some and not others.
-                  setCopyOpen(false);
+                  // Only if the diary is still on that day: Back works while it saves.
+                  setDiary((d) => (d.date === date ? next : d));
+                  // Every card of the day in sight (10 Nov, Alex): back on the diary with each card shut, as one open at a time
+                  // would have them; it used to open some and not others.
+                  setSavedScreen(null);
+                  setPanel(null);
                   setFolded(new Set(next.meals.map((m) => m.id)));
                 }
               };
@@ -1106,61 +930,89 @@ export default function FoodDiaryScreen({
                 onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
               });
               return (
-                <section className="fdi-copy">
-                  <button
-                    type="button"
-                    className="fdi-copy-head"
-                    onClick={() => {
-                      setCopyOpen((o) => !o);
-                      // Folding it away is not answering, so the question goes with it.
-                      setAskForgetDay(null);
-                    }}
-                    aria-expanded={copyOpen}
-                  >
-                    <span className="fdi-copy-title">Saved days</span>
-                    <span className={`fdi-copy-chev${copyOpen ? " up" : ""}`} aria-hidden="true">
+                <>
+                  {/* Saved days and Saved meals side by side, each its own screen to pick from (10 Nov, Alex). */}
+                  <div ref={savedRow} className="fdi-saved-row">
+                    <button type="button" className="fdi-saved-pill" onClick={() => setSavedScreen("days")}>
+                      <BookmarkIcon />
+                      <span>Saved days</span>
                       <ChevronDownIcon />
-                    </span>
-                  </button>
-                  <div className={`fdi-fold${copyOpen ? "" : " folding"}`}>
-                    <div className="fdi-fold-inner">
-                      {last && (
-                        <div className="fdi-copy-row">
-                          <span className="fdi-copy-main">
-                            <span className="fdi-copy-name">{label === "Yesterday" ? "Yesterday" : label}</span>
-                            <span className="fdi-copy-sub">{n(kcal)} kcal</span>
-                          </span>
-                          <button type="button" className="fdi-copy-use" onClick={copyLast} disabled={loading}>
-                            Use
-                          </button>
-                        </div>
-                      )}
-                      {diary.savedDays.map((d) => (
-                        <div key={d.id} className={`fdi-copy-row${askForgetDay === d.id ? " asking" : ""}`} {...holdRow(d.id)}>
-                          <span className="fdi-copy-main">
-                            <span className="fdi-copy-name">{d.name}</span>
-                            <span className="fdi-copy-sub">{n(d.kcal)} kcal</span>
-                          </span>
-                          {askForgetDay === d.id ? (
-                            <span className="fdi-row-ask">
-                              <button type="button" className="fdi-confirm-keep" onClick={() => setAskForgetDay(null)} autoFocus>
-                                Keep
-                              </button>
-                              <button type="button" className="fdi-confirm-remove" onClick={() => forget(d.id)} disabled={loading}>
-                                Forget
-                              </button>
-                            </span>
-                          ) : (
-                            <button type="button" className="fdi-copy-use" onClick={() => use(d.id)} disabled={loading}>
-                              Use
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      {diary.savedDays.length > 0 ? <p className="fdi-copy-foot">Hold a saved day to forget it</p> : <p className="fdi-copy-empty">No saved days</p>}
-                    </div>
+                    </button>
+                    <button type="button" className="fdi-saved-pill" onClick={() => setSavedScreen("meals")}>
+                      <BookmarkIcon />
+                      <span>Saved meals</span>
+                      <ChevronDownIcon />
+                    </button>
                   </div>
-                </section>
+                  {savedScreen && savedRow.current?.closest(".app-layer")?.parentElement && createPortal(
+                    <div className="app-layer app-layer-push cn-screen fdi-saved-screen">
+                      <header className="cn-header">
+                        <button
+                          type="button"
+                          className="cn-icon-btn"
+                          onClick={() => {
+                            setSavedScreen(null);
+                            setAskForgetDay(null);
+                          }}
+                          aria-label="Back"
+                        >
+                          <ChevronLeftIcon />
+                        </button>
+                        <div className="cn-header-titles">
+                          <h1 className="cn-title">{savedScreen === "days" ? "Saved days" : "Saved meals"}</h1>
+                        </div>
+                        <span className="cn-icon-spacer" aria-hidden="true" />
+                      </header>
+                      <main className="cn-body">
+                        {savedScreen === "meals" ? (
+                          diary.saved.length > 0 ? (
+                            <SavedMealCards saved={diary.saved} busy={loading} picture={(p) => pic(p, 1080)} onCopy={copyMealCard} />
+                          ) : (
+                            <p className="fdi-saved-none">None yet</p>
+                          )
+                        ) : (
+                          <>
+                            {last && (
+                              <div className="fdi-saved-day">
+                                <span className="fdi-copy-main">
+                                  <span className="fdi-copy-name">{label}</span>
+                                  <span className="fdi-copy-sub">{n(kcal)} kcal</span>
+                                </span>
+                                <button type="button" className="fdi-copy-use" onClick={copyLast} disabled={loading}>
+                                  Use
+                                </button>
+                              </div>
+                            )}
+                            {diary.savedDays.map((d) => (
+                              <div key={d.id} className="fdi-saved-day" {...holdRow(d.id)}>
+                                <span className="fdi-copy-main">
+                                  <span className="fdi-copy-name">{d.name}</span>
+                                  <span className="fdi-copy-sub">{n(d.kcal)} kcal</span>
+                                </span>
+                                {askForgetDay === d.id ? (
+                                  <span className="fdi-row-ask">
+                                    <button type="button" className="fdi-confirm-keep" onClick={() => setAskForgetDay(null)} autoFocus>
+                                      Keep
+                                    </button>
+                                    <button type="button" className="fdi-confirm-remove" onClick={() => forget(d.id)} disabled={loading}>
+                                      Forget
+                                    </button>
+                                  </span>
+                                ) : (
+                                  <button type="button" className="fdi-copy-use" onClick={() => use(d.id)} disabled={loading}>
+                                    Use
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            {diary.savedDays.length > 0 ? <p className="fdi-saved-foot">Hold a saved day to forget it</p> : !last && <p className="fdi-saved-none">None yet</p>}
+                          </>
+                        )}
+                      </main>
+                    </div>,
+                    savedRow.current?.closest(".app-layer")?.parentElement!
+                  )}
+                </>
               );
             })()}
             {/* A photo card a meal (9 Nov, Alex: option A of docs/boards/meal-cards-mockup.html), its foods folding out under

@@ -9471,6 +9471,21 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
 
 export type { CalorieLog } from "./db";
 
+/** Each day's calories, newest first (10 Nov, Alex: the diary's Log button gone): the diary's total where food was logged,
+    else a figure typed or pushed before. */
+export function listCalorieDays(clientId: number, limit = 30): CalorieLog[] {
+  const data = getData();
+  const days = new Map<string, CalorieLog>();
+  for (const c of data.calorie_logs) if (c.client_id === clientId) days.set(c.date, c);
+  const food = new Map<string, number>();
+  for (const e of data.food_entries) if (e.client_id === clientId) food.set(e.date, (food.get(e.date) ?? 0) + (Number(e.kcal) || 0));
+  for (const [date, kcal] of food) {
+    const log = days.get(date);
+    days.set(date, { ...(log ?? { id: 0, client_id: clientId, date, logged_at: date }), kcal: Math.round(kcal), day_type: foodDayType(clientId, date) } as CalorieLog);
+  }
+  return [...days.values()].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, limit);
+}
+
 export function getCalorieLog(clientId: number, date: string): CalorieLog | null {
   return getData().calorie_logs.find((c) => c.client_id === clientId && c.date === date) ?? null;
 }
@@ -11664,7 +11679,7 @@ function calorieSeries(clientId: number): { name: string; unit: string; series: 
   return {
     name: "Calories logged",
     unit: "kcal",
-    series: listCalorieLogs(clientId, 100000)
+    series: listCalorieDays(clientId, 100000)
       .map((c) => ({ date: c.date, value: c.kcal }))
       .sort((a, b) => (a.date < b.date ? -1 : 1)),
   };

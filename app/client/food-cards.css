@@ -6,6 +6,22 @@
 .fdc-meal.fdc-meal, .fdc-meal.fdc-meal.lifted { border-radius: 20px; }
 
 .fdc-card.fdc-card { position: relative; flex: none; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end; height: 132px; padding: 14px; border-radius: 20px; color: #fff; cursor: pointer; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+/* Saved days and Saved meals (10 Nov, Alex): two pills sharing the row, each opening its own screen. */
+.fdi-saved-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 6px; }
+.fdi-saved-pill { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 56px; padding: 0 12px 0 14px; border: 0; border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.fdi-saved-pill span { flex: 1; min-width: 0; text-align: left; white-space: nowrap; }
+.fdi-saved-pill svg { flex: none; width: 18px; height: 18px; }
+.fdi-saved-pill svg:last-child { width: 16px; height: 16px; color: #98A2B3; transform: rotate(-90deg); }
+.fdi-saved-screen.cn-screen, .fdi-saved-screen .cn-header { background: #F5F6F8; }
+.fdi-saved-screen .cn-body { padding: 8px 16px 32px; overflow-y: auto; }
+.fdi-saved-screen .ams-cards { max-height: none; overflow: visible; gap: 10px; }
+.fdi-saved-day { display: flex; align-items: center; gap: 12px; min-height: 60px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.fdi-saved-screen .fdi-copy-name { font-size: 15px; font-weight: 500; color: #141a24; }
+.fdi-saved-screen .fdi-copy-sub { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.fdi-saved-screen .fdi-copy-use { height: 40px; padding: 0 0 0 12px; border: 0; background: none; font-size: 13px; font-weight: 600; color: #141a24; }
+.fdi-saved-foot, .fdi-saved-none { margin: 16px 0 0; font-size: 12px; font-weight: 500; color: #8b93a1; }
+.fdi-saved-none { font-size: 13px; }
+
 /* Add a meal's Copy a meal (10 Nov, Alex): every saved meal as its card, scrolling inside the pop-up. */
 .ams-cards { display: flex; flex-direction: column; gap: 8px; max-height: min(62vh, 520px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .ams-card.fdc-card.fdc-card { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; }

@@ -23,7 +23,7 @@ import {
   isCardioDone,
   getLastMeetingRecap,
   getUpNextSession,
-  listCalorieLogs,
+  listCalorieDays,
   getDeployedProgram,
   getClientExerciseNotes,
   listClientGyms,
@@ -1068,7 +1068,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     return kcal > 0 ? kcal : null;
   };
   const weekAgo = addDays(today, -7);
-  const lastWeek = listCalorieLogs(CLIENT_ID, 14)
+  const lastWeek = listCalorieDays(CLIENT_ID, 14)
     .filter((c) => c.date < today && c.date >= weekAgo && c.kcal != null)
     .map((c) => {
       const kcal = c.kcal as number;
