@@ -316,7 +316,7 @@ export default function FoodDiaryScreen({
   const addMealNow = () => {
     releaseKeyboardHold();
     const temp: FoodMeal = `new-${Date.now()}`;
-    setDiary((d) => ({ ...d, meals: [...d.meals, { id: temp, label: "New meal", own: true, kcal: 0, protein: 0, carbs: 0, fat: 0, entries: [], savedAs: null, savedMealId: null, photo: null, picture: null, thumb: null, comments: [] }] }));
+    setDiary((d) => ({ ...d, meals: [{ id: temp, label: "New meal", own: true, kcal: 0, protein: 0, carbs: 0, fat: 0, entries: [], savedAs: null, savedMealId: null, photo: null, picture: null, thumb: null, comments: [] }, ...d.meals] }));
     setNamingId(temp);
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -1985,6 +1985,7 @@ function EditableMealCards({
   renderAdd,
   stacked = false,
   onOpen,
+  onReorder,
   onCards,
   refresh,
   actions,
@@ -1992,6 +1993,8 @@ function EditableMealCards({
 }: {
   /** A saved day in the list: two edges drawn behind the card. */
   stacked?: boolean;
+  /** Hold a card's name and drag, as on a day. */
+  onReorder?: (keys: string[]) => Promise<boolean>;
   /** A tap opens something else rather than folding the card's foods. */
   onOpen?: (c: EditCard, el: HTMLElement) => void;
   clientId: number;
@@ -2030,6 +2033,88 @@ function EditableMealCards({
   const photoInput = useRef<HTMLInputElement>(null);
   const photoFor = useRef<EditCard | null>(null);
   const noApply = () => {};
+  const list = useRef<HTMLElement>(null);
+  const cardEls = useRef(new Map<string, HTMLDivElement>());
+
+  // Hold the name to move the card, as on a day: the others slide out of its way, let go and the order is saved.
+  const [drag, setDrag] = useState<{ from: number; to: number; dy: number; height: number } | null>(null);
+  const hold = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null);
+  const dragging = useRef<{ from: number; to: number; startY: number; mids: number[] } | null>(null);
+  const draggedAt = useRef(0);
+  const holdStart = (e: React.PointerEvent<HTMLElement>, index: number) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const el = e.currentTarget;
+    const { pointerId, clientX: x, clientY: y } = e;
+    const timer = setTimeout(() => {
+      hold.current = null;
+      el.setPointerCapture(pointerId);
+      const rects = cards.map((c) => cardEls.current.get(c.key)?.getBoundingClientRect());
+      dragging.current = { from: index, to: index, startY: y, mids: rects.map((r) => (r ? r.top + r.height / 2 : 0)) };
+      if (navigator.vibrate) navigator.vibrate(10);
+      setDrag({ from: index, to: index, dy: 0, height: (rects[index]?.height ?? 132) + CARD_GAP });
+    }, 320);
+    hold.current = { timer, x, y };
+  };
+  const holdMove = (e: React.PointerEvent<HTMLElement>) => {
+    const h = hold.current;
+    if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 14) {
+      clearTimeout(h.timer);
+      hold.current = null;
+    }
+    const d = dragging.current;
+    if (!d) return;
+    e.preventDefault();
+    const dy = e.clientY - d.startY;
+    const centre = d.mids[d.from] + dy;
+    let to = d.from;
+    if (dy < 0) {
+      const i = d.mids.findIndex((m, idx) => idx < d.from && centre < m);
+      if (i >= 0) to = i;
+    } else if (dy > 0) {
+      for (let i = d.mids.length - 1; i > d.from; i--) {
+        if (centre > d.mids[i]) {
+          to = i;
+          break;
+        }
+      }
+    }
+    d.to = to;
+    setDrag((prev) => (prev ? { ...prev, dy, to } : prev));
+  };
+  const holdEnd = (e: React.PointerEvent<HTMLElement>) => {
+    if (hold.current) {
+      clearTimeout(hold.current.timer);
+      hold.current = null;
+    }
+    const d = dragging.current;
+    if (!d) return;
+    dragging.current = null;
+    draggedAt.current = e.timeStamp;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
+    setDrag(null);
+    if (d.to === d.from || !onReorder) return;
+    const was = cards;
+    const next = [...cards];
+    const [moved] = next.splice(d.from, 1);
+    next.splice(d.to, 0, moved);
+    onCards(() => next);
+    onReorder(next.map((c) => c.key))
+      .catch(() => false)
+      .then((ok) => {
+        if (!ok) onCards(() => was);
+      });
+  };
+  const shiftFor = (index: number): string | undefined => {
+    if (!drag) return undefined;
+    if (index === drag.from) return `translateY(${drag.dy}px)`;
+    if (drag.from < drag.to && index > drag.from && index <= drag.to) return `translateY(-${drag.height}px)`;
+    if (drag.to < drag.from && index >= drag.to && index < drag.from) return `translateY(${drag.height}px)`;
+    return undefined;
+  };
 
   // What is on screen changes at once. Refused or with no signal, that card alone goes back to how it stood before its
   // first change still on its way, and says so.
@@ -2075,7 +2160,9 @@ function EditableMealCards({
     const temp = `-${Date.now()}`;
     setCreateFailed(false);
     const card: EditCard = { key: temp, name: clean, picture: null, thumb: null, items: [] };
-    onCards((list) => (addAt === "top" ? [card, ...list] : [...list, card]));
+    // Always on top (10 Nov, Alex), brought into view when the button that added it is at the foot.
+    onCards((all) => [card, ...all]);
+    if (addAt === "bottom") list.current?.closest(".cn-body")?.scrollTo({ top: 0, behavior: "smooth" });
     actions
       .create(clean)
       .catch(() => null)
@@ -2165,6 +2252,8 @@ function EditableMealCards({
   const tapCard = (e: React.MouseEvent, c: EditCard) => {
     if ((e.target as Element).closest(".fdc-tools, .fdc-more, input")) return;
     if (renaming === c.key || locked || isTempCard(c.key)) return;
+    // The click a drag's release leaves behind is not a tap.
+    if (draggedAt.current && e.timeStamp - draggedAt.current < 400) return;
     if (onOpen) return onOpen(c, e.currentTarget as HTMLElement);
     if (panel?.key === c.key && panel.kind !== "search") {
       (document.activeElement as HTMLElement | null)?.blur();
@@ -2219,7 +2308,7 @@ function EditableMealCards({
           Not saved. Try again
         </p>
       )}
-      <section className="fdi-meals fdc-meals">
+      <section ref={list} className="fdi-meals fdc-meals">
         <input
           ref={photoInput}
           type="file"
@@ -2233,7 +2322,7 @@ function EditableMealCards({
             if (file && c) sendPhoto(c, file);
           }}
         />
-        {cards.map((c) => {
+        {cards.map((c, index) => {
           const naming = renaming === c.key;
           const here = panel?.key === c.key ? panel : null;
           const filled = c.items.length > 0;
@@ -2244,7 +2333,15 @@ function EditableMealCards({
           const tot = (k: MacroKey) => Math.round(c.items.reduce((t, i) => t + i[k], 0));
           const shownPicture = c.picture ?? c.fallback?.picture ?? null;
           return (
-            <div key={c.key} className={`fdi-meal fdc-meal${unfolded ? " open" : ""}${stacked ? " fdi-stack" : ""}`}>
+            <div
+              key={c.key}
+              ref={(el) => {
+                if (el) cardEls.current.set(c.key, el);
+                else cardEls.current.delete(c.key);
+              }}
+              className={`fdi-meal fdc-meal${unfolded ? " open" : ""}${stacked ? " fdi-stack" : ""}${drag?.from === index ? " lifted" : ""}${drag ? " shifting" : ""}`}
+              style={{ transform: shiftFor(index) }}
+            >
               <div className={`fdc-card${shownPicture || (busy && local) ? "" : " bare"}${filled || onOpen ? "" : " shut"}`} onClick={(e) => tapCard(e, c)}>
                 <div className="fdc-bg" aria-hidden="true">
                   {busy && local ? (
@@ -2328,6 +2425,10 @@ function EditableMealCards({
                         }}
                         onBlur={(e) => finishRename(c, e.currentTarget.value)}
                       />
+                    </span>
+                  ) : onReorder && tools ? (
+                    <span className="fdc-handle" onPointerDown={(e) => holdStart(e, index)} onPointerMove={holdMove} onPointerUp={holdEnd} onPointerCancel={holdEnd} onContextMenu={(e) => e.preventDefault()}>
+                      <span className="fdc-title">{c.name}</span>
                     </span>
                   ) : (
                     <span className="fdc-title">{c.name}</span>
@@ -2818,16 +2919,20 @@ function SavedDayScreen({
     const cards = dayCards();
     const now = cards.map((el) => getComputedStyle(el).transform);
     cards.forEach((el) => el.getAnimations().forEach((a) => a.cancel()));
+    // Each card runs its whole way before anything goes (10 Nov, Alex: "they don't really collapse all the way through").
+    const stagger = 45;
+    const run = 360;
+    const whole = (cards.length - 1) * stagger + run;
     cards.forEach((el, i) => {
       el.style.zIndex = String(cards.length - i);
       el.style.willChange = "transform";
-      el.animate([{ transform: now[i] }, { transform: behind(el, i, from.top) }], { duration: 300, delay: (cards.length - 1 - i) * 45, easing: "cubic-bezier(.55, 0, .75, .4)", fill: "both" });
+      el.animate([{ transform: now[i] }, { transform: behind(el, i, from.top) }], { duration: run, delay: (cards.length - 1 - i) * stagger, easing: "cubic-bezier(.4, 0, .2, 1)", fill: "both" });
     });
     const ghost = ghostOf(layer, from.el);
-    ghost.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, delay: 240, easing: "ease", fill: "both" });
-    cover.current?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, delay: 200, easing: "ease", fill: "forwards" });
+    ghost.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, delay: whole - 140, easing: "ease", fill: "both" });
+    cover.current?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, delay: whole - 60, easing: "ease", fill: "forwards" });
     for (const part of layer.querySelectorAll<HTMLElement>(".cn-header, .fdi-day-head, .fdi-add-meal, .fdi-day-foot, .fdc-fold")) part.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: "ease", fill: "forwards" });
-    setTimeout(onBack, 420);
+    setTimeout(onBack, whole + 110);
   };
 
   const commitName = () => {
@@ -2986,6 +3091,7 @@ function SavedDayScreen({
           recent={recent}
           locked={id == null}
           addAt="bottom"
+          onReorder={(keys) => change(null, "card-order", { key: "@order", order: keys.join(",") })}
           renderAdd={(start, input) =>
             id != null &&
             (input ? (
