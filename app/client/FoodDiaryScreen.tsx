@@ -2770,23 +2770,39 @@ function SavedDayScreen({
       return;
     }
     const cards = dayCards();
+    const running: Animation[] = [];
+    const rest = (el: HTMLElement) => {
+      el.style.zIndex = "";
+      el.style.willChange = "";
+    };
+    // Measured first, every card at its own place: an animation already holding a card would skew the next one's figures.
+    const starts = cards.map((el, i) => behind(el, i, from.top));
     cards.forEach((el, i) => {
       el.style.zIndex = String(cards.length - i);
       el.style.willChange = "transform";
-      const start = { transform: behind(el, i, from.top), ...(from.el ? {} : { opacity: 0 }) };
+      const start = { transform: starts[i], ...(from.el ? {} : { opacity: 0 }) };
       const end = { transform: "none", ...(from.el ? {} : { opacity: 1 }) };
-      el.animate([start, end], { duration: 540, delay: 80 + i * 90, easing: DAY_EASE, fill: "backwards" }).onfinish = () => {
-        el.style.zIndex = "";
-        el.style.willChange = "";
-      };
+      const move = el.animate([start, end], { duration: 540, delay: 80 + i * 90, easing: DAY_EASE, fill: "backwards" });
+      move.onfinish = () => rest(el);
+      running.push(move);
     });
+    let ghost: HTMLElement | null = null;
     if (from.el) {
-      const ghost = ghostOf(layer, from.el);
-      ghost.style.willChange = "opacity";
-      ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, delay: 110, easing: "ease", fill: "both" }).onfinish = () => ghost.remove();
+      const shown = ghostOf(layer, from.el);
+      ghost = shown;
+      shown.style.willChange = "opacity";
+      const fade = shown.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, delay: 110, easing: "ease", fill: "both" });
+      fade.onfinish = () => shown.remove();
+      running.push(fade);
     }
     const done = setTimeout(() => setDeploying(false), 1300);
-    return () => clearTimeout(done);
+    // Undone whole, so an effect run twice (React's strict mode, in development) starts from the cards' true places.
+    return () => {
+      clearTimeout(done);
+      running.forEach((a) => a.cancel());
+      cards.forEach(rest);
+      ghost?.remove();
+    };
     // Once, as it opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
