@@ -12822,9 +12822,10 @@ export function reorderFoodMeals(clientId: number, date: string, ids: string[]) 
   const client = getClient(clientId);
   if (!client) return;
   const have = new Set(listFoodMeals(clientId, date).map((m) => m.id));
-  // Meals from other days keep their place in the order; today's are put as asked.
-  const kept = (client.meal_order ?? []).filter((id) => !have.has(id));
-  client.meal_order = [...ids.filter((id) => have.has(id)), ...kept];
+  // Meals from other days keep their place in the order; today's are put as asked, in the places they held.
+  const queue = ids.filter((id) => have.has(id));
+  const placed = (client.meal_order ?? []).map((id) => (have.has(id) ? queue.shift() : id)).filter((id): id is string => !!id);
+  client.meal_order = [...placed, ...queue];
   persist();
 }
 
@@ -13003,6 +13004,7 @@ export function reorderSavedDayCards(clientId: number, id: number, keys: string[
   const cards = cardsOfSavedDay(day);
   const placed = keys.flatMap((k) => cards.filter((c) => c.key === k));
   day.cards = [...new Set([...placed, ...cards])];
+  day.ordered = true;
   persist();
   return true;
 }
@@ -13239,6 +13241,14 @@ function dropUnusedMealPictures(paths: (string | null | undefined)[]): string[] 
   return gone;
 }
 
+/** Own cards just made on a day, on top in this order: made within a millisecond of each other, "newest first" alone would be a coin toss. */
+function rankOwnCards(clientId: number, meals: string[]) {
+  const client = getClient(clientId);
+  const own = [...new Set(meals.filter((m) => m.startsWith("m:")))];
+  if (!client || own.length === 0) return;
+  client.meal_order = [...own, ...(client.meal_order ?? []).filter((id) => !own.includes(id))];
+}
+
 /** Where a meal id from another day (or a saved day) lands on a date: itself when it is a standard meal or already on that day, else an added meal of the same name on that day, made if needed; Snacks when the source meal is gone. */
 function mealOnDay(clientId: number, meal: string, date: string, taken: Set<string> = new Set(), deletedName?: string): string {
   if (hasFoodMeal(clientId, meal, date)) return meal;
@@ -13333,6 +13343,10 @@ export function addSavedDay(clientId: number, id: number, date: string): number 
     }
     data.food_entries.push({ id: allocId("food_entries"), client_id: clientId, date, ...i, meal: landing.get(i.meal)!, logged_at: now });
   }
+  // The order it was dragged into, else its own cards as they stand on it.
+  const landed = (saved.cards ?? []).flatMap((c) => landing.get(c.key) ?? []);
+  if (saved.ordered) reorderFoodMeals(clientId, date, [...new Set([...landed, ...listFoodMeals(clientId, date).map((m) => m.id)])]);
+  else rankOwnCards(clientId, landed.length > 0 ? landed : [...landing.values()]);
   // A card's picture comes with it as that day's photo, the same file, never over one the day already has.
   for (const c of saved.cards ?? []) {
     const meal = landing.get(c.key);
@@ -13354,6 +13368,7 @@ export function copyFoodDay(clientId: number, fromDate: string, toDate: string):
     if (!landing.has(e.meal)) landing.set(e.meal, mealOnDay(clientId, e.meal, toDate, taken));
     data.food_entries.push({ ...e, id: allocId("food_entries"), date: toDate, meal: landing.get(e.meal)!, logged_at: now });
   }
+  rankOwnCards(clientId, listFoodMeals(clientId, fromDate).flatMap((m) => landing.get(m.id) ?? []));
   if (rows.length) persist();
   return rows.length;
 }

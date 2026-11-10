@@ -259,6 +259,8 @@ export type SavedDay = {
   day_type?: "training" | "rest" | null;
   /** Its cards (10 Nov, Alex), each item's `meal` a `key`: a standard meal's id, or `c:<n>`. Absent on a day saved before and not changed since: one card a meal it holds. */
   cards?: { key: string; name: string; picture?: string | null; picture_thumb?: string | null }[];
+  /** The client dragged its cards: used, they land in this order. */
+  ordered?: boolean;
   /** The picture on the day's own card in the list (10 Nov, Alex). */
   picture?: string | null;
   picture_thumb?: string | null;
