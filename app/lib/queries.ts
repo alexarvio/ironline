@@ -13795,12 +13795,18 @@ const dayLabelFor = (date: string, today: string): string => {
 };
 
 /** Training or rest on a date: as set on the diary, else as logged with the calories, else by whether a set was logged. */
+// Training day unless the client picked otherwise (10 Nov, Alex: "have it on training day always").
 export function foodDayType(clientId: number, date: string): "training" | "rest" {
-  const set = getData().food_days.find((d) => d.client_id === clientId && d.date === date)?.day_type;
-  if (set) return set;
-  const log = getCalorieLog(clientId, date);
-  if (log?.day_type) return log.day_type;
-  return trainingDates(clientId).has(date) ? "training" : "rest";
+  return getData().food_days.find((d) => d.client_id === clientId && d.date === date)?.day_type ?? "training";
+}
+
+/** A day being opened: Rest picked on it counts only with something logged under it (10 Nov, Alex). While the day stays open the pick holds. */
+export function releaseEmptyRestDay(clientId: number, date: string) {
+  const data = getData();
+  const row = data.food_days.find((d) => d.client_id === clientId && d.date === date);
+  if (row?.day_type !== "rest" || listFoodEntries(clientId, date).length > 0) return;
+  data.food_days = data.food_days.filter((d) => d !== row);
+  persist();
 }
 
 export function setFoodDayType(clientId: number, date: string, dayType: "training" | "rest") {

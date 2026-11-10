@@ -230,25 +230,32 @@ export default function FoodDiaryScreen({
     if (date === initial.date) setDiary(initial);
   }
   const [loading, startLoad] = useTransition();
-  const load = (d: string) =>
+  // `opening`: a day being moved to, not one re-read after a change (see releaseEmptyRestDay).
+  const load = (d: string, opening = false) =>
     startLoad(async () => {
-      const next = await getFoodDiaryAction(clientId, d);
+      const next = await getFoodDiaryAction(clientId, d, opening);
       if (next) setDiary(next);
     });
   const goTo = (d: string) => {
     if (d > today || d < floor || d === date) return;
     setDate(d);
     setPanel(null);
-    load(d);
+    load(d, true);
   };
   const reload = () => load(date);
+  // Opening on a day left on Rest with nothing logged under it: it is a training day again.
+  useEffect(() => {
+    if (initial.dayType === "rest" && initial.meals.every((m) => m.entries.length === 0)) load(initial.date, true);
+    // Once, on open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Opened from a coach message's link to a day: read that day once, and
   // switch to it when it has come, so the screen never shows today's meals
   // under that day's name.
   useEffect(() => {
     if (!initialDate || initialDate === initial.date || initialDate > today || initialDate < floor) return;
     startLoad(async () => {
-      const next = await getFoodDiaryAction(clientId, initialDate);
+      const next = await getFoodDiaryAction(clientId, initialDate, true);
       if (!next) return;
       setDiary(next);
       setDate(initialDate);
@@ -2733,6 +2740,7 @@ function SavedDayScreen({
   const making = useRef(false);
   const id = day?.id ?? null;
   const root = useRef<HTMLDivElement>(null);
+  const cover = useRef<HTMLDivElement>(null);
   const leaving = useRef(false);
   const [deploying, setDeploying] = useState(!!from);
 
@@ -2764,14 +2772,17 @@ function SavedDayScreen({
     const cards = dayCards();
     cards.forEach((el, i) => {
       el.style.zIndex = String(cards.length - i);
+      el.style.willChange = "transform";
       const start = { transform: behind(el, i, from.top), ...(from.el ? {} : { opacity: 0 }) };
       const end = { transform: "none", ...(from.el ? {} : { opacity: 1 }) };
       el.animate([start, end], { duration: 540, delay: 80 + i * 90, easing: DAY_EASE, fill: "backwards" }).onfinish = () => {
         el.style.zIndex = "";
+        el.style.willChange = "";
       };
     });
     if (from.el) {
       const ghost = ghostOf(layer, from.el);
+      ghost.style.willChange = "opacity";
       ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, delay: 110, easing: "ease", fill: "both" }).onfinish = () => ghost.remove();
     }
     const done = setTimeout(() => setDeploying(false), 1300);
@@ -2792,11 +2803,12 @@ function SavedDayScreen({
     cards.forEach((el) => el.getAnimations().forEach((a) => a.cancel()));
     cards.forEach((el, i) => {
       el.style.zIndex = String(cards.length - i);
+      el.style.willChange = "transform";
       el.animate([{ transform: now[i] }, { transform: behind(el, i, from.top) }], { duration: 300, delay: (cards.length - 1 - i) * 45, easing: "cubic-bezier(.55, 0, .75, .4)", fill: "both" });
     });
     const ghost = ghostOf(layer, from.el);
     ghost.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, delay: 240, easing: "ease", fill: "both" });
-    layer.animate([{ backgroundColor: "#F5F6F8" }, { backgroundColor: "transparent" }], { duration: 180, delay: 200, easing: "ease", fill: "forwards" });
+    cover.current?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, delay: 200, easing: "ease", fill: "forwards" });
     for (const part of layer.querySelectorAll<HTMLElement>(".cn-header, .fdi-day-head, .fdi-add-meal, .fdi-day-foot, .fdc-fold")) part.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: "ease", fill: "forwards" });
     setTimeout(onBack, 420);
   };
@@ -2875,6 +2887,7 @@ function SavedDayScreen({
   const typing = id == null || renaming;
   return (
     <div ref={root} className={`app-layer app-layer-push cn-screen fdi-saved-screen fdi-dayscreen${deploying ? " deploy" : ""}`}>
+      <div ref={cover} className="fdi-day-cover" aria-hidden="true" />
       <header className="cn-header">
         <button type="button" className="cn-icon-btn" onClick={leave} aria-label="Back">
           <ChevronLeftIcon />
