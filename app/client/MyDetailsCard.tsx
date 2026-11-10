@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { saveMyDetailsAction } from "../lib/actions";
-import { addressLine, type PostalAddress } from "../lib/address";
+import type { PostalAddress } from "../lib/address";
 import { COUNTRIES, countryOf } from "../lib/countries";
-import { DEFAULT_DIAL, DIAL_CODES, phoneLine } from "../lib/phone";
+import { DEFAULT_DIAL, DIAL_CODES } from "../lib/phone";
 import SettingsFold from "./SettingsFold";
 
-// Your details on Settings: one row until pressed (10 Nov, Alex), then email,
-// phone, address, shown as rows and edited in place. Edit turns the rows into fields; Save posts them all at once.
+// Your details on Settings: one row until pressed, then the fields themselves
+// (10 Nov, Alex: no rows to read and no Edit first); Save posts them all at once.
 // The photo lives in the banner above. The address is in its parts (23 Oct,
 // for the coach's invoices): read as one line, typed as the street, the
 // postcode and city, and the country (a state where the country has them).
@@ -35,39 +35,44 @@ export default function MyDetailsCard({ clientId, email, phone, phoneCode, addre
     country_code: address.country_code ?? "",
     country: address.country_code ? "" : (address.country ?? ""),
   };
-  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Fields>(saved);
   const [other, setOther] = useState(!saved.country_code && !!saved.country);
+  // What was saved changed (the server splits a typed dial code off the number, the coach edits it): the boxes follow.
+  const savedKey = KEYS.map((k) => saved[k]).join("\u0001");
+  const [seenKey, setSeenKey] = useState(savedKey);
+  if (seenKey !== savedKey) {
+    setSeenKey(savedKey);
+    setDraft(saved);
+    setOther(!saved.country_code && !!saved.country);
+  }
   const [pending, startSaving] = useTransition();
   const changed = KEYS.some((k) => draft[k].trim() !== saved[k]);
   const set = (k: keyof Fields) => (v: string) => setDraft((d) => ({ ...d, [k]: v }));
   const country = countryOf(draft.country_code);
 
-  const save = () => {
+  const save = (close: () => void) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     KEYS.forEach((k) => fd.set(k, draft[k].trim()));
     startSaving(async () => {
       await saveMyDetailsAction(fd);
-      setEditing(false);
+      close();
     });
   };
-  const cancel = () => {
+  const cancel = (close: () => void) => {
     setDraft(saved);
     setOther(!saved.country_code && !!saved.country);
-    setEditing(false);
+    close();
   };
-  const shownAddress = addressLine(address);
-  const shownPhone = phoneLine(phoneCode, phone);
 
   return (
     <SettingsFold title="Your details">
-      {editing ? (
+      {(close) => (
         <form
           className="st-details-form"
           onSubmit={(e) => {
             e.preventDefault();
-            if (changed && !pending) save();
+            if (changed && !pending) save(close);
           }}
         >
           <label className="st-details-field">
@@ -141,7 +146,7 @@ export default function MyDetailsCard({ clientId, email, phone, phoneCode, addre
             )}
           </div>
           <div className="st-details-actions">
-            <button type="button" className="st-details-cancel" onClick={cancel} disabled={pending}>
+            <button type="button" className="st-details-cancel" onClick={() => cancel(close)} disabled={pending}>
               Cancel
             </button>
             <button type="submit" className="st-details-save" disabled={!changed || pending}>
@@ -149,26 +154,6 @@ export default function MyDetailsCard({ clientId, email, phone, phoneCode, addre
             </button>
           </div>
         </form>
-      ) : (
-        <div className="home-dark-rows">
-          <div className="st-details-row">
-            <span className="st-details-label">Email</span>
-            <span className={`st-details-value${saved.email ? "" : " empty"}`}>{saved.email || "Add"}</span>
-          </div>
-          <div className="st-details-row">
-            <span className="st-details-label">Phone</span>
-            <span className={`st-details-value${shownPhone ? "" : " empty"}`}>{shownPhone || "Add"}</span>
-          </div>
-          <div className="st-details-row">
-            <span className="st-details-label">Address</span>
-            <span className={`st-details-value${shownAddress ? "" : " empty"}`}>{shownAddress || "Add"}</span>
-          </div>
-          <div className="st-details-foot">
-            <button type="button" className="st-details-edit" onClick={() => setEditing(true)}>
-              Edit
-            </button>
-          </div>
-        </div>
       )}
     </SettingsFold>
   );

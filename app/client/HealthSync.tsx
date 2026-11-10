@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { useRouter } from "next/navigation";
 import { syncHealthStepsAction } from "../lib/actions";
 import { callNative, nativeApp as cap, nativePlatform as platformOf } from "../lib/native";
+import SettingsFold from "./SettingsFold";
 
 // Steps from Apple Health (iPhone) or Health Connect (Android), read by the
 // native app (mobile/, the @capgo/capacitor-health plugin) and saved into the
@@ -96,8 +97,7 @@ export function ConnectedApps({ coachName }: { coachName: string }) {
   // The names alone, Soon on their right; no line under the rows or the section (3 Nov, Alex: the words audit).
   if (!platform) {
     return (
-      <section className="home-dark-section">
-        <span className="home-dark-section-title">Connected apps</span>
+      <SettingsFold title="Connected apps">
         <div className="home-dark-rows">
           {["Apple Health", "Health Connect"].map((name) => (
             <div key={name} className="settings-app-row">
@@ -108,7 +108,7 @@ export function ConnectedApps({ coachName }: { coachName: string }) {
             </div>
           ))}
         </div>
-      </section>
+      </SettingsFold>
     );
   }
 
@@ -146,8 +146,7 @@ export function ConnectedApps({ coachName }: { coachName: string }) {
   };
 
   return (
-    <section className="home-dark-section">
-      <span className="home-dark-section-title">Connected apps</span>
+    <SettingsFold title="Connected apps">
       <div className="home-dark-rows">
         <button type="button" className="settings-toggle-row" onClick={toggle} disabled={busy}>
           <div className="home-dark-row-body">
@@ -161,6 +160,6 @@ export function ConnectedApps({ coachName }: { coachName: string }) {
       </div>
       {/* A note only when something went wrong (3 Nov, Alex: the words audit). */}
       {note && <div className="home-dark-empty st-note">{note}</div>}
-    </section>
+    </SettingsFold>
   );
 }
