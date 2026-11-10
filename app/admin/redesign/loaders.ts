@@ -316,6 +316,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       index: i + 1,
       label: programWeekLabel(program, n),
       print,
+      // Sessions holding an exercise or cardio: what a copy of the week would bring.
+      filled: days.filter((d) => rowsOf(d.id).length > 0 || cardioOf(d.id).length > 0).length,
       trained: dots.map((x) => x.done),
       missed: dots.map((x) => x.missed),
       skipped: dots.map((x) => x.skipped),

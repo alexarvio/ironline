@@ -156,7 +156,7 @@ export type DraftProgram = {
   liveIdx: number;
   /** trained: each session completed; missed: begun and left unfinished; skipped: the client said they couldn't do it. Neither: not started. */
   /** print: what a copy of the week would carry, so a week the same as another offers no copy of it. */
-  weeks: { index: number; label: string; print: string; trained: boolean[]; missed: boolean[]; skipped: boolean[]; /** Duplicates and rogue sessions the client trained that week. */ duplicates?: number; rogues?: number; state: "past" | "live" | "ahead" }[];
+  weeks: { index: number; label: string; print: string; filled: number; trained: boolean[]; missed: boolean[]; skipped: boolean[]; /** Duplicates and rogue sessions the client trained that week. */ duplicates?: number; rogues?: number; state: "past" | "live" | "ahead" }[];
   sessions: DraftSession[];
   /**
    * What the applies would change, read for the week loaded (`week`, its index) as their confirms read it
@@ -860,7 +860,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     const r = applyRead?.sessions[id];
     return !r || (lbs ? r.lbs : r.kg) || pendingCount(pend(id)) > 0 || !!saving[id];
   };
-  // + Week's menu (20 Oct, Alex: the add-week pop-up was too black): Blank, or a copy of the week before the new one, or of the one on screen; added at once.
+  // + Week's menu (20 Oct, Alex: the add-week pop-up was too black): Blank, or a copy of any week with something in it; added at once.
   // One week a pick, its own one-time key (6 Nov): a pick while one is still on its way is not taken.
   const addingWeek = useRef(false);
   const addWeek = (from: number | null) => {
@@ -870,7 +870,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     const onceKey = newOnceKey();
     startTransition(async () => {
       try {
-        await addProgramWeekAction(fd({ clientId, programId: program.id, copyFrom: from, onceKey }));
+        // The server's week number, not the week's place in this programme (a later programme starts past week 1).
+        await addProgramWeekAction(fd({ clientId, programId: program.id, copyFrom: from == null ? null : weekNo(from), onceKey }));
       } finally {
         addingWeek.current = false;
       }
@@ -879,9 +880,12 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     });
   };
   const lastWeek = weeks[weeks.length - 1];
-  const addFrom = [lastWeek, viewIdx !== lastWeek?.index ? weeks.find((w) => w.index === viewIdx) : undefined]
-    .filter((w): w is (typeof weeks)[number] => !!w && w.trained.length > 0)
-    .map((w) => ({ index: w.index, sessions: w.trained.length }));
+  // Every week with something in it, the latest first, whichever week is on screen and whether it has started, run or ended
+  // (10 Nov, Alex: it listed only the last week and the one on screen). An empty week copies nothing.
+  const addFrom = [...weeks]
+    .reverse()
+    .filter((w) => w.filled > 0)
+    .map((w) => ({ index: w.index, sessions: w.filled }));
 
   const allSessions = [...sessions, ...copySessions, ...rogueSessions];
 

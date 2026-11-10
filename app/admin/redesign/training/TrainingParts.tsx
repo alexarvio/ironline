@@ -289,7 +289,7 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
           </Link>
         );
       })}
-      {/* + Week opens a white menu whose choice is the action (20 Oct, Alex: the pop-up was too black): Blank, or a copy of the week before it, or of the one on screen. */}
+      {/* + Week opens a white menu whose choice is the action (20 Oct, Alex: the pop-up was too black): Blank, or a copy of any week with something in it. */}
       {indefinite ? (
         // ∞ over Indefinite, in the + Week card's outline (27 Oct, Alex): no date, nothing is planned after it.
         <div className="trn-week add indef" role="presentation">
