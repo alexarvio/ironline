@@ -887,6 +887,17 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     .filter((w) => w.filled > 0)
     .map((w) => ({ index: w.index, sessions: w.filled }));
 
+  // An empty week that isn't over takes the last week before it with something in it, in one tap (10 Nov, Alex: "we need to
+  // be able to copy"): nothing is on it to lose, so no pop-up. Never over a week with something on it (4 Nov, Alex).
+  const weekEmpty = !week.filled && !weekSaving && sessions.every((s) => s.rows.length === 0 && s.cardio.length === 0);
+  const copyHereFrom = !weekLocked && weekEmpty ? [...weeks].reverse().find((w) => w.index < viewIdx && w.filled > 0) ?? null : null;
+  const copyHere = (source: number) => {
+    const onceKey = newOnceKey();
+    act(async () => {
+      await copyProgramWeekAction(fd({ clientId, fromWeek: weekNo(source), toWeek: weekNo(viewIdx), onceKey }));
+    }, `Week ${source} copied to ${week.label}`);
+  };
+
   const allSessions = [...sessions, ...copySessions, ...rogueSessions];
 
   // Duplicates and rogue sessions (9 Nov, Alex): their title and icon on the page, then cards as the week's, read only.
@@ -1862,6 +1873,11 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+          )}
+          {copyHereFrom && (
+            <button type="button" className="trn-btn" onClick={() => copyHere(copyHereFrom.index)}>
+              <CopyIcon /> Copy Week {copyHereFrom.index} here
+            </button>
           )}
           {/* Build one week, fill the rest in one go (20 Oct, Alex). */}
           {program.status !== "past" && later.length > 0 && sessions.length > 0 && forwardChanges && (
