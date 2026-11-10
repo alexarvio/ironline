@@ -57,7 +57,6 @@ import {
   getActivityCalendar,
   getCheckInStatus,
   getClientPreferences,
-  listClientReports,
   listPublishedWeekNumbers,
   getNotifications,
   notificationLink,
@@ -105,7 +104,7 @@ import {
 } from "../lib/queries";
 import TrainingDayList from "./TrainingDayList";
 
-import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
+import { type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import { setsDue } from "../lib/setsDue";
 import LastWeekDays from "./LastWeekDays";
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
@@ -128,7 +127,6 @@ import { ConnectedApps } from "./HealthSync";
 import { pushPublicKey } from "../lib/push";
 import { fcmConfigured } from "../lib/fcm";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
-import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import NotificationsScreen, { type NotifView } from "./notifications/NotificationsScreen";
 import { categorize, isListed, titleAndBody } from "../lib/notificationTypes";
 import DeleteAccountRow from "./DeleteAccountRow";
@@ -209,43 +207,6 @@ async function resolveClientId(raw: string | undefined): Promise<number | null> 
 }
 
 const fmtShortDate = (iso: string) => dayWords(iso);
-
-// Settings' progress-report list is the only place reports appear — a sent
-// report's sections_snapshot parsed, plus up to 3 stat deltas derived from
-// whichever sections it actually has. No domain knowledge of which
-// direction is "good" for a coach-defined metric, so deltas render neutral
-// rather than guessing.
-type ReportSection = {
-  label: string;
-  series?: { date: string; value: number }[];
-  seriesByField?: Record<string, { unit: string; points: { date: string; value: number }[] }>;
-};
-
-function parseReportSections(snapshot: string): ReportSection[] {
-  try {
-    return JSON.parse(snapshot);
-  } catch {
-    return [];
-  }
-}
-
-function deriveReportStats(sections: ReportSection[]): { label: string; value: string }[] {
-  const stats: { label: string; value: string }[] = [];
-  for (const s of sections) {
-    if (stats.length >= 3) break;
-    if (s.series && s.series.length >= 2) {
-      const delta = s.series[s.series.length - 1].value - s.series[0].value;
-      stats.push({ label: s.label, value: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}` });
-    } else if (s.seriesByField) {
-      for (const [field, { points, unit }] of Object.entries(s.seriesByField)) {
-        if (stats.length >= 3 || points.length < 2) continue;
-        const delta = points[points.length - 1].value - points[0].value;
-        stats.push({ label: field, value: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}${unit ? ` ${unit}` : ""}` });
-      }
-    }
-  }
-  return stats;
-}
 
 function getWeekDays(CLIENT_ID: number, week?: number) {
   // Auto-advances the moment a week the coach has already deployed starts —
@@ -575,7 +536,7 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
   // A coach chat message's own notification ("Your coach sent you a video")
   // is only its echo: read the message itself (17 Oct), so a form review shows
   // as the reply it is rather than a bare "Sent you a note".
-  const notes = getNotifications(clientId).filter((n) => n.kind !== "reminder" && n.kind !== "coach_note");
+  const notes = getNotifications(clientId).filter(isListed);
   const latestNote = notes[0] ?? null;
   const msgAt = latestMsg ? new Date(`${latestMsg.dateIso}T${latestMsg.timeLabel}:00`).getTime() : 0;
   const noteAt = latestNote ? new Date(latestNote.created_at).getTime() : 0;
@@ -624,7 +585,6 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
       if (latestNote.action_tab === "home") return { kind: "comment", context: "checkin", title, body: null, cta: "View check-in", ...base };
       return { kind: "deploy", track: "training", title, body: null, cta: "View training", ...base, actionTab: latestNote.action_tab ?? "training" };
     }
-    if (latestNote.kind === "report") return { kind: "report", title: "Sent you a progress report", body: null, cta: "View report", ...base, actionTab: latestNote.action_tab ?? "settings" };
     if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title, body: detail, cta: "View nutrition", ...base };
     if (latestNote.action_tab === "invoices") return { kind: "invoice", title, body: null, cta: "View invoices", ...base };
     // The coach set what to focus on (23 Oct): View opens Home at its top, where the list is (the goals' words could read as a call or a goal below).
@@ -1155,33 +1115,6 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const profile = getClientProfile(CLIENT_ID);
   const prefs = getClientPreferences(CLIENT_ID);
 
-  const sentReports = listClientReports(CLIENT_ID).filter((r) => r.status === "sent");
-  const reports: ArchiveReport[] = sentReports.map((r) => {
-    const sections = parseReportSections(r.sections_snapshot);
-    const summary = r.summary || "";
-    const firstSentence = summary.match(/^.*?[.!?](?=\s|$)/)?.[0];
-    const chartSection = sections.find((s) => s.series && s.series.length >= 2);
-    return {
-      id: r.id,
-      period: `${fmtShortDate(r.period_start)} – ${fmtShortDate(r.period_end)}`,
-      summary: firstSentence || summary,
-      body: summary,
-      isNew: r.opened_at == null,
-      stats: deriveReportStats(sections),
-      chart: chartSection
-        ? {
-            points: chartSection.series!,
-            fromLabel: fmtShortDate(chartSection.series![0].date),
-            toLabel: fmtShortDate(chartSection.series![chartSection.series!.length - 1].date),
-            caption: chartSection.label,
-          }
-        : null,
-    };
-  });
-  // "1 new | 3 saved" while anything is unopened, otherwise just the count.
-  const newReportCount = reports.filter((r) => r.isNew).length;
-  const reportCountLabel = <Bars parts={[newReportCount > 0 && `${newReportCount} new`, `${reports.length} saved`]} />;
-
   // Weekly summary and the units toggle are out for now: the summary is
   // not built, and the units live on the Kg | Lbs switch in a session.
   // Push notifications, when this server has keys for them (lib/push.ts).
@@ -1209,8 +1142,8 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       </header>
 
       <div className="st-body">
-      {/* The coach's profile row is out of Settings for now (nice to have,
-          not yet); the profile screen and its data stay in place. */}
+      {/* In order of use (10 Nov, Alex): yours (details, gyms, card pictures, each one row until pressed), then how the app
+          behaves, what it connects to, your data. */}
       <MyDetailsCard
         clientId={CLIENT_ID}
         email={profile.email ?? null}
@@ -1219,25 +1152,24 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         address={{ address: profile.address ?? "", postcode: profile.postcode ?? "", city: profile.city ?? "", region: profile.region ?? "", country_code: profile.country_code ?? "", country: profile.country ?? "" }}
       />
 
-      <section className="home-dark-section">
-        <div className="home-dark-rows">
-          <ProgressPicturesRow />
-        </div>
-      </section>
-
-      <section className="home-dark-section">
-        <div className="home-dark-section-head">
-          <span className="home-dark-section-title">Progress reports</span>
-          {reports.length > 0 && <span className="home-dark-section-count">{reportCountLabel}</span>}
-        </div>
-        {reports.length === 0 ? (
-          <p className="home-dark-empty">None yet</p>
-        ) : (
-          <ReportArchiveList reports={reports} />
-        )}
-      </section>
-
       <GymSettings gyms={gymDashboards(CLIENT_ID)} />
+
+      {/* The pictures behind the Home cards (12 Oct): the client's own from their camera roll, or the coach's. Press and hold a card on Home does the same. */}
+      <SettingsFold title="Card pictures">
+        <div className="home-dark-rows">
+          <CardPicturesRows
+            clientId={CLIENT_ID}
+            coachName={getCoachFirstName(CLIENT_ID)}
+            rows={(["lifestyle", "training", "nutrition"] as const).map((track) => {
+              const ph = getCurrentPhase(CLIENT_ID, track);
+              const own = getClientCardPictures(CLIENT_ID)[track] ?? [];
+              const coach = ph ? (ph.cover_path ?? defaultPhaseCover(track, ph.id)) : track === "lifestyle" ? "/img/lifestyle-bottle.jpg" : defaultPhaseCover(track, 0);
+              // A stock cover the coach never chose is the default, not theirs (22 Oct).
+              return { track, own, coach, coachChose: !!ph?.cover_path };
+            })}
+          />
+        </div>
+      </SettingsFold>
 
       <section className="home-dark-section">
         <span className="home-dark-section-title">Preferences</span>
@@ -1263,23 +1195,6 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           })}
         </div>
       </section>
-
-      {/* The pictures behind the Home cards (12 Oct): the client's own from their camera roll, or the coach's. Press and hold a card on Home does the same. */}
-      <SettingsFold title="Card pictures">
-        <div className="home-dark-rows">
-          <CardPicturesRows
-            clientId={CLIENT_ID}
-            coachName={getCoachFirstName(CLIENT_ID)}
-            rows={(["lifestyle", "training", "nutrition"] as const).map((track) => {
-              const ph = getCurrentPhase(CLIENT_ID, track);
-              const own = getClientCardPictures(CLIENT_ID)[track] ?? [];
-              const coach = ph ? (ph.cover_path ?? defaultPhaseCover(track, ph.id)) : track === "lifestyle" ? "/img/lifestyle-bottle.jpg" : defaultPhaseCover(track, 0);
-              // A stock cover the coach never chose is the default, not theirs (22 Oct).
-              return { track, own, coach, coachChose: !!ph?.cover_path };
-            })}
-          />
-        </div>
-      </SettingsFold>
 
       <ConnectedApps coachName={getCoachFirstName(CLIENT_ID)} />
 

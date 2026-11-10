@@ -101,7 +101,8 @@ export function notificationTypeOf(category: NotificationCategory, eventType: Ev
 export type StoredNotification = { kind: string; message: string; action_tab: string | null };
 
 /** Reminders are not notifications; chat messages have their own tab. */
-export const isListed = (n: StoredNotification) => n.kind !== "reminder" && n.kind !== "coach_note";
+// Progress reports are gone from the client's app (10 Nov, Alex), an old note about one with them.
+export const isListed = (n: StoredNotification) => n.kind !== "reminder" && n.kind !== "coach_note" && n.kind !== "report";
 
 const starts = (m: string, ...p: string[]) => p.some((x) => m.toLowerCase().startsWith(x.toLowerCase()));
 

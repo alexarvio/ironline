@@ -746,22 +746,20 @@ export default function AppShell({
                       Events
                     </button>
                   )}
-                  {/* Shape update (23 Oct, Alex): the photo sheets, once the coach asks for an angle or there are earlier ones. */}
-                  {(photos.hasAngles || photos.earlier.length > 0) && (
-                    <button
-                      type="button"
-                      className="app-menu-item"
-                      onClick={() =>
-                        go(() => {
-                          setPhotosPeriod(null);
-                          setPushView("photos");
-                        })
-                      }
-                    >
-                      <span className="app-menu-ico"><CameraIcon /></span>
-                      Shape update
-                    </button>
-                  )}
+                  {/* Shape update: here alone, always (10 Nov, Alex: out of Settings). */}
+                  <button
+                    type="button"
+                    className="app-menu-item"
+                    onClick={() =>
+                      go(() => {
+                        setPhotosPeriod(null);
+                        setPushView("photos");
+                      })
+                    }
+                  >
+                    <span className="app-menu-ico"><CameraIcon /></span>
+                    Shape update
+                  </button>
                   {invoices && (
                     <button type="button" className="app-menu-item" onClick={() => go(() => {
                       setInvoiceFocus(null);
