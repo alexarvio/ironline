@@ -314,8 +314,17 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
   // in rust for a week (the to-do strip at the top carries its Mark completed), then `Not completed`.
   const toCome = (m: DraftMeeting) => m.status === "scheduled" && !(m.over ?? m.date < today);
   const scheduled = meetings.filter(toCome).sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
-  const upcoming = scheduled[0] ?? null;
-  const also = scheduled.slice(1);
+  // A repeating call shows its next one alone (11 Nov, Alex): the one after takes its place once it is completed or over.
+  // The rest of the series stays in `meetings`, so changing what comes after still reaches it.
+  const seenSeries = new Set<number>();
+  const shown = scheduled.filter((m) => {
+    if (m.seriesId == null) return true;
+    if (seenSeries.has(m.seriesId)) return false;
+    seenSeries.add(m.seriesId);
+    return true;
+  });
+  const upcoming = shown[0] ?? null;
+  const also = shown.slice(1);
   const past = meetings.filter((m) => !toCome(m)).sort((a, b) => (a.date !== b.date ? (a.date < b.date ? 1 : -1) : a.time < b.time ? 1 : -1));
   // To focus on (23 Oct, Alex: "deployed the moment I mark as completed this meeting, and then I can still edit it once it
   // goes down to past calls until I set a new sheet of to focus on on the next call"): the completed call the live list
