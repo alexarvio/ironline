@@ -142,9 +142,7 @@ export default function ProgressPicturesScreen({
           <div ref={openRef}>
             <OpenSheet clientId={data.clientId} sheet={data.openSheet} onUnsentChange={unsentChange} leaving={leaving} onKeep={() => setLeaving(false)} onLeave={onBack} />
           </div>
-        ) : (
-          !data.hasAngles && <p className="pp-app-empty">None yet</p>
-        )}
+        ) : null}
 
         {view === "sheet" && data.earlier.length > 0 && (
           <section>

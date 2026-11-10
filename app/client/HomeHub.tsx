@@ -757,12 +757,11 @@ export function MeetingCard({ m, recap, coachFirstName, ask }: { m: NonNullable<
 
 // Nothing booked: the coach's notes from the last call instead.
 // No call booked and none had yet (17 Oct, Alex): the section still shows, so the client knows calls live here. Since
-// 3 Nov (Alex: words mockup) the same head as always, `Meetings` with All meetings on its right, then `None yet`;
+// 3 Nov (Alex: words mockup) the same head as always, `Meetings` with All meetings on its right, and nothing under it (10 Nov, Alex);
 function NoMeetingsCard({ ask }: { ask?: HomeAsk }) {
   return (
     <section className="hm-last-meeting hm-no-meeting" aria-label="Meetings">
       <MeetingsHead ask={ask} />
-      <p className="hm-mt-none">None yet</p>
     </section>
   );
 }

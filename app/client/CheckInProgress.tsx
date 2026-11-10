@@ -157,7 +157,7 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
 
   // The chips pick a metric; so does a swipe across the chart (10 Oct): left
   // for the next, right for the one before. A hold on the chart reads values.
-  if (!series) return <p className="ci-empty">Nothing logged</p>;
+  if (!series) return null;
 
   return (
     <div className="pg-view">

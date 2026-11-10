@@ -75,9 +75,7 @@ export default function GymSettings({ gyms }: { gyms: GymDashboard[] }) {
   return (
     <SettingsFold title="Gyms">
       <span ref={anchor} hidden />
-      {list.length === 0 ? (
-        <p className="home-dark-empty">None yet</p>
-      ) : (
+      {list.length === 0 ? null : (
         <div className="gy-list">
           {list.map((g) => (
             <div key={g.id} className={`gy-row${g.deleted ? " gone" : ""}`}>

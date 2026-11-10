@@ -112,9 +112,7 @@ export default function AddMealSheet({
             </button>
           </div>
           {picking ? (
-            saved.length === 0 ? (
-              <p className="ads-note">None yet</p>
-            ) : (
+            saved.length === 0 ? null : (
               <>
                 <SavedMealCards saved={saved} busy={busy} picture={picture} onCopy={onCopy} />
                 {failed && (

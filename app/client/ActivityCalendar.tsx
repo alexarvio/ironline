@@ -164,7 +164,6 @@ export default function ActivityCalendar({ days, today, initialDay = null }: { d
           })()}
         </div>
       ))}
-      {days.length === 0 && <p className="wc-empty">Nothing logged</p>}
     </section>
   );
 }
