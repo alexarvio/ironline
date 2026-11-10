@@ -2349,8 +2349,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
 
         {dlg?.kind === "removeWeek" && (
           <ConfirmDialog
-            title={`Remove ${week.label}`}
-            description={[sessions.length ? `${sessions.length} ${sessions.length === 1 ? "session goes" : "sessions go"} with it.` : "It's empty.", viewIdx < weeks.length ? "The weeks after move up." : ""].filter(Boolean).join(" ")}
+            title={`Remove ${week.label}?`}
+            description="This cannot be undone."
             confirm="Remove week"
             danger
             onConfirm={() => {
