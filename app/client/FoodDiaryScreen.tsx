@@ -123,7 +123,7 @@ export type FoodDiaryProps = {
   meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null; /** The saved meal that filled this slot, while it still holds just that meal. */ savedMealId: number | null; photo: string | null; /** What the card shows: the saved meal's picture, else that day's photo. */ picture: string | null; /** That picture's tiny preview, there at once. */ thumb: string | null; comments: { id: number; text: string; when: string }[] }[];
   recent: FoodOptionView[];
   saved: { id: number; name: string; kcal: number; protein: number; carbs: number; fat: number; picture: string | null; thumb: string | null; count: number; names: string[]; items: SavedItem[] }[];
-  savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null; cards: { key: string; name: string; picture: string | null; thumb: string | null; items: SavedItem[] }[] }[];
+  savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null; picture: string | null; thumb: string | null; cards: { key: string; name: string; picture: string | null; thumb: string | null; items: SavedItem[] }[] }[];
   savedDayAs: string | null;
   savedDayId: number | null;
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
@@ -433,7 +433,6 @@ export default function FoodDiaryScreen({
   // The row whose bin was tapped: it becomes the question until answered.
   const [askRemove, setAskRemove] = useState<number | null>(null);
   // The saved day whose × was tapped, likewise.
-  const [askForgetDay, setAskForgetDay] = useState<number | null>(null);
   // Save this day, on the Saved days screen: the pill turned into its name box.
   const [namingDay, setNamingDay] = useState(false);
   // Saved days or Saved meals, the screen to pick from (10 Nov, Alex).
@@ -444,8 +443,9 @@ export default function FoodDiaryScreen({
     setSavedHost(savedRow.current?.closest(".app-layer")?.parentElement ?? null);
     setSavedScreen(which);
   };
-  // A saved day's own screen, over the list (10 Nov, Alex): `new` until it has its name.
+  // A saved day's own screen, over the list (10 Nov, Alex): `new` until it has its name, and what it deploys from.
   const [openDay, setOpenDay] = useState<number | "new" | null>(null);
+  const [deployFrom, setDeployFrom] = useState<DayDeploy | null>(null);
   const [dayFailed, setDayFailed] = useState<number | null>(null);
   const [forgetFailed, setForgetFailed] = useState<number | null>(null);
   // Which opening of Create a day a create belongs to: a late answer never turns a newer, unnamed screen into the old day.
@@ -454,6 +454,9 @@ export default function FoodDiaryScreen({
     const next = await getFoodDiaryAction(clientId, date);
     if (next) setDiary((d) => (d.date === date ? next : d));
   };
+  useEffect(() => {
+    if (typeof openDay === "number" && !diary.savedDays.some((d) => d.id === openDay)) setOpenDay(null);
+  }, [openDay, diary.savedDays]);
   const createDay = async (name: string) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -477,8 +480,6 @@ export default function FoodDiaryScreen({
     };
   }, [savedOpen]);
   useDropOnTapOutside(askRemove != null, setAskRemove);
-  useDropOnTapOutside(askForgetDay != null, setAskForgetDay);
-  const forgetHold = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The row goes at once; the server's day replaces the guess when it comes.
   const applyLocal = (fn: (d: FoodDiaryProps) => FoodDiaryProps) => setDiary((d) => retotal(fn(d)));
   const settle = (forDate: string, next: FoodDiaryProps | null) => {
@@ -971,7 +972,6 @@ export default function FoodDiaryScreen({
                 const fd = new FormData();
                 fd.set("clientId", String(clientId));
                 fd.set("id", String(id));
-                setAskForgetDay(null);
                 setForgetFailed(null);
                 startLoad(async () => {
                   try {
@@ -985,29 +985,6 @@ export default function FoodDiaryScreen({
                   if (next) setDiary(next);
                 });
               };
-              // Holding a saved day's row asks to forget it.
-              const holdRow = (id: number) => ({
-                onPointerDown: () => {
-                  forgetHold.current = setTimeout(() => {
-                    forgetHold.current = null;
-                    if (navigator.vibrate) navigator.vibrate(10);
-                    setAskForgetDay(id);
-                  }, 450);
-                },
-                onPointerUp: () => {
-                  if (forgetHold.current) clearTimeout(forgetHold.current);
-                  forgetHold.current = null;
-                },
-                onPointerCancel: () => {
-                  if (forgetHold.current) clearTimeout(forgetHold.current);
-                  forgetHold.current = null;
-                },
-                onPointerMove: () => {
-                  if (forgetHold.current) clearTimeout(forgetHold.current);
-                  forgetHold.current = null;
-                },
-                onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
-              });
               return (
                 <>
                   {/* Saved days and Saved meals side by side, each its own screen to pick from (10 Nov, Alex). */}
@@ -1024,36 +1001,14 @@ export default function FoodDiaryScreen({
                     </button>
                   </div>
                   {savedScreen && savedHost && createPortal(
-                    savedScreen === "days" && openDay != null ? (
-                      <SavedDayScreen
-                        clientId={clientId}
-                        date={date}
-                        day={openDay === "new" ? null : diary.savedDays.find((d) => d.id === openDay) ?? null}
-                        recent={diary.recent}
-                        busy={loading}
-                        useFailed={openDay !== "new" && dayFailed === openDay}
-                        onCreate={createDay}
-                        onDay={(id, fn) => setDiary((d) => ({ ...d, savedDays: d.savedDays.map((x) => (x.id === id ? fn(x) : x)) }))}
-                        refresh={rereadDiary}
-                        onBack={() => {
-                          setOpenDay(null);
-                          setDayFailed(null);
-                        }}
-                        onUse={use}
-                        onDelete={(id) => {
-                          setOpenDay(null);
-                          forget(id);
-                        }}
-                      />
-                    ) : (
-                    <div className="app-layer app-layer-push cn-screen fdi-saved-screen">
+                    <>
+                    <div className="app-layer app-layer-push cn-screen fdi-saved-screen" inert={savedScreen === "days" && openDay != null}>
                       <header className="cn-header">
                         <button
                           type="button"
                           className="cn-icon-btn"
                           onClick={() => {
                             setSavedScreen(null);
-                            setAskForgetDay(null);
                             setNamingDay(false);
                           }}
                           aria-label="Back"
@@ -1145,8 +1100,9 @@ export default function FoodDiaryScreen({
                                     <span>Save this day</span>
                                   </button>
                                 )}
-                                <button type="button" className="fdi-saved-pill" onClick={() => {
+                                <button type="button" className="fdi-saved-pill" onClick={(e) => {
                                     newDayOpening.current++;
+                                    setDeployFrom({ top: e.currentTarget.getBoundingClientRect().top, el: null });
                                     setOpenDay("new");
                                   }} disabled={loading}>
                                   <PlusIcon />
@@ -1165,39 +1121,50 @@ export default function FoodDiaryScreen({
                                 </button>
                               </div>
                             )}
-                            {diary.savedDays.map((d) => (
-                              <div key={d.id} className="fdi-saved-day" {...holdRow(d.id)}>
-                                {/* The day's own screen, its cards as on a day (10 Nov, Alex). A hold that asked to forget it doesn't open it. */}
-                                <button type="button" className="fdi-copy-main fdi-saved-open" onClick={() => askForgetDay !== d.id && setOpenDay(d.id)}>
-                                  <span className="fdi-copy-name">{d.name}</span>
-                                  <span className="fdi-copy-sub">{n(d.kcal)} kcal</span>
-                                  {dayFailed === d.id && <span className="fdi-make-failed">Not added. Try again</span>}
-                                  {forgetFailed === d.id && <span className="fdi-make-failed">Not deleted. Try again</span>}
-                                </button>
-                                {askForgetDay === d.id ? (
-                                  <span className="fdi-row-ask">
-                                    <button type="button" className="fdi-confirm-keep" onClick={() => setAskForgetDay(null)} autoFocus>
-                                      Keep
-                                    </button>
-                                    <button type="button" className="fdi-confirm-remove" onClick={() => forget(d.id)} disabled={loading}>
-                                      Forget
-                                    </button>
-                                  </span>
-                                ) : (
-                                  d.count > 0 && (
-                                    <button type="button" className="fdi-copy-use" onClick={() => use(d.id)} disabled={loading}>
-                                      Use
-                                    </button>
-                                  )
-                                )}
-                              </div>
-                            ))}
-                            {diary.savedDays.length > 0 && <p className="fdi-saved-foot">Hold a saved day to forget it</p>}
+                            {forgetFailed != null && diary.savedDays.some((d) => d.id === forgetFailed) && (
+                              <p className="fdi-photo-failed" role="alert">
+                                Not deleted. Try again
+                              </p>
+                            )}
+                            <SavedDayList
+                              clientId={clientId}
+                              date={date}
+                              days={diary.savedDays}
+                              onDays={(fn) => setDiary((d) => ({ ...d, savedDays: fn(d.savedDays) }))}
+                              refresh={rereadDiary}
+                              onOpen={(id, el) => {
+                                setDeployFrom({ top: el.getBoundingClientRect().top, el });
+                                setOpenDay(id);
+                              }}
+                            />
                           </>
                         )}
                       </main>
                     </div>
-                    ),
+                    {savedScreen === "days" && (openDay === "new" || diary.savedDays.some((d) => d.id === openDay)) && (
+                      <SavedDayScreen
+                        clientId={clientId}
+                        date={date}
+                        day={openDay === "new" ? null : diary.savedDays.find((d) => d.id === openDay) ?? null}
+                        recent={diary.recent}
+                        busy={loading}
+                        useFailed={openDay !== "new" && dayFailed === openDay}
+                        from={deployFrom}
+                        onCreate={createDay}
+                        onDay={(id, fn) => setDiary((d) => ({ ...d, savedDays: d.savedDays.map((x) => (x.id === id ? fn(x) : x)) }))}
+                        refresh={rereadDiary}
+                        onBack={() => {
+                          setOpenDay(null);
+                          setDayFailed(null);
+                        }}
+                        onUse={use}
+                        onDelete={(id) => {
+                          setOpenDay(null);
+                          forget(id);
+                        }}
+                      />
+                    )}
+                    </>,
                     savedHost
                   )}
                 </>
@@ -1980,9 +1947,12 @@ function SearchPanel({
 // ---- Saved meals and saved days (10 Nov, Alex: "exactly like they are inside the days"): the day's card, editable ------
 
 const NO_SAVED: FoodDiaryProps["saved"] = [];
+const NO_FOODS: FoodOptionView[] = [];
+/** The key that means a day's own picture rather than one of its cards'. */
+const DAY_COVER = "@cover";
 type SavedMealRow = FoodDiaryProps["saved"][number];
 type SavedDayRow = FoodDiaryProps["savedDays"][number];
-type EditCard = { key: string; name: string; picture: string | null; thumb: string | null; items: SavedItem[] };
+type EditCard = { key: string; name: string; picture: string | null; thumb: string | null; /** Shown when it has no picture of its own. */ fallback?: { picture: string; thumb: string | null }; items: SavedItem[] };
 type CardPanel = { key: string; kind: "search" | "custom" } | { key: string; kind: "amount"; food: FoodOptionView; index?: number };
 type CardActions = {
   /** The new card's key, null when it wasn't saved. */
@@ -2006,11 +1976,17 @@ function EditableMealCards({
   locked = false,
   addAt,
   renderAdd,
+  stacked = false,
+  onOpen,
   onCards,
   refresh,
   actions,
   foot,
 }: {
+  /** A saved day in the list: two edges drawn behind the card. */
+  stacked?: boolean;
+  /** A tap opens something else rather than folding the card's foods. */
+  onOpen?: (c: EditCard, el: HTMLElement) => void;
   clientId: number;
   date: string;
   cards: EditCard[];
@@ -2018,7 +1994,8 @@ function EditableMealCards({
   /** A day not named yet: the cards are there, their tools come with the name. */
   locked?: boolean;
   addAt: "top" | "bottom";
-  renderAdd: (start: () => void) => ReactNode;
+  /** With `input`, the title box to draw in the very same room as the button. */
+  renderAdd: (start: () => void, input: ReactNode | null) => ReactNode;
   onCards: (fn: (list: EditCard[]) => EditCard[]) => void;
   refresh: () => Promise<void>;
   actions: CardActions;
@@ -2181,6 +2158,7 @@ function EditableMealCards({
   const tapCard = (e: React.MouseEvent, c: EditCard) => {
     if ((e.target as Element).closest(".fdc-tools, .fdc-more, input")) return;
     if (renaming === c.key || locked || isTempCard(c.key)) return;
+    if (onOpen) return onOpen(c, e.currentTarget as HTMLElement);
     if (panel?.key === c.key && panel.kind !== "search") {
       (document.activeElement as HTMLElement | null)?.blur();
       return;
@@ -2203,28 +2181,28 @@ function EditableMealCards({
 
   const shown = photoOf != null ? cards.find((c) => c.key === photoOf) ?? null : null;
   const deleting = askDelete != null ? cards.find((c) => c.key === askDelete) ?? null : null;
-  const add = renderAdd(() => setCreating(true));
-  // The title first (10 Nov, Alex: "once I add a title, then boom, we have the card"): the pill becomes its name box; left blank, it goes.
-  const addOrName = creating ? (
-    <input
-      className={`fdi-make-name fdi-card-name ${addAt}`}
-      type="text"
-      placeholder="Name this meal"
-      maxLength={40}
-      autoComplete="off"
-      autoFocus
-      aria-label="Meal name"
-      onKeyDown={(e) => {
-        if (e.key === "Enter") e.currentTarget.blur();
-        if (e.key === "Escape") {
-          e.currentTarget.value = "";
-          e.currentTarget.blur();
-        }
-      }}
-      onBlur={(e) => finishCreate(e.currentTarget.value)}
-    />
-  ) : (
-    add
+  // The title first, in the button's own room so nothing moves (10 Nov, Alex: "whenever I press that button, the size changes"); left blank, it goes.
+  const addOrName = renderAdd(
+    () => setCreating(true),
+    creating ? (
+      <input
+        className="fdi-title-input"
+        type="text"
+        placeholder="Name this meal"
+        maxLength={40}
+        autoComplete="off"
+        autoFocus
+        aria-label="Meal name"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") {
+            e.currentTarget.value = "";
+            e.currentTarget.blur();
+          }
+        }}
+        onBlur={(e) => finishCreate(e.currentTarget.value)}
+      />
+    ) : null
   );
   return (
     <>
@@ -2257,15 +2235,16 @@ function EditableMealCards({
           const busy = photoBusy.includes(c.key);
           const tools = !naming && !locked && !isTempCard(c.key);
           const tot = (k: MacroKey) => Math.round(c.items.reduce((t, i) => t + i[k], 0));
+          const shownPicture = c.picture ?? c.fallback?.picture ?? null;
           return (
-            <div key={c.key} className={`fdi-meal fdc-meal${unfolded ? " open" : ""}`}>
-              <div className={`fdc-card${c.picture || (busy && local) ? "" : " bare"}${filled ? "" : " shut"}`} onClick={(e) => tapCard(e, c)}>
+            <div key={c.key} className={`fdi-meal fdc-meal${unfolded ? " open" : ""}${stacked ? " fdi-stack" : ""}`}>
+              <div className={`fdc-card${shownPicture || (busy && local) ? "" : " bare"}${filled || onOpen ? "" : " shut"}`} onClick={(e) => tapCard(e, c)}>
                 <div className="fdc-bg" aria-hidden="true">
                   {busy && local ? (
                     // eslint-disable-next-line @next/next/no-img-element -- the phone's own copy, just picked
                     <img src={local} alt="" draggable={false} />
                   ) : (
-                    c.picture && <CardPicture src={pic(c.picture, 1080)} under={local ?? c.thumb} />
+                    shownPicture && <CardPicture src={pic(shownPicture, 1080)} under={local ?? (c.picture ? c.thumb : c.fallback?.thumb ?? null)} />
                   )}
                 </div>
                 {tools && (
@@ -2313,9 +2292,11 @@ function EditableMealCards({
                           <CameraIcon />
                         </button>
                       )}
-                      <button type="button" className="fdc-tool" onClick={() => tapPlus(c)} aria-label={`Add food to ${c.name}`}>
-                        <PlusIcon />
-                      </button>
+                      {!onOpen && (
+                        <button type="button" className="fdc-tool" onClick={() => tapPlus(c)} aria-label={`Add food to ${c.name}`}>
+                          <PlusIcon />
+                        </button>
+                      )}
                     </span>
                   </>
                 )}
@@ -2344,7 +2325,7 @@ function EditableMealCards({
                   ) : (
                     <span className="fdc-title">{c.name}</span>
                   )}
-                  {filled && !naming && (
+                  {(filled || onOpen) && !naming && (
                     <button type="button" className={`fdi-meal-chev fdc-chev${unfolded ? " up" : ""}`} aria-expanded={unfolded} aria-label={unfolded ? `Fold ${c.name}` : `Open ${c.name}`}>
                       <ChevronDownIcon />
                     </button>
@@ -2579,12 +2560,19 @@ function SavedMealList({
       cards={saved.map(cardOfSaved)}
       recent={recent}
       addAt="top"
-      renderAdd={(start) => (
-        <button type="button" className="fdi-saved-pill fdi-saved-this fdi-saved-wide" onClick={start}>
-          <PlusIcon />
-          <span>Create a meal</span>
-        </button>
-      )}
+      renderAdd={(start, input) =>
+        input ? (
+          <div className="fdi-saved-pill fdi-saved-this fdi-saved-wide typing">
+            <PlusIcon />
+            {input}
+          </div>
+        ) : (
+          <button type="button" className="fdi-saved-pill fdi-saved-this fdi-saved-wide" onClick={start}>
+            <PlusIcon />
+            <span>Create a meal</span>
+          </button>
+        )
+      }
       onCards={(fn) =>
         onChange((list) =>
           fn(list.map(cardOfSaved)).map((c) => {
@@ -2610,15 +2598,101 @@ function SavedMealList({
   );
 }
 
+const cardOfSavedDay = (d: SavedDayRow): EditCard => {
+  const first = d.cards.find((c) => c.picture);
+  return { key: String(d.id), name: d.name, picture: d.picture, thumb: d.thumb, fallback: first?.picture ? { picture: first.picture, thumb: first.thumb } : undefined, items: d.cards.flatMap((c) => c.items) };
+};
+type DayDeploy = { top: number; el: HTMLElement | null };
+
+// Saved days as cards (10 Nov, Alex: A of docs/boards/saved-cards-mockup.html): the meal card with two edges behind it, so a
+// day reads as a day at a glance, its picture and ⋯ as a card's; a tap deploys the day.
+function SavedDayList({
+  clientId,
+  date,
+  days,
+  onDays,
+  refresh,
+  onOpen,
+}: {
+  clientId: number;
+  date: string;
+  days: FoodDiaryProps["savedDays"];
+  onDays: (fn: (list: FoodDiaryProps["savedDays"]) => FoodDiaryProps["savedDays"]) => void;
+  refresh: () => Promise<void>;
+  onOpen: (id: number, el: HTMLElement) => void;
+}) {
+  // A row put back after a refused delete: the list no longer holds it by then.
+  const known = useRef(new Map<string, SavedDayRow>());
+  for (const d of days) known.current.set(String(d.id), d);
+  const form = (c: EditCard) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("id", c.key);
+    return fd;
+  };
+  const no = async () => false;
+  const actions: CardActions = {
+    create: async () => null,
+    addFood: no,
+    changeFood: no,
+    removeFood: no,
+    rename: (c, name) => {
+      const fd = form(c);
+      fd.set("name", name);
+      return renameSavedDayAction(fd);
+    },
+    remove: async (c) => {
+      await deleteSavedDayAction(form(c));
+      return true;
+    },
+    upload: (c, file) => {
+      const fd = form(c);
+      fd.set("key", DAY_COVER);
+      fd.set("file", file);
+      return uploadSavedDayPictureAction(fd);
+    },
+    dropPicture: (c) => {
+      const fd = form(c);
+      fd.set("key", DAY_COVER);
+      fd.set("op", "picture-remove");
+      return changeSavedDayCardAction(fd);
+    },
+  };
+  return (
+    <EditableMealCards
+      clientId={clientId}
+      date={date}
+      cards={days.map(cardOfSavedDay)}
+      recent={NO_FOODS}
+      addAt="top"
+      renderAdd={() => null}
+      stacked
+      onOpen={(c, el) => onOpen(Number(c.key), el)}
+      onCards={(fn) =>
+        onDays((list) =>
+          fn(list.map(cardOfSavedDay)).flatMap((c) => {
+            const old = list.find((x) => String(x.id) === c.key) ?? known.current.get(c.key);
+            return old ? [{ ...old, name: c.name, picture: c.picture, thumb: c.thumb }] : [];
+          })
+        )
+      }
+      refresh={refresh}
+      actions={actions}
+    />
+  );
+}
+
 const DEFAULT_DAY_CARDS: EditCard[] = [
   { key: "breakfast", name: "Breakfast", picture: null, thumb: null, items: [] },
   { key: "lunch", name: "Lunch", picture: null, thumb: null, items: [] },
   { key: "dinner", name: "Dinner", picture: null, thumb: null, items: [] },
   { key: "snacks", name: "Snacks", picture: null, thumb: null, items: [] },
 ];
+const DAY_EASE = "cubic-bezier(.22, 1, .36, 1)";
 
-// A saved day is its name and the day's cards (10 Nov, Alex): Create a day opens on the four standard ones, there at once;
-// named, each is a card as on a day, its picture, foods, name and Delete; a meal more goes on with Add a meal.
+// Inside a day (10 Nov, Alex: A of docs/boards/saved-cards-mockup.html): its name as the page's title, Rename and Delete in
+// the ⋯ at the top. A tap on its card deploys it (10 Nov, Alex: "bum bum bum, they expand"): the cards come out from behind
+// the card that was pressed, one after another, down to their places, while the rest of the list goes.
 function SavedDayScreen({
   clientId,
   date,
@@ -2626,6 +2700,7 @@ function SavedDayScreen({
   recent,
   busy,
   useFailed,
+  from,
   onCreate,
   onDay,
   refresh,
@@ -2640,6 +2715,8 @@ function SavedDayScreen({
   recent: FoodOptionView[];
   busy: boolean;
   useFailed: boolean;
+  /** Where it deploys from: the card or pill that was pressed. */
+  from: DayDeploy | null;
   /** False when it wasn't saved. */
   onCreate: (name: string) => Promise<boolean>;
   onDay: (id: number, fn: (d: SavedDayRow) => SavedDayRow) => void;
@@ -2650,9 +2727,80 @@ function SavedDayScreen({
 }) {
   const [name, setName] = useState(day?.name ?? "");
   const [nameFailed, setNameFailed] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [menu, setMenu] = useState(false);
   const [askDelete, setAskDelete] = useState(false);
   const making = useRef(false);
   const id = day?.id ?? null;
+  const root = useRef<HTMLDivElement>(null);
+  const leaving = useRef(false);
+  const [deploying, setDeploying] = useState(!!from);
+
+  /** The pressed card over everything, fading as the day's come out of it (or back into it). */
+  const ghostOf = (layer: HTMLElement, el: HTMLElement) => {
+    const box = el.getBoundingClientRect();
+    const at = layer.getBoundingClientRect();
+    const ghost = el.cloneNode(true) as HTMLElement;
+    ghost.inert = true;
+    Object.assign(ghost.style, { position: "absolute", top: `${box.top - at.top}px`, left: `${box.left - at.left}px`, width: `${box.width}px`, height: `${box.height}px`, margin: "0", zIndex: "40", pointerEvents: "none" });
+    layer.append(ghost);
+    return ghost;
+  };
+  const stillMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const dayCards = () => [...(root.current?.querySelectorAll<HTMLElement>(".fdc-meal") ?? [])];
+  /** Where a card starts from, or folds back to: behind the pressed one, as its edges are drawn. */
+  const behind = (el: HTMLElement, i: number, top: number) => {
+    const box = el.getBoundingClientRect();
+    const level = Math.min(i, 2);
+    return `translateY(${top - box.top - level * 6}px) scale(${1 - (level * 24) / box.width})`;
+  };
+
+  useLayoutEffect(() => {
+    const layer = root.current;
+    if (!layer || !from || stillMotion()) {
+      setDeploying(false);
+      return;
+    }
+    const cards = dayCards();
+    cards.forEach((el, i) => {
+      el.style.zIndex = String(cards.length - i);
+      const start = { transform: behind(el, i, from.top), ...(from.el ? {} : { opacity: 0 }) };
+      const end = { transform: "none", ...(from.el ? {} : { opacity: 1 }) };
+      el.animate([start, end], { duration: 540, delay: 80 + i * 90, easing: DAY_EASE, fill: "backwards" }).onfinish = () => {
+        el.style.zIndex = "";
+      };
+    });
+    if (from.el) {
+      const ghost = ghostOf(layer, from.el);
+      ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, delay: 110, easing: "ease", fill: "both" }).onfinish = () => ghost.remove();
+    }
+    const done = setTimeout(() => setDeploying(false), 1300);
+    return () => clearTimeout(done);
+    // Once, as it opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Back folds the cards away into the card they came from.
+  const leave = () => {
+    const layer = root.current;
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    if (leaving.current) return;
+    if (!layer || !from || stillMotion() || !from.el?.isConnected) return onBack();
+    leaving.current = true;
+    const cards = dayCards();
+    const now = cards.map((el) => getComputedStyle(el).transform);
+    cards.forEach((el) => el.getAnimations().forEach((a) => a.cancel()));
+    cards.forEach((el, i) => {
+      el.style.zIndex = String(cards.length - i);
+      el.animate([{ transform: now[i] }, { transform: behind(el, i, from.top) }], { duration: 300, delay: (cards.length - 1 - i) * 45, easing: "cubic-bezier(.55, 0, .75, .4)", fill: "both" });
+    });
+    const ghost = ghostOf(layer, from.el);
+    ghost.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, delay: 240, easing: "ease", fill: "both" });
+    layer.animate([{ backgroundColor: "#F5F6F8" }, { backgroundColor: "transparent" }], { duration: 180, delay: 200, easing: "ease", fill: "forwards" });
+    for (const part of layer.querySelectorAll<HTMLElement>(".cn-header, .fdi-day-head, .fdi-add-meal, .fdi-day-foot, .fdc-fold")) part.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: "ease", fill: "forwards" });
+    setTimeout(onBack, 420);
+  };
+
   const commitName = () => {
     const clean = name.trim();
     if (id == null) {
@@ -2667,11 +2815,13 @@ function SavedDayScreen({
         });
       return;
     }
+    setRenaming(false);
     if (!clean) {
       setName(day?.name ?? "");
       return;
     }
     if (clean === day?.name) return;
+    const before = day?.name ?? "";
     onDay(id, (d) => ({ ...d, name: clean }));
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -2681,7 +2831,11 @@ function SavedDayScreen({
     renameSavedDayAction(fd)
       .catch(() => false)
       .then((ok) => {
-        if (!ok) setNameFailed(true);
+        if (!ok) {
+          setNameFailed(true);
+          setName(before);
+          onDay(id, (d) => (d.name === clean ? { ...d, name: before } : d));
+        }
         return refresh().catch(() => {});
       });
   };
@@ -2689,9 +2843,9 @@ function SavedDayScreen({
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("id", String(id));
-    if (c) fd.set("key", c.key);
+    fd.set("key", c ? c.key : (extra.key ?? ""));
     fd.set("op", op);
-    for (const [k, v] of Object.entries(extra)) fd.set(k, v);
+    for (const [k, v] of Object.entries(extra)) if (k !== "key") fd.set(k, v);
     return changeSavedDayCardAction(fd);
   };
   const actions: CardActions = {
@@ -2718,43 +2872,83 @@ function SavedDayScreen({
   const cards = day?.cards ?? DEFAULT_DAY_CARDS;
   const all = cards.flatMap((c) => c.items);
   const sum = (k: MacroKey) => Math.round(all.reduce((t, i) => t + i[k], 0));
+  const typing = id == null || renaming;
   return (
-    <div className="app-layer app-layer-push cn-screen fdi-saved-screen">
+    <div ref={root} className={`app-layer app-layer-push cn-screen fdi-saved-screen fdi-dayscreen${deploying ? " deploy" : ""}`}>
       <header className="cn-header">
-        <button type="button" className="cn-icon-btn" onClick={onBack} aria-label="Back">
+        <button type="button" className="cn-icon-btn" onClick={leave} aria-label="Back">
           <ChevronLeftIcon />
         </button>
         <div className="cn-header-titles">
           <h1 className="cn-title">{id == null ? "Create a day" : "Saved day"}</h1>
         </div>
-        <span className="cn-icon-spacer" aria-hidden="true" />
+        {id == null ? (
+          <span className="cn-icon-spacer" aria-hidden="true" />
+        ) : (
+          <span className="fdi-day-more">
+            <button type="button" className="cn-icon-btn" onClick={() => setMenu((m) => !m)} aria-expanded={menu} aria-label={`More for ${day?.name ?? "this day"}`}>
+              <MoreIcon />
+            </button>
+            {menu && (
+              <>
+                <button type="button" className="fdi-meal-menu-scrim" aria-label="Close" onClick={() => setMenu(false)} />
+                <span className="fdi-meal-menu" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenu(false);
+                      setRenaming(true);
+                    }}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="danger"
+                    onClick={() => {
+                      setMenu(false);
+                      setAskDelete(true);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </span>
+              </>
+            )}
+          </span>
+        )}
       </header>
       <main className="cn-body">
-        <input
-          className="fdi-make-name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={commitName}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.currentTarget.blur();
-          }}
-          placeholder="Name this day"
-          maxLength={40}
-          autoComplete="off"
-          autoFocus={id == null}
-          aria-label="Name of the day"
-        />
-        {nameFailed && (
-          <p className="fdi-photo-failed" role="alert">
-            Not saved. Try again
-          </p>
-        )}
-        {all.length > 0 && (
-          <p className="fdi-make-total">
-            <Bars parts={[`${n(sum("kcal"))} kcal`, `P ${n(sum("protein"))}`, `C ${n(sum("carbs"))}`, `F ${n(sum("fat"))}`]} />
-          </p>
-        )}
+        <div className="fdi-day-head">
+          <div className="fdi-day-eyebrow">Day</div>
+          {typing ? (
+            <input
+              className="fdi-day-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={commitName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
+              placeholder="Name this day"
+              maxLength={40}
+              autoComplete="off"
+              autoFocus
+              aria-label="Name of the day"
+            />
+          ) : (
+            <h2 className="fdi-day-title">{day?.name}</h2>
+          )}
+          <div className="fdi-day-facts">{all.length > 0 && <Bars parts={[`${n(sum("kcal"))} kcal`, `P ${n(sum("protein"))}`, `C ${n(sum("carbs"))}`, `F ${n(sum("fat"))}`]} />}</div>
+          {nameFailed && (
+            <p className="fdi-photo-failed" role="alert">
+              Not saved. Try again
+            </p>
+          )}
+        </div>
         <EditableMealCards
           clientId={clientId}
           date={date}
@@ -2762,36 +2956,34 @@ function SavedDayScreen({
           recent={recent}
           locked={id == null}
           addAt="bottom"
-          renderAdd={(start) =>
-            id != null && (
+          renderAdd={(start, input) =>
+            id != null &&
+            (input ? (
+              <div className="fdi-add-meal fdc-add typing">{input}</div>
+            ) : (
               <button type="button" className="fdi-add-meal fdc-add" onClick={start}>
                 <PlusIcon />
                 Add a meal
               </button>
-            )
+            ))
           }
           onCards={(fn) => {
             if (id != null)
               onDay(id, (d) => {
                 const next = fn(d.cards);
                 const items = next.flatMap((c) => c.items);
-                return { ...d, cards: next, count: items.length, kcal: Math.round(items.reduce((t, i) => t + i.kcal, 0)) };
+                return { ...d, cards: next.map(({ key, name: cardName, picture, thumb, items: foods }) => ({ key, name: cardName, picture, thumb, items: foods })), count: items.length, kcal: Math.round(items.reduce((t, i) => t + i.kcal, 0)) };
               });
           }}
           refresh={refresh}
           actions={actions}
         />
-        {id != null && (
-          <div className="fdi-make-foot">
-            <button type="button" className="fdi-day-delete" onClick={() => setAskDelete(true)}>
-              Delete
+        {id != null && all.length > 0 && (
+          <div className="fdi-day-foot">
+            {useFailed && <p className="fdi-photo-failed" role="alert">Not added. Try again</p>}
+            <button type="button" className="fdi-day-use" onClick={() => onUse(id)} disabled={busy}>
+              Use
             </button>
-            {useFailed && <span className="fdi-make-failed">Not added. Try again</span>}
-            {all.length > 0 && (
-              <button type="button" className="fdi-make-save" onClick={() => onUse(id)} disabled={busy}>
-                Use
-              </button>
-            )}
           </div>
         )}
       </main>
