@@ -20402,6 +20402,14 @@ span.lw-saved.lw-saved.refused { cursor: default; }
 .lw-fields.lw-fields .lw-value { align-items: flex-end; }
 .lw-fields.lw-fields .lw-num-input { text-align: right; }
 .lw-fields.lw-fields .lw-num-mirror { left: auto; right: 0; }
+/* The unit on the figure's right, on its row (10 Nov, Alex: "instead of below, just put it on the right"), as a check-in's
+   value and its unit; the same small caps, sitting on the figure's foot. The +5 stays at the figure's top right, over it. */
+.lw-fields.lw-fields .lw-value { flex-direction: row; align-items: flex-end; gap: 6px; }
+.hm-mt-links { display: inline-flex; align-items: center; gap: 16px; }
+.hm-mt-all-link.asked { color: #8b93a1; }
+.lw-num-box { position: relative; display: block; }
+.lw-fields.lw-fields .lw-num-label { margin: 0 0 12px; line-height: 1; }
+.lw-fields.lw-fields .lw-num-input.s5 ~ .lw-num-label { margin-bottom: 10px; }
 .lw-row.lw-row.done { color: #2f7a3f; }
 .lw-row.lw-row.done .lw-row-badge { box-shadow: none; --ring: #82ad8b; outline: 0; }
 .lw-row.lw-row.done .lw-row-badge svg { stroke: #82ad8b; }
