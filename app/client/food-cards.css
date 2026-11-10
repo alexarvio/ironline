@@ -19,6 +19,13 @@
 .fdi-saved-screen .fdi-copy-name { font-size: 15px; font-weight: 500; color: #141a24; }
 .fdi-saved-screen .fdi-copy-sub { font-size: 12px; font-weight: 500; color: #8b93a1; }
 .fdi-saved-screen .fdi-copy-use { height: 40px; padding: 0 0 0 12px; border: 0; background: none; font-size: 13px; font-weight: 600; color: #141a24; }
+/* Save this day, first on Saved days (10 Nov, Alex): the pill, then its name box in the same room. */
+.fdi-saved-this { margin-bottom: 8px; }
+button.fdi-saved-this { width: 100%; }
+.fdi-saved-name { display: flex; align-items: center; gap: 8px; min-height: 56px; }
+.fdi-saved-name input { flex: 1; min-width: 0; box-sizing: border-box; height: 44px; padding: 0 14px; border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 16px; font-weight: 500; color: #141a24; outline: none; }
+.fdi-saved-name input:focus { box-shadow: inset 0 0 0 1px #141a24; }
+.fdi-saved-name button { flex: none; height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .fdi-saved-foot, .fdi-saved-none { margin: 16px 0 0; font-size: 12px; font-weight: 500; color: #8b93a1; }
 .fdi-saved-none { font-size: 13px; }
 
