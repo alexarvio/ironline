@@ -483,8 +483,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
 
   // What Apply to the rest and each session's Apply to remaining weeks would change, as their confirms read it, so
   // neither is offered when it would change nothing (23 Oct, Alex: "once I apply and there are no other changes, the
-  // button disappears"). The week on screen only, and not a done one (nothing is applied from it).
-  const applyFrom = stateOf(program) !== "past" && weeks[weekIdx - 1]?.state !== "past" ? sub("applyPreview", () => applyReads(clientId, program, weekNumber)) : null;
+  // button disappears"). The week on screen only, a done one too while weeks are still to run.
+  const applyFrom = stateOf(program) !== "past" ? sub("applyPreview", () => applyReads(clientId, program, weekNumber)) : null;
   // The weeks whose copy would change the week on screen, read as Apply to the rest reads (25 Oct, Alex: "Copy Week 3
   // here" stood over a Week 4 that was Week 3; the weights the progression had raised made the two look different). A
   // weight the progression would raise again, and a session already logged on, are no change; kg and lbs as shown.

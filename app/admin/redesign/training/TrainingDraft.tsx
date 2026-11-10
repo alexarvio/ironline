@@ -829,7 +829,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     router.replace(u.pathname + u.search, { scroll: false });
   };
   // Weeks are added and removed on the server (the dialogs below); the page then lands on the right one.
-  const later = weeks.filter((w) => w.index > viewIdx);
+  // Weeks still to run: a week over is never written to, whichever week it is applied from.
+  const later = weeks.filter((w) => w.index > viewIdx && w.state !== "past");
   const laterLabel = later.length === 0 ? "" : later.length === 1 ? `W${later[0].index}` : `W${later[0].index}–W${later[later.length - 1].index}`;
   // A copy that would change nothing isn't offered (20 Oct, Alex: Week 4 was Week 3 and still said "Copy week 3 here").
   const sameWeeks = (a: number, b: number) => weeks.find((w) => w.index === a)?.print === weeks.find((w) => w.index === b)?.print;
@@ -1826,7 +1827,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         </div>
         <div className="trn-weekhead-actions">
           {/* Any week with nothing logged can go (20 Oct, Alex: it was only the last); a live programme's only from the weeks still to come. The ones after move up. */}
-          {/* A done week (weekLocked) offers none of the week's own actions: no remove, no copy here, no Apply to the rest. */}
+          {/* A done week (weekLocked) offers none of the week's own actions, no remove and no copy here; Apply stays while weeks are still to run (it changes those, never this one). */}
           {!weekLocked && weeks.length > 1 && (program.status !== "live" || week.state === "ahead") && !week.trained.some(Boolean) && !week.missed.some(Boolean) && sessions.every((x) => x.setsLogged === 0) && (
             // The bin alone (23 Oct, Alex); its words in the tooltip and for a screen reader. It asks first.
             <button type="button" className="trn-btn ghost trn-iconbtn" onClick={() => setDlg({ kind: "removeWeek" })} aria-label="Remove week" title="Remove week">
@@ -1852,7 +1853,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
             </DropdownMenu>
           )}
           {/* Build one week, fill the rest in one go (20 Oct, Alex). */}
-          {!weekLocked && later.length > 0 && sessions.length > 0 && forwardChanges && (
+          {program.status !== "past" && later.length > 0 && sessions.length > 0 && forwardChanges && (
             // The weeks it reaches, said on the button (4 Nov, Alex: "make it a bit more self-explanatory"; it was "Apply to
             // the rest" since 23 Oct): "Apply to weeks 6–13", only the weeks it would really change.
             <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyForward" })} title={`Apply ${week.label}'s changes to ${forwardLabel}`} aria-label={`Apply ${week.label}'s changes to ${forwardLabel}`}>
