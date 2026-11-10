@@ -1,12 +1,12 @@
 /* Gyms in Settings and a gym's own page (9 Nov, Alex: B of docs/boards/gym-settings-mockup.html). */
 /* A Settings section that takes one row until it is opened (9 Nov, Alex: Gyms and Card pictures, "it occupies too much space"). */
-/* Settings is its six rows (10 Nov, Alex: "why so much space between items"): 52px a row, the room inside once opened. */
+/* Settings is its six rows (10 Nov, Alex: "why so much space between items"): 44px a row, a thumb's height and no more, the room inside once opened. */
 .settings-dark .st-body { gap: 0; }
 .settings-dark .home-dark-section.home-dark-section.st-fold { padding: 0 4px; }
 .st-fold-body { padding-bottom: 14px; }
 .settings-dark .st-fold .home-dark-rows { margin-top: 0; }
 .settings-dark .st-fold .settings-toggle-row, .settings-dark .st-fold .settings-app-row, .settings-dark .st-fold .settings-data-row { min-height: 44px; padding: 8px 0; box-sizing: border-box; }
-.st-fold-head { width: 100%; display: flex; align-items: center; gap: 6px; min-height: 52px; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.st-fold-head { width: 100%; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .st-fold-chev { display: inline-flex; color: #8b93a1; transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1); }
 .st-fold-chev svg { width: 16px; height: 16px; }
 .st-fold-chev.open { transform: rotate(90deg); }
