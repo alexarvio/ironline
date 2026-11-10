@@ -8,6 +8,29 @@ import "./gyms.css";
 
 export type SavedMealCard = { id: number; name: string; kcal: number; protein: number; carbs: number; fat: number; picture: string | null; thumb: string | null };
 
+/** Every saved meal as the card it is in the diary, a tap using it. Copy a meal's and the Saved meals screen's. */
+export function SavedMealCards({ saved, busy, picture, onCopy }: { saved: SavedMealCard[]; busy: boolean; picture: (path: string) => string; onCopy: (id: number) => void }) {
+  return (
+    <div className="ams-cards">
+      {saved.map((s) => (
+        <button key={s.id} type="button" className={`fdc-card ams-card${s.picture ? "" : " bare"}`} disabled={busy} onClick={() => onCopy(s.id)}>
+          <span className="fdc-bg" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element -- the client’s own upload */}
+            {s.picture && <img src={picture(s.picture)} alt="" draggable={false} decoding="async" style={s.thumb ? { backgroundImage: `url(${s.thumb})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} />}
+          </span>
+          <span className="ams-name">{s.name}</span>
+          <span className="fdc-figs">
+            <b>{s.kcal.toLocaleString("en-GB")} kcal</b>
+            <span>P {s.protein}</span>
+            <span>C {s.carbs}</span>
+            <span>F {s.fat}</span>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Add a meal (10 Nov, Alex): New meal or Copy a meal, in the gym picker's voice; Copy a meal shows every saved meal as the
 // card it is in the diary, its picture and figures, and a tap puts it on the day as a card of its own.
 export default function AddMealSheet({
@@ -59,23 +82,7 @@ export default function AddMealSheet({
             saved.length === 0 ? (
               <p className="ads-note">None yet</p>
             ) : (
-              <div className="ams-cards">
-                {saved.map((s) => (
-                  <button key={s.id} type="button" className={`fdc-card ams-card${s.picture ? "" : " bare"}`} disabled={busy} onClick={() => onCopy(s.id)}>
-                    <span className="fdc-bg" aria-hidden="true">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- the client’s own upload */}
-                      {s.picture && <img src={picture(s.picture)} alt="" draggable={false} decoding="async" style={s.thumb ? { backgroundImage: `url(${s.thumb})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} />}
-                    </span>
-                    <span className="ams-name">{s.name}</span>
-                    <span className="fdc-figs">
-                      <b>{s.kcal.toLocaleString("en-GB")} kcal</b>
-                      <span>P {s.protein}</span>
-                      <span>C {s.carbs}</span>
-                      <span>F {s.fat}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <SavedMealCards saved={saved} busy={busy} picture={picture} onCopy={onCopy} />
             )
           ) : (
             <div className="gpk-rows">
