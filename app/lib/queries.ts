@@ -12875,6 +12875,7 @@ export function saveMeal(clientId: number, date: string, meal: FoodMeal, name: s
   if (rows.length === 0) return null;
   const data = getData();
   const row: SavedMeal = {
+    ...(FOOD_MEALS.some((m) => m.id === meal) ? { slot: meal } : {}),
     id: allocId("saved_meals"),
     client_id: clientId,
     name,
@@ -12890,6 +12891,43 @@ export function saveMeal(clientId: number, date: string, meal: FoodMeal, name: s
   data.saved_meals.push(row);
   // And the slot now is that meal: its card takes the name, its camera the saved meal.
   for (const e of rows) e.saved_meal_id = row.id;
+  persist();
+  return row;
+}
+
+type CreatedItem = { foodId: string; grams: number; serving: string | null };
+/** A food and amount as a saved meal or day holds it, worked out from the food itself; null for one that doesn't stand. */
+function createdItem(clientId: number, i: CreatedItem) {
+  const food = getFoodOption(clientId, i.foodId);
+  if (!food || !(i.grams > 0) || i.grams > 5000) return null;
+  const k = i.grams / 100;
+  return { food_id: i.foodId, name: food.name, grams: r1(i.grams), serving: i.serving, kcal: r1(food.kcal * k), protein: r1(food.protein * k), carbs: r1(food.carbs * k), fat: r1(food.fat * k) };
+}
+
+/** A saved meal made from nothing, on the Saved meals screen (10 Nov, Alex). Null with no food that stands. */
+export function createSavedMeal(clientId: number, name: string, items: CreatedItem[]): SavedMeal | null {
+  const rows = items.map((i) => createdItem(clientId, i)).filter((r): r is NonNullable<typeof r> => r != null);
+  if (rows.length === 0) return null;
+  const data = getData();
+  const row: SavedMeal = { id: allocId("saved_meals"), client_id: clientId, name, items: rows, created_at: new Date().toISOString() };
+  data.saved_meals.push(row);
+  persist();
+  return row;
+}
+
+/** A saved day made from nothing, on the Saved days screen (10 Nov, Alex): foods under the standard meals. */
+export function createSavedDay(clientId: number, name: string, items: (CreatedItem & { meal: string })[]): SavedDay | null {
+  const meals = new Set(FOOD_MEALS.map((m) => m.id as string));
+  const rows = items
+    .filter((i) => meals.has(i.meal))
+    .flatMap((i) => {
+      const row = createdItem(clientId, i);
+      return row ? [{ meal: i.meal, ...row }] : [];
+    });
+  if (rows.length === 0) return null;
+  const data = getData();
+  const row: SavedDay = { id: allocId("saved_days"), client_id: clientId, name, day_type: null, items: rows, created_at: new Date().toISOString() };
+  data.saved_days.push(row);
   persist();
   return row;
 }
@@ -12955,12 +12993,25 @@ export function addSavedMeal(clientId: number, id: number, date: string, meal: F
   return saved.items.length;
 }
 
-/** Add a meal, Copy a meal (10 Nov, Alex): a saved meal on a day as a card of its own, under its name. */
+/** The standard meal a saved meal belongs to: where it was saved from, or, saved before that was kept, where its foods first sat. */
+function slotOfSavedMeal(saved: SavedMeal): string | null {
+  if (saved.slot) return saved.slot;
+  const standard = new Set(FOOD_MEALS.map((m) => m.id as string));
+  const first = getData()
+    .food_entries.filter((e) => e.client_id === saved.client_id && e.saved_meal_id === saved.id && standard.has(e.meal))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.logged_at.localeCompare(b.logged_at))[0];
+  return first?.meal ?? null;
+}
+
+/** Add a meal, Copy a meal, Saved meals (10 Nov, Alex): a saved meal goes back to the standard meal it was saved from
+    ("always the breakfast slot with that meal"); one created from nothing, or saved from a meal of the client's own, is a card of its own. */
 export function addSavedMealCard(clientId: number, id: number, date: string): number {
   const saved = getData().saved_meals.find((m) => m.id === id && m.client_id === clientId);
   if (!saved) return 0;
-  const slot = addFoodMeal(clientId, saved.name, date);
-  return addSavedMeal(clientId, id, date, `m:${slot.id}`);
+  const slot = slotOfSavedMeal(saved);
+  if (slot) return addSavedMeal(clientId, id, date, slot);
+  const card = addFoodMeal(clientId, saved.name, date);
+  return addSavedMeal(clientId, id, date, `m:${card.id}`);
 }
 
 export type SavedDayView = { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null };

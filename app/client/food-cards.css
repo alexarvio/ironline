@@ -14,6 +14,8 @@
 .fdi-saved-pill svg:last-child { width: 16px; height: 16px; color: #98A2B3; transform: rotate(-90deg); }
 .fdi-saved-screen.cn-screen, .fdi-saved-screen .cn-header { background: #F5F6F8; }
 .fdi-saved-screen .cn-body { padding: 8px 16px 32px; overflow-y: auto; }
+/* The body is a flex column: what is in it scrolls, it never squeezes. */
+.fdi-saved-screen .cn-body > * { flex: none; }
 .fdi-saved-screen .ams-cards { max-height: none; overflow: visible; gap: 10px; }
 .fdi-saved-day { display: flex; align-items: center; gap: 12px; min-height: 60px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .fdi-saved-screen .fdi-copy-name { font-size: 15px; font-weight: 500; color: #141a24; }
@@ -21,7 +23,37 @@
 .fdi-saved-screen .fdi-copy-use { height: 40px; padding: 0 0 0 12px; border: 0; background: none; font-size: 13px; font-weight: 600; color: #141a24; }
 /* Save this day, first on Saved days (10 Nov, Alex): the pill, then its name box in the same room. */
 .fdi-saved-this { margin-bottom: 8px; }
-button.fdi-saved-this { width: 100%; }
+.fdi-saved-row.fdi-saved-this { margin-top: 0; }
+.fdi-saved-row > .fdi-saved-pill:only-child, .fdi-saved-wide { grid-column: 1 / -1; width: 100%; }
+/* Nutrition's Last 7 days: a day with food folds open on what was eaten (10 Nov, Alex). */
+.nd-day-btn { width: 100%; border: 0; background: none; font: inherit; text-align: left; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.nd-day-chev { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; color: #98A2B3; }
+.nd-day-chev svg { width: 14px; height: 14px; }
+.nd-day-foods { padding: 0 4px 12px; }
+.nd-day-meal { margin-top: 10px; }
+.nd-day-meal:first-child { margin-top: 2px; }
+.nd-day-meal-name { margin-bottom: 4px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.nd-day-food { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.nd-day-food-name { min-width: 0; font-size: 14px; font-weight: 500; color: #141a24; }
+.nd-day-food-facts { flex: none; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+/* Create a meal or a day (10 Nov, Alex). */
+.fdi-make-name { display: block; box-sizing: border-box; width: 100%; height: 48px; padding: 0 14px; border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 16px; font-weight: 500; color: #141a24; outline: none; }
+.fdi-make-name:focus { box-shadow: inset 0 0 0 1px #141a24; }
+.fdi-make-sec { margin-top: 18px; }
+.fdi-make-head { margin-bottom: 4px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.fdi-make-add { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }
+.fdi-make-add svg { width: 14px; height: 14px; }
+.fdi-make-total { margin: 20px 0 0; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.fdi-make-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-height: 44px; margin-top: 18px; }
+/* Pinned while it asks, so Back never looks dead with the foot below the fold. */
+.fdi-make-foot.ask { position: sticky; bottom: 0; z-index: 1; background: #F5F6F8; }
+.fdi-make-failed { flex: 1; font-size: 13px; font-weight: 500; color: #b8471f; }
+.fdi-make-foot.ask span { flex: 1; font-size: 13px; font-weight: 600; color: #141a24; }
+.fdi-make-save { height: 44px; padding: 0 26px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.fdi-make-save:disabled { opacity: 0.35; cursor: default; }
+.fdi-make-keep, .fdi-make-leave { height: 38px; padding: 0 16px; border: 0; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.fdi-make-keep { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.fdi-make-leave { background: none; color: #b8471f; }
 .fdi-saved-name { display: flex; align-items: center; gap: 8px; min-height: 56px; }
 .fdi-saved-name input { flex: 1; min-width: 0; box-sizing: border-box; height: 44px; padding: 0 14px; border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 16px; font-weight: 500; color: #141a24; outline: none; }
 .fdi-saved-name input:focus { box-shadow: inset 0 0 0 1px #141a24; }

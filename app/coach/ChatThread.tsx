@@ -603,9 +603,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
         }}
       >
         <div ref={inner} className="cph-thread-inner">
-          {plan == null ? null : days.length === 0 && outbox.length === 0 ? (
-            <p className="cph-empty">No messages yet</p>
-          ) : (
+          {plan == null ? null : (
             days.map((d) => (
               <div key={d.day} className="cph-day">
                 <span className="cph-day-label">{dayLabel(d.day)}</span>

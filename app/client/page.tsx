@@ -65,6 +65,7 @@ import {
   getNutritionGoalsSummary,
   getFoodDiary,
   listFoodEntries,
+  listFoodMeals,
   getNutritionPlan,
   getCurrentPhase,
   getCoachFirstName,
@@ -106,6 +107,7 @@ import TrainingDayList from "./TrainingDayList";
 
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import { setsDue } from "../lib/setsDue";
+import LastWeekDays from "./LastWeekDays";
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
 import { FOCUS_NOTE, homeFocus } from "../lib/focus";
 import type { HomeEvent, HomeEvents } from "./EventsCard";
@@ -1092,6 +1094,16 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         note: c.note ?? "",
         kcal,
         delta,
+        // What was eaten, meal by meal, for the row's fold (10 Nov, Alex).
+        meals: (() => {
+          const entries = listFoodEntries(CLIENT_ID, c.date);
+          return listFoodMeals(CLIENT_ID, c.date)
+            .map((m) => ({
+              label: m.label,
+              foods: entries.filter((e) => e.meal === m.id).map((e) => ({ name: e.name, amount: e.serving || `${Math.round(e.grams)} g`, kcal: Math.round(e.kcal) })),
+            }))
+            .filter((m) => m.foods.length > 0);
+        })(),
       };
     });
 
@@ -1129,17 +1141,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
             {lastWeek.length === 0 ? (
               <p className="nd-empty">Nothing logged</p>
             ) : (
-              lastWeek.map((d) => (
-                <div key={d.date} className="nd-day">
-                  <span>
-                    <span className="nd-day-date">{d.label}</span>
-                    <span className="nd-day-type">{d.type}</span>
-                  </span>
-                  <span className="nd-day-note">{d.note}</span>
-                  <span className="nd-day-kcal">{d.kcal.toLocaleString("en-US")}</span>
-                  <span className={`nd-day-delta ${d.delta.tone}`}>{d.delta.text}</span>
-                </div>
-              ))
+              <LastWeekDays days={lastWeek} />
             )}
           </div>
         </section>

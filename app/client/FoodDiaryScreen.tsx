@@ -15,6 +15,7 @@ import {
   addSavedMealAction,
   addSavedMealCardAction,
   deleteSavedDayAction,
+  createSavedAction,
   saveDayAction,
   copyFoodDayAction,
   deleteSavedMealAction,
@@ -406,6 +407,46 @@ export default function FoodDiaryScreen({
   // Saved days or Saved meals, the screen to pick from (10 Nov, Alex).
   const [savedScreen, setSavedScreen] = useState<"days" | "meals" | null>(null);
   const savedRow = useRef<HTMLDivElement>(null);
+  const [savedHost, setSavedHost] = useState<HTMLElement | null>(null);
+  const openSaved = (which: "days" | "meals") => {
+    setSavedHost(savedRow.current?.closest(".app-layer")?.parentElement ?? null);
+    setSavedScreen(which);
+  };
+  // Create a meal or Create a day, over the list it lands in (10 Nov, Alex).
+  const [composing, setComposing] = useState<"meal" | "day" | null>(null);
+  const [createFailed, setCreateFailed] = useState(false);
+  // One key a screen's worth of building, so Save pressed again after a failure makes one.
+  const composeKey = useRef<string | null>(null);
+  const compose = (kind: "meal" | "day") => {
+    composeKey.current = null;
+    setCreateFailed(false);
+    setComposing(kind);
+  };
+  const createSaved = (kind: "meal" | "day", name: string, drafts: ComposerDraft[]) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("kind", kind);
+    fd.set("name", name);
+    fd.set("items", JSON.stringify(drafts.map((d) => ({ meal: d.section, foodId: d.food.id, grams: d.grams, serving: d.serving }))));
+    // Its one-time key: sent again after a failure, it makes one.
+    composeKey.current ??= newOnceKey();
+    fd.set("onceKey", composeKey.current);
+    setCreateFailed(false);
+    // The screen stays until the server has it, so what was built is never lost to a bad signal.
+    startLoad(async () => {
+      try {
+        if (!(await createSavedAction(fd))) {
+          setCreateFailed(true);
+          return;
+        }
+        setComposing(null);
+        const next = await getFoodDiaryAction(clientId, date);
+        if (next) setDiary((d) => (d.date === date ? next : d));
+      } catch {
+        setCreateFailed(true);
+      }
+    });
+  };
   // The diary out of reach of the keyboard and a screen reader while its screen is over it, as a gym's page does.
   const savedOpen = !!savedScreen;
   useEffect(() => {
@@ -937,18 +978,31 @@ export default function FoodDiaryScreen({
                 <>
                   {/* Saved days and Saved meals side by side, each its own screen to pick from (10 Nov, Alex). */}
                   <div ref={savedRow} className="fdi-saved-row">
-                    <button type="button" className="fdi-saved-pill" onClick={() => setSavedScreen("days")}>
+                    <button type="button" className="fdi-saved-pill" onClick={() => openSaved("days")}>
                       <BookmarkIcon />
                       <span>Saved days</span>
                       <ChevronDownIcon />
                     </button>
-                    <button type="button" className="fdi-saved-pill" onClick={() => setSavedScreen("meals")}>
+                    <button type="button" className="fdi-saved-pill" onClick={() => openSaved("meals")}>
                       <BookmarkIcon />
                       <span>Saved meals</span>
                       <ChevronDownIcon />
                     </button>
                   </div>
-                  {savedScreen && savedRow.current?.closest(".app-layer")?.parentElement && createPortal(
+                  {savedScreen && savedHost && createPortal(
+                    composing ? (
+                      <SavedComposer
+                        kind={composing}
+                        clientId={clientId}
+                        date={date}
+                        recent={diary.recent}
+                        sections={composing === "day" ? diary.meals.filter((m) => !m.own).map((m) => ({ id: m.id, label: m.label })) : [{ id: "meal", label: "Meal" }]}
+                        saving={loading}
+                        failed={createFailed}
+                        onBack={() => setComposing(null)}
+                        onSave={(name, drafts) => createSaved(composing, name, drafts)}
+                      />
+                    ) : (
                     <div className="app-layer app-layer-push cn-screen fdi-saved-screen">
                       <header className="cn-header">
                         <button
@@ -970,11 +1024,17 @@ export default function FoodDiaryScreen({
                       </header>
                       <main className="cn-body">
                         {savedScreen === "meals" ? (
-                          diary.saved.length > 0 ? (
-                            <SavedMealCards saved={diary.saved} busy={loading} picture={(p) => pic(p, 1080)} onCopy={copyMealCard} />
-                          ) : (
-                            <p className="fdi-saved-none">None yet</p>
-                          )
+                          <>
+                            <button type="button" className="fdi-saved-pill fdi-saved-this fdi-saved-wide" onClick={() => compose("meal")} disabled={loading}>
+                              <PlusIcon />
+                              <span>Create a meal</span>
+                            </button>
+                            {diary.saved.length > 0 ? (
+                              <SavedMealCards saved={diary.saved} busy={loading} picture={(p) => pic(p, 1080)} onCopy={copyMealCard} />
+                            ) : (
+                              <p className="fdi-saved-none">None yet</p>
+                            )}
+                          </>
                         ) : (
                           <>
                             {/* Save this day (10 Nov, Alex): at the top of the list it lands in. A day already saved says so. */}
@@ -988,8 +1048,8 @@ export default function FoodDiaryScreen({
                                   Unsave
                                 </button>
                               </div>
-                            ) : diary.meals.some((m) => m.entries.length > 0) ? (
-                              namingDay ? (
+                            ) : null}
+                            {namingDay && !diary.savedDayAs && diary.meals.some((m) => m.entries.length > 0) ? (
                                 <form
                                   className="fdi-saved-name fdi-saved-this"
                                   onSubmit={(e) => {
@@ -1027,13 +1087,20 @@ export default function FoodDiaryScreen({
                                   />
                                   <button type="submit">Save</button>
                                 </form>
-                              ) : (
-                                <button type="button" className="fdi-saved-pill fdi-saved-this" onClick={() => setNamingDay(true)} disabled={loading}>
-                                  <BookmarkIcon />
-                                  <span>Save this day</span>
+                            ) : (
+                              <div className="fdi-saved-row fdi-saved-this">
+                                {!diary.savedDayAs && diary.meals.some((m) => m.entries.length > 0) && (
+                                  <button type="button" className="fdi-saved-pill" onClick={() => setNamingDay(true)} disabled={loading}>
+                                    <BookmarkIcon />
+                                    <span>Save this day</span>
+                                  </button>
+                                )}
+                                <button type="button" className="fdi-saved-pill" onClick={() => compose("day")} disabled={loading}>
+                                  <PlusIcon />
+                                  <span>Create a day</span>
                                 </button>
-                              )
-                            ) : null}
+                              </div>
+                            )}
                             {last && (
                               <div className="fdi-saved-day">
                                 <span className="fdi-copy-main">
@@ -1071,8 +1138,9 @@ export default function FoodDiaryScreen({
                           </>
                         )}
                       </main>
-                    </div>,
-                    savedRow.current?.closest(".app-layer")?.parentElement!
+                    </div>
+                    ),
+                    savedHost
                   )}
                 </>
               );
@@ -1836,6 +1904,151 @@ function SearchPanel({
 
 // ---- Inside a meal: how much -------------------------------------------------
 
+// ---- Create a meal or a day (10 Nov, Alex): a name and foods, kept here until Save ------------------------------
+
+type ComposerDraft = { key: number; section: string; food: FoodOptionView; grams: number; serving: string | null };
+const NO_SAVED: FoodDiaryProps["saved"] = [];
+
+function SavedComposer({
+  kind,
+  clientId,
+  date,
+  recent,
+  sections,
+  saving,
+  failed,
+  onBack,
+  onSave,
+}: {
+  saving: boolean;
+  failed: boolean;
+  kind: "meal" | "day";
+  clientId: number;
+  date: string;
+  recent: FoodOptionView[];
+  sections: { id: string; label: string }[];
+  onBack: () => void;
+  onSave: (name: string, drafts: ComposerDraft[]) => void;
+}) {
+  const [name, setName] = useState("");
+  const [drafts, setDrafts] = useState<ComposerDraft[]>([]);
+  const [adding, setAdding] = useState<{ section: string; step: "search" | "custom" } | { section: string; step: "amount"; food: FoodOptionView } | null>(null);
+  const [askLeave, setAskLeave] = useState(false);
+  const nextKey = useRef(1);
+  const clean = name.trim();
+  // Not with a food half added: it isn't in the list yet, and Save would leave it out.
+  const canSave = clean.length > 0 && drafts.length > 0 && !adding && !saving;
+  const total = drafts.reduce(
+    (t, d) => {
+      const r = rowOf(d.food, d.grams);
+      return { kcal: t.kcal + r.kcal, protein: t.protein + r.protein, carbs: t.carbs + r.carbs, fat: t.fat + r.fat };
+    },
+    { kcal: 0, protein: 0, carbs: 0, fat: 0 }
+  );
+  const back = () => {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    if (drafts.length > 0 || clean) setAskLeave(true);
+    else onBack();
+  };
+  const noApply = () => {};
+  const title = kind === "meal" ? "Create a meal" : "Create a day";
+  return (
+    <div className="app-layer app-layer-push cn-screen fdi-saved-screen">
+      <header className="cn-header">
+        <button type="button" className="cn-icon-btn" onClick={back} aria-label="Back">
+          <ChevronLeftIcon />
+        </button>
+        <div className="cn-header-titles">
+          <h1 className="cn-title">{title}</h1>
+        </div>
+        <span className="cn-icon-spacer" aria-hidden="true" />
+      </header>
+      <main className="cn-body">
+        <input className="fdi-make-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === "meal" ? "Name this meal" : "Name this day"} maxLength={40} autoComplete="off" aria-label={kind === "meal" ? "Name of the meal" : "Name of the day"} />
+        {sections.map((s) => {
+          const rows = drafts.filter((d) => d.section === s.id);
+          const open = adding?.section === s.id ? adding : null;
+          return (
+            <section key={s.id} className="fdi-make-sec">
+              {sections.length > 1 && <div className="fdi-make-head">{s.label}</div>}
+              {rows.map((d) => (
+                <div key={d.key} className="fdi-saved-day">
+                  <span className="fdi-copy-main">
+                    <span className="fdi-copy-name">{d.food.name}</span>
+                    <span className="fdi-copy-sub">
+                      <Bars parts={[d.serving ?? `${g(d.grams)} g`, `${n(rowOf(d.food, d.grams).kcal)} kcal`]} />
+                    </span>
+                  </span>
+                  <button type="button" className="fdi-copy-use" onClick={() => setDrafts((all) => all.filter((x) => x.key !== d.key))}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+              {open?.step === "search" ? (
+                <SearchPanel
+                  clientId={clientId}
+                  date={date}
+                  meal={s.id}
+                  mealLabel={sections.length > 1 ? s.label : clean || "this meal"}
+                  recent={recent}
+                  saved={NO_SAVED}
+                  onPick={(food) => setAdding({ section: s.id, step: "amount", food })}
+                  onCustom={() => setAdding({ section: s.id, step: "custom" })}
+                  onCopied={() => setAdding(null)}
+                  onCancel={() => setAdding(null)}
+                />
+              ) : open?.step === "amount" ? (
+                <AmountPanel
+                  clientId={clientId}
+                  date={date}
+                  meal={s.id}
+                  mealLabel={sections.length > 1 ? s.label : clean || "this meal"}
+                  food={open.food}
+                  apply={noApply}
+                  settle={noApply}
+                  onDraft={(grams, serving) => setDrafts((all) => [...all, { key: nextKey.current++, section: s.id, food: open.food, grams, serving }])}
+                  onDone={() => setAdding(null)}
+                  onCancel={() => setAdding({ section: s.id, step: "search" })}
+                />
+              ) : open?.step === "custom" ? (
+                <CustomFoodPanel clientId={clientId} onCancel={() => setAdding({ section: s.id, step: "search" })} onCreated={(food) => setAdding({ section: s.id, step: "amount", food })} />
+              ) : (
+                <button type="button" className="fdi-make-add" onClick={() => setAdding({ section: s.id, step: "search" })}>
+                  <PlusIcon />
+                  Add food
+                </button>
+              )}
+            </section>
+          );
+        })}
+        {drafts.length > 0 && (
+          <p className="fdi-make-total">
+            <Bars parts={[`${n(total.kcal)} kcal`, `P ${n(total.protein)}`, `C ${n(total.carbs)}`, `F ${n(total.fat)}`]} />
+          </p>
+        )}
+        {askLeave ? (
+          <div className="fdi-make-foot ask">
+            <span>Leave without saving?</span>
+            <button type="button" className="fdi-make-keep" onClick={() => setAskLeave(false)}>
+              Keep
+            </button>
+            <button type="button" className="fdi-make-leave" onClick={onBack}>
+              Leave
+            </button>
+          </div>
+        ) : (
+          <div className="fdi-make-foot">
+            {failed && <span className="fdi-make-failed">Not saved. Try again</span>}
+            <button type="button" className="fdi-make-save" disabled={!canSave} onClick={() => onSave(clean, drafts)}>
+              Save
+            </button>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
 function AmountPanel({
   clientId,
   date,
@@ -1845,9 +2058,12 @@ function AmountPanel({
   entry,
   apply,
   settle,
+  onDraft,
   onDone,
   onCancel,
 }: {
+  /** Creating a meal or a day: the food is kept by the screen, nothing is logged. */
+  onDraft?: (grams: number, serving: string | null) => void;
   clientId: number;
   date: string;
   meal: FoodMeal;
@@ -1916,6 +2132,11 @@ function AmountPanel({
   const save = () => {
     if (!ok) return;
     const g1 = Math.round(grams * 10) / 10;
+    if (onDraft) {
+      onDraft(g1, servingLabel);
+      onDone();
+      return;
+    }
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("grams", String(g1));

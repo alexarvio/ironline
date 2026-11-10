@@ -289,6 +289,8 @@ export type SavedMeal = {
   picture?: string | null;
   /** Its tiny blurry preview, as MealPhoto.thumb. */
   picture_thumb?: string | null;
+  /** The standard meal it was saved from (10 Nov, Alex): used again, it goes back there. Absent on one created from nothing. */
+  slot?: string | null;
 };
 // Training day or rest day, as the client set it on the food diary for a
 // date: which targets the day counts down from. Absent: by whether a set

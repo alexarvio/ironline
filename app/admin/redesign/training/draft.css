@@ -894,7 +894,7 @@ span.rd-demo { cursor: default; }
 .wb-board-title { margin: 0; font-size: 18px; font-weight: 800; color: #141a24; }
 
 /* Extra sets the client added (12 Oct): a green +N beside the swap's amber arrows, on the row and the session head. */
-.rd-extradot { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.45); color: #2f7a3f; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; vertical-align: middle; cursor: default; box-sizing: border-box; }
+.rd-extradot { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 3px; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.45); color: #2f7a3f; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; vertical-align: middle; cursor: default; box-sizing: border-box; }
 
 /* The substitutes dialog (14 Oct): the library's rows, greyed when kept off this session; the session's own under them. */
 .rd-subs-dlg { max-width: 720px; }
