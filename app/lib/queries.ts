@@ -12831,18 +12831,52 @@ export function saveMeal(clientId: number, date: string, meal: FoodMeal, name: s
     items: rows.map((e) => ({ food_id: e.food_id, name: e.name, grams: e.grams, serving: e.serving, kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat })),
     created_at: new Date().toISOString(),
   };
+  // The day's photo becomes the saved meal's picture (9 Nov, Alex): the same file, so nothing is copied.
+  const photo = getMealPhoto(clientId, date, meal);
+  if (photo) row.picture = photo;
   data.saved_meals.push(row);
+  // And the slot now is that meal: its card takes the name, its camera the saved meal.
+  for (const e of rows) e.saved_meal_id = row.id;
   persist();
   return row;
 }
 
-export function deleteSavedMeal(clientId: number, id: number): boolean {
+/** Forgets a saved meal. Returns the picture files that went with it (only when nothing else shows them), for the bucket copies. */
+export function deleteSavedMeal(clientId: number, id: number): string[] {
   const data = getData();
-  const before = data.saved_meals.length;
-  data.saved_meals = data.saved_meals.filter((m) => !(m.id === id && m.client_id === clientId));
-  if (data.saved_meals.length === before) return false;
+  const row = data.saved_meals.find((m) => m.id === id && m.client_id === clientId);
+  if (!row) return [];
+  data.saved_meals = data.saved_meals.filter((m) => m !== row);
+  const gone = dropUnusedMealPictures([row.picture]);
   persist();
-  return true;
+  return gone;
+}
+
+const foodsKey = (rows: { food_id: string; grams: number }[]) => rows.map((e) => `${e.food_id}@${e.grams}`).sort().join("|");
+
+/**
+ * The saved meal a slot's rows are, or null (9 Nov, Alex). Worked out from the rows rather than kept on the slot, so
+ * there is nothing to clear: every row must have come in with that one saved meal and the slot must still hold exactly
+ * its foods and amounts. A food added (no stamp), one taken out or its amount changed (the foods differ), a second
+ * helping of the meal (the foods differ), or the saved meal forgotten each end the link on their own.
+ */
+function savedMealOfRows(rows: FoodEntry[], saved: SavedMeal[]): SavedMeal | null {
+  const id = rows[0]?.saved_meal_id;
+  if (id == null || rows.some((e) => e.saved_meal_id !== id)) return null;
+  const row = saved.find((s) => s.id === id);
+  return row && foodsKey(row.items) === foodsKey(rows) ? row : null;
+}
+
+function savedMealOfSlot(clientId: number, date: string, meal: string): SavedMeal | null {
+  return savedMealOfRows(listFoodEntries(clientId, date).filter((e) => e.meal === meal), getData().saved_meals.filter((s) => s.client_id === clientId));
+}
+
+/** Of these picture files, the ones no saved meal and no day's photo holds any more: taken off the disk and returned, for the bucket copies. */
+function dropUnusedMealPictures(paths: (string | null | undefined)[]): string[] {
+  const data = getData();
+  const gone = [...new Set(paths.filter((p): p is string => !!p))].filter((p) => !data.saved_meals.some((s) => s.picture === p) && !data.meal_photos.some((m) => m.file_path === p));
+  for (const p of gone) fs.rmSync(path.join(DATA_DIR, p.startsWith("/") ? p.slice(1) : p), { force: true });
+  return gone;
 }
 
 /** Where a meal id from another day (or a saved day) lands on a date: itself when it is a standard meal or already on that day, else an added meal of the same name on that day, made if needed; Snacks when the source meal is gone. */
@@ -12861,7 +12895,7 @@ export function addSavedMeal(clientId: number, id: number, date: string, meal: F
   const saved = data.saved_meals.find((m) => m.id === id && m.client_id === clientId);
   if (!saved || !hasFoodMeal(clientId, meal, date)) return 0;
   const now = new Date().toISOString();
-  for (const i of saved.items) data.food_entries.push({ id: allocId("food_entries"), client_id: clientId, date, meal, ...i, logged_at: now });
+  for (const i of saved.items) data.food_entries.push({ id: allocId("food_entries"), client_id: clientId, date, meal, ...i, logged_at: now, saved_meal_id: saved.id });
   persist();
   return saved.items.length;
 }
@@ -12885,7 +12919,8 @@ export function saveDay(clientId: number, date: string, name: string): SavedDay 
     client_id: clientId,
     name,
     day_type: foodDayType(clientId, date),
-    items: rows.map((e) => ({ meal: e.meal, food_id: e.food_id, name: e.name, grams: e.grams, serving: e.serving, kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat })),
+    // A meal that came from a saved meal stays that meal when the day is used again (its card, its picture).
+    items: rows.map((e) => ({ meal: e.meal, food_id: e.food_id, name: e.name, grams: e.grams, serving: e.serving, kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat, ...(e.saved_meal_id != null ? { saved_meal_id: e.saved_meal_id } : {}) })),
     created_at: new Date().toISOString(),
   };
   data.saved_days.push(row);
@@ -13284,45 +13319,57 @@ export function markVideoSeen(id: number) {
   persist();
 }
 
-/** Writes the picture to the disk and files it. Returns its public path. */
-export function saveMealPhoto(clientId: number, date: string, meal: string, buffer: Buffer, mimeType: string): string {
+/**
+ * Writes the picture to the disk and files it as that day's photo; on a meal that is a saved meal, as the saved meal's
+ * picture as well (9 Nov, Alex). Returns its public path and the earlier files nothing shows any more.
+ */
+export function saveMealPhoto(clientId: number, date: string, meal: string, buffer: Buffer, mimeType: string): { path: string; gone: string[] } {
   const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
   // "m:12" is a meal the client added; a colon is not a filename anywhere.
   const slug = meal.replace(/[^a-z0-9]/gi, "-");
   const dir = path.join(DATA_DIR, "uploads", "meals", String(clientId), date);
   fs.mkdirSync(dir, { recursive: true });
-  // The extension can change between pictures (.heic then .jpg); drop any
-  // earlier one for this meal so the old file is not left orphaned.
-  for (const existing of fs.readdirSync(dir)) {
-    if (existing.startsWith(`${slug}.`)) fs.rmSync(path.join(dir, existing), { force: true });
-  }
-  const filename = `${slug}.${ext}`;
+  // A new name every time: a saved meal may hold the file this one replaces, and the phone keeps a card's small copy by name.
+  const filename = `${slug}-${Date.now()}.${ext}`;
   fs.writeFileSync(path.join(dir, filename), buffer);
   const publicPath = `/uploads/meals/${clientId}/${date}/${filename}`;
 
   const data = getData();
   const row = data.meal_photos.find((p) => p.client_id === clientId && p.date === date && p.meal === meal);
+  const was: (string | null | undefined)[] = [row?.file_path];
   if (row) {
     row.file_path = publicPath;
     row.uploaded_at = new Date().toISOString();
   } else {
     data.meal_photos.push({ id: allocId("meal_photos"), client_id: clientId, date, meal, file_path: publicPath, uploaded_at: new Date().toISOString() });
   }
+  const saved = savedMealOfSlot(clientId, date, meal);
+  if (saved) {
+    was.push(saved.picture);
+    saved.picture = publicPath;
+  }
+  const gone = dropUnusedMealPictures(was);
   persist();
-  return publicPath;
+  return { path: publicPath, gone };
 }
 
-/** Forgets a meal's picture. Returns the path it had, for the bucket copy. */
-export function removeMealPhoto(clientId: number, date: string, meal: string): string | null {
+/**
+ * Takes the picture on screen off a meal on a day: the saved meal's picture on a meal that is one, else that day's photo.
+ * That day's photo goes with a saved meal's only when it is the same file; a different one was never on screen, so it
+ * stays and stands in as the card's picture, as do other days' photos, the coach's record of what was eaten.
+ * Returns the files nothing shows any more, for the bucket copies.
+ */
+export function removeMealPhoto(clientId: number, date: string, meal: string): string[] {
   const data = getData();
   const row = data.meal_photos.find((p) => p.client_id === clientId && p.date === date && p.meal === meal);
-  if (!row) return null;
-  const was = row.file_path;
-  data.meal_photos = data.meal_photos.filter((p) => p !== row);
-  const onDisk = path.join(DATA_DIR, was.startsWith("/") ? was.slice(1) : was);
-  fs.rmSync(onDisk, { force: true });
+  const saved = savedMealOfSlot(clientId, date, meal);
+  const shown = saved?.picture ?? row?.file_path;
+  if (!shown) return [];
+  if (row?.file_path === shown) data.meal_photos = data.meal_photos.filter((p) => p !== row);
+  if (saved?.picture) delete saved.picture;
+  const gone = dropUnusedMealPictures([shown]);
   persist();
-  return was;
+  return gone;
 }
 
 /** Everything the diary screen needs for one day. */
@@ -13335,7 +13382,7 @@ export type FoodDiaryView = {
   /** Both days' targets, so Training day | Rest day switches on the phone at once (4 Nov, Alex: it took 1-2 s). */
   targets: { training: FoodDiaryView["target"]; rest: FoodDiaryView["target"] };
   eaten: { kcal: number; protein: number; carbs: number; fat: number };
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null; /** The client's picture of this meal, when they took one. */ photo: string | null; /** What the coach said about this meal. */ comments: MealComment[] }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null; /** The saved meal that filled this slot (added or saved from it), while it still holds just that meal; the card then wears its name. */ savedMealId: number | null; /** The client's picture of this meal that day, when they took one. */ photo: string | null; /** What the card shows: the linked saved meal's picture, else that day's photo. */ picture: string | null; /** What the coach said about this meal. */ comments: MealComment[] }[];
   recent: FoodOption[];
   /** The client's saved meals, newest first. */
   saved: SavedMealView[];
@@ -13750,7 +13797,8 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
   // The same foods in the same amounts as a saved meal: it is that meal.
   const savedKeys = getData()
     .saved_meals.filter((s) => s.client_id === clientId)
-    .map((s) => ({ name: s.name, key: s.items.map((i) => `${i.food_id}@${i.grams}`).sort().join("|") }));
+    .map((s) => ({ name: s.name, key: foodsKey(s.items) }));
+  const savedMeals = getData().saved_meals.filter((s) => s.client_id === clientId);
   // The other days' meals, newest first, so a day can be built from one before it.
   const since = new Date(`${today}T00:00:00`);
   since.setDate(since.getDate() - 14);
@@ -13783,9 +13831,11 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     meals: meals.map((m) => {
       const rows = entries.filter((e) => e.meal === m.id);
       const tot = (k: "kcal" | "protein" | "carbs" | "fat") => r1(rows.reduce((s, e) => s + e[k], 0));
-      const key = rows.map((e) => `${e.food_id}@${e.grams}`).sort().join("|");
-      const savedAs = rows.length ? savedKeys.find((s) => s.key === key)?.name ?? null : null;
-      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs, photo: photos.get(m.id) ?? null, comments: comments.get(m.id) ?? [] };
+      const key = foodsKey(rows);
+      const linked = savedMealOfRows(rows, savedMeals);
+      const savedAs = linked?.name ?? (rows.length ? savedKeys.find((s) => s.key === key)?.name ?? null : null);
+      const photo = photos.get(m.id) ?? null;
+      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs, savedMealId: linked?.id ?? null, photo, picture: linked?.picture ?? photo, comments: comments.get(m.id) ?? [] };
     }),
     recent: recentFoods(clientId),
     saved: listSavedMeals(clientId),
