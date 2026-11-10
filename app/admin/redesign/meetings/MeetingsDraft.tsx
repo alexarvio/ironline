@@ -314,14 +314,15 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
   // in rust for a week (the to-do strip at the top carries its Mark completed), then `Not completed`.
   const toCome = (m: DraftMeeting) => m.status === "scheduled" && !(m.over ?? m.date < today);
   const scheduled = meetings.filter(toCome).sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
-  // A repeating call shows its next one alone (11 Nov, Alex): the one after takes its place once it is completed or over.
+  // A repeating call shows its next two (11 Nov, Alex: "they can check when the next call is", never six months of them):
+  // the next one, and the one after it under Also scheduled, each moving up once the one before is completed or over.
   // The rest of the series stays in `meetings`, so changing what comes after still reaches it.
-  const seenSeries = new Set<number>();
+  const seenSeries = new Map<number, number>();
   const shown = scheduled.filter((m) => {
     if (m.seriesId == null) return true;
-    if (seenSeries.has(m.seriesId)) return false;
-    seenSeries.add(m.seriesId);
-    return true;
+    const n = seenSeries.get(m.seriesId) ?? 0;
+    seenSeries.set(m.seriesId, n + 1);
+    return n < 2;
   });
   const upcoming = shown[0] ?? null;
   const also = shown.slice(1);
