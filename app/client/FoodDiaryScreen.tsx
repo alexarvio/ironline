@@ -479,6 +479,7 @@ export default function FoodDiaryScreen({
     // Brought to the middle and lit (24 Oct, Alex: a link lands on its thing).
     landOn(el);
   }, [diary, initialMeal, initialDate, initial.date]);
+  const openOnly = (id: FoodMeal) => setFolded(new Set(diary.meals.map((m) => m.id).filter((x) => x !== id)));
   const toggleFold = (id: FoodMeal) =>
     setFolded((prev) => {
       const next = new Set(prev);
@@ -504,7 +505,11 @@ export default function FoodDiaryScreen({
       setFolded((prev) => new Set(prev).add(meal.id));
       return;
     }
-    if (meal.entries.length > 0) toggleFold(meal.id);
+    if (meal.entries.length === 0) return;
+    if (!folded.has(meal.id)) return toggleFold(meal.id);
+    // One meal open at a time (10 Nov, Alex): the one before folds away as this one opens, on the shared fold.
+    if (panel?.kind === "search") closePanel();
+    openOnly(meal.id);
   };
   // Rearranging: press and hold a meal's name and it lifts; drag it up or
   // down and the others slide out of its way; let go and the order is saved.
@@ -1201,11 +1206,7 @@ export default function FoodDiaryScreen({
                               onClick={() => {
                                 if (savingMeal === meal.id || (open && open.kind !== "search")) return;
                                 if (open?.kind === "search") return closePanel();
-                                setFolded((prev) => {
-                                  const next = new Set(prev);
-                                  next.delete(meal.id);
-                                  return next;
-                                });
+                                openOnly(meal.id);
                                 setPanel({ kind: "search", meal: meal.id });
                               }}
                               aria-label={`Add food to ${title}`}
