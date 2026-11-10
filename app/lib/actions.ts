@@ -353,7 +353,16 @@ import {
   copyFoodMeal,
   copyFoodDay,
   saveDay,
-  createSavedDay,
+  createBlankSavedDay,
+  renameSavedDay,
+  addSavedDayCard,
+  renameSavedDayCard,
+  removeSavedDayCard,
+  addSavedDayFood,
+  updateSavedDayFood,
+  removeSavedDayFood,
+  setSavedDayPicture,
+  removeSavedDayPicture,
   createSavedMeal,
   deleteSavedDay,
   addSavedDay,
@@ -4907,30 +4916,93 @@ export async function saveMealAction(formData: FormData) {
   });
 }
 
-/** Create a meal or Create a day (10 Nov, Alex): named, built from nothing, its foods as the client picked them. */
-export async function createSavedAction(formData: FormData): Promise<boolean> {
+/** Create a meal (10 Nov, Alex): the card named, filled after. Its id, null when it wasn't saved. */
+export async function createSavedMealCardAction(formData: FormData): Promise<number | null> {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const name = String(formData.get("name") ?? "").trim().slice(0, 40);
-  const kind = formData.get("kind") === "day" ? "day" : "meal";
-  let raw: unknown;
-  try {
-    raw = JSON.parse(String(formData.get("items") ?? "[]"));
-  } catch {
-    return false;
-  }
-  if (!name || !Array.isArray(raw)) return false;
-  const items = (raw as Record<string, unknown>[]).slice(0, 100).map((i) => ({
-    meal: String(i?.meal ?? ""),
-    foodId: String(i?.foodId ?? ""),
-    grams: Number(i?.grams),
-    serving: typeof i?.serving === "string" ? i.serving.slice(0, 60) : null,
-  }));
-  return once(`createSavedAction:${clientId}`, onceKeyOf(formData), () => {
-    const made = (kind === "day" ? createSavedDay(clientId, name, items) : createSavedMeal(clientId, name, items)) != null;
-    // The diary reads its day from the page when it next opens.
-    if (made) revalidatePath("/client");
-    return made;
+  if (!name) return null;
+  const id = await once(`createSavedMealCardAction:${clientId}`, onceKeyOf(formData), () => createSavedMeal(clientId, name)?.id ?? null);
+  if (id != null) revalidatePath("/client");
+  return id;
+}
+
+/** Create a day (10 Nov, Alex): named, the four standard cards on it. Its id, null when it wasn't saved. */
+export async function createSavedDayAction(formData: FormData): Promise<number | null> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const name = String(formData.get("name") ?? "");
+  const id = await once(`createSavedDayAction:${clientId}`, onceKeyOf(formData), () => createBlankSavedDay(clientId, name)?.id ?? null);
+  if (id != null) revalidatePath("/client");
+  return id;
+}
+
+export async function renameSavedDayAction(formData: FormData): Promise<boolean> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id)) return false;
+  const done = renameSavedDay(clientId, id, String(formData.get("name") ?? ""));
+  if (done) revalidatePath("/client");
+  return done;
+}
+
+/** A card on a saved day, changed as a day's card is. True once the server has it. */
+export async function changeSavedDayCardAction(formData: FormData): Promise<boolean> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  const op = String(formData.get("op") ?? "");
+  const key = String(formData.get("key") ?? "");
+  const name = String(formData.get("name") ?? "");
+  const index = Number(formData.get("index"));
+  const foodId = String(formData.get("foodId") ?? "");
+  const grams = Number(formData.get("grams"));
+  const serving = String(formData.get("serving") ?? "") || null;
+  if (!Number.isInteger(id) || !key) return false;
+  let gone: string[] = [];
+  const done = await once(`changeSavedDayCardAction:${clientId}`, onceKeyOf(formData), () => {
+    switch (op) {
+      case "card-add":
+        return addSavedDayCard(clientId, id, key, name);
+      case "card-rename":
+        return renameSavedDayCard(clientId, id, key, name);
+      case "card-remove": {
+        const files = removeSavedDayCard(clientId, id, key);
+        gone = files ?? [];
+        return files != null;
+      }
+      case "food-add":
+        return addSavedDayFood(clientId, id, key, { foodId, grams, serving });
+      case "food-update":
+        return Number.isInteger(index) && updateSavedDayFood(clientId, id, key, index, foodId, grams, serving);
+      case "food-remove":
+        return Number.isInteger(index) && removeSavedDayFood(clientId, id, key, index, foodId);
+      case "picture-remove":
+        gone = removeSavedDayPicture(clientId, id, key);
+        return true;
+      default:
+        return false;
+    }
   });
+  for (const was of gone) await deleteUpload(was);
+  if (done) revalidatePath("/client");
+  return done;
+}
+
+export async function uploadSavedDayPictureAction(formData: FormData): Promise<boolean> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  const key = String(formData.get("key") ?? "");
+  const file = formData.get("file") as File | null;
+  if (!Number.isInteger(id) || !key || !file || file.size === 0) return false;
+  const original = Buffer.from(await file.arrayBuffer());
+  const fitted = await fitPhoto(original);
+  const buffer = fitted?.bytes ?? original;
+  const type = fitted?.type ?? (file.type || "image/jpeg");
+  const saved = setSavedDayPicture(clientId, id, key, buffer, type);
+  if (!saved) return false;
+  for (const was of saved.gone) await deleteUpload(was);
+  await putUpload(saved.path, buffer, type);
+  await prepareChatMedia(saved.path, "image", buffer);
+  revalidatePath("/client");
+  return true;
 }
 
 export async function deleteSavedMealAction(formData: FormData) {
@@ -5084,7 +5156,7 @@ export async function deleteSavedDayAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id)) return;
-  deleteSavedDay(clientId, id);
+  for (const was of deleteSavedDay(clientId, id)) await deleteUpload(was);
   revalidatePath("/client");
 }
 

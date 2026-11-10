@@ -736,13 +736,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
         );
       })()}
 
-      {days.length === 0 ? (
-        // No programme at all (22 Oct, Alex: a new client is the start): two words, no sentence.
-        // An empty week and a week of rest days alike (3 Nov, Alex: the words audit).
-        program ? <p className="empty-note">No sessions yet</p> : <p className="empty-note">No plan yet</p>
-      ) : trainingDays.length === 0 ? (
-        <p className="empty-note">No sessions yet</p>
-      ) : (
+      {days.length === 0 || trainingDays.length === 0 ? null : (
         (() => {
           // "My notes" are private to the client: a coach previewing the app
           // gets empty ones.
@@ -1097,11 +1091,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
             <h2 className="nd-card-title">Last 7 days</h2>
           </div>
           <div className="nd-card">
-            {lastWeek.length === 0 ? (
-              <p className="nd-empty">Nothing logged</p>
-            ) : (
-              <LastWeekDays days={lastWeek} />
-            )}
+            {lastWeek.length > 0 && <LastWeekDays days={lastWeek} />}
           </div>
         </section>
       </div>

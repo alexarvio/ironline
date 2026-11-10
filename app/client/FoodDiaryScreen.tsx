@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import AddMealSheet, { DeleteMealDialog } from "./AddMealSheet";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -15,7 +15,11 @@ import {
   addSavedMealAction,
   addSavedMealCardAction,
   deleteSavedDayAction,
-  createSavedAction,
+  createSavedMealCardAction,
+  createSavedDayAction,
+  renameSavedDayAction,
+  changeSavedDayCardAction,
+  uploadSavedDayPictureAction,
   changeSavedMealFoodAction,
   renameSavedMealAction,
   uploadSavedMealPictureAction,
@@ -119,7 +123,7 @@ export type FoodDiaryProps = {
   meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null; /** The saved meal that filled this slot, while it still holds just that meal. */ savedMealId: number | null; photo: string | null; /** What the card shows: the saved meal's picture, else that day's photo. */ picture: string | null; /** That picture's tiny preview, there at once. */ thumb: string | null; comments: { id: number; text: string; when: string }[] }[];
   recent: FoodOptionView[];
   saved: { id: number; name: string; kcal: number; protein: number; carbs: number; fat: number; picture: string | null; thumb: string | null; count: number; names: string[]; items: SavedItem[] }[];
-  savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null }[];
+  savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null; cards: { key: string; name: string; picture: string | null; thumb: string | null; items: SavedItem[] }[] }[];
   savedDayAs: string | null;
   savedDayId: number | null;
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
@@ -440,40 +444,27 @@ export default function FoodDiaryScreen({
     setSavedHost(savedRow.current?.closest(".app-layer")?.parentElement ?? null);
     setSavedScreen(which);
   };
-  // Create a meal or Create a day, over the list it lands in (10 Nov, Alex).
-  const [composing, setComposing] = useState<"meal" | "day" | null>(null);
-  const [createFailed, setCreateFailed] = useState(false);
-  // One key a screen's worth of building, so Save pressed again after a failure makes one.
-  const composeKey = useRef<string | null>(null);
-  const compose = (kind: "meal" | "day") => {
-    composeKey.current = null;
-    setCreateFailed(false);
-    setComposing(kind);
+  // A saved day's own screen, over the list (10 Nov, Alex): `new` until it has its name.
+  const [openDay, setOpenDay] = useState<number | "new" | null>(null);
+  const [dayFailed, setDayFailed] = useState<number | null>(null);
+  const [forgetFailed, setForgetFailed] = useState<number | null>(null);
+  // Which opening of Create a day a create belongs to: a late answer never turns a newer, unnamed screen into the old day.
+  const newDayOpening = useRef(0);
+  const rereadDiary = async () => {
+    const next = await getFoodDiaryAction(clientId, date);
+    if (next) setDiary((d) => (d.date === date ? next : d));
   };
-  const createSaved = (kind: "meal" | "day", name: string, drafts: ComposerDraft[]) => {
+  const createDay = async (name: string) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
-    fd.set("kind", kind);
     fd.set("name", name);
-    fd.set("items", JSON.stringify(drafts.map((d) => ({ meal: d.section, foodId: d.food.id, grams: d.grams, serving: d.serving }))));
-    // Its one-time key: sent again after a failure, it makes one.
-    composeKey.current ??= newOnceKey();
-    fd.set("onceKey", composeKey.current);
-    setCreateFailed(false);
-    // The screen stays until the server has it, so what was built is never lost to a bad signal.
-    startLoad(async () => {
-      try {
-        if (!(await createSavedAction(fd))) {
-          setCreateFailed(true);
-          return;
-        }
-        setComposing(null);
-        const next = await getFoodDiaryAction(clientId, date);
-        if (next) setDiary((d) => (d.date === date ? next : d));
-      } catch {
-        setCreateFailed(true);
-      }
-    });
+    fd.set("onceKey", newOnceKey());
+    const opening = newDayOpening.current;
+    const id = await createSavedDayAction(fd);
+    if (id == null) return false;
+    await rereadDiary().catch(() => {});
+    if (newDayOpening.current === opening) setOpenDay((o) => (o === "new" ? id : o));
+    return true;
   };
   // The diary out of reach of the keyboard and a screen reader while its screen is over it, as a gym's page does.
   const savedOpen = !!savedScreen;
@@ -939,6 +930,7 @@ export default function FoodDiaryScreen({
                   // would have them; it used to open some and not others.
                   setSavedScreen(null);
                   setNamingDay(false);
+                  setOpenDay(null);
                   setPanel(null);
                   setFolded(new Set(next.meals.map((m) => m.id)));
                 }
@@ -963,8 +955,15 @@ export default function FoodDiaryScreen({
                 fd.set("date", date);
                 // Its one-time key (6 Nov): sent again once the signal is back, the saved day goes in once.
                 fd.set("onceKey", newOnceKey());
+                setDayFailed(null);
                 startLoad(async () => {
-                  await addSavedDayAction(fd);
+                  try {
+                    await addSavedDayAction(fd);
+                  } catch {
+                    // No signal: what is open stays and says so, never the error page.
+                    setDayFailed(id);
+                    return;
+                  }
                   await after();
                 });
               };
@@ -973,9 +972,16 @@ export default function FoodDiaryScreen({
                 fd.set("clientId", String(clientId));
                 fd.set("id", String(id));
                 setAskForgetDay(null);
+                setForgetFailed(null);
                 startLoad(async () => {
-                  await deleteSavedDayAction(fd);
-                  const next = await getFoodDiaryAction(clientId, date);
+                  try {
+                    await deleteSavedDayAction(fd);
+                  } catch {
+                    // No signal: the day stays listed and says so, never the error page.
+                    setForgetFailed(id);
+                    return;
+                  }
+                  const next = await getFoodDiaryAction(clientId, date).catch(() => null);
                   if (next) setDiary(next);
                 });
               };
@@ -1018,17 +1024,26 @@ export default function FoodDiaryScreen({
                     </button>
                   </div>
                   {savedScreen && savedHost && createPortal(
-                    composing ? (
-                      <SavedComposer
-                        kind={composing}
+                    savedScreen === "days" && openDay != null ? (
+                      <SavedDayScreen
                         clientId={clientId}
                         date={date}
+                        day={openDay === "new" ? null : diary.savedDays.find((d) => d.id === openDay) ?? null}
                         recent={diary.recent}
-                        sections={composing === "day" ? diary.meals.filter((m) => !m.own).map((m) => ({ id: m.id, label: m.label })) : [{ id: "meal", label: "Meal" }]}
-                        saving={loading}
-                        failed={createFailed}
-                        onBack={() => setComposing(null)}
-                        onSave={(name, drafts) => createSaved(composing, name, drafts)}
+                        busy={loading}
+                        useFailed={openDay !== "new" && dayFailed === openDay}
+                        onCreate={createDay}
+                        onDay={(id, fn) => setDiary((d) => ({ ...d, savedDays: d.savedDays.map((x) => (x.id === id ? fn(x) : x)) }))}
+                        refresh={rereadDiary}
+                        onBack={() => {
+                          setOpenDay(null);
+                          setDayFailed(null);
+                        }}
+                        onUse={use}
+                        onDelete={(id) => {
+                          setOpenDay(null);
+                          forget(id);
+                        }}
                       />
                     ) : (
                     <div className="app-layer app-layer-push cn-screen fdi-saved-screen">
@@ -1053,11 +1068,7 @@ export default function FoodDiaryScreen({
                       <main className="cn-body">
                         {savedScreen === "meals" ? (
                           <>
-                            <button type="button" className="fdi-saved-pill fdi-saved-this fdi-saved-wide" onClick={() => compose("meal")} disabled={loading}>
-                              <PlusIcon />
-                              <span>Create a meal</span>
-                            </button>
-                            {diary.saved.length > 0 && (
+                            {(
                               <SavedMealList
                                 clientId={clientId}
                                 date={date}
@@ -1134,7 +1145,10 @@ export default function FoodDiaryScreen({
                                     <span>Save this day</span>
                                   </button>
                                 )}
-                                <button type="button" className="fdi-saved-pill" onClick={() => compose("day")} disabled={loading}>
+                                <button type="button" className="fdi-saved-pill" onClick={() => {
+                                    newDayOpening.current++;
+                                    setOpenDay("new");
+                                  }} disabled={loading}>
                                   <PlusIcon />
                                   <span>Create a day</span>
                                 </button>
@@ -1153,10 +1167,13 @@ export default function FoodDiaryScreen({
                             )}
                             {diary.savedDays.map((d) => (
                               <div key={d.id} className="fdi-saved-day" {...holdRow(d.id)}>
-                                <span className="fdi-copy-main">
+                                {/* The day's own screen, its cards as on a day (10 Nov, Alex). A hold that asked to forget it doesn't open it. */}
+                                <button type="button" className="fdi-copy-main fdi-saved-open" onClick={() => askForgetDay !== d.id && setOpenDay(d.id)}>
                                   <span className="fdi-copy-name">{d.name}</span>
                                   <span className="fdi-copy-sub">{n(d.kcal)} kcal</span>
-                                </span>
+                                  {dayFailed === d.id && <span className="fdi-make-failed">Not added. Try again</span>}
+                                  {forgetFailed === d.id && <span className="fdi-make-failed">Not deleted. Try again</span>}
+                                </button>
                                 {askForgetDay === d.id ? (
                                   <span className="fdi-row-ask">
                                     <button type="button" className="fdi-confirm-keep" onClick={() => setAskForgetDay(null)} autoFocus>
@@ -1167,9 +1184,11 @@ export default function FoodDiaryScreen({
                                     </button>
                                   </span>
                                 ) : (
-                                  <button type="button" className="fdi-copy-use" onClick={() => use(d.id)} disabled={loading}>
-                                    Use
-                                  </button>
+                                  d.count > 0 && (
+                                    <button type="button" className="fdi-copy-use" onClick={() => use(d.id)} disabled={loading}>
+                                      Use
+                                    </button>
+                                  )
                                 )}
                               </div>
                             ))}
@@ -1457,7 +1476,7 @@ export default function FoodDiaryScreen({
                         meal={meal.id}
                         mealLabel={title}
                         recent={diary.recent}
-                        saved={diary.saved}
+                        saved={diary.saved.filter((s) => s.count > 0)}
                         onPick={(food) => {
                           holdMeal(meal.id);
                           setPanel({ kind: "amount", meal: meal.id, food });
@@ -1523,7 +1542,7 @@ export default function FoodDiaryScreen({
       )}
       {addingMeal && (
         <AddMealSheet
-          saved={diary.saved}
+          saved={diary.saved.filter((s) => s.count > 0)}
           busy={loading}
           picture={(p) => pic(p, 1080)}
           onNew={() => {
@@ -1958,90 +1977,99 @@ function SearchPanel({
 
 // ---- Inside a meal: how much -------------------------------------------------
 
-// ---- Saved meals (10 Nov, Alex: "exactly like they are inside the days"): the day's card, on a saved meal --------
+// ---- Saved meals and saved days (10 Nov, Alex: "exactly like they are inside the days"): the day's card, editable ------
 
+const NO_SAVED: FoodDiaryProps["saved"] = [];
 type SavedMealRow = FoodDiaryProps["saved"][number];
-type SavedPanel = { id: number; kind: "search" | "custom" } | { id: number; kind: "amount"; food: FoodOptionView; index?: number };
+type SavedDayRow = FoodDiaryProps["savedDays"][number];
+type EditCard = { key: string; name: string; picture: string | null; thumb: string | null; items: SavedItem[] };
+type CardPanel = { key: string; kind: "search" | "custom" } | { key: string; kind: "amount"; food: FoodOptionView; index?: number };
+type CardActions = {
+  /** The new card's key, null when it wasn't saved. */
+  create: (name: string) => Promise<string | null>;
+  rename: (c: EditCard, name: string) => Promise<boolean>;
+  addFood: (c: EditCard, foodId: string, grams: number, serving: string | null, onceKey: string) => Promise<boolean>;
+  changeFood: (c: EditCard, index: number, foodId: string, grams: number, serving: string | null) => Promise<boolean>;
+  removeFood: (c: EditCard, index: number, foodId: string, onceKey: string) => Promise<boolean>;
+  remove: (c: EditCard) => Promise<boolean>;
+  upload: (c: EditCard, file: File) => Promise<boolean>;
+  dropPicture: (c: EditCard) => Promise<boolean>;
+};
+/** A card still on its way to the server: its key is made here, and it has no tools until it has a real one. */
+const isTempCard = (key: string) => key.startsWith("-");
 
-/** A saved meal with its foods changed: the figures on its card follow. */
-function withItems(s: SavedMealRow, items: SavedItem[]): SavedMealRow {
-  const tot = (k: MacroKey) => Math.round(items.reduce((t, i) => t + i[k], 0));
-  return { ...s, items, count: items.length, names: [...new Set(items.map((i) => i.name))], kcal: tot("kcal"), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat") };
-}
-
-function SavedMealList({
+function EditableMealCards({
   clientId,
   date,
-  saved,
+  cards,
   recent,
-  busy,
-  onChange,
+  locked = false,
+  addAt,
+  renderAdd,
+  onCards,
   refresh,
-  onUse,
-  useFailed,
+  actions,
+  foot,
 }: {
-  /** The saved meal whose Use didn't reach the server. */
-  useFailed: number | null;
   clientId: number;
   date: string;
-  saved: FoodDiaryProps["saved"];
+  cards: EditCard[];
   recent: FoodOptionView[];
-  busy: boolean;
-  /** Shows the change on the screen at once. */
-  onChange: (fn: (list: FoodDiaryProps["saved"]) => FoodDiaryProps["saved"]) => void;
-  /** Reads the diary again, so the day's cards follow. */
+  /** A day not named yet: the cards are there, their tools come with the name. */
+  locked?: boolean;
+  addAt: "top" | "bottom";
+  renderAdd: (start: () => void) => ReactNode;
+  onCards: (fn: (list: EditCard[]) => EditCard[]) => void;
   refresh: () => Promise<void>;
-  onUse: (id: number) => void;
+  actions: CardActions;
+  /** Under a card's foods, in words. */
+  foot?: (c: EditCard) => ReactNode;
 }) {
-  const [openId, setOpenId] = useState<number | null>(null);
-  const [panel, setPanel] = useState<SavedPanel | null>(null);
-  const [menu, setMenu] = useState<number | null>(null);
-  const [renaming, setRenaming] = useState<number | null>(null);
-  const [askDelete, setAskDelete] = useState<number | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [panel, setPanel] = useState<CardPanel | null>(null);
+  const [menu, setMenu] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createFailed, setCreateFailed] = useState(false);
+  const [askDelete, setAskDelete] = useState<string | null>(null);
   const [askRemove, setAskRemove] = useState<string | null>(null);
   useDropOnTapOutside(askRemove != null, setAskRemove);
-  const [failed, setFailed] = useState<number[]>([]);
-  const unsettled = useRef(new Map<number, { row: SavedMealRow | null; at: number; count: number; bad: boolean }>());
-  const [photoOf, setPhotoOf] = useState<number | null>(null);
+  const [failed, setFailed] = useState<string[]>([]);
+  const unsettled = useRef(new Map<string, { row: EditCard | null; at: number; count: number; bad: boolean }>());
+  const [photoOf, setPhotoOf] = useState<string | null>(null);
   const [askDropPhoto, setAskDropPhoto] = useState(false);
-  const [photoBusy, setPhotoBusy] = useState<number[]>([]);
-  const [photoFailed, setPhotoFailed] = useState<number | null>(null);
-  const [picked, setPicked] = useState<Record<number, string>>({});
+  const [photoBusy, setPhotoBusy] = useState<string[]>([]);
+  const [photoFailed, setPhotoFailed] = useState<string | null>(null);
+  const [picked, setPicked] = useState<Record<string, string>>({});
   const pickedUrls = useRef<string[]>([]);
   useEffect(() => () => pickedUrls.current.forEach((u) => URL.revokeObjectURL(u)), []);
   const photoInput = useRef<HTMLInputElement>(null);
-  const photoFor = useRef<number | null>(null);
+  const photoFor = useRef<EditCard | null>(null);
   const noApply = () => {};
 
-  const form = (id: number) => {
-    const fd = new FormData();
-    fd.set("clientId", String(clientId));
-    fd.set("id", String(id));
-    return fd;
-  };
   // What is on screen changes at once. Refused or with no signal, that card alone goes back to how it stood before its
   // first change still on its way, and says so.
-  const send = (id: number, before: FoodDiaryProps["saved"], run: () => Promise<boolean>) => {
-    setFailed((f) => f.filter((x) => x !== id));
-    const mine = unsettled.current.get(id);
+  const send = (key: string, run: () => Promise<boolean>) => {
+    setFailed((f) => f.filter((x) => x !== key));
+    const mine = unsettled.current.get(key);
     if (mine) mine.count++;
     else {
-      const at = before.findIndex((x) => x.id === id);
-      unsettled.current.set(id, { row: before[at] ?? null, at, count: 1, bad: false });
+      const at = cards.findIndex((x) => x.key === key);
+      unsettled.current.set(key, { row: cards[at] ?? null, at, count: 1, bad: false });
     }
     const settle = (ok: boolean) => {
-      const entry = unsettled.current.get(id);
+      const entry = unsettled.current.get(key);
       if (!entry) return;
       entry.count--;
       if (!ok) entry.bad = true;
       if (entry.count > 0) return;
-      unsettled.current.delete(id);
+      unsettled.current.delete(key);
       if (!entry.bad) return;
-      setFailed((f) => [...f, id]);
+      setFailed((f) => [...f, key]);
       const row = entry.row;
       if (row) {
-        onChange((list) => {
-          const rest = list.filter((x) => x.id !== id);
+        onCards((list) => {
+          const rest = list.filter((x) => x.key !== key);
           const at = Math.min(entry.at, rest.length);
           return [...rest.slice(0, at), row, ...rest.slice(at)];
         });
@@ -2054,295 +2082,321 @@ function SavedMealList({
         return refresh().catch(() => {});
       });
   };
-  const setItems = (s: SavedMealRow, items: SavedItem[]) => onChange((list) => list.map((x) => (x.id === s.id ? withItems(x, items) : x)));
+  const setItems = (key: string, items: SavedItem[]) => onCards((list) => list.map((x) => (x.key === key ? { ...x, items } : x)));
 
-  const addFood = (s: SavedMealRow, food: FoodOptionView, grams: number, serving: string | null) => {
-    const before = saved;
-    setItems(s, [...s.items, { food_id: food.id, name: food.name, grams, serving, ...rowOf(food, grams) }]);
-    const fd = form(s.id);
-    fd.set("op", "add");
-    fd.set("foodId", food.id);
-    fd.set("grams", String(grams));
-    fd.set("serving", serving ?? "");
-    fd.set("onceKey", newOnceKey());
-    send(s.id, before, () => changeSavedMealFoodAction(fd));
+  const finishCreate = (value: string) => {
+    setCreating(false);
+    const clean = value.trim();
+    if (!clean) return;
+    const temp = `-${Date.now()}`;
+    setCreateFailed(false);
+    const card: EditCard = { key: temp, name: clean, picture: null, thumb: null, items: [] };
+    onCards((list) => (addAt === "top" ? [card, ...list] : [...list, card]));
+    actions
+      .create(clean)
+      .catch(() => null)
+      .then((key) => {
+        if (key) onCards((list) => list.map((x) => (x.key === temp ? { ...x, key } : x)));
+        else {
+          onCards((list) => list.filter((x) => x.key !== temp));
+          setCreateFailed(true);
+        }
+        return refresh().catch(() => {});
+      });
   };
-  const changeFood = (s: SavedMealRow, index: number, grams: number, serving: string | null) => {
-    const item = s.items[index];
+  const addFood = (c: EditCard, food: FoodOptionView, grams: number, serving: string | null) => {
+    setItems(c.key, [...c.items, { food_id: food.id, name: food.name, grams, serving, ...rowOf(food, grams) }]);
+    const onceKey = newOnceKey();
+    send(c.key, () => actions.addFood(c, food.id, grams, serving, onceKey));
+  };
+  const changeFood = (c: EditCard, index: number, grams: number, serving: string | null) => {
+    const item = c.items[index];
     if (!item || !(item.grams > 0)) return;
-    const before = saved;
     const k = grams / item.grams;
-    setItems(s, s.items.map((x, i) => (i === index ? { ...x, grams, serving, kcal: r1(x.kcal * k), protein: r1(x.protein * k), carbs: r1(x.carbs * k), fat: r1(x.fat * k) } : x)));
-    const fd = form(s.id);
-    fd.set("op", "update");
-    fd.set("index", String(index));
-    fd.set("foodId", item.food_id);
-    fd.set("grams", String(grams));
-    fd.set("serving", serving ?? "");
-    send(s.id, before, () => changeSavedMealFoodAction(fd));
+    setItems(c.key, c.items.map((x, i) => (i === index ? { ...x, grams, serving, kcal: r1(x.kcal * k), protein: r1(x.protein * k), carbs: r1(x.carbs * k), fat: r1(x.fat * k) } : x)));
+    send(c.key, () => actions.changeFood(c, index, item.food_id, grams, serving));
   };
-  const removeFood = (s: SavedMealRow, index: number) => {
-    const item = s.items[index];
+  const removeFood = (c: EditCard, index: number) => {
+    const item = c.items[index];
     if (!item) return;
-    const before = saved;
     setAskRemove(null);
     setPanel(null);
-    setItems(s, s.items.filter((_, i) => i !== index));
-    const fd = form(s.id);
-    fd.set("op", "remove");
-    fd.set("index", String(index));
-    fd.set("foodId", item.food_id);
-    // Its one-time key: sent again, a second identical food stays.
-    fd.set("onceKey", newOnceKey());
-    send(s.id, before, () => changeSavedMealFoodAction(fd));
+    setItems(c.key, c.items.filter((_, i) => i !== index));
+    const onceKey = newOnceKey();
+    send(c.key, () => actions.removeFood(c, index, item.food_id, onceKey));
   };
-  const finishRename = (s: SavedMealRow, value: string) => {
+  const finishRename = (c: EditCard, value: string) => {
     setRenaming(null);
     const clean = value.trim();
-    if (!clean || clean === s.name) return;
-    const before = saved;
-    onChange((list) => list.map((x) => (x.id === s.id ? { ...x, name: clean } : x)));
-    const fd = form(s.id);
-    fd.set("name", clean);
-    send(s.id, before, () => renameSavedMealAction(fd));
+    if (!clean || clean === c.name) return;
+    onCards((list) => list.map((x) => (x.key === c.key ? { ...x, name: clean } : x)));
+    send(c.key, () => actions.rename(c, clean));
   };
-  const removeSaved = (id: number) => {
-    const before = saved;
+  const removeCard = (c: EditCard) => {
     setAskDelete(null);
     setPanel(null);
-    setOpenId((o) => (o === id ? null : o));
-    onChange((list) => list.filter((x) => x.id !== id));
-    const fd = form(id);
-    send(id, before, async () => {
-      await deleteSavedMealAction(fd);
-      return true;
-    });
+    setOpenKey((o) => (o === c.key ? null : o));
+    onCards((list) => list.filter((x) => x.key !== c.key));
+    send(c.key, () => actions.remove(c));
   };
-
-  const pickPhotoFor = (id: number) => {
-    photoFor.current = id;
+  const pickPhotoFor = (c: EditCard) => {
+    photoFor.current = c;
     photoInput.current?.click();
   };
   const closePhoto = () => {
     setPhotoOf(null);
     setAskDropPhoto(false);
   };
-  const sendPhoto = (id: number, file: File) => {
+  const sendPhoto = (c: EditCard, file: File) => {
     const local = URL.createObjectURL(file);
     pickedUrls.current.push(local);
-    setPicked((p) => ({ ...p, [id]: local }));
-    const forget = () => setPicked((p) => (p[id] === local ? Object.fromEntries(Object.entries(p).filter(([k]) => Number(k) !== id)) : p));
-    const fd = form(id);
-    fd.set("file", file);
-    setPhotoBusy((b) => [...b, id]);
+    setPicked((p) => ({ ...p, [c.key]: local }));
+    const forget = () => setPicked((p) => (p[c.key] === local ? Object.fromEntries(Object.entries(p).filter(([k]) => k !== c.key)) : p));
+    setPhotoBusy((b) => [...b, c.key]);
     setPhotoFailed(null);
     closePhoto();
-    uploadSavedMealPictureAction(fd)
+    actions
+      .upload(c, file)
       .then(async (ok) => {
         if (!ok) {
-          setPhotoFailed(id);
+          setPhotoFailed(c.key);
           forget();
         }
         await refresh().catch(() => {});
       })
       .catch(() => {
-        setPhotoFailed(id);
+        setPhotoFailed(c.key);
         forget();
       })
-      .finally(() => setPhotoBusy((b) => b.filter((x) => x !== id)));
+      .finally(() => setPhotoBusy((b) => b.filter((x) => x !== c.key)));
   };
-  const dropPhoto = (id: number) => {
-    const before = saved;
+  const dropPhoto = (c: EditCard) => {
     closePhoto();
-    setPicked((p) => Object.fromEntries(Object.entries(p).filter(([k]) => Number(k) !== id)));
-    onChange((list) => list.map((x) => (x.id === id ? { ...x, picture: null, thumb: null } : x)));
-    const fd = form(id);
-    send(id, before, () => removeSavedMealPictureAction(fd));
+    setPicked((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k !== c.key)));
+    onCards((list) => list.map((x) => (x.key === c.key ? { ...x, picture: null, thumb: null } : x)));
+    send(c.key, () => actions.dropPicture(c));
   };
 
-  // A tap anywhere on the card opens its foods, one card at a time, as the day's cards.
-  const tapCard = (e: React.MouseEvent, s: SavedMealRow) => {
+  // A tap anywhere on the card opens its foods, one card at a time, as the day's cards; one with nothing in it doesn't open.
+  const tapCard = (e: React.MouseEvent, c: EditCard) => {
     if ((e.target as Element).closest(".fdc-tools, .fdc-more, input")) return;
-    if (renaming === s.id) return;
-    if (panel?.id === s.id && panel.kind !== "search") {
+    if (renaming === c.key || locked || isTempCard(c.key)) return;
+    if (panel?.key === c.key && panel.kind !== "search") {
       (document.activeElement as HTMLElement | null)?.blur();
       return;
     }
+    if (panel?.key === c.key) {
+      setPanel(null);
+      setOpenKey(null);
+      return;
+    }
+    if (c.items.length === 0) return;
     setPanel(null);
-    setOpenId((o) => (o === s.id ? null : s.id));
+    setOpenKey((o) => (o === c.key ? null : c.key));
   };
-  const tapPlus = (s: SavedMealRow) => {
-    if (panel?.id === s.id && panel.kind !== "search") return;
-    if (panel?.id === s.id) return setPanel(null);
-    setOpenId(s.id);
-    setPanel({ id: s.id, kind: "search" });
+  const tapPlus = (c: EditCard) => {
+    if (panel?.key === c.key && panel.kind !== "search") return;
+    if (panel?.key === c.key) return setPanel(null);
+    setOpenKey(c.key);
+    setPanel({ key: c.key, kind: "search" });
   };
 
-  const shown = photoOf != null ? saved.find((s) => s.id === photoOf) ?? null : null;
-  const deleting = askDelete != null ? saved.find((s) => s.id === askDelete) ?? null : null;
+  const shown = photoOf != null ? cards.find((c) => c.key === photoOf) ?? null : null;
+  const deleting = askDelete != null ? cards.find((c) => c.key === askDelete) ?? null : null;
+  const add = renderAdd(() => setCreating(true));
+  // The title first (10 Nov, Alex: "once I add a title, then boom, we have the card"): the pill becomes its name box; left blank, it goes.
+  const addOrName = creating ? (
+    <input
+      className={`fdi-make-name fdi-card-name ${addAt}`}
+      type="text"
+      placeholder="Name this meal"
+      maxLength={40}
+      autoComplete="off"
+      autoFocus
+      aria-label="Meal name"
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          e.currentTarget.value = "";
+          e.currentTarget.blur();
+        }
+      }}
+      onBlur={(e) => finishCreate(e.currentTarget.value)}
+    />
+  ) : (
+    add
+  );
   return (
-    <section className="fdi-meals fdc-meals">
-      <input
-        ref={photoInput}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          const id = photoFor.current;
-          photoFor.current = null;
-          if (file && id != null) sendPhoto(id, file);
-        }}
-      />
-      {saved.map((s) => {
-        const naming = renaming === s.id;
-        const unfolded = openId === s.id;
-        const local = picked[s.id] ?? null;
-        const here = panel?.id === s.id ? panel : null;
-        return (
-          <div key={s.id} className={`fdi-meal fdc-meal${unfolded ? " open" : ""}`}>
-            <div className={`fdc-card${s.picture || (photoBusy.includes(s.id) && local) ? "" : " bare"}`} onClick={(e) => tapCard(e, s)}>
-              <div className="fdc-bg" aria-hidden="true">
-                {photoBusy.includes(s.id) && local ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- the phone's own copy, just picked
-                  <img src={local} alt="" draggable={false} />
-                ) : (
-                  s.picture && <CardPicture src={pic(s.picture, 1080)} under={local ?? s.thumb} />
-                )}
-              </div>
-              {!naming && (
-                <>
-                  <span className="fdi-meal-more-wrap fdc-more">
-                    <button type="button" className="fdc-tool" onClick={() => setMenu(menu === s.id ? null : s.id)} aria-expanded={menu === s.id} aria-label={`More for ${s.name}`}>
-                      <MoreIcon />
-                    </button>
-                    {menu === s.id && (
-                      <>
-                        <button type="button" className="fdi-meal-menu-scrim" aria-label="Close" onClick={() => setMenu(null)} />
-                        <span className="fdi-meal-menu" role="menu">
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => {
-                              setMenu(null);
-                              setRenaming(s.id);
-                            }}
-                          >
-                            Rename
-                          </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="danger"
-                            onClick={() => {
-                              setMenu(null);
-                              setAskDelete(s.id);
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </span>
-                      </>
-                    )}
-                  </span>
-                  <span className="fdc-tools">
-                    {photoBusy.includes(s.id) ? (
-                      <span className="fdc-tool fdi-photo-busy" role="status" aria-label={`Adding the picture of ${s.name}`}>
-                        <CameraIcon />
-                      </span>
-                    ) : (
-                      <button type="button" className="fdc-tool" onClick={() => (s.picture ? setPhotoOf(s.id) : pickPhotoFor(s.id))} aria-label={s.picture ? `See your picture of ${s.name}` : `Add a picture of ${s.name}`}>
-                        <CameraIcon />
-                      </button>
-                    )}
-                    <button type="button" className="fdc-tool" onClick={() => tapPlus(s)} aria-label={`Add food to ${s.name}`}>
-                      <PlusIcon />
-                    </button>
-                  </span>
-                </>
-              )}
-              <div className="fdc-name">
-                {naming ? (
-                  <span className="fdc-handle naming">
-                    <input
-                      className="fdi-meal-name-box fdc-name-box"
-                      type="text"
-                      defaultValue={s.name}
-                      placeholder="Name the meal"
-                      maxLength={40}
-                      autoComplete="off"
-                      autoFocus
-                      aria-label="Meal name"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") e.currentTarget.blur();
-                        if (e.key === "Escape") {
-                          e.currentTarget.value = "";
-                          e.currentTarget.blur();
-                        }
-                      }}
-                      onBlur={(e) => finishRename(s, e.currentTarget.value)}
-                    />
-                  </span>
-                ) : (
-                  <span className="fdc-title">{s.name}</span>
-                )}
-                {!naming && (
-                  <button type="button" className={`fdi-meal-chev fdc-chev${unfolded ? " up" : ""}`} aria-expanded={unfolded} aria-label={unfolded ? `Fold ${s.name}` : `Open ${s.name}`}>
-                    <ChevronDownIcon />
-                  </button>
-                )}
-              </div>
-              {!naming && (
-                <div className="fdc-figs" role="group" aria-label={`${s.name}: ${n(s.kcal)} kcal`}>
-                  <b>{n(s.kcal)} kcal</b>
-                  <span>P {n(s.protein)}</span>
-                  <span>C {n(s.carbs)}</span>
-                  <span>F {n(s.fat)}</span>
+    <>
+      {addAt === "top" && addOrName}
+      {createFailed && (
+        <p className="fdi-photo-failed" role="alert">
+          Not saved. Try again
+        </p>
+      )}
+      <section className="fdi-meals fdc-meals">
+        <input
+          ref={photoInput}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            const c = photoFor.current;
+            photoFor.current = null;
+            if (file && c) sendPhoto(c, file);
+          }}
+        />
+        {cards.map((c) => {
+          const naming = renaming === c.key;
+          const here = panel?.key === c.key ? panel : null;
+          const filled = c.items.length > 0;
+          const unfolded = openKey === c.key && (filled || here != null);
+          const local = picked[c.key] ?? null;
+          const busy = photoBusy.includes(c.key);
+          const tools = !naming && !locked && !isTempCard(c.key);
+          const tot = (k: MacroKey) => Math.round(c.items.reduce((t, i) => t + i[k], 0));
+          return (
+            <div key={c.key} className={`fdi-meal fdc-meal${unfolded ? " open" : ""}`}>
+              <div className={`fdc-card${c.picture || (busy && local) ? "" : " bare"}${filled ? "" : " shut"}`} onClick={(e) => tapCard(e, c)}>
+                <div className="fdc-bg" aria-hidden="true">
+                  {busy && local ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- the phone's own copy, just picked
+                    <img src={local} alt="" draggable={false} />
+                  ) : (
+                    c.picture && <CardPicture src={pic(c.picture, 1080)} under={local ?? c.thumb} />
+                  )}
                 </div>
-              )}
-            </div>
-            {photoFailed === s.id && (
-              <p className="fdi-photo-failed" role="alert">
-                Picture not added. Try again
-              </p>
-            )}
-            {failed.includes(s.id) && (
-              <p className="fdi-photo-failed" role="alert">
-                Not saved. Try again
-              </p>
-            )}
-            {useFailed === s.id && (
-              <p className="fdi-photo-failed" role="alert">
-                Not added. Try again
-              </p>
-            )}
-            <div className={`so-fold fdc-fold${unfolded ? " open" : ""}`} aria-hidden={!unfolded} inert={!unfolded}>
-              <div className="so-fold-in">
-                <div className="fdc-foods">
-                  {s.items.map((it, i) => {
-                    const selected = here?.kind === "amount" && here.index === i;
-                    const askKey = `${s.id}:${i}`;
-                    const per100 = (v: number) => (it.grams > 0 ? (v / it.grams) * 100 : 0);
-                    const food: FoodOptionView = { id: it.food_id, name: it.name, hint: "", group: "more", kcal: per100(it.kcal), protein: per100(it.protein), carbs: per100(it.carbs), fat: per100(it.fat), servings: [] };
-                    return (
-                      <div key={`${i}:${it.food_id}`} className={`fdi-row-wrap${selected ? " selected" : ""}`}>
-                        <button type="button" className={`fdi-row${selected ? " selected" : ""}`} onClick={() => setPanel(selected ? null : { id: s.id, kind: "amount", food, index: i })}>
-                          <span className="fdi-row-main">
-                            <span className="fdi-row-name">{it.name}</span>
-                            <span className="fdi-row-amount">
-                              <Bars parts={amountParts(it)} />
-                            </span>
+                {tools && (
+                  <>
+                    <span className="fdi-meal-more-wrap fdc-more">
+                      <button type="button" className="fdc-tool" onClick={() => setMenu(menu === c.key ? null : c.key)} aria-expanded={menu === c.key} aria-label={`More for ${c.name}`}>
+                        <MoreIcon />
+                      </button>
+                      {menu === c.key && (
+                        <>
+                          <button type="button" className="fdi-meal-menu-scrim" aria-label="Close" onClick={() => setMenu(null)} />
+                          <span className="fdi-meal-menu" role="menu">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setMenu(null);
+                                setRenaming(c.key);
+                              }}
+                            >
+                              Rename
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="danger"
+                              onClick={() => {
+                                setMenu(null);
+                                setAskDelete(c.key);
+                              }}
+                            >
+                              Delete
+                            </button>
                           </span>
-                          <span className="fdc-row-kcal">{n(it.kcal)}</span>
+                        </>
+                      )}
+                    </span>
+                    <span className="fdc-tools">
+                      {busy ? (
+                        <span className="fdc-tool fdi-photo-busy" role="status" aria-label={`Adding the picture of ${c.name}`}>
+                          <CameraIcon />
+                        </span>
+                      ) : (
+                        <button type="button" className="fdc-tool" onClick={() => (c.picture ? setPhotoOf(c.key) : pickPhotoFor(c))} aria-label={c.picture ? `See your picture of ${c.name}` : `Add a picture of ${c.name}`}>
+                          <CameraIcon />
                         </button>
-                        {s.items.length > 1 &&
-                          (askRemove === askKey ? (
+                      )}
+                      <button type="button" className="fdc-tool" onClick={() => tapPlus(c)} aria-label={`Add food to ${c.name}`}>
+                        <PlusIcon />
+                      </button>
+                    </span>
+                  </>
+                )}
+                <div className="fdc-name">
+                  {naming ? (
+                    <span className="fdc-handle naming">
+                      <input
+                        className="fdi-meal-name-box fdc-name-box"
+                        type="text"
+                        defaultValue={c.name}
+                        placeholder="Name the meal"
+                        maxLength={40}
+                        autoComplete="off"
+                        autoFocus
+                        aria-label="Meal name"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                          if (e.key === "Escape") {
+                            e.currentTarget.value = "";
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        onBlur={(e) => finishRename(c, e.currentTarget.value)}
+                      />
+                    </span>
+                  ) : (
+                    <span className="fdc-title">{c.name}</span>
+                  )}
+                  {filled && !naming && (
+                    <button type="button" className={`fdi-meal-chev fdc-chev${unfolded ? " up" : ""}`} aria-expanded={unfolded} aria-label={unfolded ? `Fold ${c.name}` : `Open ${c.name}`}>
+                      <ChevronDownIcon />
+                    </button>
+                  )}
+                </div>
+                {!naming &&
+                  (filled ? (
+                    <div className="fdc-figs" role="group" aria-label={`${c.name}: ${n(tot("kcal"))} kcal`}>
+                      <b>{n(tot("kcal"))} kcal</b>
+                      <span>P {n(tot("protein"))}</span>
+                      <span>C {n(tot("carbs"))}</span>
+                      <span>F {n(tot("fat"))}</span>
+                    </div>
+                  ) : (
+                    <div className="fdc-figs none">Nothing logged</div>
+                  ))}
+              </div>
+              {photoFailed === c.key && (
+                <p className="fdi-photo-failed" role="alert">
+                  Picture not added. Try again
+                </p>
+              )}
+              {failed.includes(c.key) && (
+                <p className="fdi-photo-failed" role="alert">
+                  Not saved. Try again
+                </p>
+              )}
+              <div className={`so-fold fdc-fold${unfolded ? " open" : ""}`} aria-hidden={!unfolded} inert={!unfolded}>
+                <div className="so-fold-in">
+                  <div className="fdc-foods">
+                    {c.items.map((it, i) => {
+                      const selected = here?.kind === "amount" && here.index === i;
+                      const askKey = `${c.key}:${i}`;
+                      const per100 = (v: number) => (it.grams > 0 ? (v / it.grams) * 100 : 0);
+                      const food: FoodOptionView = { id: it.food_id, name: it.name, hint: "", group: "more", kcal: per100(it.kcal), protein: per100(it.protein), carbs: per100(it.carbs), fat: per100(it.fat), servings: [] };
+                      return (
+                        <div key={`${i}:${it.food_id}`} className={`fdi-row-wrap${selected ? " selected" : ""}`}>
+                          <button type="button" className={`fdi-row${selected ? " selected" : ""}`} onClick={() => setPanel(selected ? null : { key: c.key, kind: "amount", food, index: i })}>
+                            <span className="fdi-row-main">
+                              <span className="fdi-row-name">{it.name}</span>
+                              <span className="fdi-row-amount">
+                                <Bars parts={amountParts(it)} />
+                              </span>
+                            </span>
+                            <span className="fdc-row-kcal">{n(it.kcal)}</span>
+                          </button>
+                          {askRemove === askKey ? (
                             <span className="fdi-row-ask">
                               <button type="button" className="fdi-confirm-keep" onClick={() => setAskRemove(null)} autoFocus>
                                 Keep
                               </button>
-                              <button type="button" className="fdi-confirm-remove" onClick={() => removeFood(s, i)}>
+                              <button type="button" className="fdi-confirm-remove" onClick={() => removeFood(c, i)}>
                                 Remove
                               </button>
                             </span>
@@ -2350,248 +2404,407 @@ function SavedMealList({
                             <button type="button" className="fdi-row-bin" onClick={() => setAskRemove(askKey)} aria-label={`Remove ${it.name}`}>
                               <TrashIcon />
                             </button>
-                          ))}
-                        {selected && here?.kind === "amount" && (
-                          <AmountPanel
-                            clientId={clientId}
-                            date={date}
-                            meal={`saved-${s.id}`}
-                            mealLabel={s.name}
-                            food={here.food}
-                            entry={{ ...it, id: i, meal: `saved-${s.id}` }}
-                            apply={noApply}
-                            settle={noApply}
-                            onDraft={(grams, serving) => changeFood(s, i, grams, serving)}
-                            onDone={() => setPanel(null)}
-                            onCancel={() => setPanel(null)}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                  <div className="fdc-foot">
-                    <button type="button" className="fdc-save" onClick={() => onUse(s.id)} disabled={busy}>
-                      Use
-                    </button>
+                          )}
+                          {selected && here?.kind === "amount" && (
+                            <AmountPanel
+                              clientId={clientId}
+                              date={date}
+                              meal={`saved-${c.key}`}
+                              mealLabel={c.name}
+                              food={here.food}
+                              entry={{ ...it, id: i, meal: `saved-${c.key}` }}
+                              apply={noApply}
+                              settle={noApply}
+                              onDraft={(grams, serving) => changeFood(c, i, grams, serving)}
+                              onDone={() => setPanel(null)}
+                              onCancel={() => setPanel(null)}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                    {foot?.(c)}
+                    {here?.kind === "search" ? (
+                      <SearchPanel
+                        clientId={clientId}
+                        date={date}
+                        meal={`saved-${c.key}`}
+                        mealLabel={c.name}
+                        recent={recent}
+                        saved={NO_SAVED}
+                        onPick={(food) => setPanel({ key: c.key, kind: "amount", food })}
+                        onCustom={() => setPanel({ key: c.key, kind: "custom" })}
+                        onCopied={() => setPanel(null)}
+                        onCancel={() => setPanel(null)}
+                      />
+                    ) : here?.kind === "amount" && here.index == null ? (
+                      <AmountPanel
+                        clientId={clientId}
+                        date={date}
+                        meal={`saved-${c.key}`}
+                        mealLabel={c.name}
+                        food={here.food}
+                        apply={noApply}
+                        settle={noApply}
+                        onDraft={(grams, serving) => addFood(c, here.food, grams, serving)}
+                        onDone={() => setPanel(null)}
+                        onCancel={() => setPanel({ key: c.key, kind: "search" })}
+                      />
+                    ) : here?.kind === "custom" ? (
+                      <CustomFoodPanel clientId={clientId} onCancel={() => setPanel({ key: c.key, kind: "search" })} onCreated={(food) => setPanel({ key: c.key, kind: "amount", food })} />
+                    ) : null}
                   </div>
-                  {here?.kind === "search" ? (
-                    <SearchPanel
-                      clientId={clientId}
-                      date={date}
-                      meal={`saved-${s.id}`}
-                      mealLabel={s.name}
-                      recent={recent}
-                      saved={NO_SAVED}
-                      onPick={(food) => setPanel({ id: s.id, kind: "amount", food })}
-                      onCustom={() => setPanel({ id: s.id, kind: "custom" })}
-                      onCopied={() => setPanel(null)}
-                      onCancel={() => setPanel(null)}
-                    />
-                  ) : here?.kind === "amount" && here.index == null ? (
-                    <AmountPanel
-                      clientId={clientId}
-                      date={date}
-                      meal={`saved-${s.id}`}
-                      mealLabel={s.name}
-                      food={here.food}
-                      apply={noApply}
-                      settle={noApply}
-                      onDraft={(grams, serving) => addFood(s, here.food, grams, serving)}
-                      onDone={() => setPanel(null)}
-                      onCancel={() => setPanel({ id: s.id, kind: "search" })}
-                    />
-                  ) : here?.kind === "custom" ? (
-                    <CustomFoodPanel clientId={clientId} onCancel={() => setPanel({ id: s.id, kind: "search" })} onCreated={(food) => setPanel({ id: s.id, kind: "amount", food })} />
-                  ) : null}
                 </div>
               </div>
             </div>
-          </div>
-        );
-      })}
-      {deleting && <DeleteMealDialog name={deleting.name} onCancel={() => setAskDelete(null)} onDelete={() => removeSaved(deleting.id)} />}
-      {shown?.picture && (
-        <div className="fdi-photo-scrim" role="presentation" onClick={closePhoto}>
-          <div className="fdi-photo-sheet" role="dialog" aria-modal="true" aria-label={`Your picture of ${shown.name}`} onClick={(e) => e.stopPropagation()}>
-            <div className="fdi-sheet-head">
-              <span />
-              <span className="fdi-sheet-title">{shown.name}</span>
-              <button type="button" className="fdi-sheet-x" onClick={closePhoto} aria-label="Close">
-                ×
-              </button>
-            </div>
-            {/* eslint-disable-next-line @next/next/no-img-element -- the client’s own upload */}
-            <img className="fdi-photo-shot" src={shown.picture} alt={`Your picture of ${shown.name}`} />
-            {askDropPhoto ? (
-              <div className="fdi-photo-actions fdc-photo-ask">
-                <span className="fdc-photo-ask-q">Remove picture?</span>
-                <span className="fdc-photo-ask-do">
-                  <button type="button" className="fdc-photo-cancel" onClick={() => setAskDropPhoto(false)}>
-                    Cancel
+          );
+        })}
+        {deleting && <DeleteMealDialog name={deleting.name} onCancel={() => setAskDelete(null)} onDelete={() => removeCard(deleting)} />}
+        {shown?.picture && (
+          <div className="fdi-photo-scrim" role="presentation" onClick={closePhoto}>
+            <div className="fdi-photo-sheet" role="dialog" aria-modal="true" aria-label={`Your picture of ${shown.name}`} onClick={(e) => e.stopPropagation()}>
+              <div className="fdi-sheet-head">
+                <span />
+                <span className="fdi-sheet-title">{shown.name}</span>
+                <button type="button" className="fdi-sheet-x" onClick={closePhoto} aria-label="Close">
+                  ×
+                </button>
+              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element -- the client’s own upload */}
+              <img className="fdi-photo-shot" src={shown.picture} alt={`Your picture of ${shown.name}`} />
+              {askDropPhoto ? (
+                <div className="fdi-photo-actions fdc-photo-ask">
+                  <span className="fdc-photo-ask-q">Remove picture?</span>
+                  <span className="fdc-photo-ask-do">
+                    <button type="button" className="fdc-photo-cancel" onClick={() => setAskDropPhoto(false)}>
+                      Cancel
+                    </button>
+                    <button type="button" className="fdi-photo-remove" onClick={() => dropPhoto(shown)}>
+                      Remove
+                    </button>
+                  </span>
+                </div>
+              ) : (
+                <div className="fdi-photo-actions">
+                  <button type="button" className="fdi-photo-replace" onClick={() => pickPhotoFor(shown)}>
+                    Replace
                   </button>
-                  <button type="button" className="fdi-photo-remove" onClick={() => dropPhoto(shown.id)}>
+                  <button type="button" className="fdi-photo-remove" onClick={() => setAskDropPhoto(true)}>
                     Remove
                   </button>
-                </span>
-              </div>
-            ) : (
-              <div className="fdi-photo-actions">
-                <button type="button" className="fdi-photo-replace" onClick={() => pickPhotoFor(shown.id)}>
-                  Replace
-                </button>
-                <button type="button" className="fdi-photo-remove" onClick={() => setAskDropPhoto(true)}>
-                  Remove
-                </button>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </section>
+        )}
+      </section>
+      {addAt === "bottom" && addOrName}
+    </>
   );
 }
 
-// ---- Create a meal or a day (10 Nov, Alex): a name and foods, kept here until Save ------------------------------
+/** A saved meal with its foods changed: the figures on its row follow. */
+function withItems(s: SavedMealRow, items: SavedItem[]): SavedMealRow {
+  const tot = (k: MacroKey) => Math.round(items.reduce((t, i) => t + i[k], 0));
+  return { ...s, items, count: items.length, names: [...new Set(items.map((i) => i.name))], kcal: tot("kcal"), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat") };
+}
+const cardOfSaved = (s: SavedMealRow): EditCard => ({ key: String(s.id), name: s.name, picture: s.picture, thumb: s.thumb, items: s.items });
 
-type ComposerDraft = { key: number; section: string; food: FoodOptionView; grams: number; serving: string | null };
-const NO_SAVED: FoodDiaryProps["saved"] = [];
-
-function SavedComposer({
-  kind,
+function SavedMealList({
   clientId,
   date,
+  saved,
   recent,
-  sections,
-  saving,
-  failed,
-  onBack,
-  onSave,
+  busy,
+  onChange,
+  refresh,
+  onUse,
+  useFailed,
 }: {
-  saving: boolean;
-  failed: boolean;
-  kind: "meal" | "day";
   clientId: number;
   date: string;
+  saved: FoodDiaryProps["saved"];
   recent: FoodOptionView[];
-  sections: { id: string; label: string }[];
-  onBack: () => void;
-  onSave: (name: string, drafts: ComposerDraft[]) => void;
+  busy: boolean;
+  onChange: (fn: (list: FoodDiaryProps["saved"]) => FoodDiaryProps["saved"]) => void;
+  refresh: () => Promise<void>;
+  onUse: (id: number) => void;
+  useFailed: number | null;
 }) {
-  const [name, setName] = useState("");
-  const [drafts, setDrafts] = useState<ComposerDraft[]>([]);
-  const [adding, setAdding] = useState<{ section: string; step: "search" | "custom" } | { section: string; step: "amount"; food: FoodOptionView } | null>(null);
-  const [askLeave, setAskLeave] = useState(false);
-  const nextKey = useRef(1);
-  const clean = name.trim();
-  // Not with a food half added: it isn't in the list yet, and Save would leave it out.
-  const canSave = clean.length > 0 && drafts.length > 0 && !adding && !saving;
-  const total = drafts.reduce(
-    (t, d) => {
-      const r = rowOf(d.food, d.grams);
-      return { kcal: t.kcal + r.kcal, protein: t.protein + r.protein, carbs: t.carbs + r.carbs, fat: t.fat + r.fat };
-    },
-    { kcal: 0, protein: 0, carbs: 0, fat: 0 }
-  );
-  const back = () => {
-    (document.activeElement as HTMLElement | null)?.blur?.();
-    if (drafts.length > 0 || clean) setAskLeave(true);
-    else onBack();
+  const form = (c: EditCard) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("id", c.key);
+    return fd;
   };
-  const noApply = () => {};
-  const title = kind === "meal" ? "Create a meal" : "Create a day";
+  const food = (c: EditCard, op: string, foodId: string, extra: Record<string, string>) => {
+    const fd = form(c);
+    fd.set("op", op);
+    fd.set("foodId", foodId);
+    for (const [k, v] of Object.entries(extra)) fd.set(k, v);
+    return changeSavedMealFoodAction(fd);
+  };
+  const actions: CardActions = {
+    create: async (name) => {
+      const fd = new FormData();
+      fd.set("clientId", String(clientId));
+      fd.set("name", name);
+      fd.set("onceKey", newOnceKey());
+      const id = await createSavedMealCardAction(fd);
+      return id != null ? String(id) : null;
+    },
+    rename: (c, name) => {
+      const fd = form(c);
+      fd.set("name", name);
+      return renameSavedMealAction(fd);
+    },
+    addFood: (c, foodId, grams, serving, onceKey) => food(c, "add", foodId, { grams: String(grams), serving: serving ?? "", onceKey }),
+    changeFood: (c, index, foodId, grams, serving) => food(c, "update", foodId, { index: String(index), grams: String(grams), serving: serving ?? "" }),
+    removeFood: (c, index, foodId, onceKey) => food(c, "remove", foodId, { index: String(index), onceKey }),
+    remove: async (c) => {
+      await deleteSavedMealAction(form(c));
+      return true;
+    },
+    upload: (c, file) => {
+      const fd = form(c);
+      fd.set("file", file);
+      return uploadSavedMealPictureAction(fd);
+    },
+    dropPicture: (c) => removeSavedMealPictureAction(form(c)),
+  };
+  return (
+    <EditableMealCards
+      clientId={clientId}
+      date={date}
+      cards={saved.map(cardOfSaved)}
+      recent={recent}
+      addAt="top"
+      renderAdd={(start) => (
+        <button type="button" className="fdi-saved-pill fdi-saved-this fdi-saved-wide" onClick={start}>
+          <PlusIcon />
+          <span>Create a meal</span>
+        </button>
+      )}
+      onCards={(fn) =>
+        onChange((list) =>
+          fn(list.map(cardOfSaved)).map((c) => {
+            const old = list.find((x) => String(x.id) === c.key);
+            const base: SavedMealRow = old ?? { id: Number(c.key), name: c.name, kcal: 0, protein: 0, carbs: 0, fat: 0, picture: null, thumb: null, count: 0, names: [], items: [] };
+            return withItems({ ...base, id: Number(c.key), name: c.name, picture: c.picture, thumb: c.thumb }, c.items);
+          })
+        )
+      }
+      refresh={refresh}
+      actions={actions}
+      foot={(c) =>
+        c.items.length > 0 && (
+          <div className="fdc-foot">
+            <button type="button" className="fdc-save" onClick={() => onUse(Number(c.key))} disabled={busy}>
+              Use
+            </button>
+            {useFailed === Number(c.key) && <span className="fdi-make-failed">Not added. Try again</span>}
+          </div>
+        )
+      }
+    />
+  );
+}
+
+const DEFAULT_DAY_CARDS: EditCard[] = [
+  { key: "breakfast", name: "Breakfast", picture: null, thumb: null, items: [] },
+  { key: "lunch", name: "Lunch", picture: null, thumb: null, items: [] },
+  { key: "dinner", name: "Dinner", picture: null, thumb: null, items: [] },
+  { key: "snacks", name: "Snacks", picture: null, thumb: null, items: [] },
+];
+
+// A saved day is its name and the day's cards (10 Nov, Alex): Create a day opens on the four standard ones, there at once;
+// named, each is a card as on a day, its picture, foods, name and Delete; a meal more goes on with Add a meal.
+function SavedDayScreen({
+  clientId,
+  date,
+  day,
+  recent,
+  busy,
+  useFailed,
+  onCreate,
+  onDay,
+  refresh,
+  onBack,
+  onUse,
+  onDelete,
+}: {
+  clientId: number;
+  date: string;
+  /** Null: not named yet. */
+  day: SavedDayRow | null;
+  recent: FoodOptionView[];
+  busy: boolean;
+  useFailed: boolean;
+  /** False when it wasn't saved. */
+  onCreate: (name: string) => Promise<boolean>;
+  onDay: (id: number, fn: (d: SavedDayRow) => SavedDayRow) => void;
+  refresh: () => Promise<void>;
+  onBack: () => void;
+  onUse: (id: number) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [name, setName] = useState(day?.name ?? "");
+  const [nameFailed, setNameFailed] = useState(false);
+  const [askDelete, setAskDelete] = useState(false);
+  const making = useRef(false);
+  const id = day?.id ?? null;
+  const commitName = () => {
+    const clean = name.trim();
+    if (id == null) {
+      if (!clean || making.current) return;
+      making.current = true;
+      setNameFailed(false);
+      onCreate(clean)
+        .catch(() => false)
+        .then((ok) => {
+          making.current = false;
+          if (!ok) setNameFailed(true);
+        });
+      return;
+    }
+    if (!clean) {
+      setName(day?.name ?? "");
+      return;
+    }
+    if (clean === day?.name) return;
+    onDay(id, (d) => ({ ...d, name: clean }));
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("id", String(id));
+    fd.set("name", clean);
+    setNameFailed(false);
+    renameSavedDayAction(fd)
+      .catch(() => false)
+      .then((ok) => {
+        if (!ok) setNameFailed(true);
+        return refresh().catch(() => {});
+      });
+  };
+  const change = (c: EditCard | null, op: string, extra: Record<string, string>) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("id", String(id));
+    if (c) fd.set("key", c.key);
+    fd.set("op", op);
+    for (const [k, v] of Object.entries(extra)) fd.set(k, v);
+    return changeSavedDayCardAction(fd);
+  };
+  const actions: CardActions = {
+    create: async (cardName) => {
+      const key = `c:${Date.now()}`;
+      const ok = await change(null, "card-add", { key, name: cardName, onceKey: newOnceKey() });
+      return ok ? key : null;
+    },
+    rename: (c, cardName) => change(c, "card-rename", { name: cardName }),
+    addFood: (c, foodId, grams, serving, onceKey) => change(c, "food-add", { foodId, grams: String(grams), serving: serving ?? "", onceKey }),
+    changeFood: (c, index, foodId, grams, serving) => change(c, "food-update", { index: String(index), foodId, grams: String(grams), serving: serving ?? "" }),
+    removeFood: (c, index, foodId, onceKey) => change(c, "food-remove", { index: String(index), foodId, onceKey }),
+    remove: (c) => change(c, "card-remove", {}),
+    upload: (c, file) => {
+      const fd = new FormData();
+      fd.set("clientId", String(clientId));
+      fd.set("id", String(id));
+      fd.set("key", c.key);
+      fd.set("file", file);
+      return uploadSavedDayPictureAction(fd);
+    },
+    dropPicture: (c) => change(c, "picture-remove", {}),
+  };
+  const cards = day?.cards ?? DEFAULT_DAY_CARDS;
+  const all = cards.flatMap((c) => c.items);
+  const sum = (k: MacroKey) => Math.round(all.reduce((t, i) => t + i[k], 0));
   return (
     <div className="app-layer app-layer-push cn-screen fdi-saved-screen">
       <header className="cn-header">
-        <button type="button" className="cn-icon-btn" onClick={back} aria-label="Back">
+        <button type="button" className="cn-icon-btn" onClick={onBack} aria-label="Back">
           <ChevronLeftIcon />
         </button>
         <div className="cn-header-titles">
-          <h1 className="cn-title">{title}</h1>
+          <h1 className="cn-title">{id == null ? "Create a day" : "Saved day"}</h1>
         </div>
         <span className="cn-icon-spacer" aria-hidden="true" />
       </header>
       <main className="cn-body">
-        <input className="fdi-make-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === "meal" ? "Name this meal" : "Name this day"} maxLength={40} autoComplete="off" aria-label={kind === "meal" ? "Name of the meal" : "Name of the day"} />
-        {sections.map((s) => {
-          const rows = drafts.filter((d) => d.section === s.id);
-          const open = adding?.section === s.id ? adding : null;
-          return (
-            <section key={s.id} className="fdi-make-sec">
-              {sections.length > 1 && <div className="fdi-make-head">{s.label}</div>}
-              {rows.map((d) => (
-                <div key={d.key} className="fdi-saved-day">
-                  <span className="fdi-copy-main">
-                    <span className="fdi-copy-name">{d.food.name}</span>
-                    <span className="fdi-copy-sub">
-                      <Bars parts={[d.serving ?? `${g(d.grams)} g`, `${n(rowOf(d.food, d.grams).kcal)} kcal`]} />
-                    </span>
-                  </span>
-                  <button type="button" className="fdi-copy-use" onClick={() => setDrafts((all) => all.filter((x) => x.key !== d.key))}>
-                    Remove
-                  </button>
-                </div>
-              ))}
-              {open?.step === "search" ? (
-                <SearchPanel
-                  clientId={clientId}
-                  date={date}
-                  meal={s.id}
-                  mealLabel={sections.length > 1 ? s.label : clean || "this meal"}
-                  recent={recent}
-                  saved={NO_SAVED}
-                  onPick={(food) => setAdding({ section: s.id, step: "amount", food })}
-                  onCustom={() => setAdding({ section: s.id, step: "custom" })}
-                  onCopied={() => setAdding(null)}
-                  onCancel={() => setAdding(null)}
-                />
-              ) : open?.step === "amount" ? (
-                <AmountPanel
-                  clientId={clientId}
-                  date={date}
-                  meal={s.id}
-                  mealLabel={sections.length > 1 ? s.label : clean || "this meal"}
-                  food={open.food}
-                  apply={noApply}
-                  settle={noApply}
-                  onDraft={(grams, serving) => setDrafts((all) => [...all, { key: nextKey.current++, section: s.id, food: open.food, grams, serving }])}
-                  onDone={() => setAdding(null)}
-                  onCancel={() => setAdding({ section: s.id, step: "search" })}
-                />
-              ) : open?.step === "custom" ? (
-                <CustomFoodPanel clientId={clientId} onCancel={() => setAdding({ section: s.id, step: "search" })} onCreated={(food) => setAdding({ section: s.id, step: "amount", food })} />
-              ) : (
-                <button type="button" className="fdi-make-add" onClick={() => setAdding({ section: s.id, step: "search" })}>
-                  <PlusIcon />
-                  Add food
-                </button>
-              )}
-            </section>
-          );
-        })}
-        {drafts.length > 0 && (
-          <p className="fdi-make-total">
-            <Bars parts={[`${n(total.kcal)} kcal`, `P ${n(total.protein)}`, `C ${n(total.carbs)}`, `F ${n(total.fat)}`]} />
+        <input
+          className="fdi-make-name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={commitName}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          placeholder="Name this day"
+          maxLength={40}
+          autoComplete="off"
+          autoFocus={id == null}
+          aria-label="Name of the day"
+        />
+        {nameFailed && (
+          <p className="fdi-photo-failed" role="alert">
+            Not saved. Try again
           </p>
         )}
-        {askLeave ? (
-          <div className="fdi-make-foot ask">
-            <span>Leave without saving?</span>
-            <button type="button" className="fdi-make-keep" onClick={() => setAskLeave(false)}>
-              Keep
-            </button>
-            <button type="button" className="fdi-make-leave" onClick={onBack}>
-              Leave
-            </button>
-          </div>
-        ) : (
+        {all.length > 0 && (
+          <p className="fdi-make-total">
+            <Bars parts={[`${n(sum("kcal"))} kcal`, `P ${n(sum("protein"))}`, `C ${n(sum("carbs"))}`, `F ${n(sum("fat"))}`]} />
+          </p>
+        )}
+        <EditableMealCards
+          clientId={clientId}
+          date={date}
+          cards={cards}
+          recent={recent}
+          locked={id == null}
+          addAt="bottom"
+          renderAdd={(start) =>
+            id != null && (
+              <button type="button" className="fdi-add-meal fdc-add" onClick={start}>
+                <PlusIcon />
+                Add a meal
+              </button>
+            )
+          }
+          onCards={(fn) => {
+            if (id != null)
+              onDay(id, (d) => {
+                const next = fn(d.cards);
+                const items = next.flatMap((c) => c.items);
+                return { ...d, cards: next, count: items.length, kcal: Math.round(items.reduce((t, i) => t + i.kcal, 0)) };
+              });
+          }}
+          refresh={refresh}
+          actions={actions}
+        />
+        {id != null && (
           <div className="fdi-make-foot">
-            {failed && <span className="fdi-make-failed">Not saved. Try again</span>}
-            <button type="button" className="fdi-make-save" disabled={!canSave} onClick={() => onSave(clean, drafts)}>
-              Save
+            <button type="button" className="fdi-day-delete" onClick={() => setAskDelete(true)}>
+              Delete
             </button>
+            {useFailed && <span className="fdi-make-failed">Not added. Try again</span>}
+            {all.length > 0 && (
+              <button type="button" className="fdi-make-save" onClick={() => onUse(id)} disabled={busy}>
+                Use
+              </button>
+            )}
           </div>
         )}
       </main>
+      {askDelete && day && (
+        <DeleteMealDialog
+          name={day.name}
+          onCancel={() => setAskDelete(false)}
+          onDelete={() => {
+            setAskDelete(false);
+            onDelete(day.id);
+          }}
+        />
+      )}
     </div>
   );
 }
