@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
-import AddMealSheet, { SavedMealCards } from "./AddMealSheet";
+import AddMealSheet, { DeleteMealDialog } from "./AddMealSheet";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { NorCoachLogo } from "../components/NorCoachLogo";
@@ -16,6 +16,10 @@ import {
   addSavedMealCardAction,
   deleteSavedDayAction,
   createSavedAction,
+  changeSavedMealFoodAction,
+  renameSavedMealAction,
+  uploadSavedMealPictureAction,
+  removeSavedMealPictureAction,
   saveDayAction,
   copyFoodDayAction,
   deleteSavedMealAction,
@@ -102,6 +106,7 @@ const rowOf = (food: FoodOptionView, grams: number) => {
   const k = grams / 100;
   return { kcal: r1(food.kcal * k), protein: r1(food.protein * k), carbs: r1(food.carbs * k), fat: r1(food.fat * k) };
 };
+type SavedItem = { food_id: string; name: string; grams: number; serving: string | null; kcal: number; protein: number; carbs: number; fat: number };
 export type FoodDiaryProps = {
   date: string;
   dateLabel: string;
@@ -113,7 +118,7 @@ export type FoodDiaryProps = {
   loggedKcal: number | null;
   meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null; /** The saved meal that filled this slot, while it still holds just that meal. */ savedMealId: number | null; photo: string | null; /** What the card shows: the saved meal's picture, else that day's photo. */ picture: string | null; /** That picture's tiny preview, there at once. */ thumb: string | null; comments: { id: number; text: string; when: string }[] }[];
   recent: FoodOptionView[];
-  saved: { id: number; name: string; kcal: number; protein: number; carbs: number; fat: number; picture: string | null; thumb: string | null; count: number; names: string[] }[];
+  saved: { id: number; name: string; kcal: number; protein: number; carbs: number; fat: number; picture: string | null; thumb: string | null; count: number; names: string[]; items: SavedItem[] }[];
   savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null }[];
   savedDayAs: string | null;
   savedDayId: number | null;
@@ -323,6 +328,7 @@ export default function FoodDiaryScreen({
   };
   // Add a meal (10 Nov, Alex): New meal or Copy a meal, first.
   const [addingMeal, setAddingMeal] = useState(false);
+  const [copyFailed, setCopyFailed] = useState<number | null>(null);
   const copyMealCard = (id: number) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -330,9 +336,16 @@ export default function FoodDiaryScreen({
     fd.set("date", date);
     // Its one-time key: sent again once the signal is back, the card goes in once.
     fd.set("onceKey", newOnceKey());
+    setCopyFailed(null);
     startLoad(async () => {
-      await addSavedMealCardAction(fd);
-      const next = await getFoodDiaryAction(clientId, date);
+      try {
+        await addSavedMealCardAction(fd);
+      } catch {
+        // No signal: what is open stays and says so, never the error page.
+        setCopyFailed(id);
+        return;
+      }
+      const next = await getFoodDiaryAction(clientId, date).catch(() => null);
       if (next) {
         setDiary((d) => (d.date === date ? next : d));
         setPanel(null);
@@ -384,15 +397,30 @@ export default function FoodDiaryScreen({
     fd.set("name", clean);
     void renameFoodMealAction(fd);
   };
+  // Delete in a meal's ⋯ asks in a pop-up first (10 Nov, Alex): it takes what is in the meal with it.
+  const [askDeleteMeal, setAskDeleteMeal] = useState<FoodMeal | null>(null);
+  const [mealFailed, setMealFailed] = useState<FoodMeal | null>(null);
   const removeMeal = (id: FoodMeal) => {
     setMealMenu(null);
-    setDiary((d) => ({ ...d, meals: d.meals.filter((m) => m.id !== id) }));
+    setAskDeleteMeal(null);
+    setPanel((p) => (p?.meal === id ? null : p));
+    setMealFailed(null);
+    const before = diary;
+    setDiary((d) => retotal({ ...d, meals: d.meals.filter((m) => m.id !== id) }));
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("meal", id);
+    fd.set("date", date);
     startLoad(async () => {
-      await removeFoodMealAction(fd);
-      const next = await getFoodDiaryAction(clientId, date);
+      try {
+        await removeFoodMealAction(fd);
+      } catch {
+        // No signal: the card comes back and says so, never the error page.
+        setDiary((d) => (d.date === date ? before : d));
+        setMealFailed(id);
+        return;
+      }
+      const next = await getFoodDiaryAction(clientId, date).catch(() => null);
       if (next) setDiary(next);
     });
   };
@@ -1030,7 +1058,20 @@ export default function FoodDiaryScreen({
                               <span>Create a meal</span>
                             </button>
                             {diary.saved.length > 0 ? (
-                              <SavedMealCards saved={diary.saved} busy={loading} picture={(p) => pic(p, 1080)} onCopy={copyMealCard} />
+                              <SavedMealList
+                                clientId={clientId}
+                                date={date}
+                                saved={diary.saved}
+                                recent={diary.recent}
+                                busy={loading}
+                                onChange={(fn) => setDiary((d) => ({ ...d, saved: fn(d.saved) }))}
+                                refresh={async () => {
+                                  const next = await getFoodDiaryAction(clientId, date);
+                                  if (next) setDiary((d) => (d.date === date ? next : d));
+                                }}
+                                onUse={copyMealCard}
+                                useFailed={copyFailed}
+                              />
                             ) : (
                               <p className="fdi-saved-none">None yet</p>
                             )}
@@ -1204,11 +1245,17 @@ export default function FoodDiaryScreen({
                                     >
                                       Rename
                                     </button>
-                                    {!filled && (
-                                      <button type="button" role="menuitem" className="danger" onClick={() => removeMeal(meal.id)}>
-                                        Remove
-                                      </button>
-                                    )}
+                                    <button
+                                      type="button"
+                                      role="menuitem"
+                                      className="danger"
+                                      onClick={() => {
+                                        setMealMenu(null);
+                                        setAskDeleteMeal(meal.id);
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
                                   </span>
                                 </>
                               )}
@@ -1293,6 +1340,11 @@ export default function FoodDiaryScreen({
                     {photoFailed === meal.id && (
                       <p className="fdi-photo-failed" role="alert">
                         Picture not added. Try again
+                      </p>
+                    )}
+                    {mealFailed === meal.id && (
+                      <p className="fdi-photo-failed" role="alert">
+                        Not deleted. Try again
                       </p>
                     )}
                     <div className={`so-fold fdc-fold${unfolded ? " open" : ""}`} aria-hidden={!unfolded} inert={!unfolded}>
@@ -1468,6 +1520,9 @@ export default function FoodDiaryScreen({
         </div>
       </main>
 
+      {askDeleteMeal != null && diary.meals.some((m) => m.id === askDeleteMeal) && (
+        <DeleteMealDialog name={cardTitle(diary.meals.find((m) => m.id === askDeleteMeal)!)} onCancel={() => setAskDeleteMeal(null)} onDelete={() => removeMeal(askDeleteMeal)} />
+      )}
       {addingMeal && (
         <AddMealSheet
           saved={diary.saved}
@@ -1478,6 +1533,7 @@ export default function FoodDiaryScreen({
             addMealNow();
           }}
           onCopy={copyMealCard}
+          failed={copyFailed != null}
           onClose={() => setAddingMeal(false)}
         />
       )}
@@ -1903,6 +1959,499 @@ function SearchPanel({
 }
 
 // ---- Inside a meal: how much -------------------------------------------------
+
+// ---- Saved meals (10 Nov, Alex: "exactly like they are inside the days"): the day's card, on a saved meal --------
+
+type SavedMealRow = FoodDiaryProps["saved"][number];
+type SavedPanel = { id: number; kind: "search" | "custom" } | { id: number; kind: "amount"; food: FoodOptionView; index?: number };
+
+/** A saved meal with its foods changed: the figures on its card follow. */
+function withItems(s: SavedMealRow, items: SavedItem[]): SavedMealRow {
+  const tot = (k: MacroKey) => Math.round(items.reduce((t, i) => t + i[k], 0));
+  return { ...s, items, count: items.length, names: [...new Set(items.map((i) => i.name))], kcal: tot("kcal"), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat") };
+}
+
+function SavedMealList({
+  clientId,
+  date,
+  saved,
+  recent,
+  busy,
+  onChange,
+  refresh,
+  onUse,
+  useFailed,
+}: {
+  /** The saved meal whose Use didn't reach the server. */
+  useFailed: number | null;
+  clientId: number;
+  date: string;
+  saved: FoodDiaryProps["saved"];
+  recent: FoodOptionView[];
+  busy: boolean;
+  /** Shows the change on the screen at once. */
+  onChange: (fn: (list: FoodDiaryProps["saved"]) => FoodDiaryProps["saved"]) => void;
+  /** Reads the diary again, so the day's cards follow. */
+  refresh: () => Promise<void>;
+  onUse: (id: number) => void;
+}) {
+  const [openId, setOpenId] = useState<number | null>(null);
+  const [panel, setPanel] = useState<SavedPanel | null>(null);
+  const [menu, setMenu] = useState<number | null>(null);
+  const [renaming, setRenaming] = useState<number | null>(null);
+  const [askDelete, setAskDelete] = useState<number | null>(null);
+  const [askRemove, setAskRemove] = useState<string | null>(null);
+  useDropOnTapOutside(askRemove != null, setAskRemove);
+  const [failed, setFailed] = useState<number[]>([]);
+  const unsettled = useRef(new Map<number, { row: SavedMealRow | null; at: number; count: number; bad: boolean }>());
+  const [photoOf, setPhotoOf] = useState<number | null>(null);
+  const [askDropPhoto, setAskDropPhoto] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState<number[]>([]);
+  const [photoFailed, setPhotoFailed] = useState<number | null>(null);
+  const [picked, setPicked] = useState<Record<number, string>>({});
+  const pickedUrls = useRef<string[]>([]);
+  useEffect(() => () => pickedUrls.current.forEach((u) => URL.revokeObjectURL(u)), []);
+  const photoInput = useRef<HTMLInputElement>(null);
+  const photoFor = useRef<number | null>(null);
+  const noApply = () => {};
+
+  const form = (id: number) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("id", String(id));
+    return fd;
+  };
+  // What is on screen changes at once. Refused or with no signal, that card alone goes back to how it stood before its
+  // first change still on its way, and says so.
+  const send = (id: number, before: FoodDiaryProps["saved"], run: () => Promise<boolean>) => {
+    setFailed((f) => f.filter((x) => x !== id));
+    const mine = unsettled.current.get(id);
+    if (mine) mine.count++;
+    else {
+      const at = before.findIndex((x) => x.id === id);
+      unsettled.current.set(id, { row: before[at] ?? null, at, count: 1, bad: false });
+    }
+    const settle = (ok: boolean) => {
+      const entry = unsettled.current.get(id);
+      if (!entry) return;
+      entry.count--;
+      if (!ok) entry.bad = true;
+      if (entry.count > 0) return;
+      unsettled.current.delete(id);
+      if (!entry.bad) return;
+      setFailed((f) => [...f, id]);
+      const row = entry.row;
+      if (row) {
+        onChange((list) => {
+          const rest = list.filter((x) => x.id !== id);
+          const at = Math.min(entry.at, rest.length);
+          return [...rest.slice(0, at), row, ...rest.slice(at)];
+        });
+      }
+    };
+    run()
+      .catch(() => false)
+      .then((ok) => {
+        settle(ok);
+        return refresh().catch(() => {});
+      });
+  };
+  const setItems = (s: SavedMealRow, items: SavedItem[]) => onChange((list) => list.map((x) => (x.id === s.id ? withItems(x, items) : x)));
+
+  const addFood = (s: SavedMealRow, food: FoodOptionView, grams: number, serving: string | null) => {
+    const before = saved;
+    setItems(s, [...s.items, { food_id: food.id, name: food.name, grams, serving, ...rowOf(food, grams) }]);
+    const fd = form(s.id);
+    fd.set("op", "add");
+    fd.set("foodId", food.id);
+    fd.set("grams", String(grams));
+    fd.set("serving", serving ?? "");
+    fd.set("onceKey", newOnceKey());
+    send(s.id, before, () => changeSavedMealFoodAction(fd));
+  };
+  const changeFood = (s: SavedMealRow, index: number, grams: number, serving: string | null) => {
+    const item = s.items[index];
+    if (!item || !(item.grams > 0)) return;
+    const before = saved;
+    const k = grams / item.grams;
+    setItems(s, s.items.map((x, i) => (i === index ? { ...x, grams, serving, kcal: r1(x.kcal * k), protein: r1(x.protein * k), carbs: r1(x.carbs * k), fat: r1(x.fat * k) } : x)));
+    const fd = form(s.id);
+    fd.set("op", "update");
+    fd.set("index", String(index));
+    fd.set("foodId", item.food_id);
+    fd.set("grams", String(grams));
+    fd.set("serving", serving ?? "");
+    send(s.id, before, () => changeSavedMealFoodAction(fd));
+  };
+  const removeFood = (s: SavedMealRow, index: number) => {
+    const item = s.items[index];
+    if (!item) return;
+    const before = saved;
+    setAskRemove(null);
+    setPanel(null);
+    setItems(s, s.items.filter((_, i) => i !== index));
+    const fd = form(s.id);
+    fd.set("op", "remove");
+    fd.set("index", String(index));
+    fd.set("foodId", item.food_id);
+    // Its one-time key: sent again, a second identical food stays.
+    fd.set("onceKey", newOnceKey());
+    send(s.id, before, () => changeSavedMealFoodAction(fd));
+  };
+  const finishRename = (s: SavedMealRow, value: string) => {
+    setRenaming(null);
+    const clean = value.trim();
+    if (!clean || clean === s.name) return;
+    const before = saved;
+    onChange((list) => list.map((x) => (x.id === s.id ? { ...x, name: clean } : x)));
+    const fd = form(s.id);
+    fd.set("name", clean);
+    send(s.id, before, () => renameSavedMealAction(fd));
+  };
+  const removeSaved = (id: number) => {
+    const before = saved;
+    setAskDelete(null);
+    setPanel(null);
+    setOpenId((o) => (o === id ? null : o));
+    onChange((list) => list.filter((x) => x.id !== id));
+    const fd = form(id);
+    send(id, before, async () => {
+      await deleteSavedMealAction(fd);
+      return true;
+    });
+  };
+
+  const pickPhotoFor = (id: number) => {
+    photoFor.current = id;
+    photoInput.current?.click();
+  };
+  const closePhoto = () => {
+    setPhotoOf(null);
+    setAskDropPhoto(false);
+  };
+  const sendPhoto = (id: number, file: File) => {
+    const local = URL.createObjectURL(file);
+    pickedUrls.current.push(local);
+    setPicked((p) => ({ ...p, [id]: local }));
+    const forget = () => setPicked((p) => (p[id] === local ? Object.fromEntries(Object.entries(p).filter(([k]) => Number(k) !== id)) : p));
+    const fd = form(id);
+    fd.set("file", file);
+    setPhotoBusy((b) => [...b, id]);
+    setPhotoFailed(null);
+    closePhoto();
+    uploadSavedMealPictureAction(fd)
+      .then(async (ok) => {
+        if (!ok) {
+          setPhotoFailed(id);
+          forget();
+        }
+        await refresh().catch(() => {});
+      })
+      .catch(() => {
+        setPhotoFailed(id);
+        forget();
+      })
+      .finally(() => setPhotoBusy((b) => b.filter((x) => x !== id)));
+  };
+  const dropPhoto = (id: number) => {
+    const before = saved;
+    closePhoto();
+    setPicked((p) => Object.fromEntries(Object.entries(p).filter(([k]) => Number(k) !== id)));
+    onChange((list) => list.map((x) => (x.id === id ? { ...x, picture: null, thumb: null } : x)));
+    const fd = form(id);
+    send(id, before, () => removeSavedMealPictureAction(fd));
+  };
+
+  // A tap anywhere on the card opens its foods, one card at a time, as the day's cards.
+  const tapCard = (e: React.MouseEvent, s: SavedMealRow) => {
+    if ((e.target as Element).closest(".fdc-tools, .fdc-more, input")) return;
+    if (renaming === s.id) return;
+    if (panel?.id === s.id && panel.kind !== "search") {
+      (document.activeElement as HTMLElement | null)?.blur();
+      return;
+    }
+    setPanel(null);
+    setOpenId((o) => (o === s.id ? null : s.id));
+  };
+  const tapPlus = (s: SavedMealRow) => {
+    if (panel?.id === s.id && panel.kind !== "search") return;
+    if (panel?.id === s.id) return setPanel(null);
+    setOpenId(s.id);
+    setPanel({ id: s.id, kind: "search" });
+  };
+
+  const shown = photoOf != null ? saved.find((s) => s.id === photoOf) ?? null : null;
+  const deleting = askDelete != null ? saved.find((s) => s.id === askDelete) ?? null : null;
+  return (
+    <section className="fdi-meals fdc-meals">
+      <input
+        ref={photoInput}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          const id = photoFor.current;
+          photoFor.current = null;
+          if (file && id != null) sendPhoto(id, file);
+        }}
+      />
+      {saved.map((s) => {
+        const naming = renaming === s.id;
+        const unfolded = openId === s.id;
+        const local = picked[s.id] ?? null;
+        const here = panel?.id === s.id ? panel : null;
+        return (
+          <div key={s.id} className={`fdi-meal fdc-meal${unfolded ? " open" : ""}`}>
+            <div className={`fdc-card${s.picture || (photoBusy.includes(s.id) && local) ? "" : " bare"}`} onClick={(e) => tapCard(e, s)}>
+              <div className="fdc-bg" aria-hidden="true">
+                {photoBusy.includes(s.id) && local ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- the phone's own copy, just picked
+                  <img src={local} alt="" draggable={false} />
+                ) : (
+                  s.picture && <CardPicture src={pic(s.picture, 1080)} under={local ?? s.thumb} />
+                )}
+              </div>
+              {!naming && (
+                <>
+                  <span className="fdi-meal-more-wrap fdc-more">
+                    <button type="button" className="fdc-tool" onClick={() => setMenu(menu === s.id ? null : s.id)} aria-expanded={menu === s.id} aria-label={`More for ${s.name}`}>
+                      <MoreIcon />
+                    </button>
+                    {menu === s.id && (
+                      <>
+                        <button type="button" className="fdi-meal-menu-scrim" aria-label="Close" onClick={() => setMenu(null)} />
+                        <span className="fdi-meal-menu" role="menu">
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setMenu(null);
+                              setRenaming(s.id);
+                            }}
+                          >
+                            Rename
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="danger"
+                            onClick={() => {
+                              setMenu(null);
+                              setAskDelete(s.id);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </span>
+                      </>
+                    )}
+                  </span>
+                  <span className="fdc-tools">
+                    {photoBusy.includes(s.id) ? (
+                      <span className="fdc-tool fdi-photo-busy" role="status" aria-label={`Adding the picture of ${s.name}`}>
+                        <CameraIcon />
+                      </span>
+                    ) : (
+                      <button type="button" className="fdc-tool" onClick={() => (s.picture ? setPhotoOf(s.id) : pickPhotoFor(s.id))} aria-label={s.picture ? `See your picture of ${s.name}` : `Add a picture of ${s.name}`}>
+                        <CameraIcon />
+                      </button>
+                    )}
+                    <button type="button" className="fdc-tool" onClick={() => tapPlus(s)} aria-label={`Add food to ${s.name}`}>
+                      <PlusIcon />
+                    </button>
+                  </span>
+                </>
+              )}
+              <div className="fdc-name">
+                {naming ? (
+                  <span className="fdc-handle naming">
+                    <input
+                      className="fdi-meal-name-box fdc-name-box"
+                      type="text"
+                      defaultValue={s.name}
+                      placeholder="Name the meal"
+                      maxLength={40}
+                      autoComplete="off"
+                      autoFocus
+                      aria-label="Meal name"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                        if (e.key === "Escape") {
+                          e.currentTarget.value = "";
+                          e.currentTarget.blur();
+                        }
+                      }}
+                      onBlur={(e) => finishRename(s, e.currentTarget.value)}
+                    />
+                  </span>
+                ) : (
+                  <span className="fdc-title">{s.name}</span>
+                )}
+                {!naming && (
+                  <button type="button" className={`fdi-meal-chev fdc-chev${unfolded ? " up" : ""}`} aria-expanded={unfolded} aria-label={unfolded ? `Fold ${s.name}` : `Open ${s.name}`}>
+                    <ChevronDownIcon />
+                  </button>
+                )}
+              </div>
+              {!naming && (
+                <div className="fdc-figs" role="group" aria-label={`${s.name}: ${n(s.kcal)} kcal`}>
+                  <b>{n(s.kcal)} kcal</b>
+                  <span>P {n(s.protein)}</span>
+                  <span>C {n(s.carbs)}</span>
+                  <span>F {n(s.fat)}</span>
+                </div>
+              )}
+            </div>
+            {photoFailed === s.id && (
+              <p className="fdi-photo-failed" role="alert">
+                Picture not added. Try again
+              </p>
+            )}
+            {failed.includes(s.id) && (
+              <p className="fdi-photo-failed" role="alert">
+                Not saved. Try again
+              </p>
+            )}
+            {useFailed === s.id && (
+              <p className="fdi-photo-failed" role="alert">
+                Not added. Try again
+              </p>
+            )}
+            <div className={`so-fold fdc-fold${unfolded ? " open" : ""}`} aria-hidden={!unfolded} inert={!unfolded}>
+              <div className="so-fold-in">
+                <div className="fdc-foods">
+                  {s.items.map((it, i) => {
+                    const selected = here?.kind === "amount" && here.index === i;
+                    const askKey = `${s.id}:${i}`;
+                    const per100 = (v: number) => (it.grams > 0 ? (v / it.grams) * 100 : 0);
+                    const food: FoodOptionView = { id: it.food_id, name: it.name, hint: "", group: "more", kcal: per100(it.kcal), protein: per100(it.protein), carbs: per100(it.carbs), fat: per100(it.fat), servings: [] };
+                    return (
+                      <div key={`${i}:${it.food_id}`} className={`fdi-row-wrap${selected ? " selected" : ""}`}>
+                        <button type="button" className={`fdi-row${selected ? " selected" : ""}`} onClick={() => setPanel(selected ? null : { id: s.id, kind: "amount", food, index: i })}>
+                          <span className="fdi-row-main">
+                            <span className="fdi-row-name">{it.name}</span>
+                            <span className="fdi-row-amount">
+                              <Bars parts={amountParts(it)} />
+                            </span>
+                          </span>
+                          <span className="fdc-row-kcal">{n(it.kcal)}</span>
+                        </button>
+                        {s.items.length > 1 &&
+                          (askRemove === askKey ? (
+                            <span className="fdi-row-ask">
+                              <button type="button" className="fdi-confirm-keep" onClick={() => setAskRemove(null)} autoFocus>
+                                Keep
+                              </button>
+                              <button type="button" className="fdi-confirm-remove" onClick={() => removeFood(s, i)}>
+                                Remove
+                              </button>
+                            </span>
+                          ) : (
+                            <button type="button" className="fdi-row-bin" onClick={() => setAskRemove(askKey)} aria-label={`Remove ${it.name}`}>
+                              <TrashIcon />
+                            </button>
+                          ))}
+                        {selected && here?.kind === "amount" && (
+                          <AmountPanel
+                            clientId={clientId}
+                            date={date}
+                            meal={`saved-${s.id}`}
+                            mealLabel={s.name}
+                            food={here.food}
+                            entry={{ ...it, id: i, meal: `saved-${s.id}` }}
+                            apply={noApply}
+                            settle={noApply}
+                            onDraft={(grams, serving) => changeFood(s, i, grams, serving)}
+                            onDone={() => setPanel(null)}
+                            onCancel={() => setPanel(null)}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div className="fdc-foot">
+                    <button type="button" className="fdc-save" onClick={() => onUse(s.id)} disabled={busy}>
+                      Use
+                    </button>
+                  </div>
+                  {here?.kind === "search" ? (
+                    <SearchPanel
+                      clientId={clientId}
+                      date={date}
+                      meal={`saved-${s.id}`}
+                      mealLabel={s.name}
+                      recent={recent}
+                      saved={NO_SAVED}
+                      onPick={(food) => setPanel({ id: s.id, kind: "amount", food })}
+                      onCustom={() => setPanel({ id: s.id, kind: "custom" })}
+                      onCopied={() => setPanel(null)}
+                      onCancel={() => setPanel(null)}
+                    />
+                  ) : here?.kind === "amount" && here.index == null ? (
+                    <AmountPanel
+                      clientId={clientId}
+                      date={date}
+                      meal={`saved-${s.id}`}
+                      mealLabel={s.name}
+                      food={here.food}
+                      apply={noApply}
+                      settle={noApply}
+                      onDraft={(grams, serving) => addFood(s, here.food, grams, serving)}
+                      onDone={() => setPanel(null)}
+                      onCancel={() => setPanel({ id: s.id, kind: "search" })}
+                    />
+                  ) : here?.kind === "custom" ? (
+                    <CustomFoodPanel clientId={clientId} onCancel={() => setPanel({ id: s.id, kind: "search" })} onCreated={(food) => setPanel({ id: s.id, kind: "amount", food })} />
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {deleting && <DeleteMealDialog name={deleting.name} onCancel={() => setAskDelete(null)} onDelete={() => removeSaved(deleting.id)} />}
+      {shown?.picture && (
+        <div className="fdi-photo-scrim" role="presentation" onClick={closePhoto}>
+          <div className="fdi-photo-sheet" role="dialog" aria-modal="true" aria-label={`Your picture of ${shown.name}`} onClick={(e) => e.stopPropagation()}>
+            <div className="fdi-sheet-head">
+              <span />
+              <span className="fdi-sheet-title">{shown.name}</span>
+              <button type="button" className="fdi-sheet-x" onClick={closePhoto} aria-label="Close">
+                ×
+              </button>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element -- the client’s own upload */}
+            <img className="fdi-photo-shot" src={shown.picture} alt={`Your picture of ${shown.name}`} />
+            {askDropPhoto ? (
+              <div className="fdi-photo-actions fdc-photo-ask">
+                <span className="fdc-photo-ask-q">Remove picture?</span>
+                <span className="fdc-photo-ask-do">
+                  <button type="button" className="fdc-photo-cancel" onClick={() => setAskDropPhoto(false)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="fdi-photo-remove" onClick={() => dropPhoto(shown.id)}>
+                    Remove
+                  </button>
+                </span>
+              </div>
+            ) : (
+              <div className="fdi-photo-actions">
+                <button type="button" className="fdi-photo-replace" onClick={() => pickPhotoFor(shown.id)}>
+                  Replace
+                </button>
+                <button type="button" className="fdi-photo-remove" onClick={() => setAskDropPhoto(true)}>
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
 
 // ---- Create a meal or a day (10 Nov, Alex): a name and foods, kept here until Save ------------------------------
 

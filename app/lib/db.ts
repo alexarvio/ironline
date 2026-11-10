@@ -257,7 +257,7 @@ export type SavedDay = {
   name: string;
   /** Training or rest, as the day was when saved. */
   day_type?: "training" | "rest" | null;
-  items: { meal: string; food_id: string; name: string; grams: number; serving: string | null; kcal: number; protein: number; carbs: number; fat: number; saved_meal_id?: number | null }[];
+  items: { meal: string; food_id: string; name: string; grams: number; serving: string | null; kcal: number; protein: number; carbs: number; fat: number; saved_meal_id?: number | null; /** The name of a meal of the client's own deleted since (10 Nov, Alex). */ meal_name?: string }[];
   created_at: string;
 };
 // A packaged product fetched from Open Food Facts, kept so it is instant
@@ -291,6 +291,8 @@ export type SavedMeal = {
   picture_thumb?: string | null;
   /** The standard meal it was saved from (10 Nov, Alex): used again, it goes back there. Absent on one created from nothing. */
   slot?: string | null;
+  /** Its foods as they stood before it was edited (10 Nov, Alex), so a day it filled then is still that saved meal. */
+  was_foods?: string[];
 };
 // Training day or rest day, as the client set it on the food diary for a
 // date: which targets the day counts down from. Absent: by whether a set

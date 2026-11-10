@@ -279,8 +279,8 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
         <div ref={scrollRef} className="evp-scroll mtp-scroll" onScroll={onScroll}>
           <div className="evp-tl mtp-tl">
             <span className="evp-spine" aria-hidden="true" />
-            {/* (3 Nov, Alex: words mockup) `Past` as on Events, `None yet` with none. */}
-            {pastSorted.length > 0 ? <div className="evp-sec">Past</div> : <p className="evp-empty mtp-empty">None yet</p>}
+            {/* `Past` as on Events; with none, nothing (10 Nov, Alex: `No upcoming meetings` over it already says so). */}
+            {pastSorted.length > 0 && <div className="evp-sec">Past</div>}
             {pastShown.map((m, i) => (
               <PastRow
                 key={m.id}
