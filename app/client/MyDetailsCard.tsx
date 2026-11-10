@@ -5,9 +5,10 @@ import { saveMyDetailsAction } from "../lib/actions";
 import { addressLine, type PostalAddress } from "../lib/address";
 import { COUNTRIES, countryOf } from "../lib/countries";
 import { DEFAULT_DIAL, DIAL_CODES, phoneLine } from "../lib/phone";
+import SettingsFold from "./SettingsFold";
 
-// Your details on Settings: email, phone, address, shown as rows and edited
-// in place. Edit turns the rows into fields; Save posts them all at once.
+// Your details on Settings: one row until pressed (10 Nov, Alex), then email,
+// phone, address, shown as rows and edited in place. Edit turns the rows into fields; Save posts them all at once.
 // The photo lives in the banner above. The address is in its parts (23 Oct,
 // for the coach's invoices): read as one line, typed as the street, the
 // postcode and city, and the country (a state where the country has them).
@@ -60,15 +61,7 @@ export default function MyDetailsCard({ clientId, email, phone, phoneCode, addre
   const shownPhone = phoneLine(phoneCode, phone);
 
   return (
-    <section className="home-dark-section st-details">
-      <div className="home-dark-section-head">
-        <span className="home-dark-section-title">Your details</span>
-        {!editing && (
-          <button type="button" className="st-details-edit" onClick={() => setEditing(true)}>
-            Edit
-          </button>
-        )}
-      </div>
+    <SettingsFold title="Your details">
       {editing ? (
         <form
           className="st-details-form"
@@ -170,8 +163,13 @@ export default function MyDetailsCard({ clientId, email, phone, phoneCode, addre
             <span className="st-details-label">Address</span>
             <span className={`st-details-value${shownAddress ? "" : " empty"}`}>{shownAddress || "Add"}</span>
           </div>
+          <div className="st-details-foot">
+            <button type="button" className="st-details-edit" onClick={() => setEditing(true)}>
+              Edit
+            </button>
+          </div>
         </div>
       )}
-    </section>
+    </SettingsFold>
   );
 }

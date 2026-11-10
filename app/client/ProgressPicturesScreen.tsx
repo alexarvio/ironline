@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { removeProgressPhotoAction, uploadProgressPhotoAction } from "../lib/actions";
 import { fitJpeg } from "../lib/coverJpeg";
-import { ArrowRightIcon, ChevronLeftIcon } from "../components/icons";
-import { useOpenPhotos } from "./CheckInContext";
+import { ChevronLeftIcon } from "../components/icons";
 import CoachSays from "./CoachSays";
 import FitTitle from "./FitTitle";
 import ProgressCompare from "./ProgressCompare";
@@ -528,18 +527,5 @@ function OpenSheet({
         }}
       />
     </article>
-  );
-}
-
-// The Progress pictures row under the Account tab.
-export function ProgressPicturesRow() {
-  const openPhotos = useOpenPhotos();
-  return (
-    <button type="button" className="pp-app-account-btn" onClick={() => openPhotos?.()}>
-      <span className="settings-data-row">
-        <span className="home-dark-row-title">Shape update</span>
-        <ArrowRightIcon />
-      </span>
-    </button>
   );
 }

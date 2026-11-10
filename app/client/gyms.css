@@ -1,6 +1,7 @@
 /* Gyms in Settings and a gym's own page (9 Nov, Alex: B of docs/boards/gym-settings-mockup.html). */
 /* A Settings section that takes one row until it is opened (9 Nov, Alex: Gyms and Card pictures, "it occupies too much space"). */
 .settings-dark .home-dark-section.home-dark-section.st-fold { padding-top: 10px; }
+.st-details-foot { display: flex; justify-content: flex-end; padding: 2px 0 6px; }
 .st-fold-head { width: 100%; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .st-fold-chev { display: inline-flex; color: #8b93a1; transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1); }
 .st-fold-chev svg { width: 16px; height: 16px; }

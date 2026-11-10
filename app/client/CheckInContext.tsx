@@ -62,7 +62,7 @@ export function useNavigateTab() {
 }
 
 // The other half of that: whichever row the arriving tab should open. Read
-// by the list that owns those rows (ReportArchiveList), so the server
+// by the list that owns those rows (TrainingDayList), so the server
 // component in between doesn't have to thread a prop through.
 const FocusRefContext = createContext<number | null>(null);
 

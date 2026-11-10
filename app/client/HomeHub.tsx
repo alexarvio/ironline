@@ -86,7 +86,7 @@ export type MeetingRecap = { dateLabel: string; title: string; text: string } | 
 export type LatestActivity = {
   /** "focus": the coach set what to focus on (23 Oct); it opens Home at its top, where the list is. */
   /** "weightGoal": the coach set or changed a weight goal (2 Nov); it opens Events on the goal's row (actionRef its id). */
-  kind: "message" | "comment" | "video" | "deploy" | "goal" | "weightGoal" | "meeting" | "report" | "welcome" | "invoice" | "focus";
+  kind: "message" | "comment" | "video" | "deploy" | "goal" | "weightGoal" | "meeting" | "welcome" | "invoice" | "focus";
   track?: "training" | "nutrition" | "lifestyle";
   /** For a comment: what it was on. */
   context?: "training" | "nutrition" | "checkin" | "photos";
@@ -495,8 +495,6 @@ function areaOf(a: LatestActivity): NotificationCategory {
       return a.track === "nutrition" ? "nutrition_phase" : a.track === "lifestyle" ? "checkin_comment" : "training_block";
     case "meeting":
       return "meeting_notes";
-    case "report":
-      return "report";
     case "invoice":
       return "invoice";
     default:
