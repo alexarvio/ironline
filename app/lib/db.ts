@@ -188,6 +188,8 @@ export type FoodEntry = {
   carbs: number;
   fat: number;
   logged_at: string;
+  /** The saved meal this row came in with (9 Nov, Alex: a meal card knows which saved meal filled it). */
+  saved_meal_id?: number | null;
 };
 // One picture of one meal, taken by the client from their food diary. The
 // coach sees a camera on that meal's row in the nutrition log and opens it
@@ -253,7 +255,7 @@ export type SavedDay = {
   name: string;
   /** Training or rest, as the day was when saved. */
   day_type?: "training" | "rest" | null;
-  items: { meal: string; food_id: string; name: string; grams: number; serving: string | null; kcal: number; protein: number; carbs: number; fat: number }[];
+  items: { meal: string; food_id: string; name: string; grams: number; serving: string | null; kcal: number; protein: number; carbs: number; fat: number; saved_meal_id?: number | null }[];
   created_at: string;
 };
 // A packaged product fetched from Open Food Facts, kept so it is instant
@@ -281,6 +283,8 @@ export type SavedMeal = {
   name: string;
   items: { food_id: string; name: string; grams: number; serving: string | null; kcal: number; protein: number; carbs: number; fat: number }[];
   created_at: string;
+  /** The meal's own picture (9 Nov, Alex): a public path, the same file as the day's photo it was taken from; it comes back every day the meal is added. */
+  picture?: string | null;
 };
 // Training day or rest day, as the client set it on the food diary for a
 // date: which targets the day counts down from. Absent: by whether a set

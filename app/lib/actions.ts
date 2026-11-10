@@ -182,7 +182,6 @@ import {
   clearClientCardCover,
   removeClientCardPicture,
   saveMealPhoto,
-  getMealPhoto,
   removeMealPhoto,
   requestExerciseVideo,
   setVideoRequestRecurring,
@@ -1603,12 +1602,10 @@ export async function uploadMealPhotoAction(formData: FormData) {
   const fitted = await fitPhoto(original);
   const buffer = fitted?.bytes ?? original;
   const type = fitted?.type ?? (file.type || "image/jpeg");
-  const previous = getMealPhoto(clientId, date, meal);
-  // Saved to the disk, then copied into the storage bucket when it is on.
-  const saved = saveMealPhoto(clientId, date, meal, buffer, type);
-  // The previous picture's small copies go even under the same name (4 Nov: every meal photo is a .jpg now, so a
-  // replaced one would show the old one's copy); the new one then takes the name in the bucket.
-  if (previous) await deleteUpload(previous);
+  // Saved to the disk, then copied into the storage bucket when it is on; on a saved meal it is that meal's picture too.
+  const { path: saved, gone } = saveMealPhoto(clientId, date, meal, buffer, type);
+  // What it replaced goes, when nothing else shows it (a saved meal may still hold the day's old photo).
+  for (const was of gone) await deleteUpload(was);
   await putUpload(saved, buffer, type);
   revalidatePath("/admin");
 }
@@ -1779,8 +1776,7 @@ export async function removeMealPhotoAction(formData: FormData) {
   const date = String(formData.get("date") ?? "");
   const meal = String(formData.get("meal") ?? "");
   if (!date || !meal) return;
-  const was = removeMealPhoto(clientId, date, meal);
-  if (was) await deleteUpload(was);
+  for (const was of removeMealPhoto(clientId, date, meal)) await deleteUpload(was);
   revalidatePath("/admin");
 }
 
@@ -4881,7 +4877,8 @@ export async function deleteSavedMealAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id)) return;
-  deleteSavedMeal(clientId, id);
+  // Its picture's file goes only when nothing else shows it.
+  for (const was of deleteSavedMeal(clientId, id)) await deleteUpload(was);
 }
 
 export async function addSavedMealAction(formData: FormData) {
