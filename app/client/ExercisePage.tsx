@@ -1033,6 +1033,7 @@ function Stepper({
   return (
     <div className={`lw-step${small ? " small" : ""}`}>
       <label className={`lw-value${shown.ghost && draft == null ? " ghost" : ""}`}>
+        <span className="lw-num-box">
         <input
           ref={inputRef}
           className={`lw-num lw-num-input${size}`}
@@ -1064,9 +1065,6 @@ function Stepper({
             }
           }}
         />
-        <span className="lw-num-label" aria-hidden="true">
-          {label}
-        </span>
         {/* At the figure's own top right, not the box's: an unseen copy of the figure sets where it ends. */}
         {delta != null && draft == null && !shown.ghost && (
           <span className={`lw-num lw-num-mirror${size}`} aria-hidden="true">
@@ -1077,6 +1075,10 @@ function Stepper({
             </span>
           </span>
         )}
+        </span>
+        <span className="lw-num-label" aria-hidden="true">
+          {label}
+        </span>
       </label>
     </div>
   );

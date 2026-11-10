@@ -19,6 +19,8 @@ import { clock, clockRange, dayWords, monthWords, weekdayWords } from "../lib/cl
 import CoachSays from "./CoachSays";
 import MeetingNotes from "./meetings/MeetingNotes";
 import type { LinkView } from "../lib/messageLinks";
+import AskSheet from "./meetings/AskSheet";
+import type { MeetingRequestView } from "./meetings/MeetingsScreen";
 import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenEvents, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 import { goalItemId } from "../lib/weightGoal";
 import { FocusGoals } from "./home/FocusList";
@@ -128,6 +130,7 @@ export default function HomeHub({
   trainedToday,
   planGap = null,
   clientId = 0,
+  meetingRequest = null,
   cardCovers = {},
   focus = null,
   weight = null,
@@ -138,6 +141,8 @@ export default function HomeHub({
   weight?: HomeWeightData | null;
   /** Whose Home this is; the redesign mock-ups pass none. */
   clientId?: number;
+  /** The call they have asked for and is not yet booked, if any. */
+  meetingRequest?: MeetingRequestView | null;
   /** The client's own card pictures (12 Oct), a track at a time. */
   cardCovers?: CardCovers;
   /** No phase live on training or nutrition: what is next, if anything is scheduled. */
@@ -168,6 +173,7 @@ export default function HomeHub({
   /** The client's events (theirs and the coach's), for the Events card. */
   events: HomeEvents;
 }) {
+  const ask = clientId > 0 ? { clientId, coachFirst: coach.firstName, request: meetingRequest } : undefined;
   const lifestyle = phases.find((p) => p.track === "lifestyle") ?? null;
   const plan = phases.filter((p) => p.track !== "lifestyle");
   const hasCheckIns = !!checkInForm && checkInForm.sections.some((s) => s.metrics.length > 0);
@@ -248,9 +254,9 @@ export default function HomeHub({
         {/* The timeline row always (17 Oct): with nothing logged it is just Today, "Nothing on", like the Events screen. */}
         <EventsTimelineCard events={events} today={today} />
         {upcoming ? (
-          <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />
+          <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} ask={ask} />
         ) : (
-          recap ? <LastMeetingCard recap={recap} coachFirstName={coach.firstName} /> : <NoMeetingsCard />
+          recap ? <LastMeetingCard recap={recap} coachFirstName={coach.firstName} ask={ask} /> : <NoMeetingsCard ask={ask} />
         )}
       </div>
     </div>
@@ -631,7 +637,52 @@ export function localMeetingLabels(m: NonNullable<UpcomingMeeting>, now: number 
   };
 }
 
-export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<UpcomingMeeting>; recap: MeetingRecap; coachFirstName: string }) {
+// Home's Meetings head, one shape (27 Oct, Alex): `Meetings`, and on its right Request a meeting (10 Nov, Alex) and All
+// meetings in words. Once asked it says `Requested` in grey, a tap on it landing where the ask can be taken back.
+type HomeAsk = { clientId: number; coachFirst: string; request: MeetingRequestView | null };
+function MeetingsHead({ ask }: { ask?: HomeAsk }) {
+  const openMeetings = useOpenMeetings();
+  const [asking, setAsking] = useState(false);
+  const [sent, setSent] = useState(false);
+  // The page's own copy has it now: from here on its word holds, so taking the ask back brings Request a meeting back.
+  if (sent && ask?.request) setSent(false);
+  const asked = sent || !!ask?.request;
+  return (
+    <div className="hm-tasks-head">
+      <span className="hm-eyebrow">Meetings</span>
+      <span className="hm-mt-links">
+        {ask && !asked && (
+          <button type="button" className="hm-mt-all-link" onClick={() => setAsking(true)}>
+            Request a meeting
+          </button>
+        )}
+        {ask && asked && (
+          <button type="button" className="hm-mt-all-link asked" onClick={() => openMeetings?.()}>
+            Requested
+          </button>
+        )}
+        {openMeetings && (
+          <button type="button" className="hm-mt-all-link" onClick={() => openMeetings?.()}>
+            All meetings
+          </button>
+        )}
+      </span>
+      {asking && ask && (
+        <AskSheet
+          clientId={ask.clientId}
+          coachFirst={ask.coachFirst}
+          onClose={() => setAsking(false)}
+          onSent={() => {
+            setSent(true);
+            setAsking(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export function MeetingCard({ m, recap, coachFirstName, ask }: { m: NonNullable<UpcomingMeeting>; recap: MeetingRecap; coachFirstName: string; ask?: HomeAsk }) {
   // On Home: a way to every meeting, past and to come.
   const openMeetings = useOpenMeetings();
   // The pill and the Join button follow the clock: checked every minute
@@ -657,14 +708,7 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
   return (
     <section className="hm-meeting" aria-label={`Next meeting with ${coachFirstName}`}>
       {/* Its own head (16 Oct), like Events and Latest from: it used to read as part of the section above. */}
-      <div className="hm-tasks-head">
-        <span className="hm-eyebrow">Meetings</span>
-        {openMeetings && (
-          <button type="button" className="hm-mt-all-link" onClick={() => openMeetings?.()}>
-            All meetings
-          </button>
-        )}
-      </div>
+      <MeetingsHead ask={ask} />
     <div className="hm-mt">
       <span className="hm-mt-glow" aria-hidden="true" />
       {/* Only the next call itself opens the Meetings screen (16 Oct); the recap under it folds open in place. */}
@@ -716,39 +760,22 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
 // Nothing booked: the coach's notes from the last call instead.
 // No call booked and none had yet (17 Oct, Alex): the section still shows, so the client knows calls live here. Since
 // 3 Nov (Alex: words mockup) the same head as always, `Meetings` with All meetings on its right, then `None yet`;
-// asking for a call is on the Meetings screen.
-function NoMeetingsCard() {
-  const openMeetings = useOpenMeetings();
+function NoMeetingsCard({ ask }: { ask?: HomeAsk }) {
   return (
     <section className="hm-last-meeting hm-no-meeting" aria-label="Meetings">
-      <div className="hm-tasks-head">
-        <span className="hm-eyebrow">Meetings</span>
-        {openMeetings && (
-          <button type="button" className="hm-mt-all-link" onClick={() => openMeetings?.()}>
-            All meetings
-          </button>
-        )}
-      </div>
+      <MeetingsHead ask={ask} />
       <p className="hm-mt-none">None yet</p>
     </section>
   );
 }
 
-function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<MeetingRecap>; coachFirstName: string }) {
-  const openMeetings = useOpenMeetings();
+function LastMeetingCard({ recap, coachFirstName, ask }: { recap: NonNullable<MeetingRecap>; coachFirstName: string; ask?: HomeAsk }) {
   // Nothing booked (27 Oct, Alex: "always like when there is a next meeting booked… cleaner"): the same section as
   // with a call booked, Meetings and All meetings over it, the last call's label and its summary, only the next
   // call's row left out.
   return (
     <section className="hm-meeting" aria-label={`Notes from your last meeting with ${coachFirstName}`}>
-      <div className="hm-tasks-head">
-        <span className="hm-eyebrow">Meetings</span>
-        {openMeetings && (
-          <button type="button" className="hm-mt-all-link" onClick={() => openMeetings?.()}>
-            All meetings
-          </button>
-        )}
-      </div>
+      <MeetingsHead ask={ask} />
       <div className="hm-mt">
         <span className="hm-mt-glow" aria-hidden="true" />
         <div className="hm-mt-recap">

@@ -504,6 +504,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
   return (
     <HomeHub
       clientId={CLIENT_ID}
+      meetingRequest={openMeetingRequest(CLIENT_ID)}
       cardCovers={getClientCardPictures(CLIENT_ID)}
       dateLabel={dateLabel}
       firstName={(client?.name ?? "").trim().split(/\s+/)[0] || "there"}
