@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import AddMealSheet, { DeleteMealDialog } from "./AddMealSheet";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { NorCoachLogo } from "../components/NorCoachLogo";
 import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
@@ -2043,6 +2043,8 @@ function EditableMealCards({
   const draggedAt = useRef(0);
   const holdStart = (e: React.PointerEvent<HTMLElement>, index: number) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
+    // Not while a new card is on its way: its order can't be sent until it has its key.
+    if (cards.some((c) => isTempCard(c.key))) return;
     const el = e.currentTarget;
     const { pointerId, clientX: x, clientY: y } = e;
     const timer = setTimeout(() => {
@@ -2097,15 +2099,21 @@ function EditableMealCards({
     }
     setDrag(null);
     if (d.to === d.from || !onReorder) return;
-    const was = cards;
+    const order = cards.map((c) => c.key);
     const next = [...cards];
     const [moved] = next.splice(d.from, 1);
     next.splice(d.to, 0, moved);
     onCards(() => next);
+    setFailed((f) => f.filter((x) => x !== moved.key));
     onReorder(next.map((c) => c.key))
       .catch(() => false)
       .then((ok) => {
-        if (!ok) onCards(() => was);
+        if (!ok) {
+          // The order alone goes back: a name or a food changed meanwhile stays.
+          onCards((all) => [...all].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key)));
+          setFailed((f) => [...f, moved.key]);
+        }
+        return refresh().catch(() => {});
       });
   };
   const shiftFor = (index: number): string | undefined => {
@@ -2912,7 +2920,11 @@ function SavedDayScreen({
   // Back folds the cards away into the card they came from.
   const leave = () => {
     const layer = root.current;
-    (document.activeElement as HTMLElement | null)?.blur?.();
+    // Now, not after: a name still typed makes a card on top, and it has to be there when the cards are measured.
+    const body = layer?.querySelector<HTMLElement>(".cn-body");
+    const scrolledTo = body?.scrollTop ?? 0;
+    flushSync(() => (document.activeElement as HTMLElement | null)?.blur?.());
+    body?.scrollTo({ top: scrolledTo, behavior: "instant" });
     if (leaving.current) return;
     if (!layer || !from || stillMotion() || !from.el?.isConnected) return onBack();
     leaving.current = true;
