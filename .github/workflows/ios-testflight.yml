@@ -83,6 +83,9 @@ jobs:
           { echo "KEY_ID=$KEY_ID"; echo "ISSUER=$ISSUER"; echo "TEAM=$TEAM"; echo "KEY_FILE=$OUT"; } >> "$GITHUB_ENV"
 
       - name: Archive
+        # Built unsigned (11 Nov: signing at this step wants a development profile, and that wants a registered device),
+        # then given a stand-in signature carrying the app's entitlements (HealthKit); the upload below signs it for the
+        # App Store, which needs no device.
         run: |
           xcodebuild archive \
             -project ios/App/App.xcodeproj \
@@ -90,13 +93,15 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY_FILE" \
-            -authenticationKeyID "$KEY_ID" \
-            -authenticationKeyIssuerID "$ISSUER" \
             DEVELOPMENT_TEAM="$TEAM" \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGNING_ALLOWED=NO \
             CURRENT_PROJECT_VERSION=${{ github.run_number }}
+          APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          if [ -d "$APP/Frameworks" ]; then
+            find "$APP/Frameworks" -maxdepth 1 \( -name '*.framework' -o -name '*.dylib' \) -print -exec codesign --force --sign - {} \;
+          fi
+          codesign --force --sign - --entitlements ios/App/App/App.entitlements "$APP"
+          codesign -d --entitlements - "$APP"
 
       - name: Upload to TestFlight
         run: |
