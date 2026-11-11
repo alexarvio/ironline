@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import AuthenticationServices
+import WebKit
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -28,6 +29,19 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(NorcoachAuthPlugin())
+        // No rubber band (11 Nov, Alex: dragging a screen showed blank room above and below it): the view itself, and
+        // every scrolling box in the page, which is where the app scrolls. In the app alone; the website keeps its own.
+        webView?.scrollView.bounces = false
+        webView?.scrollView.alwaysBounceVertical = false
+        let still = """
+        (function () {
+          var s = document.createElement('style');
+          s.textContent = '*, html, body { overscroll-behavior-y: none !important; }';
+          (document.head || document.documentElement).appendChild(s);
+          document.documentElement.classList.add('native-app');
+        })();
+        """
+        webView?.configuration.userContentController.addUserScript(WKUserScript(source: still, injectionTime: .atDocumentStart, forMainFrameOnly: true))
     }
 }
 
