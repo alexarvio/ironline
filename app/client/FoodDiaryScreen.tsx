@@ -25,7 +25,6 @@ import {
   uploadSavedMealPictureAction,
   removeSavedMealPictureAction,
   saveDayAction,
-  copyFoodDayAction,
   deleteSavedMealAction,
   saveMealAction,
   getFoodDiaryAction,
@@ -926,9 +925,6 @@ export default function FoodDiaryScreen({
                 There on every day since 5 Oct, empty or not (a day used adds
                 its food to what is there), and with nothing saved it says so. */}
             {(() => {
-              const last = diary.previous.reduce<string | null>((best, p) => (p.date < date && (!best || p.date > best) ? p.date : best), null);
-              const label = last ? (diary.previous.find((p) => p.date === last)?.dateLabel ?? last) : null;
-              const kcal = last ? diary.previous.filter((p) => p.date === last).reduce((sum, p) => sum + p.kcal, 0) : 0;
               const after = async () => {
                 const next = await getFoodDiaryAction(clientId, date);
                 if (next) {
@@ -942,19 +938,6 @@ export default function FoodDiaryScreen({
                   setPanel(null);
                   setFolded(new Set(next.meals.map((m) => m.id)));
                 }
-              };
-              const copyLast = () => {
-                if (!last) return;
-                const fd = new FormData();
-                fd.set("clientId", String(clientId));
-                fd.set("fromDate", last);
-                fd.set("toDate", date);
-                // Its one-time key (6 Nov): sent again once the signal is back, it copies the day once.
-                fd.set("onceKey", newOnceKey());
-                startLoad(async () => {
-                  await copyFoodDayAction(fd);
-                  await after();
-                });
               };
               const use = (id: number) => {
                 const fd = new FormData();
@@ -1049,18 +1032,7 @@ export default function FoodDiaryScreen({
                           </>
                         ) : (
                           <>
-                            {/* Save this day (10 Nov, Alex): at the top of the list it lands in. A day already saved says so. */}
-                            {diary.savedDayAs && diary.savedDayId != null ? (
-                              <div className="fdi-saved-day fdi-saved-this">
-                                <span className="fdi-copy-main">
-                                  <span className="fdi-copy-name">{dayTitle}</span>
-                                  <span className="fdi-copy-sub">Saved as {diary.savedDayAs}</span>
-                                </span>
-                                <button type="button" className="fdi-copy-use" onClick={() => forget(diary.savedDayId!)} disabled={loading}>
-                                  Unsave
-                                </button>
-                              </div>
-                            ) : null}
+                            {/* Save this day (10 Nov, Alex): at the top of the list it lands in. No Today or Yesterday row (11 Nov, Alex: "what is the use"): a saved day is its card below. */}
                             {namingDay && !diary.savedDayAs && diary.meals.some((m) => m.entries.length > 0) ? (
                                 <form
                                   className="fdi-saved-name fdi-saved-this"
@@ -1114,17 +1086,6 @@ export default function FoodDiaryScreen({
                                   }} disabled={loading}>
                                   <PlusIcon />
                                   <span>Create a day</span>
-                                </button>
-                              </div>
-                            )}
-                            {last && (
-                              <div className="fdi-saved-day">
-                                <span className="fdi-copy-main">
-                                  <span className="fdi-copy-name">{label}</span>
-                                  <span className="fdi-copy-sub">{n(kcal)} kcal</span>
-                                </span>
-                                <button type="button" className="fdi-copy-use" onClick={copyLast} disabled={loading}>
-                                  Use
                                 </button>
                               </div>
                             )}
