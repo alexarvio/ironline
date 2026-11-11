@@ -114,7 +114,10 @@
 .fdc-bg { position: absolute; inset: 0; isolation: isolate; overflow: hidden; border-radius: inherit; pointer-events: none; background-color: #232b2a; background-image: url("/img/card-grain.webp"); background-size: 220px; }
 .fdc-bg img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; -webkit-touch-callout: none; }
 .fdc-bg::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(10, 14, 20, 0.05) 20%, rgba(10, 14, 20, 0.78) 100%); }
-.fdc-card.bare .fdc-bg::before { background: radial-gradient(120% 130% at 85% 0%, rgba(29, 122, 112, 0.34), transparent 62%); }
+/* No picture: the app's own paper, turned dark (11 Nov, Alex: "the same idea as the background of the app with the logo",
+   Norcoach's or the coach's if they have set one): the star, or the coach's logo (`--bg-mark`, set on the body), huge and
+   faint in white, cropped off the top right as on Home and every chat; drawn through the mark's own shape, so any logo works. */
+.fdc-card.bare .fdc-bg::before { background: #fff; opacity: 0.07; -webkit-mask: var(--bg-mark, url("/brand/mark.svg")) right -46px top -34px / 224px 215px no-repeat; mask: var(--bg-mark, url("/brand/mark.svg")) right -46px top -34px / 224px 215px no-repeat; }
 
 /* A link landing on a meal: the shared moment of light, in white because an ink tint would not show on the photo. */
 .fdc-bg::after { content: ""; position: absolute; inset: 0; z-index: 2; background: #fff; opacity: 0; }
