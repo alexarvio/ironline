@@ -21485,3 +21485,7 @@ html.native-app .ev-sheet,
 html.native-app .evs { max-height: calc(100dvh - 80px - var(--sat)); }
 html.native-app .cki-card { max-height: calc(100dvh - 72px - var(--sat)); }
 html.native-app .hm-ev-sheet { max-height: calc(100dvh - 40px - var(--sat)); }
+
+/* No grey flash on a tap (11 Nov, Alex: the + under the week's sessions lit its whole row black for a moment): the
+   phone's own tap highlight is off everywhere; what is pressed shows it by its own :active look. */
+html { -webkit-tap-highlight-color: transparent; }
