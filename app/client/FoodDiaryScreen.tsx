@@ -5,7 +5,7 @@ import AddMealSheet, { DeleteMealDialog } from "./AddMealSheet";
 import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { NorCoachLogo } from "../components/NorCoachLogo";
-import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
+import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, SearchIcon } from "../components/icons";
 import { newOnceKey } from "../lib/onceKey";
 import {
   addCustomFoodAction,
@@ -139,7 +139,17 @@ const G_PER_OZ = 28.349523125;
 const ML_PER_FL_OZ = 29.5735295625;
 const ML_PER_CUP = 236.5882365;
 /** A row's amount, its parts for Bars: the portion when there is one, then the grams. */
-const amountParts = (e: { grams: number; serving: string | null }) => [e.serving, `${g(e.grams)} g`];
+/** Under a food on a meal's line (11 Nov, Alex: A of docs/boards/meal-foods-mockup.html): its amount, the portion with
+ * its grams after it, then its own protein, carbs and fat as the card writes the meal's ("i need to be able to see a
+ * macros breakdown item by item"). */
+const foodFacts = (e: { grams: number; serving: string | null; protein: number; carbs: number; fat: number }) => [
+  e.serving ? `${e.serving} (${g(e.grams)} g)` : `${g(e.grams)} g`,
+  <span key="m" className="fdc-row-macros">
+    <span>P {n(e.protein)}</span>
+    <span>C {n(e.carbs)}</span>
+    <span>F {n(e.fat)}</span>
+  </span>,
+];
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const addDays = (date: string, days: number) => {
   const d = new Date(`${date}T00:00:00`);
@@ -437,7 +447,6 @@ export default function FoodDiaryScreen({
   // Naming the day to save it.
   // A typed figure's Edit: the strip becomes the box again.
   // The row whose bin was tapped: it becomes the question until answered.
-  const [askRemove, setAskRemove] = useState<number | null>(null);
   // The saved day whose × was tapped, likewise.
   // Save this day, on the Saved days screen: the pill turned into its name box.
   const [namingDay, setNamingDay] = useState(false);
@@ -485,7 +494,6 @@ export default function FoodDiaryScreen({
       layer.inert = false;
     };
   }, [savedOpen]);
-  useDropOnTapOutside(askRemove != null, setAskRemove);
   // The row goes at once; the server's day replaces the guess when it comes.
   const applyLocal = (fn: (d: FoodDiaryProps) => FoodDiaryProps) => setDiary((d) => retotal(fn(d)));
   const settle = (forDate: string, next: FoodDiaryProps | null) => {
@@ -497,7 +505,6 @@ export default function FoodDiaryScreen({
     fd.set("clientId", String(clientId));
     fd.set("id", String(id));
     fd.set("date", date);
-    setAskRemove(null);
     const meal = diary.meals.find((m) => m.entries.some((e) => e.id === id))?.id;
     if (meal) holdMeal(meal);
     if (panel?.kind === "amount" && panel.entry?.id === id) setPanel(null);
@@ -1303,6 +1310,9 @@ export default function FoodDiaryScreen({
                     <div className={`so-fold fdc-fold${unfolded ? " open" : ""}`} aria-hidden={!unfolded} inert={!unfolded}>
                     <div className="so-fold-in">
                     <div className="fdc-foods">
+                    {/* On a line from the card (11 Nov, Alex: A of docs/boards/meal-foods-mockup.html), each food a dot on it. */}
+                    {meal.entries.length > 0 && (
+                    <div className="fdc-spine">
                     {meal.entries.map((e) => {
                       const selected = open?.kind === "amount" && open.entry?.id === e.id;
                       return (
@@ -1322,25 +1332,11 @@ export default function FoodDiaryScreen({
                           <span className="fdi-row-main">
                             <span className="fdi-row-name">{e.name}</span>
                             <span className="fdi-row-amount">
-                              <Bars parts={amountParts(e)} />
+                              <Bars parts={foodFacts(e)} />
                             </span>
                           </span>
-                          <span className="fdc-row-kcal">{n(e.kcal)}</span>
+                          <span className="fdc-row-kcal">{n(e.kcal)} kcal</span>
                         </button>
-                        {askRemove === e.id ? (
-                          <span className="fdi-row-ask">
-                            <button type="button" className="fdi-confirm-keep" onClick={() => setAskRemove(null)} autoFocus>
-                              Keep
-                            </button>
-                            <button type="button" className="fdi-confirm-remove" onClick={() => removeRow(e.id)} disabled={loading}>
-                              Remove
-                            </button>
-                          </span>
-                        ) : (
-                          <button type="button" className="fdi-row-bin" onClick={() => setAskRemove(e.id)} aria-label={`Remove ${e.name}`}>
-                            <TrashIcon />
-                          </button>
-                        )}
                         {selected && open?.kind === "amount" && (
                           <AmountPanel
                             clientId={clientId}
@@ -1351,6 +1347,7 @@ export default function FoodDiaryScreen({
                             entry={e}
                             apply={applyLocal}
                             settle={settle}
+                            onRemove={() => removeRow(e.id)}
                             onDone={closePanel}
                             onCancel={closePanel}
                           />
@@ -1358,6 +1355,8 @@ export default function FoodDiaryScreen({
                         </div>
                       );
                     })}
+                    </div>
+                    )}
                     {/* Under the foods, in words: a linked card already wears the saved meal's name. */}
                     {savedFoot && !meal.savedAs && (
                       <div className="fdc-foot">
@@ -1989,8 +1988,6 @@ function EditableMealCards({
   const [creating, setCreating] = useState(false);
   const [createFailed, setCreateFailed] = useState(false);
   const [askDelete, setAskDelete] = useState<string | null>(null);
-  const [askRemove, setAskRemove] = useState<string | null>(null);
-  useDropOnTapOutside(askRemove != null, setAskRemove);
   const [failed, setFailed] = useState<string[]>([]);
   const unsettled = useRef(new Map<string, { row: EditCard | null; at: number; count: number; bad: boolean }>());
   const [photoOf, setPhotoOf] = useState<string | null>(null);
@@ -2168,7 +2165,6 @@ function EditableMealCards({
   const removeFood = (c: EditCard, index: number) => {
     const item = c.items[index];
     if (!item) return;
-    setAskRemove(null);
     setPanel(null);
     setItems(c.key, c.items.filter((_, i) => i !== index));
     const onceKey = newOnceKey();
@@ -2448,9 +2444,10 @@ function EditableMealCards({
               <div className={`so-fold fdc-fold${unfolded ? " open" : ""}`} aria-hidden={!unfolded} inert={!unfolded}>
                 <div className="so-fold-in">
                   <div className="fdc-foods">
+                    {c.items.length > 0 && (
+                    <div className="fdc-spine">
                     {c.items.map((it, i) => {
                       const selected = here?.kind === "amount" && here.index === i;
-                      const askKey = `${c.key}:${i}`;
                       const per100 = (v: number) => (it.grams > 0 ? (v / it.grams) * 100 : 0);
                       const food: FoodOptionView = { id: it.food_id, name: it.name, hint: "", group: "more", kcal: per100(it.kcal), protein: per100(it.protein), carbs: per100(it.carbs), fat: per100(it.fat), servings: [] };
                       return (
@@ -2459,25 +2456,11 @@ function EditableMealCards({
                             <span className="fdi-row-main">
                               <span className="fdi-row-name">{it.name}</span>
                               <span className="fdi-row-amount">
-                                <Bars parts={amountParts(it)} />
+                                <Bars parts={foodFacts(it)} />
                               </span>
                             </span>
-                            <span className="fdc-row-kcal">{n(it.kcal)}</span>
+                            <span className="fdc-row-kcal">{n(it.kcal)} kcal</span>
                           </button>
-                          {askRemove === askKey ? (
-                            <span className="fdi-row-ask">
-                              <button type="button" className="fdi-confirm-keep" onClick={() => setAskRemove(null)} autoFocus>
-                                Keep
-                              </button>
-                              <button type="button" className="fdi-confirm-remove" onClick={() => removeFood(c, i)}>
-                                Remove
-                              </button>
-                            </span>
-                          ) : (
-                            <button type="button" className="fdi-row-bin" onClick={() => setAskRemove(askKey)} aria-label={`Remove ${it.name}`}>
-                              <TrashIcon />
-                            </button>
-                          )}
                           {selected && here?.kind === "amount" && (
                             <AmountPanel
                               clientId={clientId}
@@ -2489,6 +2472,7 @@ function EditableMealCards({
                               apply={noApply}
                               settle={noApply}
                               onDraft={(grams, serving) => changeFood(c, i, grams, serving)}
+                              onRemove={() => removeFood(c, i)}
                               onDone={() => setPanel(null)}
                               onCancel={() => setPanel(null)}
                             />
@@ -2496,6 +2480,8 @@ function EditableMealCards({
                         </div>
                       );
                     })}
+                    </div>
+                    )}
                     {foot?.(c)}
                     {here?.kind === "search" ? (
                       <SearchPanel
@@ -3137,11 +3123,14 @@ function AmountPanel({
   apply,
   settle,
   onDraft,
+  onRemove,
   onDone,
   onCancel,
 }: {
   /** Creating a meal or a day: the food is kept by the screen, nothing is logged. */
   onDraft?: (grams: number, serving: string | null) => void;
+  /** Takes the food off: the screen's own remove, so a saved card or the day keeps its place. */
+  onRemove?: () => void;
   clientId: number;
   date: string;
   meal: FoodMeal;
@@ -3239,6 +3228,11 @@ function AmountPanel({
   };
   const remove = () => {
     if (!entry) return;
+    if (onRemove) {
+      onRemove();
+      onDone();
+      return;
+    }
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("id", String(entry.id));
@@ -3303,10 +3297,16 @@ function AmountPanel({
         </div>
       ) : (
         <div className="fdi-panel-actions">
+          {/* A food on the list has no bin of its own (11 Nov, Alex: A of docs/boards/meal-foods-mockup.html): Remove
+              is here, in red words, asking in place. */}
+          {entry && (
+            <button type="button" className="fdi-panel-remove" onClick={() => setConfirmRemove(true)}>
+              Remove
+            </button>
+          )}
           <button type="button" className="fdi-primary" onClick={save} disabled={!ok}>
             {pending ? "Saving…" : entry ? "Save" : `Add to ${mealLabel}`}
           </button>
-
         </div>
       )}
     </div>
