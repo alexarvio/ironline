@@ -2271,7 +2271,7 @@ export async function addMeetingAction(formData: FormData) {
   const count = Math.min(26, Math.max(2, Math.round(Number(formData.get("count")) || 0)));
   // Taken once (6 Nov, one-time key): sent again after a dropped signal, it books no second call.
   return once(`addMeetingAction:${clientId}`, onceKeyOf(formData), () => {
-    if (repeatWeeks) addMeetingSeries(clientId, date, repeatWeeks, count, time, topic, duration, link || null, tz);
+    if (repeatWeeks) addMeetingSeries(clientId, date, repeatWeeks, count, time, topic, duration, link || null, tz, meetingType);
     else addMeeting(clientId, date, time, topic, duration, link || null, null, tz, meetingType);
     // A call the client asked for is answered by whatever gets booked next (9 Oct).
     const booked = listMeetings(clientId).filter((m) => m.status === "scheduled").sort((a, b) => b.id - a.id)[0];

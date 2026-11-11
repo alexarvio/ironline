@@ -15,7 +15,6 @@ import { MonthRange } from "../MonthRange";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
 import { allTimezones, SERVER_TZ, tzShort, zonedToUtc } from "../../../lib/timezones";
 import TimezonePicker from "./TimezonePicker";
-import Picker from "../Picker";
 import { useOpenChat } from "../ChatPanel";
 import { dayMonth, logDate } from "../../../lib/dayMonth";
 import { Sep, SepJoin } from "../Sep";
@@ -335,6 +334,16 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
 
   // To come is what hasn't ended yet (2 Nov, Alex): a call that is over and never marked goes to Past calls, `To complete`
   // in rust for a week (the to-do strip at the top carries its Mark completed), then `Not completed`.
+  // The day and time on a call's facts line, the zone only when the call is in another one than the coach's (11 Nov, B).
+  const callWhen = (m: DraftMeeting) => {
+    const day = parse(m.date).toLocaleDateString("en-GB", { weekday: "short" });
+    const own = (m.tz || SERVER_TZ) === (plan.coachTz || SERVER_TZ);
+    return `${day} ${m.time} – ${endTime(m.time, m.durationMinutes)}${own ? "" : ` ${zoneOf(m)}`}`;
+  };
+  const soonWords = (date: string) => {
+    const n = Math.round((parse(date).getTime() - parse(today).getTime()) / 86400000);
+    return n <= 0 ? "Today" : n === 1 ? "Tomorrow" : `In ${n} days`;
+  };
   const toCome = (m: DraftMeeting) => m.status === "scheduled" && !(m.over ?? m.date < today);
   const scheduled = meetings.filter(toCome).sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
   // A repeating call shows its next two (11 Nov, Alex: "they can check when the next call is", never six months of them):
@@ -390,25 +399,19 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
     const tab = tabs[m.id] ?? "prep";
     return (
       <>
-        <div className="rt-band">
-          <div className="rt-band-main">
-            {/* The row's title follows each key; the words go a moment after the typing stops. */}
-            <TopicField key={`t${m.id}`} value={m.topic} auto={auto} name={`topic${m.id}`} onType={(v) => patchMeeting(m.id, { topic: v })} onSend={(v) => saveMeeting(m.id, { topic: v.trim() })} />
-          </div>
-        </div>
-        <div className="rt-body">
+        <div className="rt-body rt-notes">
           {/* Prep notes and meeting notes are the coach's own; the summary is what the client gets on Home once the call is
               completed; To focus on (23 Oct, Alex) is the next list for the top of their Home, a draft kept with the call
-              until it is completed (the live one is on the past call that holds it). */}
-          <div className="rt-notes-tabs">
-            <div className="rd-btn-group" role="radiogroup" aria-label="Notes">
-              {(["prep", "meeting", "summary", "focus"] as const).map((t) => (
-                <button key={t} type="button" role="radio" className={tab === t ? "on" : ""} aria-checked={tab === t} onClick={() => setTabs((x) => ({ ...x, [m.id]: t }))}>
-                  {t === "prep" ? "Prep notes" : t === "meeting" ? "Meeting notes" : t === "summary" ? `Summary for ${firstName}` : "To focus on"}
-                </button>
-              ))}
-            </div>
+              until it is completed (the live one is on the past call that holds it). A quiet list on the left, the one
+              picked on the right (11 Nov, Alex: B of docs/boards/next-call-mockup.html), no counts or hints beside them. */}
+          <div className="rt-notes-nav" role="tablist" aria-label="Notes" aria-orientation="vertical">
+            {(["prep", "meeting", "summary", "focus"] as const).map((t) => (
+              <button key={t} type="button" role="tab" className={tab === t ? "on" : ""} aria-selected={tab === t} onClick={() => setTabs((x) => ({ ...x, [m.id]: t }))}>
+                {t === "prep" ? "Prep notes" : t === "meeting" ? "Meeting notes" : t === "summary" ? `Summary for ${firstName}` : "To focus on"}
+              </button>
+            ))}
           </div>
+          <div className="rt-notes-pane" role="tabpanel">
           {tab === "focus" ? (
             // What was set last time beside it, greyed as the past is (2 Nov, Alex: "I want to be able to see what we wrote
             // down last time"): the client's live list, dated by the call that set it. None yet: the lines alone.
@@ -473,6 +476,7 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
               onAddEvent={(line) => addEvent(m, line)}
             />
           )}
+          </div>
         </div>
       </>
     );
@@ -481,22 +485,70 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
   // A call still to come as a row (21 Oct, Alex): the date tile, its title with its time and the chevron after it, its
   // link on the right (23 Oct, Alex: where its length and how soon were), ⋯; open, the call's body under it. The next call and Also scheduled are both this.
   const [nextOpen, setNextOpen] = useState(true);
+  // A press on the title's words that ends somewhere else on the row; and where the keyboard goes after a fold, as the
+  // button it pressed is swapped for its twin.
+  const typingTitle = useRef(false);
+  const refocus = useRef<string | null>(null);
+  useEffect(() => {
+    const want = refocus.current;
+    if (!want) return;
+    refocus.current = null;
+    const [kind, id] = want.split("-");
+    document.querySelector<HTMLElement>(kind === "fold" ? `[data-call-fold="${id}"]` : `[data-call-title="${id}"]`)?.focus();
+  });
   const callRow = (m: DraftMeeting, isOpen: boolean, toggle: () => void) => (
     <div key={m.id} id={`call-${m.id}`} className={`rd-row rt-arow${isOpen ? " open" : ""}`}>
       {/* A click anywhere opens it; for the keyboard the title is the button, ⋯ its sibling (no controls nested in a button). */}
-      <div className="rd-row-main" style={aGrid} onClick={toggle}>
+      <div
+        className="rd-row-main"
+        style={aGrid}
+        onClick={() => {
+          // A drag that selected words (the title typed in place) is no click on the row.
+          if (typingTitle.current || window.getSelection()?.toString()) {
+            typingTitle.current = false;
+            return;
+          }
+          toggle();
+        }}
+      >
         <span className="rt-tile">
           <small>{monthCap(m.date)}</small>
           <b>{dayNum(m.date)}</b>
         </span>
         <span className="rd-ex">
-          <span className="rd-ex-name rt-call">
-            <button type="button" className="rd-row-hit" aria-expanded={isOpen}>
-              <CallTitle m={m} />
-              {/* Its small fact, the time, before the chevron (design rules 8). */}
-              {m.time && <span className="rt-facts">{`${m.time} – ${endTime(m.time, m.durationMinutes)} ${zoneOf(m)}`}</span>}
-              <Fold open={isOpen} />
-            </button>
+          <span className="rd-ex-name rt-call rt-call-two">
+            {isOpen ? (
+              // Open, the title is typed in place (11 Nov, Alex: B, the title said once): the words go a moment after the
+              // typing stops; the chevron alone folds it.
+              <span
+                className="rt-headline"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => {
+                  if ((e.target as HTMLElement).tagName === "INPUT") typingTitle.current = true;
+                }}
+              >
+                <TopicField key={`t${m.id}`} value={m.topic} auto={auto} name={`topic${m.id}`} onType={(v) => patchMeeting(m.id, { topic: v })} onSend={(v) => saveMeeting(m.id, { topic: v.trim() })} />
+                <button type="button" className="rd-row-hit rt-foldhit" data-call-fold={m.id} aria-expanded aria-label="Fold the call" onClick={toggle} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (refocus.current = `title-${m.id}`)}>
+                  <Fold open />
+                </button>
+              </span>
+            ) : (
+              <button type="button" className="rd-row-hit" data-call-title={m.id} aria-expanded={false} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (refocus.current = `fold-${m.id}`)}>
+                <CallTitle m={m} tag={false} />
+                <Fold open={false} />
+              </button>
+            )}
+            <span className="rt-callfacts">
+              <KindTag kind={m.kind} />
+              {m.time && (
+                <>
+                  <Sep />
+                  {callWhen(m)}
+                </>
+              )}
+              <Sep />
+              {soonWords(m.date)}
+            </span>
           </span>
         </span>
         <span className="rt-linkslot" onClick={(e) => e.stopPropagation()}>
@@ -1107,7 +1159,8 @@ function FocusRecord({ goals }: { goals: FocusSet }) {
 
 /** The month at a glance: this client's calls, everyone else's, and the picked day's bookings under it. The phase pop-up's
  *  calendar (MonthRange, 21 Oct, Alex: one calendar, a week per wheel step), the picked day in ink, the calls as dots. */
-function MiniCalendar({ today, selected, dots, onPick }: { today: string; selected: string; dots: DraftDot[]; onPick: (d: string) => void }) {
+function MiniCalendar({ today, selected, dots, onPick, series = [] }: { today: string; selected: string; dots: DraftDot[]; onPick: (d: string) => void; /** A repeating call's later days, lit on the month (11 Nov, Alex). */ series?: string[] }) {
+  const later = new Set(series);
   const [cursor, setCursor] = useState(() => (selected || today).slice(0, 7));
   // A day typed into the Date field brings its month up (a click on the month leaves the weeks where they are).
   const [shown, setShown] = useState(selected);
@@ -1132,13 +1185,22 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
         legend={null}
         marks={(d) => {
           const list = byDate.get(d);
-          return list?.length ? (
+          const lit = later.has(d) && d !== selected;
+          const dotsOn = list?.length ? (
             <span className="rt-cal-dots">
               {list.slice(0, 3).map((x, j) => (
                 <i key={j} className={x.mine ? "mine" : ""} />
               ))}
             </span>
           ) : null;
+          return lit ? (
+            <>
+              <span className="rt-cal-next" />
+              {dotsOn}
+            </>
+          ) : (
+            dotsOn
+          );
         }}
       />
       <div className="rt-day">
@@ -1196,6 +1258,23 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
   const [count, setCount] = useState("6");
   const calls = Math.min(26, Math.max(2, Number(count) || 2));
   const lastDate = date ? addDaysIso(date, (calls - 1) * repeatWeeks * 7) : "";
+  // Repeating, it is set as it is thought (11 Nov, Alex: "every Tuesday at 9:00"): the weekday picked, the first call the
+  // next one of it from today, every call of the series lit on the month and said back in words under it.
+  const repeating = !reschedule && repeatWeeks > 0;
+  const weekdayOf = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? (parse(iso).getDay() + 6) % 7 : -1);
+  const passedToday = (t: string) => {
+    const now = new Date();
+    return !!t && t <= `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  };
+  const pickWeekday = (i: number) => {
+    const ahead = (i - weekdayOf(today) + 7) % 7;
+    setDate(addDaysIso(today, ahead === 0 && passedToday(tidyTime(time)) ? 7 : ahead));
+  };
+  // Repeating from today at a time already gone: the series starts on the same weekday a week on.
+  if (repeating && date === today && passedToday(tidyTime(time))) setDate(addDaysIso(today, 7));
+  const series = repeating && date ? Array.from({ length: calls }, (_, i) => addDaysIso(date, i * repeatWeeks * 7)) : [];
+  const dayLong = date ? parse(date).toLocaleDateString("en-GB", { weekday: "long" }) : "";
+  const every = repeatWeeks === 1 ? `Every ${dayLong}` : repeatWeeks === 2 ? `Every other ${dayLong}` : `Every 4 weeks on ${dayLong}`;
   const linkOk = link.trim() === "" || providerOf(link) != null;
   const kind = MEETING_TYPES.find((t) => t.id === mtype) ?? MEETING_TYPES[0];
   return (
@@ -1230,17 +1309,43 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
       </label>
 
       <div className="npd-cols">
-        <MiniCalendar today={today} selected={date} dots={dots} onPick={setDate} />
+        <MiniCalendar today={today} selected={date} dots={dots} onPick={setDate} series={series} />
         <div className="npd-side">
-          {/* Date and time side by side, the timezone they are in under them. */}
-          <div className="npd-dates">
-            <div className="npd-date arm">
-              <span className="npd-date-head">Date</span>
-              <DateText value={date} onChange={setDate} label="Date" />
+          {!reschedule && (
+            <div className="npd-field">
+              <span className="npd-label">Repeat</span>
+              <div className="npd-seg" role="radiogroup" aria-label="Repeat">
+                {([0, 1, 2, 4] as const).map((w) => (
+                  <button key={w} type="button" role="radio" aria-checked={repeatWeeks === w} className={repeatWeeks === w ? "on" : ""} onClick={() => setRepeatWeeks(w)}>
+                    {w === 0 ? "Once" : w === 1 ? "Weekly" : `${w} weeks`}
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
+          {repeating && (
+            <div className="npd-field">
+              <span className="npd-label">On</span>
+              <div className="rt-weekdays" role="radiogroup" aria-label="Day of the week">
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, i) => (
+                  <button key={d} type="button" role="radio" aria-checked={weekdayOf(date) === i} className={weekdayOf(date) === i ? "on" : ""} onClick={() => pickWeekday(i)}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Once: the date and the time side by side; repeating, the time alone (the weekday says the day). */}
+          <div className="npd-dates">
+            {!repeating && (
+              <div className="npd-date arm">
+                <span className="npd-date-head">Date</span>
+                <DateText value={date} onChange={setDate} label="Date" />
+              </div>
+            )}
             {/* The shared time field (3 Nov, Alex: was a bare typed box headed Time | 24h); a typed time read by its own
                 parseTime ("930", "1530", "3pm"), so 25:00 or 12:75 are never taken. */}
-            <TimePick value={time} onPick={setTime} head="Time" label="Time" />
+            <TimePick value={time} onPick={setTime} head={repeating ? "At" : "Time"} label="Time" />
           </div>
           <div className="npd-field">
             <span className="npd-label">Timezone</span>
@@ -1256,26 +1361,13 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
               ))}
             </div>
           </div>
-          {!reschedule && (
+          {repeating && (
             <div className="npd-field">
-              <span className="npd-label">Repeat</span>
-              <Picker
-                value={String(repeatWeeks)}
-                onChange={(v) => setRepeatWeeks(Number(v))}
-                label="Repeat"
-                options={[
-                  { value: "0", label: "Once" },
-                  { value: "1", label: "Weekly" },
-                  { value: "2", label: "Every 2 weeks" },
-                  { value: "4", label: "Every 4 weeks" },
-                ]}
-              />
-              {repeatWeeks > 0 && (
-                <span className="rt-repeat">
-                  <input type="text" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value.replace(/\D/g, "").slice(0, 2))} onBlur={() => setCount(String(calls))} aria-label="How many calls" />
-                  calls{date ? `, the last on ${dayMonth(lastDate)}` : ""}
-                </span>
-              )}
+              <span className="npd-label">How many</span>
+              <span className="rt-repeat">
+                <input type="text" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value.replace(/\D/g, "").slice(0, 2))} onBlur={() => setCount(String(calls))} aria-label="How many calls" />
+                calls
+              </span>
             </div>
           )}
           <label className="npd-field">
@@ -1292,11 +1384,25 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
         </div>
       </div>
 
+      {repeating && date && (
+        <div className="rt-series" aria-live="polite">
+          <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M17 3.5 20 6.5l-3 3M4 11.5v-1a4 4 0 0 1 4-4h12M7 20.5 4 17.5l3-3M20 12.5v1a4 4 0 0 1-4 4H4" />
+          </svg>
+          <span>
+            <b>
+              {every}
+              {time ? ` at ${tidyTime(time)}` : ""}
+            </b>
+            , from {dayMonth(date)} to {dayMonth(lastDate)}, {calls} calls
+          </span>
+        </div>
+      )}
       <div className="npd-foot">
         {link.trim() && !linkOk && <span className="rt-bad">Not a meeting link yet.</span>}
         <DialogClose className="npd-cancel">Cancel</DialogClose>
         <button type="button" className="npd-save" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null, repeatWeeks, count: repeatWeeks ? calls : 1, meetingType: mtype })}>
-          {reschedule ? "Move" : repeatWeeks ? `Schedule ${calls}` : "Schedule"}
+          {reschedule ? "Move" : "Schedule"}
         </button>
       </div>
     </DialogContent>
