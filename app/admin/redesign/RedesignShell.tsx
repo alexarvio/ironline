@@ -26,6 +26,7 @@ import type { DraftInvoices, RailData } from "./loaders";
 import type { DotTab, DotTrail } from "./dots";
 import { TodoContext } from "./TodoStrip";
 import { useCloseOnEmptyClick } from "./useCloseOnEmptyClick";
+import { SHOW_TAB_EVENT } from "./followLink";
 
 // The redesign drafts on one page: the rail on the left, and Training,
 // Nutrition and Measurements all loaded on the right, one shown at a time.
@@ -330,6 +331,19 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
     [clientId, openChat]
   );
   const openTab = useCallback((t: string) => show(t as RedesignTab), [show]);
+  // A link followed inside the admin (followLink.ts) to this screen's own route brings its tab forward, the link setting
+  // the address itself (11 Nov: one on Training with Nutrition showing landed behind it, unseen).
+  useEffect(() => {
+    const onShow = (e: Event) => {
+      const t = (e as CustomEvent<string>).detail as PageTab;
+      if (!t || t === tabRef.current) return;
+      scrolls.current[tabRef.current] = window.scrollY;
+      tabRef.current = t;
+      setTab(t);
+    };
+    window.addEventListener(SHOW_TAB_EVENT, onShow);
+    return () => window.removeEventListener(SHOW_TAB_EVENT, onShow);
+  }, []);
   // The phone follows the coach's tab (the screen a change made there shows on); a pick in the panel holds until the next tab.
   const [phoneScreen, setPhoneScreen] = useState<PhoneScreen>(SCREEN_FOR_TAB[tab] ?? "home");
   // Per client too: a screen picked for one client never opens the next one's phone.
