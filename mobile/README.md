@@ -12,7 +12,10 @@ icon, the site address) need a new store build.
 - Site: the Railway address for now. Switch it to the own domain before the
   first store upload, because changing it later needs an app update.
 - `www/index.html` is only the "No connection" screen.
-- `server.allowNavigation` lists the other addresses the app may open inside itself:
+- `server.allowNavigation` holds every address the app opens inside itself. The site's own
+  host must be in it: Capacitor counts a page as the app's only when it starts with the whole
+  `server.url`, `/client` included, so the redirect to `/login` went to Safari (11 Nov, builds 3
+  and 4). Also
   Clerk's `clerk.norcoachapp.com`, whose session check is a page hop (11 Nov: without it the
   first launch fell to the No connection screen and the hop opened in Safari). Any other
   address opens in Safari.
