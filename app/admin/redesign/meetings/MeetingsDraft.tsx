@@ -80,7 +80,7 @@ export type DraftMeeting = {
   toComplete?: boolean;
 };
 type FocusSet = { text: string; done: boolean }[];
-export type DraftDot = { date: string; time: string; durationMinutes: number; name: string; topic: string; mine: boolean; completed: boolean };
+export type DraftDot = { id?: number; date: string; time: string; durationMinutes: number; name: string; topic: string; mine: boolean; completed: boolean };
 export type DraftMeetings = {
   today: string;
   /** The call the client asked for (9 Oct), until it is booked or let go. */
@@ -1200,7 +1200,7 @@ function FocusRecord({ goals }: { goals: FocusSet }) {
 
 /** The month at a glance: this client's calls, everyone else's, and the picked day's bookings under it. The phase pop-up's
  *  calendar (MonthRange, 21 Oct, Alex: one calendar, a week per wheel step), the picked day in ink, the calls as dots. */
-function MiniCalendar({ today, selected, dots, onPick, series = [] }: { today: string; selected: string; dots: DraftDot[]; onPick: (d: string) => void; /** A repeating call's later days, lit on the month (11 Nov, Alex). */ series?: string[] }) {
+function MiniCalendar({ today, selected, dots, onPick, series = [], moving = null }: { today: string; selected: string; dots: DraftDot[]; onPick: (d: string) => void; /** A repeating call's later days, lit on the month (11 Nov, Alex). */ series?: string[]; /** Rescheduling (11 Nov, Alex: A of docs/boards/reschedule-which-call-mockup.html): the call being moved, its day now and where it goes. */ moving?: { id: number; from: string; time: string; durationMinutes: number; label: string } | null }) {
   const later = new Set(series);
   const [cursor, setCursor] = useState(() => (selected || today).slice(0, 7));
   // A day typed into the Date field brings its month up (a click on the month leaves the weeks where they are).
@@ -1211,7 +1211,10 @@ function MiniCalendar({ today, selected, dots, onPick, series = [] }: { today: s
   }
   const byDate = new Map<string, DraftDot[]>();
   dots.forEach((d) => byDate.set(d.date, [...(byDate.get(d.date) ?? []), d]));
-  const onDay = [...(byDate.get(selected) ?? [])].sort((a, b) => (a.time < b.time ? -1 : 1));
+  // The call being moved is drawn where it lands, lit, never as well where it was.
+  const isMoving = (d: DraftDot) => moving != null && (d.id === moving.id || (d.id == null && d.mine && d.date === moving.from && d.time === moving.time));
+  const movingRow: (DraftDot & { moving?: boolean }) | null = moving ? { date: selected, time: moving.time, durationMinutes: moving.durationMinutes, name: "", topic: moving.label, mine: true, completed: false, moving: true } : null;
+  const onDay: (DraftDot & { moving?: boolean })[] = [...(byDate.get(selected) ?? []).filter((d) => !isMoving(d)), ...(movingRow ? [movingRow] : [])].sort((a, b) => (a.time < b.time ? -1 : 1));
   return (
     <div className="rt-cal">
       <MonthRange
@@ -1227,6 +1230,7 @@ function MiniCalendar({ today, selected, dots, onPick, series = [] }: { today: s
         marks={(d) => {
           const list = byDate.get(d);
           const lit = later.has(d) && d !== selected;
+          const from = moving != null && d === moving.from && d !== selected;
           const dotsOn = list?.length ? (
             <span className="rt-cal-dots">
               {list.slice(0, 3).map((x, j) => (
@@ -1234,9 +1238,9 @@ function MiniCalendar({ today, selected, dots, onPick, series = [] }: { today: s
               ))}
             </span>
           ) : null;
-          return lit ? (
+          return lit || from ? (
             <>
-              <span className="rt-cal-next" />
+              <span className={lit ? "rt-cal-next" : "rt-cal-from"} />
               {dotsOn}
             </>
           ) : (
@@ -1255,11 +1259,10 @@ function MiniCalendar({ today, selected, dots, onPick, series = [] }: { today: s
             </p>
           ) : (
             onDay.map((e, i) => (
-              <div key={i} className={`rt-day-row${e.mine ? " mine" : ""}`}>
+              <div key={i} className={`rt-day-row${e.mine ? " mine" : ""}${e.moving ? " moving" : ""}`}>
                 <b>{e.time ? `${e.time} – ${endTime(e.time, e.durationMinutes)}` : "no time"}</b>
-                <span>
-                  <SepJoin parts={[e.name, e.topic, e.completed ? "done" : null]} />
-                </span>
+                <span>{e.moving ? e.topic : <SepJoin parts={[e.name, e.topic, e.completed ? "done" : null]} />}</span>
+                {e.moving && <em className="rt-day-tag">Moving</em>}
               </div>
             ))
           )}
@@ -1331,6 +1334,15 @@ function ScheduleDialog({ date: initialDate, reschedule, rest = null, onDelete, 
   const series = repeating && date ? Array.from({ length: total }, (_, i) => addDaysIso(date, i * weeks * 7)) : [];
   const dayLong = date ? parse(date).toLocaleDateString("en-GB", { weekday: "long" }) : "";
   const everyWords = weeks === 1 ? `Every ${dayLong}` : weeks === 2 ? `Every other ${dayLong}` : `Every 4 weeks on ${dayLong}`;
+  // The call's day and time in words; struck as Now only once it has moved.
+  const whenWords = (d: string, t: string, mins: number) => (
+    <>
+      {dayHead(d)}
+      <Sep />
+      {t ? `${t} – ${endTime(t, mins)}` : "no time"}
+    </>
+  );
+  const movedAway = !!reschedule && (date !== reschedule.date || tidyTime(time) !== reschedule.time || duration !== reschedule.durationMinutes);
   const linkOk = link.trim() === "" || providerOf(link) != null;
   const kind = MEETING_TYPES.find((t) => t.id === mtype) ?? MEETING_TYPES[0];
   return (
@@ -1344,6 +1356,29 @@ function ScheduleDialog({ date: initialDate, reschedule, rest = null, onDelete, 
         </span>
       </div>
       <DialogDescription className="sr-only">{reschedule ? "A new day and time for the call" : "The day, time and length of a new call"}</DialogDescription>
+      {/* Which call is moving (11 Nov, Alex: A of docs/boards/reschedule-which-call-mockup.html): its kind, then where it is now
+          struck grey and where it goes in its colour, as every move in the admin reads; a part that stays reads the same. */}
+      {reschedule && (
+        <div className="rt-moving">
+          <span className="rt-kind" style={{ color: kind.color, background: `rgba(${kind.rgb}, 0.12)` }}>
+            <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d={kind.icon} />
+            </svg>
+            {kind.label}
+          </span>
+          <span className={`rt-moving-at${movedAway ? " old" : ""}`}>
+            <small>Now</small>
+            <span>{whenWords(reschedule.date, reschedule.time, reschedule.durationMinutes)}</span>
+          </span>
+          <span className="rt-moving-arrow" aria-hidden="true">
+            →
+          </span>
+          <span className="rt-moving-at new">
+            <small>New</small>
+            {date ? whenWords(date, tidyTime(time), duration) : "Pick a day"}
+          </span>
+        </div>
+      )}
 
       <div className="npd-field">
         <span className="npd-label">Kind of call</span>
@@ -1365,7 +1400,14 @@ function ScheduleDialog({ date: initialDate, reschedule, rest = null, onDelete, 
       </label>
 
       <div className="npd-cols">
-        <MiniCalendar today={today} selected={date} dots={dots} onPick={setDate} series={series} />
+        <MiniCalendar
+          today={today}
+          selected={date}
+          dots={dots}
+          onPick={setDate}
+          series={series}
+          moving={reschedule ? { id: reschedule.id, from: reschedule.date, time: tidyTime(time) || reschedule.time, durationMinutes: duration, label: kind.label } : null}
+        />
         <div className="npd-side">
           {/* 11 Nov, Alex: Repeat and On side by side as dropdowns, On only once it repeats; under them the day and the
               time (Once) or the time and how many (repeating), so the rows are the same either way and nothing moves. */}

@@ -12165,6 +12165,7 @@ export function getMeetingsWorkspaceData(clientId: number) {
     dots: all
       .filter((m) => m.status !== "cancelled")
       .map((m) => ({
+        id: m.id,
         date: m.date,
         time: m.time,
         durationMinutes: m.duration_minutes,
