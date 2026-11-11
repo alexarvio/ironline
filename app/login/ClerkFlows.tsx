@@ -149,16 +149,21 @@ function useEmailCode() {
     });
   };
 
-  /** Google in the app's secure sheet: /auth/native/start, back on norcoach://auth with a one-time ticket for this sign-in. */
+  /** Google in the app's secure sheet, PKCE-shaped (app/lib/nativeAuth.ts): the site sees only the secret's SHA-256, the
+   *  sheet comes back on norcoach://auth with a one-time code, and the code and the secret together buy the ticket. */
   const googleInApp = async () => {
     if (!signIn || !setActive) throw new Error("Sign-in isn't ready yet. Try again.");
-    const bytes = crypto.getRandomValues(new Uint8Array(24));
-    const state = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-    const { url } = await callNative<{ url: string }>("NorcoachAuth", "openSignIn", { url: `${window.location.origin}/auth/native/start?provider=google&state=${state}` });
+    const b64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const state = b64url(crypto.getRandomValues(new Uint8Array(24)));
+    const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+    const challenge = b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
+    const { url } = await callNative<{ url: string }>("NorcoachAuth", "openSignIn", { url: `${window.location.origin}/auth/native/start?provider=google&state=${state}&challenge=${challenge}` });
     const back = new URL(url).searchParams;
-    if (back.get("state") !== state) throw new Error("A sign-in this app didn't start");
-    const ticket = back.get("ticket");
-    if (!ticket) throw new Error(back.get("error") === "signin" ? "Google sign-in didn't finish. Try again." : "Sign-in didn't finish. Try again.");
+    const code = back.get("code");
+    if (!code || back.get("state") !== state) throw new Error("Google sign-in didn't finish. Try again.");
+    const res = await fetch("/auth/native/exchange", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, verifier }) });
+    const { ticket } = (await res.json().catch(() => ({}))) as { ticket?: string };
+    if (!res.ok || !ticket) throw new Error("Google sign-in didn't finish. Try again.");
     const done = await signIn.create({ strategy: "ticket", ticket });
     if (done.status !== "complete" || !done.createdSessionId) throw new Error("Sign-in didn't finish. Try again.");
     await setActive({ session: done.createdSessionId });
