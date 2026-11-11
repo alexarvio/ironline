@@ -12692,6 +12692,8 @@ export type FoodOption = {
   servings: [string, number][];
   /** A liquid's grams a millilitre (the catalog's), so the diary offers ml and l. */
   ml?: number;
+  /** On Recent: the amount and unit it was last logged at, which a tap adds again (11 Nov, Alex). */
+  last?: { grams: number; serving: string | null };
 };
 
 const catalogOption = (f: CatalogFood, group: FoodOption["group"]): FoodOption => ({ id: f.id, name: f.name, hint: f.category, group, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: f.servings, ...(f.ml ? { ml: f.ml } : {}) });
@@ -12772,14 +12774,23 @@ export function searchFoods(clientId: number, query: string, limit = 30): FoodOp
   return [...own, ...packaged, ...hits.common.map((f) => catalogOption(f, "common")), ...hits.more.map((f) => catalogOption(f, "more"))].slice(0, limit + hits.common.length + packaged.length);
 }
 
-/** What the client logged most often lately, for the top of an empty search. */
+/** What the client logged last, the latest first, each with the amount and unit it was logged at then (11 Nov, Alex:
+ * "peanut butter I added yesterday… if I added 60 g then it adds 60 g"), for the top of an empty search. */
 export function recentFoods(clientId: number, limit = 8): FoodOption[] {
-  const seen = new Map<string, number>();
-  const entries = getData().food_entries.filter((e) => e.client_id === clientId);
-  for (const e of entries.slice(-200)) seen.set(e.food_id, (seen.get(e.food_id) ?? 0) + 1);
-  return [...seen.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([id]) => getFoodOption(clientId, id))
+  const latest = new Map<string, FoodEntry>();
+  for (const e of getData().food_entries) {
+    if (e.client_id !== clientId || !(e.grams > 0)) continue;
+    const had = latest.get(e.food_id);
+    if (!had || e.logged_at > had.logged_at) latest.set(e.food_id, e);
+  }
+  return [...latest.values()]
+    .sort((a, b) => b.logged_at.localeCompare(a.logged_at))
+    .map((e): FoodOption | null => {
+      const f = getFoodOption(clientId, e.food_id);
+      // A row from before ounces went (24 Oct) comes back in grams: the diary is metric.
+      const serving = e.serving && !e.serving.endsWith(" oz") ? e.serving : null;
+      return f ? { ...f, last: { grams: e.grams, serving } } : null;
+    })
     .filter((f): f is FoodOption => !!f)
     .slice(0, limit);
 }
