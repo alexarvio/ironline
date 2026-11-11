@@ -10,6 +10,7 @@ import { newOnceKey } from "../lib/onceKey";
 import {
   addCustomFoodAction,
   addFoodEntryAction,
+  updateSavedMealFromSlotAction,
   addFoodMealAction,
   addSavedDayAction,
   addSavedMealAction,
@@ -121,7 +122,7 @@ export type FoodDiaryProps = {
   eaten: Macros;
   dayType: "training" | "rest";
   loggedKcal: number | null;
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null; /** The saved meal that filled this slot, while it still holds just that meal. */ savedMealId: number | null; photo: string | null; /** What the card shows: the saved meal's picture, else that day's photo. */ picture: string | null; /** That picture's tiny preview, there at once. */ thumb: string | null; comments: { id: number; text: string; when: string }[] }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null; /** The saved meal that filled this slot, while it still holds that meal. */ savedMealId: number | null; /** It holds other foods than the saved meal now does: Update {name} is offered. */ savedDiffers?: boolean; photo: string | null; /** What the card shows: the saved meal's picture, else that day's photo. */ picture: string | null; /** That picture's tiny preview, there at once. */ thumb: string | null; comments: { id: number; text: string; when: string }[] }[];
   recent: FoodOptionView[];
   saved: { id: number; name: string; kcal: number; protein: number; carbs: number; fat: number; picture: string | null; thumb: string | null; count: number; names: string[]; items: SavedItem[] }[];
   savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null; picture: string | null; thumb: string | null; cards: { key: string; name: string; picture: string | null; thumb: string | null; items: SavedItem[] }[] }[];
@@ -487,6 +488,32 @@ export default function FoodDiaryScreen({
   const settle = (forDate: string, next: FoodDiaryProps | null) => {
     if (next && next.date === forDate) setDiary((d) => (d.date === forDate ? next : d));
     else if (!next) reload();
+  };
+  // Update {name} (11 Nov, Alex): the saved meal becomes what this meal holds today. A retry reuses its one-time key.
+  const [updateFailed, setUpdateFailed] = useState<FoodMeal | null>(null);
+  const updateKeys = useRef(new Map<string, string>());
+  const updateSaved = (mealId: FoodMeal) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("date", date);
+    fd.set("meal", mealId);
+    const k = `${date}|${mealId}`;
+    const key = updateKeys.current.get(k) ?? newOnceKey();
+    updateKeys.current.set(k, key);
+    fd.set("onceKey", key);
+    setUpdateFailed(null);
+    const forDate = date;
+    startLoad(async () => {
+      try {
+        await updateSavedMealFromSlotAction(fd);
+      } catch {
+        setUpdateFailed(mealId);
+        return;
+      }
+      updateKeys.current.delete(k);
+      const next = await getFoodDiaryAction(clientId, forDate).catch(() => null);
+      if (next) setDiary((d) => (d.date === forDate ? next : d));
+    });
   };
   // A Recent food tapped (11 Nov, Alex): on the meal at once at its last amount and unit, as Add would put it there.
   const quickAdd = (mealId: FoodMeal, food: FoodOptionView, grams: number, serving: string | null) => {
@@ -1362,17 +1389,36 @@ export default function FoodDiaryScreen({
                         </div>
                       );
                     })}
-                    <SpineAdd label={`Add food to ${title}`} on={open?.kind === "search"} onClick={addFood} />
+                    <SpineAdd
+                      label={`Add food to ${title}`}
+                      on={open?.kind === "search"}
+                      onClick={addFood}
+                      action={
+                        // In words on the ring's row: Save meal, or on a saved meal with a food added that day, Update {name},
+                        // which makes the saved meal what this day holds (11 Nov, Alex). A linked card says nothing more.
+                        savedFoot && !meal.savedAs ? (
+                          <button type="button" className="fdc-save" onClick={() => setSavingMeal(meal.id)}>
+                            Save meal
+                          </button>
+                        ) : savedFoot && meal.savedMealId != null && meal.savedDiffers ? (
+                          <>
+                            {/* Both (11 Nov): kept as a saved meal of its own, or the saved meal made this. */}
+                            <button type="button" className="fdc-save" onClick={() => setSavingMeal(meal.id)}>
+                              Save meal
+                            </button>
+                            <button type="button" className="fdc-save fdc-update" onClick={() => updateSaved(meal.id)} disabled={loading}>
+                              Update {meal.savedAs}
+                            </button>
+                          </>
+                        ) : null
+                      }
+                    />
                     </div>
                     )}
-                    {/* Under the foods, in words: a linked card already wears the saved meal's name, and says nothing more
-                        (11 Nov, Alex: no "Saved as"). */}
-                    {savedFoot && !meal.savedAs && (
-                      <div className="fdc-foot">
-                        <button type="button" className="fdc-save" onClick={() => setSavingMeal(meal.id)}>
-                          Save meal
-                        </button>
-                      </div>
+                    {updateFailed === meal.id && (
+                      <p className="fdi-photo-failed" role="alert">
+                        Not updated. Try again
+                      </p>
                     )}
                     {savingMeal === meal.id && (
                       <form
@@ -2473,10 +2519,9 @@ function EditableMealCards({
                         </div>
                       );
                     })}
-                    {!onOpen && <SpineAdd label={`Add food to ${c.name}`} on={here?.kind === "search"} onClick={() => tapPlus(c)} />}
+                    {!onOpen && <SpineAdd label={`Add food to ${c.name}`} on={here?.kind === "search"} onClick={() => tapPlus(c)} action={here ? null : foot?.(c)} />}
                     </div>
                     )}
-                    {foot?.(c)}
                     {here?.kind === "search" ? (
                       <SearchPanel
                         clientId={clientId}
@@ -2662,12 +2707,12 @@ function SavedMealList({
       actions={actions}
       foot={(c) =>
         c.items.length > 0 && (
-          <div className="fdc-foot">
+          <>
+            {useFailed === Number(c.key) && <span className="fdi-make-failed">Not added. Try again</span>}
             <button type="button" className="fdc-save" onClick={() => onUse(Number(c.key))} disabled={busy}>
               Use
             </button>
-            {useFailed === Number(c.key) && <span className="fdi-make-failed">Not added. Try again</span>}
-          </div>
+          </>
         )
       }
     />
@@ -3114,9 +3159,10 @@ function SavedDayScreen({
 /** The end of a meal's line (11 Nov, Alex: "the hairline keeps going to a second dot with a plus sign and we add items
  * from there too"): a ring with a +, on the line under the last food, adding as the card's + does; ink while its search
  * is open, as anything on is. */
-function SpineAdd({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
+function SpineAdd({ label, on, onClick, action }: { label: string; on: boolean; onClick: () => void; /** The meal's one action in words, on the right of the ring's row (Save meal, Update {name}, Use). */ action?: ReactNode }) {
   return (
     <div className="fdc-spine-add">
+      {action && <div className="fdc-spine-act">{action}</div>}
       <button type="button" className={`fdc-spine-plus${on ? " on" : ""}`} onClick={onClick} aria-label={label} aria-pressed={on}>
         <span className="fdc-spine-ring" aria-hidden="true">
           <PlusIcon />

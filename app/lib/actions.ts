@@ -376,6 +376,7 @@ import {
   setFoodDayType,
   pushFoodDayToCalorieLog,
   saveMeal,
+  updateSavedMealFromSlot,
   deleteSavedMeal,
   renameSavedMeal,
   addSavedMealFood,
@@ -4919,6 +4920,18 @@ export async function saveMealAction(formData: FormData) {
   await once(`saveMealAction:${clientId}`, onceKeyOf(formData), () => {
     saveMeal(clientId, date, meal, name);
   });
+}
+
+/** A saved meal made what a slot holds that day (11 Nov, Alex), the foods added that day included. */
+export async function updateSavedMealFromSlotAction(formData: FormData): Promise<boolean> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") ?? "");
+  const meal = String(formData.get("meal") ?? "");
+  if (!DATE.test(date) || !meal) return false;
+  // Taken once (one-time key): sent again after a dropped signal, it changes nothing twice.
+  const done = await once(`updateSavedMealFromSlotAction:${clientId}`, onceKeyOf(formData), () => updateSavedMealFromSlot(clientId, date, meal));
+  if (done) revalidatePath("/client");
+  return !!done;
 }
 
 /** Create a meal (10 Nov, Alex): the card named, filled after. Its id, null when it wasn't saved. */

@@ -182,6 +182,12 @@
 .fdc-spine-add::before { content: ""; position: absolute; left: var(--spine-x); top: 0; height: 22px; width: 1px; background: #C9CFD8; pointer-events: none; }
 .fdc-spine-plus.fdc-spine-plus { position: absolute; left: calc(var(--spine-x) + 0.5px - 22px); top: 0; width: 44px; height: 43px; display: grid; place-items: center; padding: 0; border: 0; background: none; color: #141a24; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .fdc-spine-ring { width: 21px; height: 21px; display: grid; place-items: center; border-radius: 50%; background: #F5F6F8; box-shadow: inset 0 0 0 1.5px #141a24; transition: background-color 0.2s ease, color 0.2s ease; }
+/* The meal's one action in words, on the ring's row, its right edge on the kcal's (11 Nov, Alex). */
+.fdc-spine-act { position: absolute; left: 48px; right: 4px; top: 0; height: 43px; display: flex; align-items: center; justify-content: flex-end; gap: 16px; pointer-events: none; }
+.fdc-spine-act > * { pointer-events: auto; min-width: 0; }
+.fdc-spine-act .fdc-save { flex: none; white-space: nowrap; }
+.fdc-spine-act .fdc-save.fdc-update { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.fdc-spine-act .fdi-make-failed { font-size: 12px; font-weight: 500; color: #b8471f; }
 .fdc-spine-ring svg { width: 11px; height: 11px; }
 .fdc-spine-plus.on .fdc-spine-ring { background: #141a24; color: #fff; }
 /* Never cut: a long portion wraps, its macros going on together to the next line (a narrow phone, an open food). */
