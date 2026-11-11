@@ -13226,18 +13226,49 @@ export function removeSavedMealPicture(clientId: number, id: number): string[] {
 
 /**
  * The saved meal a slot's rows are, or null (9 Nov, Alex). Worked out from the rows rather than kept on the slot, so
- * there is nothing to clear: every row must have come in with that one saved meal and the slot must still hold exactly
- * its foods and amounts. A food added (no stamp), one taken out or its amount changed (the foods differ), a second
- * helping of the meal (the foods differ), or the saved meal forgotten each end the link on their own. The saved meal
- * edited since does not (10 Nov, Alex): a day holding its foods as they stood then is still that meal (was_foods).
+ * there is nothing to clear: the rows that came in with a saved meal (stamped) must all be that one meal and still hold
+ * exactly its foods and amounts. A food added that day (no stamp) keeps it that meal, an extra for that day alone (11 Nov,
+ * Alex: "I should be able to still add some food in for that specific day"); one of its foods taken out or its amount
+ * changed (the foods differ), a second helping of the meal (the foods differ), or the saved meal forgotten each end the
+ * link on their own. The saved meal edited since does not (10 Nov, Alex): a day holding its foods as they stood then is
+ * still that meal (was_foods).
  */
 function savedMealOfRows(rows: FoodEntry[], saved: SavedMeal[]): SavedMeal | null {
-  const id = rows[0]?.saved_meal_id;
-  if (id == null || rows.some((e) => e.saved_meal_id !== id)) return null;
+  const came = rows.filter((e) => e.saved_meal_id != null);
+  const id = came[0]?.saved_meal_id;
+  if (id == null || came.some((e) => e.saved_meal_id !== id)) return null;
   const row = saved.find((s) => s.id === id);
   if (!row) return null;
-  const key = foodsKey(rows);
+  // Extras are what was added after it came in; food already on the meal before (a saved day used on a filled meal, a
+  // copy into one) means the meal is something else.
+  const cameAt = came.reduce((m, e) => (e.logged_at > m ? e.logged_at : m), "");
+  if (rows.some((e) => e.saved_meal_id == null && e.logged_at < cameAt)) return null;
+  const key = foodsKey(came);
   return foodsKey(row.items) === key || row.was_foods?.includes(key) ? row : null;
+}
+
+/** A linked slot holding the saved meal as it is now plus foods added that day: what Update {name} is for. Never a day
+ * holding an older version of the meal, where Update would undo a later change. */
+function slotAddsToSavedMeal(rows: FoodEntry[], saved: SavedMeal): boolean {
+  const came = rows.filter((e) => e.saved_meal_id === saved.id);
+  return came.length < rows.length && foodsKey(came) === foodsKey(saved.items);
+}
+
+/**
+ * A saved meal made what a slot holds on a day (11 Nov, Alex: "the option of updating… to always handle 6 items"): its
+ * foods become that day's, the foods added that day included, and every row is stamped as having come with it. Other days
+ * it filled keep what was eaten and stay that meal (was_foods). False when the slot is no saved meal.
+ */
+export function updateSavedMealFromSlot(clientId: number, date: string, meal: string): boolean {
+  const rows = listFoodEntries(clientId, date).filter((e) => e.meal === meal);
+  const saved = savedMealOfRows(rows, getData().saved_meals.filter((s) => s.client_id === clientId));
+  if (!saved || !slotAddsToSavedMeal(rows, saved)) return false;
+  changeSavedFoods(saved, () => {
+    saved.items = rows.map((e) => ({ food_id: e.food_id, name: e.name, grams: e.grams, serving: e.serving, kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat }));
+  });
+  for (const e of rows) e.saved_meal_id = saved.id;
+  persist();
+  return true;
 }
 
 function savedMealOfSlot(clientId: number, date: string, meal: string): SavedMeal | null {
@@ -13805,7 +13836,7 @@ export type FoodDiaryView = {
   /** Both days' targets, so Training day | Rest day switches on the phone at once (4 Nov, Alex: it took 1-2 s). */
   targets: { training: FoodDiaryView["target"]; rest: FoodDiaryView["target"] };
   eaten: { kcal: number; protein: number; carbs: number; fat: number };
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null; /** The saved meal that filled this slot (added or saved from it), while it still holds just that meal; the card then wears its name. */ savedMealId: number | null; /** The client's picture of this meal that day, when they took one. */ photo: string | null; /** What the card shows: the linked saved meal's picture, else that day's photo. */ picture: string | null; /** That picture's tiny preview, there at once. */ thumb: string | null; /** What the coach said about this meal. */ comments: MealComment[] }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null; /** The saved meal that filled this slot (added or saved from it), while it still holds that meal; the card then wears its name. */ savedMealId: number | null; /** A food was added to it that day, on top of the saved meal: Update {name} is offered. Never on a day holding an older version of the meal alone, where it would undo a later change. */ savedDiffers: boolean; /** The client's picture of this meal that day, when they took one. */ photo: string | null; /** What the card shows: the linked saved meal's picture, else that day's photo. */ picture: string | null; /** That picture's tiny preview, there at once. */ thumb: string | null; /** What the coach said about this meal. */ comments: MealComment[] }[];
   recent: FoodOption[];
   /** The client's saved meals, newest first. */
   saved: SavedMealView[];
@@ -14264,7 +14295,7 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
       const linked = savedMealOfRows(rows, savedMeals);
       const savedAs = linked?.name ?? (rows.length ? savedKeys.find((s) => s.key === key)?.name ?? null : null);
       const photo = photos.get(m.id) ?? null;
-      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs, savedMealId: linked?.id ?? null, photo, picture: linked?.picture ?? photo, thumb: (linked?.picture ? linked.picture_thumb : null) ?? getData().meal_photos.find((p) => p.file_path === (linked?.picture ?? photo))?.thumb ?? null, comments: comments.get(m.id) ?? [] };
+      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs, savedMealId: linked?.id ?? null, savedDiffers: !!linked && slotAddsToSavedMeal(rows, linked), photo, picture: linked?.picture ?? photo, thumb: (linked?.picture ? linked.picture_thumb : null) ?? getData().meal_photos.find((p) => p.file_path === (linked?.picture ?? photo))?.thumb ?? null, comments: comments.get(m.id) ?? [] };
     }),
     recent: recentFoods(clientId),
     saved: listSavedMeals(clientId),
