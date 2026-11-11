@@ -19,6 +19,8 @@ icon, the site address) need a new store build.
   Clerk's `clerk.norcoachapp.com`, whose session check is a page hop (11 Nov: without it the
   first launch fell to the No connection screen and the hop opened in Safari). Any other
   address opens in Safari.
+- The page starts below the clock strip (`StatusBar.overlaysWebView: false`, the strip the top bar's
+  `#FAFAFA`), as the home-screen web app does; the site's top bar is built for that (11 Nov).
 - Icon and splash come from `assets/`. Replace `assets/icon-only.png`
   (1024×1024) and `assets/splash.png` (2732×2732) with the real logo, then run
   `npm run icons`.

@@ -16,8 +16,9 @@
   },
   "plugins": {
     "StatusBar": {
-      "overlaysWebView": true,
-      "style": "LIGHT"
+      "overlaysWebView": false,
+      "style": "LIGHT",
+      "backgroundColor": "#FAFAFA"
     }
   }
 }

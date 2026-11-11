@@ -5,6 +5,7 @@ import { useAuth, useClerk } from "@clerk/nextjs";
 import { useSignIn, useSignUp } from "@clerk/nextjs/legacy";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { AuthShell, CodeScreen, CoachSignUpScreen, InviteWelcomeScreen, SignInScreen } from "./SignInScreens";
+import { callNative, nativePlatform } from "../lib/native";
 
 // Clerk behind the sign-in screens (26 Sep). One way in for everyone: an
 // email code, or Apple or Google. An email Clerk doesn't know yet (anyone
@@ -36,6 +37,8 @@ function says(error: unknown, fallback = "Something went wrong. Try again."): st
 const notFound = (error: unknown) => isClerkAPIResponseError(error) && error.errors.some((e) => e.code === "form_identifier_not_found");
 const exists = (error: unknown) => isClerkAPIResponseError(error) && error.errors.some((e) => e.code === "form_identifier_exists");
 const signedIn = (error: unknown) => isClerkAPIResponseError(error) && error.errors.some((e) => e.code === "session_exists");
+/** The person closed the app's sign-in sheet (NorcoachAuth rejects with the code "cancelled"): nothing to say. */
+const cancelled = (error: unknown) => (error as { code?: string } | null)?.code === "cancelled";
 
 /** After Clerk says yes: a full page load, so the server sees the new session. */
 // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load on purpose: the server must read the new session cookie
@@ -123,12 +126,66 @@ function useEmailCode() {
   const oauth = (strategy: "oauth_apple" | "oauth_google") => {
     if (!ready) return;
     setBusy(true);
+    // In the iPhone app (11 Nov, Alex): Google in Apple's secure sheet and back with a one-time ticket, Apple through its
+    // own sheet; a web redirect would leave the app (Google refuses app web views).
+    if (nativePlatform() === "ios") {
+      (strategy === "oauth_google" ? googleInApp() : appleInApp()).catch((e) => {
+        if (signedIn(e)) return land();
+        if (cancelled(e)) {
+          setBusy(false);
+          return;
+        }
+        const fallback = strategy === "oauth_google" ? "Google sign-in didn't finish. Try again." : "Apple sign-in didn't finish. Try again.";
+        setError(isClerkAPIResponseError(e) ? says(e, fallback) : e instanceof Error && e.message ? e.message : fallback);
+        setBusy(false);
+      });
+      return;
+    }
     // A Google or Apple account Clerk doesn't know yet is signed up on the way back.
     signIn.authenticateWithRedirect({ strategy, redirectUrl: "/sso-callback", redirectUrlComplete: continueUrl() }).catch((e) => {
       if (signedIn(e)) return land();
       setError(says(e));
       setBusy(false);
     });
+  };
+
+  /** Google in the app's secure sheet: /auth/native/start, back on norcoach://auth with a one-time ticket for this sign-in. */
+  const googleInApp = async () => {
+    if (!signIn || !setActive) throw new Error("Sign-in isn't ready yet. Try again.");
+    const bytes = crypto.getRandomValues(new Uint8Array(24));
+    const state = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    const { url } = await callNative<{ url: string }>("NorcoachAuth", "openSignIn", { url: `${window.location.origin}/auth/native/start?provider=google&state=${state}` });
+    const back = new URL(url).searchParams;
+    if (back.get("state") !== state) throw new Error("A sign-in this app didn't start");
+    const ticket = back.get("ticket");
+    if (!ticket) throw new Error(back.get("error") === "signin" ? "Google sign-in didn't finish. Try again." : "Sign-in didn't finish. Try again.");
+    const done = await signIn.create({ strategy: "ticket", ticket });
+    if (done.status !== "complete" || !done.createdSessionId) throw new Error("Sign-in didn't finish. Try again.");
+    await setActive({ session: done.createdSessionId });
+    land();
+  };
+
+  /** Sign in with Apple, natively: its identity token to Clerk, signing up an Apple account Clerk doesn't know yet. */
+  const appleInApp = async () => {
+    if (!signIn || !signUp || !setActive) throw new Error("Sign-in isn't ready yet. Try again.");
+    const apple = await callNative<{ token: string; firstName?: string; lastName?: string }>("NorcoachAuth", "signInWithApple");
+    const attempt = await signIn.create({ strategy: "oauth_token_apple", token: apple.token });
+    if (attempt.status === "complete" && attempt.createdSessionId) {
+      await setActive({ session: attempt.createdSessionId });
+      land();
+      return;
+    }
+    if (attempt.firstFactorVerification?.status === "transferable") {
+      const made = await signUp.create({ transfer: true, ...(apple.firstName ? { firstName: apple.firstName } : {}), ...(apple.lastName ? { lastName: apple.lastName } : {}) });
+      if (made.status === "complete" && made.createdSessionId) {
+        await setActive({ session: made.createdSessionId });
+        land();
+        return;
+      }
+      const missing = made.missingFields?.length ? `: ${made.missingFields.join(", ")}` : ` (${made.status})`;
+      throw new Error(`Almost: Clerk wants one more step${missing}. Tell the coach.`);
+    }
+    throw new Error("Apple sign-in didn't finish. Try again.");
   };
 
   // Busy only while something is on its way; before Clerk has loaded a tap simply waits.

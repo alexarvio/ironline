@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { nativePlatform } from "../lib/native";
 import { NorCoachLogo } from "../components/NorCoachLogo";
 import { Bars } from "../client/Bars";
 
@@ -34,11 +35,16 @@ function ErrorLine({ error }: { error?: string | null }) {
     until Apple approves the developer account); on everywhere else. */
 const APPLE_ON = process.env.NEXT_PUBLIC_APPLE_SIGNIN !== "off";
 
+const noSubscribe = () => () => {};
+
 /** Apple and Google, then "or", then the email box. */
 function Providers({ verb = "Continue", onApple, onGoogle, busy }: Oauth & { verb?: string; busy?: boolean }) {
+  // In the iPhone app Sign in with Apple is Apple's own sheet (11 Nov, Alex), so it shows there even while the website's
+  // is off; known after the first paint, as the server can't tell the app from Safari.
+  const iosApp = useSyncExternalStore(noSubscribe, () => nativePlatform() === "ios", () => false);
   return (
     <div className="au-providers">
-      {APPLE_ON && (
+      {(APPLE_ON || iosApp) && (
         <button type="button" className="au-provider apple" onClick={onApple} disabled={busy}>
           <AppleGlyph />
           {verb} with Apple
