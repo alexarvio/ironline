@@ -630,6 +630,13 @@ export default function FoodDiaryScreen({
   // Meals fold shut to their name and figures, so a long day stays short.
   // They start folded; a meal added just now opens, since it is about to be filled.
   const [folded, setFolded] = useState<Set<FoodMeal>>(() => new Set(initial.meals.map((m) => m.id).filter((id) => id !== initialMeal)));
+  // Another day: every meal shut (11 Nov, Alex: "I went to a previous day and this was unfolded"). The folds are kept by meal,
+  // and a day's own meals have ids of their own, so none of them was in the set and they all came in open.
+  const [foldedDay, setFoldedDay] = useState(diary.date);
+  if (foldedDay !== diary.date) {
+    setFoldedDay(diary.date);
+    setFolded(new Set(diary.meals.map((m) => m.id)));
+  }
   // The meal a coach's comment led here for, brought into view once its day
   // is the one showing.
   const shownLinked = useRef(false);
