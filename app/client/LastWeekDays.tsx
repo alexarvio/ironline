@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useTabActive } from "./CheckInContext";
 import { ChevronDownIcon } from "../components/icons";
 import { Bars } from "./Bars";
 
@@ -18,6 +19,11 @@ export type LastWeekDay = {
 // eaten, meal by meal, flat on the page, one day at a time; a figure typed with no food has nothing more, so no chevron.
 export default function LastWeekDays({ days }: { days: LastWeekDay[] }) {
   const [open, setOpen] = useState<string | null>(null);
+  // Leaving Nutrition folds it back (11 Nov, Alex: "I go to do a session in the gym I come back and it's still opened").
+  const showing = useTabActive();
+  useEffect(() => {
+    if (!showing) setOpen(null);
+  }, [showing]);
   return (
     <>
       {days.map((d) => {
