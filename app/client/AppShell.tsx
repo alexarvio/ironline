@@ -16,6 +16,7 @@ import ProgressPicturesScreen, { type ProgressPicturesProps, warmShapeUpdateBann
 import CoachProfileScreen from "./CoachProfileScreen";
 import { HealthAutoSync } from "./HealthSync";
 import { NativePush } from "./NativePush";
+import { NativeStatusBar } from "./NativeStatusBar";
 import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
 import EventsScreen from "./events/EventsScreen";
 import type { HomeEvents } from "./EventsCard";
@@ -589,6 +590,7 @@ export default function AppShell({
     <CoachIdentityProvider value={{ name: coachMessages.coachName, photoPath: coachAvatarPath }}>
       <LinkProvider value={openLink}>
       {!readOnly && <HealthAutoSync />}
+      {!readOnly && <NativeStatusBar />}
       {!readOnly && <NativePush />}
       <div
         className={`phone-frame${preview ? " previewing" : ""}${readOnly ? " phone-readonly" : ""}`}
