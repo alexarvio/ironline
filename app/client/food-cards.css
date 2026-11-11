@@ -28,6 +28,12 @@
 .fdi-saved-this { margin-bottom: 8px; }
 .fdi-saved-row.fdi-saved-this { margin-top: 0; }
 .fdi-saved-row > .fdi-saved-pill:only-child, .fdi-saved-wide { grid-column: 1 / -1; width: 100%; }
+/* Save this day, Create a day and Create a meal: the icon and words centred in the pill together (11 Nov, Alex: "center the
+   text inside these two"); the title box typed in its room stays from the left. */
+.fdi-saved-row.fdi-saved-this > .fdi-saved-pill, button.fdi-saved-pill.fdi-saved-this { justify-content: center; padding: 0 13px; }
+/* Copy a meal under a meal's search (11 Nov, Alex): the Saved meals pill, as tall as the search box over it. */
+.fdi-saved-pill.fdi-copy-pill { min-height: 48px; }
+.fdi-saved-row.fdi-saved-this > .fdi-saved-pill > span, button.fdi-saved-pill.fdi-saved-this > span { flex: none; }
 /* Nutrition's Last 7 days: a day with food folds open on what was eaten (10 Nov, Alex). */
 .nd-day-btn { width: 100%; border: 0; background: none; font: inherit; text-align: left; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nd-day-chev { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; color: #98A2B3; }

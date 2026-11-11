@@ -1,11 +1,11 @@
 "use client";
 
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
-import AddMealSheet, { DeleteMealDialog } from "./AddMealSheet";
+import AddMealSheet, { CopyMealDialog, DeleteMealDialog } from "./AddMealSheet";
 import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { NorCoachLogo } from "../components/NorCoachLogo";
-import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, SearchIcon } from "../components/icons";
+import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, CopyIcon, MoreIcon, PlusIcon, SearchIcon } from "../components/icons";
 import { newOnceKey } from "../lib/onceKey";
 import {
   addCustomFoodAction,
@@ -176,20 +176,6 @@ type Panel =
   | { kind: "search"; meal: FoodMeal }
   | { kind: "amount"; meal: FoodMeal; food: FoodOptionView; entry?: FoodEntryView }
   | { kind: "custom"; meal: FoodMeal };
-
-// A Keep / Forget question is answered by one of its two buttons, or
-// dropped by a tap anywhere else. Without this it outlived the moment it was
-// asked in: fold Saved days, open it again, and the row was still red.
-function useDropOnTapOutside(asking: boolean, clear: (none: null) => void) {
-  useEffect(() => {
-    if (!asking) return;
-    const onDown = (e: PointerEvent) => {
-      if (!(e.target as Element | null)?.closest?.(".fdi-row-ask")) clear(null);
-    };
-    document.addEventListener("pointerdown", onDown);
-    return () => document.removeEventListener("pointerdown", onDown);
-  }, [asking, clear]);
-}
 
 export default function FoodDiaryScreen({
   clientId,
@@ -1026,7 +1012,6 @@ export default function FoodDiaryScreen({
                                 clientId={clientId}
                                 date={date}
                                 saved={diary.saved}
-                                recent={diary.recent}
                                 busy={loading}
                                 onChange={(fn) => setDiary((d) => ({ ...d, saved: fn(d.saved) }))}
                                 refresh={async () => {
@@ -1122,7 +1107,6 @@ export default function FoodDiaryScreen({
                         clientId={clientId}
                         date={date}
                         day={openDay === "new" ? null : diary.savedDays.find((d) => d.id === openDay) ?? null}
-                        recent={diary.recent}
                         busy={loading}
                         useFailed={openDay !== "new" && dayFailed === openDay}
                         from={deployFrom}
@@ -1153,7 +1137,6 @@ export default function FoodDiaryScreen({
                 const open = panel?.meal === meal.id ? panel : null;
                 const naming = namingId === meal.id || renamingId === meal.id;
                 const filled = meal.entries.length > 0;
-                const linked = meal.savedMealId != null;
                 const title = cardTitle(meal);
                 // Its foods, or the + panel of an empty meal, which has no chevron but needs somewhere to open.
                 const unfolded = !!open || (filled && !folded.has(meal.id));
@@ -1409,8 +1392,8 @@ export default function FoodDiaryScreen({
                         date={date}
                         meal={meal.id}
                         mealLabel={title}
-                        recent={diary.recent}
-                        saved={diary.saved.filter((s) => s.count > 0)}
+                        // Copy a meal only while the meal is empty (11 Nov, Alex): with food in it, its search alone.
+                        saved={filled ? NO_SAVED : diary.saved.filter((s) => s.count > 0)}
                         onPick={(food) => {
                           holdMeal(meal.id);
                           setPanel({ kind: "amount", meal: meal.id, food });
@@ -1692,7 +1675,6 @@ function SearchPanel({
   date,
   meal,
   mealLabel,
-  recent,
   saved,
   onPick,
   onCustom,
@@ -1703,23 +1685,22 @@ function SearchPanel({
   date: string;
   meal: FoodMeal;
   mealLabel: string;
-  recent: FoodOptionView[];
   saved: FoodDiaryProps["saved"];
   onPick: (food: FoodOptionView) => void;
   onCustom: () => void;
   onCopied: () => void;
   onCancel: () => void;
 }) {
-  const [mode, setMode] = useState<"search" | "copy">("search");
   const [query, setQuery] = useState("");
+  // Copy a meal (11 Nov, Alex): the saved meals pop-up, and the meal whose copy didn't go.
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const copyKeys = useRef(new Map<number, string>());
   // The last answer, with the query it answers; anything else is stale.
   const [answer, setAnswer] = useState<{ q: string; rows: FoodOptionView[] } | null>(null);
   // Which query the long tail was opened for.
   const [moreFor, setMoreFor] = useState<string | null>(null);
   const [copying, startCopy] = useTransition();
-  // The saved meal whose × was tapped: it asks before it forgets.
-  const [askForget, setAskForget] = useState<number | null>(null);
-  useDropOnTapOutside(askForget != null, setAskForget);
   // Packaged products from Open Food Facts, asked for on request: the answer
   // and the query it answers.
   const [packaged, setPackaged] = useState<{ q: string; rows: FoodOptionView[]; error?: string } | null>(null);
@@ -1764,33 +1745,35 @@ function SearchPanel({
   const results = active && answer?.q === q ? answer.rows : null;
   const searching = active && results == null;
   const showMore = moreFor === q;
-  const showingRecent = results == null && recent.length > 0;
   // The client's own and the everyday foods are the list; the catalog's long
   // tail sits behind a count, unless it is all there is.
-  // Recent, four at most (11 Nov, Alex).
-  const front = (results ?? recent.slice(0, 4)).filter((f) => results == null || f.group !== "more");
+  // Nothing before a word is typed (11 Nov, Alex: "take out the part where we show the recent items completely").
+  const front = (results ?? []).filter((f) => f.group !== "more");
   const tail = results?.filter((f) => f.group === "more") ?? [];
   const list = front.length === 0 || showMore ? [...front, ...tail] : front;
 
-  const addSaved = (s: FoodDiaryProps["saved"][number]) => {
+  const addSaved = (id: number) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
-    fd.set("id", String(s.id));
+    fd.set("id", String(id));
     fd.set("date", date);
     fd.set("meal", meal);
-    // Its one-time key, made as the row is tapped (6 Nov): sent again once the signal is back, the meal goes in once.
-    fd.set("onceKey", newOnceKey());
+    // Its one-time key (6 Nov): a try again after a failure sends the same one, so a copy the server did write while its
+    // answer was lost never goes in twice.
+    const key = copyKeys.current.get(id) ?? newOnceKey();
+    copyKeys.current.set(id, key);
+    fd.set("onceKey", key);
+    setCopyFailed(false);
     startCopy(async () => {
-      await addSavedMealAction(fd);
-      onCopied();
-    });
-  };
-  const forget = (s: FoodDiaryProps["saved"][number]) => {
-    const fd = new FormData();
-    fd.set("clientId", String(clientId));
-    fd.set("id", String(s.id));
-    startCopy(async () => {
-      await deleteSavedMealAction(fd);
+      try {
+        await addSavedMealAction(fd);
+      } catch {
+        // No signal: the pop-up stays and says so, never the error page.
+        setCopyFailed(true);
+        return;
+      }
+      copyKeys.current.delete(id);
+      setCopyOpen(false);
       onCopied();
     });
   };
@@ -1804,18 +1787,7 @@ function SearchPanel({
         </button>
       </div>
       {scanning && <BarcodeScanner onCode={onCode} onClose={() => setScanning(false)} />}
-      {saved.length > 0 && (
-        <div className="fdi-modes" role="tablist">
-          <button type="button" role="tab" aria-selected={mode === "search"} className={`fdi-mode${mode === "search" ? " on" : ""}`} onClick={() => setMode("search")}>
-            Search
-          </button>
-          <button type="button" role="tab" aria-selected={mode === "copy"} className={`fdi-mode${mode === "copy" ? " on" : ""}`} onClick={() => setMode("copy")}>
-            Copy a meal
-          </button>
-        </div>
-      )}
-      {mode === "search" ? (
-        <>
+      <>
           <div className="fdi-search-row">
             <label className="fdi-search">
               <SearchIcon />
@@ -1828,9 +1800,19 @@ function SearchPanel({
               </svg>
             </button>
           </div>
+          {/* Copy a meal (11 Nov, Alex): the saved meals as their cards, in a pop-up; no list, words or × here. */}
+          {saved.length > 0 && (
+            <button type="button" className="fdi-saved-pill fdi-copy-pill" onClick={() => { setCopyFailed(false); setCopyOpen(true); }}>
+              <CopyIcon />
+              <span>Copy a meal</span>
+              <ChevronDownIcon />
+            </button>
+          )}
+          {copyOpen && (
+            <CopyMealDialog saved={saved} busy={copying} picture={(p) => pic(p, 1080)} onCopy={addSaved} failed={copyFailed} onClose={() => setCopyOpen(false)} />
+          )}
           {scanNote && <p className="fdi-empty">{scanNote}</p>}
           <div className="fdi-results">
-            {showingRecent && <span className="fdi-results-label">Recent</span>}
             {list.map((f) => (
               <button key={f.id} type="button" className="fdi-result" onClick={() => onPick(f)}>
                 <span className="fdi-result-main">
@@ -1871,44 +1853,11 @@ function SearchPanel({
                 {fetching ? "Asking Open Food Facts…" : "Search packaged products"}
               </button>
             )}
-            {results == null && recent.length === 0 && !active && <p className="fdi-empty">Try “chicken breast”, “oats”, “banana”.</p>}
           </div>
           <button type="button" className="fdi-link" onClick={onCustom}>
             Can’t find it? Add your own food
           </button>
         </>
-      ) : (
-        <div className="fdi-results">
-          <p className="fdi-hint">A meal you saved, the same foods and amounts, into {mealLabel}.</p>
-          {saved.map((s) => (
-            <div key={`s${s.id}`} className="fdi-result-row">
-              <button type="button" className="fdi-result" onClick={() => addSaved(s)} disabled={copying}>
-                <span className="fdi-result-main">
-                  <span className="fdi-result-name">{s.name}</span>
-                  <span className="fdi-result-hint">{s.names.join(", ")}</span>
-                </span>
-                <span className="fdi-result-kcal">
-                  {n(s.kcal)} <small>kcal</small>
-                </span>
-              </button>
-              {askForget === s.id ? (
-                <span className="fdi-row-ask">
-                  <button type="button" className="fdi-confirm-keep" onClick={() => setAskForget(null)} autoFocus>
-                    Keep
-                  </button>
-                  <button type="button" className="fdi-confirm-remove" onClick={() => { setAskForget(null); forget(s); }} disabled={copying}>
-                    Forget
-                  </button>
-                </span>
-              ) : (
-                <button type="button" className="fdi-result-x" onClick={() => setAskForget(s.id)} disabled={copying} aria-label={`Forget saved meal ${s.name}`}>
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -1918,7 +1867,6 @@ function SearchPanel({
 // ---- Saved meals and saved days (10 Nov, Alex: "exactly like they are inside the days"): the day's card, editable ------
 
 const NO_SAVED: FoodDiaryProps["saved"] = [];
-const NO_FOODS: FoodOptionView[] = [];
 /** The key that means a day's own picture rather than one of its cards'. */
 const DAY_COVER = "@cover";
 type SavedMealRow = FoodDiaryProps["saved"][number];
@@ -1947,7 +1895,6 @@ function EditableMealCards({
   clientId,
   date,
   cards,
-  recent,
   locked = false,
   addAt,
   renderAdd,
@@ -1968,7 +1915,6 @@ function EditableMealCards({
   clientId: number;
   date: string;
   cards: EditCard[];
-  recent: FoodOptionView[];
   /** A day not named yet: the cards are there, their tools come with the name. */
   locked?: boolean;
   addAt: "top" | "bottom";
@@ -2489,7 +2435,6 @@ function EditableMealCards({
                         date={date}
                         meal={`saved-${c.key}`}
                         mealLabel={c.name}
-                        recent={recent}
                         saved={NO_SAVED}
                         onPick={(food) => setPanel({ key: c.key, kind: "amount", food })}
                         onCustom={() => setPanel({ key: c.key, kind: "custom" })}
@@ -2573,7 +2518,6 @@ function SavedMealList({
   clientId,
   date,
   saved,
-  recent,
   busy,
   onChange,
   refresh,
@@ -2583,7 +2527,6 @@ function SavedMealList({
   clientId: number;
   date: string;
   saved: FoodDiaryProps["saved"];
-  recent: FoodOptionView[];
   busy: boolean;
   onChange: (fn: (list: FoodDiaryProps["saved"]) => FoodDiaryProps["saved"]) => void;
   refresh: () => Promise<void>;
@@ -2636,7 +2579,6 @@ function SavedMealList({
       clientId={clientId}
       date={date}
       cards={saved.map(cardOfSaved)}
-      recent={recent}
       addAt="top"
       renderAdd={(start, input) =>
         input ? (
@@ -2741,7 +2683,6 @@ function SavedDayList({
       clientId={clientId}
       date={date}
       cards={days.map(cardOfSavedDay)}
-      recent={NO_FOODS}
       addAt="top"
       renderAdd={() => null}
       stacked
@@ -2776,7 +2717,6 @@ function SavedDayScreen({
   clientId,
   date,
   day,
-  recent,
   busy,
   useFailed,
   from,
@@ -2791,7 +2731,6 @@ function SavedDayScreen({
   date: string;
   /** Null: not named yet. */
   day: SavedDayRow | null;
-  recent: FoodOptionView[];
   busy: boolean;
   useFailed: boolean;
   /** Where it deploys from: the card or pill that was pressed. */
@@ -3064,7 +3003,6 @@ function SavedDayScreen({
           clientId={clientId}
           date={date}
           cards={cards}
-          recent={recent}
           locked={id == null}
           addAt="bottom"
           onReorder={(keys) => change(null, "card-order", { key: "@order", order: keys.join(",") })}
