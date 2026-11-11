@@ -6,7 +6,9 @@ import "./focus.css";
 // To focus on (23 Oct, Alex): the coach's goals until the next call. Since 3 Nov (Alex: B of
 // docs/boards/home-focus-mockup.html) no pill and no fold: always open, under the coach's latest note on Home, so the
 // coach's words are in one place. A small-caps `To focus on` with the list mark, then each goal a small ink ring on a
-// thin line down the left, its words at 16px/500. Bullet points: nothing to tick.
+// thin line down the left, its words at 16px/500. Nothing to tick. Since 11 Nov (Alex: "too much like bullet points, no
+// effort put in behind it"; D of docs/boards/focus-goals-ways-mockup.html) each goal is set beside a light numeral in the
+// call's blue, as the date column on Events is set, the words at 17px/600.
 
 export function FocusGoals({ focus }: { focus: HomeFocus }) {
   if (focus.goals.length === 0) return null;
@@ -19,12 +21,11 @@ export function FocusGoals({ focus }: { focus: HomeFocus }) {
         To focus on
       </div>
       <ol className="hm-focus-list">
-        {focus.goals.map((g) => (
+        {focus.goals.map((g, i) => (
           <li key={g.id} className="hm-focus-goal">
-            {/* Drawn, not a box's edge: a 1.6px edge on a 9px box came out fatter on one side (25 Oct, Alex). */}
-            <svg className="hm-focus-node" width="11" height="11" viewBox="0 0 11 11" aria-hidden="true">
-              <circle cx="5.5" cy="5.5" r="4.2" />
-            </svg>
+            <span className="hm-focus-num" aria-hidden="true">
+              {i + 1}
+            </span>
             <span className="hm-focus-text">{g.text}</span>
           </li>
         ))}
