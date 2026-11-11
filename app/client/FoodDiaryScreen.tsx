@@ -291,8 +291,10 @@ export default function FoodDiaryScreen({
     const el = mealRefs.current.get(a.id);
     const scroller = el?.closest<HTMLElement>(".app-content");
     if (el && scroller) {
+      // The top bar's real foot: in the iPhone app it also holds the clock's room, which the variable can't say in px.
+      const head = (scroller.parentElement ?? scroller).querySelector<HTMLElement>(":scope > .app-header");
       const bar = parseFloat(getComputedStyle(scroller.parentElement ?? scroller).getPropertyValue("--topbar-h")) || 0;
-      const top = scroller.getBoundingClientRect().top + bar;
+      const top = head ? head.getBoundingClientRect().bottom : scroller.getBoundingClientRect().top + bar;
       if (a.top < top) {
         // The head of the meal had gone above the top bar: bring it to just under it.
         scroller.scrollTop += el.getBoundingClientRect().top - top - 8;

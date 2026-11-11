@@ -21459,3 +21459,29 @@ html.nc-framed .nc-boot-app { display: none; }
   .nc-boot.revealing .nc-boot-word { animation: nc-boot-fade 200ms ease forwards; }
 }
 @keyframes nc-boot-fade { to { opacity: 1; } }
+
+/* ==== The iPhone app: the page runs up under the clock (11 Nov, Alex: "could those blend in with the background") ====
+   The app draws no strip of its own for the clock and battery (mobile/capacitor.config.json, StatusBar overlaysWebView),
+   so each screen's top takes the clock's room itself and its colour or photo shows behind it. The app marks its pages
+   `native-app` (SceneDelegate.swift); a phone's browser is left as it was. The clock's own colour follows the screen
+   (NativeStatusBar.tsx). */
+html.native-app { --sat: env(safe-area-inset-top, 0px); }
+html.native-app .app-header { padding-top: calc(18px + var(--sat)); }
+html.native-app .app-layer-main,
+html.native-app .ci-screen.ci-one,
+html.native-app .pp-one { --topbar-h: calc(67px + var(--sat)); }
+html.native-app .app-menu { padding-top: calc(75px + var(--sat)); }
+html.native-app .cn-header { padding-top: calc(18px + var(--sat)); }
+html.native-app .cmg-head { padding-top: calc(18px + var(--sat)); }
+html.native-app .cpf-statusbar { height: var(--sat); }
+html.native-app .cpf-back { top: calc(8px + var(--sat)); }
+html.native-app .lw-demo-close { top: calc(12px + var(--sat)); }
+html.native-app .ivp { padding-top: calc(20px + var(--sat)); }
+html.native-app .auth-page { padding-top: max(24px, calc(12px + var(--sat))); }
+html.native-app .fdi-photo-scrim { padding-top: max(18px, calc(8px + var(--sat))); }
+/* A tall pop-up stops short of the clock. */
+html.native-app .gpk-card,
+html.native-app .ev-sheet,
+html.native-app .evs { max-height: calc(100dvh - 80px - var(--sat)); }
+html.native-app .cki-card { max-height: calc(100dvh - 72px - var(--sat)); }
+html.native-app .hm-ev-sheet { max-height: calc(100dvh - 40px - var(--sat)); }
