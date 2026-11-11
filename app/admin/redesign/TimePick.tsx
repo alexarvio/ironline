@@ -26,6 +26,15 @@ export function parseTime(raw: string): string | null {
   return hhmm(h * 60 + mm);
 }
 
+/** The quarter it is now in (09:14 → 09:00), else the nearest time the list holds. */
+function nowSlot(slots: string[]): string {
+  const d = new Date();
+  const now = hhmm(d.getHours() * 60 + Math.floor(d.getMinutes() / 15) * 15);
+  if (slots.includes(now)) return now;
+  const before = slots.filter((t) => t <= now);
+  return before.length ? before[before.length - 1] : (slots[0] ?? "09:00");
+}
+
 export function TimePick({
   value,
   onPick,
@@ -36,7 +45,7 @@ export function TimePick({
   autoFocus = false,
   className = "",
 }: {
-  /** "HH:MM", or "" for none yet (a dash, the list opening on 09:00). */
+  /** "HH:MM", or "" for none yet (a dash, the list opening on the time it is now). */
   value: string;
   /** A time typed or picked; false keeps the list open (a time that doesn't fit, as an end before the start). */
   onPick: (t: string) => boolean | void;
@@ -58,8 +67,9 @@ export function TimePick({
     setTyped("");
     setOpen(false);
   };
-  // The list opens on the time picked, else on a working morning: centred once as it opens, never again while typing.
-  const anchor = value || "09:00";
+  // The list opens on the time picked, else on the time it is now (11 Nov, Alex: "if it's like 9:14… center it towards
+  // 9 am"), the quarter it is in, or the nearest the list has: centred once as it opens, never again while typing.
+  const anchor = value || nowSlot(slots);
   const centre = useCallback(
     (list: HTMLDivElement | null) => {
       const el = list?.querySelector<HTMLElement>(`[data-t="${anchor}"]`);
@@ -86,7 +96,6 @@ export function TimePick({
             className="tpk-type"
             value={typed}
             onChange={(x) => setTyped(x.target.value)}
-            placeholder="1530"
             aria-label={`Type ${label.toLowerCase()}`}
             autoFocus={autoFocus}
             onKeyDown={(x) => {

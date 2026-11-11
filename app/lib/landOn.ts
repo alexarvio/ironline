@@ -12,7 +12,20 @@ const rounding = new WeakMap<HTMLElement, { inline: string; timer: number }>();
 export function landOn(el: Element | null | undefined, block: ScrollLogicalPosition = "center"): void {
   if (!el) return;
   const still = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  el.scrollIntoView({ behavior: still ? "auto" : "smooth", block });
+  // In the middle; one taller than the screen can't be, so its top comes in with room over it, never hard against the
+  // edge (11 Nov, Alex: an opened session landed "all the way up… there's no space").
+  const box0 = el as HTMLElement;
+  const tall = block === "center" && box0.getBoundingClientRect().height > window.innerHeight - 160;
+  const margin = box0.style.scrollMarginTop;
+  if (tall) box0.style.scrollMarginTop = "96px";
+  el.scrollIntoView({ behavior: still ? "auto" : "smooth", block: tall ? "start" : block });
+  if (tall) window.setTimeout(() => (box0.style.scrollMarginTop = margin), 1200);
+  // Lit on the next frame: a style change and reflow in the same moment as the smooth scroll starts makes Chrome drop
+  // the scroll, so the thing stayed wherever the browser had jumped it, hard against the top (11 Nov, measured).
+  requestAnimationFrame(() => light(el));
+}
+
+function light(el: Element) {
   el.classList.remove("landed");
   // A reflow between, so landing on the same thing twice lights it again.
   void (el as HTMLElement).offsetWidth;

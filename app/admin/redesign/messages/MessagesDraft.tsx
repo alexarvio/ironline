@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { followLink, leaveToBrowser } from "../followLink";
 import { useChatStream, useChatTyping, useTypingSignal } from "../../../components/useChatStream";
 import { landed, useChatOutbox, useKeptDraft } from "../../../components/chatOutbox";
 import { toast } from "sonner";
@@ -51,6 +53,7 @@ export type ChatPanelMode = { about: DraftLink | null; opened: number; onClose: 
 
 export default function MessagesDraft({ clientId, firstName, plan: fromPage, active, panel = null }: { clientId: number; firstName: string; plan: DraftMessages; /** The tab is the one showing. */ active: boolean; panel?: ChatPanelMode | null }) {
   const [pending, start] = useTransition();
+  const router = useRouter();
   // The thread as the chat last fetched it (2 Oct): it asks for itself
   // (chatDraftThreadAction) rather than re-reading the page, which redrew
   // every tab of the client. A page read that brings something new still wins.
@@ -409,7 +412,17 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
               hovering it says what it opens before a click. */}
           {m.link &&
             (m.link.href ? (
-              <a className="rm-linkdot" href={m.link.href} aria-label={`Open ${m.link.label}`}>
+              <a
+                className="rm-linkdot"
+                href={m.link.href}
+                aria-label={`Open ${m.link.label}`}
+                onClick={(e) => {
+                  // Followed inside the admin, never a reload (11 Nov, Alex: the opening played again on a link).
+                  if (leaveToBrowser(e)) return;
+                  e.preventDefault();
+                  followLink(router, m.link!.href!);
+                }}
+              >
                 <LinkGlyph />
                 <span className="rm-linkdot-tip" aria-hidden="true">
                   <LinkLabel label={m.link.label} />
