@@ -716,7 +716,6 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
   // is scrolled to and marked for a moment. After the first paint, so the
   // server's closed rows match. (The pattern read "d+" for a while, so no
   // link ever matched and the week opened folded.)
-  const [flashRow, setFlashRow] = useState<number | null>(null);
   // Rows whose swap is opened underneath them.
   const [openSwaps, setOpenSwaps] = useState<number[]>([]);
   const toggleSwap = (id: number) => setOpenSwaps((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
@@ -734,7 +733,6 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
   // session of the same week from the chat left the page as it was.
   useEffect(() => {
     let frame = 0;
-    let clear: ReturnType<typeof setTimeout> | undefined;
     const arrive = () => {
       const m = /^#session-(\d+)(?:-ex-(\d+))?$/.exec(window.location.hash);
       if (!m) return;
@@ -748,12 +746,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         // Alex: it came in at the very top, "use the space. Have it nicely in the center").
         setTimeout(() => {
           const target = (row != null && document.getElementById(`row-${row}`)) || document.getElementById(`session-${id}`);
+          // landOn lights it too, an exercise's row as the session: one tint, never the row's old flash on top of it.
           landOn(target, "center");
-          if (row != null) {
-            setFlashRow(row);
-            if (clear) clearTimeout(clear);
-            clear = setTimeout(() => setFlashRow(null), 2400);
-          }
         }, 380);
       });
     };
@@ -762,7 +756,6 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
     return () => {
       window.removeEventListener("hashchange", arrive);
       cancelAnimationFrame(frame);
-      if (clear) clearTimeout(clear);
     };
   }, []);
   const [videos, setVideos] = useState<Record<number, DraftRow["video"]>>(() => Object.fromEntries([...program.sessions, ...(program.copySessions ?? []), ...(program.rogueSessions ?? [])].flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
@@ -1161,7 +1154,7 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
                     const shownName = e.name ?? r.name;
                     const under = e.note !== undefined ? e.note : (r.note ?? "");
                     return (
-                      <SortableItem key={r.id} id={r.id} anchor={`row-${r.id}`} className={`rd-row${Object.keys(e).length ? " edited" : ""}${flashRow === r.id ? " flash" : ""}${r.id < 0 ? " trn-landing" : ""}`}>
+                      <SortableItem key={r.id} id={r.id} anchor={`row-${r.id}`} className={`rd-row${Object.keys(e).length ? " edited" : ""}${r.id < 0 ? " trn-landing" : ""}`}>
                         {(rowGrip) => (
                         <>
                         <div

@@ -581,8 +581,6 @@ html:has(.rd-page) { overflow-y: scroll; scrollbar-gutter: stable; }
 
 /* An exercise opened from a message's link: marked for a moment (25 Sep). */
 /* The ink of every arrival (24 Oct, Alex; .landed in globals.css), not a blue of its own. */
-@keyframes rd-row-flash { 0%, 55% { background: rgba(20, 26, 36, 0.07); } 100% { background: transparent; } }
-.rd-row.flash { animation: rd-row-flash 2.4s ease-out; border-radius: 10px; }
 
 /* Swaps (25 Sep): an orange circle with the swap arrows on the session's
    head (how many, when more than one) and on the swapped exercise; the

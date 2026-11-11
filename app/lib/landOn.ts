@@ -7,6 +7,10 @@ export const LANDED_MS = 2400;
  *  against the design… we do use quite a lot of rounded corners"); a card or pill keeps its own. */
 const LANDED_RADIUS = "12px";
 const rounding = new WeakMap<HTMLElement, { inline: string; timer: number }>();
+// Two landings on one thing close together (a tab's own listener and the to-do strip both land it): the first one's
+// margin and tint are taken over by the second, never put back halfway.
+const margins = new WeakMap<HTMLElement, { inline: string; timer: number }>();
+const unlight = new WeakMap<Element, number>();
 
 /** Brings `el` into view and lights it for a moment. Safe to call with null (nothing there to land on). */
 export function landOn(el: Element | null | undefined, block: ScrollLogicalPosition = "center"): void {
@@ -16,10 +20,18 @@ export function landOn(el: Element | null | undefined, block: ScrollLogicalPosit
   // edge (11 Nov, Alex: an opened session landed "all the way up… there's no space").
   const box0 = el as HTMLElement;
   const tall = block === "center" && box0.getBoundingClientRect().height > window.innerHeight - 160;
-  const margin = box0.style.scrollMarginTop;
-  if (tall) box0.style.scrollMarginTop = "96px";
+  if (tall) {
+    let m = margins.get(box0);
+    if (m) window.clearTimeout(m.timer);
+    else margins.set(box0, (m = { inline: box0.style.scrollMarginTop, timer: 0 }));
+    box0.style.scrollMarginTop = "96px";
+    const kept = m;
+    kept.timer = window.setTimeout(() => {
+      box0.style.scrollMarginTop = kept.inline;
+      margins.delete(box0);
+    }, 3000); // well after the smooth scroll has settled, which reads the margin as it goes
+  }
   el.scrollIntoView({ behavior: still ? "auto" : "smooth", block: tall ? "start" : block });
-  if (tall) window.setTimeout(() => (box0.style.scrollMarginTop = margin), 1200);
   // Lit on the next frame: a style change and reflow in the same moment as the smooth scroll starts makes Chrome drop
   // the scroll, so the thing stayed wherever the browser had jumped it, hard against the top (11 Nov, measured).
   requestAnimationFrame(() => light(el));
@@ -44,7 +56,15 @@ function light(el: Element) {
       box.style.borderRadius = round.inline;
       rounding.delete(box);
     }, LANDED_MS);
-  window.setTimeout(() => el.classList.remove("landed"), LANDED_MS);
+  const before = unlight.get(el);
+  if (before) window.clearTimeout(before);
+  unlight.set(
+    el,
+    window.setTimeout(() => {
+      el.classList.remove("landed");
+      unlight.delete(el);
+    }, LANDED_MS),
+  );
 }
 
 /** landOn once the screen has drawn what it opened (a fold, a portal): the element is looked up a moment later. */
