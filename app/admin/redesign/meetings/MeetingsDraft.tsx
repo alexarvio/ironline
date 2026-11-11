@@ -9,7 +9,7 @@ import type React from "react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, ChatIcon, CheckIcon, MoreIcon, LinkIcon, PencilIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, CheckIcon, ChevronDownIcon, MoreIcon, LinkIcon, PencilIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DateText from "../DateText";
 import { MonthRange } from "../MonthRange";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
@@ -1311,31 +1311,28 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
       <div className="npd-cols">
         <MiniCalendar today={today} selected={date} dots={dots} onPick={setDate} series={series} />
         <div className="npd-side">
+          {/* 11 Nov, Alex: Repeat and On side by side as dropdowns, On only once it repeats; under them the day and the
+              time (Once) or the time and how many (repeating), so the rows are the same either way and nothing moves. */}
           {!reschedule && (
-            <div className="npd-field">
-              <span className="npd-label">Repeat</span>
-              <div className="npd-seg" role="radiogroup" aria-label="Repeat">
-                {([0, 1, 2, 4] as const).map((w) => (
-                  <button key={w} type="button" role="radio" aria-checked={repeatWeeks === w} className={repeatWeeks === w ? "on" : ""} onClick={() => setRepeatWeeks(w)}>
-                    {w === 0 ? "Once" : w === 1 ? "Weekly" : `${w} weeks`}
-                  </button>
-                ))}
-              </div>
+            <div className="npd-dates rt-when">
+              <BoxPick
+                head="Repeat"
+                value={String(repeatWeeks)}
+                options={[
+                  { value: "0", label: "Once" },
+                  { value: "1", label: "Weekly" },
+                  { value: "2", label: "Every 2 weeks" },
+                  { value: "4", label: "Every 4 weeks" },
+                ]}
+                onChange={(v) => setRepeatWeeks(Number(v))}
+              />
+              {repeating ? (
+                <BoxPick head="On" value={String(weekdayOf(date))} options={WEEKDAYS.map((d, i) => ({ value: String(i), label: d }))} onChange={(v) => pickWeekday(Number(v))} />
+              ) : (
+                <span className="npd-date rt-slot" aria-hidden="true" />
+              )}
             </div>
           )}
-          {repeating && (
-            <div className="npd-field">
-              <span className="npd-label">On</span>
-              <div className="rt-weekdays" role="radiogroup" aria-label="Day of the week">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, i) => (
-                  <button key={d} type="button" role="radio" aria-checked={weekdayOf(date) === i} className={weekdayOf(date) === i ? "on" : ""} onClick={() => pickWeekday(i)}>
-                    {d}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {/* Once: the date and the time side by side; repeating, the time alone (the weekday says the day). */}
           <div className="npd-dates">
             {!repeating && (
               <div className="npd-date arm">
@@ -1346,6 +1343,15 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
             {/* The shared time field (3 Nov, Alex: was a bare typed box headed Time | 24h); a typed time read by its own
                 parseTime ("930", "1530", "3pm"), so 25:00 or 12:75 are never taken. */}
             <TimePick value={time} onPick={setTime} head={repeating ? "At" : "Time"} label="Time" />
+            {repeating && (
+              <label className="npd-date rt-count">
+                <span className="npd-date-head">How many</span>
+                <span className="rt-count-v">
+                  <input type="text" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value.replace(/\D/g, "").slice(0, 2))} onBlur={() => setCount(String(calls))} aria-label="How many calls" />
+                  calls
+                </span>
+              </label>
+            )}
           </div>
           <div className="npd-field">
             <span className="npd-label">Timezone</span>
@@ -1361,15 +1367,6 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
               ))}
             </div>
           </div>
-          {repeating && (
-            <div className="npd-field">
-              <span className="npd-label">How many</span>
-              <span className="rt-repeat">
-                <input type="text" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value.replace(/\D/g, "").slice(0, 2))} onBlur={() => setCount(String(calls))} aria-label="How many calls" />
-                calls
-              </span>
-            </div>
-          )}
           <label className="npd-field">
             <span className="npd-label rt-label-row">
               Meeting link
@@ -1381,23 +1378,24 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
             </span>
             <input className="npd-line" type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://meet.google.com/abc-defg-hij" />
           </label>
+          {/* The series said back at the column's foot, beside the month, its room kept on Once so nothing moves. */}
+          {!reschedule && (
+            <div className={`rt-series${repeating && date ? "" : " off"}`} aria-live="polite" aria-hidden={!(repeating && date)}>
+              <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M17 3.5 20 6.5l-3 3M4 11.5v-1a4 4 0 0 1 4-4h12M7 20.5 4 17.5l3-3M20 12.5v1a4 4 0 0 1-4 4H4" />
+              </svg>
+              <span>
+                <b>
+                  {every}
+                  {time ? ` at ${tidyTime(time)}` : ""}
+                </b>
+                {date ? `, from ${dayMonth(date)} to ${dayMonth(lastDate)}, ${calls} calls` : ""}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      {repeating && date && (
-        <div className="rt-series" aria-live="polite">
-          <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M17 3.5 20 6.5l-3 3M4 11.5v-1a4 4 0 0 1 4-4h12M7 20.5 4 17.5l3-3M20 12.5v1a4 4 0 0 1-4 4H4" />
-          </svg>
-          <span>
-            <b>
-              {every}
-              {time ? ` at ${tidyTime(time)}` : ""}
-            </b>
-            , from {dayMonth(date)} to {dayMonth(lastDate)}, {calls} calls
-          </span>
-        </div>
-      )}
       <div className="npd-foot">
         {link.trim() && !linkOk && <span className="rt-bad">Not a meeting link yet.</span>}
         <DialogClose className="npd-cancel">Cancel</DialogClose>
@@ -1406,6 +1404,29 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
         </button>
       </div>
     </DialogContent>
+  );
+}
+
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/** A choice as one of the pop-up's boxes (the date's and the time's), its list floating under it as every list. */
+function BoxPick({ head, value, options, onChange }: { head: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
+  const current = options.find((x) => x.value === value);
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger className="npd-date rt-boxpick" aria-label={head}>
+        <span className="npd-date-head">{head}</span>
+        <b>{current?.label ?? "Choose"}</b>
+        <ChevronDownIcon />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" sideOffset={6} className="pb-menu rd-picker-menu rt-boxpick-menu">
+        {options.map((x) => (
+          <DropdownMenuItem key={x.value} className={x.value === value ? "on" : ""} onSelect={() => onChange(x.value)}>
+            {x.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
