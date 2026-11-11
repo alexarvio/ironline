@@ -1959,7 +1959,11 @@ const NO_FOODS: FoodOptionView[] = [];
 const DAY_COVER = "@cover";
 type SavedMealRow = FoodDiaryProps["saved"][number];
 type SavedDayRow = FoodDiaryProps["savedDays"][number];
-type EditCard = { key: string; name: string; picture: string | null; thumb: string | null; /** Shown when it has no picture of its own. */ fallback?: { picture: string; thumb: string | null }; items: SavedItem[] };
+type EditCard = { key: string; name: string; picture: string | null; thumb: string | null; /** Shown when it has no picture of its own. */ fallback?: { picture: string; thumb: string | null }; items: SavedItem[]; /** A saved day in the list: how many cards it holds, drawn as that many in its stack. */ stack?: number };
+/** The edges drawn behind a saved day's card: one for each meal past the first (11 Nov, Alex: "a stack of two"), four at most. */
+const STACK_EDGES = 4;
+const stackEdges = (meals: number | undefined) => Math.min(STACK_EDGES, Math.max(0, (meals ?? 1) - 1));
+const EDGE_TONES = ["#6d7680", "#aeb6bf", "#cfd5dc", "#e1e5eb"];
 type CardPanel = { key: string; kind: "search" | "custom" } | { key: string; kind: "amount"; food: FoodOptionView; index?: number };
 type CardActions = {
   /** The new card's key, null when it wasn't saved. */
@@ -2348,8 +2352,14 @@ function EditableMealCards({
                 else cardEls.current.delete(c.key);
               }}
               className={`fdi-meal fdc-meal${unfolded ? " open" : ""}${stacked ? " fdi-stack" : ""}${drag?.from === index ? " lifted" : ""}${drag ? " shifting" : ""}`}
-              style={{ transform: shiftFor(index) }}
+              style={{ transform: shiftFor(index), ...(stacked ? { paddingTop: stackEdges(c.stack) * 6 } : {}) }}
+              data-edges={stacked ? stackEdges(c.stack) : undefined}
             >
+              {stacked &&
+                Array.from({ length: stackEdges(c.stack) }, (_, k) => (
+                  // The nearest edge darkest, each one further back 6px higher and 12px narrower a side.
+                  <span key={k} className="fdi-stack-edge" aria-hidden="true" style={{ top: (stackEdges(c.stack) - 1 - k) * 6, left: (k + 1) * 12, right: (k + 1) * 12, background: EDGE_TONES[k] }} />
+                ))}
               <div className={`fdc-card${shownPicture || (busy && local) ? "" : " bare"}${filled || onOpen ? "" : " shut"}`} onClick={(e) => tapCard(e, c)}>
                 <div className="fdc-bg" aria-hidden="true">
                   {busy && local ? (
@@ -2716,7 +2726,7 @@ function SavedMealList({
 
 const cardOfSavedDay = (d: SavedDayRow): EditCard => {
   const first = d.cards.find((c) => c.picture);
-  return { key: String(d.id), name: d.name, picture: d.picture, thumb: d.thumb, fallback: first?.picture ? { picture: first.picture, thumb: first.thumb } : undefined, items: d.cards.flatMap((c) => c.items) };
+  return { key: String(d.id), name: d.name, picture: d.picture, thumb: d.thumb, fallback: first?.picture ? { picture: first.picture, thumb: first.thumb } : undefined, items: d.cards.flatMap((c) => c.items), stack: d.cards.length };
 };
 type DayDeploy = { top: number; el: HTMLElement | null };
 
@@ -2869,7 +2879,9 @@ function SavedDayScreen({
   /** Where a card starts from, or folds back to: behind the pressed one, as its edges are drawn. */
   const behind = (el: HTMLElement, i: number, top: number) => {
     const box = el.getBoundingClientRect();
-    const level = Math.min(i, 2);
+    // Into the edges the pressed card draws (one a card past the first); from Create a day, two.
+    const edges = from?.el ? Number(from.el.closest<HTMLElement>(".fdi-stack")?.dataset.edges ?? 0) : 2;
+    const level = Math.min(i, edges);
     return `translateY(${top - box.top - level * 6}px) scale(${1 - (level * 24) / box.width})`;
   };
 

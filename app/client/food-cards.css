@@ -53,10 +53,9 @@
 .fdi-add-meal.typing .fdi-title-input { text-align: center; }
 
 /* A saved day in the list: the meal card with two edges behind it (A of docs/boards/saved-cards-mockup.html). */
-.fdc-meal.fdi-stack.fdi-stack { padding-top: 12px; background: none; }
-.fdi-stack::before, .fdi-stack::after { content: ""; position: absolute; height: 40px; border-radius: 18px; }
-.fdi-stack::before { top: 0; left: 24px; right: 24px; background: #aeb6bf; }
-.fdi-stack::after { top: 6px; left: 12px; right: 12px; background: #6d7680; }
+.fdc-meal.fdi-stack.fdi-stack { background: none; }
+/* An edge a meal past the first (11 Nov, Alex: "a stack of two"); placed and toned on the element (FoodDiaryScreen). */
+.fdi-stack-edge { position: absolute; height: 40px; border-radius: 18px; }
 .fdi-stack > .fdc-card.fdc-card { z-index: 1; }
 .fdi-stack:has(.fdi-meal-menu) { z-index: 5; }
 
