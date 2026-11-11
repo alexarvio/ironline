@@ -1960,8 +1960,8 @@ const DAY_COVER = "@cover";
 type SavedMealRow = FoodDiaryProps["saved"][number];
 type SavedDayRow = FoodDiaryProps["savedDays"][number];
 type EditCard = { key: string; name: string; picture: string | null; thumb: string | null; /** Shown when it has no picture of its own. */ fallback?: { picture: string; thumb: string | null }; items: SavedItem[]; /** A saved day in the list: how many cards it holds, drawn as that many in its stack. */ stack?: number };
-/** The edges drawn behind a saved day's card: one for each meal past the first (11 Nov, Alex: "a stack of two"), four at most. */
-const STACK_EDGES = 4;
+/** The edges drawn behind a saved day's card: one for each card past the first (11 Nov, Alex: "a stack of two"), a stack of three at most ("if there is more than 3 we show 3"). */
+const STACK_EDGES = 2;
 const stackEdges = (meals: number | undefined) => Math.min(STACK_EDGES, Math.max(0, (meals ?? 1) - 1));
 const EDGE_TONES = ["#6d7680", "#aeb6bf", "#cfd5dc", "#e1e5eb"];
 type CardPanel = { key: string; kind: "search" | "custom" } | { key: string; kind: "amount"; food: FoodOptionView; index?: number };
