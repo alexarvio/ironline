@@ -1262,7 +1262,6 @@ function MiniCalendar({ today, selected, dots, onPick, series = [], moving = nul
               <div key={i} className={`rt-day-row${e.mine ? " mine" : ""}${e.moving ? " moving" : ""}`}>
                 <b>{e.time ? `${e.time} – ${endTime(e.time, e.durationMinutes)}` : "no time"}</b>
                 <span>{e.moving ? e.topic : <SepJoin parts={[e.name, e.topic, e.completed ? "done" : null]} />}</span>
-                {e.moving && <em className="rt-day-tag">Moving</em>}
               </div>
             ))
           )}
