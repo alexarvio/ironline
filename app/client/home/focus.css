@@ -55,3 +55,11 @@
 .hm-focus.open-list .hm-focus-list::before { left: 6.5px; top: 10px; }
 .hm-focus.open-list .hm-focus-goal { padding-left: 1px; transform: none; }
 .hm-focus.open-list .hm-focus-goal:first-child { margin-top: 0; }
+
+/* D (11 Nov, Alex: "too much like bullet points"; docs/boards/focus-goals-ways-mockup.html): the app's light numerals in the
+   call's blue (as the To focus on notification's badge), 1 2 3, each goal beside its numeral at 17px/600; no rings, no line. */
+.hm-focus.open-list .hm-focus-list { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.hm-focus.open-list .hm-focus-list::before { content: none; }
+.hm-focus.open-list .hm-focus-goal { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: baseline; gap: 0; padding: 0; }
+.hm-focus-num { font-size: 24px; font-weight: 300; line-height: 24px; letter-spacing: -0.02em; color: #2f6fd6; font-variant-numeric: tabular-nums; }
+.hm-focus.open-list .hm-focus-text { font-size: 17px; font-weight: 600; line-height: 23px; letter-spacing: -0.01em; }

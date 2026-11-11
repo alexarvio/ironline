@@ -122,7 +122,9 @@
 /* No picture: the app's own paper, turned dark (11 Nov, Alex: "the same idea as the background of the app with the logo",
    Norcoach's or the coach's if they have set one): the star, or the coach's logo (`--bg-mark`, set on the body), huge and
    faint in white, cropped off the top right as on Home and every chat; drawn through the mark's own shape, so any logo works. */
-.fdc-card.bare .fdc-bg::before { background: #fff; opacity: 0.07; -webkit-mask: var(--bg-mark, url("/brand/mark.svg")) right -46px top -34px / 224px 215px no-repeat; mask: var(--bg-mark, url("/brand/mark.svg")) right -46px top -34px / 224px 215px no-repeat; }
+/* Drawn as Home draws it, a plain background picture, turned white (11 Nov, Alex: "I can't see it" on his iPhone: the mask
+   that cut a white fill to the logo's shape showed in Chrome alone). */
+.fdc-card.bare .fdc-bg::before { background: var(--bg-mark, url("/brand/mark.svg")) right -46px top -34px / 224px 215px no-repeat; filter: invert(1); opacity: 0.07; }
 
 /* A link landing on a meal: the shared moment of light, in white because an ink tint would not show on the photo. */
 .fdc-bg::after { content: ""; position: absolute; inset: 0; z-index: 2; background: #fff; opacity: 0; }
