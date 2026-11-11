@@ -26,7 +26,7 @@ import MediaReviewModal, { reviewable, type MediaReview, type ThreadItem } from 
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
 import { goToHash, TodoStrip } from "../TodoStrip";
-import { landOnSoon } from "../../../lib/landOn";
+import { landOn, landOnSoon } from "../../../lib/landOn";
 import { AfterWorkoutCheck, GoalsNotePills, GripIcon, WeekRail } from "./TrainingParts";
 import "./trn.css";
 import { SortableItem, SortableList } from "../Sortable";
@@ -744,15 +744,17 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
       frame = requestAnimationFrame(() => {
         setOpen(id);
         markRead.current(id);
+        // Once it has unfolded (the fold takes 340ms), in the middle of the screen and lit, as every link lands (11 Nov,
+        // Alex: it came in at the very top, "use the space. Have it nicely in the center").
         setTimeout(() => {
           const target = (row != null && document.getElementById(`row-${row}`)) || document.getElementById(`session-${id}`);
-          target?.scrollIntoView({ behavior: "smooth", block: row != null ? "center" : "start" });
+          landOn(target, "center");
           if (row != null) {
             setFlashRow(row);
             if (clear) clearTimeout(clear);
             clear = setTimeout(() => setFlashRow(null), 2400);
           }
-        }, 80);
+        }, 380);
       });
     };
     arrive();

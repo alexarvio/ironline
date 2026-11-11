@@ -1365,17 +1365,25 @@ function ScheduleDialog({ date: initialDate, reschedule, rest = null, onDelete, 
             </svg>
             {kind.label}
           </span>
-          <span className={`rt-moving-at${movedAway ? " old" : ""}`}>
-            <small>Now</small>
-            <span>{whenWords(reschedule.date, reschedule.time, reschedule.durationMinutes)}</span>
-          </span>
-          <span className="rt-moving-arrow" aria-hidden="true">
-            →
-          </span>
-          <span className="rt-moving-at new">
-            <small>New</small>
-            {date ? whenWords(date, tidyTime(time), duration) : "Pick a day"}
-          </span>
+          {/* Unchanged, the call alone (11 Nov, Alex: "why are we triggering this part… when there's nothing to be changed");
+              Now and New only once something has moved. */}
+          {movedAway ? (
+            <>
+              <span className="rt-moving-at old">
+                <small>Now</small>
+                <span>{whenWords(reschedule.date, reschedule.time, reschedule.durationMinutes)}</span>
+              </span>
+              <svg className="rt-moving-arrow" viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 12h16M14 6l6 6-6 6" />
+              </svg>
+              <span className="rt-moving-at new">
+                <small>New</small>
+                {date ? whenWords(date, tidyTime(time), duration) : "Pick a day"}
+              </span>
+            </>
+          ) : (
+            <span className="rt-moving-at">{whenWords(reschedule.date, reschedule.time, reschedule.durationMinutes)}</span>
+          )}
         </div>
       )}
 
