@@ -914,6 +914,7 @@ export default function FoodDiaryScreen({
           </div>
           {/* A figure typed in with no food behind it counts as eaten on the rings. */}
           <Targets
+            onRing={onBack}
             target={diary.target}
             eaten={diary.eaten.kcal === 0 && diary.loggedKcal != null ? { ...diary.eaten, kcal: diary.loggedKcal } : diary.eaten}
             dayType={diary.dayType}
@@ -1543,17 +1544,20 @@ const RING_R = { protein: 70, carbs: 61, fat: 52 } as const;
 const MACROS = ["protein", "carbs", "fat"] as const;
 const NAME = { protein: "Protein", carbs: "Carbs", fat: "Fat" } as const;
 
-function Targets({ target, eaten, dayType, onDayType }: { target: Macros | null; eaten: Macros; dayType: "training" | "rest"; onDayType: (t: "training" | "rest") => void }) {
+function Targets({ target, eaten, dayType, onDayType, onRing }: { target: Macros | null; eaten: Macros; dayType: "training" | "rest"; onDayType: (t: "training" | "rest") => void; /** The ring again goes back to Nutrition (11 Nov, Alex), as the ring there opened the diary. */ onRing: () => void }) {
   // A sideways swipe on the rings switches the kind of day, as on Nutrition:
   // left for a rest day, right for a training day. The rings and figures run
   // to the new targets.
   const swipe = useRef<{ x: number; y: number } | null>(null);
+  // A finger that moved was a swipe, not a tap on the ring.
+  const swiped = useRef(false);
   const swipeEnd = (x: number, y: number) => {
     const start = swipe.current;
     swipe.current = null;
     if (!start) return;
     const dx = x - start.x;
     const dy = y - start.y;
+    swiped.current = Math.hypot(dx, dy) > 10;
     if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
     onDayType(dx > 0 ? "training" : "rest");
   };
@@ -1572,7 +1576,7 @@ function Targets({ target, eaten, dayType, onDayType }: { target: Macros | null;
       }}
     >
       <div className="nd-cal-row">
-        <div className="nd-ring" role="img" aria-label={left == null ? `${n(eaten.kcal)} kcal eaten` : over > 0 ? `${n(over)} kcal over` : `${n(left)} kcal left`}>
+        <button type="button" className="nd-ring" onClick={() => !swiped.current && onRing()} aria-label={`${left == null ? `${n(eaten.kcal)} kcal eaten` : over > 0 ? `${n(over)} kcal over` : `${n(left)} kcal left`}. Back to Nutrition`}>
           <svg viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true">
             <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
               {MACROS.map((m) => (
@@ -1584,7 +1588,7 @@ function Targets({ target, eaten, dayType, onDayType }: { target: Macros | null;
             <span className="nd-ring-kcal">{n(figure)}</span>
             <span className="nd-ring-label">{left == null ? "kcal eaten" : over > 0 ? "kcal over" : "kcal left"}</span>
           </div>
-        </div>
+        </button>
         <div className="nd-macros">
           {MACROS.map((m) => (
             <MacroRow key={m} id={m} eaten={eaten[m]} goal={target?.[m] ?? null} />
