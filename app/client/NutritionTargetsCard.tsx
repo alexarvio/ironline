@@ -82,12 +82,15 @@ export default function NutritionTargetsCard({
   // day, right for Training day. Only a clearly horizontal swipe counts, so
   // scrolling the page past the card never flips it.
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  // A swipe between the days is no tap on the figures (they open the food diary).
+  const swiped = useRef(false);
   const onSwipeEnd = (x: number, y: number) => {
     const start = swipeStart.current;
     swipeStart.current = null;
     if (!start) return;
     const dx = x - start.x;
     const dy = y - start.y;
+    swiped.current = Math.hypot(dx, dy) > 10;
     if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
     chooseDay(dx > 0);
   };
@@ -130,12 +133,13 @@ export default function NutritionTargetsCard({
                 swipeStart.current = null;
               }}
             >
-              {/* The rings on the left, the three macros beside them. */}
-              <div className="nd-cal-row">
+              {/* The rings on the left, the three macros beside them; a tap anywhere on them opens the food diary (11 Nov, Alex:
+                  "if I click anywhere in that rectangle with the macros and the ring I go to food diary"), the ring its button. */}
+              <div className={`nd-cal-row${openFood ? " nd-to-diary" : ""}`} onClick={(e) => openFood && !swiped.current && !(e.target as Element).closest(".nd-ring") && openFood()}>
               <button
                 type="button"
                 className="nd-ring"
-                onClick={() => openFood?.()}
+                onClick={() => !swiped.current && openFood?.()}
                 disabled={!openFood}
                 aria-label={eatenKcal > 0 ? `${n(eatenKcal)} kcal logged today. Open the food diary` : "Open the food diary"}
               >

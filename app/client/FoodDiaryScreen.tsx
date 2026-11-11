@@ -1642,7 +1642,8 @@ function Targets({ target, eaten, dayType, onDayType, onRing }: { target: Macros
         swipe.current = null;
       }}
     >
-      <div className="nd-cal-row">
+      {/* A tap anywhere on the figures goes back to Nutrition, as the ring does (11 Nov, Alex: "and vice versa"). */}
+      <div className="nd-cal-row nd-to-diary" onClick={(e) => !swiped.current && !(e.target as Element).closest(".nd-ring") && onRing()}>
         <button type="button" className="nd-ring" onClick={() => !swiped.current && onRing()} aria-label={`${left == null ? `${n(eaten.kcal)} kcal eaten` : over > 0 ? `${n(over)} kcal over` : `${n(left)} kcal left`}. Back to Nutrition`}>
           <svg viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true">
             <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
