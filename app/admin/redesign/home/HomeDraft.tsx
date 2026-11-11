@@ -16,6 +16,7 @@ import type { OverviewInfoRow, OverviewPanel } from "../../../lib/queries";
 // Types only: homeBoard.ts re-exports the server's reader, which must never reach the browser.
 import type { HomeBoard, MuscleGroup, MuscleWindow, PerGroup } from "../../../lib/homeBoard";
 import { MessageDialog } from "../training/TrainingDraft";
+import { ConfirmText } from "../ConfirmParts";
 import AppAccessButton from "./AppAccessButton";
 import type { ClientAccess } from "../../../lib/access-actions";
 import { dayMonth, logDate, logDateWidth } from "../../../lib/dayMonth";
@@ -1477,9 +1478,9 @@ function DeleteClientDialog({ clientId, name, firstName }: { clientId: number; n
           ✕
         </DialogClose>
       </div>
-      <DialogDescription className="dlh-note">
-        This permanently deletes {firstName}&rsquo;s login, programmes, logged sets, check-ins, photos, meetings and chat. It can&rsquo;t be undone. Their invoices stay.
-      </DialogDescription>
+      <ConfirmText>
+        {firstName}&rsquo;s login, programmes, logged sets, check-ins, photos, meetings and chat are deleted, and their invoices stay. This can&rsquo;t be undone.
+      </ConfirmText>
       <label className="rh-field">
         <span className="dlh-label">Type their name</span>
         <input
@@ -1500,7 +1501,7 @@ function DeleteClientDialog({ clientId, name, firstName }: { clientId: number; n
         <DialogClose className="dlh-cancel" disabled={busy}>
           Cancel
         </DialogClose>
-        <button type="button" className="dlh-delete" onClick={go} disabled={!ok || busy}>
+        <button type="button" className="dlh-danger" onClick={go} disabled={!ok || busy}>
           {busy ? "Deleting…" : "Delete"}
         </button>
       </div>

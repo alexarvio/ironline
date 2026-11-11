@@ -144,8 +144,8 @@ export default function PlansSettings({ plans, currency, vatFact }: { plans: Pla
       <Dialog open={deleting != null} onOpenChange={(o) => !o && setDeleting(null)}>
         {deleting && (
           <ConfirmDialog
-            title={`Delete ${deleting.name}?`}
-            description="This permanently deletes the plan. It can't be undone."
+            title={`Delete the plan “${deleting.name}”?`}
+            description="This can’t be undone."
             confirm="Delete"
             danger
             onConfirm={() => {

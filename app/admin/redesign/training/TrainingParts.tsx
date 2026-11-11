@@ -487,8 +487,8 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
       <Dialog open={removing != null} onOpenChange={(o) => !o && setRemoving(null)}>
         {removing && (
           <ConfirmDialog
-            title={`Remove ${removing.label}?`}
-            description={`${firstName} stops being asked it from their next workout. The answers already given are kept.`}
+            title={`Remove “${removing.label}” from the after-workout check?`}
+            description={`${firstName} isn’t asked it from their next workout. The answers they’ve given stay.`}
             confirm="Remove"
             danger
             onConfirm={() => {

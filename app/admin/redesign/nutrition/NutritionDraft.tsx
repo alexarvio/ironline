@@ -941,8 +941,8 @@ export default function NutritionDraft({
         )}
         {dlg?.kind === "removeSupp" && (
           <ConfirmDialog
-            title={`Remove ${dlg.supp.name || "this item"}?`}
-            description={`It comes off ${firstName}'s supplements.`}
+            title={`Remove ${dlg.supp.name || "this supplement"} from the supplements?`}
+            description={`${firstName} won’t be asked to tick it off any more.`}
             confirm="Remove"
             danger
             onConfirm={() => {
@@ -1013,8 +1013,8 @@ export default function NutritionDraft({
         )}
         {dlg?.kind === "deploy" && startHasCome && (
           <ConfirmDialog
-            title={`Make ${plan.name} live?`}
-            description={`${firstName} sees these targets and supplements from today.`}
+            title={`Make “${plan.name}” live?`}
+            description={`${firstName} sees its targets and supplements from today.`}
             confirm="Make it live"
             onConfirm={() => {
               close();
@@ -1025,8 +1025,8 @@ export default function NutritionDraft({
         {/* Now, whatever its dates say (21 Oct, as Training): it starts this week. */}
         {dlg?.kind === "liveNow" && (
           <ConfirmDialog
-            title={`Make ${plan.name} live now?`}
-            description={`It starts this week; ${firstName} sees these targets from today.`}
+            title={`Make “${plan.name}” live now?`}
+            description={`Its start moves to this week, and ${firstName} sees its targets from today.`}
             confirm="Make it live"
             onConfirm={() => {
               close();
@@ -1036,8 +1036,8 @@ export default function NutritionDraft({
         )}
         {dlg?.kind === "backToDraft" && (
           <ConfirmDialog
-            title="Back to draft?"
-            description={`${plan.name} comes off ${firstName}'s schedule.`}
+            title={`Move “${plan.name}” back to draft?`}
+            description={`It comes off ${firstName}’s schedule.`}
             confirm="Back to draft"
             onConfirm={() => {
               close();

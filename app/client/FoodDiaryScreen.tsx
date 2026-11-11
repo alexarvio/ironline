@@ -94,8 +94,17 @@ export type FoodOptionView = {
 };
 export type Macros = { kcal: number; protein: number; carbs: number; fat: number };
 
+/** A day's own meal asked before it goes (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html): what goes with it,
+ * and that a saved meal it wears stays; nothing when it is empty. */
+function deleteMealText(m: FoodDiaryProps["meals"][number]): string | null {
+  const foods = m.entries.length > 0;
+  const goes = foods && m.photo ? "Its foods and the day’s photo are deleted with it." : foods ? "Its foods are deleted with it." : m.photo ? "The day’s photo is deleted with it." : null;
+  const stays = m.savedMealId != null ? "The saved meal stays." : null;
+  return [goes, stays].filter(Boolean).join(" ") || null;
+}
+
 // ---- At once (17 Oct): an add, an edit or a remove shows before the server answers.
-const r1 = (n: number) => Math.round(n * 10) / 10;
+const r1 =(n: number) => Math.round(n * 10) / 10;
 type MacroKey = "kcal" | "protein" | "carbs" | "fat";
 /** The day with its meal and day totals worked out again from the rows. */
 function retotal(d: FoodDiaryProps): FoodDiaryProps {
@@ -1525,7 +1534,7 @@ export default function FoodDiaryScreen({
       </main>
 
       {askDeleteMeal != null && diary.meals.some((m) => m.id === askDeleteMeal) && (
-        <DeleteMealDialog name={cardTitle(diary.meals.find((m) => m.id === askDeleteMeal)!)} onCancel={() => setAskDeleteMeal(null)} onDelete={() => removeMeal(askDeleteMeal)} />
+        <DeleteMealDialog name={cardTitle(diary.meals.find((m) => m.id === askDeleteMeal)!)} text={deleteMealText(diary.meals.find((m) => m.id === askDeleteMeal)!)} onCancel={() => setAskDeleteMeal(null)} onDelete={() => removeMeal(askDeleteMeal)} />
       )}
       {addingMeal && (
         <AddMealSheet
@@ -1998,7 +2007,10 @@ function EditableMealCards({
   refresh,
   actions,
   foot,
+  deleteText,
 }: {
+  /** Delete's one sentence on what stays, in its pop-up. */
+  deleteText?: string;
   /** A saved day in the list: two edges drawn behind the card. */
   stacked?: boolean;
   /** Hold a card's name and drag, as on a day. */
@@ -2561,7 +2573,7 @@ function EditableMealCards({
             </div>
           );
         })}
-        {deleting && <DeleteMealDialog name={deleting.name} onCancel={() => setAskDelete(null)} onDelete={() => removeCard(deleting)} />}
+        {deleting && <DeleteMealDialog name={deleting.name} text={deleteText} onCancel={() => setAskDelete(null)} onDelete={() => removeCard(deleting)} />}
         {shown?.picture && (
           <div className="fdi-photo-scrim" role="presentation" onClick={closePhoto}>
             <div className="fdi-photo-sheet" role="dialog" aria-modal="true" aria-label={`Your picture of ${shown.name}`} onClick={(e) => e.stopPropagation()}>
@@ -2679,6 +2691,7 @@ function SavedMealList({
       clientId={clientId}
       date={date}
       cards={saved.map(cardOfSaved)}
+      deleteText="What you logged with it stays in your diary."
       recent={recent}
       addAt="top"
       renderAdd={(start, input) =>
@@ -2784,6 +2797,7 @@ function SavedDayList({
       clientId={clientId}
       date={date}
       cards={days.map(cardOfSavedDay)}
+      deleteText="What you logged with it stays in your diary."
       recent={NO_FOODS}
       addAt="top"
       renderAdd={() => null}
@@ -3145,6 +3159,7 @@ function SavedDayScreen({
       {askDelete && day && (
         <DeleteMealDialog
           name={day.name}
+          text="What you logged with it stays in your diary."
           onCancel={() => setAskDelete(false)}
           onDelete={() => {
             setAskDelete(false);

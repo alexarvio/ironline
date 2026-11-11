@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
+import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
+import { ConfirmChoice, ConfirmText } from "../ConfirmParts";
 import { dayMonth } from "../../../lib/dayMonth";
 import { SepJoin } from "../Sep";
 
@@ -50,6 +51,14 @@ export default function DeleteSessionDialog({
   const [error, setError] = useState<string | null>(null);
   const gated = loggedSets > 0;
   const can = !gated || agreed;
+  // What goes with it, as plain sentences: its exercises and cardio, then the client's logged sets when there are any.
+  const parts = [exercises ? plural(exercises, "exercise") : null, cardioBlocks ? `${cardioBlocks} cardio` : null].filter(Boolean);
+  const text = [
+    parts.length ? `Its ${parts.join(" and ")} ${parts.length > 1 || exercises + cardioBlocks > 1 ? "are" : "is"} deleted with it.` : null,
+    gated ? `${firstName}’s logged sets come out of their history and progress charts.${hasUploads ? " Their videos stay in Media." : ""}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const del = async () => {
     if (!can || busy) return;
@@ -67,7 +76,7 @@ export default function DeleteSessionDialog({
     <DialogContent
       className="dlh"
       role="alertdialog"
-      aria-describedby="dlh-desc"
+      aria-describedby={text ? "dlh-desc" : undefined}
       onOpenAutoFocus={(ev) => {
         // Cancel takes the focus (a beat after the mount, past the dialog's own focus move).
         ev.preventDefault();
@@ -75,44 +84,31 @@ export default function DeleteSessionDialog({
       }}
     >
       <div className="dlh-head">
-        <DialogTitle className="dlh-title">Delete {name ?? `Session ${number}`}?</DialogTitle>
+        <DialogTitle className="dlh-title">{name ? <>Delete the session &ldquo;{name}&rdquo;?</> : `Delete Session ${number}?`}</DialogTitle>
         <button type="button" className="dlh-x" onClick={onClose} aria-label="Close">
           ✕
         </button>
       </div>
-      {/* What goes with it, as one quiet line (20 Oct, Alex: the hairline style). */}
-      <DialogDescription id="dlh-desc" className="dlh-what">
-        <SepJoin parts={[plural(exercises, "exercise"), cardioBlocks ? `${cardioBlocks} cardio` : null, loggedSets ? plural(loggedSets, "logged set") : "nothing logged"]} />
-      </DialogDescription>
+      {/* What goes with it, in plain sentences (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html). */}
+      {text && <ConfirmText id="dlh-desc">{text}</ConfirmText>}
+      {/* A gate: Delete wakes once it is ticked. */}
       {gated && (
-        <p className="dlh-warn">
-          {firstName} logged this session{lastLoggedAt ? `, last on ${dayMonth(lastLoggedAt)}` : ""}. Those sets come out of their history and progress charts.
-          {hasUploads ? " Videos stay in Media." : ""}
-        </p>
-      )}
-      {gated && (
-        <button type="button" role="checkbox" aria-checked={agreed} id="dlh-ack" className="dlh-ack" onClick={() => setAgreed((x) => !x)}>
-          <span className={`dlh-box${agreed ? " on" : ""}`} aria-hidden="true">
-            {agreed ? "✓" : ""}
-          </span>
-          I understand {firstName}&rsquo;s {plural(loggedSets, "logged set")} will be deleted
-        </button>
+        <ConfirmChoice
+          id="dlh-ack"
+          checked={agreed}
+          onChange={setAgreed}
+          title={`I understand ${firstName}’s logged sets are deleted`}
+          sub={<SepJoin parts={[plural(loggedSets, "set"), lastLoggedAt ? `last ${dayMonth(lastLoggedAt)}` : null]} />}
+        />
       )}
       {/* The same session in the weeks after, too (20 Oct, Alex). */}
-      {laterLabel && (
-        <button type="button" role="checkbox" aria-checked={alsoLater} className="dlh-ack" onClick={() => setAlsoLater((x) => !x)}>
-          <span className={`dlh-box ink${alsoLater ? " on" : ""}`} aria-hidden="true">
-            {alsoLater ? "✓" : ""}
-          </span>
-          Also delete it from {laterLabel}
-        </button>
-      )}
+      {laterLabel && <ConfirmChoice checked={alsoLater} onChange={setAlsoLater} title="Also delete it from the weeks after" sub={laterLabel.charAt(0).toUpperCase() + laterLabel.slice(1)} />}
       {error && <p className="dlh-error">{error}</p>}
       <div className="dlh-foot">
         <button ref={cancelRef} type="button" className="dlh-cancel" onClick={onClose}>
           Cancel
         </button>
-        <button type="button" className="dlh-delete" disabled={!can || busy} aria-describedby={gated ? "dlh-ack" : undefined} onClick={() => void del()}>
+        <button type="button" className="dlh-danger" disabled={!can || busy} aria-describedby={gated ? "dlh-ack" : undefined} onClick={() => void del()}>
           {busy ? "Deleting…" : "Delete"}
         </button>
       </div>

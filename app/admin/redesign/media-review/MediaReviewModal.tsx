@@ -1077,13 +1077,13 @@ export default function MediaReviewModal({ review, chat = null, onClose }: { rev
 
       {/* Asked before a recording is thrown away. */}
       {confirm && (
-        <div className="mrv-confirm" role="alertdialog" aria-label="Discard recording?">
+        <div className="mrv-confirm" role="alertdialog" aria-label="Discard the recording?">
           <div className="mrv-confirm-card">
-            <b>Discard recording?</b>
-            <small>What you recorded goes. Your drawings go too.</small>
+            <b>Discard the recording?</b>
+            <small>Your drawings are discarded with it.</small>
             <span>
               <button type="button" className="mrv-retake" onClick={() => setConfirm(null)}>
-                Keep it
+                Cancel
               </button>
               <button
                 type="button"

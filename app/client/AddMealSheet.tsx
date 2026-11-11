@@ -34,7 +34,7 @@ export function SavedMealCards({ saved, busy, picture, onCopy }: { saved: SavedM
 }
 
 /** Deleting a meal, from a ⋯ on its card (10 Nov, Alex: "a pop up asking for confirmation"): the day's and a saved meal's. */
-export function DeleteMealDialog({ name, onCancel, onDelete }: { name: string; onCancel: () => void; onDelete: () => void }) {
+export function DeleteMealDialog({ name, text, onCancel, onDelete }: { name: string; /** One plain sentence on what goes with it and what stays (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html); none when nothing needs saying. */ text?: string | null; onCancel: () => void; onDelete: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
     document.addEventListener("keydown", onKey);
@@ -42,16 +42,21 @@ export function DeleteMealDialog({ name, onCancel, onDelete }: { name: string; o
   }, [onCancel]);
   return createPortal(
     <div className="gpk-overlay" onClick={onCancel}>
-      <div className="gpk-card" role="alertdialog" aria-modal="true" aria-labelledby="ams-delete-title" onClick={(e) => e.stopPropagation()}>
+      <div className="gpk-card" role="alertdialog" aria-modal="true" aria-labelledby="ams-delete-title" aria-describedby={text ? "ams-delete-text" : undefined} onClick={(e) => e.stopPropagation()}>
         <div className="gpk-content">
           <h2 id="ams-delete-title" className="gpk-title sm ams-delete-title">
             Delete {name}?
           </h2>
+          {text && (
+            <p id="ams-delete-text" className="ams-text">
+              {text}
+            </p>
+          )}
           <div className="ams-ask">
             <button type="button" className="ams-cancel" onClick={onCancel} autoFocus>
               Cancel
             </button>
-            <button type="button" className="ams-delete" onClick={onDelete}>
+            <button type="button" className="ams-danger" onClick={onDelete}>
               Delete
             </button>
           </div>

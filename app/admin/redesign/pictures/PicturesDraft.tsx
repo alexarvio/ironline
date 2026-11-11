@@ -481,8 +481,8 @@ function Pictures({ clientId, firstName, plan }: Props) {
         )}
         {dlg?.kind === "drop" && (
           <ConfirmDialog
-            title={`Remove ${dlg.label}?`}
-            description={`${firstName} isn't asked for it any more. Photos already sent stay.`}
+            title={`Remove ${dlg.label} from the shape update?`}
+            description={`${firstName} won’t be asked for it any more. The photos already sent of it stay.`}
             confirm="Remove"
             danger
             onConfirm={() => {

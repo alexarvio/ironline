@@ -265,7 +265,7 @@ export function LogoSettings({ mark }: { mark: string | null }) {
         {asking && (
           <ConfirmDialog
             title="Remove your logo?"
-            description="The Norcoach star comes back behind your screens and your clients'."
+            description="The Norcoach star comes back behind your screens and your clients’."
             confirm="Remove"
             danger
             onConfirm={() => {
@@ -410,7 +410,7 @@ function OnlinePayments({ state }: { state: PaymentsState }) {
         {disconnecting && (
           <ConfirmDialog
             title="Disconnect Stripe?"
-            description="Clients can't pay invoices online until it's connected again."
+            description="Your clients can’t pay invoices online until you connect it again."
             confirm="Disconnect"
             danger
             onConfirm={() => {

@@ -229,7 +229,7 @@ export default function CoachesDraft({ accounts, waiting, support, billingOn = f
         {removing && (
           <ConfirmDialog
             title={`Remove ${removing.name}?`}
-            description="This permanently deletes the coach's account. It can't be undone."
+            description="Their Norcoach account is deleted. This can’t be undone."
             confirm="Remove"
             danger
             onConfirm={() => {
@@ -245,7 +245,7 @@ export default function CoachesDraft({ accounts, waiting, support, billingOn = f
         {declining && (
           <ConfirmDialog
             title={`Decline ${declining.name}?`}
-            description="This permanently deletes their sign-up. It can't be undone."
+            description="Their sign-up is deleted. This can’t be undone."
             confirm="Decline"
             danger
             onConfirm={() => {

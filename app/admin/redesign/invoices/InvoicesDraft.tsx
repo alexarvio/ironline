@@ -361,8 +361,8 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
       <Dialog open={removing != null} onOpenChange={(o) => !o && setRemoving(null)}>
         {removing && (
           <ConfirmDialog
-            title={`Remove ${removing.number}?`}
-            description="This permanently deletes the invoice. It can't be undone."
+            title={`Remove invoice ${removing.number}?`}
+            description={`It hasn’t reached ${firstName}. This can’t be undone.`}
             confirm="Remove"
             danger
             onConfirm={() => {
@@ -377,8 +377,8 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
       <Dialog open={stopping != null} onOpenChange={(o) => !o && setStopping(null)}>
         {stopping && (
           <ConfirmDialog
-            title="Stop this recurring invoice?"
-            description="No more invoices come from it. The ones it made stay."
+            title={`Stop the recurring invoice “${fill(stopping.lines[0]?.description ?? "Invoice", stopping.next)}”?`}
+            description={`${firstName} isn’t billed by it again. The invoices it already made stay.`}
             confirm="Stop"
             danger
             onConfirm={() => {

@@ -11,6 +11,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, WeightGoalIcon } from "../../../components/icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { MonthRange } from "../MonthRange";
+import { ConfirmText } from "../ConfirmParts";
 import { AddCells, chromeOf, dayPercent, EmptyLane, eventIsPast, eventLanes, EventMark, eventPlace, eventState, gridFor, LANE, LaneRow, rgbOf, standingParts, Timeline, WeightGoalMark, type Category, type PlanEvent } from "./timelineParts";
 import { GOAL_COLOR, type WeightGoalView } from "../../../lib/weightGoal";
 import WeightGoalDialog from "../WeightGoalDialog";
@@ -580,26 +581,31 @@ export function EventDialog({ today, event, cats, firstName, faces, initialStart
     setCursor(d.slice(0, 7));
   };
 
-  if (confirming && event)
+  if (confirming && event) {
+    // A confirm pop-up (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html): the action and the thing as a
+    // question, what isn't obvious in plain words, the verb alone as the red pill.
+    const named = event.title.trim();
+    const who = firstName || "The client";
     return (
       <DialogContent className="dlh" role="alertdialog">
         <div className="dlh-head">
-          <DialogTitle className="dlh-title">Delete {event.title}?</DialogTitle>
+          <DialogTitle className="dlh-title">{named ? `Delete the event “${named}”?` : chromeOf(cats, event.kind).label.toLowerCase() === "event" ? "Delete this event?" : `Delete the ${chromeOf(cats, event.kind).label.toLowerCase()} event?`}</DialogTitle>
           <DialogClose className="dlh-x" aria-label="Close">
             ✕
           </DialogClose>
         </div>
-        <DialogDescription className="dlh-what">This permanently deletes the event. It can&rsquo;t be undone.</DialogDescription>
+        <ConfirmText>{event.repeat ? `Every day it repeats on is deleted, and ${firstName || "the client"} won’t see it on their Events any more. This can’t be undone.` : `${who} won’t see it on their Events any more. This can’t be undone.`}</ConfirmText>
         <div className="dlh-foot">
           <button type="button" className="dlh-cancel" onClick={() => setConfirming(false)} autoFocus>
             Cancel
           </button>
-          <button type="button" className="dlh-delete" onClick={onDelete}>
+          <button type="button" className="dlh-danger" onClick={onDelete}>
             Delete
           </button>
         </div>
       </DialogContent>
     );
+  }
 
   // The phase pop-up's pattern (20 Oct, Alex): title and tags, the category as tiles, a clean line for the words,
   // the month on the left with the dates typed or picked on the right, Cancel in words and one black pill.
