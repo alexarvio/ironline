@@ -1,6 +1,6 @@
 "use client";
 
-import { NOTIFICATION_TYPES, type NotificationCategory } from "../lib/notificationTypes";
+import { NOTIFICATION_TYPES, titleAndBody, type NotificationCategory } from "../lib/notificationTypes";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { markNotificationReadAction } from "../lib/actions";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
@@ -493,8 +493,9 @@ function areaOf(a: LatestActivity): NotificationCategory {
       return "video_reply";
     case "deploy":
       return a.track === "nutrition" ? "nutrition_phase" : a.track === "lifestyle" ? "checkin_comment" : "training_block";
+    // Named as Notifications names it (11 Nov): a call booked or moved is a Meeting, what was agreed its Call notes.
     case "meeting":
-      return "meeting_notes";
+      return /^(scheduled|booked)/i.test(a.title) ? "meeting_booked" : /^(moved|cancelled|your call moved)/i.test(a.title) ? "meeting_changed" : "meeting_notes";
     case "invoice":
       return "invoice";
     default:
@@ -583,14 +584,19 @@ function LatestActivityCard({ a, coach, focus = null }: { a: LatestActivity; coa
           <CoachSays
             coach={{ name: coach.firstName, photoPath: coach.photoPath }}
             badge={{ color: area.color, icon: area.icon, label: area.label }}
+            // As a row of Notifications (11 Nov, Alex: "we could literally just copy paste this format there"): the kind in
+            // its colour over what happened, whole, and their own words under it; the time on the right.
             label={
               <>
-                <span className="coach-says-what">{body ? a.title : coach.firstName}</span>
+                <span className="coach-says-what" style={{ color: area.color }}>
+                  {area.label}
+                </span>
                 <span className="coach-says-date">{a.whenLabel}</span>
               </>
             }
           >
-            {body ?? a.title}
+            <span className="hm-lt-title">{titleAndBody(a.title, coach.firstName).title}</span>
+            {body && <span className="hm-lt-quote">{body}</span>}
           </CoachSays>
         </button>
         <div className="hm-lt-foot">

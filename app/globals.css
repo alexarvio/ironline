@@ -21325,7 +21325,13 @@ html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-stat
 .coach-says-label > .coach-says-date { flex: none; }
 .hm-lt-body.hm-lt-body { display: block; padding: 4px 12px 8px; }
 .hm-lt-body.unseen .coach-says-label { color: #141a24; }
-.hm-lt .coach-says-words.coach-says-words { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; text-wrap: pretty; }
+/* A row of Notifications, whole (11 Nov, Alex: "the notification is always displayed fully here… copy paste this format"):
+   the kind in its colour with the time on the right, what happened in ink at 600 over as many lines as it takes, their
+   own words grey under it, never cut. */
+.hm-lt .coach-says-date.coach-says-date { margin-left: auto; }
+.hm-lt .coach-says-words.coach-says-words { display: block; overflow: visible; white-space: normal; }
+.hm-lt-title { display: block; font-size: 16px; font-weight: 600; line-height: 22px; color: #141a24; text-wrap: pretty; }
+.hm-lt-quote { display: block; margin-top: 3px; font-size: 14px; font-weight: 500; line-height: 20px; color: #5b6474; white-space: pre-wrap; text-wrap: pretty; }
 /* Open chat and View under the words, from the words' own left edge (12px in + the face's 36px + its 12px gap). */
 .hm-lt-foot.hm-lt-foot { justify-content: flex-start; gap: 18px; margin: 0 12px; padding-left: 48px; }
 /* Home's Meeting summary: the chevron right after its words (not at the far right), the notes the Meetings screen's (MeetingNotes), settling 4px down as they open. */
