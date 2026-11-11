@@ -163,11 +163,10 @@
 .fdc-spine > .fdi-row-wrap::before { content: ""; position: absolute; left: calc(var(--spine-x) - var(--spine-in)); top: 0; bottom: 0; width: 1px; background: #C9CFD8; pointer-events: none; }
 .fdc-spine > .fdi-row-wrap:last-child::before { bottom: auto; height: var(--dot); }
 .fdc-spine > .fdi-row-wrap::after { content: ""; position: absolute; left: calc(var(--spine-x) - var(--spine-in) - 3px); top: calc(var(--dot) - 3.5px); width: 7px; height: 7px; border-radius: 50%; background: #F5F6F8; box-shadow: inset 0 0 0 1.5px #141a24; pointer-events: none; }
-/* An open food is its white box on the line: the line runs on through the room round it. */
-.fdc-spine > .fdi-row-wrap.selected.selected { margin-left: var(--spine-in); }
-.fdc-spine > .fdi-row-wrap.selected::before { top: -8px; bottom: -14px; }
-.fdc-spine > .fdi-row-wrap.selected:last-child::before { bottom: auto; height: calc(var(--dot) + 10px); }
-.fdc-spine > .fdi-row-wrap.selected::after { top: calc(var(--dot) + 2px - 3.5px); }
+/* An open food stays flat on the line, no white box round it (11 Nov, Alex: "why this white box here, doesnt that go
+   against the rules"): its name at 600, its panel under it on the page, only the fields keeping their boxes. */
+.fdc-spine > .fdi-row-wrap.selected.selected { margin: 0 0 0 var(--spine-in); padding-right: 0; border-radius: 0; background: none; box-shadow: none; }
+.fdc-spine > .fdi-row-wrap.selected > .fdi-row.fdi-row { padding: 10px 4px 0; }
 /* Never cut: a long portion wraps, its macros going on together to the next line (a narrow phone, an open food). */
 .fdc-spine .fdi-row-amount { white-space: normal; line-height: 17px; }
 .fdc-row-macros { display: inline-block; white-space: nowrap; }
