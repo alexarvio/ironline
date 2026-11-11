@@ -7,6 +7,7 @@
     "url": "https://app.norcoachapp.com/client",
     "errorPath": "index.html",
     "allowNavigation": [
+      "app.norcoachapp.com",
       "clerk.norcoachapp.com"
     ]
   },
