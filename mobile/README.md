@@ -5,8 +5,10 @@ loads the live site (`server.url` in `capacitor.config.json`), so every push to
 Railway shows up in the app. Only native changes (new plugins, permissions,
 icon, the site address) need a new store build.
 
-- App id: `com.arvio.ironline`. It can still change until the first upload to
-  a store, and after that it is permanent.
+- App id: `com.arvio.norcoach` on iPhone (11 Nov, Alex), permanent from its first
+  TestFlight upload. Android is still `com.arvio.ironline` (its Firebase app is
+  registered under it); move it to the same id before its first store upload.
+- iPhone builds: GitHub > Actions > iOS to TestFlight (.github/workflows/ios-testflight.yml).
 - Site: the Railway address for now. Switch it to the own domain before the
   first store upload, because changing it later needs an app update.
 - `www/index.html` is only the "No connection" screen.
