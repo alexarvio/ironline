@@ -167,6 +167,14 @@
    against the rules"): its name at 600, its panel under it on the page, only the fields keeping their boxes. */
 .fdc-spine > .fdi-row-wrap.selected.selected { margin: 0 0 0 var(--spine-in); padding-right: 0; border-radius: 0; background: none; box-shadow: none; }
 .fdc-spine > .fdi-row-wrap.selected > .fdi-row.fdi-row { padding: 10px 4px 0; }
+/* The line ends on a ring with a + (11 Nov, Alex): the search for this meal, as the card's +. A 44px target, the 21px
+   ring on the line's middle, its 11px + on whole pixels (both odd, centred on the 1px line); the line runs to its middle. */
+.fdc-spine-add { position: relative; height: 44px; }
+.fdc-spine-add::before { content: ""; position: absolute; left: var(--spine-x); top: 0; height: 22px; width: 1px; background: #C9CFD8; pointer-events: none; }
+.fdc-spine-plus.fdc-spine-plus { position: absolute; left: calc(var(--spine-x) + 0.5px - 22px); top: 0; width: 44px; height: 43px; display: grid; place-items: center; padding: 0; border: 0; background: none; color: #141a24; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.fdc-spine-ring { width: 21px; height: 21px; display: grid; place-items: center; border-radius: 50%; background: #F5F6F8; box-shadow: inset 0 0 0 1.5px #141a24; transition: background-color 0.2s ease, color 0.2s ease; }
+.fdc-spine-ring svg { width: 11px; height: 11px; }
+.fdc-spine-plus.on .fdc-spine-ring { background: #141a24; color: #fff; }
 /* Never cut: a long portion wraps, its macros going on together to the next line (a narrow phone, an open food). */
 .fdc-spine .fdi-row-amount { white-space: normal; line-height: 17px; }
 .fdc-row-macros { display: inline-block; white-space: nowrap; }

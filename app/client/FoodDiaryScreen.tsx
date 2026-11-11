@@ -1158,6 +1158,13 @@ export default function FoodDiaryScreen({
                 // Its foods, or the + panel of an empty meal, which has no chevron but needs somewhere to open.
                 const unfolded = !!open || (filled && !folded.has(meal.id));
                 const savedFoot = !open && savingMeal !== meal.id && filled;
+                // The card's + and the + ring at the end of its line: the search under the foods, a second tap shutting it.
+                const addFood = () => {
+                  if (savingMeal === meal.id || (open && open.kind !== "search")) return;
+                  if (open?.kind === "search") return closePanel();
+                  openOnly(meal.id);
+                  setPanel({ kind: "search", meal: meal.id });
+                };
                 return (
                   <div
                     key={meal.id}
@@ -1236,12 +1243,7 @@ export default function FoodDiaryScreen({
                             <button
                               type="button"
                               className="fdc-tool"
-                              onClick={() => {
-                                if (savingMeal === meal.id || (open && open.kind !== "search")) return;
-                                if (open?.kind === "search") return closePanel();
-                                openOnly(meal.id);
-                                setPanel({ kind: "search", meal: meal.id });
-                              }}
+                              onClick={addFood}
                               aria-label={`Add food to ${title}`}
                             >
                               <PlusIcon />
@@ -1355,19 +1357,16 @@ export default function FoodDiaryScreen({
                         </div>
                       );
                     })}
+                    <SpineAdd label={`Add food to ${title}`} on={open?.kind === "search"} onClick={addFood} />
                     </div>
                     )}
-                    {/* Under the foods, in words: a linked card already wears the saved meal's name. */}
+                    {/* Under the foods, in words: a linked card already wears the saved meal's name, and says nothing more
+                        (11 Nov, Alex: no "Saved as"). */}
                     {savedFoot && !meal.savedAs && (
                       <div className="fdc-foot">
                         <button type="button" className="fdc-save" onClick={() => setSavingMeal(meal.id)}>
                           Save meal
                         </button>
-                      </div>
-                    )}
-                    {savedFoot && meal.savedAs && !linked && (
-                      <div className="fdc-foot">
-                        <span className="fdc-saved">Saved as {meal.savedAs}</span>
                       </div>
                     )}
                     {savingMeal === meal.id && (
@@ -2480,6 +2479,7 @@ function EditableMealCards({
                         </div>
                       );
                     })}
+                    {!onOpen && <SpineAdd label={`Add food to ${c.name}`} on={here?.kind === "search"} onClick={() => tapPlus(c)} />}
                     </div>
                     )}
                     {foot?.(c)}
@@ -3109,6 +3109,21 @@ function SavedDayScreen({
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** The end of a meal's line (11 Nov, Alex: "the hairline keeps going to a second dot with a plus sign and we add items
+ * from there too"): a ring with a +, on the line under the last food, adding as the card's + does; ink while its search
+ * is open, as anything on is. */
+function SpineAdd({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
+  return (
+    <div className="fdc-spine-add">
+      <button type="button" className={`fdc-spine-plus${on ? " on" : ""}`} onClick={onClick} aria-label={label} aria-pressed={on}>
+        <span className="fdc-spine-ring" aria-hidden="true">
+          <PlusIcon />
+        </span>
+      </button>
     </div>
   );
 }
