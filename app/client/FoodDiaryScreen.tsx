@@ -1765,7 +1765,8 @@ function SearchPanel({
   const showingRecent = results == null && recent.length > 0;
   // The client's own and the everyday foods are the list; the catalog's long
   // tail sits behind a count, unless it is all there is.
-  const front = (results ?? recent).filter((f) => results == null || f.group !== "more");
+  // Recent, four at most (11 Nov, Alex).
+  const front = (results ?? recent.slice(0, 4)).filter((f) => results == null || f.group !== "more");
   const tail = results?.filter((f) => f.group === "more") ?? [];
   const list = front.length === 0 || showMore ? [...front, ...tail] : front;
 
