@@ -89,6 +89,7 @@ import {
   addExerciseVariation,
   removeExerciseVariation,
   laterInSeries,
+  moveMeetingSeriesFrom,
   updateMeeting,
   completeMeeting,
   getClientIdForMeeting,
@@ -2374,6 +2375,41 @@ export async function updateMeetingAction(formData: FormData) {
     const zone = patch.tz ?? SERVER_TZ;
     const at = patch.time ? ` at ${patch.time} ${tzShort(zone, zonedToUtc(patch.date ?? localDateStr(), patch.time, zone))}` : "";
     if (clientId != null) logCoachActivity(clientId, `Your call moved to ${when}${at}`, { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule", actionRef: id });
+  }
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+/** A call and the later ones of its series moved as one (11 Nov, Alex): the new weekday, time and rhythm from this call on. */
+export async function moveMeetingSeriesAction(formData: FormData) {
+  const coach = await requireCoach();
+  const id = Number(formData.get("id"));
+  if (!id || getClientIdForMeeting(id) == null || !coachOwnsMeeting(coach.id, id)) return;
+  const date = String(formData.get("date") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const time = String(formData.get("time") ?? "");
+  const tzRaw = String(formData.get("tz") ?? "").trim();
+  const tz = tzRaw && isTimezone(tzRaw) ? tzRaw : null;
+  const t = String(formData.get("meetingType") ?? "");
+  const moved = moveMeetingSeriesFrom(id, {
+    date,
+    time,
+    tz,
+    durationMinutes: Number(formData.get("durationMinutes")) || DEFAULT_MEETING_DURATION,
+    repeatWeeks: Number(formData.get("repeatWeeks")) || 1,
+    topic: String(formData.get("topic") ?? "").trim(),
+    link: String(formData.get("link") ?? "").trim() || null,
+    meetingType: isMeetingTypeId(t) ? t : null,
+  });
+  // One word to the client for the whole series, never one a call.
+  const clientId = getClientIdForMeeting(id);
+  if (clientId != null && moved.length) {
+    const day = new Date(`${date}T00:00:00`);
+    const weekdays = day.toLocaleDateString("en-GB", { weekday: "long" });
+    const zone = tz ?? SERVER_TZ;
+    const at = time ? ` at ${time} ${tzShort(zone, zonedToUtc(date, time, zone))}` : "";
+    const from = day.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+    logCoachActivity(clientId, moved.length > 1 ? `Your calls moved to ${weekdays}s${at}, from ${from}` : `Your call moved to ${from}${at}`, { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule", actionRef: id });
   }
   revalidatePath("/admin");
   revalidatePath("/client");

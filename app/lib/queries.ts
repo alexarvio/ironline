@@ -5994,7 +5994,42 @@ export function addMeetingSeries(clientId: number, date: string, repeatWeeks: nu
 export function laterInSeries(id: number): number[] {
   const m = getData().meetings.find((x) => x.id === id);
   if (!m?.series_id) return [];
-  return getData().meetings.filter((x) => x.series_id === m.series_id && x.id !== id && x.status === "scheduled" && (x.date > m.date || (x.date === m.date && x.time > m.time))).map((x) => x.id);
+  return getData()
+    .meetings.filter((x) => x.series_id === m.series_id && x.id !== id && x.client_id === m.client_id && isClientCall(x.category) && x.status === "scheduled" && (x.date > m.date || (x.date === m.date && x.time > m.time)))
+    .map((x) => x.id);
+}
+
+/**
+ * A call and the later ones of its series moved together (11 Nov, Alex: "the remaining calls are all going to be on
+ * Fridays at 9 am"): in their order, the first on `date` and each after it `repeatWeeks` weeks on, all at the one time,
+ * zone, length and kind. A topic or link changed on the call moved goes to the later calls that had its old one; one
+ * given its own keeps it. Returns the ids moved, in order.
+ */
+export function moveMeetingSeriesFrom(
+  id: number,
+  move: { date: string; time: string; tz: string | null; durationMinutes: number; repeatWeeks: number; topic: string; link: string | null; meetingType: "checkin" | "review" | "other" | null }
+): number[] {
+  const data = getData();
+  const first = data.meetings.find((x) => x.id === id);
+  if (!first) return [];
+  const oldTopic = first.topic;
+  const oldLink = first.link ?? null;
+  const later = laterInSeries(id).map((x) => data.meetings.find((m) => m.id === x)!);
+  later.sort((a, b) => (a.date === b.date ? (a.time ?? "").localeCompare(b.time ?? "") : a.date.localeCompare(b.date)));
+  const rows = [first, ...later];
+  const weeks = [1, 2, 4].includes(move.repeatWeeks) ? move.repeatWeeks : 1;
+  rows.forEach((m, i) => {
+    m.date = addDaysIso(move.date, i * weeks * 7);
+    m.time = move.time;
+    if (move.tz) m.tz = move.tz;
+    else delete m.tz;
+    m.duration_minutes = move.durationMinutes || DEFAULT_MEETING_DURATION;
+    if (i === 0 || (m.link ?? null) === oldLink) m.link = move.link || null;
+    if (move.meetingType) Object.assign(m, { meeting_type: move.meetingType });
+    if (i === 0 || m.topic === oldTopic) m.topic = move.topic;
+  });
+  persist();
+  return rows.map((m) => m.id);
 }
 
 export function setMeetingStatus(id: number, status: Meeting["status"]) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addEventFromMeetingNoteAction, addMeetingAction, completeMeetingAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
+import { addEventFromMeetingNoteAction, addMeetingAction, completeMeetingAction, moveMeetingSeriesAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
 import { MEETING_TYPES, meetingTypeOf, type MeetingTypeId } from "../../../lib/meetingTypes";
 import { agreedPoints } from "../../../lib/meetingDates";
 import type React from "react";
@@ -307,6 +307,21 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
     const m = byId(id);
     if (!m?.seriesId) return [];
     return meetings.filter((x) => x.seriesId === m.seriesId && x.id !== id && x.status === "scheduled" && (x.date > m.date || (x.date === m.date && x.time > m.time))).map((x) => x.id);
+  };
+  // Rescheduling a call of a series: how many come after it, and the series' rhythm read from its days.
+  const restOf = (id: number): { count: number; every: number; first: boolean } | null => {
+    const m = byId(id);
+    const later = laterOf(id);
+    if (!m || !later.length) return null;
+    const first = !meetings.some((x) => x.seriesId === m.seriesId && x.id !== id && x.status === "scheduled" && !x.over && (x.date < m.date || (x.date === m.date && x.time < m.time)));
+    const days = [m.date, ...later.map((x) => byId(x)!.date)].sort();
+    const gaps = days.slice(1).map((d, i) => Math.round((parse(d).getTime() - parse(days[i]).getTime()) / (7 * 86400000))).filter((g) => g > 0);
+    const snap = (g: number) => (g >= 3 ? 4 : g >= 2 ? 2 : 1);
+    const tally = new Map<number, number>();
+    gaps.forEach((g) => tally.set(snap(g), (tally.get(snap(g)) ?? 0) + 1));
+    // The commonest; a tie goes to the longer gap.
+    const every = [...tally].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] ?? 1;
+    return { count: later.length, every, first };
   };
   // Delete a call's words (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html): the call named as its row names it,
   // what is deleted with it and what stays, and the later calls of its series as the choice, their days grey under it.
@@ -823,13 +838,38 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
           <ScheduleDialog
             date={dlg.date}
             reschedule={dlg.reschedule}
+            rest={dlg.reschedule ? restOf(dlg.reschedule.id) : null}
             initialTopic={dlg.topic ?? ""}
             lastLink={plan.lastLink}
             coachTz={plan.coachTz ?? null}
             dots={dots}
             today={today}
             onSave={(v) => {
-              if (dlg.reschedule) {
+              if (dlg.reschedule && v.scope === "rest") {
+                // The call and the later ones of its series, moved together: each its place in the rhythm from the new day.
+                const ids = [dlg.reschedule.id, ...laterOf(dlg.reschedule.id).map((id) => byId(id)!).sort((a, b) => (a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date))).map((m) => m.id)];
+                const oldTopic = dlg.reschedule.topic;
+                const oldLink = dlg.reschedule.link ?? null;
+                ids.forEach((id, i) => {
+                  const was = byId(id);
+                  patchMeeting(id, {
+                    date: addDaysIso(v.date, i * v.repeatWeeks * 7),
+                    time: v.time,
+                    tz: v.tz,
+                    durationMinutes: v.durationMinutes,
+                    ...(i === 0 || (was?.link ?? null) === oldLink ? { link: v.link, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" } : {}),
+                    ...(i === 0 || was?.topic === oldTopic ? { topic: v.topic } : {}),
+                    over: undefined,
+                    toComplete: false,
+                    kind: v.meetingType,
+                  });
+                });
+                const weekday = parse(v.date).toLocaleDateString("en-GB", { weekday: "long" });
+                act(
+                  () => moveMeetingSeriesAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", meetingType: v.meetingType, repeatWeeks: v.repeatWeeks })),
+                  `${ids.length} calls moved to ${weekday}s${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new times`
+                );
+              } else if (dlg.reschedule) {
                 // Moved: whether it is over is worked out afresh from its new day (the server's flags were for the old one).
                 patchMeeting(dlg.reschedule.id, { ...v, over: undefined, toComplete: false, kind: v.meetingType, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" });
                 act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", meetingType: v.meetingType })), `Moved to ${dayMonth(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
@@ -1238,7 +1278,7 @@ function MiniCalendar({ today, selected, dots, onPick, series = [] }: { today: s
 
 /** Booking a call, or moving one: the day, a 24-hour time, how long, what about, the way in. The event pop-up's pattern
  *  (21 Oct): the kind as tiles, a clean line for the words, the month on the left with the fields on the right, Cancel and one black pill. */
-function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; initialTopic?: string; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null; repeatWeeks: number; count: number; meetingType: MeetingTypeId }) => void }) {
+function ScheduleDialog({ date: initialDate, reschedule, rest = null, initialTopic = "", lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; /** Rescheduling a call of a series: how many of it come after this one, its rhythm in weeks, and whether it is the first still to come. */ rest?: { count: number; every: number; first: boolean } | null; initialTopic?: string; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null; repeatWeeks: number; count: number; meetingType: MeetingTypeId; /** Rescheduling: this call alone, or it and the later ones of its series. */ scope: "one" | "rest" }) => void }) {
   const [date, setDate] = useState(reschedule?.date ?? initialDate);
   const [time, setTime] = useState(reschedule?.time ?? "");
   // The time is in the coach's own timezone unless they pick another; a
@@ -1256,25 +1296,40 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
   // A new call can repeat: every 1, 2 or 4 weeks, this many times (0: once).
   const [repeatWeeks, setRepeatWeeks] = useState(0);
   const [count, setCount] = useState("6");
+  // Rescheduling a call of a series (11 Nov, Alex: "the remaining calls are all going to be on Fridays at 9 am"): this
+  // call alone, or it and every later one, on a weekday, at a time and a rhythm, from this call's week.
+  const [scope, setScope] = useState<"one" | "rest">("one");
+  const [every, setEvery] = useState(rest?.every ?? 1);
+  const moving = !!reschedule && !!rest && scope === "rest";
   const calls = Math.min(26, Math.max(2, Number(count) || 2));
-  const lastDate = date ? addDaysIso(date, (calls - 1) * repeatWeeks * 7) : "";
   // Repeating, it is set as it is thought (11 Nov, Alex: "every Tuesday at 9:00"): the weekday picked, the first call the
   // next one of it from today, every call of the series lit on the month and said back in words under it.
-  const repeating = !reschedule && repeatWeeks > 0;
+  const repeating = (!reschedule && repeatWeeks > 0) || moving;
+  const weeks = moving ? every : repeatWeeks;
+  const total = moving ? rest!.count + 1 : calls;
+  const lastDate = date ? addDaysIso(date, (total - 1) * weeks * 7) : "";
   const weekdayOf = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? (parse(iso).getDay() + 6) % 7 : -1);
   const passedToday = (t: string) => {
     const now = new Date();
     return !!t && t <= `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   };
   const pickWeekday = (i: number) => {
+    if (moving) {
+      // Moving the rest: that weekday in this call's own week, else the next one still to come.
+      const own = reschedule!.date;
+      let d = addDaysIso(own, i - weekdayOf(own));
+      while (d < today || (d === today && passedToday(tidyTime(time)))) d = addDaysIso(d, 7);
+      setDate(d);
+      return;
+    }
     const ahead = (i - weekdayOf(today) + 7) % 7;
     setDate(addDaysIso(today, ahead === 0 && passedToday(tidyTime(time)) ? 7 : ahead));
   };
   // Repeating from today at a time already gone: the series starts on the same weekday a week on.
   if (repeating && date === today && passedToday(tidyTime(time))) setDate(addDaysIso(today, 7));
-  const series = repeating && date ? Array.from({ length: calls }, (_, i) => addDaysIso(date, i * repeatWeeks * 7)) : [];
+  const series = repeating && date ? Array.from({ length: total }, (_, i) => addDaysIso(date, i * weeks * 7)) : [];
   const dayLong = date ? parse(date).toLocaleDateString("en-GB", { weekday: "long" }) : "";
-  const every = repeatWeeks === 1 ? `Every ${dayLong}` : repeatWeeks === 2 ? `Every other ${dayLong}` : `Every 4 weeks on ${dayLong}`;
+  const everyWords = weeks === 1 ? `Every ${dayLong}` : weeks === 2 ? `Every other ${dayLong}` : `Every 4 weeks on ${dayLong}`;
   const linkOk = link.trim() === "" || providerOf(link) != null;
   const kind = MEETING_TYPES.find((t) => t.id === mtype) ?? MEETING_TYPES[0];
   return (
@@ -1313,9 +1368,10 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
         <div className="npd-side">
           {/* 11 Nov, Alex: Repeat and On side by side as dropdowns, On only once it repeats; under them the day and the
               time (Once) or the time and how many (repeating), so the rows are the same either way and nothing moves. */}
-          {!reschedule && (
+          {(!reschedule || rest) && (
             <div className="npd-dates rt-when">
-              <BoxPick
+              {/* The same row on a call of a series (11 Nov, Alex): which calls the change is for, then the weekday. */}
+              {reschedule ? null : <BoxPick
                 head="Repeat"
                 value={String(repeatWeeks)}
                 options={[
@@ -1325,7 +1381,19 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
                   { value: "4", label: "Every 4 weeks" },
                 ]}
                 onChange={(v) => setRepeatWeeks(Number(v))}
-              />
+              />}
+              {reschedule && rest && (
+                <BoxPick
+                  head="Apply to"
+                  value={scope}
+                  options={[
+                    { value: "one", label: "This call" },
+                    // 11 Nov, Alex ("this and later is not a good name"): the calls it moves, counted.
+                    { value: "rest", label: rest.first ? `All ${rest.count + 1} calls` : `The last ${rest.count + 1} calls` },
+                  ]}
+                  onChange={(v) => setScope(v === "rest" ? "rest" : "one")}
+                />
+              )}
               {repeating ? (
                 <BoxPick head="On" value={String(weekdayOf(date))} options={WEEKDAYS.map((d, i) => ({ value: String(i), label: d }))} onChange={(v) => pickWeekday(Number(v))} />
               ) : (
@@ -1343,7 +1411,19 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
             {/* The shared time field (3 Nov, Alex: was a bare typed box headed Time | 24h); a typed time read by its own
                 parseTime ("930", "1530", "3pm"), so 25:00 or 12:75 are never taken. */}
             <TimePick value={time} onPick={setTime} head={repeating ? "At" : "Time"} label="Time" />
-            {repeating && (
+            {moving && (
+              <BoxPick
+                head="Repeat"
+                value={String(every)}
+                options={[
+                  { value: "1", label: "Weekly" },
+                  { value: "2", label: "Every 2 weeks" },
+                  { value: "4", label: "Every 4 weeks" },
+                ]}
+                onChange={(v) => setEvery(Number(v))}
+              />
+            )}
+            {repeating && !moving && (
               <label className="npd-date rt-count">
                 <span className="npd-date-head">How many</span>
                 <span className="rt-count-v">
@@ -1379,17 +1459,17 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
             <input className="npd-line" type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://meet.google.com/abc-defg-hij" />
           </label>
           {/* The series said back at the column's foot, beside the month, its room kept on Once so nothing moves. */}
-          {!reschedule && (
+          {(!reschedule || rest) && (
             <div className={`rt-series${repeating && date ? "" : " off"}`} aria-live="polite" aria-hidden={!(repeating && date)}>
               <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M17 3.5 20 6.5l-3 3M4 11.5v-1a4 4 0 0 1 4-4h12M7 20.5 4 17.5l3-3M20 12.5v1a4 4 0 0 1-4 4H4" />
               </svg>
               <span>
                 <b>
-                  {every}
+                  {everyWords}
                   {time ? ` at ${tidyTime(time)}` : ""}
                 </b>
-                {date ? `, from ${dayMonth(date)} to ${dayMonth(lastDate)}, ${calls} calls` : ""}
+                {date ? `, from ${dayMonth(date)} to ${dayMonth(lastDate)}, ${total} calls` : ""}
               </span>
             </div>
           )}
@@ -1399,7 +1479,7 @@ function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", last
       <div className="npd-foot">
         {link.trim() && !linkOk && <span className="rt-bad">Not a meeting link yet.</span>}
         <DialogClose className="npd-cancel">Cancel</DialogClose>
-        <button type="button" className="npd-save" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null, repeatWeeks, count: repeatWeeks ? calls : 1, meetingType: mtype })}>
+        <button type="button" className="npd-save" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null, repeatWeeks: moving ? every : repeatWeeks, count: moving ? total : repeatWeeks ? calls : 1, meetingType: mtype, scope: moving ? "rest" : "one" })}>
           {reschedule ? "Move" : "Schedule"}
         </button>
       </div>
