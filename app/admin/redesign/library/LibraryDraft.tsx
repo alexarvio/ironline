@@ -475,8 +475,8 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         )}
         {dlg?.kind === "remove" && dlgItem && (
           <ConfirmDialog
-            title="Remove the demo?"
-            description={`It comes off ${dlgItem.name} for every client.`}
+            title={`Remove the demo from ${dlgItem.name}?`}
+            description="Every client with this exercise stops seeing it."
             confirm="Remove"
             danger
             onConfirm={() => {
@@ -488,8 +488,8 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         )}
         {dlg?.kind === "takeout" && dlgItem && (
           <ConfirmDialog
-            title={`Delete ${dlgItem.name}?`}
-            description="Programmes that have it keep it."
+            title={`Delete ${dlgItem.name} from the library?`}
+            description="Programmes that already have it keep it."
             confirm="Delete"
             danger
             onConfirm={() => {

@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { addClientPhaseAction, applyMetricChangesAction, deletePhaseAction, deployPhaseNowAction, dismissHomeActionAction, markSeenAction, saveAndSchedulePhaseOrSayWhyAction, sendChatMessageAction, setCheckInDayAction, setMetricSummaryAction, setMonthlyCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../../../components/ui/dialog";
+import { ConfirmChoice, ConfirmText } from "../ConfirmParts";
 import { CalendarIcon, ChartIcon, ChatIcon, NoteIcon,ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { LoggedMetric, LoggedValues } from "../../../lib/queries";
 import { ConfirmDialog, DeletePhaseDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
@@ -874,8 +875,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         )}
         {dlg?.kind === "deploy" && startHasCome && (
           <ConfirmDialog
-            title={`Make ${plan.name} live?`}
-            description={`${firstName}'s check-in asks for these metrics from today.`}
+            title={`Make “${plan.name}” live?`}
+            description={`${firstName}’s check-in asks for its metrics from today.`}
             confirm="Make it live"
             onConfirm={() => {
               close();
@@ -886,8 +887,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         {/* Now, whatever its dates say (21 Oct, as Training): it starts today. */}
         {dlg?.kind === "liveNow" && (
           <ConfirmDialog
-            title={`Make ${plan.name} live now?`}
-            description={`It starts today; ${firstName}'s check-in asks for these metrics from now.`}
+            title={`Make “${plan.name}” live now?`}
+            description={`Its start moves to this week, and ${firstName}’s check-in asks for its metrics from today.`}
             confirm="Make it live"
             onConfirm={() => {
               close();
@@ -897,8 +898,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         )}
         {dlg?.kind === "backToDraft" && (
           <ConfirmDialog
-            title="Back to draft?"
-            description={`${plan.name} comes off ${firstName}'s schedule.`}
+            title={`Move “${plan.name}” back to draft?`}
+            description={`It comes off ${firstName}’s schedule.`}
             confirm="Back to draft"
             onConfirm={() => {
               close();
@@ -934,6 +935,8 @@ function RemoveMetricDialog({ metric: m, firstName, onRemove, onClose }: { metri
   const [agreed, setAgreed] = useState(false);
   const cancel = useRef<HTMLButtonElement>(null);
   const logged = m.last != null;
+  // The metric's name in a sentence: Weight → weight, an acronym (HRV) kept as it is.
+  const low = /^[A-Z][a-z]/.test(m.name) ? m.name[0].toLowerCase() + m.name.slice(1) : m.name;
   return (
     <DialogContent
       className="dlh"
@@ -944,25 +947,32 @@ function RemoveMetricDialog({ metric: m, firstName, onRemove, onClose }: { metri
       }}
     >
       <div className="dlh-head">
-        <DialogTitle className="dlh-title">Remove {m.name}?</DialogTitle>
+        <DialogTitle className="dlh-title">Remove {m.name} from the check-in?</DialogTitle>
         <button type="button" className="dlh-x" onClick={onClose} aria-label="Close">
           ✕
         </button>
       </div>
-      <DialogDescription className="dlh-what">{logged && agreed ? "This permanently deletes what was logged for it. It can’t be undone." : logged ? `It comes off ${firstName}’s check-in. What they logged stays.` : `It comes off ${firstName}’s check-in.`}</DialogDescription>
-      {logged && (
-        <button type="button" role="checkbox" aria-checked={agreed} className="dlh-ack" onClick={() => setAgreed((x) => !x)}>
-          <span className={`dlh-box${agreed ? " on" : ""}`} aria-hidden="true">
-            {agreed ? "✓" : ""}
-          </span>
-          Delete {firstName}&rsquo;s logged {m.name} too
-        </button>
+      <ConfirmText>
+        {firstName} won&rsquo;t be asked for it any more.
+        {logged && (agreed ? ` Their logged ${low} is deleted too. This can’t be undone.` : ` What they logged is kept.`)}
+      </ConfirmText>
+      {logged && m.last && (
+        <ConfirmChoice
+          checked={agreed}
+          onChange={setAgreed}
+          title={
+            <>
+              Also delete {firstName}&rsquo;s logged {low}
+            </>
+          }
+          sub={<SepJoin parts={[`Last logged ${withUnit(m.last.value, m.unit)}`, m.last.when]} />}
+        />
       )}
       <div className="dlh-foot">
         <button ref={cancel} type="button" className="dlh-cancel" onClick={onClose}>
           Cancel
         </button>
-        <button type="button" className="dlh-delete" onClick={() => onRemove(logged && agreed)}>
+        <button type="button" className="dlh-danger" onClick={() => onRemove(logged && agreed)}>
           Remove
         </button>
       </div>

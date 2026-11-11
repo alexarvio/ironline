@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pop-up anatomy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --faint:#8b93a1; --line:#E1E5EB; --rust:#b8471f; --red:#b42318; --page:#f4f7fc; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:Archivo,system-ui,sans-serif; font-weight:500; color:var(--ink); background:#fff; padding:28px 20px 64px; -webkit-font-smoothing:antialiased; }
+  h1 { font-size:20px; font-weight:600; max-width:1160px; margin:0 auto 4px; }
+  .sub { color:var(--faint); font-size:13px; max-width:1160px; margin:0 auto 22px; }
+  .opts { display:flex; flex-wrap:wrap; gap:24px; justify-content:center; align-items:flex-start; max-width:1240px; margin:0 auto; }
+  .opt { width:380px; max-width:100%; }
+  .opt.w { width:500px; }
+  .opt > h2 { font-size:14px; font-weight:600; margin-bottom:4px; }
+  .opt > p { font-size:12.5px; color:var(--faint); line-height:1.5; margin-bottom:12px; min-height:56px; }
+  .stage { background:rgba(20,26,36,.42); border-radius:22px; padding:44px 20px; display:grid; place-items:center; }
+  .card { width:100%; background:#fff; border-radius:20px; box-shadow:0 30px 60px -24px rgba(16,24,40,.35), 0 0 0 1px var(--line); padding:20px 20px 16px; }
+  .head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .title { font-size:18px; font-weight:600; line-height:24px; }
+  .x { flex:none; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; color:var(--faint); margin:-2px -4px 0 0; }
+  .x svg { width:14px; height:14px; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; fill:none; }
+  .text { font-size:14px; line-height:21px; color:var(--body); margin-top:8px; }
+  .text b { font-weight:600; color:var(--ink); }
+  .foot { display:flex; align-items:center; justify-content:flex-end; gap:18px; margin-top:20px; }
+  .cancel { font-size:14px; font-weight:600; color:var(--sec); }
+  .del-words { font-size:14px; font-weight:600; color:var(--red); }
+  .pill { height:36px; padding:0 18px; border-radius:999px; display:inline-grid; place-items:center; font-size:14px; font-weight:600; }
+  .pill.red { background:var(--red); color:#fff; }
+  .pill.white { background:#fff; color:var(--ink); box-shadow:inset 0 0 0 1px #DCE1E8; }
+  .box { flex:none; width:18px; height:18px; border-radius:5px; box-shadow:inset 0 0 0 1.5px #C9CFD8; background:#fff; }
+  .box.on { background:var(--ink); box-shadow:none; display:grid; place-items:center; }
+  .box.on svg { width:11px; height:11px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* A: the sentence, then the choice as its own quiet row. */
+  .a .choice { display:flex; gap:12px; align-items:flex-start; margin-top:16px; padding:12px 14px; border-radius:14px; background:#F5F6F8; }
+  .a .choice-t { font-size:14px; font-weight:600; line-height:18px; }
+  .a .choice-s { display:block; font-size:12.5px; color:var(--faint); margin-top:2px; font-weight:500; }
+
+  /* B: what goes and what stays, as two lines; the choice a switch. */
+  .b .facts { margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+  .b .fact { display:grid; grid-template-columns:56px 1fr; gap:10px; font-size:14px; line-height:20px; color:var(--body); }
+  .b .fact span:first-child { font-size:10.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--sec); padding-top:1px; }
+  .b .fact.goes span:first-child { color:var(--red); }
+  .b .choice { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:16px; padding-top:2px; }
+  .b .choice-t { font-size:14px; font-weight:600; }
+  .b .choice-s { display:block; font-size:12.5px; color:var(--faint); margin-top:1px; font-weight:500; }
+  .sw { flex:none; width:36px; height:22px; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px #DCE1E8; position:relative; }
+  .sw::after { content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#C9CFD8; }
+
+  /* C: the thing itself shown first, so the title can be short. */
+  .c .thing { display:flex; align-items:center; gap:12px; margin-top:14px; padding:12px 14px; border-radius:14px; box-shadow:inset 0 0 0 1px var(--line); }
+  .c .tile { flex:none; width:40px; text-align:center; line-height:1; }
+  .c .tile small { display:block; font-size:10px; font-weight:600; letter-spacing:.14em; color:var(--sec); }
+  .c .tile b { display:block; font-size:20px; font-weight:300; margin-top:3px; }
+  .c .thing-t { font-size:14.5px; font-weight:600; }
+  .c .thing-s { font-size:12.5px; color:var(--faint); margin-top:2px; }
+  .c .choice { display:flex; gap:12px; align-items:center; margin-top:14px; font-size:14px; }
+  .c .foot { justify-content:space-between; }
+  .c .foot .right { display:flex; gap:10px; }
+
+  .notes { max-width:1160px; margin:28px auto 0; color:var(--body); font-size:13.5px; line-height:1.7; }
+  .notes h3 { font-size:14px; font-weight:600; color:var(--ink); margin:14px 0 4px; }
+  .notes ul { padding-left:18px; }
+  .bad { color:var(--faint); text-decoration:line-through; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="ck" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+</defs></svg>
+
+<h1>Pop-ups: title, explanation, choice, action</h1>
+<p class="sub">Mockup with sample words: deleting a call that repeats. Nothing here is built yet. The same four parts in each, laid out three ways.</p>
+
+<div class="opts">
+  <div class="opt a">
+    <h2>A. One sentence, the choice in a well</h2>
+    <p>The explanation is one plain sentence saying what happens. The optional thing sits in a soft grey box of its own, so it reads as a choice, not more text. Delete is a red pill.</p>
+    <div class="stage"><div class="card">
+      <div class="head"><div class="title">Delete the call “lol”?</div><span class="x"><svg><use href="#x"/></svg></span></div>
+      <p class="text">Its notes and summary are deleted with it. The goals you set on this call stay on Lena’s Home.</p>
+      <div class="choice"><span class="box"></span><span><span class="choice-t">Also delete the next 5 calls</span><span class="choice-s">Every Tuesday, 24/11 – 22/12</span></span></div>
+      <div class="foot"><span class="cancel">Cancel</span><span class="pill red">Delete</span></div>
+    </div></div>
+  </div>
+
+  <div class="opt b">
+    <h2>B. What goes, what stays</h2>
+    <p>No sentence to parse: two short labelled lines, GOES and STAYS. The choice is a switch with its range under it. Delete stays red words, as today.</p>
+    <div class="stage"><div class="card">
+      <div class="head"><div class="title">Delete the call “lol”?</div><span class="x"><svg><use href="#x"/></svg></span></div>
+      <div class="facts">
+        <div class="fact goes"><span>Goes</span><span>The call, its notes and summary</span></div>
+        <div class="fact"><span>Stays</span><span>The 3 goals set on it, on Lena’s Home</span></div>
+      </div>
+      <div class="choice"><span><span class="choice-t">The next 5 calls too</span><span class="choice-s">Every Tuesday, 24/11 – 22/12</span></span><span class="sw"></span></div>
+      <div class="foot"><span class="cancel">Cancel</span><span class="del-words">Delete</span></div>
+    </div></div>
+  </div>
+
+  <div class="opt c">
+    <h2>C. The thing first</h2>
+    <p>The pop-up shows what you are about to delete, the call as its row, so the title can stay short and nothing has to be explained in words. Cancel and Delete as two pills.</p>
+    <div class="stage"><div class="card">
+      <div class="head"><div class="title">Delete this call?</div><span class="x"><svg><use href="#x"/></svg></span></div>
+      <div class="thing"><div class="tile"><small>NOV</small><b>17</b></div><div><div class="thing-t">lol</div><div class="thing-s">Tue 18:00 – 18:30 | with Lena</div></div></div>
+      <p class="text">The goals set on it stay on Lena’s Home.</p>
+      <div class="choice"><span class="box on"><svg><use href="#ck"/></svg></span><span>And the next 5 calls, every Tuesday until 22/12</span></div>
+      <div class="foot"><span></span><span class="right"><span class="pill white">Cancel</span><span class="pill red">Delete</span></span></div>
+    </div></div>
+  </div>
+</div>
+
+<h1 style="margin-top:34px">A, on two more</h1>
+<p class="sub">Today’s Remove Weight and Delete phase, in A’s layout, the words rewritten.</p>
+<div class="opts">
+  <div class="opt a w">
+    <h2>Remove a metric, with its choice</h2>
+    <p>Today: “It comes off Alex’s check-in. What they logged stays.” and a bare checkbox.</p>
+    <div class="stage"><div class="card">
+      <div class="head"><div class="title">Remove Weight from the check-in?</div><span class="x"><svg><use href="#x"/></svg></span></div>
+      <p class="text">Alex won’t be asked for it any more. Their weigh-ins stay on their charts.</p>
+      <div class="choice"><span class="box"></span><span><span class="choice-t">Also delete Alex’s weigh-ins</span><span class="choice-s">14 weigh-ins, 2/9 – 11/11</span></span></div>
+      <div class="foot"><span class="cancel">Cancel</span><span class="pill red">Remove</span></div>
+    </div></div>
+  </div>
+  <div class="opt a w">
+    <h2>Delete a phase, nothing to choose</h2>
+    <p>Today: “This permanently deletes the phase. It can’t be undone.” under the phase’s name alone.</p>
+    <div class="stage"><div class="card">
+      <div class="head"><div class="title">Delete the phase “Alex Arvio Lucini”?</div><span class="x"><svg><use href="#x"/></svg></span></div>
+      <p class="text">Everything planned in it is deleted, and Alex won’t see it any more. This can’t be undone.</p>
+      <div class="foot"><span class="cancel">Cancel</span><span class="pill red">Delete</span></div>
+    </div></div>
+  </div>
+  <div class="opt a w">
+    <h2>The same, ticked</h2>
+    <p>Ticked, the button stays the one word: the title and the tick already say what it does.</p>
+    <div class="stage"><div class="card">
+      <div class="head"><div class="title">Remove Weight from the check-in?</div><span class="x"><svg><use href="#x"/></svg></span></div>
+      <p class="text">Alex won’t be asked for it any more. Their weigh-ins stay on their charts.</p>
+      <div class="choice"><span class="box on"><svg><use href="#ck"/></svg></span><span><span class="choice-t">Also delete Alex’s weigh-ins</span><span class="choice-s">14 weigh-ins, 2/9 – 11/11</span></span></div>
+      <div class="foot"><span class="cancel">Cancel</span><span class="pill red">Remove</span></div>
+    </div></div>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>Why today’s words read wrong</h3>
+  <ul>
+    <li><span class="bad">The call goes, with its notes and recap. Goals set in it stay.</span> Things “go” and “stay” as if by themselves; nobody is doing anything, so it reads like a puzzle.</li>
+    <li>A, B and C say who does what, name the thing, and use the words the screen uses (summary, not recap; the next 5 calls, not later calls in this series).</li>
+  </ul>
+  <h3>A rule for the words, whichever layout</h3>
+  <ul>
+    <li>Title: the action and the thing, as a question. <i>Delete the call “lol”?</i></li>
+    <li>Explanation: one or two short sentences, only what isn’t obvious: what else goes with it, and what stays. Never how the feature works.</li>
+    <li>Choice: what ticking it adds, starting with a verb or “The next…”, with its facts grey under it.</li>
+    <li>Action: the verb alone, <i>Delete</i> or <i>Remove</i>, never what it acts on: the title already says it (11 Nov, Alex).</li>
+  </ul>
+</div>
+</body>
+</html>

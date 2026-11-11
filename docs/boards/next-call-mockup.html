@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Next call</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --faint:#8b93a1; --label:#98A2B3; --line:#E1E5EB; --btn:#DCE1E8; --page:#f4f7fc; --blue:#2f6fd6; --green:#2f7a3f; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:Archivo,system-ui,sans-serif; font-weight:500; color:var(--ink); background:var(--page); padding:28px 24px 64px; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1120px; margin:0 auto; }
+  h1 { font-size:20px; font-weight:600; margin-bottom:4px; }
+  .sub { color:var(--faint); font-size:13px; margin-bottom:26px; }
+  .opt { margin-bottom:40px; }
+  .opt > h2 { font-size:14px; font-weight:600; margin-bottom:4px; }
+  .opt > p { font-size:12.5px; color:var(--faint); line-height:1.5; margin-bottom:12px; max-width:760px; }
+  .sec-title { font-size:20px; font-weight:600; margin:0 0 12px; }
+  .card { background:#fff; border-radius:18px; box-shadow:inset 0 0 0 1px var(--line); }
+  .tile { flex:none; width:46px; text-align:center; line-height:1; }
+  .tile small { display:block; font-size:10.5px; font-weight:600; letter-spacing:.16em; color:var(--sec); }
+  .tile b { display:block; font-size:24px; font-weight:300; margin-top:4px; font-variant-numeric:tabular-nums; }
+  .title { font-size:16px; font-weight:600; }
+  .facts { font-size:13px; color:var(--faint); margin-top:3px; display:flex; align-items:center; gap:0; font-variant-numeric:tabular-nums; }
+  .bar { display:inline-block; width:1px; height:11px; background:#C9CFD8; margin:0 8px; }
+  .tag { display:inline-flex; align-items:center; gap:5px; height:22px; padding:0 8px; border-radius:999px; background:rgba(47,111,214,.10); color:var(--blue); font-size:12px; font-weight:600; }
+  .tag svg { width:12px; height:12px; stroke:currentColor; stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .pill { display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 14px; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px var(--btn); font-size:13.5px; font-weight:600; color:var(--ink); white-space:nowrap; }
+  .pill svg { width:15px; height:15px; stroke:currentColor; stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .round { flex:none; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; color:var(--ink); }
+  .round svg { width:16px; height:16px; fill:currentColor; }
+  .ring { flex:none; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; box-shadow:inset 0 0 0 1px var(--btn); background:#fff; color:var(--blue); }
+  .ring svg { width:14px; height:14px; stroke:currentColor; stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .soon { font-size:13px; color:var(--sec); white-space:nowrap; }
+  .lbl { font-size:10.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--sec); }
+  .note { font-size:14px; line-height:22px; color:var(--body); margin-top:8px; }
+  .ph { color:var(--label); }
+  .goal { display:flex; gap:10px; align-items:flex-start; font-size:14px; line-height:20px; color:var(--body); }
+  .goal i { flex:none; width:7px; height:7px; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--ink); margin-top:7px; }
+  .goal.past { color:var(--faint); }
+  .goal.past i { box-shadow:inset 0 0 0 1.5px #C9CFD8; }
+  .goals { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+
+  /* A */
+  .a .head { display:flex; align-items:center; gap:18px; padding:18px 18px 18px 22px; }
+  .a .head .main { flex:1; min-width:0; }
+  .a .head .right { display:flex; align-items:center; gap:8px; }
+  .a .grid { display:grid; grid-template-columns:1fr 1fr; gap:0; padding:0 22px 6px 86px; }
+  .a .cell { padding:16px 24px 18px 0; min-height:118px; }
+  .a .cell + .cell { padding-left:24px; }
+  .a .cell:nth-child(3) { padding-left:0; }
+
+  /* B */
+  .b .head { display:flex; align-items:center; gap:18px; padding:18px 18px 4px 22px; }
+  .b .head .main { flex:1; min-width:0; }
+  .b .head .right { display:flex; align-items:center; gap:8px; }
+  .b .body { display:grid; grid-template-columns:200px 1fr; gap:0; padding:10px 22px 22px 86px; }
+  .b .tabs { display:flex; flex-direction:column; gap:2px; padding-right:22px; }
+  .b .tab { height:36px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-radius:10px; font-size:13.5px; font-weight:600; color:var(--sec); }
+  .b .tab.on { background:#F5F6F8; color:var(--ink); }
+  .b .tab small { font-size:12px; color:var(--label); font-weight:500; }
+  .b .pane { min-height:190px; padding-top:6px; }
+
+  /* C */
+  .c .card { display:grid; grid-template-columns:280px 1fr; }
+  .c .side { padding:22px; display:flex; flex-direction:column; gap:14px; }
+  .c .side .when { display:flex; gap:14px; align-items:center; }
+  .c .side .title { font-size:18px; }
+  .c .side .rows { display:flex; flex-direction:column; gap:8px; font-size:13.5px; color:var(--body); }
+  .c .side .row { display:flex; align-items:center; gap:8px; }
+  .c .side .row svg { width:15px; height:15px; stroke:var(--faint); stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .c .side .foot { margin-top:auto; display:flex; gap:8px; align-items:center; }
+  .c .doc { padding:22px 26px 22px 26px; display:flex; flex-direction:column; gap:20px; }
+  .c .doc-top { display:flex; justify-content:flex-end; margin:-8px -10px -12px 0; }
+
+  .notes { color:var(--body); font-size:13.5px; line-height:1.7; max-width:880px; }
+  .notes h3 { font-size:14px; font-weight:600; color:var(--ink); margin:14px 0 4px; }
+  .notes ul { padding-left:18px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="vid" viewBox="0 0 24 24"><rect x="3" y="6.5" width="12.5" height="11" rx="2.5"/><path d="m15.5 10.5 5-3v9l-5-3"/></symbol>
+  <symbol id="ck" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="dots" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></symbol>
+  <symbol id="link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+<h1>The next call, cleaner</h1>
+<p class="sub">Mockup with sample words, the Meetings tab’s Next call. Nothing here is built yet. Same parts in each: the date, the title, the kind of call, the time, the link, Mark completed with its check, the ⋯, and the four notes.</p>
+
+<!-- A -->
+<div class="opt a">
+  <h2>A. Everything open, nothing to switch</h2>
+  <p>The title once. Its facts on one grey line under it. The four notes as two by two, each with its small caps label, so the coach sees prep and the last focus list at a glance and types straight into any. No tabs.</p>
+  <div class="sec-title">Next call</div>
+  <div class="card">
+    <div class="head">
+      <div class="tile"><small>NOV</small><b>14</b></div>
+      <div class="main">
+        <div class="title">Monthly check-in</div>
+        <div class="facts"><span class="tag"><svg><use href="#vid"/></svg>Check-in</span><i class="bar"></i>Sat 09:30 – 10:30<i class="bar"></i>In 3 days</div>
+      </div>
+      <div class="right">
+        <span class="ring" title="Join the call"><svg><use href="#link"/></svg></span>
+        <span class="pill"><svg><use href="#ck"/></svg>Mark completed</span>
+        <span class="round"><svg><use href="#dots"/></svg></span>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="cell"><div class="lbl">Prep notes</div><p class="note">Ask about sleep since the move. Check the deadlift form video from Tuesday.</p></div>
+      <div class="cell"><div class="lbl">Meeting notes</div><p class="note ph">What was said on the call…</p></div>
+      <div class="cell"><div class="lbl">Summary for Alex</div><p class="note ph">What Alex reads after the call…</p></div>
+      <div class="cell"><div class="lbl">To focus on</div>
+        <div class="goals"><span class="goal past"><i></i>8k steps a day</span><span class="goal past"><i></i>Protein at every meal</span><span class="goal past"><i></i>Lights out by 23:00</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B -->
+<div class="opt b">
+  <h2>B. The notes as a list on the left</h2>
+  <p>The same head. The four notes as a quiet list on the left (what has something in it says so in grey), the one picked on the right, as tall as the fullest. Closest to today, without the capsule and the title said twice.</p>
+  <div class="sec-title">Next call</div>
+  <div class="card">
+    <div class="head">
+      <div class="tile"><small>NOV</small><b>14</b></div>
+      <div class="main">
+        <div class="title">Monthly check-in</div>
+        <div class="facts"><span class="tag"><svg><use href="#vid"/></svg>Check-in</span><i class="bar"></i>Sat 09:30 – 10:30<i class="bar"></i>In 3 days</div>
+      </div>
+      <div class="right">
+        <span class="ring" title="Join the call"><svg><use href="#link"/></svg></span>
+        <span class="pill"><svg><use href="#ck"/></svg>Mark completed</span>
+        <span class="round"><svg><use href="#dots"/></svg></span>
+      </div>
+    </div>
+    <div class="body">
+      <div class="tabs">
+        <span class="tab on">Prep notes <small>2 lines</small></span>
+        <span class="tab">Meeting notes</span>
+        <span class="tab">Summary for Alex</span>
+        <span class="tab">To focus on <small>3</small></span>
+      </div>
+      <div class="pane"><p class="note" style="margin-top:0">Ask about sleep since the move. Check the deadlift form video from Tuesday.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- C -->
+<div class="opt c">
+  <h2>C. The call on the left, a page of notes on the right</h2>
+  <p>The call’s facts as a short column, Mark completed at its foot. The notes as one page, read top to bottom in the order of a call: before, during, after, and what Alex works on next. Most like a document.</p>
+  <div class="sec-title">Next call</div>
+  <div class="card">
+    <div class="side">
+      <div class="when"><div class="tile"><small>NOV</small><b>14</b></div><div><div class="title">Monthly check-in</div><div class="facts" style="margin-top:6px"><span class="tag"><svg><use href="#vid"/></svg>Check-in</span></div></div></div>
+      <div class="rows">
+        <span class="row"><svg><use href="#clock"/></svg>Sat 09:30 – 10:30</span>
+        <span class="row"><svg><use href="#cal"/></svg>In 3 days</span>
+        <span class="row"><svg><use href="#link"/></svg>Join the call</span>
+      </div>
+      <div class="foot"><span class="pill"><svg><use href="#ck"/></svg>Mark completed</span></div>
+    </div>
+    <div class="doc">
+      <div class="doc-top"><span class="round"><svg><use href="#dots"/></svg></span></div>
+      <div><div class="lbl">Prep notes</div><p class="note">Ask about sleep since the move. Check the deadlift form video from Tuesday.</p></div>
+      <div><div class="lbl">Meeting notes</div><p class="note ph">What was said on the call…</p></div>
+      <div><div class="lbl">Summary for Alex</div><p class="note ph">What Alex reads after the call…</p></div>
+      <div><div class="lbl">To focus on</div><div class="goals"><span class="goal past"><i></i>8k steps a day</span><span class="goal past"><i></i>Protein at every meal</span><span class="goal past"><i></i>Lights out by 23:00</span></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>The same in all three</h3>
+  <ul>
+    <li>The title once (today “lol” shows twice: on the row and again over the notes).</li>
+    <li>The time without the time zone: the coach’s own zone, as the Calendar shows it (09:30 – 10:30, not 09:30 – 10:30 GMT+7); a zone only when the client’s differs.</li>
+    <li>“In 3 days” says how soon, so the date tile needs no weekday.</li>
+    <li>The link as its round mark, Mark completed the white pill with its check, the ⋯ last (Reschedule, Edit link, Delete).</li>
+    <li>To focus on shows last time’s list greyed until new lines are typed, as today.</li>
+  </ul>
+</div>
+</div>
+</body>
+</html>

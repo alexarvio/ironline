@@ -483,8 +483,7 @@ function PhotoSlot({ coachId, kind, label, fact, path }: { coachId: number; kind
       <Dialog open={removing} onOpenChange={setRemoving}>
         {removing && (
           <ConfirmDialog
-            title={`Remove the ${label.toLowerCase()}?`}
-            description="It comes off your profile."
+            title={`Remove your ${label.toLowerCase()}?`}
             confirm="Remove"
             danger
             onConfirm={() => {

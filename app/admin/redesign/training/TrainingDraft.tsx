@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmChoice, ConfirmText } from "../ConfirmParts";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
@@ -796,10 +797,10 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
   };
   const removeRowCopy = (r: DraftRow) => ({
     title: `Remove ${r.name}?`,
-    what: <SepJoin parts={[`${r.sets} ${r.sets === 1 ? "set" : "sets"}`, r.logged.length ? `${r.logged.length} logged` : "nothing logged"]} />,
-    warn: r.logged.length ? `${firstName}'s ${r.logged.length} logged ${r.logged.length === 1 ? "set goes" : "sets go"} with it.` : null,
+    // Only what isn't obvious (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html): the client's logged sets.
+    text: r.logged.length ? `The ${r.logged.length} ${r.logged.length === 1 ? "set" : "sets"} ${firstName} logged on it ${r.logged.length === 1 ? "is" : "are"} deleted with it.` : null,
   });
-  const removeCardioCopy = (c: DraftCardio) => ({ title: `Remove ${c.name}?`, what: c.done ? "Done" : "Not done yet", warn: c.done ? `What ${firstName} logged on it goes with it.` : null });
+  const removeCardioCopy = (c: DraftCardio) => ({ title: `Remove ${c.name}?`, text: c.done ? `What ${firstName} logged on it is deleted with it.` : null });
   const sessionById = (id: number) => sessions.find((s) => s.id === id) ?? null;
 
   // Drag to reorder: exercises inside a session (queued on its bar), and
@@ -2319,10 +2320,11 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         )}
         {dlg?.kind === "copyWeek" && (
           <ConfirmDialog
-            title={`Copy Week ${dlg.from} here`}
-            description={`This week becomes Week ${dlg.from}, cardio included. Sessions with logged sets stay as they are.`}
-            confirm="Copy week"
-            tick={laterLabel ? "Also apply to the rest of the programme" : null}
+            title={`Copy Week ${dlg.from} to ${week.label}?`}
+            description={`${week.label} becomes a copy of it, cardio included. Sessions ${firstName} has already logged stay as they are.`}
+            confirm="Copy"
+            tick={laterLabel ? "Also copy it over the weeks after" : null}
+            tickSub={laterLabel ? (() => { const w = weeksWords(later.map((x) => x.index)); return w.charAt(0).toUpperCase() + w.slice(1); })() : undefined}
             onConfirm={(also) => {
               const from = weekNo(dlg.from);
               const targets = also ? weeks.filter((w) => w.index >= viewIdx).map((w) => weekNo(w.index)) : [weekNo(viewIdx)];
@@ -2373,8 +2375,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         {dlg?.kind === "removeWeek" && (
           <ConfirmDialog
             title={`Remove ${week.label}?`}
-            description="This cannot be undone."
-            confirm="Remove week"
+            description={`Its sessions are deleted with it, and the weeks after it move up one. This can’t be undone.`}
+            confirm="Remove"
             danger
             onConfirm={() => {
               const idx = viewIdx;
@@ -2433,15 +2435,15 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         )}
         {dlg?.kind === "deploy" && !(program.status === "draft" && !startHasCome) && (
           <ConfirmDialog
-            title={program.status === "scheduled" ? "Make it live now" : startHasCome ? "Make it live" : "Schedule it"}
+            title={program.status === "scheduled" ? `Make “${program.name}” live now?` : startHasCome ? `Make “${program.name}” live?` : `Schedule “${program.name}”?`}
             description={
               program.status === "scheduled"
-                ? `Live this week instead of ${program.startDate ? fmtDate(program.startDate) : "its start"}.`
+                ? `${firstName} gets it this week instead of ${program.startDate ? `on ${fmtDate(program.startDate)}` : "on its start"}.`
                 : startHasCome
-                  ? "Live this week."
-                  : `Goes out on ${program.startDate ? fmtDate(program.startDate) : "its start date"}.`
+                  ? `${firstName} gets it this week.`
+                  : `${firstName} gets it on ${program.startDate ? fmtDate(program.startDate) : "its start date"}.`
             }
-            confirm={program.status === "scheduled" ? "Make it live now" : startHasCome ? "Make it live" : "Schedule it"}
+            confirm={program.status === "scheduled" || startHasCome ? "Make it live" : "Schedule it"}
             onConfirm={() => {
               const now = program.status === "scheduled" || startHasCome;
               close();
@@ -2453,8 +2455,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
         {/* A draft that starts later, out this week instead of on its start (20 Oct, Alex). */}
         {dlg?.kind === "liveNow" && program.status === "draft" && (
           <ConfirmDialog
-            title="Make it live now"
-            description={`Live this week instead of ${program.startDate ? fmtDate(program.startDate) : "its start"}.`}
+            title={`Make “${program.name}” live now?`}
+            description={`${firstName} gets it this week instead of ${program.startDate ? `on ${fmtDate(program.startDate)}` : "on its start"}.`}
             confirm="Make it live"
             onConfirm={() => {
               close();
@@ -2465,8 +2467,8 @@ export default function TrainingDraft({ clientId, firstName, lbsFirst = false, p
 
         {dlg?.kind === "backToDraft" && (
           <ConfirmDialog
-            title="Back to draft"
-            description={`${program.name} stops being scheduled.`}
+            title={`Move “${program.name}” back to draft?`}
+            description={`It becomes a draft again, and ${firstName} won’t get it${program.startDate ? ` on ${fmtDate(program.startDate)}` : ""}.`}
             confirm="Back to draft"
             onConfirm={() => {
               close();
@@ -2628,28 +2630,20 @@ export function DeletePhaseDialog({ name, logged, firstName, onDelete, onClose }
       }}
     >
       <div className="dlh-head">
-        <DialogTitle className="dlh-title">Delete {name}?</DialogTitle>
+        <DialogTitle className="dlh-title">Delete the phase &ldquo;{name}&rdquo;?</DialogTitle>
         <button type="button" className="dlh-x" onClick={onClose} aria-label="Close">
           ✕
         </button>
       </div>
-      {/* Not what goes, just that it is for good (20 Oct, Alex). */}
-      <DialogDescription className="dlh-what">This permanently deletes the phase. It can&rsquo;t be undone.</DialogDescription>
-      {logged > 0 && (
-        <>
-          <button type="button" role="checkbox" aria-checked={agreed} className="dlh-ack" onClick={() => setAgreed((x) => !x)}>
-            <span className={`dlh-box${agreed ? " on" : ""}`} aria-hidden="true">
-              {agreed ? "✓" : ""}
-            </span>
-            Delete {firstName}&rsquo;s logged sessions too
-          </button>
-        </>
-      )}
+      {/* What goes with it, and that it is for good (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html). */}
+      <ConfirmText>Everything planned in it is deleted with it. This can&rsquo;t be undone.</ConfirmText>
+      {/* A gate: Delete wakes once it is ticked. */}
+      {logged > 0 && <ConfirmChoice checked={agreed} onChange={setAgreed} title={`I understand ${firstName}’s logged sessions are deleted`} />}
       <div className="dlh-foot">
         <button ref={cancel} type="button" className="dlh-cancel" onClick={onClose}>
           Cancel
         </button>
-        <button type="button" className="dlh-delete" disabled={logged > 0 && !agreed} onClick={onDelete}>
+        <button type="button" className="dlh-danger" disabled={logged > 0 && !agreed} onClick={onDelete}>
           Delete
         </button>
       </div>
@@ -2657,13 +2651,15 @@ export function DeletePhaseDialog({ name, logged, firstName, onDelete, onClose }
   );
 }
 
-/** Taking a row off a session, in the delete pop-up's style: the title, one line of what it is, the logged sets in red when there are any. Cancel holds the focus. */
-function RemoveDialog({ title, what, warn, onRemove, onClose }: { title: string; what: React.ReactNode; warn: string | null; onRemove: () => void; onClose: () => void }) {
+/** Taking a row off a session, as every confirm (ConfirmParts.tsx): the title, a sentence only when the client's logged
+ *  sets go with it, Cancel and the red Remove. Cancel holds the focus. */
+function RemoveDialog({ title, text, onRemove, onClose }: { title: string; text: string | null; onRemove: () => void; onClose: () => void }) {
   const cancel = useRef<HTMLButtonElement>(null);
   return (
     <DialogContent
       className="dlh"
       role="alertdialog"
+      {...(text ? {} : { "aria-describedby": undefined })}
       onOpenAutoFocus={(ev) => {
         ev.preventDefault();
         setTimeout(() => cancel.current?.focus(), 60);
@@ -2675,13 +2671,12 @@ function RemoveDialog({ title, what, warn, onRemove, onClose }: { title: string;
           ✕
         </button>
       </div>
-      <DialogDescription className="dlh-what">{what}</DialogDescription>
-      {warn && <p className="dlh-warn">{warn}</p>}
+      {text && <ConfirmText>{text}</ConfirmText>}
       <div className="dlh-foot">
         <button ref={cancel} type="button" className="dlh-cancel" onClick={onClose}>
           Cancel
         </button>
-        <button type="button" className="dlh-delete" onClick={onRemove}>
+        <button type="button" className="dlh-danger" onClick={onRemove}>
           Remove
         </button>
       </div>
@@ -3434,29 +3429,24 @@ function CopySessionDialog({ source, others, canAdd, nextNumber, laterLabel, onC
   );
 }
 
-/** A yes-or-no, in the hairline style (20 Oct, Alex): the title, one short line, an optional tick, Cancel and the action (black, or red words when it takes something away). */
-export function ConfirmDialog({ title, description, confirm, danger, tick, onConfirm }: { title: string; description: string; confirm: string; danger?: boolean; tick?: string | null; onConfirm: (also: boolean) => void }) {
+/** A yes-or-no (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html; ConfirmParts.tsx): the title, one or two plain
+ *  sentences, an optional choice in its grey well with its facts under it, Cancel and the verb alone as a pill (red when it
+ *  takes something away, else ink). */
+export function ConfirmDialog({ title, description, confirm, danger, tick, tickSub, onConfirm }: { title: string; description?: React.ReactNode; confirm: string; danger?: boolean; tick?: React.ReactNode | null; /** The choice's facts, grey under it. */ tickSub?: React.ReactNode; onConfirm: (also: boolean) => void }) {
   const [also, setAlso] = useState(false);
   return (
-    <DialogContent className="dlh">
+    <DialogContent className="dlh" {...(description ? {} : { "aria-describedby": undefined })}>
       <div className="dlh-head">
         <DialogTitle className="dlh-title">{title}</DialogTitle>
         <DialogClose className="dlh-x" aria-label="Close">
           ✕
         </DialogClose>
       </div>
-      <DialogDescription className="dlh-what">{description}</DialogDescription>
-      {tick && (
-        <button type="button" role="checkbox" aria-checked={also} className="dlh-ack" onClick={() => setAlso((x) => !x)}>
-          <span className={`dlh-box ink${also ? " on" : ""}`} aria-hidden="true">
-            {also ? "✓" : ""}
-          </span>
-          {tick}
-        </button>
-      )}
+      {description && <ConfirmText>{description}</ConfirmText>}
+      {tick && <ConfirmChoice checked={also} onChange={setAlso} title={tick} sub={tickSub} />}
       <div className="dlh-foot">
         <DialogClose className="dlh-cancel">Cancel</DialogClose>
-        <button type="button" className={danger ? "dlh-delete" : "dlh-go"} onClick={() => onConfirm(also)} autoFocus>
+        <button type="button" className={danger ? "dlh-danger" : "dlh-go"} onClick={() => onConfirm(also)} autoFocus>
           {confirm}
         </button>
       </div>

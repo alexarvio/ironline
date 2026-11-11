@@ -309,6 +309,29 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
     if (!m?.seriesId) return [];
     return meetings.filter((x) => x.seriesId === m.seriesId && x.id !== id && x.status === "scheduled" && (x.date > m.date || (x.date === m.date && x.time > m.time))).map((x) => x.id);
   };
+  // Delete a call's words (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html): the call named as its row names it,
+  // what is deleted with it and what stays, and the later calls of its series as the choice, their days grey under it.
+  const deleteCallWords = (m: DraftMeeting) => {
+    const name = (m.summaryTitle || m.topic).trim();
+    const hasNotes = !!(m.prepNotes.trim() || m.meetingNotes.trim());
+    const hasSummary = !!(m.summary.trim() || m.summaryTitle.trim());
+    const goes = hasNotes && hasSummary ? "Its notes and summary are deleted with it." : hasSummary ? "Its summary is deleted with it." : hasNotes ? "Its notes are deleted with it." : "";
+    const keeps = holder?.id === m.id && focusGoals.length ? `The goals you set on this call stay on ${firstName}’s Home.` : "";
+    const later = laterOf(m.id)
+      .map((id) => byId(id)!)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+    const n = later.length;
+    // Weekly when every later call is a week after the one before it: the weekday, then the days they run.
+    const days = [m.date, ...later.map((x) => x.date)];
+    const weekly = n > 0 && days.every((d, i) => i === 0 || Math.round((parse(d).getTime() - parse(days[i - 1]).getTime()) / 86400000) === 7);
+    const span = n ? (n === 1 ? dayMonth(later[0].date) : `${dayMonth(later[0].date)} – ${dayMonth(later[n - 1].date)}`) : "";
+    return {
+      title: name ? `Delete the call “${name}”?` : "Delete this call?",
+      description: [goes, keeps, `${firstName} is told it’s cancelled.`].filter(Boolean).join(" "),
+      tick: n ? (n === 1 ? "Also delete the next call" : `Also delete the next ${n} calls`) : null,
+      tickSub: n ? (weekly ? `Every ${parse(later[0].date).toLocaleDateString("en-GB", { weekday: "long" })}, ${span}` : span) : undefined,
+    };
+  };
 
   // To come is what hasn't ended yet (2 Nov, Alex): a call that is over and never marked goes to Past calls, `To complete`
   // in rust for a week (the to-do strip at the top carries its Mark completed), then `Not completed`.
@@ -822,11 +845,9 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
         )}
         {dlg?.kind === "delete" && byId(dlg.meetingId) && (
           <ConfirmDialog
-            title={`Delete ${byId(dlg.meetingId)!.topic || "this call"}?`}
-            description="The call goes, with its notes and recap. Goals set in it stay."
+            {...deleteCallWords(byId(dlg.meetingId)!)}
             confirm="Delete"
             danger
-            tick={laterOf(dlg.meetingId).length ? `Also delete the ${laterOf(dlg.meetingId).length} later ${laterOf(dlg.meetingId).length === 1 ? "call" : "calls"} in this series` : null}
             onConfirm={(also) => {
               const gone = new Set([dlg.meetingId, ...(also ? laterOf(dlg.meetingId) : [])]);
               setMeetings((prev) => prev.filter((m) => !gone.has(m.id)));

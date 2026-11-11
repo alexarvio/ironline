@@ -107,6 +107,11 @@
 .ams-cancel, .ams-delete { height: 44px; padding: 0 2px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .ams-cancel { color: #5b6474; }
 .ams-delete { color: #b8471f; }
+/* A confirm's parts (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html): the title, one plain sentence, Cancel in
+   words and the verb alone as a rust pill. */
+.ams-text { margin: -6px 0 0; font-size: 14px; line-height: 21px; font-weight: 500; color: #3a4250; }
+.ams-danger { height: 40px; padding: 0 18px; border: 0; border-radius: 999px; background: #b8471f; font: inherit; font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; }
+.ams-danger:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(184, 71, 31, 0.24); }
 /* Nothing to open. */
 .fdc-card.fdc-card.shut { cursor: default; }
 

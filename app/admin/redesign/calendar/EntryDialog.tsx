@@ -7,9 +7,10 @@ import { useRouter } from "next/navigation";
 import { Popover as PopoverPrimitive } from "radix-ui";
 import { runCalendarSave } from "./CalendarSaveStatus";
 import { addCalendarEntryAction, removeCalendarEntryAction, updateCalendarEntryAction } from "../../../lib/actions";
-import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
+import { DialogContent, DialogTitle } from "../../../components/ui/dialog";
 import { SearchIcon } from "../../../components/icons";
 import DateText from "../DateText";
+import { ConfirmText } from "../ConfirmParts";
 import { MonthRange } from "../MonthRange";
 import { TimePick, TIME_SLOTS } from "../TimePick";
 import { paletteOf, type Category } from "../palette";
@@ -241,16 +242,19 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
   };
 
   // Removing asks first (design rules 4): the .dlh card, red Remove in words, Cancel back to the entry.
-  if (removing && e)
+  // A confirm pop-up (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html): the action and the thing as a question,
+  // what isn't obvious in plain words (a client's call leaves their app too), the verb alone as the red pill.
+  if (removing && e) {
+    const callWith = e.clientId != null && isClientCall(e.category) ? e.clientName.trim().split(/\s+/)[0] : "";
     return (
-      <DialogContent className="dlh" role="alertdialog" {...outside}>
+      <DialogContent className="dlh" role="alertdialog" {...(callWith ? {} : { "aria-describedby": undefined })} {...outside}>
         <div className="dlh-head">
-          <DialogTitle className="dlh-title">Remove {e.topic || "this entry"}?</DialogTitle>
+          <DialogTitle className="dlh-title">{callWith ? (e.topic.trim() ? `Delete the call “${e.topic.trim()}”?` : "Delete this call?") : e.topic.trim() ? `Remove “${e.topic.trim()}” from the calendar?` : "Remove this entry?"}</DialogTitle>
           <button type="button" className="dlh-x" onClick={tryClose} aria-label="Close">
             ✕
           </button>
         </div>
-        <DialogDescription className="dlh-what">This permanently removes the entry. It can&rsquo;t be undone.</DialogDescription>
+        {callWith && <ConfirmText>{callWith} is told it’s cancelled. This can’t be undone.</ConfirmText>}
         <div className="dlh-foot">
           <button
             type="button"
@@ -263,12 +267,13 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
           >
             Cancel
           </button>
-          <button type="button" className="dlh-delete" onClick={() => void remove()} disabled={saving}>
-            Remove
+          <button type="button" className="dlh-danger" onClick={() => void remove()} disabled={saving}>
+            {callWith ? "Delete" : "Remove"}
           </button>
         </div>
       </DialogContent>
     );
+  }
 
   return (
     <DialogContent className="npd cal-npd" style={{ "--npd-c": ink, "--npd-rgb": rgb } as React.CSSProperties} aria-describedby={undefined} {...outside}>

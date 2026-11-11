@@ -12,6 +12,7 @@ import { newOnceKey } from "../../lib/onceKey";
 import { kgFrom, kgIn, VERDICT_TONE, VERDICT_WORD, type WeightGoalView } from "../../lib/weightGoal";
 import DatePick from "./DatePick";
 import { SepJoin } from "./Sep";
+import { ConfirmText } from "./ConfirmParts";
 
 // A weight goal's pop-up (2 Nov, Alex), the one way to set or change one: from Home's Weight card and from the Plan's
 // Weight lane alike. The .dlh card: its title, the goal's tag and verdict, Goal and By on clean lines, one live fact.
@@ -90,19 +91,23 @@ export default function WeightGoalDialog({
 
   if (asking && goal)
     return (
-      <DialogContent className="dlh" aria-describedby={undefined}>
+      // A confirm pop-up (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html): the goal named as the card names it,
+      // what stays, and Delete the red pill.
+      <DialogContent className="dlh">
         <div className="dlh-head">
-          <DialogTitle className="dlh-title">Delete {one(kgIn(goal.targetKg, unit))} {unit} goal?</DialogTitle>
+          <DialogTitle className="dlh-title">
+            Delete the weight goal {one(kgIn(goal.targetKg, unit))} {unit} by {dayMonth(goal.byDate)}?
+          </DialogTitle>
           <DialogClose className="dlh-x" aria-label="Close">
             ✕
           </DialogClose>
         </div>
-        <p className="dlh-what">It can&rsquo;t be undone.</p>
+        <ConfirmText>The weigh-ins stay on their charts. This can’t be undone.</ConfirmText>
         <div className="dlh-foot">
           <button type="button" className="dlh-cancel" onClick={() => setAsking(false)}>
             Cancel
           </button>
-          <button type="button" className="dlh-delete" disabled={busy} onClick={remove} autoFocus>
+          <button type="button" className="dlh-danger" disabled={busy} onClick={remove} autoFocus>
             Delete
           </button>
         </div>

@@ -18,6 +18,7 @@ import type { GoalTracking } from "../../../lib/goalView";
 import type { PhaseTrack } from "../../../lib/db";
 import { phaseChrome, phaseStateOf, STATE_LABEL, stateTagStyle, TRACK_ACCENT, TRACK_LABEL } from "../../phaseChrome";
 import { ConfirmDialog, DeletePhaseDialog } from "../training/TrainingDraft";
+import { ConfirmText } from "../ConfirmParts";
 import Picker from "../Picker";
 import DateText from "../DateText";
 import DatePick from "../DatePick";
@@ -671,8 +672,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
         )}
         {dlg?.kind === "removeGoal" && (
           <ConfirmDialog
-            title={`Remove ${goals.find((g) => g.id === dlg.id)?.text ?? "this goal"}?`}
-            description="This permanently deletes the goal. It can't be undone."
+            title={goals.find((g) => g.id === dlg.id)?.text.trim() ? `Remove the goal “${goals.find((g) => g.id === dlg.id)!.text.trim()}”?` : "Remove this goal?"}
+            description="This can’t be undone."
             confirm="Remove"
             danger
             onConfirm={() => {
@@ -823,12 +824,14 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
     const called = name.trim() || phase.name;
     // Going live now starts it this week, so the phase running on the track ends the Sunday before (every track, 21 Oct).
     const endsOn = shortDate(addDays(mondayOf(today), -1));
+    // A confirm pop-up's words (11 Nov, Alex: A of docs/boards/popup-anatomy-mockup.html): the action and the phase as a
+    // question, who sees what, the verb alone on the ink pill.
     const t =
       going === "live"
-        ? { title: `Make ${called} live?`, what: `${firstName} sees it from today.${running ? ` ${running.name} ends ${endsOn}.` : ""}`, go: "Make it live" }
+        ? { title: `Make “${called}” live?`, what: `${firstName} sees it from today.${running ? ` “${running.name}” ends ${endsOn}.` : ""}`, go: "Make it live" }
         : going === "schedule"
-          ? { title: `Schedule ${called}?`, what: `${firstName} sees it from ${shortDate(startWeek)}.`, go: "Schedule it" }
-          : { title: "Back to draft?", what: `${called} stops being scheduled.`, go: "Back to draft" };
+          ? { title: `Schedule “${called}”?`, what: `${firstName} sees it from ${shortDate(startWeek)}.`, go: "Schedule it" }
+          : { title: `Move “${called}” back to draft?`, what: `It becomes a draft again, and ${firstName} won’t get it.`, go: "Back to draft" };
     return (
       <DialogContent className="dlh">
         <div className="dlh-head">
@@ -837,7 +840,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             ✕
           </DialogClose>
         </div>
-        <DialogDescription className="dlh-what">{t.what}</DialogDescription>
+        <ConfirmText>{t.what}</ConfirmText>
         <div className="dlh-foot">
           <button type="button" className="dlh-cancel" onClick={() => setGoing(null)}>
             Cancel
