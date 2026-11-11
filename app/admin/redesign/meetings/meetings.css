@@ -85,7 +85,7 @@
 /* Repeat | On and the row under it (11 Nov, Alex): every box the date's, two to a row, the same rows Once or repeating. */
 .npd.npd.rt-npd .npd-side > .rt-when { margin-top: 16px; }
 .npd.npd.rt-npd .npd-dates > * { flex: 0 0 calc(50% - 3px); min-width: 0; box-sizing: border-box; }
-.npd.npd.rt-npd .rt-slot { visibility: hidden; }
+.npd.npd.rt-npd .npd-dates.rt-when > :only-child { flex-basis: 100%; }
 .npd.npd.rt-npd .rt-boxpick { position: relative; padding-right: 38px; }
 .npd.npd.rt-npd .rt-boxpick svg { position: absolute; right: 14px; top: 50%; width: 16px; height: 16px; margin-top: -8px; color: #8b93a1; }
 .npd.npd.rt-npd .rt-boxpick[data-state="open"] { box-shadow: inset 0 0 0 1.5px #141a24; }

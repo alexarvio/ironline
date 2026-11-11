@@ -1395,11 +1395,8 @@ function ScheduleDialog({ date: initialDate, reschedule, rest = null, onDelete, 
                   onChange={(v) => setScope(v === "rest" ? "rest" : "one")}
                 />
               )}
-              {repeating ? (
-                <BoxPick head="On" value={String(weekdayOf(date))} options={WEEKDAYS.map((d, i) => ({ value: String(i), label: d }))} onChange={(v) => pickWeekday(Number(v))} />
-              ) : (
-                <span className="npd-date rt-slot" aria-hidden="true" />
-              )}
+              {/* 11 Nov, Alex: the first box takes the whole row until a repeat is picked, then On takes the other half. */}
+              {repeating && <BoxPick head="On" value={String(weekdayOf(date))} options={WEEKDAYS.map((d, i) => ({ value: String(i), label: d }))} onChange={(v) => pickWeekday(Number(v))} />}
             </div>
           )}
           <div className="npd-dates">
