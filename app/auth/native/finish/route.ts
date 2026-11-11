@@ -1,4 +1,5 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
+import { timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { clerkOn } from "../../../lib/clerk";
 import { B64URL, issueCode } from "../../../lib/nativeAuth";
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
 const CLEAR = "Path=/auth/native; Max-Age=0; HttpOnly; Secure; SameSite=Lax";
 function back(params: Record<string, string>) {
   const headers = new Headers({ Location: `norcoach://auth?${new URLSearchParams(params).toString()}`, "Cache-Control": "no-store" });
-  for (const name of ["norcoach_native_state", "norcoach_native_challenge", "norcoach_native_started"]) headers.append("Set-Cookie", `${name}=; ${CLEAR}`);
+  for (const name of ["norcoach_native_state", "norcoach_native_challenge", "norcoach_native_started", "norcoach_native_nonce"]) headers.append("Set-Cookie", `${name}=; ${CLEAR}`);
   return new Response(null, { status: 302, headers });
 }
 
@@ -28,6 +29,11 @@ export async function GET(request: Request) {
   const challenge = jar.get("norcoach_native_challenge")?.value ?? "";
   const started = Number(jar.get("norcoach_native_started")?.value ?? "");
   if (!/^[A-Za-z0-9_-]{16,128}$/.test(state) || !B64URL.test(challenge) || !Number.isFinite(started)) return back({ error: "no_state" });
+  // The start's secret number, back through Clerk's Google return address (second review): cookies another site planted
+  // never come with it, as that site never saw it.
+  const kept = Buffer.from(jar.get("norcoach_native_nonce")?.value ?? "");
+  const came = Buffer.from(new URL(request.url).searchParams.get("n") ?? "");
+  if (kept.length !== 32 || came.length !== kept.length || !timingSafeEqual(kept, came)) return back({ error: "no_state" });
   const { userId, sessionId } = await auth();
   if (!userId || !sessionId) return back({ error: "signin", state });
   try {
