@@ -49,15 +49,40 @@ jobs:
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        # The key as pasted into the secret, put back in shape (11 Nov: a paste from Windows failed as invalidPEMDocument):
+        # Windows line endings and stray spaces gone, the body wrapped at 64 characters between the BEGIN and END lines
+        # whether or not those came with it; a whole file pasted as base64 is read too. Only its shape is printed.
         run: |
           mkdir -p "$RUNNER_TEMP/keys"
-          printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
+          OUT="$RUNNER_TEMP/keys/AuthKey_$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]').p8"
+          node - "$OUT" <<'JS'
+          const fs = require('fs');
+          const raw = process.env.ASC_KEY_P8 || '';
+          let text = raw.replace(/\r/g, '').trim().replace(/^['"]|['"]$/g, '').replace(/\\n/g, '\n');
+          if (!text.includes('BEGIN')) {
+            const decoded = Buffer.from(text.replace(/\s+/g, ''), 'base64').toString('utf8');
+            if (decoded.includes('BEGIN')) text = decoded.replace(/\r/g, '').trim();
+          }
+          const body = text.replace(/-----(BEGIN|END)[^-]*-----/g, '').replace(/[^A-Za-z0-9+/=]/g, '');
+          console.log('key: ' + raw.length + ' characters pasted, ' + (raw.includes('BEGIN') ? 'with' : 'without') + ' a BEGIN line, ' + (raw.includes('\r') ? 'Windows' : 'plain') + ' line endings; body ' + body.length + ' characters');
+          if (body.length < 100) {
+            console.error('ASC_KEY_P8 holds no key: paste the whole text of the AuthKey .p8 file into it');
+            process.exit(1);
+          }
+          const pem = '-----BEGIN PRIVATE KEY-----\n' + body.match(/.{1,64}/g).join('\n') + '\n-----END PRIVATE KEY-----\n';
+          fs.writeFileSync(process.argv[2], pem);
+          JS
+          # The ids without stray spaces, for the steps after; masked, as this repository's logs are public.
+          KEY_ID=$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]')
+          ISSUER=$(printf '%s' "$ASC_ISSUER_ID" | tr -d '[:space:]')
+          TEAM=$(printf '%s' "$APPLE_TEAM_ID" | tr -d '[:space:]')
+          for v in "$KEY_ID" "$ISSUER" "$TEAM"; do echo "::add-mask::$v"; done
+          echo "ids: key ${#KEY_ID}, issuer ${#ISSUER}, team ${#TEAM} characters (10, 36, 10 expected)"
+          { echo "KEY_ID=$KEY_ID"; echo "ISSUER=$ISSUER"; echo "TEAM=$TEAM"; echo "KEY_FILE=$OUT"; } >> "$GITHUB_ENV"
 
       - name: Archive
-        env:
-          TEAM: ${{ secrets.APPLE_TEAM_ID }}
-          KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           xcodebuild archive \
             -project ios/App/App.xcodeproj \
@@ -66,7 +91,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyPath "$KEY_FILE" \
             -authenticationKeyID "$KEY_ID" \
             -authenticationKeyIssuerID "$ISSUER" \
             DEVELOPMENT_TEAM="$TEAM" \
@@ -74,10 +99,6 @@ jobs:
             CURRENT_PROJECT_VERSION=${{ github.run_number }}
 
       - name: Upload to TestFlight
-        env:
-          TEAM: ${{ secrets.APPLE_TEAM_ID }}
-          KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -97,7 +118,7 @@ jobs:
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
             -exportPath "$RUNNER_TEMP/export" \
             -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyPath "$KEY_FILE" \
             -authenticationKeyID "$KEY_ID" \
             -authenticationKeyIssuerID "$ISSUER"
 
