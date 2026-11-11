@@ -5965,7 +5965,7 @@ export function addMeeting(
 }
 
 /** A repeating call: count meetings, every repeatWeeks weeks from date, as one series. */
-export function addMeetingSeries(clientId: number, date: string, repeatWeeks: number, count: number, time: string, topic: string, durationMinutes: number = DEFAULT_MEETING_DURATION, link: string | null = null, tz: string | null = null) {
+export function addMeetingSeries(clientId: number, date: string, repeatWeeks: number, count: number, time: string, topic: string, durationMinutes: number = DEFAULT_MEETING_DURATION, link: string | null = null, tz: string | null = null, meetingType: "checkin" | "review" | "other" | null = null) {
   const data = getData();
   let seriesId = 0;
   for (let i = 0; i < count; i++) {
@@ -5984,6 +5984,7 @@ export function addMeetingSeries(clientId: number, date: string, repeatWeeks: nu
       link: link || null,
       prep_notes: null,
       series_id: seriesId,
+      ...(meetingType ? { meeting_type: meetingType } : {}),
     });
   }
   persist();
