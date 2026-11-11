@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CopyIcon } from "../components/icons";
 import RingEdge from "../components/RingEdge";
@@ -55,6 +55,71 @@ export function DeleteMealDialog({ name, onCancel, onDelete }: { name: string; o
               Delete
             </button>
           </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/** Copy a meal from a meal's own search (11 Nov, Alex: "the copy a meal needs to be a bit cleaner… pop up with saved
+ * meals"): Add a meal's Copy a meal on its own, every saved meal as its card, a tap putting its foods into that meal. */
+export function CopyMealDialog({
+  saved,
+  busy,
+  picture,
+  onCopy,
+  failed = false,
+  onClose,
+}: {
+  saved: SavedMealCard[];
+  busy: boolean;
+  picture: (path: string) => string;
+  onCopy: (id: number) => void;
+  failed?: boolean;
+  onClose: () => void;
+}) {
+  // While a copy is on its way the pop-up stays, so its answer (and a failure) is seen.
+  const close = () => {
+    if (!busy) onClose();
+  };
+  const closeRef = useRef(close);
+  useEffect(() => {
+    closeRef.current = close;
+  });
+  // The pop-up takes the focus from the search box behind it: typing and Escape no longer reach it, and a phone's keyboard goes.
+  const card = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    card.current?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      closeRef.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  return createPortal(
+    <div className="gpk-overlay" onClick={close}>
+      <div ref={card} tabIndex={-1} className="gpk-card" role="dialog" aria-modal="true" aria-labelledby="ams-copy-title" onClick={(e) => e.stopPropagation()} style={{ outline: "none" }}>
+        <div className="gpk-content">
+          <div className="gpk-head center">
+            <h2 id="ams-copy-title" className="gpk-title sm ads-title">
+              Copy a meal
+            </h2>
+            <button type="button" className="gpk-round" onClick={close} aria-label="Close">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18" />
+              </svg>
+              <RingEdge size={32} />
+            </button>
+          </div>
+          <SavedMealCards saved={saved} busy={busy} picture={picture} onCopy={onCopy} />
+          {failed && (
+            <p className="fdi-photo-failed" role="alert">
+              Not added. Try again
+            </p>
+          )}
         </div>
       </div>
     </div>,
