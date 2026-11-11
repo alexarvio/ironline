@@ -88,6 +88,8 @@ export type FoodOptionView = {
   servings: [string, number][];
   /** A liquid's grams a millilitre, so ml and l are offered. */
   ml?: number;
+  /** On Recent: the amount and unit it was last logged at, which a tap adds again. */
+  last?: { grams: number; serving: string | null };
 };
 export type Macros = { kcal: number; protein: number; carbs: number; fat: number };
 
@@ -485,6 +487,24 @@ export default function FoodDiaryScreen({
   const settle = (forDate: string, next: FoodDiaryProps | null) => {
     if (next && next.date === forDate) setDiary((d) => (d.date === forDate ? next : d));
     else if (!next) reload();
+  };
+  // A Recent food tapped (11 Nov, Alex): on the meal at once at its last amount and unit, as Add would put it there.
+  const quickAdd = (mealId: FoodMeal, food: FoodOptionView, grams: number, serving: string | null) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("grams", String(grams));
+    fd.set("serving", serving ?? "");
+    fd.set("date", date);
+    fd.set("meal", mealId);
+    fd.set("foodId", food.id);
+    // Its one-time key, made as it is tapped: sent again once the signal is back, the food goes in once.
+    fd.set("onceKey", newOnceKey());
+    const temp: FoodEntryView = { id: -Date.now(), meal: mealId, food_id: food.id, name: food.name, grams, serving, ...rowOf(food, grams) };
+    holdMeal(mealId);
+    applyLocal((d) => ({ ...d, meals: d.meals.map((m) => (m.id === mealId ? { ...m, entries: [...m.entries, temp] } : m)) }));
+    setPanel(null);
+    const forDate = date;
+    void addFoodEntryAction(fd).then((next) => settle(forDate, next), () => settle(forDate, null));
   };
   const removeRow = (id: number) => {
     const fd = new FormData();
@@ -1012,6 +1032,7 @@ export default function FoodDiaryScreen({
                                 clientId={clientId}
                                 date={date}
                                 saved={diary.saved}
+                                recent={diary.recent}
                                 busy={loading}
                                 onChange={(fn) => setDiary((d) => ({ ...d, saved: fn(d.saved) }))}
                                 refresh={async () => {
@@ -1107,6 +1128,7 @@ export default function FoodDiaryScreen({
                         clientId={clientId}
                         date={date}
                         day={openDay === "new" ? null : diary.savedDays.find((d) => d.id === openDay) ?? null}
+                        recent={diary.recent}
                         busy={loading}
                         useFailed={openDay !== "new" && dayFailed === openDay}
                         from={deployFrom}
@@ -1392,6 +1414,8 @@ export default function FoodDiaryScreen({
                         date={date}
                         meal={meal.id}
                         mealLabel={title}
+                        recent={diary.recent}
+                        onQuickAdd={(food, grams, serving) => quickAdd(meal.id, food, grams, serving)}
                         // Copy a meal only while the meal is empty (11 Nov, Alex): with food in it, its search alone.
                         saved={filled ? NO_SAVED : diary.saved.filter((s) => s.count > 0)}
                         onPick={(food) => {
@@ -1675,8 +1699,10 @@ function SearchPanel({
   date,
   meal,
   mealLabel,
+  recent,
   saved,
   onPick,
+  onQuickAdd,
   onCustom,
   onCopied,
   onCancel,
@@ -1685,6 +1711,9 @@ function SearchPanel({
   date: string;
   meal: FoodMeal;
   mealLabel: string;
+  recent: FoodOptionView[];
+  /** A Recent food tapped: added at once, at the amount and unit it was last logged at. */
+  onQuickAdd?: (food: FoodOptionView, grams: number, serving: string | null) => void;
   saved: FoodDiaryProps["saved"];
   onPick: (food: FoodOptionView) => void;
   onCustom: () => void;
@@ -1747,8 +1776,10 @@ function SearchPanel({
   const showMore = moreFor === q;
   // The client's own and the everyday foods are the list; the catalog's long
   // tail sits behind a count, unless it is all there is.
-  // Nothing before a word is typed (11 Nov, Alex: "take out the part where we show the recent items completely").
-  const front = (results ?? []).filter((f) => f.group !== "more");
+  // Before a word is typed, Recent: four at most, the latest first (11 Nov, Alex: "add recent again").
+  // Only while the box is empty: never in the moment a typed search is on its way, where a tap would add at once.
+  const showingRecent = q === "" && recent.length > 0;
+  const front = showingRecent ? recent.slice(0, 4) : (results ?? []).filter((f) => f.group !== "more");
   const tail = results?.filter((f) => f.group === "more") ?? [];
   const list = front.length === 0 || showMore ? [...front, ...tail] : front;
 
@@ -1813,17 +1844,31 @@ function SearchPanel({
           )}
           {scanNote && <p className="fdi-empty">{scanNote}</p>}
           <div className="fdi-results">
-            {list.map((f) => (
-              <button key={f.id} type="button" className="fdi-result" onClick={() => onPick(f)}>
-                <span className="fdi-result-main">
-                  <span className="fdi-result-name">{f.name}</span>
-                  <span className="fdi-result-hint">{f.hint || " "}</span>
-                </span>
-                <span className="fdi-result-kcal">
-                  {n(f.kcal)} <small>kcal / 100 g</small>
-                </span>
-              </button>
-            ))}
+            {showingRecent && <span className="fdi-results-label">Recent</span>}
+            {list.map((f) => {
+              // A Recent food goes in with one tap at its last amount and unit (11 Nov, Alex: "if I added 60 g then it adds
+              // 60 g"); a different amount is a tap on it on the meal's line after.
+              const again = showingRecent && f.last && onQuickAdd ? f.last : null;
+              return (
+                <button key={f.id} type="button" className="fdi-result" onClick={() => (again ? onQuickAdd!(f, again.grams, again.serving) : onPick(f))}>
+                  <span className="fdi-result-main">
+                    <span className="fdi-result-name">{f.name}</span>
+                    <span className="fdi-result-hint">{again ? (again.serving ? `${again.serving} (${g(again.grams)} g)` : `${g(again.grams)} g`) : f.hint || " "}</span>
+                  </span>
+                  <span className="fdi-result-kcal">
+                    {again ? (
+                      <>
+                        {n((f.kcal * again.grams) / 100)} <small>kcal</small>
+                      </>
+                    ) : (
+                      <>
+                        {n(f.kcal)} <small>kcal / 100 g</small>
+                      </>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
             {front.length > 0 && tail.length > 0 && !showMore && (
               <button type="button" className="fdi-more" onClick={() => setMoreFor(q)}>
                 Show {tail.length} more from the catalogue
@@ -1867,6 +1912,7 @@ function SearchPanel({
 // ---- Saved meals and saved days (10 Nov, Alex: "exactly like they are inside the days"): the day's card, editable ------
 
 const NO_SAVED: FoodDiaryProps["saved"] = [];
+const NO_FOODS: FoodOptionView[] = [];
 /** The key that means a day's own picture rather than one of its cards'. */
 const DAY_COVER = "@cover";
 type SavedMealRow = FoodDiaryProps["saved"][number];
@@ -1895,6 +1941,7 @@ function EditableMealCards({
   clientId,
   date,
   cards,
+  recent,
   locked = false,
   addAt,
   renderAdd,
@@ -1915,6 +1962,7 @@ function EditableMealCards({
   clientId: number;
   date: string;
   cards: EditCard[];
+  recent: FoodOptionView[];
   /** A day not named yet: the cards are there, their tools come with the name. */
   locked?: boolean;
   addAt: "top" | "bottom";
@@ -2435,6 +2483,11 @@ function EditableMealCards({
                         date={date}
                         meal={`saved-${c.key}`}
                         mealLabel={c.name}
+                        recent={recent}
+                        onQuickAdd={(food, grams, serving) => {
+                          addFood(c, food, grams, serving);
+                          setPanel(null);
+                        }}
                         saved={NO_SAVED}
                         onPick={(food) => setPanel({ key: c.key, kind: "amount", food })}
                         onCustom={() => setPanel({ key: c.key, kind: "custom" })}
@@ -2518,6 +2571,7 @@ function SavedMealList({
   clientId,
   date,
   saved,
+  recent,
   busy,
   onChange,
   refresh,
@@ -2527,6 +2581,7 @@ function SavedMealList({
   clientId: number;
   date: string;
   saved: FoodDiaryProps["saved"];
+  recent: FoodOptionView[];
   busy: boolean;
   onChange: (fn: (list: FoodDiaryProps["saved"]) => FoodDiaryProps["saved"]) => void;
   refresh: () => Promise<void>;
@@ -2579,6 +2634,7 @@ function SavedMealList({
       clientId={clientId}
       date={date}
       cards={saved.map(cardOfSaved)}
+      recent={recent}
       addAt="top"
       renderAdd={(start, input) =>
         input ? (
@@ -2683,6 +2739,7 @@ function SavedDayList({
       clientId={clientId}
       date={date}
       cards={days.map(cardOfSavedDay)}
+      recent={NO_FOODS}
       addAt="top"
       renderAdd={() => null}
       stacked
@@ -2717,6 +2774,7 @@ function SavedDayScreen({
   clientId,
   date,
   day,
+  recent,
   busy,
   useFailed,
   from,
@@ -2731,6 +2789,7 @@ function SavedDayScreen({
   date: string;
   /** Null: not named yet. */
   day: SavedDayRow | null;
+  recent: FoodOptionView[];
   busy: boolean;
   useFailed: boolean;
   /** Where it deploys from: the card or pill that was pressed. */
@@ -3003,6 +3062,7 @@ function SavedDayScreen({
           clientId={clientId}
           date={date}
           cards={cards}
+          recent={recent}
           locked={id == null}
           addAt="bottom"
           onReorder={(keys) => change(null, "card-order", { key: "@order", order: keys.join(",") })}
