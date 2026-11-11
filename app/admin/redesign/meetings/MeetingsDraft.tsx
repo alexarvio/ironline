@@ -839,6 +839,7 @@ function MeetingsBoard({ clientId, firstName, plan }: MeetingsProps) {
             date={dlg.date}
             reschedule={dlg.reschedule}
             rest={dlg.reschedule ? restOf(dlg.reschedule.id) : null}
+            onDelete={dlg.reschedule ? () => setDlg({ kind: "delete", meetingId: dlg.reschedule!.id }) : undefined}
             initialTopic={dlg.topic ?? ""}
             lastLink={plan.lastLink}
             coachTz={plan.coachTz ?? null}
@@ -1278,7 +1279,7 @@ function MiniCalendar({ today, selected, dots, onPick, series = [] }: { today: s
 
 /** Booking a call, or moving one: the day, a 24-hour time, how long, what about, the way in. The event pop-up's pattern
  *  (21 Oct): the kind as tiles, a clean line for the words, the month on the left with the fields on the right, Cancel and one black pill. */
-function ScheduleDialog({ date: initialDate, reschedule, rest = null, initialTopic = "", lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; /** Rescheduling a call of a series: how many of it come after this one, its rhythm in weeks, and whether it is the first still to come. */ rest?: { count: number; every: number; first: boolean } | null; initialTopic?: string; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null; repeatWeeks: number; count: number; meetingType: MeetingTypeId; /** Rescheduling: this call alone, or it and the later ones of its series. */ scope: "one" | "rest" }) => void }) {
+function ScheduleDialog({ date: initialDate, reschedule, rest = null, onDelete, initialTopic = "", lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; /** Rescheduling a call of a series: how many of it come after this one, its rhythm in weeks, and whether it is the first still to come. */ rest?: { count: number; every: number; first: boolean } | null; /** Rescheduling: Delete in red words on the footer's left, asking first. */ onDelete?: () => void; initialTopic?: string; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null; repeatWeeks: number; count: number; meetingType: MeetingTypeId; /** Rescheduling: this call alone, or it and the later ones of its series. */ scope: "one" | "rest" }) => void }) {
   const [date, setDate] = useState(reschedule?.date ?? initialDate);
   const [time, setTime] = useState(reschedule?.time ?? "");
   // The time is in the coach's own timezone unless they pick another; a
@@ -1477,6 +1478,12 @@ function ScheduleDialog({ date: initialDate, reschedule, rest = null, initialTop
       </div>
 
       <div className="npd-foot">
+        {/* 11 Nov, Alex ("I should be able to also delete call by call"): every call, the ones Also scheduled doesn't list too. */}
+        {reschedule && onDelete && (
+          <button type="button" className="npd-delete" onClick={onDelete}>
+            Delete
+          </button>
+        )}
         {link.trim() && !linkOk && <span className="rt-bad">Not a meeting link yet.</span>}
         <DialogClose className="npd-cancel">Cancel</DialogClose>
         <button type="button" className="npd-save" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null, repeatWeeks: moving ? every : repeatWeeks, count: moving ? total : repeatWeeks ? calls : 1, meetingType: mtype, scope: moving ? "rest" : "one" })}>
