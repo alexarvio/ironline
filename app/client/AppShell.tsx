@@ -207,7 +207,16 @@ export default function AppShell({
   const [ownTab, setOwnTab] = useState(initialTab);
   const tabNow = readOnly ? ownTab : storedTab;
   const activeId = tabNow && tabs.some((t) => t.id === tabNow) ? tabNow : tabs[0]?.id;
-  const setActiveId = (id: string) => (readOnly ? setOwnTab(id) : writeTab(id));
+  const setActiveId = (id: string) => {
+    // A tab comes back at its top (11 Nov, Alex: "defaulted to always be at the top"): the one left goes back up while it
+    // is still showing, since a hidden box can't be scrolled.
+    if (id !== activeId) {
+      const left = activeId ? scrollers.current[activeId] : null;
+      if (left) left.scrollTop = 0;
+    }
+    if (readOnly) setOwnTab(id);
+    else writeTab(id);
+  };
   // The food diary stays open across a reload (a deploy landing mid-session
   // reloads the page), the way the tab does: read from storage until the
   // client chooses otherwise. The other pushed views start closed, since
@@ -690,9 +699,9 @@ export default function AppShell({
                   // A tap on the tab already showing does nothing. It used to
                   // rebuild the tab, which read as the screen jumping to the top.
                   if (t.id === activeId) return;
-                  // The tab as it was left, scroll and all.
+                  // The tab at its top (setActiveId takes the one left back up).
                   setChatReturn(null);
-                  setScrolled((scrollers.current[t.id]?.scrollTop ?? 0) > 4);
+                  setScrolled(false);
                   setActiveId(t.id);
                   setFocusRef(null);
                 }}
