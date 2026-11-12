@@ -321,8 +321,8 @@ export function VideoRequestDialog({
 export function PhotoIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7H8l1.5-2.5h5L16 7h3.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z" />
-      <circle cx="12" cy="13" r="3.4" />
+      <path d="M3 8A1.5 1.5 0 0 1 4.5 6.5H8L9.5 4h5L16 6.5h3.5A1.5 1.5 0 0 1 21 8v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" />
+      <circle cx="12" cy="12.6" r="3.4" />
     </svg>
   );
 }
@@ -330,8 +330,8 @@ export function PhotoIcon() {
 export function VideoIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="2.5" y="6" width="13" height="12" rx="2.5" />
-      <path d="M15.5 10.5 21 7.5v9l-5.5-3" />
+      <rect x="2.75" y="6" width="13" height="12" rx="2.5" />
+      <path d="M15.75 10.5 21.25 7.5v9l-5.5-3" />
     </svg>
   );
 }
