@@ -16,7 +16,7 @@ import type { PhoneCalendar } from "./calendar";
 import ChatLastLine from "../components/ChatLastLine";
 import RingEdge from "../components/RingEdge";
 import { sized } from "../components/ChatMedia";
-import { PushSwitch } from "../client/PushToggle";
+import { PushSwitch, type NativeReady } from "../client/PushToggle";
 import { NativePush } from "../client/NativePush";
 
 // The coach's phone (21 Oct, Alex): Chats and Videos on a floating tab bar,
@@ -27,11 +27,11 @@ import { NativePush } from "../client/NativePush";
 // themselves every 15 s while the app is showing, as the chat does.
 // Notifications are turned on in the account sheet (the coach's face); a
 // tapped one opens its chat or video (lib/coachPush.ts; NativePush in the
-// Android app, the service worker in a browser).
+// iPhone and Android apps, the service worker in a browser).
 
 const POLL_MS = 15000;
 
-type Push = { publicKey: string | null; nativeReady: boolean };
+type Push = { publicKey: string | null; nativeReady: NativeReady };
 type Tab = "chats" | "videos" | "calendar";
 
 export default function CoachApp({ inbox: fromPage, calendar, today, coach, push }: { inbox: CoachInbox; calendar: PhoneCalendar; /** The server's day, for the first paint. */ today: string; coach: { name: string; photoPath: string | null }; push: Push }) {
