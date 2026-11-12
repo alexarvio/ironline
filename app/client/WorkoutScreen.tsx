@@ -269,8 +269,9 @@ export default function WorkoutScreen({
         <button
           type="button"
           className={cls}
-          onClick={() => (ex ? openMessages({ link: { kind: "exercise", dayId: day.key, assignmentId: ex.id }, label: `${shownName(ex)} · ${day.title}` }) : openMessages())}
-          aria-label={ex ? `Message ${coachName} about ${shownName(ex)}` : `Message ${coachName}`}
+          // Off an exercise (the finish list, a cardio) it is about the session (13 Nov, Alex: "it did not link the session").
+          onClick={() => openMessages(ex ? { link: { kind: "exercise", dayId: day.key, assignmentId: ex.id }, label: `${shownName(ex)} · ${day.title}` } : { link: { kind: "session", dayId: day.key }, label: day.title })}
+          aria-label={ex ? `Message ${coachName} about ${shownName(ex)}` : `Message ${coachName} about ${day.title}`}
         >
           <ChatIcon />
         </button>

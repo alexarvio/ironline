@@ -91,7 +91,9 @@ export default function VoiceNote({ src, face, name, mine = false, className = "
     a.currentTime = at;
     setT(at);
   };
-  const bars = peaks ?? Array.from({ length: BARS }, () => 0.18);
+  // A file the phone can't decode (an iPhone's own recording, often) still draws as a wave, not a row of dots (13 Nov,
+  // Alex): a shape of its own from the file's name, the same each time.
+  const bars = peaks ?? fallbackBars(src);
 
   return (
     <span ref={root} className={`vn${mine ? " mine" : ""}${playing ? " playing" : ""}${className ? ` ${className}` : ""}`}>
@@ -168,4 +170,16 @@ export default function VoiceNote({ src, face, name, mine = false, className = "
       />
     </span>
   );
+}
+
+function fallbackBars(src: string): number[] {
+  let h = 2166136261;
+  for (let i = 0; i < src.length; i++) h = Math.imul(h ^ src.charCodeAt(i), 16777619);
+  return Array.from({ length: BARS }, (_, i) => {
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    const noise = ((h >>> 0) % 1000) / 1000;
+    // Louder in the middle, quieter at the ends, as speech reads.
+    const swell = Math.sin((Math.PI * (i + 0.5)) / BARS);
+    return Math.max(0.15, Math.min(1, 0.25 + 0.55 * swell * (0.5 + noise * 0.8)));
+  });
 }

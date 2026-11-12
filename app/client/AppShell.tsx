@@ -535,7 +535,8 @@ export default function AppShell({
         <InvoicesScreen {...invoices} focusId={invoiceFocus} onBack={() => setPushView(null)} />
       </div>
     ) : pushView === "messages" ? (
-      <div className="app-layer app-layer-push cn-screen">
+      // cm-screen: lifted by the keyboard in its first frame (13 Nov, Alex: the box followed a second later).
+      <div className="app-layer app-layer-push cn-screen cm-screen">
         <CoachMessagesScreen {...coachMessages} clientId={clientId} onBack={() => setPushView(null)} about={messageAbout} onClearAbout={() => setMessageAbout(null)} />
       </div>
     ) : pushView === "events" && events ? (

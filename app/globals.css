@@ -21788,3 +21788,10 @@ body:has(.wo-screen) { background: #F5F6F8; }
 .vn-wave i.on { background: #141a24; }
 .vn-knob { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #141a24; pointer-events: none; }
 .vn-time { font-size: 11.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+
+/* The chat with the keyboard (13 Nov, Alex: "I press on the text box, the keyboard appears and the box follows a second
+   later"). In the iPhone app the web view shrinks to the keyboard ~0.45s after it starts; the chat now takes the
+   keyboard's room in its first frame (--kb, the part the layout has still to shrink by, 0 once it has), so the box rides
+   up with the keyboard and the thread's foot stays above it. Its home-bar room goes while the keyboard covers it. */
+html.kb-open .cm-screen { padding-bottom: var(--kb, 0px); }
+html.kb-open .cm-screen .cm-compose { padding-bottom: 10px; }
