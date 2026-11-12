@@ -255,6 +255,8 @@ export default function AppShell({
       }
     : null;
   const setPushView = (v: PushView) => setChosenPush(v);
+  // The coach's profile opened from Settings goes back to Settings.
+  const [coachFromSettings, setCoachFromSettings] = useState(false);
   // Which check-in section to land on, set by whichever due item opened it.
   const [checkInSection, setCheckInSection] = useState("daily");
   // … and, from a coach's message about one day, week or month of it, that one (21 Oct).
@@ -497,7 +499,17 @@ export default function AppShell({
     ) : pushView === "coach" && coachProfile ? (
       <div className="app-layer app-layer-push cpf-layer">
         {/* "Book a call" lands on Home, where the next meeting card is. */}
-        <CoachProfileScreen profile={coachProfile} onBack={() => setPushView(null)} onBook={() => goToTab("home")} />
+        <CoachProfileScreen
+          profile={coachProfile}
+          onBack={() => {
+            setCoachFromSettings(false);
+            setPushView(coachFromSettings ? "settings" : null);
+          }}
+          onBook={() => {
+            setCoachFromSettings(false);
+            goToTab("home");
+          }}
+        />
       </div>
     ) : pushView === "photos" ? (
       <div className="app-layer app-layer-push pp-app-screen">
@@ -532,7 +544,17 @@ export default function AppShell({
         </header>
         <main className="cn-body cn-body-settings">
           <MessagesProvider value={openMessages}>
-            <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
+            {/* Your coach, at the top of Settings (12 Nov, Alex): Back on the profile comes back here. */}
+            <CoachProvider
+              value={
+                coachProfile
+                  ? () => {
+                      setCoachFromSettings(true);
+                      setPushView("coach");
+                    }
+                  : null
+              }
+            >
               {/* Settings' Progress pictures row (17 Oct): it sat outside the photos bridge, so the tap did nothing. */}
               <PhotosProvider
                 value={() => {
