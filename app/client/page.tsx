@@ -1007,7 +1007,7 @@ function NutritionTab({ CLIENT_ID, diary, readOnly = false }: { CLIENT_ID: numbe
       // Only with something in it: the coach's note or a day in the last seven.
       foot={
         !coachNote && lastWeek.length === 0 ? undefined : (
-        <>
+        <div className="nd-body fdi-foot">
           <CoachCard
             key="coach"
             coachName={coachName}
@@ -1026,7 +1026,7 @@ function NutritionTab({ CLIENT_ID, diary, readOnly = false }: { CLIENT_ID: numbe
               </div>
             </section>
           )}
-        </>
+        </div>
         )
       }
     />
