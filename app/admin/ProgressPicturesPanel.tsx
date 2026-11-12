@@ -87,8 +87,9 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
           slotId: s.id,
           label: s.label,
           src: u?.file_path ?? null,
-          shot: u ? stampDayTime(u.uploaded_at) : null,
-          shotDay: u ? stampDay(u.uploaded_at) : null,
+          // A photo added or changed after the update closed shows the day it came in (12 Nov, Alex).
+          shot: u ? stampDayTime(u.replaced_at ?? u.uploaded_at) : null,
+          shotDay: u ? stampDay(u.replaced_at ?? u.uploaded_at) : null,
         };
       });
     const inCount = cells.filter((c) => c.src).length;

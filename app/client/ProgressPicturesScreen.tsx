@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { removeProgressPhotoAction, uploadProgressPhotoAction } from "../lib/actions";
 import { fitJpeg } from "../lib/coverJpeg";
 import { ChevronLeftIcon } from "../components/icons";
 import CoachSays from "./CoachSays";
 import FitTitle from "./FitTitle";
 import ProgressCompare from "./ProgressCompare";
-import PhotoDeck from "./PhotoDeck";
+import PhotoDeck, { type DeckItem } from "./PhotoDeck";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
 import { landOnSoon } from "../lib/landOn";
 import { Bars } from "./Bars";
@@ -20,10 +20,11 @@ type Slot = { id: number; label: string; src: string | null; /** The coach's wor
 export type ProgressPicturesProps = {
   clientId: number;
   /** The sheet open today, with every angle it asks for and the coach's
-      note on how to take them. */
-  openSheet: { period: string; title: string; openedLabel: string; slots: Slot[]; instructions: string | null } | null;
-  /** Earlier sheets, newest first. */
-  earlier: { period: string; title: string; photos: { slotId: number; label: string; src: string | null }[] }[];
+      note on how to take them. `closed`: the one just finished, swappable until the next opens (12 Nov). */
+  openSheet: { period: string; title: string; openedLabel: string; slots: Slot[]; instructions: string | null; closed?: boolean } | null;
+  /** Earlier sheets, newest first: the angles each asked for, and the coach's word on taking each (12 Nov, Alex: a
+      photo can be added to one late). */
+  earlier: { period: string; title: string; photos: { slotId: number; label: string; src: string | null; hint?: string | null }[] }[];
   /** "June": the month the oldest earlier sheet opened. */
   earlierSince: string | null;
   /** "7 Oct": when the next sheet opens. */
@@ -79,19 +80,28 @@ export default function ProgressPicturesScreen({
     return landOnSoon(() => history.current?.children[linkedIndex], "start", 120);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival from a link.
   }, []);
-  // Photos picked but not sent yet; leaving would lose them, so Back asks, in place (3 Nov, Alex: as the check-in and Add an
-  // event ask, never the browser's alert): the sheet's send row turns into the question.
-  const [unsent, setUnsent] = useState(false);
-  const [leaving, setLeaving] = useState(false);
+  // Photos picked but not sent yet, by update (the open one or a past one, 12 Nov); leaving would lose them, so Back
+  // asks, in place (3 Nov, Alex: as the check-in and Add an event ask, never the browser's alert): the send row of the
+  // update holding them turns into the question.
+  const [unsentBy, setUnsentBy] = useState<Record<string, number>>({});
+  const [leaving, setLeaving] = useState<string | null>(null);
   const back = () => {
-    if (unsent) return setLeaving(true);
+    const holding = Object.keys(unsentBy).filter((p) => unsentBy[p] > 0);
+    const asks = holding.find((p) => p === data.openSheet?.period) ?? holding[0];
+    if (asks) {
+      // A past update asking comes open, the others folding (one open at a time).
+      if (asks !== data.openSheet?.period) setOpenPast(asks);
+      return setLeaving(asks);
+    }
     onBack();
   };
-  // Nothing left unsent (the picks taken off, or sent): the question goes with them.
-  const unsentChange = useCallback((u: boolean) => {
-    setUnsent(u);
-    if (!u) setLeaving(false);
+  // Nothing left unsent on an update (the picks taken off, or sent, or the update gone from the screen): its question
+  // goes with them.
+  const unsentChange = useCallback((period: string, n: number) => {
+    setUnsentBy((u) => ((u[period] ?? 0) === n ? u : { ...u, [period]: n }));
+    if (n === 0) setLeaving((l) => (l === period ? null : l));
   }, []);
+  const keep = useCallback(() => setLeaving(null), []);
 
   const open = data.openSheet;
   // The sheet (and the ones before it), or two sheets side by side.
@@ -135,33 +145,46 @@ export default function ProgressPicturesScreen({
           <ProgressCompare
             sheets={[
               ...(open ? [{ period: open.period, title: open.title, cells: open.slots.map((x) => ({ slotId: x.id, label: x.label, src: x.src })) }] : []),
-              ...data.earlier.map((e) => ({ period: e.period, title: e.title, cells: e.photos })),
+              ...data.earlier.map((e) => ({ period: e.period, title: e.title, cells: e.photos.map((p) => ({ slotId: p.slotId, label: p.label, src: p.src })) })),
             ]}
           />
         ) : data.openSheet ? (
           <div ref={openRef}>
-            <OpenSheet clientId={data.clientId} sheet={data.openSheet} onUnsentChange={unsentChange} leaving={leaving} onKeep={() => setLeaving(false)} onLeave={onBack} />
+            <OpenSheet
+              clientId={data.clientId}
+              sheet={data.openSheet}
+              onUnsentChange={unsentChange}
+              leaving={leaving === data.openSheet.period}
+              onKeep={keep}
+              onLeave={onBack}
+            />
           </div>
         ) : null}
 
         {view === "sheet" && data.earlier.length > 0 && (
           <section>
             <div className="pp-app-section-head">
-              <span className="pp-app-section-title">Earlier sheets</span>
+              {/* No "sheet" a client reads (6 Nov, Alex). */}
+              <span className="pp-app-section-title">Earlier</span>
               {data.earlierSince && (
                 <span className="pp-app-section-meta">
                   {data.earlier.length} since {data.earlierSince}
                 </span>
               )}
             </div>
+            {/* One row an update, so a link lands on its row by its place (children[linkedIndex]). */}
             <div className="pp-app-history" ref={history}>
               {data.earlier.map((s) => (
-                <PhotoPeriodHistoryRow
+                <PastSheet
                   key={s.period}
-                  title={s.title}
-                  photos={s.photos}
+                  clientId={data.clientId}
+                  sheet={s}
                   open={openPast === s.period}
                   onToggle={() => setOpenPast((p) => (p === s.period ? null : s.period))}
+                  onUnsentChange={unsentChange}
+                  leaving={leaving === s.period}
+                  onKeep={keep}
+                  onLeave={onBack}
                 />
               ))}
             </div>
@@ -181,26 +204,25 @@ export default function ProgressPicturesScreen({
 
 type Staged = { file: File; preview: string };
 
-// The open sheet, like a check-in, as a section that comes open while it is
-// to do: a card per angle, a tap opening the phone's own picker (4 Nov), Save to
-// send them, and once all are in it folds like the earlier ones, with Edit
-// inside to reopen it. Save sends one
-// photo at a time so a weak connection fails on one photo, not all of them.
-function OpenSheet({
+/**
+ * One shape update's photos being picked, sent and taken off (17 Oct; out of OpenSheet 12 Nov, Alex, so a past update
+ * is filled and changed the same way): the photos picked and not sent, the send one at a time (a weak connection fails
+ * on one photo, not all of them), Remove, Edit photos, and the one hidden field the phone's own picker opens from (4 Nov).
+ * The update's period goes with every send; the server refuses one that has closed meanwhile.
+ */
+function useSheetPhotos({
   clientId,
-  sheet,
+  period,
+  slots,
   onUnsentChange,
-  leaving = false,
-  onKeep,
-  onLeave,
+  onAllSent,
 }: {
   clientId: number;
-  sheet: NonNullable<ProgressPicturesProps["openSheet"]>;
-  onUnsentChange: (unsent: boolean) => void;
-  /** Back was tapped with photos not sent: the send row asks Leave without sending? (3 Nov, Alex). */
-  leaving?: boolean;
-  onKeep?: () => void;
-  onLeave?: () => void;
+  period: string;
+  slots: Slot[];
+  onUnsentChange: (period: string, unsent: number) => void;
+  /** Every photo picked has gone up. */
+  onAllSent?: () => void;
 }) {
   const [staged, setStaged] = useState<Record<number, Staged>>({});
   // Picked photos that have already gone up during the current Save.
@@ -221,10 +243,6 @@ function OpenSheet({
   // A sent photo being taken off while the sheet is edited (4 Nov, Alex: "bring it back"), and one that would not go.
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [removeFailed, setRemoveFailed] = useState(false);
-  // Whether the folded "sent" row is opened up.
-  const [sentOpen, setSentOpen] = useState(false);
-  // The sheet still to do comes open; its head folds it.
-  const [open, setOpen] = useState(true);
   const [saving, startSaving] = useTransition();
 
   // Every preview made on this visit, released when the screen closes.
@@ -236,23 +254,10 @@ function OpenSheet({
 
   const stagedCount = Object.keys(staged).length;
   useEffect(() => {
-    onUnsentChange(stagedCount > 0);
-  }, [stagedCount, onUnsentChange]);
+    onUnsentChange(period, stagedCount);
+  }, [period, stagedCount, onUnsentChange]);
   // Gone from the screen (Compare), its picks go with it: nothing left to ask about.
-  useEffect(() => () => onUnsentChange(false), [onUnsentChange]);
-  // Asked to leave: the sheet comes open and its send row, now the question, is brought into view.
-  const saveRow = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!leaving) return;
-    const t = setTimeout(() => saveRow.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
-    return () => clearTimeout(t);
-  }, [leaving]);
-
-  const total = sheet.slots.length;
-  const hinted = sheet.slots.filter((s) => s.hint?.trim());
-  const inCount = sheet.slots.filter((s) => s.src).length;
-  // Folded once every angle is in and nothing new is waiting.
-  const collapsed = inCount === total && stagedCount === 0 && !editing && !saving;
+  useEffect(() => () => onUnsentChange(period, 0), [period, onUnsentChange]);
 
   const pick = (slot: Slot, file: File) => {
     const preview = URL.createObjectURL(file);
@@ -273,7 +278,7 @@ function OpenSheet({
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("slotId", String(slot.id));
-    fd.set("period", sheet.period);
+    fd.set("period", period);
     startSaving(async () => {
       let ok = true;
       try {
@@ -289,7 +294,7 @@ function OpenSheet({
   };
 
   const save = () => {
-    const queue = sheet.slots.filter((s) => staged[s.id]).map((s) => ({ slot: s, item: staged[s.id] }));
+    const queue = slots.filter((s) => staged[s.id]).map((s) => ({ slot: s, item: staged[s.id] }));
     if (queue.length === 0) return;
     setFailed(false);
     startSaving(async () => {
@@ -300,7 +305,7 @@ function OpenSheet({
         fd.set("clientId", String(clientId));
         fd.set("slotId", String(slot.id));
         // The sheet on screen: the server refuses it if that sheet has closed meanwhile (21 Oct).
-        fd.set("period", sheet.period);
+        fd.set("period", period);
         // Shrunk on the phone first (17 Oct): 1600px on the long edge, a few hundred KB instead of the camera's MBs.
         const small = await fitJpeg(item.file);
         fd.set("file", small ? new File([small], "photo.jpg", { type: "image/jpeg" }) : item.file);
@@ -327,7 +332,7 @@ function OpenSheet({
         if (done.length === queue.length) {
           setEditing(false);
           setJustSaved(true);
-          setSentOpen(false);
+          onAllSent?.();
         }
       });
     });
@@ -340,6 +345,240 @@ function OpenSheet({
     setEditing(false);
   };
 
+  /** An angle's card. `past`: a closed update's (12 Nov), a sent photo View rather than the open one's tick. `canRemove`:
+   *  Remove offered on its sent photos while edited (never a closed update's last). */
+  const deckItem = (s: Slot, { past = false, canRemove = true }: { past?: boolean; canRemove?: boolean } = {}): DeckItem => {
+    const item = staged[s.id];
+    const uploading = uploadingId === s.id;
+    const src = item?.preview ?? s.src;
+    const ticked = item ? sent.includes(s.id) : !!s.src;
+    const ready = !!item && !ticked && !uploading;
+    const settled = ticked && !uploading && !editing;
+    return {
+      key: s.id,
+      label: s.label,
+      src: src ?? null,
+      // Sent (17 Oct, Alex): locked, it is Finlay's now; no Change on the card. "Edit photos" on the sent sheet reopens it.
+      state: uploading ? "Sending…" : ready ? "Ready" : null, // no "Sent" chip (17 Oct, Alex): a sent card shows its tick, or Change while editing
+      tone: ready ? ("ready" as const) : ticked && !uploading ? ("sent" as const) : null,
+      // Editing (17 Oct, Alex: a sent photo could not be swapped or taken off): every card opens again. A past update's
+      // sent photo opens big (View), as it always has.
+      locked: settled && !past,
+      action: settled ? (past ? "View" : null) : src ? "Change" : "Add photo",
+      // A sent photo while editing (4 Nov, Alex): Remove on its card. One picked and not sent has Cancel for that.
+      removable: canRemove && editing && !!s.src && !item && !uploading,
+      removing: removingId === s.id,
+      ...(removingId === s.id ? { state: "Removing…", tone: null, action: null } : {}),
+    };
+  };
+
+  /* No capture (4 Nov, Alex): the iPhone's own sheet offers Take Photo as well as the library. As the food diary's camera. */
+  const input = (
+    <input
+      ref={photoInput}
+      type="file"
+      accept="image/*"
+      hidden
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        // Cleared so picking the same file twice still fires.
+        e.target.value = "";
+        const slot = photoFor.current;
+        photoFor.current = null;
+        if (file && slot) pick(slot, file);
+      }}
+    />
+  );
+
+  return {
+    staged,
+    stagedCount,
+    uploadingId,
+    removingId,
+    failed,
+    removeFailed,
+    setRemoveFailed,
+    editing,
+    setEditing,
+    justSaved,
+    setJustSaved,
+    saving,
+    save,
+    cancel,
+    removePhoto,
+    askPhoto,
+    deckItem,
+    input,
+  };
+}
+
+type SheetPhotos = ReturnType<typeof useSheetPhotos>;
+
+/** What failed, the send row (or, Back pressed with photos picked, the Leave question in its place: 3 Nov, Alex), and
+ *  Edit photos in words once a photo is sent (4 Nov). The open update's and a past one's alike. */
+function SheetFoot({
+  p,
+  inCount,
+  leaving,
+  onKeep,
+  onLeave,
+}: {
+  p: SheetPhotos;
+  inCount: number;
+  leaving: boolean;
+  onKeep?: () => void;
+  onLeave?: () => void;
+}) {
+  // Asked to leave: the send row, now the question, is brought into view.
+  const saveRow = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!leaving) return;
+    const t = setTimeout(() => saveRow.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+    return () => clearTimeout(t);
+  }, [leaving]);
+  const { stagedCount, editing, saving, removingId } = p;
+  const photos = stagedCount === 1 ? "1 photo" : `${stagedCount} photos`;
+  return (
+    <>
+      {leaving && stagedCount > 0 ? (
+        // The check-in's question (.cki-confirm; 3 Nov, Alex): Keep puts the send row back, Leave throws the picks away and goes back.
+        <div ref={saveRow} className="pp-todo-save pp-leave">
+          <div className="cki-confirm" role="alertdialog" aria-label={`Leave without sending ${photos}?`}>
+            <span className="cki-confirm-text">Leave without sending {photos}?</span>
+            <button type="button" className="keep" onClick={onKeep}>
+              Keep
+            </button>
+            <button
+              type="button"
+              className="discard"
+              onClick={() => {
+                p.cancel();
+                onLeave?.();
+              }}
+            >
+              Leave
+            </button>
+          </div>
+        </div>
+      ) : (stagedCount > 0 || editing || saving) && (
+        <div ref={saveRow} className="pp-todo-save">
+          {stagedCount > 0 && inCount > 0 && !saving && (
+            <button type="button" className="pp-app-save-cancel" onClick={p.cancel}>
+              Cancel
+            </button>
+          )}
+          {/* A photo being removed is no send (4 Nov): Done stays, held still, and the send pill never says Sending… for it. */}
+          {stagedCount === 0 && editing && (!saving || removingId !== null) ? (
+            <button
+              type="button"
+              className="pp-app-save-btn secondary"
+              disabled={saving}
+              onClick={() => {
+                p.setEditing(false);
+                p.setRemoveFailed(false);
+              }}
+            >
+              Done
+            </button>
+          ) : (
+            <button type="button" className="pp-app-save-btn" onClick={p.save} disabled={saving}>
+              {saving && removingId === null ? "Sending…" : `Send ${photos}`}
+            </button>
+          )}
+        </div>
+      )}
+      {/* A sheet sent in part can be edited too (4 Nov, Alex: "I uploaded a progress pic, I saved it, but I can't edit
+          it now"): Edit photos in words under the photos once one is sent, as the finished sheet's own. */}
+      {!leaving && !editing && !saving && stagedCount === 0 && inCount > 0 && (
+        <button
+          type="button"
+          className="pp-todo-edit"
+          onClick={() => {
+            p.setEditing(true);
+            p.setJustSaved(false);
+          }}
+        >
+          Edit photos
+        </button>
+      )}
+    </>
+  );
+}
+
+/** Not sent, Not removed: the update's failures, in rust over its photos' foot. */
+function SheetFails({ p }: { p: SheetPhotos }) {
+  return (
+    <>
+      {p.failed && (
+        <p className="pp-app-fail" role="alert">
+          Not sent. Try again
+        </p>
+      )}
+      {p.removeFailed && (
+        <p className="pp-app-fail" role="alert">
+          Photo not removed. Try again
+        </p>
+      )}
+    </>
+  );
+}
+
+/** The coach's general instructions and each angle's word on how to take it (17 and 21 Oct, Alex). */
+function HowToTake({ instructions, slots }: { instructions: string | null; slots: Slot[] }): ReactNode {
+  const hinted = slots.filter((s) => s.hint?.trim());
+  if (!instructions && hinted.length === 0) return null;
+  return (
+    <div className="pp-todo-coach first">
+      <CoachSays label="How to take them">
+        {instructions}
+        {hinted.length > 0 && (
+          <span className={`pp-todo-hints${instructions ? "" : " alone"}`}>
+            {hinted.map((s) => (
+              <span key={s.id} className="pp-todo-hint">
+                <b>{s.label}</b> {s.hint}
+              </span>
+            ))}
+          </span>
+        )}
+      </CoachSays>
+    </div>
+  );
+}
+
+// The open sheet, like a check-in, as a section that comes open while it is
+// to do: a card per angle, a tap opening the phone's own picker (4 Nov), Save to
+// send them, and once all are in it folds like the earlier ones, with Edit
+// inside to reopen it.
+function OpenSheet({
+  clientId,
+  sheet,
+  onUnsentChange,
+  leaving = false,
+  onKeep,
+  onLeave,
+}: {
+  clientId: number;
+  sheet: NonNullable<ProgressPicturesProps["openSheet"]>;
+  onUnsentChange: (period: string, unsent: number) => void;
+  /** Back was tapped with photos not sent: the send row asks Leave without sending? (3 Nov, Alex). */
+  leaving?: boolean;
+  onKeep?: () => void;
+  onLeave?: () => void;
+}) {
+  // Whether the folded "sent" row is opened up.
+  const [sentOpen, setSentOpen] = useState(false);
+  const allSent = useCallback(() => setSentOpen(false), []);
+  const p = useSheetPhotos({ clientId, period: sheet.period, slots: sheet.slots, onUnsentChange, onAllSent: allSent });
+  // The sheet still to do comes open; its head folds it.
+  const [open, setOpen] = useState(true);
+
+  const total = sheet.slots.length;
+  const inCount = sheet.slots.filter((s) => s.src).length;
+  // Folded once every angle is in and nothing new is waiting.
+  const collapsed = inCount === total && p.stagedCount === 0 && !p.editing && !p.saving;
+  // The one just finished is closed (12 Nov, Alex): never its last photo taken off, only changed.
+  const canRemove = !(sheet.closed && inCount === 1);
+
   // Sent: the open sheet folds into a row like the earlier sheets below it,
   // closed by default, with Edit inside to change a photo.
   if (collapsed) {
@@ -350,15 +589,15 @@ function OpenSheet({
           photos={sheet.slots.map((s) => ({ slotId: s.id, label: s.label, src: s.src }))}
           open={sentOpen}
           onToggle={() => setSentOpen((o) => !o)}
-          metaExtra={justSaved ? "just sent" : "sent"}
+          metaExtra={p.justSaved ? "just sent" : "sent"}
           done
           footer={
             <button
               type="button"
               className="pp-app-edit-photos"
               onClick={() => {
-                setEditing(true);
-                setJustSaved(false);
+                p.setEditing(true);
+                p.setJustSaved(false);
                 setSentOpen(false);
               }}
             >
@@ -379,151 +618,85 @@ function OpenSheet({
             {total} {total === 1 ? "photo" : "photos"}
           </span>
         </span>
-        {!editing && <span className="pp-todo-pill">To do</span>}
+        {!p.editing && <span className="pp-todo-pill">To do</span>}
         <span className={`tr-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>
 
       {(open || leaving) && (
         <div className="pp-todo-body">
-          {failed && (
-            <p className="pp-app-fail" role="alert">
-              A photo didn&rsquo;t send. Check your connection and press Save again.
-            </p>
-          )}
-          {removeFailed && (
-            <p className="pp-app-fail" role="alert">
-              Photo not removed. Try again
-            </p>
-          )}
+          <SheetFails p={p} />
 
           {/* How to take them, first (17 Oct, Alex): the coach's general instructions sit above the cards, read before the camera comes out. */}
           {/* The coach's word on how to take each angle (21 Oct, Alex) was the title of our sheet; with the phone's own
               picker in its place (4 Nov, Alex) it reads here, under the general instructions, each angle by its name. */}
-          {(sheet.instructions || hinted.length > 0) && (
-            <div className="pp-todo-coach first">
-              <CoachSays label="How to take them">
-                {sheet.instructions}
-                {hinted.length > 0 && (
-                  <span className={`pp-todo-hints${sheet.instructions ? "" : " alone"}`}>
-                    {hinted.map((s) => (
-                      <span key={s.id} className="pp-todo-hint">
-                        <b>{s.label}</b> {s.hint}
-                      </span>
-                    ))}
-                  </span>
-                )}
-              </CoachSays>
-            </div>
-          )}
+          <HowToTake instructions={sheet.instructions} slots={sheet.slots} />
 
           {/* The angles the coach asks for as a swipe of big cards (17 Oct, Alex); an empty one is a card too, a tap adds or changes its photo. */}
           <PhotoDeck
-            disabled={saving}
-            onTap={(i) => askPhoto(sheet.slots[i])}
-            onRemove={(i) => removePhoto(sheet.slots[i])}
-            items={sheet.slots.map((s) => {
-              const item = staged[s.id];
-              const uploading = uploadingId === s.id;
-              const src = item?.preview ?? s.src;
-              const ticked = item ? sent.includes(s.id) : !!s.src;
-              const ready = !!item && !ticked && !uploading;
-              return {
-                key: s.id,
-                label: s.label,
-                src: src ?? null,
-                // Sent (17 Oct, Alex): locked, it is Finlay's now; no Change on the card. "Edit photos" on the sent sheet reopens it.
-                state: uploading ? "Sending…" : ready ? "Ready" : null, // no "Sent" chip (17 Oct, Alex): a sent card shows its tick, or Change while editing
-                tone: ready ? ("ready" as const) : ticked && !uploading ? ("sent" as const) : null,
-                // Editing (17 Oct, Alex: a sent photo could not be swapped or taken off): every card opens again.
-                locked: ticked && !uploading && !editing,
-                action: ticked && !uploading && !editing ? null : src ? "Change" : "Add photo",
-                // A sent photo while editing (4 Nov, Alex): Remove on its card. One picked and not sent has Cancel for that.
-                removable: editing && !!s.src && !item && !uploading,
-                removing: removingId === s.id,
-                ...(removingId === s.id ? { state: "Removing…", tone: null, action: null } : {}),
-              };
-            })}
+            disabled={p.saving}
+            onTap={(i) => p.askPhoto(sheet.slots[i])}
+            onRemove={(i) => p.removePhoto(sheet.slots[i])}
+            items={sheet.slots.map((s) => p.deckItem(s, { canRemove }))}
           />
 
-          {leaving && stagedCount > 0 ? (
-            // The check-in's question (.cki-confirm; 3 Nov, Alex): Keep puts the send row back, Leave throws the picks away and goes back.
-            <div ref={saveRow} className="pp-todo-save pp-leave">
-              <div className="cki-confirm" role="alertdialog" aria-label={`Leave without sending ${stagedCount === 1 ? "1 photo" : `${stagedCount} photos`}?`}>
-                <span className="cki-confirm-text">Leave without sending {stagedCount === 1 ? "1 photo" : `${stagedCount} photos`}?</span>
-                <button type="button" className="keep" onClick={onKeep}>
-                  Keep
-                </button>
-                <button
-                  type="button"
-                  className="discard"
-                  onClick={() => {
-                    cancel();
-                    onLeave?.();
-                  }}
-                >
-                  Leave
-                </button>
-              </div>
-            </div>
-          ) : (stagedCount > 0 || editing || saving) && (
-            <div ref={saveRow} className="pp-todo-save">
-              {stagedCount > 0 && inCount > 0 && !saving && (
-                <button type="button" className="pp-app-save-cancel" onClick={cancel}>
-                  Cancel
-                </button>
-              )}
-              {/* A photo being removed is no send (4 Nov): Done stays, held still, and the send pill never says Sending… for it. */}
-              {stagedCount === 0 && editing && (!saving || removingId !== null) ? (
-                <button
-                  type="button"
-                  className="pp-app-save-btn secondary"
-                  disabled={saving}
-                  onClick={() => {
-                    setEditing(false);
-                    setRemoveFailed(false);
-                  }}
-                >
-                  Done
-                </button>
-              ) : (
-                <button type="button" className="pp-app-save-btn" onClick={save} disabled={saving}>
-                  {saving && removingId === null ? "Sending…" : stagedCount === 1 ? "Send 1 photo" : `Send ${stagedCount} photos`}
-                </button>
-              )}
-            </div>
-          )}
-          {/* A sheet sent in part can be edited too (4 Nov, Alex: "I uploaded a progress pic, I saved it, but I can't edit
-              it now"): Edit photos in words under the photos once one is sent, as the finished sheet's own. */}
-          {!leaving && !editing && !saving && stagedCount === 0 && inCount > 0 && (
-            <button
-              type="button"
-              className="pp-todo-edit"
-              onClick={() => {
-                setEditing(true);
-                setJustSaved(false);
-              }}
-            >
-              Edit photos
-            </button>
-          )}
+          <SheetFoot p={p} inCount={inCount} leaving={leaving} onKeep={onKeep} onLeave={onLeave} />
         </div>
       )}
 
-      {/* No capture (4 Nov, Alex): the iPhone's own sheet offers Take Photo as well as the library. As the food diary's camera. */}
-      <input
-        ref={photoInput}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          // Cleared so picking the same file twice still fires.
-          e.target.value = "";
-          const slot = photoFor.current;
-          photoFor.current = null;
-          if (file && slot) pick(slot, file);
-        }}
-      />
+      {p.input}
     </article>
+  );
+}
+
+// A past shape update (12 Nov, Alex: "so I can compare them to now, even though the past shape update was 2 weeks or 2
+// months ago"), filled and changed as the open one: an angle it asked for with no photo is the empty card with Add
+// photo, a sent photo View, Edit photos turning them to Change and Remove; the same send row and Leave question. Never
+// its last photo taken off (it would leave the list and renumber the rest), only changed.
+function PastSheet({
+  clientId,
+  sheet,
+  open,
+  onToggle,
+  onUnsentChange,
+  leaving = false,
+  onKeep,
+  onLeave,
+}: {
+  clientId: number;
+  sheet: ProgressPicturesProps["earlier"][number];
+  open: boolean;
+  onToggle: () => void;
+  onUnsentChange: (period: string, unsent: number) => void;
+  leaving?: boolean;
+  onKeep?: () => void;
+  onLeave?: () => void;
+}) {
+  const slots: Slot[] = sheet.photos.map((x) => ({ id: x.slotId, label: x.label, src: x.src, hint: x.hint ?? null }));
+  const p = useSheetPhotos({ clientId, period: sheet.period, slots, onUnsentChange });
+  const inCount = slots.filter((s) => s.src).length;
+  const canRemove = inCount > 1;
+  // The coach's word on each angle while one is being filled (an empty angle, a photo picked, or the update edited).
+  const filling = p.editing || p.stagedCount > 0 || slots.some((s) => !s.src);
+  return (
+    <PhotoPeriodHistoryRow
+      title={sheet.title}
+      photos={sheet.photos}
+      // Asked to leave with its picks: it comes open, as the open update does.
+      open={open || leaving}
+      onToggle={onToggle}
+      items={slots.map((s) => p.deckItem(s, { past: true, canRemove }))}
+      onTap={(i) => p.askPhoto(slots[i])}
+      onRemove={(i) => p.removePhoto(slots[i])}
+      disabled={p.saving}
+      lead={filling ? <HowToTake instructions={null} slots={slots} /> : null}
+      footer={
+        <>
+          <SheetFails p={p} />
+          <SheetFoot p={p} inCount={inCount} leaving={leaving} onKeep={onKeep} onLeave={onLeave} />
+          {/* Inside the row, so the history keeps one child a row for a link landing. */}
+          {p.input}
+        </>
+      }
+    />
   );
 }

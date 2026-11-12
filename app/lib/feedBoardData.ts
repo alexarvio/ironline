@@ -276,6 +276,8 @@ function sinceOf(ctx: Ctx): FeedBoard["since"] {
   const slots = new Map(data.photo_slots.filter((s) => ids.has(s.client_id)).map((s) => [s.id, s.client_id] as const));
   const sheets = new Set<string>();
   for (const u of data.photo_uploads) {
+    // A photo added to an update after it closed (12 Nov, Alex) is no shape update sent; a changed one keeps its first time.
+    if (u.late_at) continue;
     const clientId = slots.get(u.slot_id);
     if (clientId != null && stampMs(u.uploaded_at) > prev) sheets.add(`${clientId}:${u.period}`);
   }

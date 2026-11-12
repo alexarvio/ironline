@@ -3,17 +3,18 @@
 import { pic } from "../lib/pic";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import PhotoDeck from "./PhotoDeck";
+import PhotoDeck, { type DeckItem } from "./PhotoDeck";
 import { Bars } from "./Bars";
 import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
 import RingEdge from "../components/RingEdge";
 
 type Photo = { slotId: number; label: string; src: string | null };
 
-// Read-only view of one earlier photo sheet on the Progress pictures screen.
+// One earlier photo sheet on the Progress pictures screen.
 // Collapsed it is the title and counts; open, a row per photo (tap one for
 // full screen). The coach's comments on a sheet come in the chat, linked to it (21 Oct).
-// The screen owns which row is open, so only one is at a time.
+// The screen owns which row is open, so only one is at a time. With `items` (12 Nov, Alex: a past update filled and
+// changed as the open one) its cards are the screen's own: a View opens the photo big here, any other tap is the screen's.
 export default function PhotoPeriodHistoryRow({
   title,
   photos,
@@ -22,6 +23,11 @@ export default function PhotoPeriodHistoryRow({
   metaExtra,
   footer,
   done = false,
+  items,
+  onTap,
+  onRemove,
+  disabled = false,
+  lead,
 }: {
   title: string;
   photos: Photo[];
@@ -33,6 +39,14 @@ export default function PhotoPeriodHistoryRow({
   footer?: ReactNode;
   /** Every angle of the sheet open now is in (17 Oct, Alex): a green ring with a tick, and the count in green. */
   done?: boolean;
+  /** The cards, in `photos`' order, when the screen fills and changes them; without, the photos read only. */
+  items?: DeckItem[];
+  /** A card's tap that is not View. */
+  onTap?: (index: number) => void;
+  onRemove?: (index: number) => void;
+  disabled?: boolean;
+  /** Shown over the cards, e.g. the coach's word on how to take each angle. */
+  lead?: ReactNode;
 }) {
   const inCount = photos.filter((p) => p.src).length;
   // The photo open full screen, as an index into the sent ones.
@@ -92,9 +106,18 @@ export default function PhotoPeriodHistoryRow({
       {mounted && (
         <div className="pp-app-past-body">
           {/* The angles as a swipe of big cards (17 Oct, Alex), the empty ones too; a photo opens full screen in the app (a link to the image from the home screen has no way back). */}
+          {lead}
           <PhotoDeck
-            onTap={(i) => setViewing(sent.findIndex((s) => s.slotId === photos[i].slotId))}
-            items={photos.map((p) => ({ key: p.slotId, label: p.label, src: p.src ?? null, state: p.src ? null : "Not sent", tone: p.src ? null : ("muted" as const), action: p.src ? "View" : null }))}
+            disabled={disabled}
+            onTap={(i) => {
+              if (items && items[i]?.action !== "View") return onTap?.(i);
+              setViewing(sent.findIndex((s) => s.slotId === photos[i].slotId));
+            }}
+            onRemove={onRemove}
+            items={
+              items ??
+              photos.map((p) => ({ key: p.slotId, label: p.label, src: p.src ?? null, state: p.src ? null : "Not sent", tone: p.src ? null : ("muted" as const), action: p.src ? "View" : null }))
+            }
           />
 
           {footer}
