@@ -224,9 +224,10 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
 }
 
 /** Whether an exercise shows its photo or video row (the workout's rule): a coach's ask with or without a note, on a
- *  swap only when it is about the swap, and one the client started only once something is in it. */
-export function askShown(ask: VideoAsk | null | undefined, swapped: boolean): ask is VideoAsk {
-  return !!ask && (!swapped || ask.about === "swap") && (!ask.fromClient || !!ask.note || !!ask.src || !!ask.reply);
+ *  swap only when it is about the swap, and one the client started only once something is in it. A finished session
+ *  shows only what was sent in it and the reply to that, never a reply carried from an earlier session (`finished`). */
+export function askShown(ask: VideoAsk | null | undefined, swapped: boolean, finished = false): ask is VideoAsk {
+  return !!ask && !(finished && ask.carried) && (!swapped || ask.about === "swap") && (!ask.fromClient || !!ask.note || !!ask.src || !!ask.reply);
 }
 
 /** The workout's row for an exercise's photo or video and the coach's reply, word for word wherever it shows: the
@@ -236,7 +237,7 @@ export function VideoAskRow({ ask, coachName, onOpen, tabIndex }: { ask: VideoAs
   return (
     <button type="button" className={`wo-video${ask.reply ? " replied" : ask.src ? " sent" : " asked"}${ask.reply && !ask.reply.seen ? " unseen" : ""}`} onClick={onOpen} tabIndex={tabIndex}>
       <span className="wo-video-tile">
-        <VideoGlyph />
+        <VideoGlyph photo={ask.media === "photo"} />
       </span>
       <span className="wo-video-main">
         <b>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}`) : ask.src ? (ask.media === "photo" ? "Photo sent" : "Video sent") : `${coachName} asked for a video`}</b>
@@ -259,28 +260,34 @@ export function VideoAskMark({ ask }: { ask: VideoAsk }) {
   return (
     <span className={`wo-askmark${green ? " green" : ""}`} role="img" aria-label={words} title={words}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-        {photo ? (
-          <>
-            <path vectorEffect="non-scaling-stroke" d="M3 8.5A1.5 1.5 0 0 1 4.5 7H8l1.5-2.5h5L16 7h3.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z" />
-            <circle vectorEffect="non-scaling-stroke" cx="12" cy="13" r="3.4" />
-          </>
-        ) : (
-          <>
-            <rect vectorEffect="non-scaling-stroke" x="2.5" y="6" width="13" height="12" rx="2.5" />
-            <path vectorEffect="non-scaling-stroke" d="M15.5 10.5 21 7.5v9l-5.5-3" />
-          </>
-        )}
+        <MediaPaths photo={photo} fixed />
       </svg>
       <RingEdge size={22} stroke={1.5} />
     </span>
   );
 }
 
-export function VideoGlyph() {
+/** The video camera, or the photo camera for a photo: one drawing for the mark and the row's tile, so one thing never
+ *  wears two icons. `fixed` keeps the stroke at its width however small it is drawn. */
+function MediaPaths({ photo, fixed = false }: { photo: boolean; fixed?: boolean }) {
+  const ve = fixed ? "non-scaling-stroke" : undefined;
+  return photo ? (
+    <>
+      <path vectorEffect={ve} d="M3 8.5A1.5 1.5 0 0 1 4.5 7H8l1.5-2.5h5L16 7h3.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z" />
+      <circle vectorEffect={ve} cx="12" cy="13" r="3.4" />
+    </>
+  ) : (
+    <>
+      <rect vectorEffect={ve} x="2.5" y="6" width="13" height="12" rx="2.5" />
+      <path vectorEffect={ve} d="M15.5 10.5 21 7.5v9l-5.5-3" />
+    </>
+  );
+}
+
+export function VideoGlyph({ photo = false }: { photo?: boolean }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="2.5" y="6" width="13" height="12" rx="2.5" />
-      <path d="M15.5 10.5 21 7.5v9l-5.5-3" />
+      <MediaPaths photo={photo} />
     </svg>
   );
 }

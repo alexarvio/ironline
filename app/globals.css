@@ -19134,7 +19134,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-head-btn svg { width: 22px; height: 22px; }
 .wo-head-btn svg { width: 16px; height: 16px; stroke-width: 2.6; }
 .wo-head-right { display: flex; justify-content: flex-end; gap: 4px; }
-.wo-pill { position: relative; overflow: hidden; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 5px 0 14px; border: 0; border-radius: 999px; background: #141a24; color: #fff; box-shadow: 0 12px 22px -14px rgba(20, 26, 36, 0.8); font: inherit; cursor: pointer; justify-self: center; max-width: 100%; }
+.wo-pill { position: relative; overflow: hidden; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 5px 0 14px; border: 0; border-radius: 999px; background: #141a24; color: #fff; box-shadow: none; font: inherit; cursor: pointer; justify-self: center; max-width: 100%; }
 .wo-pill:disabled { cursor: default; }
 /* No glow and 600 at most (12 Nov, Alex: A of docs/boards/workout-hidden-mockup.html). With a gym: its face first, 20px,
    as far in from the pill's left as from its top (9px), its name in white, a ⌄ after it, then the clock. */

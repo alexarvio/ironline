@@ -423,8 +423,9 @@ export default function TrainingDayList({
                     {d.exercises.map((ex) => {
                       const sets = ex.logs.slice().sort((a, b) => a.setNumber - b.setNumber);
                       // What was sent and the coach's reply (12 Nov, Alex: B of docs/boards/workout-hidden-mockup.html):
-                      // the mark at the row's end, the workout's own row under the sets, the same sheet.
-                      const ask = askShown(ex.videoRequest, ex.swap != null) ? ex.videoRequest : null;
+                      // the mark at the row's end, the workout's own row under the sets, the same sheet. Only this
+                      // session's own: a reply carried from an earlier session is not shown here.
+                      const ask = askShown(ex.videoRequest, ex.swap != null, true) ? ex.videoRequest : null;
                       return (
                         <div key={ex.id} className={`tr-x-ex${isDone(ex) ? " done" : ""}`}>
                           <span className="tr-x-head">
