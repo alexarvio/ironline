@@ -1,0 +1,233 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Workout, A2</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet"><style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --faint:#8b93a1; --label:#98A2B3; --line:#E1E5EB; --page:#F5F6F8; --green:#2f7a3f; --rust:#b8471f; --amber:#a8761f; --indigo:#3a3390; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:Archivo,system-ui,sans-serif; font-weight:500; color:var(--ink); background:#fff; padding:28px 20px 64px; -webkit-font-smoothing:antialiased; }
+  h1 { font-size:20px; font-weight:600; margin-bottom:4px; }
+  .sub { color:var(--faint); font-size:13px; margin-bottom:24px; max-width:900px; line-height:1.5; }
+  .opts { display:flex; flex-wrap:wrap; gap:30px; align-items:flex-start; }
+  .opt { width:375px; }
+  .opt h3 { font-size:14px; font-weight:600; margin-bottom:4px; }
+  .opt h3 em { font-style:normal; margin-left:6px; padding:2px 8px; border-radius:999px; font-size:11px; color:var(--green); box-shadow:inset 0 0 0 1px rgba(47,122,63,.35); }
+  .opt > p { font-size:12.5px; color:var(--faint); line-height:1.5; min-height:132px; margin-bottom:12px; }
+  .phone { position:relative; overflow:hidden; border-radius:44px; background:var(--page); box-shadow:0 0 0 8px #1b1f27, 0 30px 60px -30px rgba(0,0,0,.4); padding:0 18px; width:375px; height:812px; }
+  .pick { margin-top:22px; font-size:13px; color:var(--body); max-width:900px; line-height:1.55; }
+  .pick b { font-weight:600; color:var(--ink); }
+  svg.i { fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .bar { display:inline-block; width:1px; height:10px; background:var(--line); margin:0 7px; vertical-align:-1px; }
+
+  /* Head */
+  .whead { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; height:38px; margin-top:46px; }
+  .back svg { width:16px; height:16px; stroke:var(--ink); stroke-width:2.4; fill:none; }
+  .gpill { display:flex; align-items:center; gap:7px; height:38px; padding:0 5px 0 6px; border-radius:999px; background:var(--ink); color:#fff; }
+  .gface { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; font-size:9.5px; font-weight:600; background:#2f5d8f; }
+  .gname { font-size:12.5px; font-weight:600; }
+  .gchev { width:12px; height:12px; stroke:rgba(255,255,255,.7); }
+  .gclock { display:flex; align-items:center; gap:6px; height:28px; padding:0 11px; border-radius:999px; background:rgba(255,255,255,.12); font-size:13.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .gclock i { width:6px; height:6px; border-radius:50%; background:#32D74B; }
+  .segs { display:flex; gap:4px; margin:14px 0 18px; }
+  .segs i { flex:1; height:2px; border-radius:2px; background:var(--line); }
+  .segs i.n { background:var(--indigo); }
+
+  .eyebrow { font-size:10.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); }
+  .eyebrow b { color:var(--indigo); font-weight:600; }
+  .exrow { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-top:6px; }
+  .exrow h4 { flex:1; min-width:0; font-size:26px; font-weight:500; letter-spacing:-.01em; line-height:1.15; }
+  .tools { display:flex; gap:6px; flex:none; padding-top:2px; }
+  .tb { width:32px; height:32px; border-radius:50%; display:grid; place-items:center; color:var(--ink); }
+  .tb svg { width:20px; height:20px; }
+  .tb.ring { box-shadow:inset 0 0 0 1.5px var(--line); }
+  .tb.ring svg { width:14px; height:14px; }
+  .tb.green { box-shadow:inset 0 0 0 1.5px rgba(47,122,63,.55); color:var(--green); }
+  .tb.green svg { width:14px; height:14px; }
+  .next { margin-top:5px; font-size:12px; color:var(--faint); }
+  .replied { display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12.5px; font-weight:600; color:var(--green); }
+  .replied i { width:6px; height:6px; border-radius:50%; background:var(--green); }
+  .replied span { color:var(--ink); }
+
+  .coach { display:flex; gap:10px; margin-top:16px; }
+  .coach .f { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#9a8a78,#4a4038); flex:none; }
+  .coach .l { font-size:10px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--sec); }
+  .coach .t { font-size:14px; color:var(--body); line-height:1.4; margin-top:2px; }
+  .coach.one .t { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .demo { display:flex; align-items:center; justify-content:center; gap:8px; height:42px; margin-top:14px; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px var(--line); font-size:13.5px; }
+  .demo svg { width:22px; height:22px; }
+  .vrow { display:flex; align-items:center; gap:12px; height:46px; margin-top:6px; }
+  .vrow .tile { width:28px; height:28px; display:grid; place-items:center; color:var(--green); }
+  .vrow .tile svg { width:22px; height:22px; }
+  .vrow b { flex:1; font-size:14px; font-weight:600; } .vrow .a { font-size:12.5px; font-weight:600; }
+
+  .target { margin:16px 0 0; }
+  .target .l { font-size:10.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--sec); }
+  .tgrid { display:grid; grid-template-columns:repeat(3,1fr); margin-top:6px; }
+  .tgrid span { font-size:10px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .tgrid b { font-size:18px; font-weight:600; padding-top:8px; }
+  .facts { margin-top:8px; font-size:14px; color:var(--body); font-variant-numeric:tabular-nums; }
+  .facts b { font-weight:600; color:var(--ink); }
+
+  .shead { display:flex; align-items:center; justify-content:space-between; height:34px; margin-top:16px; }
+  .shead .e { font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; }
+  .shead .p { font-size:11px; font-weight:600; color:var(--faint); margin-left:8px; }
+  .unit { display:flex; padding:2px; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px var(--line); }
+  .unit span { height:24px; padding:0 10px; display:grid; place-items:center; border-radius:999px; font-size:11px; font-weight:600; }
+  .unit .on { background:var(--ink); color:#fff; }
+  .rows { position:relative; }
+  .rows::before { content:""; position:absolute; left:18px; top:12px; bottom:12px; width:1px; background:var(--line); }
+
+  /* Now: every row the same big size */
+  .big { position:relative; display:flex; align-items:center; gap:16px; height:64px; }
+  .bdg { width:36px; height:36px; border-radius:50%; background:var(--page); box-shadow:inset 0 0 0 1px #C9CFD8; display:grid; place-items:center; font-size:13px; font-weight:600; color:var(--faint); flex:none; position:relative; }
+  .bdg.warm { box-shadow:inset 0 0 0 1px rgba(168,118,31,.5); color:var(--amber); }
+  .bdg.done { box-shadow:inset 0 0 0 1.5px #82ad8b; }
+  .bdg.done svg { width:16px; height:16px; stroke:#82ad8b; stroke-width:2; fill:none; }
+  .bdg.now { box-shadow:inset 0 0 0 1.5px var(--ink); color:var(--ink); }
+  .bnum { font-size:30px; font-weight:500; color:var(--faint); } .bnum small { font-size:15px; color:var(--label); margin:0 4px 0 2px; }
+  .bnum.d { color:var(--green); opacity:.6; } .bnum.w { color:var(--amber); }
+  .openh { display:flex; align-items:center; gap:14px; height:36px; position:relative; }
+  .openh .t { font-size:10.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--sec); }
+  .fields { display:flex; justify-content:center; gap:34px; padding:4px 0 12px; position:relative; }
+  .fields div { display:flex; align-items:flex-end; gap:6px; }
+  .fields b { font-size:46px; font-weight:300; border-bottom:1px solid var(--ink); line-height:56px; min-width:80px; text-align:right; }
+  .fields small { font-size:9.5px; font-weight:600; letter-spacing:.14em; color:var(--label); margin-bottom:12px; }
+  .acts { display:flex; gap:20px; padding-left:52px; height:40px; align-items:center; font-size:13px; font-weight:600; color:var(--sec); }
+
+  /* Quiet lines: a done or upcoming set as one small line */
+  .q { position:relative; display:flex; align-items:center; gap:16px; height:38px; }
+  .q .dot { width:36px; display:grid; place-items:center; flex:none; }
+  .q .dot span { width:22px; height:22px; border-radius:50%; background:var(--page); box-shadow:inset 0 0 0 1px #C9CFD8; display:grid; place-items:center; font-size:11px; font-weight:600; color:var(--faint); }
+  .q .dot span.ok { box-shadow:inset 0 0 0 1.5px var(--green); }
+  .q .dot span.ok svg { width:12px; height:12px; stroke:var(--green); stroke-width:1.8; fill:none; }
+  .q .dot span.warm { box-shadow:inset 0 0 0 1px rgba(168,118,31,.5); color:var(--amber); font-size:9.5px; }
+  .q .dot span.warm.ok { box-shadow:inset 0 0 0 1.5px var(--amber); } .q .dot span.warm.ok svg { stroke:var(--amber); }
+  .q .v { font-size:15px; color:var(--body); font-variant-numeric:tabular-nums; } .q .v small { color:var(--faint); font-size:12px; margin:0 3px 0 1px; }
+  .q .dl { font-size:11px; font-weight:600; color:var(--green); }
+  .q.up .v { color:var(--faint); }
+  .hero { position:relative; margin:6px 0 4px; }
+  .hero .openh .t { color:var(--ink); }
+  .gap { height:26px; }
+  .zone { font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--ink); }
+
+  /* C: focus */
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:14px; }
+  .chip { display:flex; align-items:center; gap:6px; height:30px; padding:0 11px 0 6px; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px var(--line); font-size:12.5px; font-variant-numeric:tabular-nums; }
+  .chip i { width:18px; height:18px; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--green); display:grid; place-items:center; }
+  .chip i svg { width:10px; height:10px; stroke:var(--green); stroke-width:2; fill:none; }
+  .chip.w i { box-shadow:inset 0 0 0 1.5px var(--amber); } .chip.w i svg { stroke:var(--amber); }
+  .chip.up { color:var(--faint); background:transparent; box-shadow:inset 0 0 0 1px var(--line); }
+  .focus { text-align:center; margin-top:34px; }
+  .focus .t { font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--ink); }
+  .focus .last { margin-top:6px; font-size:12px; color:var(--faint); }
+
+  .dock { position:absolute; left:18px; right:18px; bottom:20px; height:48px; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px var(--line); display:grid; place-items:center; font-size:14.5px; }
+  .note-on { box-shadow:0 0 0 2px rgba(47,122,63,.45); border-radius:10px; }
+
+  .tb.amber { box-shadow:inset 0 0 0 1.5px rgba(168,118,31,.55); color:var(--amber); } .tb.amber svg { width:14px; height:14px; }
+  .tb.grey { box-shadow:inset 0 0 0 1.5px var(--line); color:var(--faint); } .tb.grey svg { width:14px; height:14px; }
+  .eyerow { display:flex; align-items:center; justify-content:space-between; height:32px; }
+  .asknote { margin:4px 0 0 12px; font-size:13px; color:var(--faint); }
+  .warmadd { position:relative; display:flex; align-items:center; gap:16px; height:40px; font-size:13px; font-weight:600; color:var(--amber); }
+  .warmadd .plus { width:36px; display:grid; place-items:center; flex:none; }
+  .warmadd .plus span { width:22px; height:22px; border-radius:50%; background:var(--page); box-shadow:inset 0 0 0 1px rgba(168,118,31,.45); display:grid; place-items:center; }
+  .warmadd .plus svg { width:12px; height:12px; }
+  .status { position:absolute; top:14px; left:30px; right:26px; display:flex; justify-content:space-between; font-size:15px; font-weight:600; }
+  .island { position:absolute; top:11px; left:50%; width:120px; height:34px; margin-left:-60px; border-radius:20px; background:#000; }
+</style></head><body>
+</head><body>
+<h1>The workout screen, A with A2's header</h1>
+<p class="sub">Full screen at iPhone size (375 × 812). The exercise on top: the eyebrow with the four buttons on its right (demo, the video ask's mark, chat, ⋯), the name across the whole width, the video line while there is something to do or see, Next up, Finlay's note, the target. Room. Then the work: done sets as quiet lines, + Warm-up on the spine until every set is in, the set being logged big, the rest quiet. Shown through the video ask's moments.</p>
+<div class="opts">
+<div class="opt"><h3>Finlay asked for a video</h3><p>Amber ring among the buttons, the line under the name with Record, his words grey under it. One warm-up done.</p><div class="phone">
+  <div class="status"><span>14:09</span><span>5G</span></div><div class="island"></div>
+  <div class="whead" style="margin-top:56px"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><span class="gpill"><span class="gface">MF</span><span class="gname">Muscle Factory</span><svg class="gchev i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg><span class="gclock"><i></i>14:02</span></span><span></span></div>
+  <div class="segs"><i class="n" style="background:var(--indigo)"></i><i class="n" style="background:var(--indigo)"></i><i class="n"></i><i></i><i></i><i></i></div>
+  <div class="eyerow"><div class="eyebrow"><b>Push</b><span class="bar"></span>Exercise 3 of 6</div><div class="tools" style="padding:0"><span class="tb ring"><svg class="i" viewBox="0 0 24 24"><path d="M9 7l8 5-8 5z"/></svg></span><span class="tb amber"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></span></div></div>
+  <div class="exrow" style="margin-top:4px"><h4>Inline Chest Press Machine</h4></div>
+  <div class="replied" style="color:var(--amber)"><i style="background:var(--amber)"></i>Finlay asked for a video<span class="bar"></span><span>Record</span></div><div class="asknote">“From the side, your last working set.”</div>
+  <div class="next" style="margin-top:6px">Next up<span class="bar"></span>Cable Fly</div>
+  <div class="coach"><span class="f"></span><div><div class="l">Finlay</div><div class="t">Shoulders down, slow on the way back.</div></div></div>
+  <div class="tgrid" style="margin-top:16px"><span>Sets</span><span>Reps</span><span>kg</span><b>3</b><b>10–12</b><b>60</b></div>
+  <div class="gap"></div>
+  <div class="shead" style="margin-top:0"><div><span class="zone">Sets</span><span class="p">1/3</span></div><div class="unit"><span class="on">KG</span><span>LBS</span></div></div>
+  <div class="rows">
+    <div class="q"><span class="dot"><span class="warm ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">40<small>kg</small>× 12</span></div>
+    <div class="warmadd"><span class="plus"><span><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></span>Warm-up</div>
+    <div class="q"><span class="dot"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">60<small>kg</small>× 12</span><span class="dl">+2.5 kg</span></div>
+    <div class="hero"><div class="openh"><span class="bdg now">2</span><span class="t">Set 2</span></div>
+      <div class="fields"><div><b>60</b><small>KG</small></div><div><b>12</b><small>REPS</small></div></div></div>
+    <div class="q up"><span class="dot"><span>3</span></span><span class="v">60<small>kg</small>× 12</span></div>
+  </div>
+  <div class="acts">+ Add a set<span>− Remove a set</span></div>
+  <div class="dock" style="bottom:28px">Rest timer</div>
+</div></div>
+<div class="opt"><h3>Video sent</h3><p>Grey ring, Video sent | View: nothing to do, so nothing loud.</p><div class="phone">
+  <div class="status"><span>14:09</span><span>5G</span></div><div class="island"></div>
+  <div class="whead" style="margin-top:56px"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><span class="gpill"><span class="gface">MF</span><span class="gname">Muscle Factory</span><svg class="gchev i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg><span class="gclock"><i></i>14:02</span></span><span></span></div>
+  <div class="segs"><i class="n" style="background:var(--indigo)"></i><i class="n" style="background:var(--indigo)"></i><i class="n"></i><i></i><i></i><i></i></div>
+  <div class="eyerow"><div class="eyebrow"><b>Push</b><span class="bar"></span>Exercise 3 of 6</div><div class="tools" style="padding:0"><span class="tb ring"><svg class="i" viewBox="0 0 24 24"><path d="M9 7l8 5-8 5z"/></svg></span><span class="tb grey"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></span></div></div>
+  <div class="exrow" style="margin-top:4px"><h4>Inline Chest Press Machine</h4></div>
+  <div class="replied" style="color:var(--faint)"><i style="background:#C9CFD8"></i>Video sent<span class="bar"></span><span style="color:var(--sec)">View</span></div>
+  <div class="next" style="margin-top:6px">Next up<span class="bar"></span>Cable Fly</div>
+  <div class="coach"><span class="f"></span><div><div class="l">Finlay</div><div class="t">Shoulders down, slow on the way back.</div></div></div>
+  <div class="tgrid" style="margin-top:16px"><span>Sets</span><span>Reps</span><span>kg</span><b>3</b><b>10–12</b><b>60</b></div>
+  <div class="gap"></div>
+  <div class="shead" style="margin-top:0"><div><span class="zone">Sets</span><span class="p">1/3</span></div><div class="unit"><span class="on">KG</span><span>LBS</span></div></div>
+  <div class="rows">
+    <div class="q"><span class="dot"><span class="warm ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">40<small>kg</small>× 12</span></div>
+    <div class="warmadd"><span class="plus"><span><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></span>Warm-up</div>
+    <div class="q"><span class="dot"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">60<small>kg</small>× 12</span><span class="dl">+2.5 kg</span></div>
+    <div class="hero"><div class="openh"><span class="bdg now">2</span><span class="t">Set 2</span></div>
+      <div class="fields"><div><b>60</b><small>KG</small></div><div><b>12</b><small>REPS</small></div></div></div>
+    <div class="q up"><span class="dot"><span>3</span></span><span class="v">60<small>kg</small>× 12</span></div>
+  </div>
+  <div class="acts">+ Add a set<span>− Remove a set</span></div>
+  <div class="dock" style="bottom:28px">Rest timer</div>
+</div></div>
+<div class="opt"><h3>Finlay replied</h3><p>Green ring, Finlay replied | View in green until it is watched.</p><div class="phone">
+  <div class="status"><span>14:09</span><span>5G</span></div><div class="island"></div>
+  <div class="whead" style="margin-top:56px"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><span class="gpill"><span class="gface">MF</span><span class="gname">Muscle Factory</span><svg class="gchev i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg><span class="gclock"><i></i>14:02</span></span><span></span></div>
+  <div class="segs"><i class="n" style="background:var(--indigo)"></i><i class="n" style="background:var(--indigo)"></i><i class="n"></i><i></i><i></i><i></i></div>
+  <div class="eyerow"><div class="eyebrow"><b>Push</b><span class="bar"></span>Exercise 3 of 6</div><div class="tools" style="padding:0"><span class="tb ring"><svg class="i" viewBox="0 0 24 24"><path d="M9 7l8 5-8 5z"/></svg></span><span class="tb green"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></span></div></div>
+  <div class="exrow" style="margin-top:4px"><h4>Inline Chest Press Machine</h4></div>
+  <div class="replied"><i></i>Finlay replied<span class="bar"></span><span>View</span></div>
+  <div class="next" style="margin-top:6px">Next up<span class="bar"></span>Cable Fly</div>
+  <div class="coach"><span class="f"></span><div><div class="l">Finlay</div><div class="t">Shoulders down, slow on the way back.</div></div></div>
+  <div class="tgrid" style="margin-top:16px"><span>Sets</span><span>Reps</span><span>kg</span><b>3</b><b>10–12</b><b>60</b></div>
+  <div class="gap"></div>
+  <div class="shead" style="margin-top:0"><div><span class="zone">Sets</span><span class="p">1/3</span></div><div class="unit"><span class="on">KG</span><span>LBS</span></div></div>
+  <div class="rows">
+    <div class="q"><span class="dot"><span class="warm ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">40<small>kg</small>× 12</span></div>
+    <div class="warmadd"><span class="plus"><span><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></span>Warm-up</div>
+    <div class="q"><span class="dot"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">60<small>kg</small>× 12</span><span class="dl">+2.5 kg</span></div>
+    <div class="hero"><div class="openh"><span class="bdg now">2</span><span class="t">Set 2</span></div>
+      <div class="fields"><div><b>60</b><small>KG</small></div><div><b>12</b><small>REPS</small></div></div></div>
+    <div class="q up"><span class="dot"><span>3</span></span><span class="v">60<small>kg</small>× 12</span></div>
+  </div>
+  <div class="acts">+ Add a set<span>− Remove a set</span></div>
+  <div class="dock" style="bottom:28px">Rest timer</div>
+</div></div>
+<div class="opt"><h3>Watched, short name</h3><p>Once watched the line goes; the green ring stays to see it again. A short name sits the same way, the buttons never beside it.</p><div class="phone">
+  <div class="status"><span>14:09</span><span>5G</span></div><div class="island"></div>
+  <div class="whead" style="margin-top:56px"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><span class="gpill"><span class="gface">MF</span><span class="gname">Muscle Factory</span><svg class="gchev i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg><span class="gclock"><i></i>14:02</span></span><span></span></div>
+  <div class="segs"><i class="n" style="background:var(--indigo)"></i><i class="n" style="background:var(--indigo)"></i><i class="n"></i><i></i><i></i><i></i></div>
+  <div class="eyerow"><div class="eyebrow"><b>Push</b><span class="bar"></span>Exercise 3 of 6</div><div class="tools" style="padding:0"><span class="tb ring"><svg class="i" viewBox="0 0 24 24"><path d="M9 7l8 5-8 5z"/></svg></span><span class="tb green"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></span></div></div>
+  <div class="exrow" style="margin-top:4px"><h4>Lat Pull In</h4></div>
+  
+  <div class="next" style="margin-top:6px">Next up<span class="bar"></span>Cable Fly</div>
+  <div class="coach"><span class="f"></span><div><div class="l">Finlay</div><div class="t">Shoulders down, slow on the way back.</div></div></div>
+  <div class="tgrid" style="margin-top:16px"><span>Sets</span><span>Reps</span><span>kg</span><b>3</b><b>10–12</b><b>60</b></div>
+  <div class="gap"></div>
+  <div class="shead" style="margin-top:0"><div><span class="zone">Sets</span><span class="p">1/3</span></div><div class="unit"><span class="on">KG</span><span>LBS</span></div></div>
+  <div class="rows">
+    
+    <div class="warmadd"><span class="plus"><span><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></span>Warm-up</div>
+    <div class="q"><span class="dot"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">60<small>kg</small>× 12</span><span class="dl">+2.5 kg</span></div>
+    <div class="hero"><div class="openh"><span class="bdg now">2</span><span class="t">Set 2</span></div>
+      <div class="fields"><div><b>60</b><small>KG</small></div><div><b>12</b><small>REPS</small></div></div></div>
+    <div class="q up"><span class="dot"><span>3</span></span><span class="v">60<small>kg</small>× 12</span></div>
+  </div>
+  <div class="acts">+ Add a set<span>− Remove a set</span></div>
+  <div class="dock" style="bottom:28px">Rest timer</div>
+</div></div>
+</div>
+</body></html>
