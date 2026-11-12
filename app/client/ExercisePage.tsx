@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type React from "react";
 import { useOffline } from "next/offline";
 import { enqueueWorkout, useWorkoutOutbox, forgetRefused } from "../components/workoutOutbox";
 import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel as labelOf, type Unit } from "../lib/units";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
-import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
+import { askShown, VideoAskRow, VideoAskSheet } from "./VideoAskSheet";
 import { CoachNote, lastSetsHere, shownName, TargetTable, targetColumns, type SessionExercise } from "./workoutShared";
 import { isAssisted } from "../lib/progressRules";
 import CoachSays from "./CoachSays";
@@ -14,7 +14,6 @@ import { Bars } from "./Bars";
 import RingEdge from "../components/RingEdge";
 import DoneCheck from "../components/DoneCheck";
 import { NoteIcon } from "../components/icons";
-import { dayWords } from "../lib/clientDates";
 
 // One exercise, as a page of the workout (13 Oct, "Stepper sheet"): logging
 // is the whole screen. The sets card holds one row a set; exactly one is
@@ -267,6 +266,8 @@ export default function ExercisePage({
     ...warm.flatMap((w, i): Row[] => (warmShown(w) ? [{ id: `w${i}`, kind: "warm", n: i + 1, label: `W${i + 1}`, plan: w.plan, entered: w.entered, saved: w.saved, extra: true }] : [])),
     ...workRows,
   ];
+  // The + Warm-up over set 1 (12 Nov, Alex): while no working set is in and there is room for another, as the ⋯'s item.
+  const warmAddShown = doneCount === 0 && warm.length < MAX_WARMUPS;
   const firstUnsaved = (after: RowId | null = null) => {
     const from = after ? rows.findIndex((r) => r.id === after) + 1 : 0;
     return rows.slice(from).find((r) => !r.saved)?.id ?? rows.slice(0, from).find((r) => !r.saved)?.id ?? null;
@@ -716,26 +717,15 @@ export default function ExercisePage({
 
 
       {/* A coach's ask shows with or without a note (the note is optional since 15 Oct); a row the client started shows once something is in it. */}
-      {ask && (!swapped || ask.about === "swap") && (!ask.fromClient || ask.note || ask.src || ask.reply) && (
-        <button
-          type="button"
-          className={`wo-video${ask.reply ? " replied" : ask.src ? " sent" : " asked"}${ask.reply && !ask.reply.seen ? " unseen" : ""}`}
-          onClick={() => {
+      {askShown(ask, swapped) && (
+        <VideoAskRow
+          ask={ask}
+          coachName={coachName}
+          onOpen={() => {
             setMediaAbout(null);
             setVideoOpen(true);
           }}
-        >
-          <span className="wo-video-tile">
-            <VideoGlyph />
-          </span>
-          <span className="wo-video-main">
-            <b>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}`) : ask.src ? (ask.media === "photo" ? "Photo sent" : "Video sent") : `${coachName} asked for a video`}</b>
-            {/* A reply needs no second line (17 Oct, Alex): the title says it and Open opens it. */}
-            {!ask.reply && <small>{/* Sent and its day alone (25 Oct, Alex: "waiting for Finlay is not necessary"). */}
-            {ask.src ? (ask.sentAt ? `Sent ${dayWords(new Date(ask.sentAt))}` : "Sent") : ask.note || "Of this exercise, this session"}</small>}
-          </span>
-          <span className="wo-video-action">{ask.reply ? "Open" : ask.src ? "View" : "Record"}</span>
-        </button>
+        />
       )}
 
       {/* ---- The sets card. */}
@@ -765,7 +755,23 @@ export default function ExercisePage({
         </div>
 
         <div className="lw-rows">
-          {rows.map((row) => {
+          {rows.map((row) => (
+            <Fragment key={row.id}>
+            {row.id === "s1" && warmAddShown && (
+              // On the spine right above set 1 (12 Nov, Alex: A of docs/boards/workout-hidden-mockup.html): a + in a faint
+              // amber ring and Warm-up in amber words, where a warm-up lands, after any there already, so each tap adds the
+              // next. Exactly the ⋯'s Add a warm-up set; gone once a working set is in.
+              <button key="warm-add" type="button" className="lw-warmadd" onClick={addWarm}>
+                <span className="lw-warmadd-plus" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden="true" focusable="false">
+                    <path vectorEffect="non-scaling-stroke" d="M12 5v14M5 12h14" />
+                  </svg>
+                  <RingEdge size={36} stroke={1} />
+                </span>
+                Warm-up
+              </button>
+            )}
+            {(() => {
             const open = row.id === current;
             const state = open ? "open" : row.saved ? "done" : "todo";
             if (!open) {
@@ -876,7 +882,9 @@ export default function ExercisePage({
               </div>
               </Fold>
             );
-          })}
+            })()}
+            </Fragment>
+          ))}
         </div>
 
         <div className="lw-setacts">

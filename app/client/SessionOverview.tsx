@@ -10,7 +10,7 @@ import { ChevronLeftIcon } from "../components/icons";
 import DoneCheck from "../components/DoneCheck";
 import GymPickerDialog from "./GymPickerDialog";
 import { Bars } from "./Bars";
-import { VideoAskSheet } from "./VideoAskSheet";
+import { askShown, VideoAskMark, VideoAskRow, VideoAskSheet } from "./VideoAskSheet";
 import { dayWords } from "../lib/clientDates";
 import type { GymOption } from "./GymPickerDialog";
 import {
@@ -344,6 +344,10 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
   const [videoOpen, setVideoOpen] = useState(false);
   const media = ask?.media === "photo" ? "photo" : "video";
   if (done) {
+    // What was sent and the coach's reply, as the workout shows them (12 Nov, Alex: B of
+    // docs/boards/workout-hidden-mockup.html): a mark on the row, so a shut session says which exercise holds something,
+    // and the workout's own row under the sets, opening the same sheet.
+    const sent = askShown(ask, swapped) ? ask : null;
     return (
       <div ref={cardRef} className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
         <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
@@ -351,6 +355,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
           <span className="so-card-main">
             <span className="so-card-name">{shownName(exercise)}</span>
           </span>
+          {sent && <VideoAskMark ask={sent} />}
           {delta != null && delta !== 0 && (
             <span className={`so-delta${delta > 0 ? " up" : ""}`}>
               {delta > 0 ? "+" : "−"}
@@ -382,6 +387,12 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
             ) : (
               <div className="so-notlogged">Not logged</div>
             )}
+            {sent && (
+              <div className="lw so-video-past">
+                <VideoAskRow ask={sent} coachName={coachName} onOpen={() => setVideoOpen(true)} />
+              </div>
+            )}
+            {videoOpen && sent && <VideoAskSheet ask={sent} assignmentId={exercise.id} exerciseName={shownName(exercise)} coachName={coachName} onClose={() => setVideoOpen(false)} />}
           </div>
         </SoFold>
       </div>

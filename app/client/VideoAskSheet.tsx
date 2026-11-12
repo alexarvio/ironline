@@ -7,6 +7,7 @@ import { uploadFirst } from "../lib/uploadFirst";
 import { newOnceKey } from "../lib/onceKey";
 import { VideoReplyBody, type VideoReplyView } from "./VideoReplySheet";
 import { dayWords } from "../lib/clientDates";
+import RingEdge from "../components/RingEdge";
 
 // The coach asked for a video of this exercise: a camera on the exercise
 // card, with a dot until one is sent. It opens a sheet from the bottom with
@@ -219,6 +220,59 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
       </div>
     </div>,
     document.body
+  );
+}
+
+/** Whether an exercise shows its photo or video row (the workout's rule): a coach's ask with or without a note, on a
+ *  swap only when it is about the swap, and one the client started only once something is in it. */
+export function askShown(ask: VideoAsk | null | undefined, swapped: boolean): ask is VideoAsk {
+  return !!ask && (!swapped || ask.about === "swap") && (!ask.fromClient || !!ask.note || !!ask.src || !!ask.reply);
+}
+
+/** The workout's row for an exercise's photo or video and the coach's reply, word for word wherever it shows: the
+ *  exercise page, and a finished session's exercise on Training and in its overview (12 Nov, Alex: B of
+ *  docs/boards/workout-hidden-mockup.html). Styled under `.lw`; a page outside the workout wraps it in one. */
+export function VideoAskRow({ ask, coachName, onOpen, tabIndex }: { ask: VideoAsk; coachName: string; onOpen: () => void; tabIndex?: number }) {
+  return (
+    <button type="button" className={`wo-video${ask.reply ? " replied" : ask.src ? " sent" : " asked"}${ask.reply && !ask.reply.seen ? " unseen" : ""}`} onClick={onOpen} tabIndex={tabIndex}>
+      <span className="wo-video-tile">
+        <VideoGlyph />
+      </span>
+      <span className="wo-video-main">
+        <b>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}`) : ask.src ? (ask.media === "photo" ? "Photo sent" : "Video sent") : `${coachName} asked for a video`}</b>
+        {/* A reply needs no second line (17 Oct, Alex): the title says it and Open opens it. */}
+        {!ask.reply && <small>{/* Sent and its day alone (25 Oct, Alex: "waiting for Finlay is not necessary"). */}
+        {ask.src ? (ask.sentAt ? `Sent ${dayWords(new Date(ask.sentAt))}` : "Sent") : ask.note || "Of this exercise, this session"}</small>}
+      </span>
+      <span className="wo-video-action">{ask.reply ? "Open" : ask.src ? "View" : "Record"}</span>
+    </button>
+  );
+}
+
+/** The mark on a finished session's exercise row that says it holds a photo or video (12 Nov, Alex: B of
+ *  docs/boards/workout-hidden-mockup.html; as the coach's rows carry it): the video, or the camera for a photo, 12px in
+ *  a 22px ring, green once sent or replied to, grey while only asked. */
+export function VideoAskMark({ ask }: { ask: VideoAsk }) {
+  const green = !!ask.reply || !!ask.src;
+  const photo = ask.media === "photo";
+  const words = ask.reply ? "Reply" : ask.src ? (photo ? "Photo sent" : "Video sent") : "Video asked";
+  return (
+    <span className={`wo-askmark${green ? " green" : ""}`} role="img" aria-label={words} title={words}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+        {photo ? (
+          <>
+            <path vectorEffect="non-scaling-stroke" d="M3 8.5A1.5 1.5 0 0 1 4.5 7H8l1.5-2.5h5L16 7h3.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z" />
+            <circle vectorEffect="non-scaling-stroke" cx="12" cy="13" r="3.4" />
+          </>
+        ) : (
+          <>
+            <rect vectorEffect="non-scaling-stroke" x="2.5" y="6" width="13" height="12" rx="2.5" />
+            <path vectorEffect="non-scaling-stroke" d="M15.5 10.5 21 7.5v9l-5.5-3" />
+          </>
+        )}
+      </svg>
+      <RingEdge size={22} stroke={1.5} />
+    </span>
   );
 }
 
