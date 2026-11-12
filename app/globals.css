@@ -21795,3 +21795,17 @@ body:has(.wo-screen) { background: #F5F6F8; }
    up with the keyboard and the thread's foot stays above it. Its home-bar room goes while the keyboard covers it. */
 html.kb-open .cm-screen { padding-bottom: var(--kb, 0px); }
 html.kb-open .cm-screen .cm-compose { padding-bottom: 10px; }
+
+/* The keyboard without the web view shrinking (13 Nov, Alex: "this keyboard is quite buggy still across the app"; the
+   shell's Keyboard resize is none since then, mobile/capacitor.config.json). Every screen of the client app takes the
+   keyboard's room as its own foot while it is up (--kb, from the plugin's height as the keyboard starts), which is what
+   the old shrink did but in the keyboard's first frame: each screen's scroll box ends at the keyboard, its foot (the
+   chat's box, a sticky footer) sits on it, and the reveal brings a field above it. A build that still shrinks gets --kb
+   only in its gap, so nothing is lifted twice. The sign-in page centres its card in the room above it. The tab bar's
+   room under a sticky footer goes while it is hidden. In the new mode the chat eases up with the keyboard, on a curve
+   close to iOS's own. Pop-ups and sheets keep their own --kb rules above. */
+html.kb-open .app-layer { padding-bottom: var(--kb, 0px); }
+html.kb-open .app-layer-main .app-sticky-footer { padding-bottom: 12px; }
+html.kb-open .auth-page.au-page { padding-bottom: calc(24px + var(--kb, 0px)); }
+html.kb-overlay .cm-screen { transition: padding-bottom 0.28s cubic-bezier(0.38, 0.7, 0.125, 1); }
+@media (prefers-reduced-motion: reduce) { html.kb-overlay .cm-screen { transition: none; } }

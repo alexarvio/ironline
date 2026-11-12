@@ -381,3 +381,8 @@ html.cph-locked .cph-stage { touch-action: none; }
 @media (prefers-reduced-motion: reduce) {
   .cph-scrim, .cph-sheet, .cph-rec i, .cph-cal-now::before, .cph-cal-week, .cph-cal-daybody { animation: none; }
 }
+
+/* A sheet over the keyboard (13 Nov: the app's web view no longer shrinks to it): the scrim ends at the keyboard
+   (--kb, keyboard.ts), the sheet no taller than the room left, its own body scrolling, its home-bar room gone. */
+html.kb-open .cph-scrim { bottom: var(--kb, 0px); }
+html.kb-open .cph-sheet { max-height: calc(100dvh - var(--kb, 0px) - 40px - env(safe-area-inset-top, 0px)); overflow-y: auto; overscroll-behavior: contain; padding-bottom: 12px; }
