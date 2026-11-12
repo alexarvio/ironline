@@ -106,12 +106,9 @@ export default function SessionOverview({
   const pillClass = status;
 
   const [seenAuto, setSeenAuto] = useState(false);
-  // Exactly one gym: no question, it starts there. None yet: the pop-up
-  // opens on its Add form. Two or more: the pop-up, last used preselected.
-  const start = () => {
-    if (day.gyms.length === 1) onStart(day.gyms[0]);
-    else setGymOpen(true);
-  };
+  // Always the question (13 Nov, Alex: one gym went straight in, with no One-time gym or Add a gym):
+  // the pop-up, last used preselected; none yet, it opens on its Add form.
+  const start = () => setGymOpen(true);
   // Arrived from Home's Start: straight into the gym question, or the start.
   if (autoStart !== seenAuto) {
     setSeenAuto(autoStart);
