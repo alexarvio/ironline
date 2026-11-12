@@ -502,7 +502,9 @@ function EventRow(p: RowProps) {
           {g ? <span className="evp-label">{c.label}</span> : label && <span className="evp-label">{label}</span>}
           <span className="evp-title-row">
             <span ref={titleRef} className="evp-title">{e.title}</span>
-            {(e.note || clipped || e.goal) && (
+            {/* Every row that opens wears its chevron (12 Nov, Alex: A of docs/boards/hidden-ways-mockup.html): a plain
+                upcoming event opens on Edit and Delete too, and looked closed without it. */}
+            {more && (
               <svg className="evp-chev" viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M9 6l6 6-6 6" />
               </svg>

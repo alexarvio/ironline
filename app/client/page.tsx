@@ -114,11 +114,10 @@ import type { HomeWeight } from "./home/weightData";
 import type { ClientMeetingView } from "./meetings/MeetingsScreen";
 import { isMeetingTypeId } from "../lib/meetingTypes";
 import type { ProgressPics } from "./ProgressPicsCard";
-import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
+import FoodDiaryScreen, { type FoodDiaryProps } from "./FoodDiaryScreen";
 import CoachCard from "./CoachCard";
 import FitTitle from "./FitTitle";
 import { Bars } from "./Bars";
-import PictureCycle from "./PictureCycle";
 import PhaseObjectives from "./PhaseObjectives";
 import { FEATURES } from "../lib/features";
 import PushToggle from "./PushToggle";
@@ -138,7 +137,7 @@ import AppShell, { AppTab, type Arrival, type PhoneScreen } from "./AppShell";
 import NativeCoachRedirect from "../coach/NativeCoachRedirect";
 import OpeningSplash from "./OpeningSplash";
 import AvatarUpload from "./AvatarUpload";
-import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
+import { phaseCovers, phaseLastDay } from "../lib/phases";
 import { defaultPhaseCover } from "../lib/phaseCovers";
 import { CardPicturesRows } from "./CardPictureSheet";
 import { isGymColor } from "../lib/gymColors";
@@ -180,7 +179,7 @@ function noteDateLabel(at: string | null): string {
 // PreviewBar's cookie (a client module's constant reads as a reference here, not the string).
 const PREVIEW_COOKIE = "ironline_preview";
 // The screens the phone preview can open on (AppShell's PhoneScreen), and which of them are tabs.
-const PHONE_SCREENS = new Set<string>(["home", "training", "nutrition", "checkin", "photos", "messages", "food", "meetings", "invoices", "events"]);
+const PHONE_SCREENS = new Set<string>(["home", "training", "nutrition", "checkin", "photos", "messages", "meetings", "invoices", "events"]);
 const PHONE_TAB_SCREENS = new Set<string>(["home", "training", "nutrition"]);
 
 async function resolveClientId(raw: string | undefined): Promise<number | null> {
@@ -872,7 +871,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
   );
 }
 
-function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
+function NutritionTab({ CLIENT_ID, diary, readOnly = false }: { CLIENT_ID: number; diary: FoodDiaryProps; readOnly?: boolean }) {
   const summary = getNutritionGoalsSummary(CLIENT_ID);
   const plan = getNutritionPlan(CLIENT_ID);
   const storedPlan = getStoredNutritionPlan(CLIENT_ID);
@@ -888,101 +887,15 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     d.setDate(d.getDate() + days);
     return localDateStr(d);
   };
-  // Both day types' targets up front, so the tabs switch with no server
-  // round trip. A macro's share is of the kcal the three macros make up.
-  const targetSet = (kcal: number, protein: number, carbs: number, fats: number): NutritionTargetSet => {
-    const macroKcal = protein * 4 + carbs * 4 + fats * 9;
-    const share = (grams: number, kcalPerGram: number) => (macroKcal > 0 ? (grams * kcalPerGram) / macroKcal : 0);
-    return {
-      kcal,
-      macros: [
-        { id: "protein", name: "Protein", grams: protein, share: share(protein, 4) },
-        { id: "carbs", name: "Carbs", grams: carbs, share: share(carbs, 4) },
-        { id: "fat", name: "Fat", grams: fats, share: share(fats, 9) },
-      ],
-    };
-  };
   const hasTargets = summary.trainingKcal > 0 || summary.restKcal > 0;
-  const training = targetSet(summary.trainingKcal, summary.trainingProtein, summary.trainingCarbs, summary.trainingFats);
-  const rest = targetSet(summary.restKcal, summary.restProtein, summary.restCarbs, summary.restFats);
 
-  // The nutrition phase the client is in, named as the coach named it on the
-  // Plan tab: which week of it this is, one segment per week, and when it ends.
+  // The nutrition phase the client is in, named as the coach named it on the Plan tab: the banner's title.
   const nutritionPhase = getCurrentPhase(CLIENT_ID, "nutrition");
-  // Nothing set up yet (17 Oct, Alex: "very naked"): the Training tab's banner, same size, with the nutrition photo,
-  // and one line. No day tabs, rings, supplements or last 7 days until the coach deploys a phase or targets.
-  if (!nutritionPhase && !hasTargets) {
-    const pics = bannerPictures(CLIENT_ID, "nutrition");
-    return (
-      <div className="tr nd-naked">
-        <header className="tr-banner nd-naked-banner">
-          {pics.length > 0 && <PictureCycle pictures={pics} className="tr-banner-pic" />}
-          <span className="tr-banner-glow" aria-hidden="true" />
-          <div className="tr-kicker">Nutrition</div>
-          <FitTitle className="tr-name">Your nutrition</FitTitle>
-        </header>
-        <div className="tr-body">
-          <p className="empty-note">No plan yet</p>
-        </div>
-      </div>
-    );
-  }
-  const phaseSlot = nutritionPhase ? (
-    (() => {
-      const total = phaseWeeks(nutritionPhase.start_week, nutritionPhase.end_week);
-      const current = phaseWeekIndex(nutritionPhase.start_week, nutritionPhase.end_week, today);
-      // The bar is one line for the phase's days, filled up to today. With
-      // under a week to go, the count switches from weeks to days.
-      const totalDays = phaseDays(nutritionPhase.start_week, nutritionPhase.end_week);
-      const dayIndex = Math.min(
-        totalDays,
-        Math.max(1, Math.round((new Date(`${today}T00:00:00`).getTime() - new Date(`${nutritionPhase.start_week}T00:00:00`).getTime()) / 86400000) + 1)
-      );
-      const inDays = totalDays - dayIndex < 7;
-      return (
-        <>
-          <div className="nd-phase">
-            <div className="nd-phase-titles">
-              <div className="nd-kicker">Nutrition</div>
-              <FitTitle className="nd-phase-name">{nutritionPhase.name}</FitTitle>
-            </div>
-          </div>
-          <div
-            className="nd-progress"
-            role="progressbar"
-            aria-label={`${nutritionPhase.name}: day ${dayIndex} of ${totalDays}`}
-            aria-valuemin={0}
-            aria-valuemax={totalDays}
-            aria-valuenow={dayIndex}
-          >
-            <span style={{ width: `${(dayIndex / totalDays) * 100}%` }} />
-          </div>
-          {/* Under the bar: when it began on the left, how far in on the right. */}
-          <div className="nd-timeline-foot">
-            <span>Started {short(nutritionPhase.start_week)}</span>
-            <span className="nd-phase-week">
-              {inDays ? (
-                <>
-                  Day <b>{dayIndex}</b> of {totalDays}
-                </>
-              ) : (
-                <>
-                  Week <b>{current}</b> of {total}
-                </>
-              )}
-            </span>
-          </div>
-        </>
-      );
-    })()
-  ) : (
-    <div className="nd-phase">
-      <div className="nd-phase-titles">
-        <div className="nd-kicker">Nutrition</div>
-        <div className="nd-phase-name">Your targets</div>
-      </div>
-    </div>
-  );
+  const pics = bannerPictures(CLIENT_ID, "nutrition");
+  // Nutrition is the food diary (12 Nov, Alex: B of docs/boards/nutrition-is-the-diary-mockup.html, "one screen"): tap it
+  // and you are in today's diary, logging. Nothing set up yet (no phase, no targets): the diary alone, its banner grey,
+  // and none of what the coach sets (Supplements | Water, the note, Last 7 days).
+  if (!nutritionPhase && !hasTargets) return <FoodDiaryScreen clientId={CLIENT_ID} diary={diary} pictures={pics} title="Your nutrition" naked readOnly={readOnly} />;
 
   const supplementRows = SUPPLEMENT_ITEMS.map((item) => ({ item, entry: plan.supplements[slugify(item)] })).filter(
     (r) => r.entry?.quantity
@@ -1061,41 +974,60 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     });
 
 
-  return (
-    <div className="nd">
-      <NutritionTargetsCard
-        pictures={bannerPictures(CLIENT_ID, "nutrition")}
-        training={training}
-        rest={rest}
-        // Always opens on Training day; Rest day is a tap away.
-        initialIsTraining
-        hasTargets={hasTargets}
-        phase={phaseSlot}
-        eatenKcal={listFoodEntries(CLIENT_ID, today).reduce((s, e) => s + e.kcal, 0)}
-        waterL={storedPlan.water_l ?? null}
-        footer={supplements.length > 0 ? <SupplementsCard date={today} rows={supplements} /> : undefined}
-      />
-
-      <div className="nd-body">
-        {/* The coach's objectives for the nutrition phase, as on its Home card. */}
-        <PhaseObjectives coachName={coachName} objectives={FEATURES.phaseGoals ? nutritionPhase?.objectives ?? [] : []} />
-        <CoachCard
-          coachName={coachName}
-          photoPath={getCoachAvatarPath(CLIENT_ID)}
-          note={plan.coach_notes?.trim() || null}
-          noteDate={nutritionPhase ? short(nutritionPhase.start_week) : null}
-        />
-
-        <section className="nd-days">
-          <div className="nd-section-head">
-            <h2 className="nd-card-title">Last 7 days</h2>
+  const coachNote = plan.coach_notes?.trim() || null;
+  // Today's water goal and supplements, between the ring and the meals, whichever day the diary shows (they are today's).
+  const water = storedPlan.water_l != null && storedPlan.water_l > 0 ? storedPlan.water_l : null;
+  const supps = supplements.length > 0 ? <SupplementsCard key="supps" date={today} rows={supplements} /> : null;
+  const wsRow =
+    water || supps ? (
+      <div className={`nd-wsrow${water && supps ? " both" : ""}`}>
+        {water && (
+          <div key="water" className="nd-water">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3.5c3.2 3.9 6 7.4 6 10.7a6 6 0 0 1-12 0c0-3.3 2.8-6.8 6-10.7z" />
+            </svg>
+            <span className="nd-water-title">Water</span>
+            <span className="nd-water-goal">{water.toLocaleString("en-US", { maximumFractionDigits: 2 })} L</span>
           </div>
-          <div className="nd-card">
-            {lastWeek.length > 0 && <LastWeekDays days={lastWeek} />}
-          </div>
-        </section>
+        )}
+        {supps}
       </div>
-    </div>
+    ) : null;
+
+  return (
+    <FoodDiaryScreen
+      clientId={CLIENT_ID}
+      diary={diary}
+      pictures={pics}
+      title={nutritionPhase?.name ?? "Your targets"}
+      readOnly={readOnly}
+      beforeMeals={wsRow}
+      // Only with something in it: the coach's note or a day in the last seven.
+      foot={
+        !coachNote && lastWeek.length === 0 ? undefined : (
+        <>
+          <CoachCard
+            key="coach"
+            coachName={coachName}
+            photoPath={getCoachAvatarPath(CLIENT_ID)}
+            note={coachNote}
+            noteDate={nutritionPhase ? short(nutritionPhase.start_week) : null}
+          />
+          {/* An empty list says nothing (10 Nov, Alex). */}
+          {lastWeek.length > 0 && (
+            <section key="days" className="nd-days">
+              <div className="nd-section-head">
+                <h2 className="nd-card-title">Last 7 days</h2>
+              </div>
+              <div className="nd-card">
+                <LastWeekDays days={lastWeek} />
+              </div>
+            </section>
+          )}
+        </>
+        )
+      }
+    />
   );
 }
 
@@ -1324,7 +1256,9 @@ export default async function ClientPage({
   // The coach's phone preview (21 Oct): ?phone=1 from the admin's panel draws this client's app read-only on the
   // screen it names (AppShell readOnly). A coach only; for a client the parameters are ignored.
   const phone = params.phone === "1" && (await getSessionUser())?.role === "coach";
-  const phoneScreen = phone && PHONE_SCREENS.has(params.screen ?? "") ? (params.screen as PhoneScreen) : "home";
+  // The food diary is Nutrition now (12 Nov, Alex): an older admin asking for it gets Nutrition.
+  const askedScreen = params.screen === "food" ? "nutrition" : params.screen;
+  const phoneScreen = phone && PHONE_SCREENS.has(askedScreen ?? "") ? (askedScreen as PhoneScreen) : "home";
   // Who is in the app (9 Oct): this one, on the client app (a coach previewing counts as the coach). Not the preview:
   // the coach is on the admin, looking.
   if (!phone) touchPresence(await getSessionUser(), "Client app");
@@ -1565,7 +1499,7 @@ export default async function ClientPage({
       // Draws its own photo banner, darkened; the top bar floats over it in white.
       bare: true,
       darkBanner: true,
-      content: <NutritionTab CLIENT_ID={CLIENT_ID} />,
+      content: <NutritionTab CLIENT_ID={CLIENT_ID} diary={foodDiary} readOnly={phone} />,
     },
   ];
 
@@ -1603,7 +1537,6 @@ export default async function ClientPage({
       coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}
       clientAvatarPath={client?.avatar_path ?? null}
       foodDiary={foodDiary}
-      foodPictures={bannerPictures(CLIENT_ID, "nutrition")}
       meetings={meetings}
       invoices={invoices}
       arrival={phone ? null : arrivalFrom(CLIENT_ID, params.n, params.meeting)}

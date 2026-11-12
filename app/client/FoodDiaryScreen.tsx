@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useLayoutEffect, useRef, useState, useTransi
 import AddMealSheet, { CopyMealDialog, DeleteMealDialog } from "./AddMealSheet";
 import { createPortal, flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
-import { NorCoachLogo } from "../components/NorCoachLogo";
+
 import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, CopyIcon, MoreIcon, PlusIcon, SearchIcon } from "../components/icons";
 import { newOnceKey } from "../lib/onceKey";
 import {
@@ -41,22 +41,23 @@ import {
   setFoodDayTypeAction,
   updateFoodEntryAction,
 } from "../lib/actions";
-import { useTween } from "./NutritionTargetsCard";
+import { useTween } from "../components/useTween";
+import FitTitle from "./FitTitle";
+import { useFoodFocus, useTabShown } from "./CheckInContext";
 import BarcodeScanner from "./BarcodeScanner";
 import PictureCycle from "./PictureCycle";
 import { landOn } from "../lib/landOn";
-import { dayWords, weekdayWords } from "../lib/clientDates";
+import { dayWords } from "../lib/clientDates";
 import { Bars } from "./Bars";
 import CoachSays from "./CoachSays";
 import { pic } from "../lib/pic";
 import "./food-cards.css";
 
-// The client's food diary, opened from the ring on Nutrition. On the client
-// page model: the top bar (a back arrow in place of the burger) floating
-// over a banner with the day, a week strip and the Training day / Rest day
-// choice that decides the targets; the Nutrition card's rings pulled up over
-// the banner, filling as the day is eaten with the kcal left inside; then
-// the meals, a photo card each with its foods folding out under it. A day at a time: the strip, its arrows or a
+// The client's food diary, which is the Nutrition tab (12 Nov, Alex: B of docs/boards/nutrition-is-the-diary-mockup.html).
+// Under the app's own top bar: a banner with the phase, the day, a week strip and the Training day / Rest day choice
+// that decides the targets; the rings filling as the day is eaten with the kcal left inside; Supplements | Water;
+// the meals, a photo card each with its foods folding out under it; Saved days | Saved meals; the coach's note and
+// Last 7 days at the foot. A day at a time: the strip, its arrows or a
 // sideways swipe move a day, never past today; other days are read through
 // the action, and the day is re-read after every change. Add food opens
 // inside the meal: a search box with the matches under it, then the amount
@@ -193,20 +194,31 @@ export default function FoodDiaryScreen({
   clientId,
   diary: initial,
   pictures = [],
-  initialDate = null,
-  initialMeal = null,
-  onBack,
+  title,
+  naked = false,
+  beforeMeals,
+  foot,
+  readOnly = false,
 }: {
+  /** The coach's phone preview: shown, never written to (no day let go on opening). */
+  readOnly?: boolean;
   clientId: number;
   diary: FoodDiaryProps;
   /** The pictures set for Nutrition (17 Oct), taking turns behind the banner as they do there; none, the banner's own photo. */
   pictures?: string[];
-  /** A coach message linked this day: open on it rather than today. */
-  initialDate?: string | null;
-  /** … and the coach commented on this meal of it: open and show it. */
-  initialMeal?: string | null;
-  onBack: () => void;
+  /** The banner's title: the nutrition phase's name (12 Nov, Alex: Nutrition is the food diary). */
+  title: string;
+  /** No phase and no targets: the banner in grey, as Training's with nothing planned. */
+  naked?: boolean;
+  /** Supplements | Water, between the ring and the meals. */
+  beforeMeals?: ReactNode;
+  /** The coach's note and Last 7 days, at the foot. */
+  foot?: ReactNode;
 }) {
+  // Where a link landed (a coach's message about a day, and a meal of it), read once: the tab stays mounted and the
+  // focus goes back to null the moment it is left, while the day it opened on must stay reachable.
+  const focusNow = useFoodFocus();
+  const [{ date: initialDate, meal: initialMeal }] = useState(() => ({ date: focusNow?.date ?? null, meal: focusNow?.meal ?? null }));
   // The day showing. Today arrives with the page; other days, and today
   // again after a change, are read through the action.
   const today = initial.date;
@@ -218,10 +230,14 @@ export default function FoodDiaryScreen({
   // catch up then, in one go, instead of on every add.
   const router = useRouter();
   const changed = useRef(false);
-  const firstDiary = useRef(true);
+  // Only the client's own edits count: a day read as it is from the server (the page's newer read, a day moved to) is
+  // marked here and passed over, or every visit to the tab, now kept mounted, would refresh the page on leaving.
+  const fromServer = useRef<FoodDiaryProps>(initial);
   useEffect(() => {
-    if (firstDiary.current) firstDiary.current = false;
-    else changed.current = true;
+    // The page's own read, taken in as it is, is the server's too.
+    if (diary !== fromServer.current && diary !== initial) changed.current = true;
+    // Only on a new diary.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diary]);
   useEffect(
     () => () => {
@@ -230,19 +246,22 @@ export default function FoodDiaryScreen({
     [router]
   );
   const [date, setDate] = useState(initial.date);
-  // A newer read of the page (the coach's phone preview reads again after a save): today's diary follows it.
   const [seenInitial, setSeenInitial] = useState(initial);
-  if (seenInitial !== initial) {
-    setSeenInitial(initial);
-    if (date === initial.date) setDiary(initial);
-  }
   const [loading, startLoad] = useTransition();
-  // `opening`: a day being moved to, not one re-read after a change (see releaseEmptyRestDay).
-  const load = (d: string, opening = false) =>
+  // `opening`: a day being moved to, not one re-read after a change (see releaseEmptyRestDay). Never in the coach's
+  // read-only preview, where opening would write (it lets an empty Rest day go).
+  // The latest read wins: one started earlier and answering later (a link's day, a day moved away from, the tab left
+  // meanwhile) is dropped.
+  const loadTicket = useRef(0);
+  const load = (d: string, opening = false) => {
+    const ticket = ++loadTicket.current;
     startLoad(async () => {
-      const next = await getFoodDiaryAction(clientId, d, opening);
-      if (next) setDiary(next);
+      const next = await getFoodDiaryAction(clientId, d, opening && !readOnly);
+      if (!next || ticket !== loadTicket.current) return;
+      if (opening) fromServer.current = next;
+      setDiary(next);
     });
+  };
   const goTo = (d: string) => {
     if (d > today || d < floor || d === date) return;
     setDate(d);
@@ -252,7 +271,7 @@ export default function FoodDiaryScreen({
   const reload = () => load(date);
   // Opening on a day left on Rest with nothing logged under it: it is a training day again.
   useEffect(() => {
-    if (initial.dayType === "rest" && initial.meals.every((m) => m.entries.length === 0)) load(initial.date, true);
+    if (!readOnly && initial.dayType === "rest" && initial.meals.every((m) => m.entries.length === 0)) load(initial.date, true);
     // Once, on open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -261,9 +280,11 @@ export default function FoodDiaryScreen({
   // under that day's name.
   useEffect(() => {
     if (!initialDate || initialDate === initial.date || initialDate > today || initialDate < floor) return;
+    const ticket = ++loadTicket.current;
     startLoad(async () => {
-      const next = await getFoodDiaryAction(clientId, initialDate, true);
-      if (!next) return;
+      const next = await getFoodDiaryAction(clientId, initialDate, !readOnly);
+      if (!next || ticket !== loadTicket.current) return;
+      fromServer.current = next;
       setDiary(next);
       setDate(initialDate);
     });
@@ -307,6 +328,13 @@ export default function FoodDiaryScreen({
   });
   // A meal added just now: it appears at once with its name as a box to type into.
   const [namingId, setNamingId] = useState<FoodMeal | null>(null);
+  // A newer read of the page (the coach's phone preview reads again after a save; on the tab, any read of /client):
+  // today's diary follows it, but never over a change still on its way (a meal or food under a stand-in id).
+  if (seenInitial !== initial) {
+    const settled = !loading && namingId == null && !diary.meals.some((m) => m.id.startsWith("new-") || m.entries.some((e) => e.id < 0));
+    setSeenInitial(initial);
+    if (date === initial.date && settled) setDiary(initial);
+  }
   // iOS only opens the keyboard for a focus made during the tap itself, and
   // the name box appears after the server has made the meal. So the tap
   // focuses an unseen input, which holds the keyboard open until the name
@@ -491,7 +519,8 @@ export default function FoodDiaryScreen({
     if (!layer || !savedOpen) return;
     layer.inert = true;
     return () => {
-      layer.inert = false;
+      // Never out from under a screen the app itself has over the tab (it marks that layer aria-hidden too).
+      layer.inert = layer.getAttribute("aria-hidden") === "true";
     };
   }, [savedOpen]);
   // The row goes at once; the server's day replaces the guess when it comes.
@@ -617,6 +646,42 @@ export default function FoodDiaryScreen({
     setPhotoOf(null);
     setAskDropPhoto(false);
   };
+  // Leaving the tab (12 Nov, Alex: Nutrition is the diary, kept mounted as every tab): Home's and the phase card's
+  // figures catch up then, as leaving the pushed diary did; anything open shuts (a Saved screen hangs over the whole
+  // app); and the diary is today again for the next visit ("tap Nutrition and you are in today's diary"). A pushed
+  // screen over it (the chat) is no leaving: the day stays.
+  const shown = useTabShown();
+  const wasShown = useRef(shown);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (wasShown.current === shown) return;
+    wasShown.current = shown;
+    if (shown) return;
+    // A read still on its way (a link's day) is for a visit that is over.
+    loadTicket.current++;
+    // A name box still open (a tab tapped does not take the focus on an iPhone) is settled as leaving it would.
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && rootRef.current?.contains(focused)) focused.blur();
+    if (changed.current) {
+      changed.current = false;
+      router.refresh();
+    }
+    /* eslint-disable react-hooks/set-state-in-effect -- shutting what is open as the tab goes, not state derived from props */
+    setSavedScreen(null);
+    setOpenDay(null);
+    setNamingDay(false);
+    setAddingMeal(false);
+    setPanel(null);
+    setMealMenu(null);
+    closePhoto();
+    if (date !== today) {
+      setDate(today);
+      load(today, true);
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // Only on the tab going; the rest is read as it stands then.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown]);
   const dropPhoto = (meal: FoodMeal) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -767,9 +832,6 @@ export default function FoodDiaryScreen({
     if (drag.to < drag.from && index >= drag.to && index < drag.from) return `translateY(${drag.height}px)`;
     return undefined;
   };
-  // The top bar is see-through over the banner until the page scrolls.
-  const [scrolled, setScrolled] = useState(false);
-
   // A sideways swipe on the page steps a day: left for the next, right for the one before.
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const onSwipeEnd = (x: number, y: number) => {
@@ -852,26 +914,12 @@ export default function FoodDiaryScreen({
       goTo(landing);
     }, 260);
   };
-  // The banner: the day in big ("Today", "Monday"), the date under it.
-  const weekday = weekdayWords(date);
-  const relative = diary.dateLabel === "Today" || diary.dateLabel === "Yesterday" ? diary.dateLabel : null;
-  const dayTitle = relative ?? weekday;
-  const daySub = `${relative ? `${weekday} ` : ""}${dayWords(date, { long: true })}`;
+  // The banner (12 Nov, Alex: Nutrition is the diary): Nutrition over the phase's name, the day showing under it.
+  const daySub = dayWords(date, { weekday: "long", long: true });
 
+  // The Nutrition tab's content: the app's own top bar floats over the banner and the tab's scroller holds it.
   return (
-    <div className="fdi-screen app-layer-main">
-      {/* White over the photo banner until the page scrolls, as on Nutrition. */}
-      <header className={`app-header dark overlay${scrolled ? "" : " clear on-dark"}`}>
-        <button type="button" className="app-header-icon-btn" onClick={onBack} aria-label="Back">
-          <ChevronLeftIcon />
-        </button>
-        <NorCoachLogo className="app-header-brand" word />
-        <div className="app-header-actions">
-          <span className="app-header-icon-btn fdi-bar-spacer" aria-hidden="true" />
-        </div>
-      </header>
-
-      <main className={`app-content dark${loading ? " fdi-loading" : ""}`} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 4)}>
+    <>
         <input
           ref={photoInput}
           type="file"
@@ -886,7 +934,7 @@ export default function FoodDiaryScreen({
             if (file && meal) sendPhoto(meal, file);
           }}
         />
-        <div className="fdi-page">
+        <div ref={rootRef} className={`nd fdi-page${loading ? " fdi-loading" : ""}`}>
           {/* A clear sideways swipe on the banner or the rings steps a day; the meals below scroll only. */}
           <div
             className="fdi-swipe-zone"
@@ -900,12 +948,12 @@ export default function FoodDiaryScreen({
           >
           {/* Nutrition's banner, part for part (4 Nov, Alex: going from Nutrition to here the picture and the header
               jumped): its height, its eyebrow and title (.nd-phase), Training day | Rest day at its foot. */}
-          <header className="nd-banner nd-photo fdi-banner">
+          <header className={`nd-banner nd-photo fdi-banner${naked ? " nd-naked" : ""}`}>
             {pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
             <div className="nd-phase">
               <div className="nd-phase-titles">
-                <div className="nd-kicker">Food diary</div>
-                <h1 className="nd-phase-name">{dayTitle}</h1>
+                <div className="nd-kicker">Nutrition</div>
+                <FitTitle className="nd-phase-name">{title}</FitTitle>
                 <div className="fdi-date-sub">{daySub}</div>
               </div>
             </div>
@@ -972,231 +1020,14 @@ export default function FoodDiaryScreen({
           </div>
           {/* A figure typed in with no food behind it counts as eaten on the rings. */}
           <Targets
-            onRing={onBack}
             target={diary.target}
             eaten={diary.eaten.kcal === 0 && diary.loggedKcal != null ? { ...diary.eaten, kcal: diary.loggedKcal } : diary.eaten}
             dayType={diary.dayType}
             onDayType={chooseDay}
           />
           <div className="nd-body fdi-list">
-            {/* One card, folded, holding the days that can be copied onto this
-                one: the last day with food, and the days the client saved.
-                There on every day since 5 Oct, empty or not (a day used adds
-                its food to what is there), and with nothing saved it says so. */}
-            {(() => {
-              const after = async () => {
-                const next = await getFoodDiaryAction(clientId, date);
-                if (next) {
-                  // Only if the diary is still on that day: Back works while it saves.
-                  setDiary((d) => (d.date === date ? next : d));
-                  // Every card of the day in sight (10 Nov, Alex): back on the diary with each card shut, as one open at a time
-                  // would have them; it used to open some and not others.
-                  setSavedScreen(null);
-                  setNamingDay(false);
-                  setOpenDay(null);
-                  setPanel(null);
-                  setFolded(new Set(next.meals.map((m) => m.id)));
-                }
-              };
-              const use = (id: number) => {
-                const fd = new FormData();
-                fd.set("clientId", String(clientId));
-                fd.set("id", String(id));
-                fd.set("date", date);
-                // Its one-time key (6 Nov): sent again once the signal is back, the saved day goes in once.
-                fd.set("onceKey", newOnceKey());
-                setDayFailed(null);
-                startLoad(async () => {
-                  try {
-                    await addSavedDayAction(fd);
-                  } catch {
-                    // No signal: what is open stays and says so, never the error page.
-                    setDayFailed(id);
-                    return;
-                  }
-                  await after();
-                });
-              };
-              const forget = (id: number) => {
-                const fd = new FormData();
-                fd.set("clientId", String(clientId));
-                fd.set("id", String(id));
-                setForgetFailed(null);
-                startLoad(async () => {
-                  try {
-                    await deleteSavedDayAction(fd);
-                  } catch {
-                    // No signal: the day stays listed and says so, never the error page.
-                    setForgetFailed(id);
-                    return;
-                  }
-                  const next = await getFoodDiaryAction(clientId, date).catch(() => null);
-                  if (next) setDiary(next);
-                });
-              };
-              return (
-                <>
-                  {/* Saved days and Saved meals side by side, each its own screen to pick from (10 Nov, Alex). */}
-                  <div ref={savedRow} className="fdi-saved-row">
-                    <button type="button" className="fdi-saved-pill" onClick={() => openSaved("days")}>
-                      <BookmarkIcon />
-                      <span>Saved days</span>
-                      <ChevronDownIcon />
-                    </button>
-                    <button type="button" className="fdi-saved-pill" onClick={() => openSaved("meals")}>
-                      <BookmarkIcon />
-                      <span>Saved meals</span>
-                      <ChevronDownIcon />
-                    </button>
-                  </div>
-                  {savedScreen && savedHost && createPortal(
-                    <>
-                    <div className="app-layer app-layer-push cn-screen fdi-saved-screen" inert={savedScreen === "days" && openDay != null}>
-                      <header className="cn-header">
-                        <button
-                          type="button"
-                          className="cn-icon-btn"
-                          onClick={() => {
-                            setSavedScreen(null);
-                            setNamingDay(false);
-                          }}
-                          aria-label="Back"
-                        >
-                          <ChevronLeftIcon />
-                        </button>
-                        <div className="cn-header-titles">
-                          <h1 className="cn-title">{savedScreen === "days" ? "Saved days" : "Saved meals"}</h1>
-                        </div>
-                        <span className="cn-icon-spacer" aria-hidden="true" />
-                      </header>
-                      <main className="cn-body">
-                        {savedScreen === "meals" ? (
-                          <>
-                            {(
-                              <SavedMealList
-                                clientId={clientId}
-                                date={date}
-                                saved={diary.saved}
-                                recent={diary.recent}
-                                busy={loading}
-                                onChange={(fn) => setDiary((d) => ({ ...d, saved: fn(d.saved) }))}
-                                refresh={async () => {
-                                  const next = await getFoodDiaryAction(clientId, date);
-                                  if (next) setDiary((d) => (d.date === date ? next : d));
-                                }}
-                                onUse={copyMealCard}
-                                useFailed={copyFailed}
-                              />
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            {/* Save this day (10 Nov, Alex): at the top of the list it lands in. No Today or Yesterday row (11 Nov, Alex: "what is the use"): a saved day is its card below. */}
-                            {namingDay && !diary.savedDayAs && diary.meals.some((m) => m.entries.length > 0) ? (
-                                <form
-                                  className="fdi-saved-name fdi-saved-this"
-                                  onSubmit={(e) => {
-                                    e.preventDefault();
-                                    const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
-                                    if (!name) return;
-                                    const fd = new FormData();
-                                    fd.set("clientId", String(clientId));
-                                    fd.set("date", date);
-                                    fd.set("name", name);
-                                    // Its one-time key (6 Nov): sent again once the signal is back, it saves the day once.
-                                    fd.set("onceKey", newOnceKey());
-                                    setNamingDay(false);
-                                    startLoad(async () => {
-                                      await saveDayAction(fd);
-                                      const next = await getFoodDiaryAction(clientId, date);
-                                      if (next) setDiary((d) => (d.date === date ? next : d));
-                                    });
-                                  }}
-                                >
-                                  <input
-                                    name="name"
-                                    type="text"
-                                    placeholder="Name this day"
-                                    maxLength={40}
-                                    autoComplete="off"
-                                    autoFocus
-                                    aria-label="Name for the saved day"
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Escape") setNamingDay(false);
-                                    }}
-                                    onBlur={(e) => {
-                                      if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingDay(false);
-                                    }}
-                                  />
-                                  <button type="submit">Save</button>
-                                </form>
-                            ) : (
-                              <div className="fdi-saved-row fdi-saved-this">
-                                {!diary.savedDayAs && diary.meals.some((m) => m.entries.length > 0) && (
-                                  <button type="button" className="fdi-saved-pill" onClick={() => setNamingDay(true)} disabled={loading}>
-                                    <BookmarkIcon />
-                                    <span>Save this day</span>
-                                  </button>
-                                )}
-                                <button type="button" className="fdi-saved-pill" onClick={(e) => {
-                                    newDayOpening.current++;
-                                    setDeployFrom({ top: e.currentTarget.getBoundingClientRect().top, el: null });
-                                    setOpenDay("new");
-                                  }} disabled={loading}>
-                                  <PlusIcon />
-                                  <span>Create a day</span>
-                                </button>
-                              </div>
-                            )}
-                            {forgetFailed != null && diary.savedDays.some((d) => d.id === forgetFailed) && (
-                              <p className="fdi-photo-failed" role="alert">
-                                Not deleted. Try again
-                              </p>
-                            )}
-                            <SavedDayList
-                              clientId={clientId}
-                              date={date}
-                              days={diary.savedDays}
-                              onDays={(fn) => setDiary((d) => ({ ...d, savedDays: fn(d.savedDays) }))}
-                              refresh={rereadDiary}
-                              onOpen={(id, el) => {
-                                setDeployFrom({ top: el.getBoundingClientRect().top, el });
-                                setOpenDay(id);
-                              }}
-                            />
-                          </>
-                        )}
-                      </main>
-                    </div>
-                    {savedScreen === "days" && (openDay === "new" || diary.savedDays.some((d) => d.id === openDay)) && (
-                      <SavedDayScreen
-                        clientId={clientId}
-                        date={date}
-                        day={openDay === "new" ? null : diary.savedDays.find((d) => d.id === openDay) ?? null}
-                        recent={diary.recent}
-                        busy={loading}
-                        useFailed={openDay !== "new" && dayFailed === openDay}
-                        from={deployFrom}
-                        onCreate={createDay}
-                        onDay={(id, fn) => setDiary((d) => ({ ...d, savedDays: d.savedDays.map((x) => (x.id === id ? fn(x) : x)) }))}
-                        refresh={rereadDiary}
-                        onBack={() => {
-                          setOpenDay(null);
-                          setDayFailed(null);
-                        }}
-                        onUse={use}
-                        onDelete={(id) => {
-                          setOpenDay(null);
-                          forget(id);
-                        }}
-                      />
-                    )}
-                    </>,
-                    savedHost
-                  )}
-                </>
-              );
-            })()}
+            {/* Supplements | Water, today's (12 Nov, Alex: Nutrition is the diary). */}
+            {beforeMeals}
             {/* A photo card a meal (9 Nov, Alex: option A of docs/boards/meal-cards-mockup.html), its foods folding out under
                 it, flat on the page. */}
             <section className="fdi-meals fdc-meals">
@@ -1538,9 +1369,229 @@ export default function FoodDiaryScreen({
               <PlusIcon />
               Add a meal
             </button>
+            {/* Saved days | Saved meals, under the meals (12 Nov, Alex: B of docs/boards/nutrition-is-the-diary-mockup.html). */}
+            {/* One card, folded, holding the days that can be copied onto this
+                one: the last day with food, and the days the client saved.
+                There on every day since 5 Oct, empty or not (a day used adds
+                its food to what is there), and with nothing saved it says so. */}
+            {(() => {
+              const after = async () => {
+                const next = await getFoodDiaryAction(clientId, date);
+                if (next) {
+                  // Only if the diary is still on that day: Back works while it saves.
+                  setDiary((d) => (d.date === date ? next : d));
+                  // Every card of the day in sight (10 Nov, Alex): back on the diary with each card shut, as one open at a time
+                  // would have them; it used to open some and not others.
+                  setSavedScreen(null);
+                  setNamingDay(false);
+                  setOpenDay(null);
+                  setPanel(null);
+                  setFolded(new Set(next.meals.map((m) => m.id)));
+                }
+              };
+              const use = (id: number) => {
+                const fd = new FormData();
+                fd.set("clientId", String(clientId));
+                fd.set("id", String(id));
+                fd.set("date", date);
+                // Its one-time key (6 Nov): sent again once the signal is back, the saved day goes in once.
+                fd.set("onceKey", newOnceKey());
+                setDayFailed(null);
+                startLoad(async () => {
+                  try {
+                    await addSavedDayAction(fd);
+                  } catch {
+                    // No signal: what is open stays and says so, never the error page.
+                    setDayFailed(id);
+                    return;
+                  }
+                  await after();
+                });
+              };
+              const forget = (id: number) => {
+                const fd = new FormData();
+                fd.set("clientId", String(clientId));
+                fd.set("id", String(id));
+                setForgetFailed(null);
+                startLoad(async () => {
+                  try {
+                    await deleteSavedDayAction(fd);
+                  } catch {
+                    // No signal: the day stays listed and says so, never the error page.
+                    setForgetFailed(id);
+                    return;
+                  }
+                  const next = await getFoodDiaryAction(clientId, date).catch(() => null);
+                  if (next) setDiary(next);
+                });
+              };
+              return (
+                <>
+                  {/* Saved days and Saved meals side by side, each its own screen to pick from (10 Nov, Alex). */}
+                  <div ref={savedRow} className="fdi-saved-row">
+                    <button type="button" className="fdi-saved-pill" onClick={() => openSaved("days")}>
+                      <BookmarkIcon />
+                      <span>Saved days</span>
+                      <ChevronDownIcon />
+                    </button>
+                    <button type="button" className="fdi-saved-pill" onClick={() => openSaved("meals")}>
+                      <BookmarkIcon />
+                      <span>Saved meals</span>
+                      <ChevronDownIcon />
+                    </button>
+                  </div>
+                  {savedScreen && savedHost && createPortal(
+                    <>
+                    <div className="app-layer app-layer-push cn-screen fdi-saved-screen" inert={savedScreen === "days" && openDay != null}>
+                      <header className="cn-header">
+                        <button
+                          type="button"
+                          className="cn-icon-btn"
+                          onClick={() => {
+                            setSavedScreen(null);
+                            setNamingDay(false);
+                          }}
+                          aria-label="Back"
+                        >
+                          <ChevronLeftIcon />
+                        </button>
+                        <div className="cn-header-titles">
+                          <h1 className="cn-title">{savedScreen === "days" ? "Saved days" : "Saved meals"}</h1>
+                        </div>
+                        <span className="cn-icon-spacer" aria-hidden="true" />
+                      </header>
+                      <main className="cn-body">
+                        {savedScreen === "meals" ? (
+                          <>
+                            {(
+                              <SavedMealList
+                                clientId={clientId}
+                                date={date}
+                                saved={diary.saved}
+                                recent={diary.recent}
+                                busy={loading}
+                                onChange={(fn) => setDiary((d) => ({ ...d, saved: fn(d.saved) }))}
+                                refresh={async () => {
+                                  const next = await getFoodDiaryAction(clientId, date);
+                                  if (next) setDiary((d) => (d.date === date ? next : d));
+                                }}
+                                onUse={copyMealCard}
+                                useFailed={copyFailed}
+                              />
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {/* Save this day (10 Nov, Alex): at the top of the list it lands in. No Today or Yesterday row (11 Nov, Alex: "what is the use"): a saved day is its card below. */}
+                            {namingDay && !diary.savedDayAs && diary.meals.some((m) => m.entries.length > 0) ? (
+                                <form
+                                  className="fdi-saved-name fdi-saved-this"
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
+                                    if (!name) return;
+                                    const fd = new FormData();
+                                    fd.set("clientId", String(clientId));
+                                    fd.set("date", date);
+                                    fd.set("name", name);
+                                    // Its one-time key (6 Nov): sent again once the signal is back, it saves the day once.
+                                    fd.set("onceKey", newOnceKey());
+                                    setNamingDay(false);
+                                    startLoad(async () => {
+                                      await saveDayAction(fd);
+                                      const next = await getFoodDiaryAction(clientId, date);
+                                      if (next) setDiary((d) => (d.date === date ? next : d));
+                                    });
+                                  }}
+                                >
+                                  <input
+                                    name="name"
+                                    type="text"
+                                    placeholder="Name this day"
+                                    maxLength={40}
+                                    autoComplete="off"
+                                    autoFocus
+                                    aria-label="Name for the saved day"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Escape") setNamingDay(false);
+                                    }}
+                                    onBlur={(e) => {
+                                      if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingDay(false);
+                                    }}
+                                  />
+                                  <button type="submit">Save</button>
+                                </form>
+                            ) : (
+                              <div className="fdi-saved-row fdi-saved-this">
+                                {!diary.savedDayAs && diary.meals.some((m) => m.entries.length > 0) && (
+                                  <button type="button" className="fdi-saved-pill" onClick={() => setNamingDay(true)} disabled={loading}>
+                                    <BookmarkIcon />
+                                    <span>Save this day</span>
+                                  </button>
+                                )}
+                                <button type="button" className="fdi-saved-pill" onClick={(e) => {
+                                    newDayOpening.current++;
+                                    setDeployFrom({ top: e.currentTarget.getBoundingClientRect().top, el: null });
+                                    setOpenDay("new");
+                                  }} disabled={loading}>
+                                  <PlusIcon />
+                                  <span>Create a day</span>
+                                </button>
+                              </div>
+                            )}
+                            {forgetFailed != null && diary.savedDays.some((d) => d.id === forgetFailed) && (
+                              <p className="fdi-photo-failed" role="alert">
+                                Not deleted. Try again
+                              </p>
+                            )}
+                            <SavedDayList
+                              clientId={clientId}
+                              date={date}
+                              days={diary.savedDays}
+                              onDays={(fn) => setDiary((d) => ({ ...d, savedDays: fn(d.savedDays) }))}
+                              refresh={rereadDiary}
+                              onOpen={(id, el) => {
+                                setDeployFrom({ top: el.getBoundingClientRect().top, el });
+                                setOpenDay(id);
+                              }}
+                            />
+                          </>
+                        )}
+                      </main>
+                    </div>
+                    {savedScreen === "days" && (openDay === "new" || diary.savedDays.some((d) => d.id === openDay)) && (
+                      <SavedDayScreen
+                        clientId={clientId}
+                        date={date}
+                        day={openDay === "new" ? null : diary.savedDays.find((d) => d.id === openDay) ?? null}
+                        recent={diary.recent}
+                        busy={loading}
+                        useFailed={openDay !== "new" && dayFailed === openDay}
+                        from={deployFrom}
+                        onCreate={createDay}
+                        onDay={(id, fn) => setDiary((d) => ({ ...d, savedDays: d.savedDays.map((x) => (x.id === id ? fn(x) : x)) }))}
+                        refresh={rereadDiary}
+                        onBack={() => {
+                          setOpenDay(null);
+                          setDayFailed(null);
+                        }}
+                        onUse={use}
+                        onDelete={(id) => {
+                          setOpenDay(null);
+                          forget(id);
+                        }}
+                      />
+                    )}
+                    </>,
+                    savedHost
+                  )}
+                </>
+              );
+            })()}
           </div>
+          {/* The coach's note and Last 7 days, at the foot. */}
+          {foot && <div className="nd-body fdi-foot">{foot}</div>}
         </div>
-      </main>
 
       {askDeleteMeal != null && diary.meals.some((m) => m.id === askDeleteMeal) && (
         <DeleteMealDialog name={cardTitle(diary.meals.find((m) => m.id === askDeleteMeal)!)} text={deleteMealText(diary.meals.find((m) => m.id === askDeleteMeal)!)} onCancel={() => setAskDeleteMeal(null)} onDelete={() => removeMeal(askDeleteMeal)} />
@@ -1598,7 +1649,7 @@ export default function FoodDiaryScreen({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -1613,20 +1664,17 @@ const RING_R = { protein: 70, carbs: 61, fat: 52 } as const;
 const MACROS = ["protein", "carbs", "fat"] as const;
 const NAME = { protein: "Protein", carbs: "Carbs", fat: "Fat" } as const;
 
-function Targets({ target, eaten, dayType, onDayType, onRing }: { target: Macros | null; eaten: Macros; dayType: "training" | "rest"; onDayType: (t: "training" | "rest") => void; /** The ring again goes back to Nutrition (11 Nov, Alex), as the ring there opened the diary. */ onRing: () => void }) {
+function Targets({ target, eaten, dayType, onDayType }: { target: Macros | null; eaten: Macros; dayType: "training" | "rest"; onDayType: (t: "training" | "rest") => void }) {
   // A sideways swipe on the rings switches the kind of day, as on Nutrition:
   // left for a rest day, right for a training day. The rings and figures run
   // to the new targets.
   const swipe = useRef<{ x: number; y: number } | null>(null);
-  // A finger that moved was a swipe, not a tap on the ring.
-  const swiped = useRef(false);
   const swipeEnd = (x: number, y: number) => {
     const start = swipe.current;
     swipe.current = null;
     if (!start) return;
     const dx = x - start.x;
     const dy = y - start.y;
-    swiped.current = Math.hypot(dx, dy) > 10;
     if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
     onDayType(dx > 0 ? "training" : "rest");
   };
@@ -1644,9 +1692,9 @@ function Targets({ target, eaten, dayType, onDayType, onRing }: { target: Macros
         swipe.current = null;
       }}
     >
-      {/* A tap anywhere on the figures goes back to Nutrition, as the ring does (11 Nov, Alex: "and vice versa"). */}
-      <div className="nd-cal-row nd-to-diary" onClick={(e) => !swiped.current && !(e.target as Element).closest(".nd-ring") && onRing()}>
-        <button type="button" className="nd-ring" onClick={() => !swiped.current && onRing()} aria-label={`${left == null ? `${n(eaten.kcal)} kcal eaten` : over > 0 ? `${n(over)} kcal over` : `${n(left)} kcal left`}. Back to Nutrition`}>
+      {/* The day's figures, nothing to tap (12 Nov, Alex: Nutrition is the diary, so they lead nowhere else). */}
+      <div className="nd-cal-row">
+        <div className="nd-ring" role="img" aria-label={left == null ? `${n(eaten.kcal)} kcal eaten` : over > 0 ? `${n(over)} kcal over` : `${n(left)} kcal left`}>
           <svg viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true">
             <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
               {MACROS.map((m) => (
@@ -1658,7 +1706,7 @@ function Targets({ target, eaten, dayType, onDayType, onRing }: { target: Macros
             <span className="nd-ring-kcal">{n(figure)}</span>
             <span className="nd-ring-label">{left == null ? "kcal eaten" : over > 0 ? "kcal over" : "kcal left"}</span>
           </div>
-        </button>
+        </div>
         <div className="nd-macros">
           {MACROS.map((m) => (
             <MacroRow key={m} id={m} eaten={eaten[m]} goal={target?.[m] ?? null} />

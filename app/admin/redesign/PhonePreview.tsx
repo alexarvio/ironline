@@ -14,7 +14,6 @@ export const PHONE_SCREENS: { id: PhoneScreen; label: string }[] = [
   { id: "home", label: "Home" },
   { id: "training", label: "Training" },
   { id: "nutrition", label: "Nutrition" },
-  { id: "food", label: "Food diary" },
   { id: "checkin", label: "Check-in" },
   { id: "photos", label: "Shape update" },
   { id: "meetings", label: "Meetings" },

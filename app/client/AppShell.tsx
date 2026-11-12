@@ -9,7 +9,7 @@ import type { NotificationCategory } from "../lib/notificationTypes";
 import { goalItemId } from "../lib/weightGoal";
 import { logoutAction } from "../lib/auth-actions";
 import { NorCoachLogo } from "../components/NorCoachLogo";
-import { BellIcon, CalendarIcon, CameraIcon, ChevronLeftIcon, GearIcon, MenuIcon, ChatIcon, ReceiptIcon } from "../components/icons";
+import { BellIcon, CalendarIcon, CameraIcon, ChevronLeftIcon, GearIcon, HeartIcon, MenuIcon, ChatIcon, ReceiptIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
 import PreviewBar from "./PreviewBar";
 import ProgressPicturesScreen, { type ProgressPicturesProps, warmShapeUpdateBanner } from "./ProgressPicturesScreen";
@@ -20,7 +20,7 @@ import { NativeStatusBar } from "./NativeStatusBar";
 import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
 import EventsScreen from "./events/EventsScreen";
 import type { HomeEvents } from "./EventsCard";
-import FoodDiaryScreen, { type FoodDiaryProps } from "./FoodDiaryScreen";
+import type { FoodDiaryProps } from "./FoodDiaryScreen";
 import MeetingsScreen, { type MeetingsProps } from "./meetings/MeetingsScreen";
 import InvoicesScreen, { type InvoicesProps } from "./InvoicesScreen";
 import type { CoachProfileView } from "../lib/coachProfileView";
@@ -30,7 +30,6 @@ import {
   CoachProvider,
   FocusRefProvider,
   TabActiveProvider,
-  FoodProvider,
   LinkProvider,
   MessagesProvider,
   NavigateProvider,
@@ -40,6 +39,9 @@ import {
   MeetingsProvider,
   EventsProvider,
   TrainingFocusProvider,
+  FoodFocusProvider,
+  TabShownProvider,
+  type FoodFocus,
   type TrainingFocus,
 } from "./CheckInContext";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
@@ -58,9 +60,9 @@ export type AppTab = {
   darkBanner?: boolean;
 };
 
-type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | "meetings" | "invoices" | "settings" | "events" | null;
+type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "meetings" | "invoices" | "settings" | "events" | null;
 /** The screens the coach's phone preview can be asked for (21 Oct): the three tabs, and the pushed screens. */
-export type PhoneScreen = "home" | "training" | "nutrition" | "checkin" | "photos" | "messages" | "food" | "meetings" | "invoices" | "events";
+export type PhoneScreen = "home" | "training" | "nutrition" | "checkin" | "photos" | "messages" | "meetings" | "invoices" | "events";
 const PHONE_TABS = new Set<string>(["home", "training", "nutrition"]);
 /** What the admin's panel posts to the preview: a screen to show, or to read the page again after a save. */
 export type PhoneMessage = { norcoach: "phone"; screen?: PhoneScreen; refresh?: boolean };
@@ -77,19 +79,9 @@ const stopEvent = (e: SyntheticEvent) => {
 // the server render and the first client render agree (first tab), then the
 // remembered tab applies.
 const TAB_KEY = "ironline.client.tab";
-const PUSH_KEY = "ironline.client.push";
-// Which pushed view was open when the page last reloaded (only the food diary is kept).
-function readPush(): string | null {
-  try {
-    return window.sessionStorage.getItem(PUSH_KEY);
-  } catch {
-    return null;
-  }
-}
-// Nothing to subscribe to: once the client picks a view, that choice wins.
-function subscribePush() {
-  return () => {};
-}
+// The pushed food diary was kept across a reload under this key; the diary is the Nutrition tab now (12 Nov), whose
+// tab memory brings it back, so the key is only cleared.
+const OLD_PUSH_KEY = "ironline.client.push";
 const TAB_EVENT = "ironline:tab";
 /** The tab, for the server (page.tsx reads it). */
 export const TAB_COOKIE = "ironline_tab";
@@ -145,7 +137,6 @@ export default function AppShell({
   coachAvatarPath = null,
   clientAvatarPath = null,
   foodDiary = null,
-  foodPictures = [],
   meetings = null,
   invoices = null,
   initialPush = null,
@@ -187,10 +178,8 @@ export default function AppShell({
   coachAvatarPath?: string | null;
   /** The client's own photo from Settings (9 Oct): on the Events rows they added. */
   clientAvatarPath?: string | null;
-  /** Today's food diary, opened from the ring on Nutrition. */
+  /** Today's food diary (the Nutrition tab draws it): its meal pictures are fetched ahead. */
   foodDiary?: FoodDiaryProps | null;
-  /** The pictures set for Nutrition, behind the food diary's banner too (17 Oct). */
-  foodPictures?: string[];
   /** Every call with the coach: to come and past, for the Meetings screen. */
   meetings?: MeetingsProps | null;
   /** The coach's invoices that reached the client; null, none yet (the menu leaves the row out). */
@@ -217,12 +206,15 @@ export default function AppShell({
     if (readOnly) setOwnTab(id);
     else writeTab(id);
   };
-  // The food diary stays open across a reload (a deploy landing mid-session
-  // reloads the page), the way the tab does: read from storage until the
-  // client chooses otherwise. The other pushed views start closed, since
-  // they hang off something on the tab underneath.
-  const storedPush = useSyncExternalStore(subscribePush, readPush, () => null);
-  // A pushed screen opens only when this client has it (no diary, no Food; no invoices, no Invoices).
+  // Pushed views start closed on a reload, since they hang off something on the tab underneath.
+  useEffect(() => {
+    try {
+      window.sessionStorage.removeItem(OLD_PUSH_KEY);
+    } catch {
+      /* blocked storage: nothing kept there */
+    }
+  }, []);
+  // A pushed screen opens only when this client has it (no invoices, no Invoices).
   // Today's meal pictures and the saved meals' fetched ahead (10 Nov, Alex: as the chat's), a moment after the app is up, so
   // the food diary opens on them.
   const mealPictures = foodDiary && !readOnly ? [...new Set([...foodDiary.meals.map((m) => m.picture), ...foodDiary.saved.map((s) => s.picture)].filter((p): p is string => !!p))].slice(0, 24).join("\n") : "";
@@ -233,7 +225,7 @@ export default function AppShell({
     }, 1200);
     return () => clearTimeout(t);
   }, [mealPictures]);
-  const canPush = (v: PushView) => !(v === "invoices" && !invoices) && !(v === "food" && !foodDiary) && !(v === "meetings" && !meetings) && !(v === "events" && !events);
+  const canPush = (v: PushView) => !(v === "invoices" && !invoices) && !(v === "meetings" && !meetings) && !(v === "events" && !events);
   const [chosenPush, setChosenPush] = useState<PushView | undefined>(initialPush && canPush(initialPush) ? initialPush : undefined);
   // The link has done its job: a reload opens the app as usual. (The preview keeps its address: it is read again in place.)
   // Arriving on the chat (a message's lock-screen notification, 21 Oct) reads it, as opening it from the nav does.
@@ -242,7 +234,7 @@ export default function AppShell({
     window.history.replaceState(null, "", "/client");
     if (initialPush === "messages") void markCoachNotesReadAction(clientId).catch(() => {});
   }, [initialPush, readOnly, clientId]);
-  const pushView: PushView = chosenPush !== undefined ? chosenPush : !readOnly && storedPush === "food" && foodDiary ? "food" : null;
+  const pushView: PushView = chosenPush ?? null;
   // The workout's saves kept on the phone go from here (7 Nov, workoutOutbox.ts): on opening, the signal back, the app
   // back in front. Never in the coach's phone preview: there nothing is read, shown or sent.
   useWorkoutOutboxRunner(clientId, !readOnly);
@@ -262,16 +254,7 @@ export default function AppShell({
         setPushView("meetings");
       }
     : null;
-  const setPushView = (v: PushView) => {
-    setChosenPush(v);
-    if (readOnly) return;
-    try {
-      if (v === "food") window.sessionStorage.setItem(PUSH_KEY, "food");
-      else window.sessionStorage.removeItem(PUSH_KEY);
-    } catch {
-      /* blocked storage: the view still opens for this page */
-    }
-  };
+  const setPushView = (v: PushView) => setChosenPush(v);
   // Which check-in section to land on, set by whichever due item opened it.
   const [checkInSection, setCheckInSection] = useState("daily");
   // … and, from a coach's message about one day, week or month of it, that one (21 Oct).
@@ -340,10 +323,8 @@ export default function AppShell({
   const [invoiceFocus, setInvoiceFocus] = useState<number | null>(null);
   // With a link into Training: the week to land on and the exercise to open.
   const [trainingFocus, setTrainingFocus] = useState<TrainingFocus | null>(null);
-  // With a link into the food diary: the day to open it on (today otherwise).
-  const [foodDate, setFoodDate] = useState<string | null>(null);
-  // … and, when the coach commented on one meal, the meal to open on it.
-  const [foodMeal, setFoodMeal] = useState<string | null>(null);
+  // Where a link into Nutrition lands: its day and meal (12 Nov, Alex: Nutrition is the food diary).
+  const [foodFocus, setFoodFocus] = useState<FoodFocus | null>(null);
   // With a link to a sheet of pictures: the sheet to open.
   const [photosPeriod, setPhotosPeriod] = useState<string | null>(null);
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
@@ -382,6 +363,7 @@ export default function AppShell({
     setActiveId(tab);
     setFocusRef(ref ?? null);
     setTrainingFocus(focus ?? null);
+    setFoodFocus(null);
     // Sent to something inside it: that tab comes up fresh, at its top.
     setRebuilt((r) => ({ ...r, [tab]: (r[tab] ?? 0) + 1 }));
   };
@@ -391,7 +373,7 @@ export default function AppShell({
   // Opened from the chat, Back comes back to the chat instead of the tab
   // underneath: this names the screen that should (a session in Training
   // carries it in its focus instead).
-  const [chatReturn, setChatReturn] = useState<"food" | "checkin" | "photos" | "nutrition" | null>(null);
+  const [chatReturn, setChatReturn] = useState<"checkin" | "photos" | "nutrition" | null>(null);
   const openLink = (view: LinkView) => {
     if (view.gone) return;
     const l = view.link;
@@ -408,16 +390,11 @@ export default function AppShell({
         returnTo("nutrition");
         return;
       case "food":
-        // No diary on this client (switched off since): their Nutrition tab instead.
-        if (!foodDiary) {
-          goToTab("nutrition");
-          returnTo("nutrition");
-          return;
-        }
-        setFoodDate(l.date);
-        setFoodMeal(l.meal ?? null);
-        setPushView("food");
-        returnTo("food");
+        // Nutrition is the diary (12 Nov, Alex): it comes up fresh on the day, the meal open, lit. Set after goToTab,
+        // which clears it.
+        goToTab("nutrition");
+        setFoodFocus({ date: l.date, meal: l.meal ?? null });
+        returnTo("nutrition");
         return;
       case "checkin":
         openCheckIn(l.section, l.period ?? null);
@@ -474,7 +451,8 @@ export default function AppShell({
       const m = e.data as PhoneMessage | null;
       if (m?.norcoach !== "phone") return;
       if (m.refresh) router.refresh();
-      const s = m.screen;
+      // The food diary is Nutrition now (12 Nov): an older admin asking for it gets Nutrition.
+      const s = (m.screen as string) === "food" ? "nutrition" : m.screen;
       if (!s) return;
       if (PHONE_TABS.has(s)) {
         setChosenPush(null);
@@ -484,10 +462,6 @@ export default function AppShell({
       }
       if (s === "checkin") setCheckInSection("daily");
       if (s === "photos") setPhotosPeriod(null);
-      if (s === "food") {
-        setFoodDate(null);
-        setFoodMeal(null);
-      }
       if (canPush(s as PushView)) setChosenPush(s as PushView);
     };
     window.addEventListener("message", onMessage);
@@ -528,10 +502,6 @@ export default function AppShell({
     ) : pushView === "photos" ? (
       <div className="app-layer app-layer-push pp-app-screen">
         <ProgressPicturesScreen data={photos} initialPeriod={photosPeriod} onBack={backFrom("photos")} />
-      </div>
-    ) : pushView === "food" && foodDiary ? (
-      <div className="app-layer app-layer-push cn-screen">
-        <FoodDiaryScreen clientId={clientId} diary={foodDiary} pictures={foodPictures} initialDate={foodDate} initialMeal={foodMeal} onBack={backFrom("food")} />
       </div>
     ) : pushView === "meetings" && meetings ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -634,17 +604,6 @@ export default function AppShell({
                 }}
               >
                 <MessagesProvider value={openMessages}>
-                  <FoodProvider
-                    value={
-                      foodDiary
-                        ? () => {
-                            setFoodDate(null);
-                            setFoodMeal(null);
-                            setPushView("food");
-                          }
-                        : null
-                    }
-                  >
                 <MeetingsProvider value={openMeetingsAt}>
                 <EventsProvider value={openEventsAt}>
                 <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
@@ -666,7 +625,11 @@ export default function AppShell({
                               {/* A deep link's target is for the tab it was sent to only. */}
                               <FocusRefProvider value={t.id === activeId ? focusRef : null}>
                                 <TabActiveProvider value={t.id === activeId && !pushView}>
-                                  <TrainingFocusProvider value={t.id === activeId ? trainingFocus : null}>{t.content}</TrainingFocusProvider>
+                                  <TabShownProvider value={t.id === activeId}>
+                                    <FoodFocusProvider value={t.id === activeId ? foodFocus : null}>
+                                      <TrainingFocusProvider value={t.id === activeId ? trainingFocus : null}>{t.content}</TrainingFocusProvider>
+                                    </FoodFocusProvider>
+                                  </TabShownProvider>
                                 </TabActiveProvider>
                               </FocusRefProvider>
                             </main>
@@ -676,7 +639,6 @@ export default function AppShell({
                   </CoachProvider>
                 </EventsProvider>
                 </MeetingsProvider>
-                </FoodProvider>
                 </MessagesProvider>
               </PhotosProvider>
             </CheckInProvider>
@@ -704,6 +666,7 @@ export default function AppShell({
                   setScrolled(false);
                   setActiveId(t.id);
                   setFocusRef(null);
+                  setFoodFocus(null);
                 }}
               >
                 <span className="app-tab-icon" aria-hidden="true">
@@ -755,6 +718,14 @@ export default function AppShell({
                         </svg>
                       </span>
                       Events
+                    </button>
+                  )}
+                  {/* Check-in (12 Nov, Alex: A of docs/boards/hidden-ways-mockup.html): the whole screen, Entries,
+                      Progress and Calendar, which before only an unmarked tap on Home opened. While a check-in is asked. */}
+                  {checkIn.sections.length > 0 && (
+                    <button type="button" className="app-menu-item" onClick={() => go(() => openCheckIn("daily"))}>
+                      <span className="app-menu-ico"><HeartIcon /></span>
+                      Check-in
                     </button>
                   )}
                   {/* Shape update: here alone, always (10 Nov, Alex: out of Settings). */}

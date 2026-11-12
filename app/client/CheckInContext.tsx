@@ -83,7 +83,6 @@ export function useTabActive() {
   return useContext(TabActiveContext);
 }
 
-// Same bridge for the food diary, opened from the ring on Nutrition.
 // The Events screen (8 Oct), from Home's "Coming up" card.
 // With an event id (10 Oct), the screen lands on that event: a glow, and open when it has a note.
 const EventsContext = createContext<((eventId?: number) => void) | null>(null);
@@ -92,14 +91,6 @@ export const EventsProvider = EventsContext.Provider;
 
 export function useOpenEvents() {
   return useContext(EventsContext);
-}
-
-const FoodContext = createContext<(() => void) | null>(null);
-
-export const FoodProvider = FoodContext.Provider;
-
-export function useOpenFood() {
-  return useContext(FoodContext);
 }
 
 // Who the coach is, for the small round picture (CoachMark) in front of
@@ -147,6 +138,27 @@ export const TrainingFocusProvider = TrainingFocusContext.Provider;
 
 export function useTrainingFocus() {
   return useContext(TrainingFocusContext);
+}
+
+// Where a link into Nutrition lands (12 Nov, Alex: Nutrition is the food diary): the day to show and the meal to open.
+// Null on an ordinary visit, which is today.
+export type FoodFocus = { date: string | null; meal: string | null };
+
+const FoodFocusContext = createContext<FoodFocus | null>(null);
+
+export const FoodFocusProvider = FoodFocusContext.Provider;
+
+export function useFoodFocus() {
+  return useContext(FoodFocusContext);
+}
+
+// Whether this tab is the one on screen, a pushed screen over it or not (TabActive also turns false under the chat).
+const TabShownContext = createContext(true);
+
+export const TabShownProvider = TabShownContext.Provider;
+
+export function useTabShown() {
+  return useContext(TabShownContext);
 }
 
 // Same bridge for the Meetings screen, opened from Home's meeting card and

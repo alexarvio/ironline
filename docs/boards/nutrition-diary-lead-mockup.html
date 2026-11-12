@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Into the food diary</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --faint:#8b93a1; --label:#98A2B3; --line:#E1E5EB; --page:#F5F6F8; --green:#2f7a3f; --rust:#b8471f; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:Archivo,system-ui,sans-serif; font-weight:500; color:var(--ink); background:#fff; padding:28px 20px 64px; -webkit-font-smoothing:antialiased; }
+  h1 { font-size:20px; font-weight:600; margin-bottom:4px; }
+  .sub { color:var(--faint); font-size:13px; margin-bottom:24px; max-width:760px; line-height:1.5; }
+  .opts { display:flex; flex-wrap:wrap; gap:26px; align-items:flex-start; }
+  .opt { width:360px; }
+  .opt h3 { font-size:14px; font-weight:600; margin-bottom:4px; }
+  .opt h3 em { font-style:normal; margin-left:6px; padding:2px 8px; border-radius:999px; font-size:11px; color:var(--green); box-shadow:inset 0 0 0 1px rgba(47,122,63,.35); }
+  .opt > p { font-size:12.5px; color:var(--faint); line-height:1.5; min-height:96px; margin-bottom:12px; }
+  .phone { position:relative; overflow:hidden; border-radius:30px; background:var(--page); box-shadow:0 0 0 8px #1b1f27; padding:18px 16px 26px; }
+  /* What sits over the list, kept short */
+  .pills { display:grid; grid-template-columns:minmax(0,1fr) 140px; gap:8px; }
+  .pill { display:flex; align-items:center; gap:8px; min-height:56px; padding:0 12px; border-radius:26px; background:#fff; box-shadow:inset 0 0 0 1px var(--line); font-size:14px; font-weight:600; }
+  .pill svg { flex:none; width:20px; height:20px; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .pill .t { flex:1; } .pill .c { color:var(--faint); font-weight:500; font-size:13px; } .pill .v { font-weight:500; }
+  .coach { display:flex; gap:12px; margin-top:22px; }
+  .face { flex:none; width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#8a7a68,#3b342c); }
+  .cl { font-size:10.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); }
+  .cl span { letter-spacing:0; text-transform:none; font-size:12px; font-weight:500; margin-left:8px; }
+  .cw { margin-top:3px; font-size:15px; line-height:1.4; }
+  /* Last 7 days, as it is */
+  .head { display:flex; align-items:baseline; justify-content:space-between; margin:30px 4px 4px; }
+  .eyebrow { font-size:11.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--ink); }
+  .act { font-size:13px; font-weight:600; color:var(--ink); }
+  .day { display:grid; grid-template-columns:auto 1fr 66px 62px; align-items:center; gap:0 8px; min-height:58px; padding:8px 4px; }
+  .d { font-size:15px; color:var(--ink); line-height:20px; font-variant-numeric:tabular-nums; }
+  .ty { display:block; font-size:12px; color:var(--faint); }
+  .chev { width:16px; height:16px; color:var(--label); fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .k { text-align:right; font-size:16px; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .dl { text-align:right; font-size:12.5px; font-weight:600; color:var(--faint); font-variant-numeric:tabular-nums; }
+  .dl.over { color:var(--rust); } .dl.ok { color:var(--green); }
+  .today .d { font-weight:600; }
+  .today .log { text-align:right; font-size:13px; font-weight:600; color:var(--ink); }
+  .today .k.none { color:var(--label); }
+  .gap { height:10px; }
+  .reco { margin-top:22px; font-size:13px; color:var(--body); max-width:760px; line-height:1.55; }
+  .reco b { font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Into the food diary, from Last 7 days</h1>
+<p class="sub">Nutrition under the ring. No third pill: Supplements and Water stay as they are, and the ring still opens the diary. The way in sits with the logs.</p>
+<div class="opts"><div class="opt"><h3>Now</h3><p>The diary opens only from a tap on the ring or the macros, which nothing says.</p><div class="phone">
+  <div class="pills">
+    <div class="pill"><svg viewBox="0 0 24 24" stroke="#1f7a4d"><path d="M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7zM8.5 8.5l7 7"/></svg><span class="t">Supplements</span><span class="c">1</span><svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+    <div class="pill"><svg viewBox="0 0 24 24" stroke="#1d7a70"><path d="M12 3.5c3.2 3.9 6 7.4 6 10.7a6 6 0 0 1-12 0c0-3.3 2.8-6.8 6-10.7z"/></svg><span class="t">Water</span><span class="v">4 L</span></div>
+  </div>
+  <div class="coach"><span class="face"></span><div><div class="cl">Finlay<span>5 Oct</span></div><div class="cw">Keep protein at 180 g on rest days too.</div></div></div>
+<div class="head"><span class="eyebrow">Last 7 days</span></div>
+  <div class="day"><span class="d">Tue 10<span class="ty">Training</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">2,410</span><span class="dl">+100</span></div>
+  <div class="day"><span class="d">Mon 9<span class="ty">Training</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">1,993</span><span class="dl">−317</span></div>
+  <div class="day"><span class="d">Fri 6<span class="ty">Rest</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">2,491</span><span class="dl over">+381</span></div>
+</div></div><div class="opt"><h3>A · Food diary in the head</h3><p>“Food diary” in words on the right of Last 7 days, as Home’s Meetings carries All meetings. Nothing else moves.</p><div class="phone">
+  <div class="pills">
+    <div class="pill"><svg viewBox="0 0 24 24" stroke="#1f7a4d"><path d="M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7zM8.5 8.5l7 7"/></svg><span class="t">Supplements</span><span class="c">1</span><svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+    <div class="pill"><svg viewBox="0 0 24 24" stroke="#1d7a70"><path d="M12 3.5c3.2 3.9 6 7.4 6 10.7a6 6 0 0 1-12 0c0-3.3 2.8-6.8 6-10.7z"/></svg><span class="t">Water</span><span class="v">4 L</span></div>
+  </div>
+  <div class="coach"><span class="face"></span><div><div class="cl">Finlay<span>5 Oct</span></div><div class="cw">Keep protein at 180 g on rest days too.</div></div></div>
+<div class="head"><span class="eyebrow">Last 7 days</span><span class="act">Food diary</span></div>
+  <div class="day"><span class="d">Tue 10<span class="ty">Training</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">2,410</span><span class="dl">+100</span></div>
+  <div class="day"><span class="d">Mon 9<span class="ty">Training</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">1,993</span><span class="dl">−317</span></div>
+  <div class="day"><span class="d">Fri 6<span class="ty">Rest</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">2,491</span><span class="dl over">+381</span></div>
+</div></div><div class="opt"><h3>B · Today leads the list <em>My pick</em></h3><p>Today is the first row: what is eaten so far, and Log in words where the other days show their difference. A tap anywhere on it opens today in the diary.</p><div class="phone">
+  <div class="pills">
+    <div class="pill"><svg viewBox="0 0 24 24" stroke="#1f7a4d"><path d="M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7zM8.5 8.5l7 7"/></svg><span class="t">Supplements</span><span class="c">1</span><svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+    <div class="pill"><svg viewBox="0 0 24 24" stroke="#1d7a70"><path d="M12 3.5c3.2 3.9 6 7.4 6 10.7a6 6 0 0 1-12 0c0-3.3 2.8-6.8 6-10.7z"/></svg><span class="t">Water</span><span class="v">4 L</span></div>
+  </div>
+  <div class="coach"><span class="face"></span><div><div class="cl">Finlay<span>5 Oct</span></div><div class="cw">Keep protein at 180 g on rest days too.</div></div></div>
+<div class="head"><span class="eyebrow">Last 7 days</span></div><div class="day today"><span class="d">Today<span class="ty">Training</span></span><span></span><span class="k">1,240</span><span class="log">Log</span></div>
+  <div class="day"><span class="d">Tue 10<span class="ty">Training</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">2,410</span><span class="dl">+100</span></div>
+  <div class="day"><span class="d">Mon 9<span class="ty">Training</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">1,993</span><span class="dl">−317</span></div>
+  <div class="day"><span class="d">Fri 6<span class="ty">Rest</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">2,491</span><span class="dl over">+381</span></div>
+</div></div><div class="opt"><h3>B, nothing logged yet</h3><p>The same row first thing in the morning: a grey dash for the figure, Log the same.</p><div class="phone">
+  <div class="pills">
+    <div class="pill"><svg viewBox="0 0 24 24" stroke="#1f7a4d"><path d="M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7zM8.5 8.5l7 7"/></svg><span class="t">Supplements</span><span class="c">1</span><svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+    <div class="pill"><svg viewBox="0 0 24 24" stroke="#1d7a70"><path d="M12 3.5c3.2 3.9 6 7.4 6 10.7a6 6 0 0 1-12 0c0-3.3 2.8-6.8 6-10.7z"/></svg><span class="t">Water</span><span class="v">4 L</span></div>
+  </div>
+  <div class="coach"><span class="face"></span><div><div class="cl">Finlay<span>5 Oct</span></div><div class="cw">Keep protein at 180 g on rest days too.</div></div></div>
+<div class="head"><span class="eyebrow">Last 7 days</span></div><div class="day today"><span class="d">Today<span class="ty">Training</span></span><span></span><span class="k none">—</span><span class="log">Log</span></div>
+  <div class="day"><span class="d">Tue 10<span class="ty">Training</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">2,410</span><span class="dl">+100</span></div>
+  <div class="day"><span class="d">Mon 9<span class="ty">Training</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">1,993</span><span class="dl">−317</span></div>
+  <div class="day"><span class="d">Fri 6<span class="ty">Rest</span></span><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><span class="k">2,491</span><span class="dl over">+381</span></div>
+</div></div></div>
+<p class="reco"><b>My pick: B.</b> Today is the day you log on, so it leads the list with what you have eaten so far and <b>Log</b> in words where the other days show their difference, the same word as Home's card. With nothing eaten yet its figure is a grey dash. A says it in the section's head instead, as Home's Meetings carries All meetings: tidy, but a word in a head is easy to read past.</p>
+
+
+</body>
+</html>
