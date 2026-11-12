@@ -151,7 +151,7 @@ function FullProfile({ profile, onBack, onBook }: { profile: CoachProfileView; o
 
   return (
     <div className="cpf">
-      <div className="cpf-statusbar" style={{ opacity: clamp((y - 340) / 60, 0, 1) }} aria-hidden="true" />
+      <div className="cpf-statusbar" data-clock="light" style={{ opacity: clamp((y - 340) / 60, 0, 1) }} aria-hidden="true" />
       {onBack && (
         <button type="button" className={`cpf-back${y > HERO - STRIP ? " solid" : ""}`} onClick={onBack} aria-label="Back">
           <ChevronLeftIcon />

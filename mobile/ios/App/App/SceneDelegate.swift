@@ -43,6 +43,17 @@ class MainViewController: CAPBridgeViewController {
         """
         webView?.configuration.userContentController.addUserScript(WKUserScript(source: still, injectionTime: .atDocumentStart, forMainFrameOnly: true))
     }
+
+    /// The status-bar plugin puts the clock back to its config colour each time this screen appears again (after the
+    /// camera, the photo picker or a sign-in sheet closes), and the page never hears of it (12 Nov, Alex: "sometimes
+    /// they do not"). Tell the page, after the plugin's own reset has run, so it sets the colour for what is under the
+    /// clock again (NativeStatusBar, "norcoachappear").
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        DispatchQueue.main.async { [weak self] in
+            self?.bridge?.triggerWindowJSEvent(eventName: "norcoachappear")
+        }
+    }
 }
 
 /// Signing in from inside the app (11 Nov, Alex). Google refuses to sign in inside an app's web view, so its sign-in runs

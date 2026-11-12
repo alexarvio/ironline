@@ -20,6 +20,7 @@ export default function OpeningLogo({ revealing = false, plain = false, classNam
   return (
     <div
       className={`nc-boot${className ? " " + className : ""}${revealing ? " revealing" : ""}`}
+      data-clock="light"
       aria-hidden="true"
       onAnimationEnd={(e) => {
         if (e.target === e.currentTarget && (e.animationName === "nc-boot-off" || e.animationName === "nc-open-safe")) onEnd?.();
