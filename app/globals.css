@@ -21807,8 +21807,10 @@ html.kb-open .cm-screen .cm-compose { padding-bottom: 10px; }
 html.kb-open .app-layer { padding-bottom: var(--kb, 0px); }
 html.kb-open .app-layer-main .app-sticky-footer { padding-bottom: 12px; }
 html.kb-open .auth-page.au-page { padding-bottom: calc(24px + var(--kb, 0px)); }
-html.kb-overlay .cm-screen { transition: padding-bottom 0.28s cubic-bezier(0.38, 0.7, 0.125, 1); }
-@media (prefers-reduced-motion: reduce) { html.kb-overlay .cm-screen { transition: none; } }
+/* Every pushed screen eases up with the keyboard (13 Nov, Alex: the box jumped up before it): the chat, the workout, the
+   check-in. The tabs (heavier pages) take the room at once. The keyboard is iOS's 0.25s on its own curve; this is close. */
+html.kb-overlay :is(.cm-screen, .app-layer-push) { transition: padding-bottom 0.26s cubic-bezier(0.38, 0.7, 0.125, 1); }
+@media (prefers-reduced-motion: reduce) { html.kb-overlay :is(.cm-screen, .app-layer-push) { transition: none; } }
 
 /* Holding the mic selects nothing (13 Nov, Alex: "it selects elements when it shouldn't"): no text selection or callout on
    the mic, the recording bar or the lock. */

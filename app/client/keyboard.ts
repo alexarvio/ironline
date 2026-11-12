@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { onNative } from "../lib/native";
+import { callNative, onNative } from "../lib/native";
 
 // The on-screen keyboard, one source for the whole app (12 Nov, Alex: "the keyboard experience is not the smoothest…
 // it gets in the middle of the text boxes and it lags").
@@ -130,6 +130,11 @@ function start() {
   fullWidth = window.innerWidth;
   fullHeight = window.innerHeight;
   // The app's plugin, at the start of the keyboard's own slide; the same events also come to the window.
+  // The app's keyboard mode, asked up front (13 Nov, Alex: the chat's box jumped up before the keyboard on the first
+  // open, which the late test below can't know): none, and what the keyboard lifts eases up with it from the first.
+  void callNative<{ mode?: string }>("Keyboard", "getResizeMode")
+    .then((r) => r?.mode === "none" && document.documentElement.classList.add("kb-overlay"))
+    .catch(() => {});
   onNative("Keyboard", "keyboardWillShow", willShow);
   onNative("Keyboard", "keyboardDidShow", didShow);
   onNative("Keyboard", "keyboardWillHide", willHide);
