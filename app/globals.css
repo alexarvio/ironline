@@ -19619,7 +19619,9 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* Two equal halves (28 Oct, Alex): the pill keeps one width as it slides (SlidePills). */
 .lw-unit { display: grid; grid-template-columns: 1fr 1fr; }
 .lw-rows { position: relative; gap: 0; }
-.lw-rows::before { content: ""; position: absolute; left: 20px; top: 0; bottom: 0; border-left: 1px solid #E1E5EB; pointer-events: none; }
+/* The spine runs through the middle of every ring on it (12 Nov, review of A2): the rings and the open set's 34px badge
+   are centred 20px in, so the 1px line spans 19.5–20.5 (it sat half a pixel right of them at 20–21). */
+.lw-rows::before { content: ""; position: absolute; left: 19.5px; top: 0; bottom: 0; border-left: 1px solid #E1E5EB; pointer-events: none; }
 .lw-fold { position: relative; }
 .lw-row, .lw-row.done, .lw-row.extra, .lw-row.done.extra, .lw-row.done.warm { height: 52px; gap: 14px; padding: 0 6px 0 6px; border-radius: 0; background: none; box-shadow: none; outline: 0; color: #8b93a1; }
 .lw-row.done { color: #141a24; }
@@ -21599,6 +21601,16 @@ body:has(.wo-screen) { background: #F5F6F8; }
 .wo-eyerow > .wo-ex-tools.wo-ex-tools { flex: none; display: flex; align-items: center; gap: 6px; margin: 0; }
 .wo-eyerow .wo-ex-tools .wo-ex-btn.wo-ex-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; color: #141a24; }
 .wo-eyerow .wo-ex-tools .wo-ex-btn.wo-ex-btn svg { width: 20px; height: 20px; }
+/* The eyebrow's facts fit what the buttons leave (12 Nov, review of A2: at 320px with all four buttons the name went to
+   nothing and the count was cut mid-word): the count is always whole on the right; the session's name before it is cut
+   with an ellipsis, and once not even 40px of it fits it goes, its bar with it, rather than leaving a bar on its own.
+   The line is laid out from the right with the count first (row-reverse, `order`), so the name is the item that wraps,
+   onto a second line kept out of sight. A count too long for the line on its own ends in an ellipsis. EyebrowFacts. */
+.wo-eyebrow.fit { flex-direction: row-reverse; flex-wrap: wrap; justify-content: flex-end; align-content: flex-start; align-items: center; gap: 0 5px; height: 16px; line-height: 16px; }
+.wo-eyebrow.fit > .wo-eyebrow-count { order: 1; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.wo-eyebrow.fit > .wo-eyebrow-lead { order: 2; flex: 1 1 0; display: flex; align-items: center; min-width: 40px; max-width: max-content; }
+.wo-eyebrow-lead > .wo-eyebrow-session { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.wo-eyebrow-lead > .cl-sep { flex: none; margin: 0 2px 0 7px; }
 /* The demo's play mark and the ask's mark: 14 in a 32px ring, both even. The play is the Demo pill's, ink. */
 .wo-demo-tool, .wo-ask-tool { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; font: inherit; cursor: pointer; }
 .wo-demo-tool { --ring: #E1E5EB; color: #141a24; }
@@ -21629,26 +21641,27 @@ body:has(.wo-screen) { background: #F5F6F8; }
 .wo-askline-note { margin: 2px 0 0 13px; font-size: 13px; font-weight: 500; line-height: 1.4; color: #8b93a1; }
 
 /* The target, the purple band (C): a soft training-purple tint (7%), a 2px purple line with rounded ends on its left,
-   TARGET in purple, then a column for each figure, the figure 24px/600 in ink over its word in small grey caps, the
+   TARGET in purple, then a column for each figure, the figure 600 in ink over its word in small grey caps, the
    columns sharing the width. On the workout's pages it runs to the screen's edges; elsewhere (the session overview's
-   opened exercise and cardio) it keeps its shape inside its box. Six or more columns tighten (20px, 8px apart). */
+   opened exercise and cardio) it keeps its shape inside its box. The figures are sized to their room, 24px at most
+   (`--tv`, set by `fitTargetGrid`), and never cut: a column too narrow for its figure or its word grows to hold it
+   (`minmax(min-content, 1fr)`), and `--per` puts them in two rows when one won't do. Five or more are 8px apart. */
 .lw-target.lw-target { position: relative; display: block; margin: 0; padding: 12px 14px 10px 26px; background: rgba(58, 51, 144, 0.07); }
 .lw-target.lw-target::before { content: ""; position: absolute; left: 12px; top: 12px; bottom: 12px; width: 2px; border-radius: 2px; background: #3a3390; }
 .wo-page .lw-target.lw-target { margin: 6px -16px 0; padding: 14px 16px 12px 32px; }
 .wo-page .lw-target.lw-target::before { left: 16px; top: 14px; bottom: 14px; }
 .lw-target .lw-target-label.lw-target-label { display: block; font-size: 10.5px; font-weight: 600; line-height: 14px; letter-spacing: 0.16em; text-transform: uppercase; color: #3a3390; }
-.lw-target .lw-target-grid.lw-target-grid { display: grid; column-gap: 12px; justify-content: stretch; margin-top: 8px; background: none; }
-.lw-target-col { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
-.lw-target .lw-target-v.lw-target-v { max-width: 100%; padding: 0; font-size: 24px; font-weight: 600; line-height: 28px; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lw-target .lw-target-grid.lw-target-grid { display: grid; grid-template-columns: repeat(var(--per, 3), minmax(min-content, 1fr)); gap: 10px 12px; justify-content: stretch; margin-top: 8px; background: none; }
+.lw-target-col { display: flex; flex-direction: column; align-items: flex-start; }
+.lw-target .lw-target-grid .lw-target-v.lw-target-v { padding: 0 6px 0 0; font-size: var(--tv, 24px); font-weight: 600; line-height: 1.17; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lw-target .lw-target-h.lw-target-h { padding: 0; margin-top: 2px; font-size: 10.5px; font-weight: 600; line-height: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; }
 .lw-target .lw-target-grid.lw-target-grid.dense { column-gap: 8px; }
-.lw-target .lw-target-grid.dense .lw-target-v.lw-target-v { font-size: 20px; line-height: 24px; }
 
 /* Clear room, then the sets (about 26px from the band). */
 .lw > .lw-card.lw-card { margin-top: 10px; }
 
 /* Done and upcoming sets as quiet lines: 38px, a 22px ring in the 36px column (its middle on the spine, as the open
-   set's 36px badge), the done check in green (a warm-up's amber, an extra set's dashed edge) or the set's number grey,
+   set's 34px badge's), the done check in green (a warm-up's amber, an extra set's dashed edge) or the set's number grey,
    then the figures 15px in body grey (upcoming faint), the change on last time small after them. Only the open set is
    big. The ring sits on the page's disc so the spine stays hidden behind it. */
 .lw-q { position: relative; display: flex; align-items: center; gap: 16px; width: 100%; height: 38px; padding: 0 6px 0 2px; border: 0; background: none; font: inherit; color: #3a4250; text-align: left; cursor: pointer; }
