@@ -21625,7 +21625,13 @@ html { -webkit-tap-highlight-color: transparent; }
 html.kb-open .app-bottom-nav, html.kb-open .tr-resume, html.kb-open .tr-toast, html.kb-open .wo-dock { visibility: hidden; }
 /* Centred pop-ups and sheets sit above the keyboard, each card no taller than the room left; the field in it is then
    brought into the card's own body. */
-html.kb-open :is(.gpk-overlay, .ev-scrim, .vr-sheet-scrim, .wo-sheet-scrim, .sw-overlay) { bottom: var(--kb, 0px); }
+/* Pop-ups over the keyboard (13 Nov, Alex: "insanely buggy"): the dim stays the whole screen; the card slides up on the
+   keyboard's own curve by a transform, half the keyboard for a centred card (so it sits in the middle of the room left),
+   the whole of it for a sheet from the bottom. A transform moves nothing else, so nothing round it jumps. */
+:is(.gpk-card, .cki-card, .ev-sheet, .evs, .vr-sheet, .wo-sheet, .sw-card, .fdi-scan) { transition: translate 0.26s cubic-bezier(0.38, 0.7, 0.125, 1); }
+html.kb-open :is(.gpk-card, .cki-card, .ev-sheet, .evs, .vas, .sw-card) { translate: 0 calc(var(--kb, 0px) * -0.5); }
+html.kb-open :is(.vr-sheet:not(.vas), .wo-sheet, .fdi-scan) { translate: 0 calc(var(--kb, 0px) * -1); padding-bottom: 16px; }
+@media (prefers-reduced-motion: reduce) { :is(.gpk-card, .cki-card, .ev-sheet, .evs, .vr-sheet, .wo-sheet, .sw-card, .fdi-scan) { transition: none; } }
 html.kb-open :is(.gpk-card, .ev-sheet, .evs, .vr-sheet) { max-height: calc(100dvh - var(--kb, 0px) - 80px - var(--sat, 0px)); }
 /* The gym picker's voice keeps its card's overflow hidden, so its content is what scrolls: a form taller than the
    room (Add a gym, Edit gym) is reached down to its pill, never cut off at the card's foot. */
@@ -21634,7 +21640,7 @@ html.kb-open .gpk-content { max-height: calc(100dvh - var(--kb, 0px) - 80px - va
    body scrolls, the sheet scrolls itself, so neither spills over the top of the screen. */
 html.kb-open .cki-card { max-height: calc(100dvh - var(--kb, 0px) - 72px - var(--sat, 0px)); }
 html.kb-open .hm-ev-sheet { max-height: calc(100dvh - var(--kb, 0px) - 40px - var(--sat, 0px)); }
-html.kb-open .sw-card { top: calc((100dvh - var(--kb, 0px) + var(--sat, 0px)) / 2); max-height: calc(100dvh - var(--kb, 0px) - 48px - var(--sat, 0px)); }
+html.kb-open .sw-card { max-height: calc(100dvh - var(--kb, 0px) - 48px - var(--sat, 0px)); }
 /* ==== The workout's exercise page, A2 (12 Nov, Alex: docs/boards/workout-a2-mockup.html; the sets as A of
    docs/boards/workout-structure-mockup.html) ==== */
 /* One page colour to the very bottom and behind the dock (12 Nov, Alex: "the background would change colour if I kept
@@ -21793,7 +21799,16 @@ body:has(.wo-screen) { background: #F5F6F8; }
    later"). In the iPhone app the web view shrinks to the keyboard ~0.45s after it starts; the chat now takes the
    keyboard's room in its first frame (--kb, the part the layout has still to shrink by, 0 once it has), so the box rides
    up with the keyboard and the thread's foot stays above it. Its home-bar room goes while the keyboard covers it. */
-html.kb-open .cm-screen { padding-bottom: var(--kb, 0px); }
+html.kb-up .cm-screen { padding-bottom: var(--kb, 0px); }
+/* The chat holds to its foot, so its room is no layout change while the keyboard slides (13 Nov, Alex): the thread and
+   the box ride up by a transform on the keyboard's curve (kb-moving), the screen takes the room once it is up (kb-up, the
+   same frame the transform goes, keyboard.ts), and going down they ride back from where they were (kb-leaving, then
+   kb-dropping). The header stays over the thread as it passes under it. */
+html.kb-moving .cm-screen :is(.cm-body, .cm-compose) { translate: 0 calc(var(--kb, 0px) * -1); transition: translate 0.26s cubic-bezier(0.38, 0.7, 0.125, 1); }
+html.kb-leaving .cm-screen :is(.cm-body, .cm-compose) { translate: 0 calc(var(--kb-was, 0px) * -1); }
+html.kb-dropping .cm-screen :is(.cm-body, .cm-compose) { translate: 0 0; transition: translate 0.26s cubic-bezier(0.38, 0.7, 0.125, 1); }
+html:is(.kb-moving, .kb-leaving, .kb-dropping) .cm-screen .cm-header { position: relative; z-index: 3; }
+@media (prefers-reduced-motion: reduce) { html:is(.kb-moving, .kb-dropping) .cm-screen :is(.cm-body, .cm-compose) { transition: none; } }
 html.kb-open .cm-screen .cm-compose { padding-bottom: 10px; }
 
 /* The keyboard without the web view shrinking (13 Nov, Alex: "this keyboard is quite buggy still across the app"; the
@@ -21804,7 +21819,9 @@ html.kb-open .cm-screen .cm-compose { padding-bottom: 10px; }
    only in its gap, so nothing is lifted twice. The sign-in page centres its card in the room above it. The tab bar's
    room under a sticky footer goes while it is hidden. In the new mode the chat eases up with the keyboard, on a curve
    close to iOS's own. Pop-ups and sheets keep their own --kb rules above. */
-html.kb-open .app-layer { padding-bottom: var(--kb, 0px); }
+html.kb-open .app-layer:not([inert]):not(.cm-screen) { padding-bottom: var(--kb, 0px); }
+/* A Couldn't train sheet over the keyboard is no taller than the room left. */
+html.kb-open .wo-sheet-scrim > .wo-sheet { max-height: calc(100dvh - var(--kb, 0px) - 60px - var(--sat, 0px)); }
 html.kb-open .app-layer-main .app-sticky-footer { padding-bottom: 12px; }
 html.kb-open .auth-page.au-page { padding-bottom: calc(24px + var(--kb, 0px)); }
 /* Every pushed screen eases up with the keyboard (13 Nov, Alex: the box jumped up before it): the chat, the workout, the

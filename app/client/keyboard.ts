@@ -80,8 +80,50 @@ function write(kick = false) {
     const root = document.documentElement;
     root.style.setProperty("--kb", `${next.covered}px`);
     root.classList.toggle("kb-open", next.open);
+    // A browser has no word of the keyboard's slide: what it covers is settled as soon as it is measured.
+    if (!pluginOpen && !pluginSeen) root.classList.toggle("kb-up", next.open);
   }
   if (changed || kick) subs.forEach((f) => f());
+}
+
+// The keyboard's slide (13 Nov, Alex: "insanely buggy"; two audits found every lift snapping a quarter second before
+// the keyboard was there). What sits at the foot of a screen and holds to it (the chat's thread and box) moves by a
+// transform on the keyboard's own 0.26s while it slides (`kb-moving`), and takes the room by layout only once it is up
+// (`kb-up`), in the same frame the transform goes, so nothing moves then; going down, the room goes at once and the
+// same transform (from `--kb-was`, the height it had) eases back to nothing (`kb-leaving`, then `kb-dropping`). Pop-up
+// cards slide by a transform alone (the end of globals.css). Pages whose things hold to their top take the room at
+// once, which moves nothing there.
+const SLIDE_MS = 280;
+let pluginSeen = false;
+let slideTimer = 0;
+function slideUp() {
+  const root = document.documentElement;
+  window.clearTimeout(slideTimer);
+  root.classList.remove("kb-leaving", "kb-dropping");
+  // Already up (the number pad after the letters, the QuickType bar): the new height is taken at once.
+  if (root.classList.contains("kb-up")) return;
+  root.classList.add("kb-moving");
+  slideTimer = window.setTimeout(() => {
+    root.classList.remove("kb-moving");
+    if (pluginOpen) root.classList.add("kb-up");
+    subs.forEach((f) => f());
+  }, SLIDE_MS);
+}
+function slideDown(was: number) {
+  const root = document.documentElement;
+  window.clearTimeout(slideTimer);
+  const wasUp = root.classList.contains("kb-up") || root.classList.contains("kb-moving");
+  root.classList.remove("kb-up", "kb-moving");
+  if (!wasUp || was <= 0) return;
+  root.style.setProperty("--kb-was", `${was}px`);
+  root.classList.add("kb-leaving");
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      root.classList.remove("kb-leaving");
+      root.classList.add("kb-dropping");
+      slideTimer = window.setTimeout(() => root.classList.remove("kb-dropping"), SLIDE_MS);
+    })
+  );
 }
 
 /** Resizes and scrolls come in bursts: one measure a frame. */
@@ -94,21 +136,16 @@ function heightOf(d: unknown) {
   return typeof h === "number" && h > 0 ? h : 0;
 }
 
-let modeTimer = 0;
 function willShow(d: unknown) {
   noteHeight();
+  pluginSeen = true;
+  const again = pluginOpen;
   pluginOpen = true;
   // A second willShow (the number pad after the letters, QuickType) is a new height; the full height stays.
   pluginHeight = heightOf(d) || pluginHeight;
+  // The app sends each event to the window too: the same keyboard twice is one.
+  if (!again) slideUp();
   write(true);
-  // The app's keyboard mode (13 Nov, Alex): since then the shell no longer shrinks the web view (resize none,
-  // mobile/capacitor.config.json); the screens take the keyboard's room themselves, in its first frame (the end of
-  // globals.css). A build from before still shrinks it ~0.45s on. A page still its full height well after the keyboard
-  // came is the new way: `kb-overlay` on <html>, and what moves with the keyboard may then ease with it.
-  window.clearTimeout(modeTimer);
-  modeTimer = window.setTimeout(() => {
-    if (pluginOpen && pluginHeight > 0 && window.innerHeight >= fullHeight - 2) document.documentElement.classList.add("kb-overlay");
-  }, 800);
 }
 
 function didShow(d: unknown) {
@@ -118,6 +155,8 @@ function didShow(d: unknown) {
 }
 
 function willHide() {
+  if (!pluginOpen) return;
+  slideDown(snap.covered);
   pluginOpen = false;
   pluginHeight = 0;
   hiddenAt = performance.now();
@@ -231,8 +270,12 @@ function screenTop() {
 }
 
 /** Brings the focused field into the band between the top bar and the keyboard (or a dock), in its own scroll box. */
+/** Pop-up cards that slide up with the keyboard (the end of globals.css): a field in one is placed once it has. */
+const SLIDING_CARDS = ".gpk-card, .cki-card, .ev-sheet, .evs, .vr-sheet, .wo-sheet, .sw-card, .fdi-scan";
+
 export function revealField(el: HTMLElement) {
   if (el.closest("[data-kb-own]")) return;
+  if (document.documentElement.classList.contains("kb-moving") && el.closest(SLIDING_CARDS)) return;
   // What the keyboard covers as of this moment: a resize may have come in this frame, its measure not yet run.
   write();
   const box = scrollBoxOf(el);
@@ -275,7 +318,8 @@ export function revealField(el: HTMLElement) {
   if (f.top - d < ceiling) d = f.top - ceiling;
   if (f.bottom - d > floor) d = f.bottom - floor;
   if (Math.abs(d) < 2) return;
-  const behavior: ScrollBehavior = keyboardSettled() ? "smooth" : "auto";
+  // Smooth, so a field rises with the keyboard as it comes (13 Nov: an instant scroll in its first frame read as a jump).
+  const behavior: ScrollBehavior = "smooth";
   if (isDoc) window.scrollBy({ top: d, behavior });
   else box.scrollBy({ top: d, behavior });
 }
