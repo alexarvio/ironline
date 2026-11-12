@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AppleIcon, ChevronDownIcon, DumbbellIcon, HeartIcon } from "../components/icons";
-import { useNavigateTab, useOpenCheckIn, useOpenFood } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn } from "./CheckInContext";
 import FitTitle from "./FitTitle";
 import CardPictureSheet, { useLongPress, type CardCovers } from "./CardPictureSheet";
 import PictureCycle from "./PictureCycle";
@@ -382,7 +382,6 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
 export function PhaseCard({ ph, pictures, eager, coachName, today, nextSession, food, weekDone, checkInCount, onOpen, onHold, onLog }: { ph: HomePhase; /** The client's own pictures (14 Oct), taking turns; one or none, the cover shows. */ pictures?: string[]; eager?: boolean; coachName: string; today: string; nextSession: PhaseNextSession; food: PhaseFoodToday; weekDone: { nextWeekLabel: string } | null; checkInCount: { done: number; total: number } | null; onOpen: () => void; /** Pressed and held (12 Oct): the picture sheet. */ onHold?: () => void; /** The lifestyle card's Log (13 Oct): today's check-in in a pop-up. */ onLog?: () => void }) {
   const hold = useLongPress(() => onHold?.());
   const goToTab = useNavigateTab();
-  const openFood = useOpenFood();
   const openCheckIn = useOpenCheckIn();
   const kcal = (v: number) => Math.round(v).toLocaleString("en-US");
   // The objectives: folded, on arrival.
@@ -447,7 +446,7 @@ export function PhaseCard({ ph, pictures, eager, coachName, today, nextSession, 
             label="Today"
             name={food?.target ? `${kcal(food.target)} kcal` : "Your food diary"}
             action="Log"
-            onClick={() => (openFood ? openFood() : goToTab?.("nutrition"))}
+            onClick={() => goToTab?.("nutrition")}
           />
         )}
         {ph.track === "lifestyle" && (onLog || openCheckIn) && (

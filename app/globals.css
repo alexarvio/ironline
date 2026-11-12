@@ -20520,7 +20520,7 @@ span.lw-saved.lw-saved.refused { cursor: default; }
 .nd > .nd-banner.nd-banner, .nd-banner.nd-banner.fdi-banner { height: calc(var(--topbar-h, 67px) + 231px); display: flex; flex-direction: column; gap: 0; }
 .nd > .nd-banner.nd-banner > :not(.tr-banner-pic), .nd-banner.nd-banner.fdi-banner > :not(.tr-banner-pic) { flex-shrink: 0; }
 .nd > .nd-banner.nd-banner > .nd-tabs, .nd-banner.nd-banner.fdi-banner > .nd-tabs { margin-top: auto; }
-.nd-banner.fdi-banner h1.nd-phase-name { margin: 4px 0 0; }
+.nd-banner.fdi-banner .nd-phase-name { margin: 4px 0 0; }
 .nd-banner.fdi-banner .fdi-date-sub { display: block; margin-top: 4px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nd-banner.nd-banner.fdi-banner > .fdi-week { margin: auto -8px 0; }
 /* Objectives from the coach in the hairline language (17 Oct, Alex), on every phase's tab (Training, Nutrition, the lifestyle check-in): no white card, a flat row between hairlines; the small grey label at 600, the count plain beside it, the chevron in the label grey; opened, the list drops out flat with thin numbered rings and the body text at 500. Doubled for the dev-server CSS order. */
@@ -21489,3 +21489,21 @@ html.native-app .hm-ev-sheet { max-height: calc(100dvh - 40px - var(--sat)); }
 /* No grey flash on a tap (11 Nov, Alex: the + under the week's sessions lit its whole row black for a moment): the
    phone's own tap highlight is off everywhere; what is pressed shows it by its own :active look. */
 html { -webkit-tap-highlight-color: transparent; }
+
+/* ==== Nutrition is the food diary (12 Nov, Alex: B of docs/boards/nutrition-is-the-diary-mockup.html) ====
+   One screen under the tab's own top bar: the banner, the ring and macros (the day's figures, nothing to tap),
+   Supplements | Water, the meals, Add a meal, Saved days | Saved meals, the coach's note, Last 7 days. */
+.fdi-targets .nd-ring { cursor: auto; }
+/* Supplements | Water right under the ring, the 12px Nutrition had. */
+.fdi-list > .nd-wsrow.nd-wsrow:first-child { margin-top: -6px; }
+.fdi-list > .nd-wsrow:first-child > .nd-water.nd-water, .fdi-list > .nd-wsrow:first-child > .nd-supps.nd-supps { margin-top: 0; }
+/* The tab's own room at the foot, under the floating bar: the page adds none of its own. */
+.nd.fdi-page { padding-bottom: 28px; }
+/* Typing on a phone, the floating tab bar steps aside: the meals' search and amounts sit right over the keyboard. */
+@media (hover: none) {
+  .app-layer-main:has(> .app-content :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea):focus) > .app-bottom-nav { visibility: hidden; }
+}
+/* The coach's note and Last 7 days at the foot, in the diary's own column; no line over a section (§2). */
+.nd .fdi-foot .nd-section-head { border-top: 0; }
+/* No phase and no targets: the banner in grey, as Training's with nothing planned. */
+.nd-banner.fdi-banner.nd-naked { filter: grayscale(1); }
