@@ -15,6 +15,7 @@ import { ChatAttachmentRow, useChatAttachment } from "../components/ChatAttachme
 import { dayMonth } from "../lib/dayMonth";
 import { newOnceKey } from "../lib/onceKey";
 import { useKeyboardInset } from "../client/useKeyboardInset";
+import { useHoldPress } from "../components/useHoldPress";
 import { Avatar, Facts, Icon } from "./parts";
 import { ChatReview } from "./PhoneReview";
 import LastActive from "../components/LastActive";
@@ -31,7 +32,6 @@ import LastActive from "../components/LastActive";
 
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 const POLL_MS = 15000;
-const HOLD_MS = 450;
 
 const dayOf = (when: string) => when.split(", ")[0] ?? when;
 const timeOf = (when: string) => when.split(", ")[1] ?? "";
@@ -309,45 +309,14 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
       document.removeEventListener("keydown", esc);
     };
   }, [menuFor]);
-  const hold = useRef<{ timer: number; x: number; y: number } | null>(null);
-  const held = useRef(false);
+  // Holding the message (or a right click on a computer) opens it: one mechanism with the client's chat (useHoldPress).
+  const { bind: bindHold, held } = useHoldPress({ ignore: ".cph-menu" });
   const openMenu = (m: DraftMessage, el?: Element | null) => {
-    held.current = true;
     setConfirmDelete(false);
     setMenuDown((el?.getBoundingClientRect().top ?? 400) < 320);
     setMenuFor(m);
-    try {
-      navigator.vibrate?.(8);
-    } catch {}
   };
-  const pressHandlers = (m: DraftMessage) => ({
-    onPointerDown: (e: React.PointerEvent) => {
-      if (e.button !== 0) return;
-      held.current = false;
-      const el = e.currentTarget;
-      const timer = window.setTimeout(() => {
-        hold.current = null;
-        openMenu(m, el);
-      }, HOLD_MS);
-      hold.current = { timer, x: e.clientX, y: e.clientY };
-    },
-    onPointerMove: (e: React.PointerEvent) => {
-      const h = hold.current;
-      if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 10) cancelHold();
-    },
-    onPointerUp: () => cancelHold(),
-    onPointerCancel: () => cancelHold(),
-    onPointerLeave: () => cancelHold(),
-    onContextMenu: (e: React.MouseEvent) => {
-      e.preventDefault();
-      cancelHold();
-      openMenu(m, e.currentTarget);
-    },
-  });
-  const cancelHold = () => {
-    if (hold.current) clearTimeout(hold.current.timer);
-    hold.current = null;
-  };
+  const pressHandlers = (m: DraftMessage) => bindHold((el) => openMenu(m, el));
   const closeMenu = () => {
     setMenuFor(null);
     setConfirmDelete(false);
