@@ -895,6 +895,9 @@ type PhotoSettings = {
   /** A closed update's angles by its period, frozen before its first late change (12 Nov, Alex), so adding or removing a
    *  photo on it never moves an angle on or off it. Kept in the row's extra jsonb. */
   photo_sheet_angles?: Record<string, number[]>;
+  /** When a closed update's last on-time photo came in, by its period, kept with its angles (12 Nov), so its own row in
+   *  the coach's Activity keeps its day whatever is taken off or added late. Kept in the row's extra jsonb. */
+  photo_sheet_sent_at?: Record<string, string>;
 };
 
 // The coach's written feedback on one period's photo set — shape, what's
