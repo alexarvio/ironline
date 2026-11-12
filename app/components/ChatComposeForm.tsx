@@ -253,6 +253,9 @@ export default function ChatComposeForm({
           className={`chat-attach-btn chat-plus-btn${plusOpen ? " open" : ""}`}
           aria-label={onAddEvent ? "Add a photo, a video, a file or an event" : "Send a photo, video or file"}
           aria-expanded={onAddEvent ? plusOpen : undefined}
+          // The box keeps the focus as + is tapped (13 Nov, Alex: the keyboard dropped and iOS's picker menu stayed where
+          // the + had been, mid-screen): the keyboard and the + stay put under the menu.
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => (onAddEvent ? setPlusOpen((o) => !o) : fileInputRef.current?.click())}
           disabled={pending}
         >

@@ -633,7 +633,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
         {/* Out of the way while a message is edited (an edit is words alone); back once it is saved or let go. */}
         {!editing && <ChatAttachmentRow att={att} sending={sendingAtt} />}
         <div className="cph-compose-row">
-          <button type="button" className="cph-round" onClick={() => fileInput.current?.click()} disabled={sendingFile || sendingAtt || !!editing} aria-label="Send a photo, video or file">
+          <button type="button" className="cph-round" onMouseDown={(e) => e.preventDefault()} onClick={() => fileInput.current?.click()} disabled={sendingFile || sendingAtt || !!editing} aria-label="Send a photo, video or file">
             <Icon name="plus" />
             <RingEdge size={40} />
           </button>
