@@ -21598,6 +21598,13 @@ html { -webkit-tap-highlight-color: transparent; }
 .so-video-past { margin-top: 6px; }
 .tr-x-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
 .tr-x-head .tr-x-name { min-width: 0; }
+/* A finished session's exercise marks (13 Nov, Alex), packed at the head's right end, 6px apart, each a 22px ring as the coach's rows. */
+.tr-x-marks { display: inline-flex; flex: none; align-items: center; gap: 6px; }
+.tr-xmark { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; --ring: rgba(47, 122, 63, 0.55); color: #2f7a3f; }
+.tr-xmark.removed { --ring: rgba(184, 71, 31, 0.55); color: #b8471f; }
+.tr-xmark.swap { --ring: #C9CFD8; color: #8b93a1; }
+.tr-xmark > svg:not(.ring-edge) { width: 12px; height: 12px; }
+.tr-x-pb { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #2f7a3f; }
 .tr-x-ex .so-video-past { margin-top: 2px; }
 
 /* ==== The keyboard (12 Nov, Alex: "the keyboard experience is not the smoothest… it gets in the middle of the text
