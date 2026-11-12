@@ -7,10 +7,9 @@ import { enqueueWorkout, useWorkoutOutbox, forgetRefused } from "../components/w
 import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel as labelOf, type Unit } from "../lib/units";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import { askShown, VideoAskLine, VideoAskSheet, VideoAskTool } from "./VideoAskSheet";
-import { CoachNote, lastSetsHere, shownName, TargetTable, targetColumns, type SessionExercise } from "./workoutShared";
+import { CoachNote, EyebrowFacts, lastSetsHere, shownName, TargetTable, targetColumns, type SessionExercise } from "./workoutShared";
 import { isAssisted } from "../lib/progressRules";
 import CoachSays from "./CoachSays";
-import { Bars } from "./Bars";
 import RingEdge from "../components/RingEdge";
 import DoneCheck from "../components/DoneCheck";
 import { NoteIcon } from "../components/icons";
@@ -665,16 +664,7 @@ export default function ExercisePage({
           then Next up. */}
       <div className="wo-ex-head">
         <div className="wo-eyerow">
-          <div className="wo-eyebrow">
-            <Bars
-              parts={[
-                sessionLabel && <span key="s" className="wo-eyebrow-session">{sessionLabel}</span>,
-                <span key="c" className="wo-eyebrow-count">
-                  Exercise {index} of {total}
-                </span>,
-              ]}
-            />
-          </div>
+          <EyebrowFacts session={sessionLabel} count={`Exercise ${index} of ${total}`} />
           <div className="wo-ex-tools">
             {exercise.videoUrl && (
               <button type="button" className="wo-demo-tool" onClick={openDemo} aria-label={`Play the demo of ${shownName(exercise)}`} title="Demo">

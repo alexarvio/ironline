@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { enqueueWorkout } from "../components/workoutOutbox";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import type { VideoAsk } from "./VideoAskSheet";
 import type { GymOption } from "./GymPickerDialog";
-import { Bars } from "./Bars";
+import { Bar, Bars } from "./Bars";
 import { fmtWeight, planToDisplay, unitLabel } from "../lib/units";
 import { dayWords } from "../lib/clientDates";
 
@@ -311,16 +311,7 @@ export function CardioCard({ cardio, index, session, readOnly = false, coachName
   return (
     <div className={`wo-cardio${done ? " done" : ""}`} data-index={index}>
       <div className="wo-ex-head">
-        <div className="wo-eyebrow">
-          <Bars
-            parts={[
-              sessionLabel && <span key="s" className="wo-eyebrow-session">{sessionLabel}</span>,
-              <span key="c" className="wo-eyebrow-count">
-                {position ? `Cardio ${position.n} of ${position.total}` : "Cardio"}
-              </span>,
-            ]}
-          />
-        </div>
+        <EyebrowFacts session={sessionLabel} count={position ? `Cardio ${position.n} of ${position.total}` : "Cardio"} />
         <div className="wo-ex-top">
           <h2 className="wo-ex-name">{cardio.swap ?? cardio.name}</h2>
         </div>
@@ -476,16 +467,100 @@ export function targetColumns(t: { sets?: number | null; reps?: string | null; w
 }
 export const cardioColumns = (c: SessionCardio) => targetColumns({ time: c.time, pace: c.pace, incline: c.incline, distance: c.distance });
 
+// The figures sized to the room they have (12 Nov, review of the band): the largest size up to 24px at which every
+// figure and its word fit their column, never cut and never hidden. The columns share the width evenly while that keeps
+// the figures at 16px or more; past that each column is as wide as it needs (`minmax(min-content, 1fr)`), down to
+// 14px, and only when even that won't go on one line do they take two rows (20px at most). A figure keeps 6px free on
+// its right (`.lw-target-v`), so two never run together (`3-1-1-0 2 min`). Measured from the figures as drawn, so a
+// coach's own words for a pace or a tempo fit as well as `10–12`.
+const FIG_MAX = 24;
+const FIG_EVEN = 16;
+const FIG_MIN = 14;
+const FIG_AIR = 6;
+const FIG_TWO_ROWS = 20;
+type TargetFit = { size: number; per: number };
+export function fitTargetGrid(grid: HTMLElement): TargetFit | null {
+  const width = grid.clientWidth;
+  const cols = Array.from(grid.children) as HTMLElement[];
+  if (!width || !cols.length) return null;
+  // Read in the page's own pixels, whatever transform the screen is under.
+  const scale = grid.offsetWidth ? grid.getBoundingClientRect().width / grid.offsetWidth || 1 : 1;
+  const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
+  const items = cols.map((col) => {
+    const v = col.querySelector<HTMLElement>(".lw-target-v");
+    const h = col.querySelector<HTMLElement>(".lw-target-h");
+    const style = v ? getComputedStyle(v) : null;
+    const at = style ? parseFloat(style.fontSize) || FIG_MAX : FIG_MAX;
+    const pad = style ? (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0) : 0;
+    // A figure's width for each pixel of its size (its type alone, not its air), and its word's width, which stays put.
+    return { em: v ? Math.max(0, v.getBoundingClientRect().width / scale - pad) / at : 0, word: h ? h.getBoundingClientRect().width / scale : 0 };
+  });
+  const widest = Math.max(...items.map((i) => i.em)) || 1;
+  const rows = items.length > 1 ? [items.length, Math.ceil(items.length / 2)] : [1];
+  for (const per of rows) {
+    const room = width - (per - 1) * gap - 0.5;
+    const needs = (size: number) => {
+      let sum = 0;
+      for (let c = 0; c < per; c++) {
+        let w = 0;
+        for (let i = c; i < items.length; i += per) w = Math.max(w, items[i].em * size + FIG_AIR, items[i].word);
+        sum += w;
+      }
+      return sum;
+    };
+    // Two rows are a taller band already, so their figures stop at 20px.
+    const top = per === items.length ? FIG_MAX : FIG_TWO_ROWS;
+    let size = Math.min(top, Math.max(FIG_EVEN, Math.floor(room / per / widest)));
+    while (size >= FIG_MIN && needs(size) > room) size--;
+    if (size >= FIG_MIN) return { size, per };
+  }
+  return { size: FIG_MIN, per: Math.ceil(items.length / 2) };
+}
+function useTargetFit(sig: string) {
+  const grid = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState<TargetFit | null>(null);
+  useLayoutEffect(() => {
+    const el = grid.current;
+    if (!el) return;
+    let live = true;
+    let frame = 0;
+    const run = () => {
+      if (!live) return;
+      const f = fitTargetGrid(el);
+      if (f) setFit((p) => (p && p.size === f.size && p.per === f.per ? p : f));
+    };
+    run();
+    // Again when the room changes (a fold opening, the phone turned) and once the type has loaded; a frame later, so a
+    // new size is never set inside the observer's own pass.
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(run);
+    });
+    ro?.observe(el);
+    document.fonts?.ready.then(run);
+    return () => {
+      live = false;
+      ro?.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [sig]);
+  return [grid, fit] as const;
+}
+
 // The targets, one drawing on the exercise page, the session overview and the cardio page (3 Nov, Alex): the purple
 // band since 12 Nov (Alex: C of docs/boards/workout-a2-mockup.html), a soft training-purple tint with a 2px purple line
 // on its left, TARGET in purple, then a column for each figure, the figure in ink over its word in small grey caps, the
-// columns sharing the width evenly; six or more tighter (`.lw-target`, `dense`).
+// columns sharing the width evenly, the figures sized to fit (`fitTargetGrid`; `.lw-target`, `dense` from five).
 export function TargetTable({ cols }: { cols: [string, string][] }) {
+  const [grid, fit] = useTargetFit(cols.map((c) => c.join("\u0001")).join("\u0002"));
   if (!cols.length) return null;
+  const n = cols.length;
+  // Before the first measure (and without one): a size that fits the usual figures at that many columns.
+  const guess = n <= 3 ? FIG_MAX : n === 4 ? 20 : n === 5 ? 18 : FIG_EVEN;
   return (
     <div className="lw-target">
       <span className="lw-target-label">Target</span>
-      <div className={`lw-target-grid${cols.length >= 6 ? " dense" : ""}`} style={{ gridTemplateColumns: `repeat(${cols.length}, minmax(0, 1fr))` }}>
+      <div ref={grid} className={`lw-target-grid${n >= 5 ? " dense" : ""}`} style={{ "--tv": `${fit?.size ?? guess}px`, "--per": fit?.per ?? n } as CSSProperties}>
         {cols.map(([name, v]) => (
           <span key={name} className="lw-target-col">
             <b className="lw-target-v">{v}</b>
@@ -493,6 +568,23 @@ export function TargetTable({ cols }: { cols: [string, string][] }) {
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+// The workout's eyebrow, `Push | Exercise 3 of 6` (12 Nov, review of A2): the count always whole, the session's name
+// before it cut with an ellipsis when the line is short, and gone with its bar once not even a few letters of it fit,
+// so nothing is cut off unseen and no bar is left on its own (`.wo-eyebrow.fit`). On the exercise page and the cardio.
+export function EyebrowFacts({ session, count }: { session?: ReactNode; count: ReactNode }) {
+  return (
+    <div className="wo-eyebrow fit">
+      {session ? (
+        <span className="wo-eyebrow-lead">
+          <span className="wo-eyebrow-session">{session}</span>
+          <Bar />
+        </span>
+      ) : null}
+      <span className="wo-eyebrow-count">{count}</span>
     </div>
   );
 }
