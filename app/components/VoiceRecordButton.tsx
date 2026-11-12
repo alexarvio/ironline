@@ -259,7 +259,7 @@ export default function VoiceRecordButton({ onRecorded, className = "", disabled
       ? createPortal(
           <div
             className={`vrec ${phase}`}
-            style={{ left: bar.left, top: bar.top, width: phase === "locked" ? bar.width : Math.max(120, bar.micLeft - 6), height: bar.height }}
+            style={{ left: bar.left, top: bar.top, width: phase === "locked" ? bar.width : Math.max(120, bar.micLeft - bar.micW * 0.2 - 10), height: bar.height }}
             role="status"
             aria-label={`Recording ${clock(secs)}`}
           >
