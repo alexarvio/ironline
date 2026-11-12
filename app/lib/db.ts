@@ -869,6 +869,10 @@ type PhotoUpload = {
   period: string;
   file_path: string; // public URL path, e.g. /uploads/progress/1/3/2026-08-24.jpg
   uploaded_at: string;
+  /** A photo the client added to a shape update after it closed (12 Nov, Alex): when. Kept in the row's extra jsonb. */
+  late_at?: string;
+  /** A closed update's photo changed (12 Nov): when; uploaded_at keeps the original send. Kept in the row's extra jsonb. */
+  replaced_at?: string;
 };
 
 // How often a client gets a fresh, empty photo sheet to fill in — one
@@ -888,6 +892,9 @@ type PhotoSettings = {
   /** The sheet open now, by the day it opened (21 Oct, Alex): it stays open until every photo asked for is in, and only
    *  then does the next one open, on its own day. Missing until a sheet first opens. Kept in the row's extra jsonb. */
   photo_open_period?: string | null;
+  /** A closed update's angles by its period, frozen before its first late change (12 Nov, Alex), so adding or removing a
+   *  photo on it never moves an angle on or off it. Kept in the row's extra jsonb. */
+  photo_sheet_angles?: Record<string, number[]>;
 };
 
 // The coach's written feedback on one period's photo set — shape, what's

@@ -89,6 +89,7 @@ import {
   listPhotoSlots,
   listPhotoUploads,
   photoSlotsOnSheet,
+  getPhotoSheetAngles,
   localDateStr,
   photoSheetFor,
   nextPhotoSheet,
@@ -1220,14 +1221,21 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
   const strictlyOpen = active.length > 0 ? photoSheetFor(CLIENT_ID, today) : null;
   const sent = listPhotoPeriods(slots.map((s) => s.id));
   const sheetTitle = sheetTitles(openPeriod ? [...sent, openPeriod] : sent);
+  // The angles frozen on an update changed after it closed (12 Nov, Alex).
+  const frozen = getPhotoSheetAngles(CLIENT_ID);
   const earlier = sent
     .filter((p) => p !== openPeriod)
     .map((period) => ({
       period,
       title: sheetTitle(period),
       // A sheet keeps any paused angle it already has a photo for, and an angle added later is not missing from it
-      // (6 Nov, Alex; photoSlotsOnSheet).
-      photos: photoSlotsOnSheet(slots, uploads, period, false).map((s) => ({ slotId: s.id, label: s.label, src: srcFor(s.id, period) })),
+      // (6 Nov, Alex; photoSlotsOnSheet). Each with the coach's word on how to take it, for a photo added late (12 Nov).
+      photos: photoSlotsOnSheet(slots, uploads, period, false, frozen[period]).map((s) => ({
+        slotId: s.id,
+        label: s.label,
+        src: srcFor(s.id, period),
+        hint: s.hint ?? null,
+      })),
     }));
   const oldest = earlier[earlier.length - 1];
   const next = active.length > 0 && !strictlyOpen ? nextPhotoSheet(CLIENT_ID, today) : null;
@@ -1239,8 +1247,16 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
           period: openPeriod,
           title: sheetTitle(openPeriod),
           openedLabel: fmtShortDate(openPeriod),
-          slots: active.map((s) => ({ id: s.id, label: s.label, hint: s.hint ?? null, src: srcFor(s.id, openPeriod) })),
+          // The one just finished holds the angles it asked for, as every closed update (12 Nov), never one added since.
+          slots: (openPeriod === strictlyOpen ? active : photoSlotsOnSheet(slots, uploads, openPeriod, false, frozen[openPeriod])).map((s) => ({
+            id: s.id,
+            label: s.label,
+            hint: s.hint ?? null,
+            src: srcFor(s.id, openPeriod),
+          })),
           instructions: getPhotoInstructions(CLIENT_ID),
+          // The one just finished, swappable until the next opens: closed, so never its last photo taken off (12 Nov).
+          closed: openPeriod !== strictlyOpen,
         }
       : null,
     earlier,

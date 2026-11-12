@@ -76,6 +76,7 @@ import {
   listPhotoUploads,
   photoSlotsOnSheet,
   photoSheetFor,
+  getPhotoSheetAngles,
   nextPhotoSheet,
   localDateStr,
   METRIC_GROUPS,
@@ -957,12 +958,16 @@ export function loadPictures(clientId: number): DraftPictures {
     commentsOn.set(m.link.period, list);
   }
 
+  // The angles frozen on an update the client changed after it closed (12 Nov, Alex).
+  const frozen = getPhotoSheetAngles(clientId);
   const sheets = periods.map((period, i) => {
     // An angle added later is not missing from the updates before it (6 Nov, Alex).
-    const cells = photoSlotsOnSheet(slots, uploads, period, period === live)
+    const cells = photoSlotsOnSheet(slots, uploads, period, period === live, frozen[period])
       .map((s) => {
         const u = uploadFor(s.id, period);
-        return { slotId: s.id, label: s.label, src: u?.file_path ?? null, shot: u ? stampDayTime(u.uploaded_at) : null, shotDay: u ? stampDay(u.uploaded_at) : null };
+        // A photo added or changed late shows the day it came in (12 Nov).
+        const at = u ? (u.replaced_at ?? u.uploaded_at) : null;
+        return { slotId: s.id, label: s.label, src: u?.file_path ?? null, shot: at ? stampDayTime(at) : null, shotDay: at ? stampDay(at) : null };
       });
     const inCount = cells.filter((c) => c.src).length;
     const number = periods.length - i;

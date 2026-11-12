@@ -3276,9 +3276,28 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
 
   const slotsById = new Map(data.photo_slots.map((s) => [s.id, s] as const));
   const sheets = new Map<string, { clientId: number; period: string; photos: { order: number; src: string }[]; latest: string | null }>();
+  // Photos added to or changed on an update after it closed (12 Nov, Alex): a row of their own a day, the update's own
+  // row staying on its day (a changed photo keeps its first send's time).
+  const late = new Map<string, { clientId: number; period: string; photos: { order: number; src: string }[]; latest: string | null; added: number }>();
+  const periodsOf = new Map<number, Set<string>>();
   for (const u of data.photo_uploads) {
     const slot = slotsById.get(u.slot_id);
     if (!slot) continue;
+    const mine = periodsOf.get(slot.client_id) ?? new Set<string>();
+    mine.add(u.period);
+    periodsOf.set(slot.client_id, mine);
+    // Its latest change: a photo added late and changed since is told on the day it was changed.
+    const lateStamp = latestOf(u.late_at ?? null, u.replaced_at);
+    if (lateStamp) {
+      const day = localDateStr(new Date(stampMs(lateStamp)));
+      const lkey = `${slot.client_id}:${u.period}:${day}`;
+      const row = late.get(lkey) ?? { clientId: slot.client_id, period: u.period, photos: [], latest: null, added: 0 };
+      row.photos.push({ order: slot.order_index, src: u.file_path });
+      row.latest = latestOf(row.latest, lateStamp);
+      if (u.late_at && lateStamp === u.late_at) row.added++;
+      late.set(lkey, row);
+    }
+    if (u.late_at) continue;
     const key = `${slot.client_id}:${u.period}`;
     const sheet = sheets.get(key) ?? { clientId: slot.client_id, period: u.period, photos: [], latest: null };
     sheet.photos.push({ order: slot.order_index, src: u.file_path });
@@ -3295,6 +3314,24 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       thing: "Sent a shape update",
       thumbs: s.photos.sort((a, b) => a.order - b.order).map((p) => p.src),
       // That sheet, opened (24 Oct, Alex).
+      target: { kind: "sheet", period: s.period },
+    });
+  });
+  late.forEach((s, key) => {
+    // Shape update 1, 2, 3 in the order they opened, as the tab counts them.
+    const number = [...(periodsOf.get(s.clientId) ?? [])].sort().indexOf(s.period) + 1;
+    const name = `Shape update ${number}`;
+    add(s.clientId, {
+      id: `photos-late-${s.clientId}-${s.period}-${key.split(":")[2]}`,
+      category: "measurements",
+      at: s.latest ? stampMs(s.latest) : middayMs(s.period),
+      tab: "photos",
+      text:
+        s.added > 0
+          ? `added ${plural(s.added, "photo")} to ${name.toLowerCase()}`
+          : `changed ${plural(s.photos.length, "photo")} on ${name.toLowerCase()}`,
+      thing: s.added > 0 ? `Added to ${name}` : `Changed ${s.photos.length === 1 ? "a photo" : `${s.photos.length} photos`} on ${name}`,
+      thumbs: s.photos.sort((a, b) => a.order - b.order).map((p) => p.src),
       target: { kind: "sheet", period: s.period },
     });
   });
@@ -4850,6 +4887,10 @@ export type PhotoUpload = {
   period: string;
   file_path: string;
   uploaded_at: string;
+  /** Added to the update after it closed (12 Nov, Alex): when. */
+  late_at?: string;
+  /** A closed update's photo changed (12 Nov): when; uploaded_at keeps the original send. */
+  replaced_at?: string;
 };
 
 export type PhotoCadence = "weekly" | "biweekly" | "monthly" | "sixweekly";
@@ -5064,6 +5105,36 @@ export function photoSheetForClient(clientId: number, day: string): string | nul
   return listPhotoPeriods(slots.map((s) => s.id)).find((p) => p < held && p <= day) ?? null;
 }
 
+/** A shape update that has closed and holds a photo (12 Nov, Alex: a client adds to or changes a past one, to compare
+ *  with now): never the open one, never the next one waiting for its day, never a period nothing was sent to (it would
+ *  be a new update and renumber the rest). */
+export function closedPhotoSheet(clientId: number, period: string, day: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(period) || period > day) return false;
+  if (period === photoSheetFor(clientId, day)) return false;
+  return listPhotoPeriods(listPhotoSlots(clientId).map((s) => s.id)).includes(period);
+}
+
+/** The angles frozen on closed updates, by period (12 Nov); {} when none is. */
+export function getPhotoSheetAngles(clientId: number): Record<string, number[]> {
+  return getData().photo_settings.find((s) => s.client_id === clientId)?.photo_sheet_angles ?? {};
+}
+
+/** Before a closed update's first late change, its angles as they stand are kept (12 Nov), so a photo added or taken off
+ *  never moves an angle on or off it. Once frozen it stays. */
+export function freezePhotoSheetAngles(clientId: number, period: string) {
+  if (getPhotoSheetAngles(clientId)[period]) return;
+  const slots = listPhotoSlots(clientId);
+  const ids = photoSlotsOnSheet(slots, listPhotoUploads(slots.map((s) => s.id)), period, false).map((s) => s.id);
+  const data = getData();
+  let row = data.photo_settings.find((s) => s.client_id === clientId);
+  if (!row) {
+    row = { client_id: clientId, cadence: "weekly" };
+    data.photo_settings.push(row);
+  }
+  row.photo_sheet_angles = { ...(row.photo_sheet_angles ?? {}), [period]: ids };
+  persist();
+}
+
 /** A new start date or rhythm (21 Oct): a sheet waiting for its day waits for the new schedule's next day (so a
  *  finished one never opens again); otherwise the calendar decides the open sheet again. */
 export function resetPhotoOpenSheet(clientId: number, day: string) {
@@ -5113,15 +5184,25 @@ export function listPhotoSlots(clientId: number): PhotoSlot[] {
  * The angles a shape update shows (6 Nov, Alex: two angles added on the fourth showed as missing on the three before):
  * an open or coming one, every angle asked now; one that is done, the angles it holds a photo for, and those that were
  * already asked when its last photo came in (from the day an angle was added; an older angle, from its first photo).
- * A paused angle only where it has a photo. The coach's tab and the client's screen alike.
+ * A paused angle only where it has a photo. The coach's tab and the client's screen alike. One changed after it closed
+ * (12 Nov) keeps the angles frozen on it then (`frozen`, getPhotoSheetAngles), whatever photos come or go.
  */
-export function photoSlotsOnSheet<S extends Pick<PhotoSlot, "id" | "paused" | "added_at">>(slots: S[], uploads: Pick<PhotoUpload, "slot_id" | "period" | "uploaded_at">[], period: string, open: boolean): S[] {
+export function photoSlotsOnSheet<S extends Pick<PhotoSlot, "id" | "paused" | "added_at">>(
+  slots: S[],
+  uploads: Pick<PhotoUpload, "slot_id" | "period" | "uploaded_at" | "late_at">[],
+  period: string,
+  open: boolean,
+  frozen?: number[] | null
+): S[] {
   const here = uploads.filter((u) => u.period === period);
   const has = (s: S) => here.some((u) => u.slot_id === s.id);
   if (open) return slots.filter((s) => !s.paused || has(s));
+  if (frozen) return slots.filter((s) => has(s) || frozen.includes(s.id));
   const lastIn = here.reduce<string | null>((m, u) => (!m || u.uploaded_at > m ? u.uploaded_at : m), null);
+  // A photo added late to an old update (12 Nov) says nothing about when its angle was first asked.
   const askedFrom = (s: S) =>
-    s.added_at ?? uploads.filter((u) => u.slot_id === s.id).reduce<string | null>((m, u) => (!m || u.uploaded_at < m ? u.uploaded_at : m), null);
+    s.added_at ??
+    uploads.filter((u) => u.slot_id === s.id && !u.late_at).reduce<string | null>((m, u) => (!m || u.uploaded_at < m ? u.uploaded_at : m), null);
   return slots.filter((s) => {
     if (has(s)) return true;
     if (s.paused) return false;
@@ -5292,43 +5373,71 @@ export function saveDemoVideoUpload(
   return `/uploads/demos/${clientId}/${filename}`;
 }
 
-export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer, mimeType: string): string {
+/**
+ * Files one angle's photo on a shape update: the period given (a closed one the caller checked, closedPhotoSheet), else
+ * the open one or the one just finished. On a closed update (12 Nov, Alex) a new photo is marked late and a changed
+ * one keeps its first send's time, the change stamped beside it. Back with the photo's path ("" with no update to file
+ * it in) and the file it replaced when that had another name (another extension), for the caller to take off the bucket.
+ */
+export function savePhotoUpload(
+  clientId: number,
+  slotId: number,
+  buffer: Buffer,
+  mimeType: string,
+  period: string | null = null,
+  closed = false
+): { path: string; gone: string | null } {
   // The open sheet, or the one just finished (a wrong photo swapped) until the next one opens.
-  const period = photoSheetForClient(clientId, localDateStr());
+  const sheet = period ?? photoSheetForClient(clientId, localDateStr());
   // Before the coach's first sheet date there is no sheet to file it in.
-  if (!period) return "";
+  if (!sheet || !/^\d{4}-\d{2}-\d{2}$/.test(sheet)) return { path: "", gone: null };
   const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
   const dir = path.join(DATA_DIR, "uploads", "progress", String(clientId), String(slotId));
   fs.mkdirSync(dir, { recursive: true });
-  const filename = `${period}.${ext}`;
+  const filename = `${sheet}.${ext}`;
   fs.writeFileSync(path.join(dir, filename), buffer);
   // ?v= (17 Oct): a replaced photo keeps its file name, and without it the phone kept showing the old one from its cache.
-  const publicPath = `/uploads/progress/${clientId}/${slotId}/${filename}?v=${Date.now()}`;
+  const base = `/uploads/progress/${clientId}/${slotId}/${filename}`;
+  const publicPath = `${base}?v=${Date.now()}`;
 
   const data = getData();
-  const existing = data.photo_uploads.find((u) => u.slot_id === slotId && u.period === period);
+  const now = new Date().toISOString();
+  const existing = data.photo_uploads.find((u) => u.slot_id === slotId && u.period === sheet);
+  let gone: string | null = null;
   if (existing) {
+    // Another extension leaves the old file under its own name: it goes, so nothing is left that nothing shows.
+    if (existing.file_path.split("?")[0] !== base) {
+      gone = existing.file_path;
+      try {
+        fs.rmSync(path.join(DATA_DIR, gone.split("?")[0].replace(/^\//, "")), { force: true });
+      } catch {
+        /* not on the disk */
+      }
+    }
     existing.file_path = publicPath;
-    existing.uploaded_at = new Date().toISOString();
+    if (closed) existing.replaced_at = now;
+    else existing.uploaded_at = now;
   } else {
     data.photo_uploads.push({
       id: allocId("photo_uploads"),
       slot_id: slotId,
-      period,
+      period: sheet,
       file_path: publicPath,
-      uploaded_at: new Date().toISOString(),
+      uploaded_at: now,
+      ...(closed ? { late_at: now } : {}),
     });
   }
   persist();
-  return publicPath;
+  return { path: publicPath, gone };
 }
 
-/** Takes one angle's photo off the sheet open now (17 Oct). Back with its file, to delete; null when there was none. */
-export function removePhotoUpload(clientId: number, slotId: number): string | null {
-  const period = photoSheetForClient(clientId, localDateStr());
-  if (!period) return null;
+/** Takes one angle's photo off a shape update (17 Oct): the period given (a closed one the caller checked; 12 Nov), else
+ *  the open one or the one just finished. Back with its file, to delete; null when there was none. */
+export function removePhotoUpload(clientId: number, slotId: number, period: string | null = null): string | null {
+  const sheet = period ?? photoSheetForClient(clientId, localDateStr());
+  if (!sheet) return null;
   const data = getData();
-  const i = data.photo_uploads.findIndex((u) => u.slot_id === slotId && u.period === period);
+  const i = data.photo_uploads.findIndex((u) => u.slot_id === slotId && u.period === sheet);
   if (i < 0) return null;
   const [gone] = data.photo_uploads.splice(i, 1);
   persist();

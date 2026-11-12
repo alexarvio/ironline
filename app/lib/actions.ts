@@ -423,7 +423,23 @@ import { logoAsPng, makeLogoMark, removeCoachLogo, saveCoachLogo } from "./brand
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
 import { FEATURES } from "./features";
-import { clearPhotoOpenSheet, getPhotoCadence, getPhotoOpenPeriod, getPhotoInstructions, getPhotoStartDate, listActivePhotoSlots, listPhotoSlots, listPhotoUploads, photoSheetFor, photoSheetForClient, resetPhotoOpenSheet } from "./queries";
+import {
+  clearPhotoOpenSheet,
+  closedPhotoSheet,
+  freezePhotoSheetAngles,
+  getPhotoCadence,
+  getPhotoOpenPeriod,
+  getPhotoInstructions,
+  getPhotoSheetAngles,
+  getPhotoStartDate,
+  listActivePhotoSlots,
+  listPhotoSlots,
+  listPhotoUploads,
+  photoSheetFor,
+  photoSheetForClient,
+  photoSlotsOnSheet,
+  resetPhotoOpenSheet,
+} from "./queries";
 import { dayMonth } from "./dayMonth";
 import { isTimezone, SERVER_TZ, tzShort, zonedToUtc } from "./timezones";
 import { askedWeightUnit, removeWeightGoal, saveWeightGoal, type WeightGoalFields, type WeightGoalRefusal } from "./queries";
@@ -1573,6 +1589,18 @@ async function takeUpload(formData: FormData, clientId: number | null, kinds: re
 /** What the saving queries write where the upload then lands: the bytes stay on the disk, never in memory. */
 const EMPTY = Buffer.alloc(0);
 
+/** The shape update a client's photo goes on (12 Nov, Alex): the one their screen sent (else the open one, or the one
+ *  just finished), when it is the open one or a closed one holding a photo (closedPhotoSheet: never the next one, a
+ *  period nothing was sent to, a day to come or a malformed one). Anything else has closed. */
+function photoTarget(clientId: number, sent: string): { period: string; closed: boolean } {
+  const today = localDateStr();
+  const open = photoSheetFor(clientId, today);
+  const target = sent || photoSheetForClient(clientId, today);
+  if (target && target === open) return { period: target, closed: false };
+  if (target && closedPhotoSheet(clientId, target, today)) return { period: target, closed: true };
+  throw new Error("That shape update has closed");
+}
+
 export async function uploadProgressPhotoAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const slotId = Number(formData.get("slotId"));
@@ -1581,18 +1609,24 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   // photo can't be filed into another client's sheet.
   if (getClientIdForPhotoSlot(slotId) !== clientId) return;
 
-  // Only into the sheet the client's screen shows (it may have closed meanwhile), never an angle no longer asked for.
-  const sheet = photoSheetForClient(clientId, localDateStr());
-  const sent = String(formData.get("period") ?? "");
-  if (!sheet || (sent && sent !== sheet)) throw new Error("That shape update has closed");
-  if (!listActivePhotoSlots(clientId).some((s) => s.id === slotId)) throw new Error("That angle isn't asked for any more");
+  // Only into the update the client's screen shows: the open one, never an angle no longer asked for; or a closed one
+  // holding a photo (12 Nov, Alex), only an angle it asked for.
+  const target = photoTarget(clientId, String(formData.get("period") ?? ""));
+  if (target.closed) {
+    const slots = listPhotoSlots(clientId);
+    const on = photoSlotsOnSheet(slots, listPhotoUploads(slots.map((s) => s.id)), target.period, false, getPhotoSheetAngles(clientId)[target.period]);
+    if (!on.some((s) => s.id === slotId)) throw new Error("That angle isn't on that shape update");
+  } else if (!listActivePhotoSlots(clientId).some((s) => s.id === slotId)) throw new Error("That angle isn't asked for any more");
   // Still in the action's body (4 Nov, Alex: memory): shrunk on the phone to a few hundred KB (fitJpeg), well under
   // next.config.ts's 25mb; the big files go through /api/upload.
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return;
   const buffer = Buffer.from(await file.arrayBuffer());
-  // Saved to the disk, then copied into the storage bucket when it is on.
-  const saved = savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg");
+  // Its angles kept as they stand before the first late change, so the photo never moves one on or off it.
+  if (target.closed) freezePhotoSheetAngles(clientId, target.period);
+  // Saved to the disk, then copied into the storage bucket when it is on; a file it replaced under another name goes.
+  const { path: saved, gone } = savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg", target.period, target.closed);
+  if (gone) await deleteUpload(gone);
   await putUpload(saved, buffer, file.type);
   // Its small copies made from these bytes behind the answer (27 Oct), so the coach's first look is quick.
   if (saved) afterResponse(() => warmSmallCopies(saved, buffer));
@@ -1600,14 +1634,21 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   revalidatePath("/client");
 }
 
-/** The client takes a photo off the open sheet (17 Oct): it goes from the data and the bucket. */
+/** The client takes a photo off a shape update (17 Oct; a closed one too since 12 Nov): it goes from the data and the bucket. */
 export async function removeProgressPhotoAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const slotId = Number(formData.get("slotId"));
   if (getClientIdForPhotoSlot(slotId) !== clientId) return;
-  const sent = String(formData.get("period") ?? "");
-  if (sent && sent !== photoSheetForClient(clientId, localDateStr())) throw new Error("That shape update has closed");
-  await deleteUpload(removePhotoUpload(clientId, slotId));
+  const target = photoTarget(clientId, String(formData.get("period") ?? ""));
+  if (target.closed) {
+    // Never a closed update's last photo (12 Nov, Alex): it would leave the list, every later Shape update renumbered and
+    // its comments and links pointing at nothing. It can be changed.
+    const here = listPhotoUploads(listPhotoSlots(clientId).map((s) => s.id)).filter((u) => u.period === target.period);
+    if (!here.some((u) => u.slot_id === slotId)) return;
+    if (here.length <= 1) throw new Error("Keep one photo on it");
+    freezePhotoSheetAngles(clientId, target.period);
+  }
+  await deleteUpload(removePhotoUpload(clientId, slotId, target.period));
   revalidatePath("/admin");
   revalidatePath("/client");
 }
