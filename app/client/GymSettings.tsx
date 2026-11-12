@@ -7,8 +7,8 @@ import { ChevronLeftIcon, ChevronRightIcon } from "../components/icons";
 import RingEdge from "../components/RingEdge";
 import { Bars } from "./Bars";
 import SettingsFold from "./SettingsFold";
-import { BadgeFace, CameraDot, sendLogo, shrink } from "./GymPickerDialog";
-import { clientMakeHomeGymAction, clientRemoveGymAction, clientRestoreGymAction, clientUpdateGymAction } from "../lib/actions";
+import { AddGymForm, BadgeFace, CameraDot, sendLogo, shrink, type GymOption } from "./GymPickerDialog";
+import { clientAddGymFromSettingsAction, clientMakeHomeGymAction, clientRemoveGymAction, clientRestoreGymAction, clientUpdateGymAction } from "../lib/actions";
 import { GYM_COLORS, GYM_COLOR_KEYS, GYM_KINDS, gymColor, type GymColorKey, type GymKind } from "../lib/gymColors";
 import { dayWords, monthWords } from "../lib/clientDates";
 import type { GymDashboard } from "../lib/queries";
@@ -28,7 +28,7 @@ const hours = (min: number) => {
 /** Home, Once or Deleted, then more. */
 const state = (g: GymDashboard) => (g.deleted ? "Deleted" : g.once ? "Once" : g.home ? "Home" : null);
 
-export default function GymSettings({ gyms }: { gyms: GymDashboard[] }) {
+export default function GymSettings({ clientId, gyms }: { clientId: number; gyms: GymDashboard[] }) {
   const router = useRouter();
   const [list, setList] = useState(gyms);
   const sig = JSON.stringify(gyms);
@@ -59,6 +59,19 @@ export default function GymSettings({ gyms }: { gyms: GymDashboard[] }) {
     patch(id, { deleted: false });
     router.refresh();
   };
+  // A gym added here shows at once, after the regular gyms (none trained there yet); the read after it puts it in its place
+  // and says Home when it is. A deleted one's name brings that gym back.
+  const [adding, setAdding] = useState(false);
+  const added = (gym: GymOption) => {
+    setAdding(false);
+    setList((l) => {
+      if (l.some((g) => g.id === gym.id)) return l.map((g) => (g.id === gym.id ? { ...g, name: gym.name, color: gym.color, kind: gym.kind, logo: gym.logo ?? g.logo, once: false, deleted: false } : g));
+      const row: GymDashboard = { id: gym.id, name: gym.name, color: gym.color, kind: gym.kind, logo: gym.logo ?? null, home: false, once: false, deleted: false, sessions: 0, sets: 0, minutes: 0, since: null, months: [], top: [] };
+      const at = l.findIndex((g) => g.once || g.deleted);
+      return at < 0 ? [...l, row] : [...l.slice(0, at), row, ...l.slice(at)];
+    });
+    router.refresh();
+  };
   const shown = list.find((g) => g.id === open) ?? null;
   // Over Settings, as Settings is over the app: the next layer in the same grid.
   const host = shown ? anchor.current?.closest(".app-layer")?.parentElement : null;
@@ -79,6 +92,7 @@ export default function GymSettings({ gyms }: { gyms: GymDashboard[] }) {
         <div className="gy-list">
           {list.map((g) => (
             <div key={g.id} className={`gy-row${g.deleted ? " gone" : ""}`}>
+              {/* Every row opens its page, so every row has its chevron, a deleted one's faded with it (12 Nov, Alex). */}
               <button type="button" className="gy-row-open" onClick={() => setOpen(g.id)}>
                 <span className="gy-badge" style={{ background: gymColor(g.color ?? undefined).hex }} aria-hidden="true">
                   <BadgeFace name={g.name} logo={g.logo} />
@@ -89,7 +103,7 @@ export default function GymSettings({ gyms }: { gyms: GymDashboard[] }) {
                     <Bars parts={[state(g), plural(g.sessions, "session")]} />
                   </span>
                 </span>
-                {!g.deleted && <ChevronRightIcon />}
+                <ChevronRightIcon />
               </button>
               {g.deleted && (
                 <button type="button" className="gy-word" disabled={busy === g.id} onClick={() => void bringBack(g.id)}>
@@ -100,6 +114,14 @@ export default function GymSettings({ gyms }: { gyms: GymDashboard[] }) {
           ))}
         </div>
       )}
+      {/* Adding a gym here too (12 Nov, Alex), in the picker's own form; with none yet, the pill is all there is. */}
+      <button type="button" className="gy-add" onClick={() => setAdding(true)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        <span>Add a gym</span>
+      </button>
+      {adding && <AddGym clientId={clientId} gyms={list} onClose={() => setAdding(false)} onAdded={added} />}
       {shown && host && createPortal(<GymPage key={shown.id} gym={shown} busy={busy === shown.id} failed={notBack === shown.id} onBack={() => setOpen(null)} onBringBack={() => void bringBack(shown.id)} onChange={(p) => patch(shown.id, p)} onMadeHome={() => setList((l) => l.map((g) => ({ ...g, home: g.id === shown.id })))} />, host)}
     </SettingsFold>
   );
@@ -306,6 +328,32 @@ function GymPage({ gym, busy, failed, onBack, onBringBack, onChange, onMadeHome 
       </main>
       {editing && <EditGym gym={gym} onClose={() => setEditing(false)} onSaved={onChange} />}
     </div>
+  );
+}
+
+/** Add a gym from Settings (12 Nov, Alex): the picker's own form in the picker's own card, its ✕ on the right. A name of a
+ *  gym in use is refused; a deleted one's, or one trained at once, is that gym again, as from the picker. */
+function AddGym({ clientId, gyms, onClose, onAdded }: { clientId: number; gyms: GymDashboard[]; onClose: () => void; onAdded: (gym: GymOption) => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && (e.preventDefault(), onClose());
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return createPortal(
+    <div className="gpk-overlay" onClick={onClose}>
+      <div className="gpk-card" role="dialog" aria-modal="true" aria-labelledby="gpk-title" onClick={(e) => e.stopPropagation()}>
+        <AddGymForm
+          existing={gyms.filter((g) => !g.deleted && !g.once)}
+          title="Add a gym"
+          addLabel="Add"
+          send={(name, color, kind, onceKey) => clientAddGymFromSettingsAction(clientId, name, color, kind, onceKey)}
+          sentKey={clientId}
+          onClose={onClose}
+          onAdded={onAdded}
+        />
+      </div>
+    </div>,
+    document.body
   );
 }
 
