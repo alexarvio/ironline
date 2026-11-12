@@ -56,6 +56,7 @@ export default function SessionOverview({
   onStart,
   onResume,
   onEdit,
+  onReopen,
   autoStart = false,
   focusExercise = null,
 }: {
@@ -77,6 +78,8 @@ export default function SessionOverview({
   onResume: () => void;
   /** A finished session opened again to change what was logged. */
   onEdit: () => void;
+  /** A finished session back in progress (13 Nov, Alex); answers with what went wrong, or null. */
+  onReopen?: () => Promise<string | null>;
   /** Arrived from Home's Start: open the gym question (or start) at once. */
   autoStart?: boolean;
 }) {
@@ -95,6 +98,18 @@ export default function SessionOverview({
   const [menuOpen, setMenuOpen] = useState(false);
   useDismiss(menuOpen, () => setMenuOpen(false));
   const [skipOpen, setSkipOpen] = useState(false);
+  const [reopenAsk, setReopenAsk] = useState(false);
+  const [reopenProblem, setReopenProblem] = useState<string | null>(null);
+  const [reopening, setReopening] = useState(false);
+  if (!menuOpen && reopenAsk) setReopenAsk(false);
+  const reopen = async () => {
+    if (!onReopen || reopening) return;
+    setReopening(true);
+    const problem = await onReopen();
+    setReopening(false);
+    if (problem) setReopenProblem(problem);
+    else setMenuOpen(false);
+  };
   const [skipDraft, setSkipDraft] = useState(day.skipReason);
   // Kept on the phone and sent behind (7 Nov, workoutOutbox.ts): the sheet closes at once, signal or none.
   const submitSkip = (value: string = skipDraft) => {
@@ -136,7 +151,23 @@ export default function SessionOverview({
           <>
             <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
             <div className="wo-menu so-menu" role="menu">
-              {done ? (
+              {reopenAsk ? (
+                // Asked in the menu itself (13 Nov, Alex: A of docs/boards/reopen-session-mockup.html).
+                <div className="so-ask" role="alertdialog" aria-label={`Reopen ${day.title}?`}>
+                  <b>Reopen {day.title}?</b>
+                  <p>It goes back to in progress. Every set stays.</p>
+                  {reopenProblem && <p className="so-ask-bad">{reopenProblem}</p>}
+                  <span className="so-ask-acts">
+                    <button type="button" className="so-ask-cancel" onClick={() => setMenuOpen(false)}>
+                      Cancel
+                    </button>
+                    <button type="button" className="so-ask-go" disabled={reopening} onClick={reopen}>
+                      Reopen
+                    </button>
+                  </span>
+                </div>
+              ) : done ? (
+              <>
               <button
                 type="button"
                 role="menuitem"
@@ -152,6 +183,16 @@ export default function SessionOverview({
                 </svg>
                 Edit workout
               </button>
+              {onReopen && !liveElsewhere && (
+                <button type="button" role="menuitem" className="wo-menu-row" onClick={() => { setReopenProblem(null); setReopenAsk(true); }}>
+                  <svg className="so-menu-ico edit" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3-6.7" />
+                    <path d="M3 4v5h5" />
+                  </svg>
+                  Reopen
+                </button>
+              )}
+              </>
               ) : (
               <button
                 type="button"
