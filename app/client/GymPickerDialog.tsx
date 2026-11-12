@@ -263,9 +263,10 @@ export default function GymPickerDialog({
               </button>
               </div>
             </div>
-            <button type="button" className="gpk-primary gpk-start" disabled={!chosen} onClick={go}>
+            {/* The gym already on the session is no switch (13 Nov, Alex: "Switch to Muscle Factory" while at it). */}
+            <button type="button" className="gpk-primary gpk-start" disabled={!chosen || (mode === "switch" && chosen.id === gymId)} onClick={go}>
               <span className="gpk-dot" aria-hidden="true" />
-              <span className="gpk-start-label">{mode === "switch" ? `Switch to ${chosen?.name ?? "…"}` : `Start at ${chosen?.name ?? "…"}`}</span>
+              <span className="gpk-start-label">{mode === "switch" ? (chosen && chosen.id === gymId ? `At ${chosen.name}` : `Switch to ${chosen?.name ?? "…"}`) : `Start at ${chosen?.name ?? "…"}`}</span>
             </button>
           </div>
         )}

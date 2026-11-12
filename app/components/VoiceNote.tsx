@@ -46,6 +46,7 @@ export default function VoiceNote({ src, face, name, mine = false, className = "
   const el = useRef<HTMLAudioElement>(null);
   const wave = useRef<HTMLSpanElement>(null);
   const root = useRef<HTMLSpanElement>(null);
+  const seeking = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [played, setPlayed] = useState(false);
   const [t, setT] = useState(0);
@@ -155,9 +156,25 @@ export default function VoiceNote({ src, face, name, mine = false, className = "
         ref={el}
         src={src}
         preload="metadata"
-        onLoadedMetadata={(e) => Number.isFinite(e.currentTarget.duration) && setD(e.currentTarget.duration)}
-        onDurationChange={(e) => Number.isFinite(e.currentTarget.duration) && setD(e.currentTarget.duration)}
-        onTimeUpdate={(e) => setT(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) => {
+          const a = e.currentTarget;
+          if (Number.isFinite(a.duration) && a.duration > 0) return setD(a.duration);
+          // A recording that doesn't say its length (13 Nov, Alex: voice messages reading 0:00): asked for its end, the
+          // phone reads it through and learns it; then back to the start.
+          seeking.current = true;
+          a.currentTime = 1e7;
+        }}
+        onDurationChange={(e) => {
+          const a = e.currentTarget;
+          if (!Number.isFinite(a.duration) || a.duration <= 0) return;
+          setD(a.duration);
+          if (seeking.current) {
+            seeking.current = false;
+            a.currentTime = 0;
+            setT(0);
+          }
+        }}
+        onTimeUpdate={(e) => !seeking.current && setT(e.currentTarget.currentTime)}
         onPlay={() => {
           setPlaying(true);
           setPlayed(true);
