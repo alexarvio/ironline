@@ -636,7 +636,7 @@ export default function TrainingDayList({
           clientName={clientName}
           focusExercise={openDay.key === focus ? focusExercise : null}
           onBack={() => (openDay.free ? (openDay.exercises.length === 0 && openDay.cardio.length === 0 ? dropFree(openDay.key) : setView(null)) : setView({ dayId: openDay.key, screen: "overview" }))}
-          library={openDay.free ? library : undefined}
+          library={library}
           onAddExercise={openDay.free ? (pick) => addFree(openDay.key, pick) : undefined}
           onEnded={() => {
             const minutes = openDay.startedAt ? Math.max(1, Math.round((Date.now() - Date.parse(openDay.startedAt)) / 60000)) : null;

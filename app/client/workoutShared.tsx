@@ -368,7 +368,8 @@ export function CardioCard({ cardio, index, session, readOnly = false, coachName
           coach={{ firstName: coachName, photo: null }}
           onSwap={(choice) => {
             setSwapOpen(false);
-            const name = choice.libraryExerciseId != null ? cardio.alternatives[choice.libraryExerciseId]?.name : choice.customName;
+            // A library pick names itself; a suggestion is its place in the alternatives.
+            const name = choice.customName ?? (choice.libraryExerciseId != null ? cardio.alternatives[choice.libraryExerciseId]?.name : null);
             if (name) save({ kind: "cardioSwap", name });
           }}
           onClose={() => setSwapOpen(false)}

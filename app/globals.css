@@ -20601,6 +20601,13 @@ span.lw-saved.lw-saved.refused { cursor: default; }
 .sw-card.sw-card .sw-field { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
 .sw-card.sw-card .sw-field.on { box-shadow: inset 0 0 0 1.5px #141a24; }
 .sw-card.sw-card .sw-field input { font-weight: 500; }
+/* The library as the swap's field is typed in (13 Nov, Alex): flat rows under it, the name in ink, its group grey on the right, six then it scrolls. */
+.sw-lib { display: flex; flex-direction: column; max-height: 264px; margin-top: 6px; overflow-y: auto; overscroll-behavior: contain; }
+.sw-lib-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none; height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: none; font: inherit; text-align: left; cursor: pointer; }
+.sw-lib-row:active { background: #F5F6F8; }
+@media (hover: hover) { .sw-lib-row:hover { background: #fafbfd; } }
+.sw-lib-name { min-width: 0; font-size: 15px; font-weight: 500; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sw-lib-group { flex: none; font-size: 12px; font-weight: 500; color: #8b93a1; }
 .sw-card.sw-card .sw-primary { height: 48px; border-radius: 999px; background: #141a24; box-shadow: none; font-size: 15px; font-weight: 600; }
 .sw-card.sw-card .sw-primary.off { background: #C9CFD8; }
 .sw-card.sw-card .sw-photo { font-weight: 600; color: #141a24; }
