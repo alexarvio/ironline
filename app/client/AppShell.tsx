@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransition, type SyntheticEvent } from "react";
 import { pic } from "../lib/pic";
+import "./gyms.css";
 import { useRouter } from "next/navigation";
 import { markCoachNotesReadAction, markNotificationReadAction } from "../lib/actions";
 import { useWorkoutOutboxRunner } from "../components/workoutOutbox";
@@ -256,7 +257,6 @@ export default function AppShell({
     : null;
   const setPushView = (v: PushView) => setChosenPush(v);
   // The coach's profile opened from Settings goes back to Settings.
-  const [coachFromSettings, setCoachFromSettings] = useState(false);
   // Which check-in section to land on, set by whichever due item opened it.
   const [checkInSection, setCheckInSection] = useState("daily");
   // … and, from a coach's message about one day, week or month of it, that one (21 Oct).
@@ -515,14 +515,8 @@ export default function AppShell({
         {/* "Book a call" lands on Home, where the next meeting card is. */}
         <CoachProfileScreen
           profile={coachProfile}
-          onBack={() => {
-            setCoachFromSettings(false);
-            setPushView(coachFromSettings ? "settings" : null);
-          }}
-          onBook={() => {
-            setCoachFromSettings(false);
-            goToTab("home");
-          }}
+          onBack={() => setPushView(null)}
+          onBook={() => goToTab("home")}
         />
       </div>
     ) : pushView === "photos" ? (
@@ -558,17 +552,6 @@ export default function AppShell({
         </header>
         <main className="cn-body cn-body-settings">
           <MessagesProvider value={openMessages}>
-            {/* Your coach, at the top of Settings (12 Nov, Alex): Back on the profile comes back here. */}
-            <CoachProvider
-              value={
-                coachProfile
-                  ? () => {
-                      setCoachFromSettings(true);
-                      setPushView("coach");
-                    }
-                  : null
-              }
-            >
               {/* Settings' Progress pictures row (17 Oct): it sat outside the photos bridge, so the tap did nothing. */}
               <PhotosProvider
                 value={() => {
@@ -580,7 +563,6 @@ export default function AppShell({
                   <FocusRefProvider value={focusRef}>{settingsContent}</FocusRefProvider>
                 </NavigateProvider>
               </PhotosProvider>
-            </CoachProvider>
           </MessagesProvider>
         </main>
       </div>
@@ -732,9 +714,28 @@ export default function AppShell({
               <nav className="app-menu" aria-label="Menu">
                 <div className="app-menu-head">
                   <NorCoachLogo className="app-header-brand app-menu-brand" />
-                  {/* The coach's business, hardcoded like the rail and the Settings
-                      footnote until the coach profile carries it. */}
-                  <span className="app-menu-name">Full Potential Coaching</span>
+                  {/* Your coach, under the logo and over Meetings (12 Nov, Alex: B of docs/boards/hidden-ways-mockup.html,
+                      moved here from Settings): their face, their name and the business under it, a tap opening their
+                      profile, Back coming back to where you were. The business is hardcoded, like the rail's, until the
+                      coach profile carries it. */}
+                  {coachProfile ? (
+                    <button type="button" className="app-menu-coach" onClick={() => go(() => setPushView("coach"))}>
+                      <span className="app-menu-coach-face" aria-hidden="true">
+                        {coachAvatarPath ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
+                          <img src={pic(coachAvatarPath, 96)} alt="" />
+                        ) : (
+                          (coachProfile.displayName || coachMessages.coachName).charAt(0).toUpperCase()
+                        )}
+                      </span>
+                      <span className="app-menu-coach-body">
+                        <span className="app-menu-coach-name">{coachProfile.displayName || coachMessages.coachName}</span>
+                        <span className="app-menu-name">Full Potential Coaching</span>
+                      </span>
+                    </button>
+                  ) : (
+                    <span className="app-menu-name">Full Potential Coaching</span>
+                  )}
                 </div>
                 <div className="app-menu-list">
                   {meetings && (

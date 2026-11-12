@@ -79,15 +79,15 @@ button.gy-hero-badge:disabled { cursor: default; }
 .gy-foot-btns { flex: none; display: flex; gap: 16px; }
 @media (prefers-reduced-motion: reduce) { .gy-hero-badge.busy { animation: none; } }
 
-/* Your coach, the first thing in Settings (12 Nov, Alex): the white hairline pill, their face, name and title, the
-   chevron to their profile. */
-.st-coach { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; margin: 0 0 12px; padding: 0 16px 0 12px; border: 0; border-radius: 32px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
-.st-coach-face { flex: none; display: grid; place-items: center; width: 40px; height: 40px; overflow: hidden; border-radius: 50%; background: #141a24; font-size: 16px; font-weight: 600; color: #fff; }
-.st-coach-face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
-.st-coach-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.st-coach-name { font-size: 15px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.st-coach-title { font-size: 12px; font-weight: 500; line-height: 16px; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.st-coach > svg { flex: none; width: 16px; height: 16px; color: #98A2B3; }
+/* Your coach in the burger, under the logo and over Meetings (12 Nov, Alex: moved from Settings): their face, their
+   name at 600 and the business grey under it, a tap opening their profile. No chevron, as no burger row has one. */
+.app-menu-coach { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 14px; padding: 0; border: 0; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
+.app-menu-coach-face { flex: none; display: grid; place-items: center; width: 40px; height: 40px; overflow: hidden; border-radius: 50%; background: #141a24; font-size: 16px; font-weight: 600; color: #fff; }
+.app-menu-coach-face img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.app-menu-coach-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.app-menu-coach-name { font-size: 15px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-menu-coach .app-menu-name { line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-menu-coach:active { opacity: 0.7; }
 
 /* Add a meal's counts (12 Nov, Alex): how many saved meals and days, grey at the row's end. */
 .gpk-addrow .ams-count { margin-left: auto; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }

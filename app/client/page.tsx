@@ -132,7 +132,6 @@ import { clerkOn } from "../lib/clerk";
 import MyDetailsCard from "./MyDetailsCard";
 import GymSettings from "./GymSettings";
 import SettingsFold from "./SettingsFold";
-import CoachRow from "./CoachRow";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import AppShell, { AppTab, type Arrival, type PhoneScreen } from "./AppShell";
 import NativeCoachRedirect from "../coach/NativeCoachRedirect";
@@ -1059,8 +1058,6 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       </header>
 
       <div className="st-body">
-      {/* The coach first, their own pill (12 Nov, Alex): a tap opens their profile. */}
-      {coach && <CoachRow name={coach.displayName || getCoachFirstName(CLIENT_ID)} title={coach.title} photoPath={coach.avatarPath ?? getCoachAvatarPath(CLIENT_ID)} />}
       {/* Six rows, each opening (10 Nov, Alex), in order of use: yours (details, gyms, card pictures), then how the app
           behaves, what it connects to, your data. Log out is on the burger. */}
       <MyDetailsCard
