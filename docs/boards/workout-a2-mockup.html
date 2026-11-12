@@ -144,6 +144,13 @@
   .tline i { font-style:normal; font-size:20px; color:var(--faint); }
   .tline em { font-style:normal; font-size:15px; color:var(--faint); }
   .tline small { font-size:15px; font-weight:600; color:var(--faint); margin-left:-4px; }
+  .phone.crop .dock { display:none; }
+  .askrow { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:34px; margin-top:6px; }
+  .asktext { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600; }
+  .asktext i { width:6px; height:6px; border-radius:50%; }
+  .askword { font-size:13px; font-weight:600; color:var(--ink); }
+  .askpill { display:inline-flex; align-items:center; justify-content:center; min-width:72px; height:32px; padding:0 14px; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px var(--line); font-size:13px; font-weight:600; color:var(--ink); }
+  .askpill.ink { background:var(--ink); color:#fff; box-shadow:none; }
   .island { position:absolute; top:11px; left:50%; width:120px; height:34px; margin-left:-60px; border-radius:20px; background:#000; }
 </style></head><body>
 </head><body>
@@ -317,4 +324,127 @@
 </div></div>
 </div>
 <p class="pick"><b>My pick: A.</b> A card reads as the thing to aim for at a glance, takes any number of columns (sets, reps, kg, RPE, tempo, rest), and with the words under the figures SETS never repeats.</p>
+
+<h1 style="margin-top:44px">The video line's action, on the right</h1>
+<p class="sub">The line's action moves to the right end of its row, level with the words. Two ways: its word alone, as a row's action is today; or a pill, as the app's calls to action are (Today's Start, Join). With pills, Record is the ink pill, the one thing to do; View the white hairline pill.</p>
+<div class="opts">
+<div class="opt"><h3>Words on the right · asked</h3><p>Record in ink words at the row's right end.</p><div class="phone crop" style="height:400px">
+  <div class="status"><span>14:09</span><span>5G</span></div><div class="island"></div>
+  <div class="whead" style="margin-top:56px"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><span class="gpill"><span class="gface">MF</span><span class="gname">Muscle Factory</span><svg class="gchev i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg><span class="gclock"><i></i>14:02</span></span><span></span></div>
+  <div class="segs"><i class="n" style="background:var(--indigo)"></i><i class="n" style="background:var(--indigo)"></i><i class="n"></i><i></i><i></i><i></i></div>
+  <div class="eyerow"><div class="eyebrow"><b>Push</b><span class="bar"></span>Exercise 3 of 6</div><div class="tools" style="padding:0"><span class="tb ring"><svg class="i" viewBox="0 0 24 24"><path d="M9 7l8 5-8 5z"/></svg></span><span class="tb amber"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></span></div></div>
+  <div class="exrow" style="margin-top:4px"><h4>Inline Chest Press Machine</h4></div>
+  <div class="next" style="margin-top:4px">Next up<span class="bar"></span>Cable Fly</div>
+  <div class="askrow"><span class="asktext" style="color:var(--amber)"><i style="background:var(--amber)"></i>Finlay asked for a video</span><span class="askword">Record</span></div><div class="asknote">“From the side, your last working set.”</div>
+  <div class="coach"><span class="f"></span><div><div class="l">Finlay</div><div class="t">Shoulders down, slow on the way back.</div></div></div>
+  <div class="tcard"><div class="tl">Target</div><div class="tfig"><div><b>3</b><span>sets</span></div><div><b>10–12</b><span>reps</span></div><div><b>60</b><span>kg</span></div></div></div>
+  <div class="gap"></div>
+  <div class="shead" style="margin-top:0"><div><span class="zone">Sets</span><span class="p">1/3</span></div><div class="unit"><span class="on">KG</span><span>LBS</span></div></div>
+  <div class="rows">
+    <div class="q"><span class="dot"><span class="warm ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">40<small>kg</small>× 12</span></div>
+    <div class="warmadd"><span class="plus"><span><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></span>Warm-up</div>
+    <div class="q"><span class="dot"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">60<small>kg</small>× 12</span><span class="dl">+2.5 kg</span></div>
+    <div class="hero"><div class="openh"><span class="bdg now">2</span><span class="t">Set 2</span></div>
+      <div class="fields"><div><b>60</b><small>KG</small></div><div><b>12</b><small>REPS</small></div></div></div>
+    <div class="q up"><span class="dot"><span>3</span></span><span class="v">60<small>kg</small>× 12</span></div>
+  </div>
+  <div class="acts">+ Add a set<span>− Remove a set</span></div>
+  <div class="dock" style="bottom:28px">Rest timer</div>
+</div></div>
+<div class="opt"><h3>Words on the right · replied</h3><p>View in ink words; Finlay replied in green on the left.</p><div class="phone crop" style="height:400px">
+  <div class="status"><span>14:09</span><span>5G</span></div><div class="island"></div>
+  <div class="whead" style="margin-top:56px"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><span class="gpill"><span class="gface">MF</span><span class="gname">Muscle Factory</span><svg class="gchev i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg><span class="gclock"><i></i>14:02</span></span><span></span></div>
+  <div class="segs"><i class="n" style="background:var(--indigo)"></i><i class="n" style="background:var(--indigo)"></i><i class="n"></i><i></i><i></i><i></i></div>
+  <div class="eyerow"><div class="eyebrow"><b>Push</b><span class="bar"></span>Exercise 3 of 6</div><div class="tools" style="padding:0"><span class="tb ring"><svg class="i" viewBox="0 0 24 24"><path d="M9 7l8 5-8 5z"/></svg></span><span class="tb green"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></span></div></div>
+  <div class="exrow" style="margin-top:4px"><h4>Inline Chest Press Machine</h4></div>
+  <div class="next" style="margin-top:4px">Next up<span class="bar"></span>Cable Fly</div>
+  <div class="askrow"><span class="asktext" style="color:var(--green)"><i style="background:var(--green)"></i>Finlay replied</span><span class="askword">View</span></div>
+  <div class="coach"><span class="f"></span><div><div class="l">Finlay</div><div class="t">Shoulders down, slow on the way back.</div></div></div>
+  <div class="tcard"><div class="tl">Target</div><div class="tfig"><div><b>3</b><span>sets</span></div><div><b>10–12</b><span>reps</span></div><div><b>60</b><span>kg</span></div></div></div>
+  <div class="gap"></div>
+  <div class="shead" style="margin-top:0"><div><span class="zone">Sets</span><span class="p">1/3</span></div><div class="unit"><span class="on">KG</span><span>LBS</span></div></div>
+  <div class="rows">
+    <div class="q"><span class="dot"><span class="warm ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">40<small>kg</small>× 12</span></div>
+    <div class="warmadd"><span class="plus"><span><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></span>Warm-up</div>
+    <div class="q"><span class="dot"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">60<small>kg</small>× 12</span><span class="dl">+2.5 kg</span></div>
+    <div class="hero"><div class="openh"><span class="bdg now">2</span><span class="t">Set 2</span></div>
+      <div class="fields"><div><b>60</b><small>KG</small></div><div><b>12</b><small>REPS</small></div></div></div>
+    <div class="q up"><span class="dot"><span>3</span></span><span class="v">60<small>kg</small>× 12</span></div>
+  </div>
+  <div class="acts">+ Add a set<span>− Remove a set</span></div>
+  <div class="dock" style="bottom:28px">Rest timer</div>
+</div></div>
+</div>
+<div class="opts" style="margin-top:30px">
+<div class="opt"><h3>Pill on the right · asked<em>My pick</em></h3><p>Record as the ink pill, 32px: it is what Finlay is waiting for, so it reads as the call to action. The open set stays the hero below it.</p><div class="phone crop" style="height:400px">
+  <div class="status"><span>14:09</span><span>5G</span></div><div class="island"></div>
+  <div class="whead" style="margin-top:56px"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><span class="gpill"><span class="gface">MF</span><span class="gname">Muscle Factory</span><svg class="gchev i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg><span class="gclock"><i></i>14:02</span></span><span></span></div>
+  <div class="segs"><i class="n" style="background:var(--indigo)"></i><i class="n" style="background:var(--indigo)"></i><i class="n"></i><i></i><i></i><i></i></div>
+  <div class="eyerow"><div class="eyebrow"><b>Push</b><span class="bar"></span>Exercise 3 of 6</div><div class="tools" style="padding:0"><span class="tb ring"><svg class="i" viewBox="0 0 24 24"><path d="M9 7l8 5-8 5z"/></svg></span><span class="tb amber"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></span></div></div>
+  <div class="exrow" style="margin-top:4px"><h4>Inline Chest Press Machine</h4></div>
+  <div class="next" style="margin-top:4px">Next up<span class="bar"></span>Cable Fly</div>
+  <div class="askrow"><span class="asktext" style="color:var(--amber)"><i style="background:var(--amber)"></i>Finlay asked for a video</span><span class="askpill ink">Record</span></div><div class="asknote">“From the side, your last working set.”</div>
+  <div class="coach"><span class="f"></span><div><div class="l">Finlay</div><div class="t">Shoulders down, slow on the way back.</div></div></div>
+  <div class="tcard"><div class="tl">Target</div><div class="tfig"><div><b>3</b><span>sets</span></div><div><b>10–12</b><span>reps</span></div><div><b>60</b><span>kg</span></div></div></div>
+  <div class="gap"></div>
+  <div class="shead" style="margin-top:0"><div><span class="zone">Sets</span><span class="p">1/3</span></div><div class="unit"><span class="on">KG</span><span>LBS</span></div></div>
+  <div class="rows">
+    <div class="q"><span class="dot"><span class="warm ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">40<small>kg</small>× 12</span></div>
+    <div class="warmadd"><span class="plus"><span><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></span>Warm-up</div>
+    <div class="q"><span class="dot"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">60<small>kg</small>× 12</span><span class="dl">+2.5 kg</span></div>
+    <div class="hero"><div class="openh"><span class="bdg now">2</span><span class="t">Set 2</span></div>
+      <div class="fields"><div><b>60</b><small>KG</small></div><div><b>12</b><small>REPS</small></div></div></div>
+    <div class="q up"><span class="dot"><span>3</span></span><span class="v">60<small>kg</small>× 12</span></div>
+  </div>
+  <div class="acts">+ Add a set<span>− Remove a set</span></div>
+  <div class="dock" style="bottom:28px">Rest timer</div>
+</div></div>
+<div class="opt"><h3>Pill on the right · replied</h3><p>View as the white hairline pill; nothing urgent, so not ink.</p><div class="phone crop" style="height:400px">
+  <div class="status"><span>14:09</span><span>5G</span></div><div class="island"></div>
+  <div class="whead" style="margin-top:56px"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><span class="gpill"><span class="gface">MF</span><span class="gname">Muscle Factory</span><svg class="gchev i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg><span class="gclock"><i></i>14:02</span></span><span></span></div>
+  <div class="segs"><i class="n" style="background:var(--indigo)"></i><i class="n" style="background:var(--indigo)"></i><i class="n"></i><i></i><i></i><i></i></div>
+  <div class="eyerow"><div class="eyebrow"><b>Push</b><span class="bar"></span>Exercise 3 of 6</div><div class="tools" style="padding:0"><span class="tb ring"><svg class="i" viewBox="0 0 24 24"><path d="M9 7l8 5-8 5z"/></svg></span><span class="tb green"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></span></div></div>
+  <div class="exrow" style="margin-top:4px"><h4>Inline Chest Press Machine</h4></div>
+  <div class="next" style="margin-top:4px">Next up<span class="bar"></span>Cable Fly</div>
+  <div class="askrow"><span class="asktext" style="color:var(--green)"><i style="background:var(--green)"></i>Finlay replied</span><span class="askpill">View</span></div>
+  <div class="coach"><span class="f"></span><div><div class="l">Finlay</div><div class="t">Shoulders down, slow on the way back.</div></div></div>
+  <div class="tcard"><div class="tl">Target</div><div class="tfig"><div><b>3</b><span>sets</span></div><div><b>10–12</b><span>reps</span></div><div><b>60</b><span>kg</span></div></div></div>
+  <div class="gap"></div>
+  <div class="shead" style="margin-top:0"><div><span class="zone">Sets</span><span class="p">1/3</span></div><div class="unit"><span class="on">KG</span><span>LBS</span></div></div>
+  <div class="rows">
+    <div class="q"><span class="dot"><span class="warm ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">40<small>kg</small>× 12</span></div>
+    <div class="warmadd"><span class="plus"><span><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></span>Warm-up</div>
+    <div class="q"><span class="dot"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">60<small>kg</small>× 12</span><span class="dl">+2.5 kg</span></div>
+    <div class="hero"><div class="openh"><span class="bdg now">2</span><span class="t">Set 2</span></div>
+      <div class="fields"><div><b>60</b><small>KG</small></div><div><b>12</b><small>REPS</small></div></div></div>
+    <div class="q up"><span class="dot"><span>3</span></span><span class="v">60<small>kg</small>× 12</span></div>
+  </div>
+  <div class="acts">+ Add a set<span>− Remove a set</span></div>
+  <div class="dock" style="bottom:28px">Rest timer</div>
+</div></div>
+<div class="opt"><h3>Pill on the right · sent</h3><p>Video sent in grey, View the white pill.</p><div class="phone crop" style="height:400px">
+  <div class="status"><span>14:09</span><span>5G</span></div><div class="island"></div>
+  <div class="whead" style="margin-top:56px"><span class="back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><span class="gpill"><span class="gface">MF</span><span class="gname">Muscle Factory</span><svg class="gchev i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg><span class="gclock"><i></i>14:02</span></span><span></span></div>
+  <div class="segs"><i class="n" style="background:var(--indigo)"></i><i class="n" style="background:var(--indigo)"></i><i class="n"></i><i></i><i></i><i></i></div>
+  <div class="eyerow"><div class="eyebrow"><b>Push</b><span class="bar"></span>Exercise 3 of 6</div><div class="tools" style="padding:0"><span class="tb ring"><svg class="i" viewBox="0 0 24 24"><path d="M9 7l8 5-8 5z"/></svg></span><span class="tb grey"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7"/></svg></span><span class="tb"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></span></div></div>
+  <div class="exrow" style="margin-top:4px"><h4>Inline Chest Press Machine</h4></div>
+  <div class="next" style="margin-top:4px">Next up<span class="bar"></span>Cable Fly</div>
+  <div class="askrow"><span class="asktext" style="color:var(--faint)"><i style="background:#C9CFD8"></i>Video sent</span><span class="askpill">View</span></div>
+  <div class="coach"><span class="f"></span><div><div class="l">Finlay</div><div class="t">Shoulders down, slow on the way back.</div></div></div>
+  <div class="tcard"><div class="tl">Target</div><div class="tfig"><div><b>3</b><span>sets</span></div><div><b>10–12</b><span>reps</span></div><div><b>60</b><span>kg</span></div></div></div>
+  <div class="gap"></div>
+  <div class="shead" style="margin-top:0"><div><span class="zone">Sets</span><span class="p">1/3</span></div><div class="unit"><span class="on">KG</span><span>LBS</span></div></div>
+  <div class="rows">
+    <div class="q"><span class="dot"><span class="warm ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">40<small>kg</small>× 12</span></div>
+    <div class="warmadd"><span class="plus"><span><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></span>Warm-up</div>
+    <div class="q"><span class="dot"><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></span><span class="v">60<small>kg</small>× 12</span><span class="dl">+2.5 kg</span></div>
+    <div class="hero"><div class="openh"><span class="bdg now">2</span><span class="t">Set 2</span></div>
+      <div class="fields"><div><b>60</b><small>KG</small></div><div><b>12</b><small>REPS</small></div></div></div>
+    <div class="q up"><span class="dot"><span>3</span></span><span class="v">60<small>kg</small>× 12</span></div>
+  </div>
+  <div class="acts">+ Add a set<span>− Remove a set</span></div>
+  <div class="dock" style="bottom:28px">Rest timer</div>
+</div></div>
+</div>
+<p class="pick"><b>My pick: the pill.</b> The words-alone rule is for a list's rows; this is a call to action on its own line, like Today's Start or a call's Join, so the pill fits, and it gives Record the weight of something Finlay is waiting on. If it goes in, the rules get a line saying so.</p>
 </body></html>
