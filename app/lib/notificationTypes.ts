@@ -133,18 +133,36 @@ export function categorize(n: StoredNotification): NotificationCategory {
   return "system";
 }
 
-/** The row's one line as a title and a body: "Updated your training: Week 3 …"
- *  reads as "Finlay updated your training" over "Week 3 …". A row that
- *  already names the coach ("Your coach replied…") keeps its shape with the
- *  name put in. */
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** A day written in a notification ("Mon 16 Nov", "Monday 16 Nov") moved by a number of days, in the same words. The
+ *  year is the one that puts it nearest today (a notification is about now). */
+function shiftDay(wd: string, day: string, mon: string, by: number): string {
+  const now = new Date();
+  const month = MONTHS.indexOf(mon.slice(0, 3));
+  let best: Date | null = null;
+  for (const y of [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]) {
+    const d = new Date(y, month, Number(day));
+    if (!best || Math.abs(d.getTime() - now.getTime()) < Math.abs(best.getTime() - now.getTime())) best = d;
+  }
+  const d = best!;
+  d.setDate(d.getDate() + by);
+  const name = WEEKDAYS[d.getDay()];
+  const shown = wd.length > 3 ? name : name.slice(0, 3);
+  return `${shown} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
 /** A time written with its zone ("09:00 GMT+1", the coach's zone when a call moved) as the time in the client's own
  *  zone, without the zone (12 Nov, Alex: "it should be assumed that the time in the app is the time the client is
- *  in"). With the phone's zone unknown, the zone word alone goes. */
+ *  in"). When that crosses midnight, the days written in it move with it (Mon 16 Nov at 23:30 GMT+1 reads Tue 17 Nov
+ *  at 05:30 in Bangkok; Fridays, Saturdays). With the phone's zone unknown, the zone word alone goes. */
 export function clockToZone(text: string, tz: string | null): string {
-  return text.replace(/\b(\d{1,2}):(\d{2}) (?:GMT|UTC)(?:([+-])(\d{1,2})(?::(\d{2}))?)?(?![\w:+-])/g, (_all, h, m, sign, oh, om) => {
+  let shift = 0;
+  const out = text.replace(/\b(\d{1,2}):(\d{2}) (?:GMT|UTC)(?:([+-])(\d{1,2})(?::(\d{2}))?)?(?![\w:+-])/g, (_all, h, m, sign, oh, om) => {
     const from = (sign === "-" ? -1 : 1) * ((Number(oh) || 0) * 60 + (Number(om) || 0));
     if (!tz) return `${String(h).padStart(2, "0")}:${m}`;
-    let to = 0;
+    let to = from;
     try {
       const off = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value ?? "GMT";
       const z = /GMT([+-])(\d{1,2})(?::(\d{2}))?/.exec(off);
@@ -152,11 +170,21 @@ export function clockToZone(text: string, tz: string | null): string {
     } catch {
       to = from;
     }
-    const mins = (((Number(h) * 60 + Number(m) - from + to) % 1440) + 1440) % 1440;
+    const total = Number(h) * 60 + Number(m) - from + to;
+    shift = Math.floor(total / 1440);
+    const mins = ((total % 1440) + 1440) % 1440;
     return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
   });
+  if (shift === 0) return out;
+  return out
+    .replace(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)(day|sday|nesday|rsday|urday)? (\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\b/g, (_all, w, rest, day, mon) => shiftDay(w + (rest ?? ""), day, mon, shift))
+    .replace(/\b(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)s\b/g, (_all, w) => `${WEEKDAYS[(WEEKDAYS.indexOf(w) + shift + 7) % 7]}s`);
 }
 
+/** The row's one line as a title and a body: "Updated your training: Week 3 …"
+ *  reads as "Finlay updated your training" over "Week 3 …". A row that
+ *  already names the coach ("Your coach replied…") keeps its shape with the
+ *  name put in. */
 export function titleAndBody(message: string, coachFirst: string): { title: string; body: string | null } {
   const i = message.indexOf(": ");
   // A series of calls by its rhythm in words (12 Nov, Alex): rows written before said "every-4-weeks".
