@@ -10796,6 +10796,20 @@ function syncWorkoutMetrics(clientId: number, at: string) {
   }
 }
 
+/** A finished session back in progress (13 Nov, Alex: ended by mistake): its end goes, everything logged, its note and
+    answers stay, and it is ended again by the swipe. Refused while another session is going. */
+export function reopenSession(programDayId: number): { ok: true } | { ok: false; other: string } {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day || !day.session_started_at) return { ok: false, other: "" };
+  if (!day.session_ended_at) return { ok: true };
+  const live = liveSessionFor(day.client_id);
+  if (live && live.id !== day.id) return { ok: false, other: live.label };
+  delete day.session_ended_at;
+  persist();
+  return { ok: true };
+}
+
 /** The client threw the session away: its sets, warm-ups and swaps go, and
     it reads as never begun. */
 export function discardSession(programDayId: number) {

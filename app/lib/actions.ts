@@ -324,6 +324,7 @@ import {
   endSession,
   saveProgramWorkoutQuestions,
   discardSession,
+  reopenSession,
   createFreeSession,
   duplicateSession,
   addFreeExercise,
@@ -4254,6 +4255,16 @@ export async function saveProgramWorkoutQuestionsAction(programId: number, quest
   saveProgramWorkoutQuestions(program.id, Array.isArray(questions) ? questions : []);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+/** A finished session back in progress (13 Nov, Alex). Needs signal, as a rogue session does. */
+export async function reopenSessionAction(programDayId: number): Promise<{ ok: true } | { ok: false; other?: string }> {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || !(await canAccessClient(owner))) return { ok: false };
+  const r = reopenSession(Number(programDayId));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+  return r.ok ? r : { ok: false, other: r.other || undefined };
 }
 
 /** The client threw the session away: its sets, warm-ups and swaps with it. */

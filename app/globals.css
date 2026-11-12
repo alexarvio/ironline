@@ -16344,6 +16344,15 @@ body:has(.nc-scrim) [data-radix-popper-content-wrapper] { z-index: 110 !importan
 .so-menu .wo-menu-row { min-height: 40px; padding: 0 12px 0 10px; font-size: 14px; white-space: nowrap; justify-content: flex-start; gap: 8px; }
 .so-menu-ico { width: 16px; height: 16px; fill: none; stroke: #b3302b; stroke-width: 2; stroke-linecap: round; }
 .so-menu-ico.edit { stroke: #1E3A5F; stroke-linejoin: round; }
+/* Reopen asked in the menu itself (13 Nov, Alex: A of docs/boards/reopen-session-mockup.html). */
+.so-ask { width: 240px; padding: 10px 10px 8px; }
+.so-ask b { display: block; font-size: 14px; font-weight: 600; color: #141a24; margin-bottom: 4px; }
+.so-ask p { font-size: 12.5px; font-weight: 500; color: #5b6474; line-height: 1.45; margin: 0 0 10px; }
+.so-ask p.so-ask-bad { color: #b8471f; }
+.so-ask-acts { display: flex; justify-content: flex-end; align-items: center; gap: 16px; }
+.so-ask-cancel { font-size: 13px; font-weight: 600; color: #5b6474; }
+.so-ask-go { height: 32px; padding: 0 14px; border-radius: 999px; background: #141a24; color: #fff; font-size: 13px; font-weight: 600; }
+.so-ask-go:disabled { opacity: 0.5; }
 .so-cardio-done { font-size: 13px; font-weight: 700; color: #2E7D32; }
 /* Overview exercise card: a bare number, the prescription as figure and unit, the coach's note as everywhere else. */
 .so-num { flex: none; width: 22px; font-size: 14px; font-weight: 700; color: #1E3A5F; text-align: center; font-variant-numeric: tabular-nums; }

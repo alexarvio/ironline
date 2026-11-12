@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Bars } from "./Bars";
-import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, duplicateSessionAction, removeFreeSessionAction } from "../lib/actions";
+import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, duplicateSessionAction, removeFreeSessionAction, reopenSessionAction } from "../lib/actions";
 import { newOnceKey } from "../lib/onceKey";
 import { applyWorkoutOutbox, clearNotSaved, enqueueWorkout, notSavedWords, useWorkoutOutbox } from "../components/workoutOutbox";
 import GymPickerDialog, { type GymOption } from "./GymPickerDialog";
@@ -86,8 +86,12 @@ export default function TrainingDayList({
   const [freeAdds, setFreeAdds] = useState<{ dayId: number; ex: SessionExercise }[]>([]);
   const [freeCardio, setFreeCardio] = useState<{ dayId: number; c: SessionCardio }[]>([]);
   const [goneFree, setGoneFree] = useState<number[]>([]);
+  // Reopened here (13 Nov, Alex): drawn in progress at once, until the server says so too. Only over that end, so a
+  // new end laid over it by the outbox shows.
+  const [reopened, setReopened] = useState<{ key: number; endedAt: string } | null>(null);
   const merged = [...serverDays, ...(localFree && !serverDays.some((d) => d.key === localFree.key) ? [localFree] : [])]
     .filter((d) => !goneFree.includes(d.key))
+    .map((d) => (reopened && d.key === reopened.key && d.endedAt === reopened.endedAt ? { ...d, endedAt: null } : d))
     .map((d) => {
       const adds = freeAdds.filter((a) => a.dayId === d.key && !d.exercises.some((e) => e.id === a.ex.id)).map((a) => a.ex);
       const cardio = freeCardio.filter((a) => a.dayId === d.key && !d.cardio.some((c) => c.id === a.c.id)).map((a) => a.c);
@@ -554,6 +558,17 @@ export default function TrainingDayList({
           onStart={(g) => start(openDay, g)}
           onResume={() => setView({ dayId: openDay.key, screen: "workout" })}
           onEdit={() => setView({ dayId: openDay.key, screen: "edit" })}
+          onReopen={outbox.entries.some((e) => e.dayId === openDay.key) || !openDay.endedAt ? undefined : async () => {
+            const d = openDay;
+            const r = await Promise.race([
+              reopenSessionAction(d.key),
+              new Promise<{ ok: false; other?: string }>((resolve) => setTimeout(() => resolve({ ok: false }), 10000)),
+            ]).catch(() => ({ ok: false as const }));
+            if (!r.ok) return "other" in r && r.other ? `Finish ${r.other} first.` : "Couldn't reopen. Try again.";
+            setReopened({ key: d.key, endedAt: d.endedAt! });
+            setView({ dayId: d.key, screen: "workout" });
+            return null;
+          }}
           autoStart={openDay.key === focus && focusStart && !openDay.startedAt && !openDay.endedAt}
           focusExercise={openDay.key === focus ? focusExercise : null}
         />,
