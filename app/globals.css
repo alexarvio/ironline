@@ -21556,9 +21556,12 @@ html { -webkit-tap-highlight-color: transparent; }
    boxes and it lags"; docs/DESIGN-RULES.md §3, §7). keyboard.ts writes --kb (how much of the page as laid out now the
    keyboard covers) and kb-open on <html> while it is up; useKeyboardReveal keeps the field being typed in in sight.
    Every field at 16px at least, so the phone never zooms in on one: the ones under it are raised where they are drawn,
-   and this catches any field nothing sizes (zero specificity, so a field drawn bigger, a set's numerals, keeps its size). */
+   and this catches any field nothing sizes (zero specificity, so a field drawn bigger, a set's numerals, keeps its size).
+   The client app's alone: its screens, the sign-in, and while it is up (kb-app, set by useKeyboardReveal) its pop-ups
+   in portals, everything at the body's top but the app's own frame (so not the coach's preview bar). Never the coach's
+   side: an unlayered rule beats every layered one, so it would undo the size of a Tailwind field (form.tsx's Input). */
 @media (hover: none) {
-  :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), textarea, select) { font-size: max(16px, 1em); }
+  :where(.app-screen, .au-page, html.kb-app body > :not(.phone-frame)) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), textarea, select) { font-size: max(16px, 1em); }
 }
 /* Typing, the tab bar and what floats over it step aside; the docks that belong to the typing (the chat's box, the
    workout's dock) stay. */
@@ -21567,4 +21570,11 @@ html.kb-open .app-bottom-nav, html.kb-open .tr-resume, html.kb-open .tr-toast { 
    brought into the card's own body. */
 html.kb-open :is(.gpk-overlay, .ev-scrim, .vr-sheet-scrim, .wo-sheet-scrim, .sw-overlay) { bottom: var(--kb, 0px); }
 html.kb-open :is(.gpk-card, .ev-sheet, .evs, .vr-sheet) { max-height: calc(100dvh - var(--kb, 0px) - 80px - var(--sat, 0px)); }
+/* The gym picker's voice keeps its card's overflow hidden, so its content is what scrolls: a form taller than the
+   room (Add a gym, Edit gym) is reached down to its pill, never cut off at the card's foot. */
+html.kb-open .gpk-content { max-height: calc(100dvh - var(--kb, 0px) - 80px - var(--sat, 0px)); overflow-y: auto; overscroll-behavior: contain; }
+/* The check-in's card and Home's event sheet keep the room each keeps at the top with the keyboard down: the card's
+   body scrolls, the sheet scrolls itself, so neither spills over the top of the screen. */
+html.kb-open .cki-card { max-height: calc(100dvh - var(--kb, 0px) - 72px - var(--sat, 0px)); }
+html.kb-open .hm-ev-sheet { max-height: calc(100dvh - var(--kb, 0px) - 40px - var(--sat, 0px)); }
 html.kb-open .sw-card { top: calc((100dvh - var(--kb, 0px) + var(--sat, 0px)) / 2); max-height: calc(100dvh - var(--kb, 0px) - 48px - var(--sat, 0px)); }

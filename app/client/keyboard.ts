@@ -23,8 +23,10 @@ export function isTextField(el: EventTarget | Element | null): el is HTMLElement
   return el instanceof HTMLElement && el.matches(TEXT) && !(el as HTMLInputElement).disabled;
 }
 
-type Snap = { open: boolean; covered: number };
-let snap: Snap = { open: false, covered: 0 };
+/** `pending`: the part of `covered` the layout has still to shrink by (the plugin's height in the app's gap; 0 once the
+ *  web view has shrunk, and always 0 in a browser, whose layout never shrinks to the keyboard). */
+type Snap = { open: boolean; covered: number; pending: number };
+let snap: Snap = { open: false, covered: 0, pending: 0 };
 let started = false;
 const subs = new Set<() => void>();
 /** The keyboard's own height as the plugin last gave it, and whether it is up (willShow to willHide). */
@@ -64,14 +66,14 @@ function measure(): Snap {
   // In a browser there is no word from the keyboard itself: a text field with the focus and the visual viewport
   // shrunk well past a toolbar's height is the keyboard.
   const open = pluginOpen || (fromViewport > 80 && isTextField(document.activeElement));
-  return { open, covered: Math.max(fromPlugin, fromViewport) };
+  return { open, covered: Math.max(fromPlugin, fromViewport), pending: fromPlugin };
 }
 
 function write(kick = false) {
   cancelAnimationFrame(frame);
   frame = 0;
   const next = measure();
-  const changed = next.open !== snap.open || next.covered !== snap.covered;
+  const changed = next.open !== snap.open || next.covered !== snap.covered || next.pending !== snap.pending;
   if (changed) {
     snap = next;
     movedAt = performance.now();
@@ -154,6 +156,12 @@ export function keyboardOpen() {
   return snap.open;
 }
 
+/** How much the page's layout has still to shrink by for the keyboard, in px: the app's gap between the plugin's
+ *  willShow and the web view shrinking to it; 0 otherwise, and always in a browser. */
+export function keyboardPending() {
+  return snap.pending;
+}
+
 /** Nothing has moved for a moment: the keyboard is up (or down) and the page has its size. */
 export function keyboardSettled(ms = 500) {
   return performance.now() - movedAt > ms;
@@ -192,6 +200,22 @@ function blockRect(el: HTMLElement, f: DOMRect): { top: number; bottom: number }
   return block ? block.getBoundingClientRect() : f;
 }
 
+let satProbe: HTMLElement | null = null;
+/** The top of what can be seen: under the clock in the app (--sat, the end of globals.css), and in a browser under
+ *  what the visual viewport has panned past. A box whose own top is off the screen (a card taller than the room) never
+ *  counts a row above it as in sight. */
+function screenTop() {
+  if (!satProbe?.isConnected) {
+    satProbe = document.createElement("div");
+    satProbe.setAttribute("aria-hidden", "true");
+    satProbe.style.cssText = "position:fixed;left:0;top:0;width:0;height:var(--sat,0px);visibility:hidden;pointer-events:none";
+    document.body.appendChild(satProbe);
+  }
+  const vv = window.visualViewport;
+  const panned = vv && vv.scale <= 1.02 ? Math.max(0, vv.offsetTop) : 0;
+  return Math.max(0, satProbe.offsetHeight, panned);
+}
+
 /** Brings the focused field into the band between the top bar and the keyboard (or a dock), in its own scroll box. */
 export function revealField(el: HTMLElement) {
   if (el.closest("[data-kb-own]")) return;
@@ -201,7 +225,9 @@ export function revealField(el: HTMLElement) {
   if (!box) return;
   const isDoc = box === document.scrollingElement;
   const b = isDoc ? { top: 0, bottom: window.innerHeight } : box.getBoundingClientRect();
-  let floor = Math.min(b.bottom, window.innerHeight - keyboardCovered());
+  const line = window.innerHeight - keyboardCovered();
+  const pending = keyboardPending();
+  let floor = Math.min(b.bottom, line);
   // A dock counts where it really shows over the box: not one under a pop-up's scrim, not the field's own.
   for (const dock of Array.from(document.querySelectorAll<HTMLElement>(DOCKS))) {
     if (dock.contains(el) || !dock.offsetParent) continue;
@@ -210,9 +236,13 @@ export function revealField(el: HTMLElement) {
     const x = Math.min(window.innerWidth - 1, Math.max(0, (r.left + r.right) / 2));
     const y = Math.min(window.innerHeight - 1, r.top + 2);
     const hit = document.elementFromPoint(x, y);
-    if (hit && dock.contains(hit)) floor = Math.min(floor, r.top);
+    if (!hit || !dock.contains(hit)) continue;
+    // In the app, before the web view has shrunk, a dock pinned to the foot (the workout's) is still under the
+    // keyboard and comes up with the foot by what is still to shrink: the floor is where it lands, so the field is
+    // placed once, not again over the dock 0.45s later. A dock already over the keyboard (lifted in a pop-up) stays.
+    floor = Math.min(floor, pending > 0 && r.top >= line - 1 ? r.top - pending : r.top);
   }
-  let ceiling = b.top;
+  let ceiling = Math.max(b.top, screenTop());
   // The tab's own top bar floats over a bare tab's page.
   const header = el.closest(".app-layer")?.querySelector<HTMLElement>(".app-header");
   if (header) {
@@ -240,6 +270,10 @@ export function revealField(el: HTMLElement) {
 export function useKeyboardReveal(on = true) {
   useEffect(() => {
     if (!on) return;
+    // The client app's fields, its pop-ups in portals too, are held at 16px on a touch screen (kb-app, the end of
+    // globals.css); never the coach's side, which mounts no reveal.
+    const root = document.documentElement;
+    root.classList.add("kb-app");
     let raf = 0;
     let timers: number[] = [];
     const now = () => {
@@ -266,6 +300,7 @@ export function useKeyboardReveal(on = true) {
     window.addEventListener("resize", next);
     const off = subscribeKeyboard(next);
     return () => {
+      root.classList.remove("kb-app");
       cancelAnimationFrame(raf);
       timers.forEach((t) => window.clearTimeout(t));
       document.removeEventListener("focusin", focused);
