@@ -75,8 +75,8 @@ export default function GymSettings({ clientId, gyms }: { clientId: number; gyms
   const shown = list.find((g) => g.id === open) ?? null;
   // Over Settings, as Settings is over the app: the next layer in the same grid.
   const host = shown ? anchor.current?.closest(".app-layer")?.parentElement : null;
-  // Settings is out of reach behind the page, as the app is behind Settings.
-  const covered = !!shown;
+  // Settings is out of reach behind the page, as the app is behind Settings; and behind Add a gym while it is open.
+  const covered = !!shown || adding;
   useEffect(() => {
     const layer = anchor.current?.closest<HTMLElement>(".app-layer");
     if (!layer || !covered) return;
@@ -334,14 +334,42 @@ function GymPage({ gym, busy, failed, onBack, onBringBack, onChange, onMadeHome 
 /** Add a gym from Settings (12 Nov, Alex): the picker's own form in the picker's own card, its ✕ on the right. A name of a
  *  gym in use is refused; a deleted one's, or one trained at once, is that gym again, as from the picker. */
 function AddGym({ clientId, gyms, onClose, onAdded }: { clientId: number; gyms: GymDashboard[]; onClose: () => void; onAdded: (gym: GymOption) => void }) {
+  // Focus as the picker's: the card takes it, Tab stays inside, Escape closes, and Add a gym has it back after. The layer
+  // behind is inert until this goes, so the hand-back waits a frame for it to be reachable again.
+  const card = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && (e.preventDefault(), onClose());
+    const before = document.activeElement as HTMLElement | null;
+    card.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !card.current) return;
+      const items = Array.from(card.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex="0"]'));
+      if (!items.length) return;
+      const i = items.indexOf(document.activeElement as HTMLElement);
+      if (e.shiftKey && i <= 0) {
+        e.preventDefault();
+        items[items.length - 1].focus();
+      } else if (!e.shiftKey && (i === items.length - 1 || i === -1)) {
+        e.preventDefault();
+        items[0].focus();
+      }
+    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      requestAnimationFrame(() => {
+        if (before?.isConnected) before.focus?.();
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open (onClose only sets adding off)
+  }, []);
   return createPortal(
     <div className="gpk-overlay" onClick={onClose}>
-      <div className="gpk-card" role="dialog" aria-modal="true" aria-labelledby="gpk-title" onClick={(e) => e.stopPropagation()}>
+      <div ref={card} tabIndex={-1} className="gpk-card" role="dialog" aria-modal="true" aria-labelledby="gpk-title" onClick={(e) => e.stopPropagation()}>
         <AddGymForm
           existing={gyms.filter((g) => !g.deleted && !g.once)}
           title="Add a gym"

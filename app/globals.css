@@ -18667,6 +18667,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .gpk-overlay.closing { animation: gpk-fade 0.18s ease-in reverse forwards; }
 .gpk-card { position: relative; width: 100%; max-width: 420px; max-height: calc(100dvh - 80px); overflow: hidden; border-radius: 30px; background: #fff; box-shadow: 0 40px 70px -24px rgba(0, 0, 0, 0.6); animation: gpk-pop 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .gpk-card.closing { animation: gpk-pop 0.18s ease-in reverse forwards; }
+/* A card that takes the focus on open (Settings' Add a gym) draws no ring round itself. */
+.gpk-card:focus { outline: none; }
 @keyframes gpk-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes gpk-pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
 .gpk-glow { position: absolute; right: -120px; top: -160px; width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle, rgba(var(--g-rgb), 0.28), transparent 68%); pointer-events: none; transition: background 0.3s; }
