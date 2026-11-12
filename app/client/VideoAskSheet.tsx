@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { sendExerciseMediaAction } from "../lib/actions";
-import { uploadFirst } from "../lib/uploadFirst";
+import { uploadFileFirst } from "../lib/uploadFirst";
+import { fitJpeg } from "../lib/coverJpeg";
+import { Bars } from "./Bars";
+import DoneCheck from "../components/DoneCheck";
 import { newOnceKey } from "../lib/onceKey";
 import { VideoReplyBody, type VideoReplyView } from "./VideoReplySheet";
 import { dayWords } from "../lib/clientDates";
@@ -66,8 +69,13 @@ export default function VideoAskButton({ ask, assignmentId, exerciseName, coachN
   );
 }
 
+/** The photo or video sheet (13 Nov, Alex): a centred pop-up in the gym picker's voice, the title and the round ✕ on its
+ *  right. One tap opens the phone's own picker (a hidden file field's click, no capture, so the camera is one of the
+ *  phone's choices; never a menu of ours or a see-through field). The coach's reply first, with what it answers under it:
+ *  the client's own clip as a small frame, `Your video | Sat 10 Oct | Upper`, a tap playing it. What is picked starts going
+ *  up at once (a photo made smaller first), so Send only files it. */
 export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, coachName = "Coach", onClose }: { ask: VideoAsk | null; assignmentId: number; /** Sending a picture of the swap (9 Oct). */ about?: "swap" | null; exerciseName: string; coachName?: string; onClose: () => void }) {
-  const isPhoto = (f: File | null) => !!f && f.type.startsWith("image/");
+  const isPhoto = (f: Blob | null) => !!f && f.type.startsWith("image/");
   const sentPhoto = ask?.media === "photo";
   // The coach asked for it, with or without a note (the note is optional since 15 Oct).
   const asked = !!ask && !ask.fromClient && !ask.carried;
@@ -76,15 +84,44 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
   const [preview, setPreview] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [theirsOpen, setTheirsOpen] = useState(false);
   const [sending, run] = useTransition();
   const url = useRef<string | null>(null);
+  const field = useRef<HTMLInputElement>(null);
+  // The picked file going up ahead (13 Nov, Alex: "faster upload"): its handle once the server has it.
+  const upload = useRef<{ file: File; abort: AbortController; done: Promise<{ handle: string } | { refused: string }> } | null>(null);
   // The send whose answer was lost on the way, its one-time key kept for sending that clip again (6 Nov).
   const lostSend = useRef<{ key: string; sent: string } | null>(null);
 
-  // The preview's object URL is let go when it changes and when the sheet closes.
-  useEffect(() => () => {
-    if (url.current) URL.revokeObjectURL(url.current);
-  }, []);
+  const dropUpload = () => {
+    upload.current?.abort.abort();
+    upload.current = null;
+  };
+  // The preview's object URL and an upload not sent are let go as the sheet closes.
+  useEffect(
+    () => () => {
+      if (url.current) URL.revokeObjectURL(url.current);
+      upload.current?.abort.abort();
+    },
+    []
+  );
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !sending && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [sending, onClose]);
+
+  const startUpload = (f: File) => {
+    dropUpload();
+    const abort = new AbortController();
+    const done = (async () => {
+      // A photo goes up made smaller (the server keeps 2048 at most anyway); a video as it is.
+      const body: Blob = isPhoto(f) ? ((await fitJpeg(f, 2048)) ?? f) : f;
+      return uploadFileFirst(body, "media", null, abort.signal);
+    })();
+    done.catch(() => undefined);
+    upload.current = { file: f, abort, done };
+  };
 
   const pick = async (f: File) => {
     if (url.current) URL.revokeObjectURL(url.current);
@@ -93,23 +130,21 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
     setFile(f);
     setPreview(u);
     setProblem(null);
+    dropUpload();
     if (f.type.startsWith("image/")) {
-      if (f.size > 20 * 1024 * 1024) setProblem("This photo is over 20 MB. Pick a smaller one.");
-      return;
+      if (f.size > 20 * 1024 * 1024) return setProblem("This photo is over 20 MB. Pick a smaller one.");
+      return startUpload(f);
     }
-    if (f.size > MAX_BYTES) {
-      setProblem(`This clip is ${Math.round(f.size / 1024 / 1024)} MB and the limit is 128 MB. Film it in 1080p rather than 4K (Settings › Camera › Record Video), and keep it under two minutes.`);
-      return;
-    }
+    if (f.size > MAX_BYTES) return setProblem(`This clip is ${Math.round(f.size / 1024 / 1024)} MB and the limit is 128 MB. Film it in 1080p rather than 4K, and keep it under two minutes.`);
     const secs = await durationOf(u);
-    if (secs != null && secs > MAX_SECONDS + 1) setProblem(`This clip is ${Math.round(secs)} seconds. Keep it under two minutes: just the set ${coachName} asked for.`);
+    if (secs != null && secs > MAX_SECONDS + 1) return setProblem(`This clip is ${Math.round(secs)} seconds. Keep it under two minutes.`);
+    startUpload(f);
   };
 
   const send = () => {
     if (!file || problem) return;
     const fd = new FormData();
     fd.set("assignmentId", String(assignmentId));
-    fd.set("file", file);
     fd.set("about", about ?? ask?.about ?? "");
     fd.set("note", note);
     // Its one-time key, made as Send is tapped (6 Nov): sent again once the signal is back, or the same clip sent again
@@ -119,19 +154,25 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
     lostSend.current = { key: onceKey, sent };
     fd.set("onceKey", onceKey);
     run(async () => {
-      // A failed request (the connection dropped, the body refused) used to throw
-      // out of here and crash the screen (15 Oct): now it reads as a line in the sheet.
       let error: string | null;
       try {
-        // The clip goes ahead to the server's disk; the send carries its handle (4 Nov, Alex: memory).
-        error = await uploadFirst(fd, "media");
-        if (!error) {
+        // The upload begun at the pick; one that failed on the way goes again now.
+        if (upload.current?.file !== file) startUpload(file);
+        let answer = await upload.current!.done.catch(() => null);
+        if (!answer) {
+          startUpload(file);
+          answer = await upload.current!.done;
+        }
+        if ("refused" in answer) error = answer.refused;
+        else {
+          fd.set("upload", answer.handle);
           error = await sendExerciseMediaAction(fd);
+          upload.current = null;
           lostSend.current = null;
         }
       } catch (e) {
         const mb = Math.round(file.size / 1024 / 1024);
-        error = `That didn't send${mb ? ` (${mb} MB)` : ""}. Check your connection and try again; a shorter clip helps.`;
+        error = `Not sent${mb ? ` (${mb} MB)` : ""}. Check your connection and try again.`;
         console.error("[media] send failed", e);
       }
       if (error) {
@@ -143,80 +184,131 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
     });
   };
 
-  const picker = (label: string, capture: boolean, className = "pp-app-sheet-option") => (
-    <label key={label} className={className}>
-      {label}
-      <input
-        type="file"
-        accept={asked ? "video/*" : "image/*,video/*"}
-        capture={capture ? "environment" : undefined}
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void pick(f);
-          e.target.value = "";
-        }}
-      />
-    </label>
-  );
-  const options = (
-    <>
-      {picker(ask?.src ? (asked ? "Record a new one" : "Take a new one") : asked ? "Record a video" : "Take a photo or film a video", true)}
-      {picker("Choose from your phone", false)}
-    </>
-  );
   // A video shows its first frame before it plays (19 Oct): iOS paints nothing until asked for a time.
   const firstFrame = (src: string) => (src.includes("#") ? src : `${src}#t=0.001`);
+  const reply = ask?.reply ?? null;
+  // What the reply answers: the clip it was sent on (the ask's own, or an earlier session's for a carried one).
+  const theirs = reply ? reply.theirs ?? (ask?.carried ? null : ask?.src ?? null) : null;
+  const theirsPhoto = reply ? (reply.theirsPhoto ?? (!ask?.carried && sentPhoto)) : false;
+  const theirsAt = reply ? (reply.theirsAt ?? (!ask?.carried ? ask?.sentAt : null) ?? null) : null;
+  // The sent clip shows once: as what the reply answers when it is this ask's own.
+  const showSent = !!ask?.src && !(reply && !ask.carried);
+  const title = done
+    ? `Sent to ${coachName}`
+    : file
+      ? isPhoto(file) ? "Your photo" : "Your video"
+      : reply
+        ? `${coachName} replied`
+        : ask?.src
+          ? sentPhoto ? "Your photo" : "Your video"
+          : asked
+            ? `Video for ${coachName}`
+            : about === "swap" || ask?.about === "swap"
+              ? "A picture of what you used"
+              : "Photo or video";
+  const addWords = ask?.src || reply ? (asked ? "Send a new video" : "Send another") : asked ? "Record a video" : "Add a photo or video";
 
   return createPortal(
-    <div className="vr-sheet-scrim" role="presentation" onClick={() => !sending && onClose()}>
-      <div className="pp-app-sheet vr-sheet" role="dialog" aria-modal="true" aria-label={`Video of ${exerciseName}`} onClick={(e) => e.stopPropagation()}>
-        <div className="pp-app-sheet-head">
-          <span className="pp-app-sheet-title">{done ? `Sent to ${coachName}` : ask?.src && !file ? (sentPhoto ? "Your photo" : "Your video") : asked ? `Video for ${coachName}` : about === "swap" || ask?.about === "swap" ? "A picture of what you used" : "Photo or video"}</span>
-          <span className="pp-app-sheet-sub">{exerciseName}</span>
+    <div className="vr-sheet-scrim vas-scrim" role="presentation" onClick={() => !sending && onClose()}>
+      <div className="vr-sheet vas" role="dialog" aria-modal="true" aria-labelledby="vas-title" onClick={(e) => e.stopPropagation()}>
+        <div className="vas-head">
+          <div className="vas-head-text">
+            <h2 id="vas-title" className="vas-title">{title}</h2>
+            <span className="vas-sub">{exerciseName}</span>
+          </div>
+          <button type="button" className="vas-x" onClick={onClose} disabled={sending} aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
         </div>
 
-        {/* The coach's reply first, when there is one: it is what is new. */}
-        {ask?.reply && !done && !file && <VideoReplyBody reply={ask.reply} coachName={coachName} />}
-
-        {ask?.note && !done && (
-          <div className="vr-sheet-note">
-            <span>{coachName} asked</span>
-            <p>{ask.note}</p>
-          </div>
-        )}
-
-        {/* Sent, the title says it alone (3 Nov, Alex: the words audit). */}
-        {done ? null : file && preview ? (
+        {done ? (
+          <span className="vas-done" aria-hidden="true">
+            <DoneCheck size={36} />
+          </span>
+        ) : file && preview ? (
           <>
-            {isPhoto(file) ? <img className="vr-sheet-video" src={preview} alt="" /> : <video className="vr-sheet-video" src={firstFrame(preview)} controls playsInline muted preload="metadata" />}
-            {/* Send and Cancel are the choice here (19 Oct, Alex: four buttons was crowded); another one is a quiet line. */}
-            {picker(`Choose another ${asked ? "video" : "one"}`, false, "vr-sheet-again")}
-            {!asked && <input className="vr-sheet-note-in" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything to say with it? (optional)" maxLength={300} />}
-            {problem && <p className="vr-sheet-problem">{problem}</p>}
-            <button type="button" className="vr-sheet-send" onClick={send} disabled={!!problem || sending}>
-              {sending ? "Sending… keep the app open" : ask?.src ? "Send instead" : `Send to ${coachName}`}
-            </button>
+            {isPhoto(file) ? <img className="vas-media" src={preview} alt="" /> : <video className="vas-media" src={firstFrame(preview)} controls playsInline muted preload="metadata" />}
+            {!asked && (
+              <input
+                className="vas-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={`Note for ${coachName}`}
+                aria-label={`Note for ${coachName}`}
+                maxLength={300}
+                enterKeyHint="done"
+              />
+            )}
+            {problem && <p className="vas-problem">{problem}</p>}
+            <div className="vas-foot">
+              <button type="button" className="vas-text" onClick={() => field.current?.click()} disabled={sending}>
+                Choose another
+              </button>
+              <button type="button" className="vas-pill" onClick={send} disabled={!!problem || sending}>
+                {sending ? "Sending" : `Send to ${coachName}`}
+              </button>
+            </div>
           </>
         ) : (
           <>
-            {ask?.src && (
+            {/* The coach's reply first: it is what is new. */}
+            {reply && <VideoReplyBody reply={reply} coachName={coachName} />}
+            {reply && theirs && (
+              <div className="vas-theirs">
+                <span className="vas-label">What it replies to</span>
+                <button type="button" className={`vas-theirs-row${theirsOpen ? " open" : ""}`} onClick={() => setTheirsOpen((o) => !o)} aria-expanded={theirsOpen}>
+                  <span className="vas-thumb" aria-hidden="true">
+                    {theirsPhoto ? <img src={theirs} alt="" /> : <video src={firstFrame(theirs)} muted playsInline preload="metadata" />}
+                  </span>
+                  <span className="vas-theirs-words">
+                    <Bars parts={[theirsPhoto ? "Your photo" : "Your video", theirsAt ? dayWords(new Date(theirsAt), { weekday: "short" }) : null, reply.where || null]} />
+                  </span>
+                  <span className="vas-chev" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="m9 6 6 6-6 6" />
+                    </svg>
+                  </span>
+                </button>
+                {theirsOpen && (theirsPhoto ? <img className="vas-media" src={theirs} alt="" /> : <video className="vas-media" src={firstFrame(theirs)} controls autoPlay playsInline preload="metadata" />)}
+              </div>
+            )}
+
+            {ask?.note && !ask.fromClient && (
+              <div className="vas-asked">
+                <span className="vas-label">{coachName} asked</span>
+                <p>“{ask.note}”</p>
+              </div>
+            )}
+
+            {showSent && ask?.src && (
               <>
-                {sentPhoto ? <img className="vr-sheet-video" src={ask.src} alt="" /> : <video className="vr-sheet-video" src={firstFrame(ask.src)} controls playsInline preload="metadata" />}
-                {ask.clientNote && <p className="vr-sheet-sent">{ask.clientNote}</p>}
-                {ask.sentAt && <p className="vr-sheet-sent">Sent {dayWords(new Date(ask.sentAt), { weekday: "short" })}.</p>}
+                {sentPhoto ? <img className="vas-media" src={ask.src} alt="" /> : <video className="vas-media" src={firstFrame(ask.src)} controls playsInline preload="metadata" />}
+                {ask.clientNote && <p className="vas-fact">“{ask.clientNote}”</p>}
+                {ask.sentAt && <p className="vas-fact">Sent {dayWords(new Date(ask.sentAt), { weekday: "short" })}</p>}
               </>
             )}
             {/* The limit alone, and nothing with no ask (3 Nov, Alex: the words audit). */}
-            {!ask?.src && asked && <p className="vr-sheet-hint">Up to 2 min</p>}
-            {options}
+            {!ask?.src && asked && <p className="vas-fact">Up to 2 min</p>}
+            {problem && <p className="vas-problem">{problem}</p>}
+            {/* The one ink pill while nothing is picked; once something is sent or answered it is the white one. */}
+            <button type="button" className={ask?.src || reply ? "vas-pill white" : "vas-pill"} onClick={() => field.current?.click()}>
+              {addWords}
+            </button>
           </>
         )}
-
-        {!done && (
-          <button type="button" className="pp-app-sheet-cancel" onClick={onClose} disabled={sending}>
-            {ask?.src && !file ? "Close" : "Cancel"}
-          </button>
-        )}
+        <input
+          ref={field}
+          type="file"
+          hidden
+          accept={asked ? "video/*" : "image/*,video/*"}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void pick(f);
+            e.target.value = "";
+          }}
+        />
       </div>
     </div>,
     document.body
@@ -225,9 +317,11 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
 
 /** Whether an exercise shows its photo or video row (the workout's rule): a coach's ask with or without a note, on a
  *  swap only when it is about the swap, and one the client started only once something is in it. A finished session
- *  shows only what was sent in it and the reply to that, never a reply carried from an earlier session (`finished`). */
+ *  shows only what was sent in it and the reply to that, never a reply carried from an earlier session (`finished`).
+ *  A reply carried from an earlier session shows on a later workout only while it is still unseen (12 Nov, Alex: a
+ *  month-old reply lit the video mark with nothing new in it). */
 export function askShown(ask: VideoAsk | null | undefined, swapped: boolean, finished = false): ask is VideoAsk {
-  return !!ask && !(finished && ask.carried) && (!swapped || ask.about === "swap") && (!ask.fromClient || !!ask.note || !!ask.src || !!ask.reply);
+  return !!ask && !(ask.carried && (finished || !!ask.reply?.seen)) && (!swapped || ask.about === "swap") && (!ask.fromClient || !!ask.note || !!ask.src || !!ask.reply);
 }
 
 /** The workout's row for an exercise's photo or video and the coach's reply, word for word wherever it shows: the
@@ -240,7 +334,7 @@ export function VideoAskRow({ ask, coachName, onOpen, tabIndex }: { ask: VideoAs
         <VideoGlyph photo={ask.media === "photo"} />
       </span>
       <span className="wo-video-main">
-        <b>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}`) : ask.src ? (ask.media === "photo" ? "Photo sent" : "Video sent") : `${coachName} asked for a video`}</b>
+        <b>{ask.reply ? (ask.carried ? `${coachName} replied to your ${ask.reply.theirsPhoto ? "photo" : "video"}${ask.reply.theirsAt ? ` of ${dayWords(new Date(ask.reply.theirsAt))}` : ""}` :`${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}`) : ask.src ? (ask.media === "photo" ? "Photo sent" : "Video sent") : `${coachName} asked for a video`}</b>
         {/* A reply needs no second line (17 Oct, Alex): the title says it and Open opens it. */}
         {!ask.reply && <small>{/* Sent and its day alone (25 Oct, Alex: "waiting for Finlay is not necessary"). */}
         {ask.src ? (ask.sentAt ? `Sent ${dayWords(new Date(ask.sentAt))}` : "Sent") : ask.note || "Of this exercise, this session"}</small>}
