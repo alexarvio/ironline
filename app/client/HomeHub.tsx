@@ -14,7 +14,6 @@ import { isoWeekday } from "../lib/eventRepeat";
 import EventsTimelineCard from "./home/EventsTimelineCard";
 import type { CardCovers } from "./CardPictureSheet";
 import { ChevronDownIcon } from "../components/icons";
-import { tzShort } from "../lib/timezones";
 import { clock, clockRange, dayWords, monthWords, weekdayWords } from "../lib/clientDates";
 import CoachSays from "./CoachSays";
 import MeetingNotes from "./meetings/MeetingNotes";
@@ -623,7 +622,7 @@ function LatestActivityCard({ a, coach, focus = null }: { a: LatestActivity; coa
 // ---- 5 · Next meeting, only when booked ------------------------------------
 
 /** A booked call's day and time in the phone's own timezone ("Wednesday
- *  14:30 GMT+7 · 30 min" in Bangkok for 09:30 in Amsterdam). Until the phone
+ *  14:30 · 30 min" in Bangkok for 09:30 in Amsterdam; no zone, 12 Nov). Until the phone
  *  is known (the server render), the labels as the coach typed them. */
 export function localMeetingLabels(m: NonNullable<UpcomingMeeting>, now: number | null) {
   const start = m.startIso ? Date.parse(m.startIso) : NaN;
@@ -632,12 +631,12 @@ export function localMeetingLabels(m: NonNullable<UpcomingMeeting>, now: number 
   const t = new Date(now);
   const dayOf = (x: Date) => Date.UTC(x.getFullYear(), x.getMonth(), x.getDate());
   const days = Math.round((dayOf(d) - dayOf(t)) / 86400000);
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return {
     dayNumber: String(d.getDate()),
     monthCap: monthWords(d, { short: true, year: false }).toUpperCase(),
     inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
-    whenLabel: `${weekdayWords(d)} ${clock(d)} ${tzShort(zone, d)} · ${m.durationMinutes} min`,
+    // The client's own time, no zone (12 Nov, Alex: the time in the app is the time the client is in).
+    whenLabel: `${weekdayWords(d)} ${clock(d)} · ${m.durationMinutes} min`,
   };
 }
 
