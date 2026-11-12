@@ -43,7 +43,7 @@ import {
 } from "../lib/actions";
 import { useTween } from "../components/useTween";
 import FitTitle from "./FitTitle";
-import { useFoodFocus, useTabShown } from "./CheckInContext";
+import { DiaryDayProvider, useFoodFocus, useTabShown } from "./CheckInContext";
 import BarcodeScanner from "./BarcodeScanner";
 import PictureCycle from "./PictureCycle";
 import { landOn } from "../lib/landOn";
@@ -269,6 +269,12 @@ export default function FoodDiaryScreen({
     load(d, true);
   };
   const reload = () => load(date);
+  // A day tapped in Last 7 days, at the foot: the diary goes to it and the screen back to its top (12 Nov, Alex).
+  const showDay = (d: string) => {
+    goTo(d);
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    rootRef.current?.closest<HTMLElement>(".app-content")?.scrollTo({ top: 0, behavior: still ? "instant" : "smooth" });
+  };
   // Opening on a day left on Rest with nothing logged under it: it is a training day again.
   useEffect(() => {
     if (!readOnly && initial.dayType === "rest" && initial.meals.every((m) => m.entries.length === 0)) load(initial.date, true);
@@ -1574,7 +1580,7 @@ export default function FoodDiaryScreen({
             })()}
           </div>
           {/* The coach's note and Last 7 days, at the foot. */}
-          {foot}
+          <DiaryDayProvider value={showDay}>{foot}</DiaryDayProvider>
         </div>
 
       {askDeleteMeal != null && diary.meals.some((m) => m.id === askDeleteMeal) && (
