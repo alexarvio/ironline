@@ -476,23 +476,20 @@ export function targetColumns(t: { sets?: number | null; reps?: string | null; w
 }
 export const cardioColumns = (c: SessionCardio) => targetColumns({ time: c.time, pace: c.pace, incline: c.incline, distance: c.distance });
 
-// The targets as the workout's table (3 Nov, Alex: one table on the exercise page, the session overview and the
-// cardio page): TARGET, the names in small grey caps over one hairline across the width, the figures under them in
-// ink; five or more spread over the width, fewer from the left 32px apart (`.lw-target-grid`).
+// The targets, one drawing on the exercise page, the session overview and the cardio page (3 Nov, Alex): the purple
+// band since 12 Nov (Alex: C of docs/boards/workout-a2-mockup.html), a soft training-purple tint with a 2px purple line
+// on its left, TARGET in purple, then a column for each figure, the figure in ink over its word in small grey caps, the
+// columns sharing the width evenly; six or more tighter (`.lw-target`, `dense`).
 export function TargetTable({ cols }: { cols: [string, string][] }) {
   if (!cols.length) return null;
   return (
     <div className="lw-target">
       <span className="lw-target-label">Target</span>
-      <div className={`lw-target-grid spread${cols.length >= 6 ? " dense" : ""}`} style={{ gridTemplateColumns: `repeat(${cols.length}, minmax(0, 1fr))` }}>
-        {cols.map(([name]) => (
-          <span key={`h${name}`} className="lw-target-h">
-            {name}
-          </span>
-        ))}
+      <div className={`lw-target-grid${cols.length >= 6 ? " dense" : ""}`} style={{ gridTemplateColumns: `repeat(${cols.length}, minmax(0, 1fr))` }}>
         {cols.map(([name, v]) => (
-          <span key={`v${name}`} className="lw-target-v">
-            {v}
+          <span key={name} className="lw-target-col">
+            <b className="lw-target-v">{v}</b>
+            <span className="lw-target-h">{name}</span>
           </span>
         ))}
       </div>

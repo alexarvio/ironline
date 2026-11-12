@@ -6,7 +6,7 @@ import { useOffline } from "next/offline";
 import { enqueueWorkout, useWorkoutOutbox, forgetRefused } from "../components/workoutOutbox";
 import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel as labelOf, type Unit } from "../lib/units";
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
-import { askShown, VideoAskRow, VideoAskSheet } from "./VideoAskSheet";
+import { askShown, VideoAskLine, VideoAskSheet, VideoAskTool } from "./VideoAskSheet";
 import { CoachNote, lastSetsHere, shownName, TargetTable, targetColumns, type SessionExercise } from "./workoutShared";
 import { isAssisted } from "../lib/progressRules";
 import CoachSays from "./CoachSays";
@@ -23,7 +23,7 @@ import { NoteIcon } from "../components/icons";
 // badge takes them all. A set saves itself as soon as weight and reps are
 // in, folds into a green row 1.4s later and the next set opens. When every
 // set is in, the workout slides on to the next exercise by itself. The
-// coach's demo is a full-width row above the card. Warm-ups are rows of
+// coach's demo is a play mark on the eyebrow line (12 Nov). Warm-ups are rows of
 // the same kind above set 1, labelled W1, W2, never counted.
 
 export const MAX_WARMUPS = 8;
@@ -579,6 +579,10 @@ export default function ExercisePage({
     if (playable(exercise.videoUrl)) setDemoOpen(true);
     else window.open(exercise.videoUrl, "_blank", "noopener");
   };
+  const openAsk = () => {
+    setMediaAbout(null);
+    setVideoOpen(true);
+  };
 
   // ---- Typing along a set (13 Oct, Alex): the big numbers are boxes; a tap
   // opens the keyboard, Next commits and hands the focus to the next box in
@@ -630,27 +634,24 @@ export default function ExercisePage({
   const assisted = exercise.assisted ?? isAssisted(shownName(exercise));
   const weightTone = (d: number) => ((d > 0) !== assisted ? "up" : "down");
   const signed = (d: number) => `${d > 0 ? "+" : "−"}${fmtWeight(Math.abs(d))}`;
-  // The same, laid out (13 Oct): the weight in a right-aligned column, so "kg ×" lines up down the card.
-  const summaryCells = (row: Row) => {
+  // A quiet line's figures (12 Nov): `60 kg × 12`, the unit small and faint.
+  const quietCells = (row: Row) => {
     const w = shownOf(row, "weight");
     const r = shownOf(row, "reps");
-    if (!(askWeight || row.kind === "warm")) return <span className="lw-row-w wide">{r.text} reps</span>;
+    if (!(askWeight || row.kind === "warm")) return <>{r.text} reps</>;
     return (
       <>
-        <span className="lw-row-w">{w.text}</span>
-        <span className="lw-row-u">{uLabel}</span>
-        <span className="lw-row-x">×</span>
-        <span className="lw-row-r">{r.text}</span>
+        {w.text}
+        <small>{uLabel}</small>× {r.text}
       </>
     );
   };
-  // A done set's change on last time, beside its figures (never inside them, so it is never cut off): the weight
-  // over the reps when both changed.
+  // A done set's change on last time, after its figures on the same line: the weight, then the reps.
   const rowDelta = (row: Row) => {
     const d = row.saved ? deltaOf(row) : { weight: null, reps: null };
     if (d.weight == null && d.reps == null) return null;
     return (
-      <span className="lw-row-delta">
+      <span className="lw-q-dl">
         {d.weight != null && <span className={weightTone(d.weight)}>{signed(d.weight)} {uLabel}</span>}
         {d.reps != null && <span className={d.reps > 0 ? "up" : "down"}>{signed(d.reps)} {Math.abs(d.reps) === 1 ? "rep" : "reps"}</span>}
       </span>
@@ -659,20 +660,36 @@ export default function ExercisePage({
 
   return (
     <div className="wo-page-inner lw" data-ex={exercise.id}>
+      {/* The head (12 Nov, Alex: A2 of docs/boards/workout-a2-mockup.html): the eyebrow with the round buttons on its
+          right (the demo's play mark, the video ask's mark, the chat, the ⋯), the name across the whole width under it,
+          then Next up. */}
       <div className="wo-ex-head">
-        <div className="wo-eyebrow">
-          <Bars
-            parts={[
-              sessionLabel && <span key="s" className="wo-eyebrow-session">{sessionLabel}</span>,
-              <span key="c" className="wo-eyebrow-count">
-                Exercise {index} of {total}
-              </span>,
-            ]}
-          />
+        <div className="wo-eyerow">
+          <div className="wo-eyebrow">
+            <Bars
+              parts={[
+                sessionLabel && <span key="s" className="wo-eyebrow-session">{sessionLabel}</span>,
+                <span key="c" className="wo-eyebrow-count">
+                  Exercise {index} of {total}
+                </span>,
+              ]}
+            />
+          </div>
+          <div className="wo-ex-tools">
+            {exercise.videoUrl && (
+              <button type="button" className="wo-demo-tool" onClick={openDemo} aria-label={`Play the demo of ${shownName(exercise)}`} title="Demo">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M8 5.5v13l11-6.5z" />
+                </svg>
+                <RingEdge size={32} stroke={1.5} />
+              </button>
+            )}
+            {askShown(ask, swapped) && <VideoAskTool ask={ask} coachName={coachName} onOpen={openAsk} />}
+            {tools}
+          </div>
         </div>
         <div className="wo-ex-top">
           <h2 key={exercise.id} className="wo-ex-name">{shownName(exercise)}</h2>
-          <div className="wo-ex-tools">{tools}</div>
         </div>
         <div className="wo-ex-title-row">
           {/* Next up only with an exercise ahead (19 Oct, Alex); a free session with nothing after says nothing, not "Last exercise". */}
@@ -684,6 +701,10 @@ export default function ExercisePage({
           )}
         </div>
       </div>
+
+      {/* The ask's line (12 Nov, Alex: A2 and the pill of docs/boards/workout-a2-mockup.html), only while there is
+          something to do or see. A coach's ask shows with or without a note; a row the client started once something is in it. */}
+      {askShown(ask, swapped) && <VideoAskLine ask={ask} coachName={coachName} onOpen={openAsk} />}
 
       {exercise.swap && (
         <div className="wo-swap-banner">
@@ -705,40 +726,14 @@ export default function ExercisePage({
         </div>
       )}
 
-      {/* The coach's demo, its own row; nothing at all without one. */}
-      {exercise.videoUrl && (
-        <button type="button" className="lw-demo" onClick={openDemo}>
-          <span className="lw-demo-play" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M8 5.5v13l11-6.5z" />
-            </svg>
-          </span>
-          Demo
-        </button>
-      )}
+      {/* The coach's targets, the purple band (12 Nov, Alex: C of docs/boards/workout-a2-mockup.html): the columns the
+          coach filled in for this exercise, and only those, each figure over its word. One helper and one table for the
+          session overview and the cardio page too (3 Nov, Alex). Swapped, a naked sheet (4 Nov, Alex): no table at all. */}
+      {!free && !swapped && <TargetTable cols={targetColumns({ sets: exercise.coachSets ?? exercise.sets, reps: exercise.reps, weightKg: targetWeight, unit, rpe: targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance })} />}
 
-
-      {/* A coach's ask shows with or without a note (the note is optional since 15 Oct); a row the client started shows once something is in it. */}
-      {askShown(ask, swapped) && (
-        <VideoAskRow
-          ask={ask}
-          coachName={coachName}
-          onOpen={() => {
-            setMediaAbout(null);
-            setVideoOpen(true);
-          }}
-        />
-      )}
-
-      {/* ---- The sets card. */}
+      {/* ---- The sets: done and upcoming sets as quiet lines, the set being logged the one big thing (12 Nov, Alex: A of
+          docs/boards/workout-structure-mockup.html). */}
       <div className="lw-card">
-        {/* The coach's targets as a table (3 Nov, Alex: A of docs/boards/workout-targets-table-mockup.html): the columns the
-            coach filled in for this exercise, and only those (Sets, Reps, kg, RPE, Tempo, Rest; a cardio's Time and
-            Distance), their names small and grey over a hairline, the figures under them in ink, big enough to read mid-set.
-            One helper and one table for the session overview and the cardio page too (3 Nov, Alex). Swapped, a naked
-            sheet (4 Nov, Alex: "when we swap an exercise, it should just be a naked sheet"): the targets were set for the
-            exercise it replaced, so no table at all. */}
-        {!free && !swapped && <TargetTable cols={targetColumns({ sets: exercise.coachSets ?? exercise.sets, reps: exercise.reps, weightKg: targetWeight, unit, rpe: targetRpe, tempo: exercise.tempo, rest: exercise.rest, time: exercise.time, distance: exercise.distance })} />}
         <div className="lw-card-head">
           <span className="lw-eyebrow">Sets</span>
           <span className={`lw-progress${allDone ? " done" : ""}`}>
@@ -766,11 +761,14 @@ export default function ExercisePage({
               <div key="warm-add" className={`so-fold lw-warmadd-fold${warmAddShown ? " open" : ""}`} aria-hidden={!warmAddShown} inert={!warmAddShown}>
               <div className="so-fold-in">
               <button type="button" className="lw-warmadd" onClick={addWarm}>
-                <span className="lw-warmadd-plus" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden="true" focusable="false">
-                    <path vectorEffect="non-scaling-stroke" d="M12 5v14M5 12h14" />
-                  </svg>
-                  <RingEdge size={36} stroke={1} />
+                {/* In the quiet lines' size (12 Nov, Alex: docs/boards/workout-a2-mockup.html): a 12px + in a 22px ring, in the 36px column. */}
+                <span className="lw-q-col" aria-hidden="true">
+                  <span className="lw-q-ring lw-warmadd-plus">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden="true" focusable="false">
+                      <path vectorEffect="non-scaling-stroke" d="M12 5v14M5 12h14" />
+                    </svg>
+                    <RingEdge size={22} stroke={1} />
+                  </span>
                 </span>
                 Warm-up
               </button>
@@ -782,24 +780,27 @@ export default function ExercisePage({
             const state = open ? "open" : row.saved ? "done" : "todo";
             if (!open) {
               const rpe = shownOf(row, "rpe");
+              // A quiet line (12 Nov, Alex: A of docs/boards/workout-structure-mockup.html): a 22px ring in the 36px
+              // column, so the spine runs through it as through the open set's badge, then the figures small.
               return (
                 <Fold key={row.id} state={state}>
-                <button type="button" className={`lw-row${row.saved ? " done" : " upcoming"}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" && !free ? " extra" : ""}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
-                  <span className="lw-row-badge" aria-hidden="true">
+                <button type="button" className={`lw-q${row.saved ? " done" : " upcoming"}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" && !free ? " extra" : ""}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
+                  <span className="lw-q-col" aria-hidden="true">
                     {/* Logged, the one done check (3 Nov, Alex): full green, a warm-up's in its amber. */}
                     {row.saved ? (
-                      <DoneCheck size={36} />
+                      <span className="lw-q-ring">
+                        <DoneCheck size={22} />
+                      </span>
                     ) : (
-                      <>
+                      <span className="lw-q-ring">
                         {row.label}
-                        <RingEdge size={36} stroke={1} />
-                      </>
+                        <RingEdge size={22} stroke={1} />
+                      </span>
                     )}
                   </span>
-                  <span className="lw-row-sum">{summaryCells(row)}</span>
+                  <span className="lw-q-v">{quietCells(row)}</span>
                   {rowDelta(row)}
-                  {/* The RPE slot is always there, empty on a warm-up, so the numbers line up down the card. */}
-                  {askRpe && <span className="lw-row-rpe">{row.kind === "work" && rpe.value != null && (!rpe.ghost || !row.saved) ? `RPE ${rpe.text}` : ""}</span>}
+                  {askRpe && <span className="lw-q-rpe">{row.kind === "work" && rpe.value != null && (!rpe.ghost || !row.saved) ? `RPE ${rpe.text}` : ""}</span>}
                 </button>
                 </Fold>
               );

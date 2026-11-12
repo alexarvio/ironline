@@ -250,6 +250,50 @@ export function VideoAskRow({ ask, coachName, onOpen, tabIndex }: { ask: VideoAs
   );
 }
 
+/** Where an ask stands on the workout (12 Nov, Alex: docs/boards/workout-a2-mockup.html): asked and nothing sent amber,
+ *  sent with no reply grey, replied green. */
+export const askState = (ask: VideoAsk): "asked" | "sent" | "replied" => (ask.reply ? "replied" : ask.src ? "sent" : "asked");
+
+/** The ask's round button on the exercise page's eyebrow line (12 Nov, Alex: A2 of docs/boards/workout-a2-mockup.html):
+ *  the video, or the camera for a photo, 14 in a 32px ring in its state's colour; a tap opens the sheet. Both even. */
+export function VideoAskTool({ ask, coachName, onOpen }: { ask: VideoAsk; coachName: string; onOpen: () => void }) {
+  const state = askState(ask);
+  const photo = ask.media === "photo";
+  const words = state === "replied" ? `${coachName} replied` : state === "sent" ? (photo ? "Photo sent" : "Video sent") : `${coachName} asked for a ${photo ? "photo" : "video"}`;
+  return (
+    <button type="button" className={`wo-ask-tool ${state}`} onClick={onOpen} aria-label={words} title={words}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+        <MediaPaths photo={photo} fixed />
+      </svg>
+      <RingEdge size={32} stroke={1.5} />
+    </button>
+  );
+}
+
+/** The ask's line under the exercise's name (12 Nov, Alex: A2 and "the pill" of docs/boards/workout-a2-mockup.html), only
+ *  while there is something to do or see: a dot and the words in the state's colour, the action on the right as a pill
+ *  (Record the ink one, View the white one), the coach's ask note grey under it in quotes. A reply once seen says nothing
+ *  here; its green ring on the eyebrow line stays. The one pill in a row, by choice (docs/DESIGN-RULES.md §6). */
+export function VideoAskLine({ ask, coachName, onOpen }: { ask: VideoAsk; coachName: string; onOpen: () => void }) {
+  const state = askState(ask);
+  if (state === "replied" && ask.reply?.seen) return null;
+  const photo = ask.media === "photo";
+  const words = state === "replied" ? `${coachName} replied` : state === "sent" ? (photo ? "Photo sent" : "Video sent") : `${coachName} asked for a ${photo ? "photo" : "video"}`;
+  const note = state === "asked" && !ask.fromClient ? ask.note?.trim() : null;
+  return (
+    <div className={`wo-askline ${state}`}>
+      <button type="button" className="wo-askline-row" onClick={onOpen}>
+        <span className="wo-askline-words">
+          <i aria-hidden="true" />
+          {words}
+        </span>
+        <span className={`wo-askline-pill${state === "asked" ? " ink" : ""}`}>{state === "asked" ? "Record" : "View"}</span>
+      </button>
+      {note && <p className="wo-askline-note">“{note}”</p>}
+    </div>
+  );
+}
+
 /** The mark on a finished session's exercise row that says it holds a photo or video (12 Nov, Alex: B of
  *  docs/boards/workout-hidden-mockup.html; as the coach's rows carry it): the video, or the camera for a photo, 12px in
  *  a 22px ring, green once sent or replied to, grey while only asked. */
