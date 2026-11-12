@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import type { LibraryPick } from "../workoutShared";
 import { createPortal } from "react-dom";
@@ -61,6 +61,10 @@ export default function SwapExerciseDialog({
   // The library exercise the field holds, when it was picked from the list (13 Nov, Alex).
   const [ownLib, setOwnLib] = useState<number | null>(current && !inList ? current.libraryExerciseId : null);
   const [listOpen, setListOpen] = useState(false);
+  const fieldRef = useRef<HTMLLabelElement>(null);
+  // Where the list floats (13 Nov, Alex: in the card it grew the card and everything jumped): fixed under the field,
+  // over the card, no taller than the room left above the keyboard; it follows the field as the card moves.
+  const [place, setPlace] = useState<{ left: number; top: number; width: number; maxH: number } | null>(null);
   const [ownOn, setOwnOn] = useState(picked == null);
   const needle = own.trim().toLowerCase();
   const cardio = exercise.group === "cardio";
@@ -113,6 +117,29 @@ export default function SwapExerciseDialog({
       180
     );
   };
+  const showList = listOpen && ownLib == null && matches.length > 0;
+  useLayoutEffect(() => {
+    if (!showList) return;
+    let raf = 0;
+    let last = "";
+    const measure = () => {
+      raf = requestAnimationFrame(measure);
+      const r = fieldRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const vv = window.visualViewport;
+      const bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+      const top = r.bottom + 6;
+      const next = { left: r.left, top, width: r.width, maxH: Math.max(88, Math.min(264, bottom - top - 12)) };
+      const key = `${next.left}|${next.top}|${next.width}|${next.maxH}`;
+      if (key !== last) {
+        last = key;
+        setPlace(next);
+      }
+    };
+    measure();
+    return () => cancelAnimationFrame(raf);
+  }, [showList]);
+
   const targetLine = useMemo(() => {
     const parts = [`${targets.sets} × ${targets.time ? targets.time : targets.reps || "—"}`];
     if (targets.rpe != null && !targets.time) parts.push(`RPE ${targets.rpe}`);
@@ -225,7 +252,7 @@ export default function SwapExerciseDialog({
 
           <div className="sw-block">
             <span className="sw-label">{list.length ? "Or write what you did" : "What did you do instead?"}</span>
-            <label className={`sw-field${ownOn ? " on" : ""}`}>
+            <label ref={fieldRef} className={`sw-field${ownOn ? " on" : ""}`}>
               {/* No sample in it (13 Nov, Alex: no "e.g."): the library comes up under it as the name is typed. */}
               <input
                 value={own}
@@ -233,13 +260,15 @@ export default function SwapExerciseDialog({
                 enterKeyHint="done"
                 autoComplete="off"
                 role="combobox"
-                aria-expanded={listOpen && matches.length > 0}
+                aria-expanded={showList}
                 aria-controls="sw-lib"
                 aria-label="What you did instead"
                 onFocus={() => {
                   setOwnOn(true);
                   setListOpen(true);
                 }}
+                // Gone with the keyboard; a moment after, so a tap on a row still lands.
+                onBlur={() => window.setTimeout(() => setListOpen(false), 220)}
                 onChange={(e) => {
                   setOwn(e.target.value);
                   setOwnLib(null);
@@ -263,9 +292,10 @@ export default function SwapExerciseDialog({
                 }}
               />
             </label>
-            {listOpen && ownLib == null && matches.length > 0 && (
-              // The library as it is typed, its group grey on the right, as the admin's search (13 Nov, Alex).
-              <div className="sw-lib" id="sw-lib" role="listbox" aria-label="From the library">
+            {showList && place && createPortal(
+              // The library as it is typed, its group grey on the right, as the admin's search (13 Nov, Alex): floating, so
+              // nothing in the card moves. A portal: the card's transform would hold a fixed list inside it.
+              <div className="sw-lib" id="sw-lib" role="listbox" aria-label="From the library" style={{ left: place.left, top: place.top, width: place.width, maxHeight: place.maxH }} onClick={(e) => e.stopPropagation()}>
                 {matches.map((m) => (
                   <button
                     key={m.id}
@@ -285,7 +315,8 @@ export default function SwapExerciseDialog({
                     <span className="sw-lib-group">{groupLabel(m.group)}</span>
                   </button>
                 ))}
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 
