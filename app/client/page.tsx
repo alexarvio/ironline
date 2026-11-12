@@ -122,8 +122,7 @@ import PhaseObjectives from "./PhaseObjectives";
 import { FEATURES } from "../lib/features";
 import PushToggle from "./PushToggle";
 import { ConnectedApps } from "./HealthSync";
-import { pushPublicKey } from "../lib/push";
-import { fcmConfigured } from "../lib/fcm";
+import { nativePushReady, pushPublicKey } from "../lib/push";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
 import NotificationsScreen, { type NotifView } from "./notifications/NotificationsScreen";
 import { categorize, clockToZone, isListed, titleAndBody } from "../lib/notificationTypes";
@@ -150,9 +149,7 @@ import {
   DumbbellIcon,
   HomeIcon,
 } from "../components/icons";
-import {
-  setClientPreferenceAction,
-} from "../lib/actions";
+import PrefSwitch from "./PrefSwitch";
 
 // Reads live from the JSON store on every request — without this, Next
 // statically prerenders this page at build time (before any real data
@@ -1089,25 +1086,10 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 
       <SettingsFold title="Preferences">
         <div className="home-dark-rows">
-          <PushToggle publicKey={pushKey} nativeReady={fcmConfigured()} />
-          {toggleDefs.map((t) => {
-            const on = prefs[t.key];
-            return (
-              <form key={t.key} action={setClientPreferenceAction}>
-                <input type="hidden" name="clientId" value={CLIENT_ID} />
-                <input type="hidden" name="key" value={t.key} />
-                <input type="hidden" name="value" value={(!on).toString()} />
-                <button type="submit" className="settings-toggle-row">
-                  <div className="home-dark-row-body">
-                    <div className="home-dark-row-title">{t.label}</div>
-                  </div>
-                  <span className={`settings-switch${on ? " on" : ""}`} aria-hidden="true">
-                    <span className="settings-switch-knob" />
-                  </span>
-                </button>
-              </form>
-            );
-          })}
+          <PushToggle publicKey={pushKey} nativeReady={nativePushReady()} />
+          {toggleDefs.map((t) => (
+            <PrefSwitch key={t.key} clientId={CLIENT_ID} prefKey={t.key} label={t.label} on={prefs[t.key]} />
+          ))}
         </div>
       </SettingsFold>
 

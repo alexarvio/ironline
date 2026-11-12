@@ -41,10 +41,20 @@ npx cap open android
   Actions macOS runners). Signing needs the Apple Developer account for
   Arvio Enterprises LLC.
 
+## Push notifications
+
+- iPhone (12 Nov): Apple's own push (APNs), no Firebase. `AppDelegate.swift` hands
+  the phone's token to the push plugin, the page posts it to `/api/push` as kind
+  `apns` (`app/client/NativePush.tsx`), and `app/lib/apns.ts` sends to it. Needs
+  `aps-environment` in `App.entitlements` (the TestFlight workflow signs it as
+  production), the Push Notifications capability on the App ID, and on Railway
+  `APNS_KEY` (the .p8 text), `APNS_KEY_ID`, `APNS_TEAM_ID`. Without them the
+  Settings switch says `Not available`.
+- Android: Firebase (FCM), `app/lib/fcm.ts`, `FCM_SERVICE_ACCOUNT` on the server
+  and `google-services.json` in `android/app`.
+
 ## Still to do before the stores
 
-- Native push: APNs on iPhone and FCM on Android. `push_subscriptions` already
-  has a kind for it. Hide the web PushToggle inside the app.
 - Apple Health and Health Connect for steps.
 - Sign-in once Clerk goes live: Google blocks sign-in inside app webviews, so
   use Clerk's native flow or the system browser. Apple also requires

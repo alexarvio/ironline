@@ -84,7 +84,7 @@ jobs:
 
       - name: Archive
         # Built unsigned (11 Nov: signing at this step wants a development profile, and that wants a registered device),
-        # then given a stand-in signature carrying the app's entitlements (HealthKit); the upload below signs it for the
+        # then given a stand-in signature carrying the app's entitlements (HealthKit, push); the upload below signs it for the
         # App Store, which needs no device.
         run: |
           xcodebuild archive \
@@ -100,7 +100,12 @@ jobs:
           if [ -d "$APP/Frameworks" ]; then
             find "$APP/Frameworks" -maxdepth 1 \( -name '*.framework' -o -name '*.dylib' \) -print -exec codesign --force --sign - {} \;
           fi
-          codesign --force --sign - --entitlements ios/App/App/App.entitlements "$APP"
+          # Push for TestFlight and the App Store is Apple's production service (the file says development, for a
+          # build from Xcode), so the archive carries production and matches the App Store profile.
+          ENT="$RUNNER_TEMP/App.entitlements"
+          cp ios/App/App/App.entitlements "$ENT"
+          /usr/libexec/PlistBuddy -c "Set :aps-environment production" "$ENT"
+          codesign --force --sign - --entitlements "$ENT" "$APP"
           codesign -d --entitlements - "$APP"
 
       - name: Upload to TestFlight

@@ -3,8 +3,7 @@ import { requireCoach } from "../lib/auth";
 import { getCoachProfile, localDateStr } from "../lib/queries";
 import { loadPhoneCalendar } from "./calendar";
 import { listPhoneVideos } from "../lib/coachPhone";
-import { pushPublicKey } from "../lib/push";
-import { fcmConfigured } from "../lib/fcm";
+import { nativePushReady, pushPublicKey } from "../lib/push";
 import { loadChatDock } from "../admin/redesign/loaders";
 import CoachApp from "./CoachApp";
 import "./coach.css";
@@ -41,7 +40,7 @@ export default async function CoachPage() {
       calendar={loadPhoneCalendar(coach.id, localDateStr(monday), today)}
       today={today}
       coach={{ name, photoPath: profile?.avatar_path ?? null }}
-      push={{ publicKey: pushPublicKey(), nativeReady: fcmConfigured() }}
+      push={{ publicKey: pushPublicKey(), nativeReady: nativePushReady() }}
     />
   );
 }
