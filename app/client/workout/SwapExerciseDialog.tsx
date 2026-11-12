@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef,
 import type React from "react";
 import type { LibraryPick } from "../workoutShared";
 import { createPortal } from "react-dom";
+import { keyboardCovered } from "../keyboard";
 import { groupColour } from "../../lib/muscleGroups";
 import { pic } from "../../lib/pic";
 import { Bars } from "../Bars";
@@ -126,8 +127,8 @@ export default function SwapExerciseDialog({
       raf = requestAnimationFrame(measure);
       const r = fieldRef.current?.getBoundingClientRect();
       if (!r) return;
-      const vv = window.visualViewport;
-      const bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+      // The keyboard as the rest of the app reads it (keyboard.ts): in the app the page never shrinks to it.
+      const bottom = window.innerHeight - keyboardCovered();
       const top = r.bottom + 6;
       const next = { left: r.left, top, width: r.width, maxH: Math.max(88, Math.min(264, bottom - top - 12)) };
       const key = `${next.left}|${next.top}|${next.width}|${next.maxH}`;
