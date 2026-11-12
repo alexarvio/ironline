@@ -266,8 +266,10 @@ export default function ExercisePage({
     ...warm.flatMap((w, i): Row[] => (warmShown(w) ? [{ id: `w${i}`, kind: "warm", n: i + 1, label: `W${i + 1}`, plan: w.plan, entered: w.entered, saved: w.saved, extra: true }] : [])),
     ...workRows,
   ];
-  // The + Warm-up over set 1 (12 Nov, Alex): while no working set is in and there is room for another, as the ⋯'s item.
-  const warmAddShown = doneCount === 0 && warm.length < MAX_WARMUPS;
+  // The + Warm-up over set 1 (12 Nov, Alex: A of docs/boards/workout-hidden-mockup.html): until every set is in, as an
+  // untouched warm-up goes, and while there is room for another, as the ⋯'s item. It folds away on the shared fold, never
+  // unmounting, so set 1 and its steppers never jump up under a finger mid-tap.
+  const warmAddShown = !allDone && warm.length < MAX_WARMUPS;
   const firstUnsaved = (after: RowId | null = null) => {
     const from = after ? rows.findIndex((r) => r.id === after) + 1 : 0;
     return rows.slice(from).find((r) => !r.saved)?.id ?? rows.slice(0, from).find((r) => !r.saved)?.id ?? null;
@@ -757,11 +759,13 @@ export default function ExercisePage({
         <div className="lw-rows">
           {rows.map((row) => (
             <Fragment key={row.id}>
-            {row.id === "s1" && warmAddShown && (
+            {row.id === "s1" && (
               // On the spine right above set 1 (12 Nov, Alex: A of docs/boards/workout-hidden-mockup.html): a + in a faint
               // amber ring and Warm-up in amber words, where a warm-up lands, after any there already, so each tap adds the
-              // next. Exactly the ⋯'s Add a warm-up set; gone once a working set is in.
-              <button key="warm-add" type="button" className="lw-warmadd" onClick={addWarm}>
+              // next. Exactly the ⋯'s Add a warm-up set; folded away once every set is in.
+              <div key="warm-add" className={`so-fold lw-warmadd-fold${warmAddShown ? " open" : ""}`} aria-hidden={!warmAddShown} inert={!warmAddShown}>
+              <div className="so-fold-in">
+              <button type="button" className="lw-warmadd" onClick={addWarm}>
                 <span className="lw-warmadd-plus" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden="true" focusable="false">
                     <path vectorEffect="non-scaling-stroke" d="M12 5v14M5 12h14" />
@@ -770,6 +774,8 @@ export default function ExercisePage({
                 </span>
                 Warm-up
               </button>
+              </div>
+              </div>
             )}
             {(() => {
             const open = row.id === current;

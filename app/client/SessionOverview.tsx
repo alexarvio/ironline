@@ -346,8 +346,9 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
   if (done) {
     // What was sent and the coach's reply, as the workout shows them (12 Nov, Alex: B of
     // docs/boards/workout-hidden-mockup.html): a mark on the row, so a shut session says which exercise holds something,
-    // and the workout's own row under the sets, opening the same sheet.
-    const sent = askShown(ask, swapped) ? ask : null;
+    // and the workout's own row under the sets, opening the same sheet. Only this session's own: a reply carried from an
+    // earlier session is not shown on a finished one.
+    const sent = askShown(ask, swapped, true) ? ask : null;
     return (
       <div ref={cardRef} className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
         <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
