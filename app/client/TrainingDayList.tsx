@@ -255,9 +255,8 @@ export default function TrainingDayList({
       setStartProblem(`Finish ${liveSession.label} first.`);
       return;
     }
-    const regular = (serverDays.find((d) => d.key === key)?.gyms ?? []).filter((g) => !g.once);
-    if (regular.length === 1) void duplicate(key, regular[0]);
-    else setCopyGymFor(key);
+    // Always the gym question, one gym too (13 Nov, Alex), so One-time gym and Add a gym are there.
+    setCopyGymFor(key);
   };
   // An answer lost on the way keeps its key, so the next tap on that session and a late landing are one duplicate.
   const copyUnanswered = useRef<{ source: number; key: string } | null>(null);
