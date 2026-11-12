@@ -62,8 +62,6 @@ import {
   describeMessageLink,
   getNutritionGoalsSummary,
   getFoodDiary,
-  listFoodEntries,
-  listFoodMeals,
   getNutritionPlan,
   getCurrentPhase,
   getCoachFirstName,
@@ -963,16 +961,6 @@ function NutritionTab({ CLIENT_ID, diary, readOnly = false }: { CLIENT_ID: numbe
         note: c.note ?? "",
         kcal,
         delta,
-        // What was eaten, meal by meal, for the row's fold (10 Nov, Alex).
-        meals: (() => {
-          const entries = listFoodEntries(CLIENT_ID, c.date);
-          return listFoodMeals(CLIENT_ID, c.date)
-            .map((m) => ({
-              label: m.label,
-              foods: entries.filter((e) => e.meal === m.id).map((e) => ({ name: e.name, amount: e.serving || `${Math.round(e.grams)} g`, kcal: Math.round(e.kcal) })),
-            }))
-            .filter((m) => m.foods.length > 0);
-        })(),
       };
     });
 

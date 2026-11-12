@@ -152,6 +152,15 @@ export function useFoodFocus() {
   return useContext(FoodFocusContext);
 }
 
+// A day of Last 7 days opening in the diary above it (12 Nov, Alex). Null outside the diary.
+const DiaryDayContext = createContext<((date: string) => void) | null>(null);
+
+export const DiaryDayProvider = DiaryDayContext.Provider;
+
+export function useDiaryDay() {
+  return useContext(DiaryDayContext);
+}
+
 // Whether this tab is the one on screen, a pushed screen over it or not (TabActive also turns false under the chat).
 const TabShownContext = createContext(true);
 

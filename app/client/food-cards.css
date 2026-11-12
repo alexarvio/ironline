@@ -34,17 +34,11 @@
 /* Copy a meal under a meal's search (11 Nov, Alex): the Saved meals pill, as tall as the search box over it. */
 .fdi-saved-pill.fdi-copy-pill { min-height: 48px; }
 .fdi-saved-row.fdi-saved-this > .fdi-saved-pill > span, button.fdi-saved-pill.fdi-saved-this > span { flex: none; }
-/* Nutrition's Last 7 days: a day with food folds open on what was eaten (10 Nov, Alex). */
+/* Nutrition's Last 7 days: a tap opens the day in the diary above (12 Nov, Alex); pressed, it dims a touch. */
 .nd-day-btn { width: 100%; border: 0; background: none; font: inherit; text-align: left; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nd-day-chev { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; color: #98A2B3; }
 .nd-day-chev svg { width: 14px; height: 14px; }
-.nd-day-foods { padding: 0 4px 12px; }
-.nd-day-meal { margin-top: 10px; }
-.nd-day-meal:first-child { margin-top: 2px; }
-.nd-day-meal-name { margin-bottom: 4px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
-.nd-day-food { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 4px 0; }
-.nd-day-food-name { min-width: 0; font-size: 14px; font-weight: 500; color: #141a24; }
-.nd-day-food-facts { flex: none; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.nd-day-btn:active { opacity: 0.6; }
 /* Create a meal or a day (10 Nov, Alex). */
 .fdi-make-name { display: block; box-sizing: border-box; width: 100%; height: 48px; padding: 0 14px; border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 16px; font-weight: 500; color: #141a24; outline: none; }
 .fdi-make-name:focus { box-shadow: inset 0 0 0 1px #141a24; }
