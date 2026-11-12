@@ -195,6 +195,16 @@ export default function WorkoutScreen({
     setMenuOpen((o) => !o);
   };
   const [gymOpen, setGymOpen] = useState(false);
+  // The gym pill's own drop (13 Nov, Alex: "just have a little drop down there with the options of the gym"): the gyms
+  // to switch to, under the pill; One-time gym and Add a gym stay in the picker, behind ⋯ → Change gym.
+  const [gymDrop, setGymDrop] = useState<{ top: number; left: number } | null>(null);
+  useDismiss(!!gymDrop, () => setGymDrop(null));
+  const toggleGymDrop = (e: React.MouseEvent<HTMLElement>) => {
+    if (gymDrop) return setGymDrop(null);
+    const box = screenRef.current?.getBoundingClientRect();
+    const pill = e.currentTarget.getBoundingClientRect();
+    setGymDrop(box ? { top: pill.bottom - box.top + 8, left: pill.left + pill.width / 2 - box.left } : null);
+  };
   // The exercise on screen, for the menu's note / warm-up / swap and the chat.
   const currentEx = current.kind === "exercise" ? day.exercises[current.index] : null;
   const currentCardio = current.kind === "cardio" ? day.cardio[current.index] : null;
@@ -347,7 +357,8 @@ export default function WorkoutScreen({
           <button
             type="button"
             className={`wo-pill${ended ? " ended" : ""}${gym ? " has-gym" : ""}`}
-            onClick={() => day.gyms.length > 0 && setGymOpen(true)}
+            onClick={(e) => day.gyms.length > 0 && (gymId == null ? setGymOpen(true) : toggleGymDrop(e))}
+            aria-expanded={gymDrop ? true : undefined}
             disabled={day.gyms.length === 0}
             aria-label={`${gymName ?? (editing ? `Editing ${day.title}` : day.title)},${clock(ms)} elapsed${day.gyms.length > 0 ? ". Switch gym" : ""}`}
           >
@@ -386,6 +397,39 @@ export default function WorkoutScreen({
             </button>
           ))}
         </div>
+        {gymDrop && (
+          <>
+            <button type="button" className="wo-menu-scrim" aria-label="Close" onClick={() => setGymDrop(null)} />
+            <div className="wo-menu wo-gymdrop" role="menu" aria-label="Switch gym" style={{ top: gymDrop.top, left: gymDrop.left }}>
+              {day.gyms
+                .filter((g) => !g.once || g.id === gymId)
+                .sort((a, b) => Number(b.id === gymId) - Number(a.id === gymId) || b.sessions - a.sessions)
+                .map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={g.id === gymId}
+                    className={`wo-menu-row wo-gymdrop-row${g.id === gymId ? " on" : ""}`}
+                    onClick={() => {
+                      setGymDrop(null);
+                      if (g.id !== gymId) onPickGym(g);
+                    }}
+                  >
+                    <span className="wo-gymdrop-face" style={{ background: gymColor(g.color).hex }} aria-hidden="true">
+                      <BadgeFace name={g.name} logo={g.logo} />
+                    </span>
+                    <span className="wo-gymdrop-name">{g.name}</span>
+                    {g.id === gymId && (
+                      <svg className="wo-gymdrop-check" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m5 12.5 4.5 4.5L19 7.5" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+            </div>
+          </>
+        )}
         {menuOpen && (
           <>
             <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />

@@ -60,19 +60,45 @@ export default function VoiceRecordButton({ onRecorded, className = "", disabled
   const start = async (lockIt: boolean) => {
     if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) return setPhase("denied");
     locked.current = lockIt;
+    // The bar in the tap's own frame (13 Nov, Alex: "it takes two seconds to react"): the phone's microphone can take a
+    // moment to open, so nothing waits on it; the time starts once it records.
+    measure();
+    setSecs(0);
+    setLevels([]);
+    setPhase(lockIt ? "locked" : "holding");
+    // The wave's audio started inside the tap: an iPhone keeps one made after it silent (the wave stayed flat).
+    let ctx: AudioContext | null = null;
+    try {
+      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (Ctx) {
+        ctx = new Ctx();
+        void ctx.resume().catch(() => {});
+      }
+    } catch {
+      ctx = null;
+    }
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // A voice, clean (13 Nov, Alex: "the quality is so bad"): one channel, echo and noise taken out, the level kept even.
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch {
+      void ctx?.close().catch(() => {});
       return setPhase("denied");
     }
-    // Let go while the phone was asking for the microphone: nothing is recorded.
+    // Let go (or slid away) while the microphone was opening: nothing is recorded.
     if (!held.current && !locked.current) {
       stream.getTracks().forEach((t) => t.stop());
-      return;
+      void ctx?.close().catch(() => {});
+      return setPhase("idle");
     }
-    const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "";
-    const r = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "";
+    let r: MediaRecorder;
+    try {
+      // 96 kbps, well over the phone's own default: a voice as it sounds.
+      r = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), audioBitsPerSecond: 96000 });
+    } catch {
+      r = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    }
     chunks.current = [];
     ending.current = "discard";
     r.ondataavailable = (e) => e.data.size > 0 && chunks.current.push(e.data);
@@ -97,14 +123,9 @@ export default function VoiceRecordButton({ onRecorded, className = "", disabled
     rec.current = r;
     r.start();
     startedAt.current = Date.now();
-    setSecs(0);
-    measure();
-    setPhase(locked.current ? "locked" : "holding");
     // The live wave: the microphone's loudness a few times a second, the newest on the right.
     try {
-      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (Ctx) {
-        const ctx = new Ctx();
+      if (ctx) {
         const an = ctx.createAnalyser();
         an.fftSize = 512;
         ctx.createMediaStreamSource(stream).connect(an);
@@ -126,6 +147,10 @@ export default function VoiceRecordButton({ onRecorded, className = "", disabled
       }
     } catch {
       /* no wave, the recording goes on */
+    }
+    if (!audio.current) {
+      // No wave to drive the time: a plain tick until it stops.
+      const t = window.setInterval(() => (rec.current?.state === "recording" ? setSecs(Math.floor((Date.now() - startedAt.current) / 1000)) : window.clearInterval(t)), 500);
     }
   };
 
@@ -172,6 +197,12 @@ export default function VoiceRecordButton({ onRecorded, className = "", disabled
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", onMove);
     };
+  }, [phase]);
+  // While holding or recording nothing on the page is selected or called out (13 Nov, Alex: "it selects elements").
+  useEffect(() => {
+    const on = phase === "holding" || phase === "locked";
+    document.documentElement.classList.toggle("vrec-on", on);
+    return () => document.documentElement.classList.remove("vrec-on");
   }, [phase]);
   // Leaving the screen mid-recording throws it away.
   useEffect(
