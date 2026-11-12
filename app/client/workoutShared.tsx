@@ -57,6 +57,8 @@ export type SessionExercise = {
   lastWarmups: { weight: number | null; reps: number | null }[];
   /** The coach asked for a video of this exercise in this session. */
   videoRequest: VideoAsk | null;
+  /** The set numbers that were a personal best (13 Nov, Alex: marked on a finished session, as the coach's rows). */
+  pbSets?: number[];
   /** With gyms: the weight target and "My notes" at each gym, by gym id. */
   gymTargets?: Record<number, number | null>;
   gymNotes?: Record<number, string>;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, useTransition } from "react";
+import { Fragment, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Bars } from "./Bars";
 import { addFreeCardioAction, addFreeExerciseAction, createFreeSessionAction, duplicateSessionAction, removeFreeSessionAction } from "../lib/actions";
@@ -426,11 +426,30 @@ export default function TrainingDayList({
                       // the mark at the row's end, the workout's own row under the sets, the same sheet. Only this
                       // session's own: a reply carried from an earlier session is not shown here.
                       const ask = askShown(ex.videoRequest, ex.swap != null, true) ? ex.videoRequest : null;
+                      // The coach's marks on their own rows, here too (13 Nov, Alex: "icons… for like picture uploaded,
+                      // personal bests"): from the left PB, sets added or taken off, the photo or video, the swap.
+                      const pbs = new Set(ex.pbSets ?? []);
+                      const extra = sets.filter((l) => l.setNumber > ex.sets).length;
+                      const removed = ex.coachSets != null && ex.coachSets > ex.sets ? ex.coachSets - ex.sets : 0;
                       return (
                         <div key={ex.id} className={`tr-x-ex${isDone(ex) ? " done" : ""}`}>
                           <span className="tr-x-head">
                             <span className="tr-x-name">{shownName(ex)}</span>
-                            {ask && <VideoAskMark ask={ask} />}
+                            {(pbs.size > 0 || extra > 0 || removed > 0 || ask || ex.swap) && (
+                              <span className="tr-x-marks">
+                                {pbs.size > 0 && <XMark kind="pb" label={pbs.size > 1 ? `${pbs.size} personal bests` : "Personal best"}>PB</XMark>}
+                                {extra > 0 && <XMark kind="extra" label={`${extra} extra set${extra === 1 ? "" : "s"}`}>+{extra}</XMark>}
+                                {removed > 0 && <XMark kind="removed" label={`${removed} set${removed === 1 ? "" : "s"} taken off`}>−{removed}</XMark>}
+                                {ask && <VideoAskMark ask={ask} />}
+                                {ex.swap && (
+                                  <XMark kind="swap" label={`Instead of ${ex.name}`}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                      <path vectorEffect="non-scaling-stroke" d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4" />
+                                    </svg>
+                                  </XMark>
+                                )}
+                              </span>
+                            )}
                           </span>
                           {sets.length === 0 ? (
                             <span className="tr-x-none">Not logged</span>
@@ -438,7 +457,7 @@ export default function TrainingDayList({
                             sets.map((l) => (
                               <span key={l.id} className="tr-x-set">
                                 <span className="tr-x-n">
-                                  <Bars parts={[`Set ${l.setNumber}`, l.setNumber > ex.sets && "Extra"]} />
+                                  <Bars parts={[`Set ${l.setNumber}`, l.setNumber > ex.sets && "Extra", pbs.has(l.setNumber) && <b key="pb" className="tr-x-pb">PB</b>]} />
                                 </span>
                                 <span className="tr-x-v">
                                   <Bars parts={[`${l.weight != null ? `${roundTo(l.weight, 2)} kg` : "–"} × ${l.reps ?? "–"}`, l.rpe != null && <small key="r">RPE {l.rpe}</small>]} />
@@ -664,5 +683,16 @@ export default function TrainingDayList({
         host
       )}
     </>
+  );
+}
+
+/** A mark on a finished session's exercise (13 Nov, Alex), drawn as the coach's rows draw theirs: 22px rings, PB and a set
+ *  added green, a set taken off rust, a swap grey (the client's amber is the warm-up's and the ask's alone); the photo or video is VideoAskMark beside them. */
+function XMark({ kind, label, children }: { kind: "pb" | "extra" | "removed" | "swap"; label: string; children: ReactNode }) {
+  return (
+    <span className={`tr-xmark ${kind}`} role="img" aria-label={label} title={label}>
+      {children}
+      <RingEdge size={22} stroke={1.5} />
+    </span>
   );
 }

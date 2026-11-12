@@ -150,6 +150,7 @@ import {
   HomeIcon,
 } from "../components/icons";
 import PrefSwitch from "./PrefSwitch";
+import { personalBests } from "../lib/homeBoardData";
 
 // Reads live from the JSON store on every request — without this, Next
 // statically prerenders this page at build time (before any real data
@@ -755,6 +756,13 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
           const library = new Map(coachId != null ? listExercises(coachId).map((e) => [e.id, e] as const) : []);
           const libraryName = new Map([...library].map(([id, e]) => [id, e.name] as const));
           const videoReplies = listVideoReplies(CLIENT_ID);
+          // Each exercise's personal bests, as the coach's rows mark them (13 Nov, Alex: the marks on a finished session).
+          let bests: ReturnType<typeof personalBests> = new Map();
+          try {
+            bests = personalBests(CLIENT_ID);
+          } catch {
+            /* none shown */
+          }
           return (
             <>
             <div className="tr-sessions-head">
@@ -835,6 +843,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   myNote: myNotes.get(a.exercise_id) || latestNotes.get(a.exercise_id) || "",
                   warmups: (a.warmup_sets ?? []).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
                   lastWarmups: getLastWarmupSets(a.id).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
+                  pbSets: bests.get(a.id)?.sets ?? [],
                   videoRequest: (() => {
                     const r = videoAsks.get(a.id);
                     if (r) return { id: r.id, note: r.note, src: r.file_path, sentAt: r.submitted_at, reply: videoReplies.find((x) => x.id === r.id) ?? null, fromClient: !!r.from_client, media: r.media ?? "video", about: r.about ?? null, clientNote: r.client_note ?? null };
