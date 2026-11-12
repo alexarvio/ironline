@@ -311,12 +311,26 @@ export default function AppShell({
   }, []);
   // The phone's timezone, for the server: Home's greeting and a call's time
   // are drawn in it from the first paint instead of changing a moment later.
+  // A new zone (12 Nov, Alex: landing in Tokyo with a call on Sunday) reads the page again, so what the server words in
+  // it (a notification's time, the greeting) follows at once; checked again each time the app comes back to the front.
   useEffect(() => {
     if (readOnly) return;
-    try {
-      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (zone) document.cookie = `ironline_tz=${encodeURIComponent(zone)}; path=/; max-age=31536000; samesite=lax`;
-    } catch {}
+    const check = () => {
+      try {
+        const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (!zone) return;
+        const had = document.cookie.split("; ").find((c) => c.startsWith("ironline_tz="))?.slice("ironline_tz=".length);
+        if (had === encodeURIComponent(zone)) return;
+        document.cookie = `ironline_tz=${encodeURIComponent(zone)}; path=/; max-age=31536000; samesite=lax`;
+        if (had) router.refresh();
+      } catch {}
+    };
+    check();
+    const back = () => document.visibilityState === "visible" && check();
+    document.addEventListener("visibilitychange", back);
+    return () => document.removeEventListener("visibilitychange", back);
+    // Once; router is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Which row the tab we're switching to should open on arrival, set only by
   // a notification's deep link and cleared by any ordinary nav tap.
