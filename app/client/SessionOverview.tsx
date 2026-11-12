@@ -9,7 +9,8 @@ import { ChevronLeftIcon } from "../components/icons";
 import DoneCheck from "../components/DoneCheck";
 import GymPickerDialog from "./GymPickerDialog";
 import { Bars } from "./Bars";
-import { askShown, VideoAskMark, VideoAskRow, VideoAskSheet } from "./VideoAskSheet";
+import { askShown, VideoAskRow, VideoAskSheet } from "./VideoAskSheet";
+import ExerciseMarks from "./ExerciseMarks";
 import { dayWords } from "../lib/clientDates";
 import type { GymOption } from "./GymPickerDialog";
 import {
@@ -351,7 +352,8 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
           <span className="so-card-main">
             <span className="so-card-name">{shownName(exercise)}</span>
           </span>
-          {sent && <VideoAskMark ask={sent} />}
+          {/* The coach's marks, in their colours, as on the workout's finish list (13 Nov, Alex). */}
+          <ExerciseMarks ex={exercise} finished />
           {delta != null && delta !== 0 && (
             <span className={`so-delta${delta > 0 ? " up" : ""}`}>
               {delta > 0 ? "+" : "−"}
@@ -372,7 +374,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
                   .map((l) => (
                     <div key={l.id} className="so-set">
                       <span className="so-set-n">
-                        <Bars parts={[`Set ${l.setNumber}`, l.setNumber > exercise.sets && "Extra"]} />
+                        <Bars parts={[`Set ${l.setNumber}`, l.setNumber > exercise.sets && "Extra", exercise.pbSets?.includes(l.setNumber) && <b key="pb" className="tr-x-pb">PB</b>]} />
                       </span>
                       <span>{l.weight != null ? `${kgToUnit(l.weight, "kg")} kg` : "–"}</span>
                       <span>{l.reps != null ? `${l.reps} reps` : "–"}</span>

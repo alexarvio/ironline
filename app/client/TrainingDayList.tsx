@@ -13,10 +13,8 @@ import { CopyIcon, PlusIcon } from "../components/icons";
 import AddSessionSheet from "./AddSessionSheet";
 import RingEdge from "../components/RingEdge";
 import DoneCheck from "../components/DoneCheck";
-import { askShown, VideoAskRow, VideoAskSheet } from "./VideoAskSheet";
-import ExerciseMarks from "./ExerciseMarks";
 import { useFocusRef, useNavigateTab, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
-import { clock, durationMinutes, elapsedMs, fresh, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type LibraryPick, type SessionCardio, type SessionDay, type SessionExercise } from "./workoutShared";
+import { clock, durationMinutes, elapsedMs, fresh, loggedSets, plannedSets, sessionStatus, shortDate, useTicker, type LibraryPick, type SessionCardio, type SessionDay, type SessionExercise } from "./workoutShared";
 
 // The week's sessions as rows on the Training tab. A finished session (swiped
 // to its end) opens in place with its sets (16 Oct); any other row opens the
@@ -332,10 +330,6 @@ export default function TrainingDayList({
   const nextKey = currentWeek ? days.find((d) => !d.copy && sessionStatus(d, false) === "upcoming")?.key ?? null : null;
 
   const [host, setHost] = useState<HTMLElement | null>(null);
-  // The finished session open in place, if any.
-  const [expanded, setExpanded] = useState<number | null>(null);
-  // The exercise whose photo or video (and the coach's reply) is open from that fold.
-  const [videoFor, setVideoFor] = useState<SessionExercise | null>(null);
 
   return (
     <>
@@ -360,9 +354,6 @@ export default function TrainingDayList({
                   d.cardio.length ? `${d.cardio.length} cardio` : null,
                 ];
           const tone = status === "done" ? "done" : status === "unfinished" ? "unfinished" : status === "live" ? "live" : isNext ? "next" : status;
-          // A session swiped to its end (16 Oct, Alex) opens in place with what was done; the full screen is a link inside.
-          const ended = (status === "done" || status === "unfinished") && !!d.endedAt;
-          const isOpen = ended && expanded === d.key;
           // Kept on the phone and not sent yet (7 Nov): one grey fact after the bar. Refused by the server: in rust, what
           // and why, until the row is opened.
           const waiting = outbox.entries.some((e) => e.dayId === d.key);
@@ -371,13 +362,12 @@ export default function TrainingDayList({
             <Fragment key={d.key}>
             <button
               type="button"
-              className={`tr-row ${tone}${isOpen ? " open" : ""}`}
+              className={`tr-row ${tone}`}
               onClick={() => {
                 if (refused) clearNotSaved(d.key);
-                if (ended) setExpanded((k) => (k === d.key ? null : d.key));
-                else setView({ dayId: d.key, screen: d.free ? "workout" : "overview" });
+                // Straight to the session's screen, a finished one too (13 Nov, Alex: the fold showed the data twice).
+                setView({ dayId: d.key, screen: d.free && !d.endedAt ? "workout" : "overview" });
               }}
-              aria-expanded={ended ? isOpen : undefined}
             >
               <span className={`tr-row-tile ${tone}`}>
                 {/* Done, the one done check (3 Nov, Alex), on the tile's page-colour disc so the spine stays hidden. */}
@@ -416,59 +406,6 @@ export default function TrainingDayList({
               )}
               <span className="tr-row-chev" aria-hidden="true" />
             </button>
-            {ended && (
-              <div className={`ev-x tr-x${isOpen ? " open" : ""}`} aria-hidden={!isOpen}>
-                <div className="ev-x-clip">
-                  <div className="tr-x-in">
-                    {d.exercises.map((ex) => {
-                      const sets = ex.logs.slice().sort((a, b) => a.setNumber - b.setNumber);
-                      // What was sent and the coach's reply (12 Nov, Alex: B of docs/boards/workout-hidden-mockup.html):
-                      // the mark at the row's end, the workout's own row under the sets, the same sheet. Only this
-                      // session's own: a reply carried from an earlier session is not shown here.
-                      const ask = askShown(ex.videoRequest, ex.swap != null, true) ? ex.videoRequest : null;
-                      const pbs = new Set(ex.pbSets ?? []);
-                      return (
-                        <div key={ex.id} className={`tr-x-ex${isDone(ex) ? " done" : ""}`}>
-                          <span className="tr-x-head">
-                            <span className="tr-x-name">{shownName(ex)}</span>
-                            {/* The coach's marks, in their colours (13 Nov, Alex). */}
-                            <ExerciseMarks ex={ex} finished />
-                          </span>
-                          {sets.length === 0 ? (
-                            <span className="tr-x-none">Not logged</span>
-                          ) : (
-                            sets.map((l) => (
-                              <span key={l.id} className="tr-x-set">
-                                <span className="tr-x-n">
-                                  <Bars parts={[`Set ${l.setNumber}`, l.setNumber > ex.sets && "Extra", pbs.has(l.setNumber) && <b key="pb" className="tr-x-pb">PB</b>]} />
-                                </span>
-                                <span className="tr-x-v">
-                                  <Bars parts={[`${l.weight != null ? `${roundTo(l.weight, 2)} kg` : "–"} × ${l.reps ?? "–"}`, l.rpe != null && <small key="r">RPE {l.rpe}</small>]} />
-                                </span>
-                              </span>
-                            ))
-                          )}
-                          {ask && (
-                            <div className="lw so-video-past">
-                              <VideoAskRow ask={ask} coachName={coachName} onOpen={() => setVideoFor(ex)} tabIndex={isOpen ? 0 : -1} />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {d.cardio.map((c) => (
-                      <div key={`c${c.id}`} className={`tr-x-ex${c.done ? " done" : ""}`}>
-                        <span className="tr-x-name">{c.swap ?? c.name}</span>
-                        <span className="tr-x-none">{c.done ? "Done" : "Not done"}</span>
-                      </div>
-                    ))}
-                    <button type="button" className="tr-x-open" onClick={() => setView({ dayId: d.key, screen: "overview" })} tabIndex={isOpen ? 0 : -1}>
-                      Open session
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
             </Fragment>
           );
         })}
@@ -535,9 +472,6 @@ export default function TrainingDayList({
         ) : null;
       })()}
 
-      {videoFor && (
-        <VideoAskSheet ask={videoFor.videoRequest} assignmentId={videoFor.id} exerciseName={shownName(videoFor)} coachName={coachName} onClose={() => setVideoFor(null)} />
-      )}
 
       {startProblem && (
         <p className="tr-start-problem" role="alert">
