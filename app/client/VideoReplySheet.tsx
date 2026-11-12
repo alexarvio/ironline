@@ -20,6 +20,9 @@ export type VideoReplyView = {
   asked: string | null;
   /** The client's own video. */
   theirs: string | null;
+  /** When the client sent it, and whether it was a photo: what the reply answers (13 Nov). */
+  theirsAt?: string | null;
+  theirsPhoto?: boolean;
   replyNote: string | null;
   replySrc: string | null;
   repliedAt: string;

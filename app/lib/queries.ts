@@ -13904,6 +13904,9 @@ export function listVideoReplies(clientId: number) {
         week: day?.week_number ?? null,
         asked: r.note,
         theirs: r.file_path,
+        /** When it was sent, and whether it was a photo: what the reply answers (13 Nov, Alex). */
+        theirsAt: r.submitted_at,
+        theirsPhoto: r.media === "photo",
         replyNote: r.reply_note ?? null,
         replySrc: r.reply_file_path ?? null,
         repliedAt: r.replied_at!,
