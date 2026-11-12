@@ -3227,7 +3227,8 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
   const metricDefs = new Map(data.metric_definitions.map((d) => [d.id, d] as const));
   for (const e of data.metric_entries) {
     const def = metricDefs.get(e.metric_definition_id);
-    if (!def || e.value == null) continue;
+    // Steps the phone filled in are no check-in the client did (13 Nov, Alex).
+    if (!def || e.value == null || e.source === "health") continue;
     const c = checkIn(def.client_id, def.frequency, e.period);
     c.count++;
     c.latest = latestOf(c.latest, e.logged_at);
@@ -4110,6 +4111,8 @@ export type MetricEntry = {
   value: number | null;
   /** When the client saved it (ISO); missing on older rows. */
   logged_at?: string;
+  /** "health": filled from the phone, not typed (13 Nov): never a check-in on Activity. */
+  source?: "health";
 };
 
 export type MetricCadence = "daily" | "weekly" | "monthly";
@@ -4861,14 +4864,19 @@ export function applyMetricTemplateToClient(clientId: number, templateCategoryId
 
 // Upsert: logging the same metric for the same period again overwrites the
 // value rather than creating a duplicate row.
-export function setMetricEntry(metricDefinitionId: number, period: string, value: number | null, loggedAt?: string) {
+export function setMetricEntry(metricDefinitionId: number, period: string, value: number | null, loggedAt?: string, source?: "health") {
   const data = getData();
   const existing = data.metric_entries.find(
     (e) => e.metric_definition_id === metricDefinitionId && e.period === period
   );
   if (existing) {
+    // The same figure saved again is no new reading (13 Nov, Alex: a save re-dated old days on Activity): it keeps its time.
+    if (existing.value === value && existing.source === source) return;
     existing.value = value;
-    if (loggedAt) existing.logged_at = loggedAt;
+    // The phone's count growing on a day already in keeps that day's time; a typed one takes the save's.
+    if (loggedAt && !(source === "health" && existing.logged_at)) existing.logged_at = loggedAt;
+    if (source) existing.source = source;
+    else delete existing.source;
   } else {
     data.metric_entries.push({
       id: allocId("metric_entries"),
@@ -4876,6 +4884,7 @@ export function setMetricEntry(metricDefinitionId: number, period: string, value
       period,
       value,
       ...(loggedAt ? { logged_at: loggedAt } : {}),
+      ...(source ? { source } : {}),
     });
   }
   persist();

@@ -252,7 +252,7 @@ function sinceOf(ctx: Ctx): FeedBoard["since"] {
   const defs = new Map(data.metric_definitions.filter((m) => ids.has(m.client_id) && !ctx.fedIds.get(m.client_id)?.has(m.id)).map((m) => [m.id, m] as const));
   for (const e of data.metric_entries) {
     const def = defs.get(e.metric_definition_id);
-    if (!def || e.value == null) continue;
+    if (!def || e.value == null || e.source === "health") continue;
     if (def.frequency === "daily") {
       const day = (e.period ?? "").slice(0, 10);
       if (day <= today && savedSince(e.logged_at, day)) checkIns.add(`${def.client_id}:${day}`);
