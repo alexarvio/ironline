@@ -15,7 +15,15 @@ import { Bars } from "./Bars";
 // Deliberately does not import from ../lib/queries (a "use client" file
 // importing queries.ts breaks the dev server); page.tsx builds these props.
 
-type Slot = { id: number; label: string; src: string | null; /** The coach's word on how to take it (21 Oct). */ hint?: string | null };
+type Slot = {
+  id: number;
+  label: string;
+  src: string | null;
+  /** The coach's word on how to take it (21 Oct). */
+  hint?: string | null;
+  /** No longer asked (the one just finished keeps its photo, 12 Nov): never the one photo that keeps it the client's. */
+  paused?: boolean;
+};
 
 export type ProgressPicturesProps = {
   clientId: number;
@@ -102,6 +110,15 @@ export default function ProgressPicturesScreen({
     if (n === 0) setLeaving((l) => (l === period ? null : l));
   }, []);
   const keep = useCallback(() => setLeaving(null), []);
+  // Leave on one update throws away its picks alone (SheetFoot's cancel): another still holding picks asks next, with
+  // its own count, and the screen goes only once none is left.
+  const leaveFrom = (period: string) => {
+    const rest = Object.keys(unsentBy).filter((k) => k !== period && unsentBy[k] > 0);
+    const next = rest.find((k) => k === data.openSheet?.period) ?? rest[0];
+    if (!next) return onBack();
+    if (next !== data.openSheet?.period) setOpenPast(next);
+    setLeaving(next);
+  };
 
   const open = data.openSheet;
   // The sheet (and the ones before it), or two sheets side by side.
@@ -150,13 +167,15 @@ export default function ProgressPicturesScreen({
           />
         ) : data.openSheet ? (
           <div ref={openRef}>
+            {/* Its own picks and edit state for each update: a new one on top starts clean, never with the last one's. */}
             <OpenSheet
+              key={data.openSheet.period}
               clientId={data.clientId}
               sheet={data.openSheet}
               onUnsentChange={unsentChange}
               leaving={leaving === data.openSheet.period}
               onKeep={keep}
-              onLeave={onBack}
+              onLeave={() => leaveFrom(data.openSheet?.period ?? "")}
             />
           </div>
         ) : null}
@@ -184,7 +203,7 @@ export default function ProgressPicturesScreen({
                   onUnsentChange={unsentChange}
                   leaving={leaving === s.period}
                   onKeep={keep}
-                  onLeave={onBack}
+                  onLeave={() => leaveFrom(s.period)}
                 />
               ))}
             </div>
@@ -433,8 +452,37 @@ function SheetFoot({
   const saveRow = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!leaving) return;
-    const t = setTimeout(() => saveRow.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
-    return () => clearTimeout(t);
+    const row = saveRow.current;
+    if (!row) return;
+    const go = () => {
+      // Never the fold's own clip scrolled: only the page moves.
+      const clip = row.closest<HTMLElement>(".pp-app-past-clip");
+      if (clip) clip.scrollTop = 0;
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    // A past update asking comes open on its fold (and the one open before folds shut): brought into view once the
+    // folds have settled, not while it is still 0px tall. Reduced motion, or the open update, at once.
+    const fold = row.closest<HTMLElement>(".pp-app-past-fold");
+    if (!fold || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const t = setTimeout(go, 0);
+      return () => clearTimeout(t);
+    }
+    let done = false;
+    const fire = () => {
+      if (done) return;
+      done = true;
+      go();
+    };
+    const onEnd = (e: TransitionEvent) => {
+      if (e.target === fold && e.propertyName === "grid-template-rows") fire();
+    };
+    fold.addEventListener("transitionend", onEnd);
+    // The fold already open (no transition), or the event missed: both folds are done in 340ms.
+    const t = setTimeout(fire, 420);
+    return () => {
+      fold.removeEventListener("transitionend", onEnd);
+      clearTimeout(t);
+    };
   }, [leaving]);
   const { stagedCount, editing, saving, removingId } = p;
   const photos = stagedCount === 1 ? "1 photo" : `${stagedCount} photos`;
@@ -576,8 +624,9 @@ function OpenSheet({
   const inCount = sheet.slots.filter((s) => s.src).length;
   // Folded once every angle is in and nothing new is waiting.
   const collapsed = inCount === total && p.stagedCount === 0 && !p.editing && !p.saving;
-  // The one just finished is closed (12 Nov, Alex): never its last photo taken off, only changed.
-  const canRemove = !(sheet.closed && inCount === 1);
+  // The one just finished is closed (12 Nov, Alex): never its last photo taken off, only changed; nor the last on an
+  // angle still asked, which keeps it the client's (a paused angle's photo alone would hand the top to the one before).
+  const canRemove = (s: Slot) => !sheet.closed || sheet.slots.some((o) => o.id !== s.id && o.src && !o.paused);
 
   // Sent: the open sheet folds into a row like the earlier sheets below it,
   // closed by default, with Edit inside to change a photo.
@@ -636,7 +685,7 @@ function OpenSheet({
             disabled={p.saving}
             onTap={(i) => p.askPhoto(sheet.slots[i])}
             onRemove={(i) => p.removePhoto(sheet.slots[i])}
-            items={sheet.slots.map((s) => p.deckItem(s, { canRemove }))}
+            items={sheet.slots.map((s) => p.deckItem(s, { canRemove: canRemove(s) }))}
           />
 
           <SheetFoot p={p} inCount={inCount} leaving={leaving} onKeep={onKeep} onLeave={onLeave} />

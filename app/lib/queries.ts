@@ -3275,44 +3275,67 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
   });
 
   const slotsById = new Map(data.photo_slots.map((s) => [s.id, s] as const));
-  const sheets = new Map<string, { clientId: number; period: string; photos: { order: number; src: string }[]; latest: string | null }>();
-  // Photos added to or changed on an update after it closed (12 Nov, Alex): a row of their own a day, the update's own
-  // row staying on its day (a changed photo keeps its first send's time).
-  const late = new Map<string, { clientId: number; period: string; photos: { order: number; src: string }[]; latest: string | null; added: number }>();
+  // Every update's own row, on its first send's day: its on-time photos, else (all taken off since, 12 Nov) the late ones.
+  const sheets = new Map<
+    string,
+    { clientId: number; period: string; photos: { order: number; src: string }[]; latePhotos: { order: number; src: string }[]; latest: string | null }
+  >();
+  // Photos added to or changed on an update after it closed (12 Nov, Alex): a row of their own a day, each told on its
+  // own day (an added photo on the day it came, a change on the day it was made), the update's own row staying on its
+  // day (a changed photo keeps its first send's time).
+  const late = new Map<
+    string,
+    { clientId: number; period: string; photos: { order: number; src: string }[]; latest: string | null; added: number; changed: number }
+  >();
   const periodsOf = new Map<number, Set<string>>();
+  // When a closed update's last on-time photo came in, kept as it was first changed (freezePhotoSheetAngles).
+  const sentAtOf = new Map(data.photo_settings.map((s) => [s.client_id, s.photo_sheet_sent_at ?? {}] as const));
   for (const u of data.photo_uploads) {
     const slot = slotsById.get(u.slot_id);
     if (!slot) continue;
     const mine = periodsOf.get(slot.client_id) ?? new Set<string>();
     mine.add(u.period);
     periodsOf.set(slot.client_id, mine);
-    // Its latest change: a photo added late and changed since is told on the day it was changed.
-    const lateStamp = latestOf(u.late_at ?? null, u.replaced_at);
-    if (lateStamp) {
-      const day = localDateStr(new Date(stampMs(lateStamp)));
+    const lateRow = (stamp: string) => {
+      const day = localDateStr(new Date(stampMs(stamp)));
       const lkey = `${slot.client_id}:${u.period}:${day}`;
-      const row = late.get(lkey) ?? { clientId: slot.client_id, period: u.period, photos: [], latest: null, added: 0 };
-      row.photos.push({ order: slot.order_index, src: u.file_path });
-      row.latest = latestOf(row.latest, lateStamp);
-      if (u.late_at && lateStamp === u.late_at) row.added++;
+      const row = late.get(lkey) ?? { clientId: slot.client_id, period: u.period, photos: [], latest: null, added: 0, changed: 0 };
+      if (!row.photos.some((p) => p.src === u.file_path)) row.photos.push({ order: slot.order_index, src: u.file_path });
+      row.latest = latestOf(row.latest, stamp);
       late.set(lkey, row);
+      return { row, day };
+    };
+    let addedDay: string | null = null;
+    if (u.late_at) {
+      const { row, day } = lateRow(u.late_at);
+      row.added++;
+      addedDay = day;
     }
-    if (u.late_at) continue;
+    if (u.replaced_at) {
+      // A late photo retaken the day it was added is still just added that day.
+      const { row, day } = lateRow(u.replaced_at);
+      if (day !== addedDay) row.changed++;
+    }
     const key = `${slot.client_id}:${u.period}`;
-    const sheet = sheets.get(key) ?? { clientId: slot.client_id, period: u.period, photos: [], latest: null };
-    sheet.photos.push({ order: slot.order_index, src: u.file_path });
-    sheet.latest = latestOf(sheet.latest, u.uploaded_at);
+    const sheet = sheets.get(key) ?? { clientId: slot.client_id, period: u.period, photos: [], latePhotos: [], latest: null };
+    if (u.late_at) sheet.latePhotos.push({ order: slot.order_index, src: u.file_path });
+    else {
+      sheet.photos.push({ order: slot.order_index, src: u.file_path });
+      sheet.latest = latestOf(sheet.latest, u.uploaded_at);
+    }
     sheets.set(key, sheet);
   }
   sheets.forEach((s) => {
+    const sentAt = sentAtOf.get(s.clientId)?.[s.period] ?? s.latest;
+    const photos = s.photos.length > 0 ? s.photos : s.latePhotos;
     add(s.clientId, {
       id: `photos-${s.clientId}-${s.period}`,
       category: "measurements",
-      at: s.latest ? stampMs(s.latest) : middayMs(s.period),
+      at: sentAt ? stampMs(sentAt) : middayMs(s.period),
       tab: "photos",
-      text: `sent ${plural(s.photos.length, "photo")} for the shape update of ${feedDay(s.period)}`,
+      text: `sent ${plural(photos.length, "photo")} for the shape update of ${feedDay(s.period)}`,
       thing: "Sent a shape update",
-      thumbs: s.photos.sort((a, b) => a.order - b.order).map((p) => p.src),
+      thumbs: photos.sort((a, b) => a.order - b.order).map((p) => p.src),
       // That sheet, opened (24 Oct, Alex).
       target: { kind: "sheet", period: s.period },
     });
@@ -3328,9 +3351,9 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       tab: "photos",
       text:
         s.added > 0
-          ? `added ${plural(s.added, "photo")} to ${name.toLowerCase()}`
-          : `changed ${plural(s.photos.length, "photo")} on ${name.toLowerCase()}`,
-      thing: s.added > 0 ? `Added to ${name}` : `Changed ${s.photos.length === 1 ? "a photo" : `${s.photos.length} photos`} on ${name}`,
+          ? `added ${plural(s.added, "photo")} to ${name.toLowerCase()}${s.changed > 0 ? ` and changed ${plural(s.changed, "photo")}` : ""}`
+          : `changed ${plural(s.changed, "photo")} on ${name.toLowerCase()}`,
+      thing: s.added > 0 ? `Added to ${name}` : `Changed ${s.changed === 1 ? "a photo" : `${s.changed} photos`} on ${name}`,
       thumbs: s.photos.sort((a, b) => a.order - b.order).map((p) => p.src),
       target: { kind: "sheet", period: s.period },
     });
@@ -5120,11 +5143,16 @@ export function getPhotoSheetAngles(clientId: number): Record<string, number[]> 
 }
 
 /** Before a closed update's first late change, its angles as they stand are kept (12 Nov), so a photo added or taken off
- *  never moves an angle on or off it. Once frozen it stays. */
+ *  never moves an angle on or off it, and when its last on-time photo came in, so its own Activity row keeps its day
+ *  (photo_sheet_sent_at). Once frozen it stays. */
 export function freezePhotoSheetAngles(clientId: number, period: string) {
   if (getPhotoSheetAngles(clientId)[period]) return;
   const slots = listPhotoSlots(clientId);
-  const ids = photoSlotsOnSheet(slots, listPhotoUploads(slots.map((s) => s.id)), period, false).map((s) => s.id);
+  const uploads = listPhotoUploads(slots.map((s) => s.id));
+  const ids = photoSlotsOnSheet(slots, uploads, period, false).map((s) => s.id);
+  const sentAt = uploads
+    .filter((u) => u.period === period && !u.late_at)
+    .reduce<string | null>((m, u) => (!m || u.uploaded_at > m ? u.uploaded_at : m), null);
   const data = getData();
   let row = data.photo_settings.find((s) => s.client_id === clientId);
   if (!row) {
@@ -5132,7 +5160,17 @@ export function freezePhotoSheetAngles(clientId: number, period: string) {
     data.photo_settings.push(row);
   }
   row.photo_sheet_angles = { ...(row.photo_sheet_angles ?? {}), [period]: ids };
+  if (sentAt) row.photo_sheet_sent_at = { ...(row.photo_sheet_sent_at ?? {}), [period]: sentAt };
   persist();
+}
+
+/** The angles a shape update asks for (12 Nov): the open one, every angle asked now; a closed one (the one just
+ *  finished too), the angles it asked for, frozen on it or as they stood (photoSlotsOnSheet). One read for Home's
+ *  Today, the client's screen and the server, so the three never disagree. */
+export function photoSheetSlots(clientId: number, period: string, open: boolean): PhotoSlot[] {
+  if (open) return listActivePhotoSlots(clientId);
+  const slots = listPhotoSlots(clientId);
+  return photoSlotsOnSheet(slots, listPhotoUploads(slots.map((s) => s.id)), period, false, getPhotoSheetAngles(clientId)[period]);
 }
 
 /** A new start date or rhythm (21 Oct): a sheet waiting for its day waits for the new schedule's next day (so a
@@ -8502,7 +8540,11 @@ export function getCheckInSections(clientId: number): CheckInData {
 
   const cadence = getPhotoCadence(clientId);
   const photoPeriod = photoSheetForClient(clientId, today);
-  const slots = listActivePhotoSlots(clientId);
+  // The angles the screen shows and the server takes (12 Nov): the one just finished asks only the ones it asked for,
+  // so an angle added since is never due on it.
+  const slots = photoPeriod
+    ? photoSheetSlots(clientId, photoPeriod, photoPeriod === photoSheetFor(clientId, today))
+    : listActivePhotoSlots(clientId);
   const uploads = listPhotoUploads(slots.map((s) => s.id));
 
   const photoSlots = slots.map((s) => ({

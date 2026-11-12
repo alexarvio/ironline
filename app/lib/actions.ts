@@ -430,14 +430,13 @@ import {
   getPhotoCadence,
   getPhotoOpenPeriod,
   getPhotoInstructions,
-  getPhotoSheetAngles,
   getPhotoStartDate,
   listActivePhotoSlots,
   listPhotoSlots,
   listPhotoUploads,
   photoSheetFor,
   photoSheetForClient,
-  photoSlotsOnSheet,
+  photoSheetSlots,
   resetPhotoOpenSheet,
 } from "./queries";
 import { dayMonth } from "./dayMonth";
@@ -1612,11 +1611,9 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   // Only into the update the client's screen shows: the open one, never an angle no longer asked for; or a closed one
   // holding a photo (12 Nov, Alex), only an angle it asked for.
   const target = photoTarget(clientId, String(formData.get("period") ?? ""));
-  if (target.closed) {
-    const slots = listPhotoSlots(clientId);
-    const on = photoSlotsOnSheet(slots, listPhotoUploads(slots.map((s) => s.id)), target.period, false, getPhotoSheetAngles(clientId)[target.period]);
-    if (!on.some((s) => s.id === slotId)) throw new Error("That angle isn't on that shape update");
-  } else if (!listActivePhotoSlots(clientId).some((s) => s.id === slotId)) throw new Error("That angle isn't asked for any more");
+  // The angles it asks, as Home's Today and the screen read them (photoSheetSlots).
+  if (!photoSheetSlots(clientId, target.period, !target.closed).some((s) => s.id === slotId))
+    throw new Error(target.closed ? "That angle isn't on that shape update" : "That angle isn't asked for any more");
   // Still in the action's body (4 Nov, Alex: memory): shrunk on the phone to a few hundred KB (fitJpeg), well under
   // next.config.ts's 25mb; the big files go through /api/upload.
   const file = formData.get("file") as File | null;
@@ -1646,6 +1643,12 @@ export async function removeProgressPhotoAction(formData: FormData) {
     const here = listPhotoUploads(listPhotoSlots(clientId).map((s) => s.id)).filter((u) => u.period === target.period);
     if (!here.some((u) => u.slot_id === slotId)) return;
     if (here.length <= 1) throw new Error("Keep one photo on it");
+    // The one just finished stays the client's only while it holds a photo on an angle still asked
+    // (photoSheetForClient reads those): one is kept, or the screen would jump to the update before it.
+    if (target.period === photoSheetForClient(clientId, localDateStr())) {
+      const active = new Set(listActivePhotoSlots(clientId).map((s) => s.id));
+      if (!here.some((u) => u.slot_id !== slotId && active.has(u.slot_id))) throw new Error("Keep one photo on it");
+    }
     freezePhotoSheetAngles(clientId, target.period);
   }
   await deleteUpload(removePhotoUpload(clientId, slotId, target.period));

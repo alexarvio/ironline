@@ -89,6 +89,7 @@ import {
   listPhotoSlots,
   listPhotoUploads,
   photoSlotsOnSheet,
+  photoSheetSlots,
   getPhotoSheetAngles,
   localDateStr,
   photoSheetFor,
@@ -1247,12 +1248,15 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
           period: openPeriod,
           title: sheetTitle(openPeriod),
           openedLabel: fmtShortDate(openPeriod),
-          // The one just finished holds the angles it asked for, as every closed update (12 Nov), never one added since.
-          slots: (openPeriod === strictlyOpen ? active : photoSlotsOnSheet(slots, uploads, openPeriod, false, frozen[openPeriod])).map((s) => ({
+          // The one just finished holds the angles it asked for, as every closed update (12 Nov), never one added since;
+          // as Home's Today and the server read them (photoSheetSlots).
+          slots: photoSheetSlots(CLIENT_ID, openPeriod, openPeriod === strictlyOpen).map((s) => ({
             id: s.id,
             label: s.label,
             hint: s.hint ?? null,
             src: srcFor(s.id, openPeriod),
+            // A paused angle's photo never keeps the one just finished the client's (photoSheetForClient).
+            ...(s.paused ? { paused: true } : {}),
           })),
           instructions: getPhotoInstructions(CLIENT_ID),
           // The one just finished, swappable until the next opens: closed, so never its last photo taken off (12 Nov).
