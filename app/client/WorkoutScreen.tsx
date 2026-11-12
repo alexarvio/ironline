@@ -7,7 +7,7 @@ import { useKeptDraft } from "../components/chatOutbox";
 import { ChatIcon, ChevronLeftIcon, NOTE_ICON_PATHS } from "../components/icons";
 import { useOpenMessages } from "./CheckInContext";
 import type { GymOption } from "./GymPickerDialog";
-import ExercisePage, { MAX_WARMUPS, type ExerciseRequest } from "./ExercisePage";
+import ExercisePage, { type ExerciseRequest } from "./ExercisePage";
 import GymPickerDialog, { BadgeFace } from "./GymPickerDialog";
 import { gymColor } from "../lib/gymColors";
 import RestTimerPill, { useRestTimer } from "./RestTimer";
@@ -401,10 +401,7 @@ export default function WorkoutScreen({
               )}
               {currentEx && (
                 <>
-                  <button type="button" role="menuitem" className="wo-menu-row ico" disabled={currentEx.warmups.length >= MAX_WARMUPS} onClick={() => ask("warmup")}>
-                    <MenuIcon kind="warmup" />
-                    Add a warm-up set
-                  </button>
+                  {/* No Add a warm-up set here (12 Nov, Alex): + Warm-up is on the sets' spine, always in sight. */}
                   {!day.free && (
                     <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("swap")}>
                       <MenuIcon kind="swap" />
