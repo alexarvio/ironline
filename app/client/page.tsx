@@ -971,7 +971,7 @@ function NutritionTab({ CLIENT_ID, diary, readOnly = false }: { CLIENT_ID: numbe
   const supps = supplements.length > 0 ? <SupplementsCard key="supps" date={today} rows={supplements} /> : null;
   const wsRow =
     water || supps ? (
-      <div className={`nd-wsrow${water && supps ? " both" : ""}`}>
+      <div key="ws" className={`nd-wsrow${water && supps ? " both" : ""}`}>
         {water && (
           <div key="water" className="nd-water">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -992,11 +992,11 @@ function NutritionTab({ CLIENT_ID, diary, readOnly = false }: { CLIENT_ID: numbe
       pictures={pics}
       title={nutritionPhase?.name ?? "Your targets"}
       readOnly={readOnly}
-      beforeMeals={wsRow}
-      // Only with something in it: the coach's note or a day in the last seven.
-      foot={
-        !coachNote && lastWeek.length === 0 ? undefined : (
-        <div className="nd-body fdi-foot">
+      // Supplements | Water, then the coach's note over the meals (12 Nov, Alex: "the note from the coach has high
+      // hierarchy level, have it before meals"). Keyed, as a list of the page's own parts.
+      beforeMeals={[
+        wsRow,
+        coachNote ? (
           <CoachCard
             key="coach"
             coachName={coachName}
@@ -1004,9 +1004,13 @@ function NutritionTab({ CLIENT_ID, diary, readOnly = false }: { CLIENT_ID: numbe
             note={coachNote}
             noteDate={nutritionPhase ? short(nutritionPhase.start_week) : null}
           />
-          {/* An empty list says nothing (10 Nov, Alex). */}
-          {lastWeek.length > 0 && (
-            <section key="days" className="nd-days">
+        ) : null,
+      ]}
+      // Last 7 days at the foot; an empty list says nothing (10 Nov, Alex).
+      foot={
+        lastWeek.length === 0 ? undefined : (
+          <div className="nd-body fdi-foot">
+            <section className="nd-days">
               <div className="nd-section-head">
                 <h2 className="nd-card-title">Last 7 days</h2>
               </div>
@@ -1014,8 +1018,7 @@ function NutritionTab({ CLIENT_ID, diary, readOnly = false }: { CLIENT_ID: numbe
                 <LastWeekDays days={lastWeek} />
               </div>
             </section>
-          )}
-        </div>
+          </div>
         )
       }
     />
