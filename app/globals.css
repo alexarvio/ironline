@@ -13262,7 +13262,7 @@ body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5
 .vr-sheet-note span { font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8a5a12; }
 .vr-sheet-note p { margin: 3px 0 0; font-size: 14px; line-height: 1.45; color: #333333; white-space: pre-wrap; }
 .vr-sheet-video { display: block; width: 100%; max-height: 46vh; border-radius: 12px; background: #222222; object-fit: contain; }
-.vr-sheet-note-in { height: 44px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 12px; background: #F5F5F5; font: inherit; font-size: 14px; font-weight: 500; color: #333333; }
+.vr-sheet-note-in { height: 44px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 12px; background: #F5F5F5; font: inherit; font-size: 16px; font-weight: 500; color: #333333; }
 .vr-sheet-note-in::placeholder { color: #BDBDBD; }
 .vr-sheet-hint, .vr-sheet-sent { margin: 0; padding: 0 4px; font-size: 12.5px; line-height: 1.45; color: #757575; text-align: center; }
 .vr-sheet-problem { margin: 0; padding: 10px 12px; border-radius: 12px; background: #FFF8E1; font-size: 13px; line-height: 1.45; color: #C62828; }
@@ -14442,7 +14442,7 @@ body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5
 .st-delete-cancel { align-self: flex-start; min-height: 40px; padding: 0 16px; border: 1px solid #E0E0E0; border-radius: 12px; background: #fff; color: #333333; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
 .settings-dark .home-dark-section:has(.st-delete-panel) { padding-bottom: 0; overflow: hidden; }
 .st-delete-field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; font-weight: 600; color: #7a2430; }
-.st-delete-field input { min-height: 42px; padding: 0 12px; border: 1px solid #e6c3c7; border-radius: 12px; background: #fff; color: #333333; font: inherit; font-size: 15px; font-weight: 500; }
+.st-delete-field input { min-height: 42px; padding: 0 12px; border: 1px solid #e6c3c7; border-radius: 12px; background: #fff; color: #333333; font: inherit; font-size: 16px; font-weight: 500; }
 .st-delete-field input:focus { outline: 2px solid #c8343f; outline-offset: 1px; }
 .st-delete-error { margin: 0; font-size: 13px; font-weight: 600; color: #b3261e; }
 .st-delete-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -17265,7 +17265,7 @@ button.ci-hint { cursor: pointer; }
 .cm-menu-list button.danger { color: #b3261e; }
 /* Editing in place: the text becomes a box with Cancel and Save. */
 .cm-edit { display: flex; flex-direction: column; gap: 8px; min-width: 220px; }
-.cm-edit textarea { width: 100%; padding: 8px 10px; border: 1px solid #E0E0E0; border-radius: 10px; background: #fff; font: inherit; font-size: 15px; line-height: 1.45; color: #333333; resize: vertical; outline: none; }
+.cm-edit textarea { width: 100%; padding: 8px 10px; border: 1px solid #E0E0E0; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; line-height: 1.45; color: #333333; resize: vertical; outline: none; }
 .cm-edit textarea:focus { border-color: #00897B; }
 .cm-edit-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .cm-edit-cancel, .cm-edit-save { height: 32px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
@@ -18148,7 +18148,7 @@ button.ci-hint { cursor: pointer; }
 .evs-label { font-size: 12px; font-weight: 800; color: #757575; }
 .evs-title { display: flex; align-items: center; gap: 10px; height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 15px; background: #F5F5F5; color: var(--c); transition: box-shadow 0.2s ease, color 0.3s ease; }
 .evs-title.ring { box-shadow: inset 0 0 0 1.5px var(--c); }
-.evs-title input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 15px; font-weight: 700; color: #333333; }
+.evs-title input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 16px; font-weight: 700; color: #333333; }
 .evs-title input::placeholder { color: #BDBDBD; font-weight: 500; }
 
 /* When: navy. */
@@ -18713,7 +18713,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .gpk-label { font-size: 12px; font-weight: 800; color: #757575; }
 .gpk-input-box { display: flex; align-items: center; height: 48px; padding: 0 14px; border-radius: 14px; background: #F5F5F5; transition: box-shadow 0.2s; }
 .gpk-input-box:focus-within, .gpk-input-box.valid { box-shadow: inset 0 0 0 1.5px var(--g); }
-.gpk-input { width: 100%; min-width: 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 700; color: #333333; outline: none; }
+.gpk-input { width: 100%; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; font-weight: 700; color: #333333; outline: none; }
 .gpk-input::placeholder { color: #BDBDBD; font-weight: 600; }
 .gpk-error { font-size: 12.5px; font-weight: 700; color: #C62828; }
 .gpk-group { display: flex; flex-direction: column; gap: 8px; }
@@ -19073,8 +19073,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .sw-overlay.closing { animation: gpk-fade 0.18s ease-in reverse forwards; }
 .sw-card { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: calc(100vw - 24px); max-width: 400px; max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px); display: flex; flex-direction: column; border-radius: 30px; background: #fff; overflow: hidden; box-shadow: 0 40px 70px -24px rgba(0, 0, 0, 0.6); transform-origin: center; animation: sw-pop 0.26s cubic-bezier(0.2, 0.8, 0.2, 1); color: #141a24; }
 .sw-card.closing { animation: sw-pop 0.18s ease-in reverse forwards; }
-/* The keyboard up: pinned under the top instead of centred, so it never sits under the keys. */
-.sw-card.kb { top: calc(env(safe-area-inset-top, 0px) + 12px); transform: translate(-50%, 0); }
 @keyframes sw-pop { from { opacity: 0; transform: translate(-50%, -50%) scale(0.94); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .sw-card, .sw-card.closing { animation: gpk-fade 0.2s ease both; } }
 .sw-glow { position: absolute; right: -120px; top: -170px; width: 300px; height: 300px; border-radius: 999px; background: radial-gradient(circle, rgba(var(--rgb), 0.3), transparent 68%); pointer-events: none; }
@@ -19114,7 +19112,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .sw-check svg { width: 11px; height: 11px; fill: none; stroke: var(--c); stroke-width: 3.6; stroke-linecap: round; stroke-linejoin: round; }
 .sw-field { display: flex; align-items: center; height: 48px; padding: 0 14px; border-radius: 15px; background: #F4F6FA; transition: box-shadow 0.2s; }
 .sw-field.on { box-shadow: inset 0 0 0 1.5px var(--c); }
-.sw-field input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 15px; font-weight: 700; color: #141a24; }
+.sw-field input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 16px; font-weight: 700; color: #141a24; }
 .sw-field input::placeholder { color: #98A2B3; font-weight: 500; }
 .sw-actions { display: flex; flex-direction: column; gap: 10px; padding-top: 2px; }
 .sw-primary { display: flex; align-items: center; justify-content: center; gap: 8px; height: 54px; border: 0; border-radius: 17px; background: #1d3466; color: #fff; font: inherit; font-size: 15.5px; font-weight: 800; box-shadow: 0 14px 24px -12px rgba(29, 52, 102, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.2); cursor: pointer; transition: background 0.2s; }
@@ -20827,7 +20825,7 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .fa-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
 .fa-title { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
 .fa-sub { margin: 0; font-size: 13px; font-weight: 500; color: #8b93a1; }
-.fa-search { width: 100%; box-sizing: border-box; height: 46px; padding: 0 16px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; outline: none; }
+.fa-search { width: 100%; box-sizing: border-box; height: 46px; padding: 0 16px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 16px; font-weight: 500; color: #141a24; outline: none; }
 .fa-search:focus { box-shadow: inset 0 0 0 1.5px #141a24; }
 .fa-search::placeholder { color: #98A2B3; }
 .fa-problem { margin: 0; font-size: 13px; font-weight: 500; color: #b8471f; }
@@ -20958,7 +20956,7 @@ select.st-details-input.st-details-input.st-details-input.empty { color: #98A2B3
 .au-card .auth-title { margin: 0 0 18px; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
 .au-card .au-lead { color: #5b6474; font-size: 14px; font-weight: 500; }
 .au-card .auth-field span { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
-.au-card .auth-field input { height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; }
+.au-card .auth-field input { height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 16px; font-weight: 500; color: #141a24; }
 .au-card .auth-field input::placeholder { color: #98A2B3; }
 .au-card .auth-field input:focus { outline: none; box-shadow: inset 0 0 0 1.5px #141a24; }
 .au-card .au-provider { height: 44px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 14.5px; font-weight: 600; color: #141a24; }
@@ -21175,6 +21173,17 @@ svg.ring-edge.ring-edge.ring-edge.ring-edge.ring-edge > circle { fill: none; str
    still and nothing is blurred through; at 1× everything comes back as it was. */
 html.zoomed .pc-aura, html.zoomed .ev-aura, html.zoomed .hm-gap.charging::before, html.zoomed .hm-gap.charging::after { display: none; }
 html.zoomed *, html.zoomed *::before, html.zoomed *::after { animation-play-state: paused !important; will-change: auto !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+/* Typing, the glass rests too (12 Nov, Alex: "the keyboard… lags"; keyboard.ts puts kb-open on <html> while the
+   keyboard is up): every blurred layer the page can redraw as it shrinks to the keyboard is plain while typing, a touch
+   more solid so what is on it still reads, and the moving glows hold still. Down again, all is as it was. */
+html.kb-open :is(.gpk-overlay, .ev-scrim, .sw-overlay, .wo-dock, .ci-bar, .app-bottom-nav, .hm-phase, .pc-panel, .hm-pp-panel) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.kb-open .gpk-overlay, html.kb-open .ev-scrim { background: rgba(14, 18, 28, 0.62); }
+html.kb-open .sw-overlay { background: rgba(14, 18, 28, 0.56); }
+html.kb-open .ci-one .ci-bar.stuck.stuck { background: rgba(245, 246, 248, 0.99); }
+html.kb-open .hm-phase { background: rgba(255, 255, 255, 0.55); }
+html.kb-open .pc-panel { background: rgba(20, 24, 33, 0.4); }
+html.kb-open .hm-pp-panel { background: rgba(20, 24, 33, 0.56); }
+html.kb-open .pc-aura::before, html.kb-open .pc-aura::after, html.kb-open .ev-aura::before, html.kb-open .ev-aura::after { animation-play-state: paused; }
 
 /* ---- Folds and chevrons, one way across the client (3 Nov, Alex: the audit; "make the session overview expand in the
    same smoothness", "have the chevrons behave like the ones for events"). The session overview's exercise and cardio
@@ -21511,10 +21520,8 @@ html { -webkit-tap-highlight-color: transparent; }
 .fdi-list > .nd-wsrow:first-child > .nd-water.nd-water, .fdi-list > .nd-wsrow:first-child > .nd-supps.nd-supps { margin-top: 0; }
 /* The tab's own room at the foot, under the floating bar: the page adds none of its own. */
 .nd.fdi-page { padding-bottom: 28px; }
-/* Typing on a phone, the floating tab bar steps aside: the meals' search and amounts sit right over the keyboard. */
-@media (hover: none) {
-  .app-layer-main:has(> .app-content :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea):focus) > .app-bottom-nav { visibility: hidden; }
-}
+/* Typing on a phone, the floating tab bar steps aside: since 12 Nov by the keyboard itself (kb-open, the end of this
+   file), wherever the field is. */
 /* The coach's note and Last 7 days at the foot, in the diary's own column; no line over a section (§2). */
 .nd .fdi-foot .nd-section-head { border-top: 0; }
 /* No phase and no targets: the banner in grey, as Training's with nothing planned. */
@@ -21544,3 +21551,20 @@ html { -webkit-tap-highlight-color: transparent; }
 .tr-x-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
 .tr-x-head .tr-x-name { min-width: 0; }
 .tr-x-ex .so-video-past { margin-top: 2px; }
+
+/* ==== The keyboard (12 Nov, Alex: "the keyboard experience is not the smoothest… it gets in the middle of the text
+   boxes and it lags"; docs/DESIGN-RULES.md §3, §7). keyboard.ts writes --kb (how much of the page as laid out now the
+   keyboard covers) and kb-open on <html> while it is up; useKeyboardReveal keeps the field being typed in in sight.
+   Every field at 16px at least, so the phone never zooms in on one: the ones under it are raised where they are drawn,
+   and this catches any field nothing sizes (zero specificity, so a field drawn bigger, a set's numerals, keeps its size). */
+@media (hover: none) {
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), textarea, select) { font-size: max(16px, 1em); }
+}
+/* Typing, the tab bar and what floats over it step aside; the docks that belong to the typing (the chat's box, the
+   workout's dock) stay. */
+html.kb-open .app-bottom-nav, html.kb-open .tr-resume, html.kb-open .tr-toast { visibility: hidden; }
+/* Centred pop-ups and sheets sit above the keyboard, each card no taller than the room left; the field in it is then
+   brought into the card's own body. */
+html.kb-open :is(.gpk-overlay, .ev-scrim, .vr-sheet-scrim, .wo-sheet-scrim, .sw-overlay) { bottom: var(--kb, 0px); }
+html.kb-open :is(.gpk-card, .ev-sheet, .evs, .vr-sheet) { max-height: calc(100dvh - var(--kb, 0px) - 80px - var(--sat, 0px)); }
+html.kb-open .sw-card { top: calc((100dvh - var(--kb, 0px) + var(--sat, 0px)) / 2); max-height: calc(100dvh - var(--kb, 0px) - 48px - var(--sat, 0px)); }

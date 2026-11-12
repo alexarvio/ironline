@@ -319,7 +319,10 @@ export default function ChatComposeForm({
             formRef.current?.requestSubmit();
           }
         }}
-        disabled={pending}
+        // Read-only, never disabled, while a send goes: a disabled box loses the focus, and the phone's keyboard drops
+        // between two messages (12 Nov, Alex: the keyboard "lags").
+        readOnly={pending}
+        aria-busy={pending || undefined}
       />
       {/* The round ink arrow, as every chat's (27 Oct, Alex: one composer for all three). */}
       {text.trim() || att.current ? (

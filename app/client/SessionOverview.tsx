@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { landOnSoon } from "../lib/landOn";
 import { useDismiss } from "./useDismiss";
-import { useKeyboardInset } from "./useKeyboardInset";
 import { enqueueWorkout } from "../components/workoutOutbox";
 import { pic } from "../lib/pic";
 import { ChevronLeftIcon } from "../components/icons";
@@ -91,8 +90,7 @@ export default function SessionOverview({
   const logged = loggedSets(day);
   const [gymOpen, setGymOpen] = useState(false);
   // The ⋯ menu and the "couldn't do this session" sheet it opens.
-  // The sheet rides on the keyboard, so the reason box stays in view while typing.
-  const kb = useKeyboardInset();
+  // The sheet rides on the keyboard (--kb under kb-open, the end of globals.css), so the reason box stays in view.
   const [menuOpen, setMenuOpen] = useState(false);
   useDismiss(menuOpen, () => setMenuOpen(false));
   const [skipOpen, setSkipOpen] = useState(false);
@@ -272,7 +270,7 @@ export default function SessionOverview({
       )}
 
       {skipOpen && (
-        <div className="wo-sheet-scrim" style={kb ? { paddingBottom: kb } : undefined} onClick={() => setSkipOpen(false)}>
+        <div className="wo-sheet-scrim" onClick={() => setSkipOpen(false)}>
           <div className="wo-sheet" role="dialog" aria-label="Couldn't train" onClick={(e) => e.stopPropagation()}>
             <span className="wo-sheet-grab" aria-hidden="true" />
             {/* The title alone (3 Nov, Alex: the words audit). */}

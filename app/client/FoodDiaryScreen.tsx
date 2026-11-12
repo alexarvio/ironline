@@ -341,15 +341,6 @@ export default function FoodDiaryScreen({
     setSeenInitial(initial);
     if (date === initial.date && settled) setDiary(initial);
   }
-  // iOS only opens the keyboard for a focus made during the tap itself, and
-  // the name box appears after the server has made the meal. So the tap
-  // focuses an unseen input, which holds the keyboard open until the name
-  // box mounts and takes the focus over (autoFocus).
-  const keyboardHold = useRef<HTMLInputElement | null>(null);
-  const releaseKeyboardHold = () => {
-    keyboardHold.current?.remove();
-    keyboardHold.current = null;
-  };
   // The meal shows the moment + is tapped (17 Oct, Alex: it waited on two round
   // trips and felt slow): a stand-in row under a temporary id, its name box
   // mounted during the tap so iOS opens the keyboard for it; the server's id
@@ -357,7 +348,6 @@ export default function FoodDiaryScreen({
   const pendingMeal = useRef<{ temp: FoodMeal; id: Promise<FoodMeal | null> } | null>(null);
   const realId = async (id: FoodMeal) => (pendingMeal.current?.temp === id ? await pendingMeal.current.id : id);
   const addMealNow = () => {
-    releaseKeyboardHold();
     const temp: FoodMeal = `new-${Date.now()}`;
     setDiary((d) => ({ ...d, meals: [{ id: temp, label: "New meal", own: true, kcal: 0, protein: 0, carbs: 0, fat: 0, entries: [], savedAs: null, savedMealId: null, photo: null, picture: null, thumb: null, comments: [] }, ...d.meals] }));
     setNamingId(temp);
@@ -1166,11 +1156,6 @@ export default function FoodDiaryScreen({
                                 }
                               }}
                               onBlur={(e) => (renamingId === meal.id ? finishRename(meal.id, meal.label, e.currentTarget.value) : finishNaming(meal.id, e.currentTarget.value))}
-                              onFocus={(e) => {
-                                const el = e.currentTarget;
-                                releaseKeyboardHold();
-                                setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
-                              }}
                             />
                           ) : (
                             <span className="fdc-title">{title}</span>

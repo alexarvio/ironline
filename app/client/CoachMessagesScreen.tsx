@@ -16,6 +16,7 @@ import { ChatImage, ChatVideo } from "../components/ChatMedia";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
 import { clock, dayWords } from "../lib/clientDates";
 import { useHoldPress } from "../components/useHoldPress";
+import { keyboardCovered, subscribeKeyboard } from "./keyboard";
 
 // The conversation with the coach, laid out as WhatsApp does: the coach's
 // picture and name in the header, their messages on the left and the
@@ -230,6 +231,18 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
     const el = body.current;
     if (!el) return;
     const place = () => {
+      // A message being edited (12 Nov): its box stays in sight over the keyboard, never the thread's foot instead.
+      const active = document.activeElement;
+      const edit = active instanceof HTMLElement && el.contains(active) ? active.closest<HTMLElement>(".cm-edit") : null;
+      if (edit) {
+        const b = el.getBoundingClientRect();
+        const top = b.top + 12;
+        const bottom = Math.min(b.bottom, window.innerHeight - keyboardCovered()) - 12;
+        const r = edit.getBoundingClientRect();
+        if (r.bottom > bottom) el.scrollTop += Math.min(r.bottom - bottom, r.top - top);
+        else if (r.top < top) el.scrollTop -= top - r.top;
+        return;
+      }
       if (held.current && firstUnread.current != null) {
         const row = el.querySelector<HTMLElement>(`[data-mid="${firstUnread.current}"]`);
         if (row) {
@@ -261,7 +274,12 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
     el.addEventListener("load", place, true);
     el.addEventListener("loadedmetadata", place, true);
     const timers = [80, 300, 800, 1600].map((ms) => window.setTimeout(place, ms));
+    // The keyboard coming or going, and the edit box taking the focus (the thread keeps its own place: data-kb-own).
+    el.addEventListener("focusin", place);
+    const offKeyboard = subscribeKeyboard(place);
     return () => {
+      el.removeEventListener("focusin", place);
+      offKeyboard();
       el.removeEventListener("scroll", onScroll);
       el.removeEventListener("touchstart", touched);
       el.removeEventListener("wheel", touched);
@@ -481,7 +499,7 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
           </button>
         </div>
       )}
-      <main ref={body} className="cm-body">
+      <main ref={body} className="cm-body" data-kb-own="">
         {days.length === 0 ? (
           // An empty chat (17 Oct, Alex): one quiet line, low over the box where the first message will go.
           <p className="cm-start">This is the beginning of your chat with {coachName.trim().split(/\s+/)[0] || coachName}</p>

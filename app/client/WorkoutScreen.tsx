@@ -328,47 +328,6 @@ export default function WorkoutScreen({
   };
   const pageStarted = (p: Page) => p.kind === "exercise" && loggedCount(day.exercises[p.index]) > 0;
 
-  // What is being typed in is always in sight (12 Nov, Alex: "Edit your note… opens up keyboard but there is no note to
-  // be seen"): the note opens under the sets, and the page, a box of its own, was never scrolled to it; the keyboard then
-  // takes the bottom of the screen. The field (with its note's Cancel and Save) is brought to just over the dock, on
-  // focus, as the keyboard comes up, and as a note grows.
-  useEffect(() => {
-    const root = screenRef.current;
-    if (!root) return;
-    const bring = () => {
-      const el = document.activeElement;
-      if (!(el instanceof HTMLElement) || !root.contains(el) || !el.matches("textarea, input:not([type=checkbox]):not([type=radio]):not([type=file])")) return;
-      const page = el.closest<HTMLElement>(".wo-page");
-      if (!page) return;
-      const box = el.closest<HTMLElement>(".wo-note") ?? el;
-      const pageBox = page.getBoundingClientRect();
-      const dock = root.querySelector<HTMLElement>(".wo-dock");
-      const vv = window.visualViewport;
-      const floor = Math.min(pageBox.bottom, dock && dock.offsetParent ? dock.getBoundingClientRect().top : Infinity, vv ? vv.offsetTop + vv.height : window.innerHeight) - 12;
-      const ceiling = pageBox.top + 12;
-      const r = box.getBoundingClientRect();
-      if (r.bottom > floor) page.scrollBy({ top: Math.min(r.bottom - floor, r.top - ceiling), behavior: "smooth" });
-      else if (r.top < ceiling) page.scrollBy({ top: r.top - ceiling, behavior: "smooth" });
-    };
-    const timers: number[] = [];
-    // Now, and again as the keyboard finishes coming up.
-    const soon = () => {
-      bring();
-      timers.push(window.setTimeout(bring, 320), window.setTimeout(bring, 700));
-    };
-    root.addEventListener("focusin", soon);
-    root.addEventListener("input", bring);
-    window.addEventListener("resize", bring);
-    window.visualViewport?.addEventListener("resize", bring);
-    return () => {
-      timers.forEach((t) => window.clearTimeout(t));
-      root.removeEventListener("focusin", soon);
-      root.removeEventListener("input", bring);
-      window.removeEventListener("resize", bring);
-      window.visualViewport?.removeEventListener("resize", bring);
-    };
-  }, []);
-
   return (
     <div ref={screenRef} className="app-layer app-layer-push wo-screen" role="dialog" aria-label={`${day.title} workout`}>
       <header className="wo-head">

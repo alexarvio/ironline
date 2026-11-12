@@ -163,27 +163,8 @@ export default function AddEventSheet({
     return () => document.removeEventListener("keydown", onKey);
   });
 
-  // ---- The keyboard: the sheet lifts above it, and the field being typed in stays in view.
-  const [lift, setLift] = useState(0);
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const onResize = () => setLift(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
-    vv.addEventListener("resize", onResize);
-    vv.addEventListener("scroll", onResize);
-    return () => {
-      vv.removeEventListener("resize", onResize);
-      vv.removeEventListener("scroll", onResize);
-    };
-  }, []);
-  const keepInView = (e: React.FocusEvent<HTMLElement>) => {
-    const box = sheet.current;
-    if (!box) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    const b = box.getBoundingClientRect();
-    if (r.bottom > b.bottom - 16) box.scrollTop += r.bottom - (b.bottom - 16);
-    else if (r.top < b.top + 16) box.scrollTop -= b.top + 16 - r.top;
-  };
+  // ---- The keyboard (12 Nov): the pop-up sits above it by --kb under kb-open (the end of globals.css), and the field
+  // being typed in is brought into the sheet by the app's one reveal (keyboard.ts).
 
   // ---- Drag down past 120px lets go. Only a drag that starts on the grabber
   // or the header counts: a touch anywhere else is a tap or a scroll, and
@@ -208,7 +189,7 @@ export default function AddEventSheet({
     if (let_go) close();
   };
 
-  const style = { "--c": t.color, "--rgb": t.rgb, bottom: lift || undefined, transform: drag ? `translateY(${drag.dy}px)` : undefined } as React.CSSProperties;
+  const style = { "--c": t.color, "--rgb": t.rgb, transform: drag ? `translateY(${drag.dy}px)` : undefined } as React.CSSProperties;
   const label = event ? "Edit event" : "New event";
 
   return createPortal(
@@ -254,10 +235,7 @@ export default function AddEventSheet({
                 ref={titleRef}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                onFocus={(e) => {
-                  setTitleFocus(true);
-                  keepInView(e);
-                }}
+                onFocus={() => setTitleFocus(true)}
                 onBlur={() => setTitleFocus(false)}
                 placeholder={t.placeholder}
                 maxLength={60}
@@ -271,7 +249,7 @@ export default function AddEventSheet({
           <WhenSection mode={repeating ? "repeat" : oneDay ? "one" : "range"} start={start} end={end} until={until} days={days} today={today} onMode={setMode} onStart={moveStart} onEnd={setEnd} onUntil={setUntil} onDay={toggleDay} />
 
           <span className="evs-note">
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} onFocus={keepInView} placeholder={`Anything ${coachName} should know? (optional)`} maxLength={280} aria-label="Note" />
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={`Anything ${coachName} should know? (optional)`} maxLength={280} aria-label="Note" />
             {note.length > 240 && <small>{note.length}/280</small>}
           </span>
 

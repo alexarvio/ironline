@@ -18,6 +18,7 @@ import CoachProfileScreen from "./CoachProfileScreen";
 import { HealthAutoSync } from "./HealthSync";
 import { NativePush } from "./NativePush";
 import { NativeStatusBar } from "./NativeStatusBar";
+import { useKeyboardReveal } from "./keyboard";
 import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
 import EventsScreen from "./events/EventsScreen";
 import type { HomeEvents } from "./EventsCard";
@@ -193,6 +194,8 @@ export default function AppShell({
   initialTab?: string | null;
 }) {
   const storedTab = useSyncExternalStore(subscribeTab, readTab, () => initialTab);
+  // The keyboard, one source for the app (--kb and kb-open on <html>), and the field being typed in kept in sight.
+  useKeyboardReveal(!readOnly);
   // The preview keeps its tab to itself: the coach's own tab memory (storage, cookie) is the coach's.
   const [ownTab, setOwnTab] = useState(initialTab);
   const tabNow = readOnly ? ownTab : storedTab;

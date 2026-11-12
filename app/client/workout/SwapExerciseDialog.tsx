@@ -5,7 +5,6 @@ import type React from "react";
 import { createPortal } from "react-dom";
 import { groupColour } from "../../lib/muscleGroups";
 import { pic } from "../../lib/pic";
-import { useKeyboardInset } from "../useKeyboardInset";
 import { Bars } from "../Bars";
 import RingEdge from "../../components/RingEdge";
 
@@ -55,7 +54,6 @@ export default function SwapExerciseDialog({
   const [ownOn, setOwnOn] = useState(picked == null);
   const [lightbox, setLightbox] = useState<SwapSuggestion | null>(null);
   const [closing, setClosing] = useState(false);
-  const kb = useKeyboardInset();
   const first = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     first.current?.focus();
@@ -91,7 +89,7 @@ export default function SwapExerciseDialog({
 
   return createPortal(
     <div className={`sw-overlay${closing ? " closing" : ""}`} role="presentation" onClick={close}>
-      <div className={`sw-card${closing ? " closing" : ""}${kb ? " kb" : ""}`} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties} role="dialog" aria-modal="true" aria-label={`Swap ${exercise.name}`} onClick={(e) => e.stopPropagation()}>
+      <div className={`sw-card${closing ? " closing" : ""}`} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties} role="dialog" aria-modal="true" aria-label={`Swap ${exercise.name}`} onClick={(e) => e.stopPropagation()}>
         <span className="sw-glow" aria-hidden="true" />
         <span className="sw-wash" aria-hidden="true" />
         <div className="sw-in">
