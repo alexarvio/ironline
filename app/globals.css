@@ -21563,9 +21563,10 @@ html { -webkit-tap-highlight-color: transparent; }
 @media (hover: none) {
   :where(.app-screen, .au-page, html.kb-app body > :not(.phone-frame)) :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), textarea, select) { font-size: max(16px, 1em); }
 }
-/* Typing, the tab bar and what floats over it step aside; the docks that belong to the typing (the chat's box, the
-   workout's dock) stay. */
-html.kb-open .app-bottom-nav, html.kb-open .tr-resume, html.kb-open .tr-toast { visibility: hidden; }
+/* Typing, the tab bar and what floats over it step aside, and the workout's dock too (12 Nov, Alex: with the number pad
+   up the Rest timer sat over the warm-up being typed; it comes back as the keyboard goes). The chat's box, part of the
+   typing, stays. */
+html.kb-open .app-bottom-nav, html.kb-open .tr-resume, html.kb-open .tr-toast, html.kb-open .wo-dock { visibility: hidden; }
 /* Centred pop-ups and sheets sit above the keyboard, each card no taller than the room left; the field in it is then
    brought into the card's own body. */
 html.kb-open :is(.gpk-overlay, .ev-scrim, .vr-sheet-scrim, .wo-sheet-scrim, .sw-overlay) { bottom: var(--kb, 0px); }
