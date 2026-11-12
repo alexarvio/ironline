@@ -326,18 +326,26 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
   };
 
   // The message whose menu is open: its ⌄, or holding the message (docs/DESIGN-RULES.md §9, as the coach's phone).
-  const [menuFor, setMenuFor] = useState<number | null>(null);
+  // Kept by what the message is, never by its place: one still sending by its outbox key (its id is only its place
+  // in the outbox, -1, -2, and goes to the next one sent once it lands), one sent by its id.
+  const menuKey = (m: CoachMessageView) => (m.out ? `o:${m.out.key}` : `m:${m.id}`);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  // A message gone from the thread (landed from the outbox, deleted) takes its open menu with it.
+  useEffect(() => {
+    if (menuFor != null && !messages.some((m) => menuKey(m) === menuFor)) setMenuFor(null);
+  });
   const { bind: bindHold } = useHoldPress({ ignore: ".cm-menu" });
 
   const bubble = (m: CoachMessageView) => {
     const isEditing = editing?.id === m.id;
+    const mk = menuKey(m);
     const mine = m.reactions?.[mySide] ?? null;
     const theirs = m.reactions?.[theirSide] ?? null;
     return (
       <article key={m.id} data-mid={m.id} className={`cm-item${m.mine ? " mine" : ""}${flash === m.id ? " flash" : ""}${m.out ? (m.out.failed ? " out failed" : " out") : ""}`}>
         <div className="cm-msg-row">
           <div className="cm-msg-wrap">
-            <div className={`cm-msg${m.mine ? " mine" : ""}${m.media ? " media" : ""}${m.link ? " linked" : ""}`} {...(isEditing ? {} : bindHold(() => setMenuFor(m.id)))}>
+            <div className={`cm-msg${m.mine ? " mine" : ""}${m.media ? " media" : ""}${m.link ? " linked" : ""}`} {...(isEditing ? {} : bindHold(() => setMenuFor(mk)))}>
               {/* What it is about: a small bubble on the corner that goes there. */}
               {m.link && <LinkBubble view={m.link} />}
               {/* What it answers (the coach replying to one message), a tap away from it. */}
@@ -385,8 +393,8 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
                 </span>
                 {!isEditing && (
                   <MessageMenu
-                    open={menuFor === m.id}
-                    onOpenChange={(o) => setMenuFor((cur) => (o ? m.id : cur === m.id ? null : cur))}
+                    open={menuFor === mk}
+                    onOpenChange={(o) => setMenuFor((cur) => (o ? mk : cur === mk ? null : cur))}
                     align={m.mine ? "right" : "left"}
                     reaction={mine}
                     onReact={(e) => react(m, e)}
