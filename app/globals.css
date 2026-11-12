@@ -12995,6 +12995,10 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
    (24 Oct, Alex: on the phone it showed as a lighter band). Home scrolls inside its own box, which cuts anything above
    its top, so the star starts just inside it with its top point whole, cropped off the right edge only. */
 body:has(.hm), .app-screen:has(.hm), .app-content:has(> .hm) { background: #F5F5F5; }
+/* A tab's scroll box is its page's colour all the way down (12 Nov, Alex: under a short week on Training the box's own
+   #FAFAFA showed below the sessions, "kind of like the screen cutting"): Training's #F5F5F5, Nutrition's #F5F6F8. */
+.app-content:has(> .tr) { background: #F5F5F5; }
+.app-content:has(> .nd) { background: #F5F6F8; }
 .hm { position: relative; isolation: isolate; overflow-x: clip; }
 .hm > .hm-banner:not(.st-banner) { background: none; overflow: visible; }
 .hm > .hm-banner:not(.st-banner)::after { content: none; }
