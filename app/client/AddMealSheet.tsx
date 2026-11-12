@@ -68,7 +68,8 @@ export function DeleteMealDialog({ name, text, onCancel, onDelete }: { name: str
 }
 
 /** Copy a meal from a meal's own search (11 Nov, Alex: "the copy a meal needs to be a bit cleaner… pop up with saved
- * meals"): Add a meal's Copy a meal on its own, every saved meal as its card, a tap putting its foods into that meal. */
+ * meals"): every saved meal as its card in a pop-up, a tap putting its foods into that meal (Add a meal's Copy a meal
+ * opens the Saved meals screen instead, 12 Nov). */
 export function CopyMealDialog({
   saved,
   busy,

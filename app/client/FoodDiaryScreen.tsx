@@ -1368,11 +1368,7 @@ export default function FoodDiaryScreen({
               <PlusIcon />
               Add a meal
             </button>
-            {/* Saved days | Saved meals, under the meals (12 Nov, Alex: B of docs/boards/nutrition-is-the-diary-mockup.html). */}
-            {/* One card, folded, holding the days that can be copied onto this
-                one: the last day with food, and the days the client saved.
-                There on every day since 5 Oct, empty or not (a day used adds
-                its food to what is there), and with nothing saved it says so. */}
+            {/* The Saved meals and Saved days screens, opened from Add a meal (12 Nov, Alex). */}
             {(() => {
               const after = async () => {
                 const next = await getFoodDiaryAction(clientId, date);
