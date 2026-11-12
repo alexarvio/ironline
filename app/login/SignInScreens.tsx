@@ -4,6 +4,7 @@ import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { nativePlatform } from "../lib/native";
 import { NorCoachLogo } from "../components/NorCoachLogo";
 import { Bars } from "../client/Bars";
+import { useKeyboardReveal } from "../client/keyboard";
 
 // The sign-in screens for the switch to Clerk (26 Sep): no passwords, an
 // email code or Apple or Google, for coaches and clients alike. Each screen
@@ -15,6 +16,8 @@ type Busy = { busy?: boolean; error?: string | null };
 type Oauth = { onApple?: () => void; onGoogle?: () => void };
 
 export function AuthShell({ children }: { children: ReactNode }) {
+  // The field being typed in stays above the phone's keyboard (12 Nov; keyboard.ts).
+  useKeyboardReveal();
   return (
     <div className="auth-page au-page">
       <div className="auth-card au-card">

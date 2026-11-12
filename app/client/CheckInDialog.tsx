@@ -215,28 +215,8 @@ export default function CheckInDialog({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open
   }, []);
-  // The keyboard: the card lifts clear of it, and the line being typed in is scrolled into the body.
-  const [kb, setKb] = useState(0);
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const on = () => setKb(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
-    vv.addEventListener("resize", on);
-    vv.addEventListener("scroll", on);
-    return () => {
-      vv.removeEventListener("resize", on);
-      vv.removeEventListener("scroll", on);
-    };
-  }, []);
-  const reveal = (el: HTMLElement) => {
-    const box = body.current;
-    const row = el.closest(".cki-row, .cki-note-box") as HTMLElement | null;
-    if (!box || !row) return;
-    const over = row.getBoundingClientRect().bottom + 12 - box.getBoundingClientRect().bottom;
-    const under = box.getBoundingClientRect().top - (row.getBoundingClientRect().top - 12);
-    if (over > 0) box.scrollTop += over;
-    else if (under > 0) box.scrollTop -= under;
-  };
+  // The keyboard (12 Nov): the card lifts clear of it by --kb under kb-open (the end of globals.css), and the line being
+  // typed in is brought into the body by the app's one reveal (keyboard.ts), a .cki-row or the note's box whole.
   // The note grows with what is typed, from 56px up to 120.
   const noteBox = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => {
@@ -324,7 +304,7 @@ export default function CheckInDialog({
   }
   return createPortal(
     <>
-      <div className={`gpk-overlay${phase === "closing" ? " closing" : ""}`} style={kb ? { paddingBottom: kb } : undefined} onClick={close}>
+      <div className={`gpk-overlay${phase === "closing" ? " closing" : ""}`} onClick={close}>
         <div ref={card} className={`cki-card${phase === "closing" ? " closing" : ""}`} role="dialog" aria-modal="true" aria-labelledby="cki-title" onClick={(e) => e.stopPropagation()}>
           <span className="cki-glow" aria-hidden="true" />
           <span className="cki-wash" aria-hidden="true" />
@@ -362,7 +342,7 @@ export default function CheckInDialog({
             </button>
           </div>
 
-          <div ref={body} className="cki-body" onFocus={(e) => reveal(e.target as HTMLElement)}>
+          <div ref={body} className="cki-body">
             {groups.map((g) => (
               <div key={g.id} className="cki-group">
                 <div className="cki-group-label">{g.label}</div>
