@@ -1574,7 +1574,7 @@ export default function FoodDiaryScreen({
             })()}
           </div>
           {/* The coach's note and Last 7 days, at the foot. */}
-          {foot && <div className="nd-body fdi-foot">{foot}</div>}
+          {foot}
         </div>
 
       {askDeleteMeal != null && diary.meals.some((m) => m.id === askDeleteMeal) && (
