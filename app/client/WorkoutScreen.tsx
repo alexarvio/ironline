@@ -13,6 +13,7 @@ import { gymColor } from "../lib/gymColors";
 import RestTimerPill, { useRestTimer } from "./RestTimer";
 import SwipeToEnd from "./SwipeToEnd";
 import FreeAddPage from "./FreeAddPage";
+import ExerciseMarks from "./ExerciseMarks";
 import { SwapLibrary } from "./workout/SwapExerciseDialog";
 import { Bars } from "./Bars";
 import RingEdge from "../components/RingEdge";
@@ -536,6 +537,8 @@ export default function WorkoutScreen({
                         <span className="wo-check-name" aria-hidden="true">
                           {name}
                         </span>
+                        {/* The coach's marks here too, in their colours (13 Nov, Alex). */}
+                        {ex && <ExerciseMarks ex={ex} />}
                         {showUnit && ex && <CheckUnit key={`${ex.id}:${ex.unit ?? "kg"}`} ex={ex} session={session} disabled={locked} />}
                         <span className={`wo-check-status${complete ? " done" : count ? " part" : ""}`} aria-hidden="true">
                           {status}
