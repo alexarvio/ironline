@@ -45,6 +45,7 @@ import {
   getOverviewPanel,
   describeMessageLink,
   getClient,
+  getCoachAvatarPath,
   listChatMessages,
   chatSeenTest,
   listMessageLinkTargets,
@@ -1387,7 +1388,7 @@ export function loadMessages(clientId: number): DraftMessages {
         })(),
       };
     });
-  return { rev: chatRev(clientId), messages, targets: listMessageLinkTargets(clientId), avatarPath: getClient(clientId)?.avatar_path ?? null, unread: chatUnread(clientId), firstUnread: chatFirstUnread(clientId), lastActiveAt: clientLastActive(clientId) };
+  return { rev: chatRev(clientId), messages, targets: listMessageLinkTargets(clientId), avatarPath: getClient(clientId)?.avatar_path ?? null, coachAvatarPath: getCoachAvatarPath(clientId), unread: chatUnread(clientId), firstUnread: chatFirstUnread(clientId), lastActiveAt: clientLastActive(clientId) };
 }
 
 // ---- Invoices tab: the client's invoices as they print, and what Settings

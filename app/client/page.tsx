@@ -1524,6 +1524,9 @@ export default async function ClientPage({
       photos={progressPictures}
       coachMessages={{
         coachName: getCoachDisplayName(CLIENT_ID),
+        coachPhoto: getCoachAvatarPath(CLIENT_ID),
+        myPhoto: client?.avatar_path ?? null,
+        myName: client?.name ?? "You",
         messages: coachMessagesFor(CLIENT_ID),
         // The coach's quiet hours: the chat says they are away while they hold (27 Oct, Alex).
         quiet: coachQuietHours(CLIENT_ID),

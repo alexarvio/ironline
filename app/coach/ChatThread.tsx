@@ -7,6 +7,8 @@ import { coachThreadAction } from "./actions";
 import type { DraftMedia, DraftMessage, DraftMessages } from "../admin/redesign/messages/MessagesDraft";
 import { chatTypingAction, deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction } from "../lib/actions";
 import VoiceRecordButton from "../components/VoiceRecordButton";
+import VoiceNote from "../components/VoiceNote";
+import { pic } from "../lib/pic";
 import RingEdge from "../components/RingEdge";
 import ChatMediaGallery, { exerciseOf } from "../components/ChatMediaGallery";
 import { ChatImage, ChatVideo, sized, withVideoFrame } from "../components/ChatMedia";
@@ -35,7 +37,6 @@ const POLL_MS = 15000;
 
 const dayOf = (when: string) => when.split(", ")[0] ?? when;
 const timeOf = (when: string) => when.split(", ")[1] ?? "";
-const clock = (s: number) => (Number.isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "");
 const quoteOf = (m: DraftMessage) => m.text.trim() || (m.media?.type === "image" ? "Photo" : m.media?.type === "video" ? "Video" : m.media?.type === "audio" ? "Voice message" : m.media ? m.media.name ?? "File" : "");
 const NOT_SENT = "Not sent. Check the connection and try again.";
 
@@ -485,7 +486,7 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
             </span>
           </span>
         )}
-        {m.media && <Media media={m.media} onOpen={(src) => !held.current && setViewer(src)} />}
+        {m.media && <Media media={m.media} voice={{ face: m.mine ? plan?.coachAvatarPath ?? null : avatar, name: m.mine ? "You" : first, mine: m.mine }} onOpen={(src) => !held.current && setViewer(src)} />}
         {m.text && <span className="cph-text">{m.text}</span>}
         <span className="cph-meta">
           {m.pinned && <Icon name="pin" small size={11} />}
@@ -725,9 +726,9 @@ export default function ChatThread({ clientId, name, avatarPath, onBack, onRead 
 }
 
 // A picture shows (tap: big), a video plays behind its poster, a voice message plays in the bubble, a file opens.
-function Media({ media, onOpen }: { media: DraftMedia; onOpen: (src: string) => void }) {
+function Media({ media, voice, onOpen }: { media: DraftMedia; /** Whose voice message it is (13 Nov): their face on it. */ voice: { face: string | null; name: string; mine: boolean }; onOpen: (src: string) => void }) {
   if (media.type === "video") return <ChatVideo className="cph-video-media" src={media.path} look={media} />;
-  if (media.type === "audio") return <Voice src={media.path} />;
+  if (media.type === "audio") return <VoiceNote src={media.path} face={voice.face ? pic(voice.face, 96) : null} name={voice.name} mine={voice.mine} />;
   if (media.type === "file")
     return (
       <a className="cph-file" href={media.path} target="_blank" rel="noreferrer" download={media.name ?? undefined}>
@@ -742,42 +743,3 @@ function Media({ media, onOpen }: { media: DraftMedia; onOpen: (src: string) => 
   );
 }
 
-/** A voice message: play, the length, how far it has played. */
-function Voice({ src }: { src: string }) {
-  const el = useRef<HTMLAudioElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [t, setT] = useState(0);
-  const [d, setD] = useState(0);
-  const toggle = () => {
-    const a = el.current;
-    if (!a) return;
-    if (a.paused) void a.play().catch(() => {});
-    else a.pause();
-  };
-  const share = d && Number.isFinite(d) ? Math.min(1, t / d) : 0;
-  return (
-    <span className="cph-voice">
-      <button type="button" onClick={toggle} aria-label={playing ? "Pause the voice message" : "Play the voice message"}>
-        <Icon name={playing ? "pause" : "play"} />
-      </button>
-      <span className="cph-voice-track" aria-hidden="true">
-        <i style={{ width: `${share * 100}%` }} />
-      </span>
-      <span className="cph-voice-time">{playing || t > 0 ? clock(t) : clock(d)}</span>
-      <audio
-        ref={el}
-        src={src}
-        preload="metadata"
-        onLoadedMetadata={(e) => setD(e.currentTarget.duration)}
-        onDurationChange={(e) => setD(e.currentTarget.duration)}
-        onTimeUpdate={(e) => setT(e.currentTarget.currentTime)}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => {
-          setPlaying(false);
-          setT(0);
-        }}
-      />
-    </span>
-  );
-}

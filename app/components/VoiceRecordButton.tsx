@@ -1,76 +1,154 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import RingEdge from "./RingEdge";
 
-// A voice message: tap to start, tap to stop, and the recording is handed
-// over as a file for the chat to send. Records with what the browser has
-// (audio/webm on Chrome and Android, audio/mp4 on iPhone). Shows the
-// seconds while it runs; a second tap ends it, Escape throws it away.
-// Since 27 Oct (Alex, from the research: "playback and erase voice messages before sending") a second tap stops it
-// and it waits: ✕ throws it away, ▶ plays it back with its length, the ink arrow sends it.
-// `ring`: the round button's size, when its outline is a vector ring (`RingEdge`); while recording it is a pill.
+// A voice message, as WhatsApp records one (13 Nov, Alex: "hold to record, slide up to lock, slide left to cancel, live
+// wave"), in every chat. On a phone: hold the mic and speak, the bar over the box showing the time and the live wave;
+// let go and it sends; slide left past the line and it is thrown away; slide up onto the lock and it keeps recording
+// hands-free, the bar then holding ✕, ■ (stop and play it back first, as since 27 Oct) and the ink arrow to send. A tap
+// too short to be a hold says `Hold to record`. With a mouse, a click starts it locked. Records with what the browser
+// has (audio/webm on Chrome and Android, audio/mp4 on iPhone); Escape throws it away.
+// `ring`: the round button's size, when its outline is a vector ring (`RingEdge`).
+
+const CANCEL_PX = 110;
+const LOCK_PX = 80;
+const WAVE = 44;
+
+type Phase = "idle" | "holding" | "locked" | "review" | "denied";
+
 export default function VoiceRecordButton({ onRecorded, className = "", disabled = false, ring }: { onRecorded: (file: File) => void; className?: string; disabled?: boolean; ring?: number }) {
-  const [state, setState] = useState<"idle" | "recording" | "denied" | "review">("idle");
-  // The take waiting to be sent, played back from here.
+  const [phase, setPhase] = useState<Phase>("idle");
   const [take, setTake] = useState<{ file: File; url: string; secs: number } | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [secs, setSecs] = useState(0);
+  const [levels, setLevels] = useState<number[]>([]);
+  const [drag, setDrag] = useState({ dx: 0, dy: 0 });
+  const [hint, setHint] = useState(false);
+  const [bar, setBar] = useState<{ left: number; top: number; width: number; height: number; micLeft: number; micW: number } | null>(null);
+  const btn = useRef<HTMLButtonElement>(null);
   const player = useRef<HTMLAudioElement | null>(null);
-  const counted = useRef(0);
-  const [seconds, setSeconds] = useState(0);
   const rec = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
-  const discard = useRef(false);
-  const timer = useRef<number | null>(null);
+  // What the stop does with the take: send it, keep it for playing back, or throw it away.
+  const ending = useRef<"send" | "review" | "discard">("discard");
+  const held = useRef(false);
+  const locked = useRef(false);
+  const origin = useRef({ x: 0, y: 0, at: 0 });
+  const startedAt = useRef(0);
+  const audio = useRef<{ ctx: AudioContext; raf: number } | null>(null);
+  const hintTimer = useRef<number | null>(null);
 
+  const measure = () => {
+    // The bar lies over the composer's row: the first box up from the mic wide enough to be it.
+    let row: HTMLElement | null = btn.current?.parentElement ?? null;
+    while (row && row.getBoundingClientRect().width < 260 && row.parentElement) row = row.parentElement;
+    const r = row?.getBoundingClientRect();
+    const m = btn.current?.getBoundingClientRect();
+    if (r && m) setBar({ left: r.left, top: r.top, width: r.width, height: Math.max(44, r.height), micLeft: m.left - r.left, micW: m.width });
+  };
+
+  const stopAudio = () => {
+    if (!audio.current) return;
+    cancelAnimationFrame(audio.current.raf);
+    void audio.current.ctx.close().catch(() => {});
+    audio.current = null;
+  };
   const stopTracks = () => rec.current?.stream.getTracks().forEach((t) => t.stop());
-  const start = async () => {
-    if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) return setState("denied");
+
+  const start = async (lockIt: boolean) => {
+    if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) return setPhase("denied");
+    locked.current = lockIt;
+    let stream: MediaStream;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "";
-      const r = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-      chunks.current = [];
-      discard.current = false;
-      r.ondataavailable = (e) => e.data.size > 0 && chunks.current.push(e.data);
-      r.onstop = () => {
-        stopTracks();
-        if (timer.current) window.clearInterval(timer.current);
-        setSeconds(0);
-        if (discard.current || chunks.current.length === 0) return setState("idle");
-        const type = r.mimeType || mime || "audio/webm";
-        const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "weba";
-        const file = new File([new Blob(chunks.current, { type })], `voice-${Date.now()}.${ext}`, { type });
-        setTake({ file, url: URL.createObjectURL(file), secs: counted.current });
-        setState("review");
-      };
-      rec.current = r;
-      r.start();
-      setState("recording");
-      setSeconds(0);
-      counted.current = 0;
-      timer.current = window.setInterval(() => {
-        counted.current += 1;
-        setSeconds((s) => s + 1);
-      }, 1000);
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      setState("denied");
+      return setPhase("denied");
+    }
+    // Let go while the phone was asking for the microphone: nothing is recorded.
+    if (!held.current && !locked.current) {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "";
+    const r = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    chunks.current = [];
+    ending.current = "discard";
+    r.ondataavailable = (e) => e.data.size > 0 && chunks.current.push(e.data);
+    r.onstop = () => {
+      stopTracks();
+      stopAudio();
+      const took = (Date.now() - startedAt.current) / 1000;
+      setLevels([]);
+      setDrag({ dx: 0, dy: 0 });
+      if (ending.current === "discard" || chunks.current.length === 0 || took < 0.6) return setPhase("idle");
+      const type = r.mimeType || mime || "audio/webm";
+      const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "weba";
+      const file = new File([new Blob(chunks.current, { type })], `voice-${Date.now()}.${ext}`, { type });
+      if (ending.current === "send") {
+        setPhase("idle");
+        onRecorded(file);
+        return;
+      }
+      setTake({ file, url: URL.createObjectURL(file), secs: Math.round(took) });
+      setPhase("review");
+    };
+    rec.current = r;
+    r.start();
+    startedAt.current = Date.now();
+    setSecs(0);
+    measure();
+    setPhase(locked.current ? "locked" : "holding");
+    // The live wave: the microphone's loudness a few times a second, the newest on the right.
+    try {
+      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (Ctx) {
+        const ctx = new Ctx();
+        const an = ctx.createAnalyser();
+        an.fftSize = 512;
+        ctx.createMediaStreamSource(stream).connect(an);
+        const buf = new Uint8Array(an.fftSize);
+        let last = 0;
+        const tick = (now: number) => {
+          if (!audio.current) return;
+          audio.current.raf = requestAnimationFrame(tick);
+          if (now - last < 70) return;
+          last = now;
+          an.getByteTimeDomainData(buf);
+          let sum = 0;
+          for (let i = 0; i < buf.length; i++) sum += ((buf[i] - 128) / 128) ** 2;
+          const level = Math.min(1, Math.sqrt(sum / buf.length) * 4);
+          setLevels((l) => [...l.slice(-(WAVE - 1)), level]);
+          setSecs(Math.floor((Date.now() - startedAt.current) / 1000));
+        };
+        audio.current = { ctx, raf: requestAnimationFrame(tick) };
+      }
+    } catch {
+      /* no wave, the recording goes on */
     }
   };
-  const stop = () => rec.current?.state === "recording" && rec.current.stop();
+
+  const end = (how: "send" | "review" | "discard") => {
+    held.current = false;
+    ending.current = how;
+    if (rec.current?.state === "recording") rec.current.stop();
+    else setPhase("idle");
+  };
+
   const drop = () => {
     player.current?.pause();
     if (take) URL.revokeObjectURL(take.url);
     setTake(null);
     setPlaying(false);
-    setState("idle");
+    setPhase("idle");
   };
-  const send = () => {
+  const sendTake = () => {
     player.current?.pause();
     const t = take;
     setTake(null);
     setPlaying(false);
-    setState("idle");
+    setPhase("idle");
     if (t) {
       onRecorded(t.file);
       setTimeout(() => URL.revokeObjectURL(t.url), 60_000);
@@ -85,23 +163,28 @@ export default function VoiceRecordButton({ onRecorded, className = "", disabled
   const clock = (n: number) => `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, "0")}`;
 
   useEffect(() => {
-    if (state !== "recording") return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        discard.current = true;
-        stop();
-      }
-    };
+    if (phase !== "holding" && phase !== "locked") return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && end("discard");
+    const onMove = () => measure();
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [state]);
+    window.addEventListener("resize", onMove);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onMove);
+    };
+  }, [phase]);
   // Leaving the screen mid-recording throws it away.
-  useEffect(() => () => {
-    discard.current = true;
-    stop();
-  }, []);
+  useEffect(
+    () => () => {
+      ending.current = "discard";
+      if (rec.current?.state === "recording") rec.current.stop();
+      stopAudio();
+      if (hintTimer.current) window.clearTimeout(hintTimer.current);
+    },
+    []
+  );
 
-  if (state === "review" && take) {
+  if (phase === "review" && take) {
     return (
       <span className="vr-review" role="group" aria-label="Voice message">
         <audio ref={player} src={take.url} preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />
@@ -122,31 +205,166 @@ export default function VoiceRecordButton({ onRecorded, className = "", disabled
           )}
           <span className="vr-time">{clock(take.secs)}</span>
         </button>
-        <button type="button" className="vr-send" onClick={send} aria-label="Send the voice message" title="Send">
+        <button type="button" className="vr-send" onClick={sendTake} aria-label="Send the voice message" title="Send">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M12 19V5M6 11l6-6 6 6" />
+            <path d="M5 12h14M13 6l6 6-6 6" />
           </svg>
         </button>
       </span>
     );
   }
-  if (state === "recording") {
-    return (
-      <button type="button" className={`${className} recording`} onClick={stop} aria-label="Stop the voice message" title="Stop (Esc to throw it away)">
-        <span className="vr-dot" aria-hidden="true" />
-        <span className="vr-time">
-          {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}
-        </span>
-      </button>
-    );
-  }
+
+  const recording = phase === "holding" || phase === "locked";
+  const wave = (
+    <span className="vrec-wave" aria-hidden="true">
+      {Array.from({ length: WAVE }, (_, i) => {
+        const v = levels[levels.length - WAVE + i];
+        return <i key={i} style={{ height: `${Math.round(Math.max(0.1, v ?? 0) * 100)}%`, opacity: v == null ? 0.35 : 1 }} />;
+      })}
+    </span>
+  );
+  const overlay =
+    recording && bar
+      ? createPortal(
+          <div
+            className={`vrec ${phase}`}
+            style={{ left: bar.left, top: bar.top, width: phase === "locked" ? bar.width : Math.max(120, bar.micLeft - 6), height: bar.height }}
+            role="status"
+            aria-label={`Recording ${clock(secs)}`}
+          >
+            {phase === "locked" && (
+              <button type="button" className="vrec-x" onClick={() => end("discard")} aria-label="Throw it away">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+                </svg>
+              </button>
+            )}
+            <span className="vrec-dot" aria-hidden="true" />
+            <span className="vrec-time">{clock(secs)}</span>
+            {phase === "holding" ? (
+              <span className="vrec-cancel" style={{ translate: `${Math.max(-CANCEL_PX, drag.dx) * 0.6}px 0`, opacity: 1 - Math.min(1, -drag.dx / CANCEL_PX) * 0.7 }}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m15 6-6 6 6 6" />
+                </svg>
+                Slide to cancel
+              </span>
+            ) : (
+              wave
+            )}
+            {phase === "holding" && wave}
+            {phase === "locked" && (
+              <>
+                <button type="button" className="vrec-stop" onClick={() => end("review")} aria-label="Stop and play it back">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="7" y="7" width="10" height="10" rx="2" />
+                  </svg>
+                </button>
+                <button type="button" className="vrec-send" onClick={() => end("send")} aria-label="Send the voice message">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              </>
+            )}
+          </div>,
+          document.body
+        )
+      : null;
+  // The lock over the mic while holding: it rises with the finger, closing once past the line.
+  const lockMark =
+    phase === "holding" && bar
+      ? createPortal(
+          <span
+            className={`vrec-lock${-drag.dy > LOCK_PX * 0.6 ? " near" : ""}`}
+            style={{ left: bar.left + bar.micLeft + bar.micW / 2, top: bar.top - 74 + Math.max(-LOCK_PX, drag.dy) * 0.5 }}
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24">
+              <rect x="6" y="11" width="12" height="9" rx="2" />
+              <path d="M9 11V8a3 3 0 0 1 6 0v3" />
+            </svg>
+            <svg viewBox="0 0 24 24" className="vrec-up">
+              <path d="m7 14 5-5 5 5" />
+            </svg>
+          </span>,
+          document.body
+        )
+      : null;
+
   return (
-    <button type="button" className={className} onClick={start} disabled={disabled} aria-label="Record a voice message" title={state === "denied" ? "The microphone is not available" : "Voice message"}>
-      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="9" y="3" width="6" height="11" rx="3" />
-        <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
-      </svg>
-      {ring != null && <RingEdge size={ring} />}
-    </button>
+    <>
+      <button
+        ref={btn}
+        type="button"
+        className={`${className}${phase === "holding" ? " vrec-held" : ""}`}
+        style={phase === "holding" ? { translate: `${Math.max(-CANCEL_PX, drag.dx) * 0.4}px ${Math.max(-LOCK_PX, drag.dy) * 0.4}px` } : undefined}
+        disabled={disabled}
+        aria-label={phase === "denied" ? "The microphone is not available" : "Hold to record a voice message"}
+        title={phase === "denied" ? "The microphone is not available" : "Voice message"}
+        onContextMenu={(e) => e.preventDefault()}
+        onPointerDown={(e) => {
+          if (disabled || recording) return;
+          if (e.pointerType === "mouse") {
+            // A click with a mouse records hands-free: there is no finger to hold.
+            void start(true);
+            return;
+          }
+          e.preventDefault();
+          held.current = true;
+          origin.current = { x: e.clientX, y: e.clientY, at: Date.now() };
+          setDrag({ dx: 0, dy: 0 });
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {
+            /* the moves still come while the finger stays on it */
+          }
+          void start(false);
+        }}
+        onPointerMove={(e) => {
+          if (!held.current || locked.current) return;
+          const dx = Math.min(0, e.clientX - origin.current.x);
+          const dy = Math.min(0, e.clientY - origin.current.y);
+          setDrag({ dx, dy });
+          if (phase !== "holding") return;
+          if (-dx > CANCEL_PX) end("discard");
+          else if (-dy > LOCK_PX) {
+            locked.current = true;
+            held.current = false;
+            setDrag({ dx: 0, dy: 0 });
+            setPhase("locked");
+            if (navigator.vibrate) navigator.vibrate(10);
+          }
+        }}
+        onPointerUp={() => {
+          if (!held.current) return;
+          held.current = false;
+          // Too short to be a hold: a word on how, nothing recorded.
+          if (Date.now() - origin.current.at < 350) {
+            end("discard");
+            setHint(true);
+            if (hintTimer.current) window.clearTimeout(hintTimer.current);
+            hintTimer.current = window.setTimeout(() => setHint(false), 1600);
+            return;
+          }
+          if (!locked.current) end("send");
+        }}
+        onPointerCancel={() => {
+          if (held.current && !locked.current) end("discard");
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="9" y="3" width="6" height="11" rx="3" />
+          <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
+        </svg>
+        {ring != null && <RingEdge size={ring} />}
+        {hint && (
+          <span className="vrec-hint" role="status">
+            Hold to record
+          </span>
+        )}
+      </button>
+      {overlay}
+      {lockMark}
+    </>
   );
 }

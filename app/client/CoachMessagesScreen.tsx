@@ -13,6 +13,8 @@ import CoachMark from "./CoachMark";
 import { useOpenLink } from "./CheckInContext";
 import ChatMediaGallery, { exerciseOf } from "../components/ChatMediaGallery";
 import { ChatImage, ChatVideo } from "../components/ChatMedia";
+import VoiceNote from "../components/VoiceNote";
+import { pic } from "../lib/pic";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
 import { clock, dayWords } from "../lib/clientDates";
 import { useHoldPress } from "../components/useHoldPress";
@@ -51,6 +53,10 @@ export type CoachMessageView = {
 
 export type CoachMessagesProps = {
   coachName: string;
+  /** The faces on voice messages (13 Nov, Alex): the coach's and the client's own. */
+  coachPhoto?: string | null;
+  myPhoto?: string | null;
+  myName?: string;
   /** The coach's quiet hours, in their time zone (27 Oct, Alex): "Finlay is away until 07:00" while they hold. */
   quiet?: { from: string; to: string; tz: string | null } | null;
   messages: CoachMessageView[];
@@ -95,7 +101,7 @@ function useAwayUntil(quiet: CoachMessagesProps["quiet"]): string | null {
   return until;
 }
 
-export default function CoachMessagesScreen({ coachName, quiet = null, messages: fromPage, viewerIsClient, unreadCount = 0, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
+export default function CoachMessagesScreen({ coachName, coachPhoto = null, myPhoto = null, myName = "You", quiet = null, messages: fromPage, viewerIsClient, unreadCount = 0, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
   const [, startTransition] = useTransition();
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
   // The one message being answered (2 Oct, as WhatsApp): quoted over the box until sent or dropped.
@@ -373,7 +379,7 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
                   <span>{m.replyTo.text}</span>
                 </button>
               )}
-              {m.media && <Media media={m.media} />}
+              {m.media && <Media media={m.media} voice={{ face: m.mine ? myPhoto : coachPhoto, name: m.mine ? myName : coachName, mine: m.mine }} />}
               {isEditing ? (
                 <div className="cm-edit">
                   <textarea
@@ -694,9 +700,9 @@ function LinkBubble({ view }: { view: LinkView }) {
 
 // A picture shows, a video and a voice message play, any other file downloads.
 // The picture at 1080 wide (19 Oct), the video behind its poster (21 Oct): ChatMedia.
-function Media({ media }: { media: NonNullable<CoachMessageView["media"]> }) {
+function Media({ media, voice }: { media: NonNullable<CoachMessageView["media"]>; /** Whose voice message it is (13 Nov): their face on it. */ voice: { face: string | null; name: string; mine: boolean } }) {
   if (media.type === "video") return <ChatVideo className="cm-msg-video" src={media.path} look={media} />;
-  if (media.type === "audio") return <audio className="cm-msg-audio" src={media.path} controls preload="metadata" />;
+  if (media.type === "audio") return <VoiceNote src={media.path} face={voice.face ? pic(voice.face, 96) : null} name={voice.name} mine={voice.mine} />;
   if (media.type === "file")
     return (
       <a className="cm-msg-file" href={media.path} download={media.name ?? undefined} target="_blank" rel="noreferrer">

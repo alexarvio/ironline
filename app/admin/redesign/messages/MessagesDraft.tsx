@@ -12,6 +12,7 @@ import { ChevronDownIcon } from "../../../components/icons";
 import { MEDIA_PATHS } from "../../../components/ChatLastLine";
 import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
+import VoiceNote from "../../../components/VoiceNote";
 import ChatMediaGallery, { exerciseOf } from "../../../components/ChatMediaGallery";
 import { ChatImage, ChatVideo, withVideoFrame } from "../../../components/ChatMedia";
 import { uploadFirstOrThrow } from "../../../lib/uploadFirst";
@@ -38,7 +39,7 @@ export type DraftLink = { area: string; label: string; gone: boolean; link?: Mes
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null; thumb?: string | null; w?: number | null; h?: number | null };
 export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean; /** The other side has had the chat open since (27 Oct): Seen under the last of yours. */ seen?: boolean; /** The message it answers, quoted (mine: the coach's own). */ replyTo?: { id: number; mine: boolean; text: string } | null };
 /** Newest first, as the loader hands them over. */
-export type DraftMessages = { /** The chat's revision (chatBus.ts): handed back, so an unchanged chat sends nothing. */ rev?: string; messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean; /** The first of those (25 Oct): the phone opens on it. */ firstUnread?: number | null; /** When the client was last in the app (4 Nov, Alex; presence.ts), ISO: the head's `Active 12 min ago`. */ lastActiveAt?: string | null };
+export type DraftMessages = { /** The chat's revision (chatBus.ts): handed back, so an unchanged chat sends nothing. */ rev?: string; messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** The coach's own face, on their voice messages (13 Nov). */ coachAvatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean; /** The first of those (25 Oct): the phone opens on it. */ firstUnread?: number | null; /** When the client was last in the app (4 Nov, Alex; presence.ts), ISO: the head's `Active 12 min ago`. */ lastActiveAt?: string | null };
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 const POLL_MS = 15000;
 
@@ -371,7 +372,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
               <span>{m.replyTo.text}</span>
             </button>
           )}
-          {m.media && <Media media={m.media} />}
+          {m.media && <Media media={m.media} voice={{ face: m.mine ? plan.coachAvatarPath ?? null : plan.avatarPath ?? null, name: m.mine ? "You" : firstName, mine: m.mine }} />}
           {editing?.id === m.id && !inPins ? (
             <span className="rm-edit">
               <textarea
@@ -886,9 +887,9 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
 // A picture shows, a video and a voice message play, any other file downloads.
 // The picture at 1080 wide, not the phone's original (21 Oct: a 6 MB, 4000 px
 // photo for a 280 px bubble), the video behind its poster: ChatMedia.
-function Media({ media }: { media: DraftMedia }) {
+function Media({ media, voice }: { media: DraftMedia; /** Whose voice message it is (13 Nov): their face on it. */ voice: { face: string | null; name: string; mine: boolean } }) {
   if (media.type === "video") return <ChatVideo className="rm-media-video" src={media.path} look={media} />;
-  if (media.type === "audio") return <audio className="rm-media-audio" src={media.path} controls preload="metadata" />;
+  if (media.type === "audio") return <VoiceNote src={media.path} face={voice.face ? pic(voice.face, 96) : null} name={voice.name} mine={voice.mine} />;
   if (media.type === "file")
     return (
       <a className="rm-media-file" href={media.path} download={media.name ?? undefined} target="_blank" rel="noreferrer">
