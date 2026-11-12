@@ -2321,7 +2321,8 @@ export async function addMeetingAction(formData: FormData) {
     // A call the client asked for is answered by whatever gets booked next (9 Oct).
     const booked = listMeetings(clientId).filter((m) => m.status === "scheduled").sort((a, b) => b.id - a.id)[0];
     settleOpenMeetingRequest(clientId, booked?.id ?? 0);
-    const every = repeatWeeks === 1 ? "weekly" : `every-${repeatWeeks}-weeks`;
+    // The rhythm in words (12 Nov, Alex: "every-4-weeks" read oddly): weekly, biweekly, monthly.
+    const every = repeatWeeks === 1 ? "weekly" : repeatWeeks === 2 ? "biweekly" : "monthly";
     logCoachActivity(clientId, repeatWeeks ? `Scheduled ${count} ${every} meetings${topic ? `: "${topic}"` : ""}` : topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
       kind: "general",
       push: true,

@@ -139,7 +139,8 @@ export function categorize(n: StoredNotification): NotificationCategory {
  *  name put in. */
 export function titleAndBody(message: string, coachFirst: string): { title: string; body: string | null } {
   const i = message.indexOf(": ");
-  let title = i > 0 ? message.slice(0, i) : message;
+  // A series of calls by its rhythm in words (12 Nov, Alex): rows written before said "every-4-weeks".
+  let title = (i > 0 ? message.slice(0, i) : message).replace(/\bevery-2-weeks\b/, "biweekly").replace(/\bevery-4-weeks\b/, "monthly");
   const body = i > 0 ? message.slice(i + 2).trim() || null : null;
   if (/^your coach\b/i.test(title)) title = coachFirst + title.slice("your coach".length);
   else if (/^(scheduled|updated|added|changed|moved|left|set|sent|marked|cancelled|asked)\b/i.test(title)) title = `${coachFirst} ${title.charAt(0).toLowerCase()}${title.slice(1)}`;
