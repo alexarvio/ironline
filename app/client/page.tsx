@@ -126,7 +126,7 @@ import { pushPublicKey } from "../lib/push";
 import { fcmConfigured } from "../lib/fcm";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
 import NotificationsScreen, { type NotifView } from "./notifications/NotificationsScreen";
-import { categorize, isListed, titleAndBody } from "../lib/notificationTypes";
+import { categorize, clockToZone, isListed, titleAndBody } from "../lib/notificationTypes";
 import DeleteAccountRow from "./DeleteAccountRow";
 import { clerkOn } from "../lib/clerk";
 import MyDetailsCard from "./MyDetailsCard";
@@ -474,7 +474,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
       coach={{ firstName: coachFirst, photoPath: getCoachAvatarPath(CLIENT_ID) }}
       session={session}
       progressPics={photos}
-      latestActivity={latestCoachActivity(CLIENT_ID, coachFirst)}
+      latestActivity={latestCoachActivity(CLIENT_ID, coachFirst, phoneTz)}
       upcoming={upcoming}
       recap={getLastMeetingRecap(CLIENT_ID)}
       phases={phases}
@@ -528,14 +528,15 @@ function actionOnly(message: string): string {
 // What a comment was on, in words: "Commented on your nutrition".
 const COMMENT_ON = { nutrition: "your nutrition", checkin: "your check-in", photos: "your shape update", training: "your training" } as const;
 
-function latestCoachActivity(clientId: number, coachFirst: string): LatestActivity {
+function latestCoachActivity(clientId: number, coachFirst: string, phoneTz: string | null = null): LatestActivity {
   const weekAgo = Date.now() - 7 * 86400000;
   const sent = coachMessagesFor(clientId).filter((m) => !m.mine && (m.text.trim() || m.media));
   const latestMsg = sent[sent.length - 1] ?? null;
   // A coach chat message's own notification ("Your coach sent you a video")
   // is only its echo: read the message itself (17 Oct), so a form review shows
   // as the reply it is rather than a bare "Sent you a note".
-  const notes = getNotifications(clientId).filter(isListed);
+  // A time in the coach's zone read in the client's own (12 Nov, Alex).
+  const notes = getNotifications(clientId).filter(isListed).map((n) => ({ ...n, message: clockToZone(n.message, phoneTz) }));
   const latestNote = notes[0] ?? null;
   const msgAt = latestMsg ? new Date(`${latestMsg.dateIso}T${latestMsg.timeLabel}:00`).getTime() : 0;
   const noteAt = latestNote ? new Date(latestNote.created_at).getTime() : 0;
@@ -1138,7 +1139,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 // The Notifications screen (9 Oct): every row the coach caused, as a
 // category with a title and a body, newest first; reminders and chat
 // messages stay out (Home and the chat tab have them).
-function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
+function NotificationsPanel({ CLIENT_ID, phoneTz = null }: { CLIENT_ID: number; phoneTz?: string | null }) {
   const coachFirst = getCoachFirstName(CLIENT_ID);
   const videoReplies = listVideoReplies(CLIENT_ID);
   // A call-notes notification from before 10 Oct carries no meeting: it is read as the latest call with a recap on or before its day.
@@ -1164,7 +1165,7 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
   const items: NotifView[] = getNotifications(CLIENT_ID, 300)
     .filter(isListed)
     .map((n) => {
-      const { title, body } = titleAndBody(n.message, coachFirst);
+      const { title, body } = titleAndBody(clockToZone(n.message, phoneTz), coachFirst);
       const category = categorize(n);
       const actionRef = n.action_ref ?? (category === "meeting_notes" ? meetingFor(n.created_at) : category === "event_added" ? eventFor(n.message) : category === "meeting_booked" ? bookedFor(n.message, n.created_at) : null);
       // An event's notification wears the event's own colour and icon (16 Oct), not the generic amber.
@@ -1527,7 +1528,7 @@ export default async function ClientPage({
     <AppShell
       clientName={client?.name ?? ""}
       tabs={tabs}
-      notificationsContent={<NotificationsPanel CLIENT_ID={CLIENT_ID} />}
+      notificationsContent={<NotificationsPanel CLIENT_ID={CLIENT_ID} phoneTz={phoneTz} />}
       hasUnreadNotifications={hasUnreadNotifications}
       clientId={CLIENT_ID}
       preview={preview}

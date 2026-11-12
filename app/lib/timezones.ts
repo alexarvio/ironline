@@ -73,7 +73,7 @@ export function meetingLabelsIn(startIso: string, durationMinutes: number, tz: s
     dayNumber: new Intl.DateTimeFormat("en-US", { timeZone: tz, day: "numeric" }).format(d),
     monthCap: new Intl.DateTimeFormat("en-US", { timeZone: tz, month: "short" }).format(d).toUpperCase(),
     inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
-    whenLabel: `${new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long" }).format(d)} ${new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(d)} ${tzShort(tz, d)} · ${durationMinutes} min`,
+    whenLabel: `${new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long" }).format(d)} ${new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(d)} · ${durationMinutes} min`,
   };
 }
 
