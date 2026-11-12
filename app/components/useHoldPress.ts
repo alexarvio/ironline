@@ -121,7 +121,8 @@ export function useHoldPress({ ms = HOLD_MS, ignore }: { ms?: number; /** Presse
         clearRelease();
         return;
       }
-      if (ignored(e)) return;
+      // Wherever it lands, the menu just opened under the finger too: a real tap on the menu comes with its own
+      // pointerdown first, which has let held go.
       held.current = false;
       clearRelease();
       e.preventDefault();
