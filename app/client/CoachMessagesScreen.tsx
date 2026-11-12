@@ -15,6 +15,7 @@ import ChatMediaGallery, { exerciseOf } from "../components/ChatMediaGallery";
 import { ChatImage, ChatVideo } from "../components/ChatMedia";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
 import { clock, dayWords } from "../lib/clientDates";
+import { useHoldPress } from "../components/useHoldPress";
 
 // The conversation with the coach, laid out as WhatsApp does: the coach's
 // picture and name in the header, their messages on the left and the
@@ -324,6 +325,10 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
     setPinAt((i) => (i + 1) % Math.max(1, pinned.length));
   };
 
+  // The message whose menu is open: its ⌄, or holding the message (docs/DESIGN-RULES.md §9, as the coach's phone).
+  const [menuFor, setMenuFor] = useState<number | null>(null);
+  const { bind: bindHold } = useHoldPress({ ignore: ".cm-menu" });
+
   const bubble = (m: CoachMessageView) => {
     const isEditing = editing?.id === m.id;
     const mine = m.reactions?.[mySide] ?? null;
@@ -332,7 +337,7 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
       <article key={m.id} data-mid={m.id} className={`cm-item${m.mine ? " mine" : ""}${flash === m.id ? " flash" : ""}${m.out ? (m.out.failed ? " out failed" : " out") : ""}`}>
         <div className="cm-msg-row">
           <div className="cm-msg-wrap">
-            <div className={`cm-msg${m.mine ? " mine" : ""}${m.media ? " media" : ""}${m.link ? " linked" : ""}`}>
+            <div className={`cm-msg${m.mine ? " mine" : ""}${m.media ? " media" : ""}${m.link ? " linked" : ""}`} {...(isEditing ? {} : bindHold(() => setMenuFor(m.id)))}>
               {/* What it is about: a small bubble on the corner that goes there. */}
               {m.link && <LinkBubble view={m.link} />}
               {/* What it answers (the coach replying to one message), a tap away from it. */}
@@ -380,6 +385,8 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
                 </span>
                 {!isEditing && (
                   <MessageMenu
+                    open={menuFor === m.id}
+                    onOpenChange={(o) => setMenuFor((cur) => (o ? m.id : cur === m.id ? null : cur))}
                     align={m.mine ? "right" : "left"}
                     reaction={mine}
                     onReact={(e) => react(m, e)}
@@ -516,6 +523,8 @@ export default function CoachMessagesScreen({ coachName, quiet = null, messages:
 // itself. Goes on a pick, a tap anywhere else, or Escape. Opens upward,
 // or downward when the message is near the top of the screen.
 function MessageMenu({
+  open,
+  onOpenChange,
   align,
   reaction,
   onReact,
@@ -527,6 +536,9 @@ function MessageMenu({
   onDelete,
   onUnpin = null,
 }: {
+  /** Open, from its ⌄ or from holding the message: the thread keeps which one, so one is open at a time. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   align: "left" | "right";
   reaction: string | null;
   onReact: (emoji: string | null) => void;
@@ -539,16 +551,27 @@ function MessageMenu({
   onDelete: () => void;
   onUnpin?: (() => void) | null;
 }) {
-  const [open, setOpen] = useState(false);
   const [down, setDown] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
+  const close = useRef(onOpenChange);
+  useEffect(() => {
+    close.current = onOpenChange;
+  });
+  // Up from the message, or down near the top of the thread; asked again each time it opens, before it paints.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const scroller = box.current?.closest(".cm-body");
+    const top = box.current?.getBoundingClientRect().top ?? 0;
+    setDown(top - (scroller?.getBoundingClientRect().top ?? 0) < 280);
+    setConfirming(false);
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const away = (e: PointerEvent) => {
-      if (!box.current?.contains(e.target as Node)) setOpen(false);
+      if (!box.current?.contains(e.target as Node)) close.current(false);
     };
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && close.current(false);
     document.addEventListener("pointerdown", away);
     document.addEventListener("keydown", esc);
     return () => {
@@ -556,17 +579,9 @@ function MessageMenu({
       document.removeEventListener("keydown", esc);
     };
   }, [open]);
-  const toggle = () => {
-    if (!open) {
-      const scroller = box.current?.closest(".cm-body");
-      const top = box.current?.getBoundingClientRect().top ?? 0;
-      setDown(top - (scroller?.getBoundingClientRect().top ?? 0) < 280);
-      setConfirming(false);
-    }
-    setOpen((o) => !o);
-  };
+  const toggle = () => onOpenChange(!open);
   const pick = (fn: () => void) => () => {
-    setOpen(false);
+    onOpenChange(false);
     fn();
   };
   return (

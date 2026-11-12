@@ -21509,3 +21509,12 @@ html { -webkit-tap-highlight-color: transparent; }
 .nd .fdi-foot .nd-section-head { border-top: 0; }
 /* No phase and no targets: the banner in grey, as Training's with nothing planned. */
 .nd-banner.fdi-banner.nd-naked { filter: grayscale(1); }
+
+/* Holding a message in the client's chat opens its menu (12 Nov; docs/DESIGN-RULES.md §9, as the coach's phone,
+   useHoldPress): on a touch screen the bubble never starts the phone's own text selection or its callout (Save
+   image, a link's preview) under the finger. A computer keeps selecting words; Copy is in the menu. */
+@media (hover: none) {
+  .cm-msg { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .cm-msg img, .cm-msg video, .cm-msg a { -webkit-touch-callout: none; }
+  .cm-msg textarea { -webkit-user-select: text; user-select: text; }
+}
