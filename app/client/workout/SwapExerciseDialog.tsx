@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
+import type { LibraryPick } from "../workoutShared";
 import { createPortal } from "react-dom";
 import { groupColour } from "../../lib/muscleGroups";
 import { pic } from "../../lib/pic";
@@ -16,7 +17,11 @@ import RingEdge from "../../components/RingEdge";
 // the row. The workout keeps running behind it.
 
 export type SwapSuggestion = { id: number; name: string; note: string | null; video: string | null };
+/** A library pick carries its name in customName too, so a cardio's swap (named by its alternatives' place) reads it. */
 export type SwapChoice = { libraryExerciseId: number | null; customName: string | null };
+
+/** The coach's library, given by the workout screen (13 Nov, Alex: the field searches it as the client types). */
+export const SwapLibrary = createContext<LibraryPick[]>([]);
 
 const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
 const isUpload = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
@@ -50,8 +55,23 @@ export default function SwapExerciseDialog({
   const list = suggestions;
   const currentPick = current?.libraryExerciseId != null && list.some((s) => s.id === current.libraryExerciseId) ? current.libraryExerciseId : null;
   const [picked, setPicked] = useState<number | null>(currentPick ?? (current ? null : list[0]?.id ?? null));
-  const [own, setOwn] = useState(current && current.libraryExerciseId == null ? current.name : "");
+  const library = useContext(SwapLibrary);
+  const inList = currentPick != null;
+  const [own, setOwn] = useState(current && !inList ? current.name : "");
+  // The library exercise the field holds, when it was picked from the list (13 Nov, Alex).
+  const [ownLib, setOwnLib] = useState<number | null>(current && !inList ? current.libraryExerciseId : null);
+  const [listOpen, setListOpen] = useState(false);
   const [ownOn, setOwnOn] = useState(picked == null);
+  const needle = own.trim().toLowerCase();
+  const cardio = exercise.group === "cardio";
+  const matches = useMemo(() => {
+    if (!needle) return [];
+    const self = exercise.name.toLowerCase();
+    return library
+      .filter((e) => (e.group === "cardio") === cardio && e.name.toLowerCase() !== self && e.name.toLowerCase().includes(needle))
+      .sort((a, b) => Number(!a.name.toLowerCase().startsWith(needle)) - Number(!b.name.toLowerCase().startsWith(needle)) || a.name.localeCompare(b.name))
+      .slice(0, 20);
+  }, [library, needle, cardio, exercise.name]);
   const [lightbox, setLightbox] = useState<SwapSuggestion | null>(null);
   const [closing, setClosing] = useState(false);
   const first = useRef<HTMLButtonElement>(null);
@@ -69,7 +89,13 @@ export default function SwapExerciseDialog({
     return () => document.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- close is stable enough for a key handler
   }, [lightbox]);
-  const chosen = ownOn ? (own.trim() ? { name: own.trim(), id: null as number | null } : null) : list.find((s) => s.id === picked) ? { name: list.find((s) => s.id === picked)!.name, id: picked } : null;
+  const chosen: { name: string; id: number | null; lib: boolean } | null = ownOn
+    ? own.trim()
+      ? { name: own.trim(), id: ownLib, lib: ownLib != null }
+      : null
+    : list.find((s) => s.id === picked)
+      ? { name: list.find((s) => s.id === picked)!.name, id: picked, lib: false }
+      : null;
   const keeping = !!current && !!chosen && (chosen.id != null ? chosen.id === current.libraryExerciseId : current.libraryExerciseId == null && chosen.name === current.name);
   const label = !chosen ? "Pick or write one" : keeping ? `Keep ${chosen.name}` : `Swap for ${chosen.name}`;
   const go = () => {
@@ -79,7 +105,13 @@ export default function SwapExerciseDialog({
       return;
     }
     setClosing(true);
-    setTimeout(() => onSwap(chosen.id != null ? { libraryExerciseId: chosen.id, customName: null } : { libraryExerciseId: null, customName: chosen.name }), 180);
+    setTimeout(
+      () =>
+        onSwap(
+          chosen.lib ? { libraryExerciseId: chosen.id, customName: chosen.name } : chosen.id != null ? { libraryExerciseId: chosen.id, customName: null } : { libraryExerciseId: null, customName: chosen.name }
+        ),
+      180
+    );
   };
   const targetLine = useMemo(() => {
     const parts = [`${targets.sets} × ${targets.time ? targets.time : targets.reps || "—"}`];
@@ -194,27 +226,67 @@ export default function SwapExerciseDialog({
           <div className="sw-block">
             <span className="sw-label">{list.length ? "Or write what you did" : "What did you do instead?"}</span>
             <label className={`sw-field${ownOn ? " on" : ""}`}>
+              {/* No sample in it (13 Nov, Alex: no "e.g."): the library comes up under it as the name is typed. */}
               <input
                 value={own}
                 maxLength={60}
-                placeholder="e.g. Neutral-grip pulldown"
                 enterKeyHint="done"
                 autoComplete="off"
+                role="combobox"
+                aria-expanded={listOpen && matches.length > 0}
+                aria-controls="sw-lib"
                 aria-label="What you did instead"
-                onFocus={() => setOwnOn(true)}
+                onFocus={() => {
+                  setOwnOn(true);
+                  setListOpen(true);
+                }}
                 onChange={(e) => {
                   setOwn(e.target.value);
+                  setOwnLib(null);
                   setOwnOn(true);
+                  setListOpen(true);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
+                    // The name typed in full is that library exercise.
+                    const exact = matches.find((m) => m.name.toLowerCase() === needle);
+                    if (exact && ownLib == null) {
+                      setOwn(exact.name);
+                      setOwnLib(exact.id);
+                      setListOpen(false);
+                      return;
+                    }
                     e.currentTarget.blur();
                     go();
                   }
                 }}
               />
             </label>
+            {listOpen && ownLib == null && matches.length > 0 && (
+              // The library as it is typed, its group grey on the right, as the admin's search (13 Nov, Alex).
+              <div className="sw-lib" id="sw-lib" role="listbox" aria-label="From the library">
+                {matches.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    className="sw-lib-row"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setOwn(m.name);
+                      setOwnLib(m.id);
+                      setOwnOn(true);
+                      setListOpen(false);
+                    }}
+                  >
+                    <span className="sw-lib-name">{m.name}</span>
+                    <span className="sw-lib-group">{groupLabel(m.group)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="sw-actions">

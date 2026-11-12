@@ -13,6 +13,7 @@ import { gymColor } from "../lib/gymColors";
 import RestTimerPill, { useRestTimer } from "./RestTimer";
 import SwipeToEnd from "./SwipeToEnd";
 import FreeAddPage from "./FreeAddPage";
+import { SwapLibrary } from "./workout/SwapExerciseDialog";
 import { Bars } from "./Bars";
 import RingEdge from "../components/RingEdge";
 import type { LibraryPick, WeightUnit } from "./workoutShared";
@@ -43,6 +44,7 @@ import {
 
 const PAGE_KEY = "ironline.client.workout-page";
 type Page = { kind: "exercise"; index: number } | { kind: "cardio"; index: number } | { kind: "add" } | { kind: "wrap" };
+const NO_LIBRARY: LibraryPick[] = [];
 
 function readPage(dayId: number, editing: boolean): number | null {
   try {
@@ -329,6 +331,8 @@ export default function WorkoutScreen({
   const pageStarted = (p: Page) => p.kind === "exercise" && loggedCount(day.exercises[p.index]) > 0;
 
   return (
+    // The coach's library, for the swap's search (13 Nov, Alex).
+    <SwapLibrary.Provider value={library ?? NO_LIBRARY}>
     <div ref={screenRef} className="app-layer app-layer-push wo-screen" role="dialog" aria-label={`${day.title} workout`}>
       <header className="wo-head">
         <div className="wo-head-row">
@@ -620,6 +624,7 @@ export default function WorkoutScreen({
         />
       )}
     </div>
+    </SwapLibrary.Provider>
   );
 }
 

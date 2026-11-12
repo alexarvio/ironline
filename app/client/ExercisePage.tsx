@@ -549,7 +549,7 @@ export default function ExercisePage({
       assignmentId: exercise.id,
       libraryExerciseId: choice?.libraryExerciseId ?? null,
       customName: choice?.customName ?? null,
-      name: choice ? (choice.libraryExerciseId != null ? exercise.alternatives.find((a) => a.id === choice.libraryExerciseId)?.name ?? null : choice.customName) : null,
+      name: choice ? (choice.libraryExerciseId != null ? exercise.alternatives.find((a) => a.id === choice.libraryExerciseId)?.name ?? choice.customName ?? null : choice.customName) : null,
       ...session,
     });
 
