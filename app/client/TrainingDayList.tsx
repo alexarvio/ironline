@@ -13,6 +13,7 @@ import { CopyIcon, PlusIcon } from "../components/icons";
 import AddSessionSheet from "./AddSessionSheet";
 import RingEdge from "../components/RingEdge";
 import DoneCheck from "../components/DoneCheck";
+import { askShown, VideoAskMark, VideoAskRow, VideoAskSheet } from "./VideoAskSheet";
 import { useFocusRef, useNavigateTab, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
 import { clock, durationMinutes, elapsedMs, fresh, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type LibraryPick, type SessionCardio, type SessionDay, type SessionExercise } from "./workoutShared";
 
@@ -333,6 +334,8 @@ export default function TrainingDayList({
   const [host, setHost] = useState<HTMLElement | null>(null);
   // The finished session open in place, if any.
   const [expanded, setExpanded] = useState<number | null>(null);
+  // The exercise whose photo or video (and the coach's reply) is open from that fold.
+  const [videoFor, setVideoFor] = useState<SessionExercise | null>(null);
 
   return (
     <>
@@ -419,9 +422,15 @@ export default function TrainingDayList({
                   <div className="tr-x-in">
                     {d.exercises.map((ex) => {
                       const sets = ex.logs.slice().sort((a, b) => a.setNumber - b.setNumber);
+                      // What was sent and the coach's reply (12 Nov, Alex: B of docs/boards/workout-hidden-mockup.html):
+                      // the mark at the row's end, the workout's own row under the sets, the same sheet.
+                      const ask = askShown(ex.videoRequest, ex.swap != null) ? ex.videoRequest : null;
                       return (
                         <div key={ex.id} className={`tr-x-ex${isDone(ex) ? " done" : ""}`}>
-                          <span className="tr-x-name">{shownName(ex)}</span>
+                          <span className="tr-x-head">
+                            <span className="tr-x-name">{shownName(ex)}</span>
+                            {ask && <VideoAskMark ask={ask} />}
+                          </span>
                           {sets.length === 0 ? (
                             <span className="tr-x-none">Not logged</span>
                           ) : (
@@ -435,6 +444,11 @@ export default function TrainingDayList({
                                 </span>
                               </span>
                             ))
+                          )}
+                          {ask && (
+                            <div className="lw so-video-past">
+                              <VideoAskRow ask={ask} coachName={coachName} onOpen={() => setVideoFor(ex)} tabIndex={isOpen ? 0 : -1} />
+                            </div>
                           )}
                         </div>
                       );
@@ -517,6 +531,10 @@ export default function TrainingDayList({
           />
         ) : null;
       })()}
+
+      {videoFor && (
+        <VideoAskSheet ask={videoFor.videoRequest} assignmentId={videoFor.id} exerciseName={shownName(videoFor)} coachName={coachName} onClose={() => setVideoFor(null)} />
+      )}
 
       {startProblem && (
         <p className="tr-start-problem" role="alert">

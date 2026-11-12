@@ -8,7 +8,8 @@ import { ChatIcon, ChevronLeftIcon, NOTE_ICON_PATHS } from "../components/icons"
 import { useOpenMessages } from "./CheckInContext";
 import type { GymOption } from "./GymPickerDialog";
 import ExercisePage, { MAX_WARMUPS, type ExerciseRequest } from "./ExercisePage";
-import GymPickerDialog from "./GymPickerDialog";
+import GymPickerDialog, { BadgeFace } from "./GymPickerDialog";
+import { gymColor } from "../lib/gymColors";
 import RestTimerPill, { useRestTimer } from "./RestTimer";
 import SwipeToEnd from "./SwipeToEnd";
 import FreeAddPage from "./FreeAddPage";
@@ -201,7 +202,8 @@ export default function WorkoutScreen({
   };
   const openMessages = useOpenMessages();
   const currentNote = currentEx ? ((gymId != null ? currentEx.gymNotes?.[gymId] : "") || currentEx.myNote).trim() : "";
-  const gymName = day.gyms.find((g) => g.id === gymId)?.name ?? null;
+  const gym = day.gyms.find((g) => g.id === gymId) ?? null;
+  const gymName = gym?.name ?? null;
   // Every save here is kept on the phone until the server has it (7 Nov, Alex: offline saving; workoutOutbox.ts).
   const session = { dayId: day.key, startedAt: day.startedAt };
 
@@ -374,16 +376,27 @@ export default function WorkoutScreen({
           <button type="button" className="wo-head-btn" onClick={() => (ended || editing || window.confirm("Leave workout? Your sets are saved.") ? onBack() : undefined)} aria-label="Back">
             <ChevronLeftIcon />
           </button>
-          {/* The gym and the live clock in one ink capsule (15 Oct), the only dark thing up here; a tap switches gym. */}
+          {/* The gym and the live clock in one ink capsule (15 Oct), the only dark thing up here; a tap switches gym. Its
+              face first and a ⌄ after its name (12 Nov, Alex: A of docs/boards/workout-hidden-mockup.html), so it reads as
+              your gym to tap and change; the words alone when it shows no gym, the ⌄ only where a tap opens the picker. */}
           <button
             type="button"
-            className={`wo-pill${ended ? " ended" : ""}`}
+            className={`wo-pill${ended ? " ended" : ""}${gym ? " has-gym" : ""}`}
             onClick={() => day.gyms.length > 0 && setGymOpen(true)}
             disabled={day.gyms.length === 0}
             aria-label={`${gymName ?? (editing ? `Editing ${day.title}` : day.title)},${clock(ms)} elapsed${day.gyms.length > 0 ? ". Switch gym" : ""}`}
           >
-            <span className="wo-pill-glow" aria-hidden="true" />
+            {gym && (
+              <span className="wo-pill-face" style={{ background: gymColor(gym.color).hex }} aria-hidden="true">
+                <BadgeFace name={gym.name} logo={gym.logo} />
+              </span>
+            )}
             <span className="wo-pill-gym">{gymName ?? (editing ? <Bars parts={["Editing", day.title]} /> : day.gyms.length > 0 ? "Pick a gym" : day.title)}</span>
+            {day.gyms.length > 0 && (
+              <svg className="wo-pill-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                <path vectorEffect="non-scaling-stroke" d="m6 9 6 6 6-6" />
+              </svg>
+            )}
             <span className="wo-pill-clock">
               <i className="wo-pill-dot" aria-hidden="true" />
               {clock(ms)}

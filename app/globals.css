@@ -19136,9 +19136,15 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-head-right { display: flex; justify-content: flex-end; gap: 4px; }
 .wo-pill { position: relative; overflow: hidden; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 5px 0 14px; border: 0; border-radius: 999px; background: #141a24; color: #fff; box-shadow: 0 12px 22px -14px rgba(20, 26, 36, 0.8); font: inherit; cursor: pointer; justify-self: center; max-width: 100%; }
 .wo-pill:disabled { cursor: default; }
-.wo-pill-glow { position: absolute; right: -40px; top: -70px; width: 120px; height: 120px; border-radius: 999px; background: radial-gradient(circle, rgba(124, 112, 230, 0.6), transparent 68%); pointer-events: none; }
-.wo-pill-gym { position: relative; max-width: 140px; font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, 0.65); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wo-pill-clock { position: relative; display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); color: #fff; font-size: 13.5px; font-weight: 900; font-variant-numeric: tabular-nums; }
+/* No glow and 600 at most (12 Nov, Alex: A of docs/boards/workout-hidden-mockup.html). With a gym: its face first, 20px,
+   as far in from the pill's left as from its top (9px), its name in white, a ⌄ after it, then the clock. */
+.wo-pill-gym { position: relative; max-width: 140px; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.65); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wo-pill.has-gym { gap: 7px; padding-left: 9px; }
+.wo-pill.has-gym .wo-pill-gym { max-width: 120px; font-size: 12.5px; color: #fff; }
+.wo-pill-face { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; overflow: hidden; border-radius: 50%; color: #fff; font-size: 9px; font-weight: 600; line-height: 1; }
+.wo-pill-face .gpk-badge-img { border-radius: 50%; }
+.wo-pill-chev { position: relative; flex: none; width: 12px; height: 12px; margin-left: -2px; color: rgba(255, 255, 255, 0.7); }
+.wo-pill-clock { position: relative; display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); color: #fff; font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .wo-pill-dot { width: 6px; height: 6px; border-radius: 999px; background: #32D74B; animation: wo-live 1.6s ease-in-out infinite; }
 .wo-pill.ended .wo-pill-dot { animation: none; background: #7fd68f; }
 @keyframes wo-live { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
@@ -21518,3 +21524,19 @@ html { -webkit-tap-highlight-color: transparent; }
   .cm-msg img, .cm-msg video, .cm-msg a { -webkit-touch-callout: none; }
   .cm-msg textarea { -webkit-user-select: text; user-select: text; }
 }
+/* ==== Out of the workout's ⋯ (12 Nov, Alex: docs/boards/workout-hidden-mockup.html) ==== */
+/* + Warm-up on the spine right above set 1 (A): the + in a faint amber ring on the page's disc (so the spine stays
+   hidden), Warm-up in amber words; a row as tall as the room under the sets. 36 and 14, both even. */
+.lw-warmadd { position: relative; display: flex; align-items: center; gap: 16px; width: 100%; height: 44px; padding: 0 6px 0 2px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #a8761f; text-align: left; cursor: pointer; }
+.lw-warmadd-plus { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #F5F6F8; --ring: rgba(168, 118, 31, 0.45); color: #a8761f; }
+.lw-warmadd-plus > svg:not(.ring-edge) { width: 14px; height: 14px; }
+.lw-warmadd:active { background: rgba(20, 26, 36, 0.03); }
+/* A finished session's photo or video (B): its mark on the exercise's row, 12 in 22, green once sent or replied to,
+   grey while only asked; the workout's own row under the sets (`.lw` round it, VideoAskRow). */
+.wo-askmark { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; --ring: #C9CFD8; color: #8b93a1; }
+.wo-askmark.green { --ring: rgba(47, 122, 63, 0.55); color: #2f7a3f; }
+.wo-askmark > svg:not(.ring-edge) { width: 12px; height: 12px; }
+.so-video-past { margin-top: 6px; }
+.tr-x-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
+.tr-x-head .tr-x-name { min-width: 0; }
+.tr-x-ex .so-video-past { margin-top: 2px; }
