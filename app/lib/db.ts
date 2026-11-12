@@ -820,6 +820,8 @@ type MetricEntry = {
   value: number | null;
   // Same stamp as MeasurementValue.logged_at.
   logged_at?: string;
+  /** "health": filled from the phone's Apple Health / Health Connect, not typed (13 Nov): never a check-in on Activity. */
+  source?: "health";
 };
 
 // Coach-level (not tied to any one client) reusable metric presets — build a

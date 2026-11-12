@@ -1351,7 +1351,9 @@ export async function syncHealthStepsAction(days: { date: string; steps: number 
     const steps = Math.round(Number(day?.steps));
     if (!checkInEditable(String(day?.date), today) || !Number.isFinite(steps) || steps <= 0 || steps > 200000) continue;
     if (current.get(day.date) === steps) continue;
-    setMetricEntry(metric.id, day.date, steps, new Date().toISOString());
+    // Flagged as the phone's, and an older day keeps its time (13 Nov, Alex: Activity showed 8 daily check-ins at 14:55,
+    // the sync re-dating the last eight days each time their counts moved).
+    setMetricEntry(metric.id, day.date, steps, new Date().toISOString(), "health");
     saved++;
   }
   if (saved) {
