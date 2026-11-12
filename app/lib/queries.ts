@@ -12981,11 +12981,13 @@ function createdItem(clientId: number, i: CreatedItem) {
 }
 
 /** A saved meal made from nothing, on the Saved meals screen (10 Nov, Alex): a card named first and filled after, so it may hold no food yet. */
-export function createSavedMeal(clientId: number, name: string, items: CreatedItem[] = []): SavedMeal | null {
+export function createSavedMeal(clientId: number, name: string, items: CreatedItem[] = [], slot: string | null = null): SavedMeal | null {
   const rows = items.map((i) => createdItem(clientId, i)).filter((r): r is NonNullable<typeof r> => r != null);
   if (!name.trim() || (items.length > 0 && rows.length === 0)) return null;
   const data = getData();
-  const row: SavedMeal = { id: allocId("saved_meals"), client_id: clientId, name, items: rows, created_at: new Date().toISOString() };
+  // Made for Breakfast, Lunch, Dinner or Snacks (12 Nov, Alex): used, it goes into that meal's card.
+  const meal = slot && FOOD_MEALS.some((m) => m.id === slot) ? slot : null;
+  const row: SavedMeal = { ...(meal ? { slot: meal } : {}), id: allocId("saved_meals"), client_id: clientId, name, items: rows, created_at: new Date().toISOString() };
   data.saved_meals.push(row);
   persist();
   return row;
@@ -13354,12 +13356,13 @@ export function addSavedMeal(clientId: number, id: number, date: string, meal: F
 }
 
 /** Add a meal, Copy a meal, Saved meals (10 Nov, Alex): a saved meal is a card of its own, added twice two cards, never on
-    top of each other ("it's a different meal"). The one exception: saved from Breakfast, Lunch or Dinner it goes back there
-    while that meal is empty ("always the breakfast slot with that meal"). Snacks is no meal of its own to go back to. */
+    top of each other ("it's a different meal"). The one exception: saved from or made for Breakfast, Lunch, Dinner or
+    Snacks it goes into that meal's card while the card is empty ("always the breakfast slot with that meal"; 12 Nov, Alex:
+    "so we don't have two breakfasts", Snacks too); a meal already holding food keeps it, and the saved meal is a card of its own. */
 export function addSavedMealCard(clientId: number, id: number, date: string): number {
   const saved = getData().saved_meals.find((m) => m.id === id && m.client_id === clientId);
   if (!saved || saved.items.length === 0) return 0;
-  const slot = saved.slot && saved.slot !== "snacks" ? saved.slot : null;
+  const slot = saved.slot && FOOD_MEALS.some((m) => m.id === saved.slot) ? saved.slot : null;
   if (slot && !listFoodEntries(clientId, date).some((e) => e.meal === slot)) return addSavedMeal(clientId, id, date, slot);
   const card = addFoodMeal(clientId, saved.name, date);
   return addSavedMeal(clientId, id, date, `m:${card.id}`);

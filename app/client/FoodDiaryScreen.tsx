@@ -56,7 +56,7 @@ import "./food-cards.css";
 // The client's food diary, which is the Nutrition tab (12 Nov, Alex: B of docs/boards/nutrition-is-the-diary-mockup.html).
 // Under the app's own top bar: a banner with the phase, the day, a week strip and the Training day / Rest day choice
 // that decides the targets; the rings filling as the day is eaten with the kcal left inside; Supplements | Water;
-// the meals, a photo card each with its foods folding out under it; Saved days | Saved meals; the coach's note and
+// the meals, a photo card each with its foods folding out under it (Add a meal opens Saved meals and days); the coach's note and
 // Last 7 days at the foot. A day at a time: the strip, its arrows or a
 // sideways swipe move a day, never past today; other days are read through
 // the action, and the day is re-read after every change. Add food opens
@@ -480,10 +480,9 @@ export default function FoodDiaryScreen({
   const [namingDay, setNamingDay] = useState(false);
   // Saved days or Saved meals, the screen to pick from (10 Nov, Alex).
   const [savedScreen, setSavedScreen] = useState<"days" | "meals" | null>(null);
-  const savedRow = useRef<HTMLDivElement>(null);
   const [savedHost, setSavedHost] = useState<HTMLElement | null>(null);
   const openSaved = (which: "days" | "meals") => {
-    setSavedHost(savedRow.current?.closest(".app-layer")?.parentElement ?? null);
+    setSavedHost(rootRef.current?.closest(".app-layer")?.parentElement ?? null);
     setSavedScreen(which);
   };
   // A saved day's own screen, over the list (10 Nov, Alex): `new` until it has its name, and what it deploys from.
@@ -515,7 +514,7 @@ export default function FoodDiaryScreen({
   // The diary out of reach of the keyboard and a screen reader while its screen is over it, as a gym's page does.
   const savedOpen = !!savedScreen;
   useEffect(() => {
-    const layer = savedRow.current?.closest<HTMLElement>(".app-layer");
+    const layer = rootRef.current?.closest<HTMLElement>(".app-layer");
     if (!layer || !savedOpen) return;
     layer.inert = true;
     return () => {
@@ -1427,19 +1426,8 @@ export default function FoodDiaryScreen({
               };
               return (
                 <>
-                  {/* Saved days and Saved meals side by side, each its own screen to pick from (10 Nov, Alex). */}
-                  <div ref={savedRow} className="fdi-saved-row">
-                    <button type="button" className="fdi-saved-pill" onClick={() => openSaved("days")}>
-                      <BookmarkIcon />
-                      <span>Saved days</span>
-                      <ChevronDownIcon />
-                    </button>
-                    <button type="button" className="fdi-saved-pill" onClick={() => openSaved("meals")}>
-                      <BookmarkIcon />
-                      <span>Saved meals</span>
-                      <ChevronDownIcon />
-                    </button>
-                  </div>
+                  {/* Saved days and Saved meals open from Add a meal (12 Nov, Alex: A of docs/boards/saved-other-ways-mockup.html):
+                      no row of their own; their screens are here. */}
                   {savedScreen && savedHost && createPortal(
                     <>
                     <div className="app-layer app-layer-push cn-screen fdi-saved-screen" inert={savedScreen === "days" && openDay != null}>
@@ -1598,15 +1586,21 @@ export default function FoodDiaryScreen({
       )}
       {addingMeal && (
         <AddMealSheet
-          saved={diary.saved.filter((s) => s.count > 0)}
           busy={loading}
-          picture={(p) => pic(p, 1080)}
+          meals={diary.saved.length}
+          days={diary.savedDays.length}
           onNew={() => {
             setAddingMeal(false);
             addMealNow();
           }}
-          onCopy={copyMealCard}
-          failed={copyFailed != null}
+          onMeals={() => {
+            setAddingMeal(false);
+            openSaved("meals");
+          }}
+          onDays={() => {
+            setAddingMeal(false);
+            openSaved("days");
+          }}
           onClose={() => setAddingMeal(false)}
         />
       )}
@@ -2682,6 +2676,14 @@ function withItems(s: SavedMealRow, items: SavedItem[]): SavedMealRow {
 }
 const cardOfSaved = (s: SavedMealRow): EditCard => ({ key: String(s.id), name: s.name, picture: s.picture, thumb: s.thumb, items: s.items });
 
+// The meals of the day a saved meal can be made for (12 Nov, Alex), in the day's order.
+const MAKE_SLOTS = [
+  { id: "breakfast", label: "Breakfast" },
+  { id: "lunch", label: "Lunch" },
+  { id: "dinner", label: "Dinner" },
+  { id: "snacks", label: "Snacks" },
+];
+
 function SavedMealList({
   clientId,
   date,
@@ -2716,12 +2718,30 @@ function SavedMealList({
     for (const [k, v] of Object.entries(extra)) fd.set(k, v);
     return changeSavedMealFoodAction(fd);
   };
+  // Which meal of the day a new saved meal is for (12 Nov, Alex: "select if it's breakfast, lunch, dinner, or snack"):
+  // used, it goes into that card, so there are never two Breakfasts. Named anything with none picked, it is a card of its own.
+  const [slot, setSlot] = useState<string | null>(null);
+  const slotNow = useRef<string | null>(null);
+  const pickSlot = (id: string, label: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    const next = slot === id ? null : id;
+    slotNow.current = next;
+    setSlot(next);
+    // Picked with no name typed: it is named for its meal, and made at once.
+    const box = e.currentTarget.closest(".fdi-make-slots")?.previousElementSibling?.querySelector<HTMLInputElement>(".fdi-title-input");
+    if (next && box && !box.value.trim()) {
+      box.value = label;
+      box.blur();
+    }
+  };
   const actions: CardActions = {
     create: async (name) => {
       const fd = new FormData();
       fd.set("clientId", String(clientId));
       fd.set("name", name);
+      if (slotNow.current) fd.set("slot", slotNow.current);
       fd.set("onceKey", newOnceKey());
+      slotNow.current = null;
+      setSlot(null);
       const id = await createSavedMealCardAction(fd);
       return id != null ? String(id) : null;
     },
@@ -2754,12 +2774,30 @@ function SavedMealList({
       addAt="top"
       renderAdd={(start, input) =>
         input ? (
-          <div className="fdi-saved-pill fdi-saved-this fdi-saved-wide typing">
-            <PlusIcon />
-            {input}
-          </div>
+          <>
+            <div className="fdi-saved-pill fdi-saved-this fdi-saved-wide typing">
+              <PlusIcon />
+              {input}
+            </div>
+            {/* The meal it is for, under the name: chips, the picked one ink; the name box keeps the focus. */}
+            <div className="fdi-make-slots" role="group" aria-label="For">
+              {MAKE_SLOTS.map((m) => (
+                <button key={m.id} type="button" className={`fdi-make-slot${slot === m.id ? " on" : ""}`} aria-pressed={slot === m.id} onPointerDown={(e) => e.preventDefault()} onClick={(e) => pickSlot(m.id, m.label, e)}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </>
         ) : (
-          <button type="button" className="fdi-saved-pill fdi-saved-this fdi-saved-wide" onClick={start}>
+          <button
+            type="button"
+            className="fdi-saved-pill fdi-saved-this fdi-saved-wide"
+            onClick={() => {
+              slotNow.current = null;
+              setSlot(null);
+              start();
+            }}
+          >
             <PlusIcon />
             <span>Create a meal</span>
           </button>
