@@ -1070,7 +1070,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         address={{ address: profile.address ?? "", postcode: profile.postcode ?? "", city: profile.city ?? "", region: profile.region ?? "", country_code: profile.country_code ?? "", country: profile.country ?? "" }}
       />
 
-      <GymSettings gyms={gymDashboards(CLIENT_ID)} />
+      <GymSettings clientId={CLIENT_ID} gyms={gymDashboards(CLIENT_ID)} />
 
       {/* The pictures behind the Home cards (12 Oct): the client's own from their camera roll, or the coach's. Press and hold a card on Home does the same. */}
       <SettingsFold title="Card pictures">

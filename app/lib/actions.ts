@@ -4023,10 +4023,22 @@ type ClientAddedGym = { id: number; name: string; color: "navy" | "indigo" | "te
 export async function clientAddGymAction(programDayId: number, name: string, color: string, kind: string, justOnce = false, onceKey?: string): Promise<ClientAddedGym> {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return { error: "Not signed in." };
+  return addGymForClient(owner, name, color, kind, justOnce, onceKey);
+}
+
+/** The client adds a gym from Settings · Gyms (12 Nov, Alex), in the picker's own form: a regular gym, on the same rules
+ *  (the first one home, a deleted one's name bringing it back). */
+export async function clientAddGymFromSettingsAction(clientId: number, name: string, color: string, kind: string, onceKey?: string): Promise<ClientAddedGym> {
+  const owner = Number(clientId);
+  if (!Number.isFinite(owner) || !(await canAccessClient(owner))) return { error: "Not signed in." };
+  return addGymForClient(owner, name, color, kind, false, onceKey);
+}
+
+async function addGymForClient(owner: number, name: string, color: string, kind: string, justOnce: boolean, onceKey?: string): Promise<ClientAddedGym> {
   const clean = String(name ?? "").trim().replace(/\s+/g, " ");
   if (clean.length < 2) return { error: "Give the gym a name." };
   // Taken once (6 Nov, one-time key): sent again after a dropped signal, it answers the gym the first made, never
-  // "You already have a gym called X".
+  // "You already have a gym called X". One key space for the picker and Settings.
   return once(`clientAddGymAction:${owner}`, onceKeyOf(onceKey), (): ClientAddedGym => {
     // Just this once (6 Nov, Alex): a name already used once is that gym again; a regular gym's name is that gym.
     const same = listClientGyms(owner).find((g) => g.name.toLowerCase() === clean.toLowerCase());

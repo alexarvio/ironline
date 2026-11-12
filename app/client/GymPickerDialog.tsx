@@ -102,62 +102,6 @@ export default function GymPickerDialog({
     setClosing(true);
     setTimeout(onClose, 180);
   };
-  // The form.
-  const [name, setName] = useState("");
-  const [color, setColor] = useState<GymColorKey>(() => nextFreeColor(gyms));
-  const [kind, setKind] = useState<GymKind>("gym");
-  const [busy, setBusy] = useState(false);
-  // A second tap while the add is out is nothing; the add that didn't go keeps its key for Try again (6 Nov).
-  const addOut = useRef(false);
-  const lastAdd = useRef<{ key: string; sent: string } | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const clean = name.trim().replace(/\s+/g, " ");
-  const duplicate = clean.length >= 2 && list.some((g) => g.name.toLowerCase() === clean.toLowerCase() && !(once && g.once));
-  const valid = clean.length >= 2 && !duplicate && !busy;
-  const nameRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (adding) setTimeout(() => nameRef.current?.focus(), 60);
-  }, [adding]);
-
-  // The picture: picked in the form it waits (shown from memory) until the
-  // gym exists; picked for a gym in the list it goes up straight away.
-  const fileRef = useRef<HTMLInputElement>(null);
-  const pickFor = useRef<"new" | number>("new");
-  const [newLogo, setNewLogo] = useState<{ blob: Blob; url: string } | null>(null);
-  const [logoBusy, setLogoBusy] = useState<"new" | number | null>(null);
-  useEffect(() => () => void (newLogo && URL.revokeObjectURL(newLogo.url)), [newLogo]);
-  const choosePicture = (forWhat: "new" | number) => {
-    pickFor.current = forWhat;
-    fileRef.current?.click();
-  };
-  const onPicture = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    const target = pickFor.current;
-    setLogoBusy(target);
-    const blob = await shrink(file);
-    if (!blob) {
-      setLogoBusy(null);
-      setToast("Couldn't read that picture.");
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-    if (target === "new") {
-      setNewLogo({ blob, url: URL.createObjectURL(blob) });
-      setLogoBusy(null);
-      return;
-    }
-    const logo = await sendLogo(target, blob);
-    setLogoBusy(null);
-    if (!logo) {
-      setToast("Couldn't save the picture. Try again.");
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-    setList((l) => l.map((g) => (g.id === target ? { ...g, logo } : g)));
-  };
-
   // Focus: the card takes it, Escape closes, and the Start button has it back after.
   const card = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -190,32 +134,7 @@ export default function GymPickerDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open
   }, []);
 
-  const add = async () => {
-    if (!valid || addOut.current) return;
-    addOut.current = true;
-    setBusy(true);
-    // Its one-time key, made as Add is tapped (6 Nov): sent again once the signal is back, or tried again unchanged after
-    // it didn't go, it adds one gym.
-    const sent = JSON.stringify([dayId, clean, color, once ? "gym" : kind, once]);
-    const onceKey = lastAdd.current?.sent === sent ? lastAdd.current.key : newOnceKey();
-    lastAdd.current = { key: onceKey, sent };
-    let r: Awaited<ReturnType<typeof clientAddGymAction>> | null;
-    try {
-      r = await clientAddGymAction(dayId, clean, color, once ? "gym" : kind, once, onceKey);
-    } catch {
-      r = null;
-    }
-    addOut.current = false;
-    if (!r || "error" in r) {
-      setBusy(false);
-      setToast(r?.error ?? "Couldn't add the gym. Try again.");
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-    lastAdd.current = null;
-    const logo = newLogo ? await sendLogo(r.id, newLogo.blob) : null;
-    setBusy(false);
-    const gym: GymOption = { id: r.id, name: r.name, color: r.color, kind: r.kind, sessions: 0, lastUsedAt: null, lastUsed: false, logo, once };
+  const added = (gym: GymOption) => {
     if (once) {
       try {
         navigator.vibrate?.(10);
@@ -225,10 +144,6 @@ export default function GymPickerDialog({
     }
     setList((l) => [...l.filter((g) => g.id !== gym.id), gym]);
     setSelected(gym.id);
-    setNewLogo(null);
-    setName("");
-    setColor(nextFreeColor([...list, gym]));
-    setKind("gym");
     setAdding(false);
   };
   const go = () => {
@@ -248,9 +163,10 @@ export default function GymPickerDialog({
     (card.current?.querySelectorAll<HTMLElement>('[role="radio"]')[(i + step + list.length) % list.length])?.focus();
   };
 
-  const tint = adding ? GYM_COLORS[color] : gymColor(chosen?.color);
+  // The form sets its own colour over this while it is open.
+  const tint = gymColor(chosen?.color);
   const currentName = list.find((g) => g.id === gymId)?.name ?? null;
-  const title = adding ? (once ? "One-time gym" : firstGym ? "Where do you train?" : "Add a gym") : mode === "switch" ? "Switch gym" : "Where are you training?";
+  const title = mode === "switch" ? "Switch gym" : "Where are you training?";
   const openForm = (asOnce: boolean) => {
     setOnce(asOnce);
     setAdding(true);
@@ -258,80 +174,20 @@ export default function GymPickerDialog({
   return createPortal(
     <div className={`gpk-overlay${closing ? " closing" : ""}`} onClick={close}>
       <div ref={card} className={`gpk-card${closing ? " closing" : ""}`} role="dialog" aria-modal="true" aria-labelledby="gpk-title" style={{ "--g": tint.hex, "--g-rgb": tint.rgb } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onPicture(e)} />
         <span className="gpk-glow" aria-hidden="true" />
         <span className="gpk-wash" aria-hidden="true" />
         {adding ? (
-          <div className="gpk-content gpk-add">
-            <div className="gpk-head center">
-              {!firstGym && (
-                <button type="button" className="gpk-round" onClick={() => setAdding(false)} aria-label="Back to your gyms">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="m14.5 6-6 6 6 6" />
-                  </svg>
-                  <RingEdge size={32} />
-                </button>
-              )}
-              <h2 id="gpk-title" className="gpk-title sm">
-                {title}
-              </h2>
-            </div>
-            <div className="gpk-name-row">
-              <button type="button" className={`gpk-badge big gpk-badge-btn${logoBusy === "new" ? " busy" : ""}`} style={{ background: GYM_COLORS[color].hex }} onClick={() => choosePicture("new")} aria-label={newLogo ? "Change the gym's picture" : "Add a picture of the gym"}>
-                <BadgeFace name={name} logo={newLogo?.url} />
-                <CameraDot />
-              </button>
-              <label className="gpk-field">
-                <span className="gpk-label">Gym name</span>
-                <span className={`gpk-input-box${clean.length >= 2 && !duplicate ? " valid" : ""}`}>
-                  <input
-                    ref={nameRef}
-                    className="gpk-input"
-                    value={name}
-                    maxLength={32}
-                    placeholder={once ? "e.g. Day pass, Koh Samui" : "e.g. PureGym Leeds"}
-                    autoCapitalize="words"
-                    autoComplete="off"
-                    enterKeyHint="done"
-                    onChange={(e) => setName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), void add())}
-                  />
-                </span>
-                {duplicate && <span className="gpk-error">You already have a gym called {clean}</span>}
-              </label>
-            </div>
-            {!once && (
-            <>
-            <div className="gpk-group">
-              <span className="gpk-label">Colour</span>
-              <div className="gpk-swatches" role="radiogroup" aria-label="Colour">
-                {GYM_COLOR_KEYS.map((c) => (
-                  <button key={c} type="button" role="radio" aria-checked={c === color} aria-label={GYM_COLORS[c].label} className={`gpk-swatch${c === color ? " on" : ""}`} style={{ background: GYM_COLORS[c].hex, ...(c === color ? { boxShadow: `0 0 0 3px #fff, 0 0 0 5px ${GYM_COLORS[c].hex}` } : {}) }} onClick={() => setColor(c)} />
-                ))}
-              </div>
-            </div>
-            <div className="gpk-group">
-              <span className="gpk-label">Type</span>
-              <div className="gpk-seg" role="radiogroup" aria-label="Type">
-                {GYM_KINDS.map((k) => (
-                  <button key={k.key} type="button" role="radio" aria-checked={k.key === kind} className={`gpk-seg-btn${k.key === kind ? " on" : ""}`} onClick={() => setKind(k.key)}>
-                    {k.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="gpk-info">Weights you log here are kept separate from your other gyms.</p>
-            </>
-            )}
-            <button type="button" className="gpk-primary" disabled={!valid} onClick={() => void add()}>
-              {busy ? (once ? "Starting…" : "Adding…") : once ? (mode === "switch" ? "Switch here" : "Start here") : "Add & select"}
-            </button>
-            {toast && (
-              <div className="gpk-toast" role="alert">
-                {toast}
-              </div>
-            )}
-          </div>
+          <AddGymForm
+            existing={list}
+            once={once}
+            title={once ? "One-time gym" : firstGym ? "Where do you train?" : "Add a gym"}
+            addLabel={once ? (mode === "switch" ? "Switch here" : "Start here") : "Add & select"}
+            busyLabel={once ? "Starting…" : "Adding…"}
+            send={(name, color, kind, onceKey) => clientAddGymAction(dayId, name, color, kind, once, onceKey)}
+            sentKey={dayId}
+            onBack={firstGym ? undefined : () => setAdding(false)}
+            onAdded={added}
+          />
         ) : (
           <div className="gpk-content">
             <div className="gpk-head">
@@ -365,7 +221,7 @@ export default function GymPickerDialog({
                     onClick={() => setSelected(g.id)}
                     onKeyDown={(e) => onRowKey(e, i)}
                   >
-                    <span className={`gpk-badge${logoBusy === g.id ? " busy" : ""}`} style={{ background: c.hex }} aria-hidden="true">
+                    <span className="gpk-badge" style={{ background: c.hex }} aria-hidden="true">
                       <BadgeFace name={g.name} logo={g.logo} />
                     </span>
                     <span className="gpk-row-text">
@@ -411,15 +267,192 @@ export default function GymPickerDialog({
               <span className="gpk-dot" aria-hidden="true" />
               <span className="gpk-start-label">{mode === "switch" ? `Switch to ${chosen?.name ?? "…"}` : `Start at ${chosen?.name ?? "…"}`}</span>
             </button>
-            {toast && (
-              <div className="gpk-toast" role="alert">
-                {toast}
-              </div>
-            )}
           </div>
         )}
       </div>
     </div>,
     document.body
+  );
+}
+
+/** What an add answers: the gym, or why not. */
+export type AddedGym = Awaited<ReturnType<typeof clientAddGymAction>>;
+
+/**
+ * The Add a gym form (13 Oct), one for the picker and Settings · Gyms (12 Nov, Alex): the picture, the name, the colour and
+ * the type (the name and picture alone for a one-time gym). The picture waits, shown from memory, until the gym exists.
+ * Whose gyms they are is the caller's: `send` adds it, `onAdded` hears the gym.
+ */
+export function AddGymForm({
+  existing,
+  once = false,
+  title,
+  addLabel,
+  busyLabel = "Adding…",
+  send,
+  sentKey,
+  onBack,
+  onClose,
+  onAdded,
+}: {
+  /** The gyms a name may not repeat (a one-time gym's name may come again as one). */
+  existing: { name: string; color?: string | null; once?: boolean }[];
+  once?: boolean;
+  title: string;
+  addLabel: string;
+  busyLabel?: string;
+  send: (name: string, color: GymColorKey, kind: GymKind, onceKey: string) => Promise<AddedGym>;
+  /** Where the add goes (the session's day, the client): part of what makes a retry the same add. */
+  sentKey: number;
+  /** The round back arrow on the left. */
+  onBack?: () => void;
+  /** The round ✕ on the right. */
+  onClose?: () => void;
+  onAdded: (gym: GymOption) => void;
+}) {
+  const [name, setName] = useState("");
+  const [color, setColor] = useState<GymColorKey>(() => nextFreeColor(existing));
+  const [kind, setKind] = useState<GymKind>("gym");
+  const [busy, setBusy] = useState(false);
+  // A second tap while the add is out is nothing; the add that didn't go keeps its key for Try again (6 Nov).
+  const addOut = useRef(false);
+  const lastAdd = useRef<{ key: string; sent: string } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const say = (words: string) => {
+    setToast(words);
+    setTimeout(() => setToast(null), 3000);
+  };
+  const clean = name.trim().replace(/\s+/g, " ");
+  const duplicate = clean.length >= 2 && existing.some((g) => g.name.toLowerCase() === clean.toLowerCase() && !(once && g.once));
+  const valid = clean.length >= 2 && !duplicate && !busy;
+  const nameRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const t = setTimeout(() => nameRef.current?.focus(), 60);
+    return () => clearTimeout(t);
+  }, []);
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [newLogo, setNewLogo] = useState<{ blob: Blob; url: string } | null>(null);
+  const [logoBusy, setLogoBusy] = useState(false);
+  useEffect(() => () => void (newLogo && URL.revokeObjectURL(newLogo.url)), [newLogo]);
+  const onPicture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setLogoBusy(true);
+    const blob = await shrink(file);
+    setLogoBusy(false);
+    if (!blob) return say("Couldn't read that picture.");
+    setNewLogo({ blob, url: URL.createObjectURL(blob) });
+  };
+
+  const add = async () => {
+    if (!valid || addOut.current) return;
+    addOut.current = true;
+    setBusy(true);
+    const k: GymKind = once ? "gym" : kind;
+    // Its one-time key, made as Add is tapped (6 Nov): sent again once the signal is back, or tried again unchanged after
+    // it didn't go, it adds one gym.
+    const sent = JSON.stringify([sentKey, clean, color, k, once]);
+    const onceKey = lastAdd.current?.sent === sent ? lastAdd.current.key : newOnceKey();
+    lastAdd.current = { key: onceKey, sent };
+    let r: AddedGym | null;
+    try {
+      r = await send(clean, color, k, onceKey);
+    } catch {
+      r = null;
+    }
+    addOut.current = false;
+    if (!r || "error" in r) {
+      setBusy(false);
+      return say(r?.error ?? "Couldn't add the gym. Try again.");
+    }
+    lastAdd.current = null;
+    const logo = newLogo ? await sendLogo(r.id, newLogo.blob) : null;
+    setBusy(false);
+    onAdded({ id: r.id, name: r.name, color: r.color, kind: r.kind, sessions: 0, lastUsedAt: null, lastUsed: false, logo, once });
+  };
+
+  const tint = GYM_COLORS[color];
+  return (
+    <div className="gpk-content gpk-add" style={{ "--g": tint.hex, "--g-rgb": tint.rgb } as React.CSSProperties}>
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onPicture(e)} />
+      <div className="gpk-head center">
+        {onBack && (
+          <button type="button" className="gpk-round" onClick={onBack} aria-label="Back to your gyms">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m14.5 6-6 6 6 6" />
+            </svg>
+            <RingEdge size={32} />
+          </button>
+        )}
+        <h2 id="gpk-title" className={`gpk-title sm${onClose ? " ads-title" : ""}`}>
+          {title}
+        </h2>
+        {onClose && (
+          <button type="button" className="gpk-round" onClick={onClose} aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+            <RingEdge size={32} />
+          </button>
+        )}
+      </div>
+      <div className="gpk-name-row">
+        <button type="button" className={`gpk-badge big gpk-badge-btn${logoBusy ? " busy" : ""}`} style={{ background: tint.hex }} onClick={() => fileRef.current?.click()} aria-label={newLogo ? "Change the gym's picture" : "Add a picture of the gym"}>
+          <BadgeFace name={name} logo={newLogo?.url} />
+          <CameraDot />
+        </button>
+        <label className="gpk-field">
+          <span className="gpk-label">Gym name</span>
+          <span className={`gpk-input-box${clean.length >= 2 && !duplicate ? " valid" : ""}`}>
+            <input
+              ref={nameRef}
+              className="gpk-input"
+              value={name}
+              maxLength={32}
+              placeholder={once ? "e.g. Day pass, Koh Samui" : "e.g. PureGym Leeds"}
+              autoCapitalize="words"
+              autoComplete="off"
+              enterKeyHint="done"
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), void add())}
+            />
+          </span>
+          {duplicate && <span className="gpk-error">You already have a gym called {clean}</span>}
+        </label>
+      </div>
+      {!once && (
+        <>
+          <div className="gpk-group">
+            <span className="gpk-label">Colour</span>
+            <div className="gpk-swatches" role="radiogroup" aria-label="Colour">
+              {GYM_COLOR_KEYS.map((c) => (
+                <button key={c} type="button" role="radio" aria-checked={c === color} aria-label={GYM_COLORS[c].label} className={`gpk-swatch${c === color ? " on" : ""}`} style={{ background: GYM_COLORS[c].hex, ...(c === color ? { boxShadow: `0 0 0 3px #fff, 0 0 0 5px ${GYM_COLORS[c].hex}` } : {}) }} onClick={() => setColor(c)} />
+              ))}
+            </div>
+          </div>
+          <div className="gpk-group">
+            <span className="gpk-label">Type</span>
+            <div className="gpk-seg" role="radiogroup" aria-label="Type">
+              {GYM_KINDS.map((g) => (
+                <button key={g.key} type="button" role="radio" aria-checked={g.key === kind} className={`gpk-seg-btn${g.key === kind ? " on" : ""}`} onClick={() => setKind(g.key)}>
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="gpk-info">Weights you log here are kept separate from your other gyms.</p>
+        </>
+      )}
+      <button type="button" className="gpk-primary" disabled={!valid} onClick={() => void add()}>
+        {busy ? busyLabel : addLabel}
+      </button>
+      {toast && (
+        <div className="gpk-toast" role="alert">
+          {toast}
+        </div>
+      )}
+    </div>
   );
 }

@@ -25,7 +25,11 @@
 .gy-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 8px; }
 .gy-row { display: flex; align-items: center; gap: 12px; min-height: 48px; }
 .gy-row-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.gy-row.gone .gy-badge, .gy-row.gone .gy-row-text { opacity: 0.45; filter: grayscale(1); }
+.gy-row.gone .gy-badge, .gy-row.gone .gy-row-text, .gy-row.gone .gy-row-open > svg { opacity: 0.45; filter: grayscale(1); }
+/* Add a gym under the rows (12 Nov, Alex): the white hairline pill across the list, the + and its words centred together. */
+.gy-add { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; margin: 4px 0 0; padding: 0 16px; border: 0; border-radius: 24px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.gy-add svg { flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; translate: 0 -0.5px; }
+.gy-add:active { background: #F5F6F8; }
 .gy-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .gy-row-name { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gy-row-fact { font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
