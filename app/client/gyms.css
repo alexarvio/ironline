@@ -84,3 +84,6 @@ button.gy-hero-badge:disabled { cursor: default; }
 .st-coach-name { font-size: 15px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-coach-title { font-size: 12px; font-weight: 500; line-height: 16px; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-coach > svg { flex: none; width: 16px; height: 16px; color: #98A2B3; }
+
+/* Add a meal's counts (12 Nov, Alex): how many saved meals and days, grey at the row's end. */
+.gpk-addrow .ams-count { margin-left: auto; font-size: 13px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { CopyIcon } from "../components/icons";
+import { BookmarkIcon, CopyIcon } from "../components/icons";
 import RingEdge from "../components/RingEdge";
 import "./gyms.css";
 
@@ -132,27 +132,28 @@ export function CopyMealDialog({
   );
 }
 
-// Add a meal (10 Nov, Alex): New meal or Copy a meal, in the gym picker's voice; Copy a meal shows every saved meal as the
-// card it is in the diary, its picture and figures, and a tap puts it on the day as a card of its own.
+// Add a meal (10 Nov, Alex), in the gym picker's voice. Since 12 Nov (Alex: A of docs/boards/saved-other-ways-mockup.html,
+// "four pills together… I don't like it") it is also the one way to what is saved: New meal; Copy a meal, the Saved
+// meals screen (every saved meal as its card, Use, Create a meal); Use a saved day, the Saved days screen. Each with its
+// count, grey; none, no count.
 export default function AddMealSheet({
-  saved,
   busy,
-  picture,
+  meals,
+  days,
   onNew,
-  onCopy,
-  failed = false,
+  onMeals,
+  onDays,
   onClose,
 }: {
-  failed?: boolean;
-  saved: SavedMealCard[];
   busy: boolean;
-  /** The sized copy of a saved meal's picture. */
-  picture: (path: string) => string;
+  /** How many saved meals and saved days there are. */
+  meals: number;
+  days: number;
   onNew: () => void;
-  onCopy: (id: number) => void;
+  onMeals: () => void;
+  onDays: () => void;
   onClose: () => void;
 }) {
-  const [picking, setPicking] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
@@ -163,16 +164,8 @@ export default function AddMealSheet({
       <div className="gpk-card" role="dialog" aria-modal="true" aria-labelledby="ams-title" onClick={(e) => e.stopPropagation()}>
         <div className="gpk-content">
           <div className="gpk-head center">
-            {picking && (
-              <button type="button" className="gpk-round" onClick={() => setPicking(false)} aria-label="Back">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m14.5 6-6 6 6 6" />
-                </svg>
-                <RingEdge size={32} />
-              </button>
-            )}
             <h2 id="ams-title" className="gpk-title sm ads-title">
-              {picking ? "Copy a meal" : "Add a meal"}
+              Add a meal
             </h2>
             <button type="button" className="gpk-round" onClick={onClose} aria-label="Close">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -181,35 +174,30 @@ export default function AddMealSheet({
               <RingEdge size={32} />
             </button>
           </div>
-          {picking ? (
-            saved.length === 0 ? null : (
-              <>
-                <SavedMealCards saved={saved} busy={busy} picture={picture} onCopy={onCopy} />
-                {failed && (
-                  <p className="fdi-photo-failed" role="alert">
-                    Not added. Try again
-                  </p>
-                )}
-              </>
-            )
-          ) : (
-            <div className="gpk-rows">
-              <button type="button" className="gpk-addrow" disabled={busy} onClick={onNew}>
-                <span className="gpk-addrow-ico" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                </span>
-                New meal
-              </button>
-              <button type="button" className="gpk-addrow" disabled={busy} onClick={() => setPicking(true)}>
-                <span className="gpk-addrow-ico" aria-hidden="true">
-                  <CopyIcon />
-                </span>
-                Copy a meal
-              </button>
-            </div>
-          )}
+          <div className="gpk-rows">
+            <button type="button" className="gpk-addrow" disabled={busy} onClick={onNew}>
+              <span className="gpk-addrow-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </span>
+              New meal
+            </button>
+            <button type="button" className="gpk-addrow" disabled={busy} onClick={onMeals}>
+              <span className="gpk-addrow-ico" aria-hidden="true">
+                <CopyIcon />
+              </span>
+              Copy a meal
+              {meals > 0 && <span className="ams-count">{meals}</span>}
+            </button>
+            <button type="button" className="gpk-addrow" disabled={busy} onClick={onDays}>
+              <span className="gpk-addrow-ico" aria-hidden="true">
+                <BookmarkIcon />
+              </span>
+              Use a saved day
+              {days > 0 && <span className="ams-count">{days}</span>}
+            </button>
+          </div>
         </div>
       </div>
     </div>,

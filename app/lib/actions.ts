@@ -4975,7 +4975,8 @@ export async function createSavedMealCardAction(formData: FormData): Promise<num
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const name = String(formData.get("name") ?? "").trim().slice(0, 40);
   if (!name) return null;
-  const id = await once(`createSavedMealCardAction:${clientId}`, onceKeyOf(formData), () => createSavedMeal(clientId, name)?.id ?? null);
+  const slot = String(formData.get("slot") ?? "") || null;
+  const id = await once(`createSavedMealCardAction:${clientId}`, onceKeyOf(formData), () => createSavedMeal(clientId, name, [], slot)?.id ?? null);
   if (id != null) revalidatePath("/client");
   return id;
 }
