@@ -94,12 +94,21 @@ function heightOf(d: unknown) {
   return typeof h === "number" && h > 0 ? h : 0;
 }
 
+let modeTimer = 0;
 function willShow(d: unknown) {
   noteHeight();
   pluginOpen = true;
   // A second willShow (the number pad after the letters, QuickType) is a new height; the full height stays.
   pluginHeight = heightOf(d) || pluginHeight;
   write(true);
+  // The app's keyboard mode (13 Nov, Alex): since then the shell no longer shrinks the web view (resize none,
+  // mobile/capacitor.config.json); the screens take the keyboard's room themselves, in its first frame (the end of
+  // globals.css). A build from before still shrinks it ~0.45s on. A page still its full height well after the keyboard
+  // came is the new way: `kb-overlay` on <html>, and what moves with the keyboard may then ease with it.
+  window.clearTimeout(modeTimer);
+  modeTimer = window.setTimeout(() => {
+    if (pluginOpen && pluginHeight > 0 && window.innerHeight >= fullHeight - 2) document.documentElement.classList.add("kb-overlay");
+  }, 800);
 }
 
 function didShow(d: unknown) {

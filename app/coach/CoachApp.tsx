@@ -18,6 +18,7 @@ import RingEdge from "../components/RingEdge";
 import { sized } from "../components/ChatMedia";
 import { PushSwitch, type NativeReady } from "../client/PushToggle";
 import { NativePush } from "../client/NativePush";
+import { subscribeKeyboard } from "../client/keyboard";
 
 // The coach's phone (21 Oct, Alex): Chats and Videos on a floating tab bar,
 // and since 22 Oct the Calendar (CoachCalendar.tsx); a chat or a video over
@@ -35,6 +36,9 @@ type Push = { publicKey: string | null; nativeReady: NativeReady };
 type Tab = "chats" | "videos" | "calendar";
 
 export default function CoachApp({ inbox: fromPage, calendar, today, coach, push }: { inbox: CoachInbox; calendar: PhoneCalendar; /** The server's day, for the first paint. */ today: string; coach: { name: string; photoPath: string | null }; push: Push }) {
+  // The keyboard source from the start, not only in a chat (13 Nov: the app's web view no longer shrinks to it; a
+  // sheet's fields lift by --kb, coach.css).
+  useEffect(() => subscribeKeyboard(() => {}), []);
   const params = useSearchParams();
   const chatId = Number(params.get("c")) || null;
   const videoId = Number(params.get("v")) || null;

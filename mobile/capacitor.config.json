@@ -20,7 +20,13 @@
       "style": "LIGHT"
     },
     "PushNotifications": {
-      "presentationOptions": ["alert", "sound"]
+      "presentationOptions": [
+        "alert",
+        "sound"
+      ]
+    },
+    "Keyboard": {
+      "resize": "none"
     }
   }
 }
