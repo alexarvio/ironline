@@ -1,0 +1,212 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Client onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;500;600&display=swap" rel="stylesheet"><style>
+  :root { --ink:#141a24; --body:#3a4250; --sec:#5b6474; --faint:#8b93a1; --label:#98A2B3; --line:#E1E5EB; --page:#F5F6F8; --green:#2f7a3f; --rust:#b8471f; --amber:#a8761f; --indigo:#3a3390; --blue:#2f6fd6; --beige:#a08a5c; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:Archivo,system-ui,sans-serif; font-weight:500; color:var(--ink); background:var(--page); padding:32px 20px 80px; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:980px; margin:0 auto; }
+  h1 { font-size:24px; font-weight:600; }
+  .sub { color:var(--sec); font-size:14px; line-height:1.55; margin:6px 0 18px; max-width:760px; }
+  .key { display:flex; flex-wrap:wrap; gap:14px; font-size:12.5px; color:var(--sec); margin-bottom:28px; align-items:center; }
+  .who { display:inline-flex; align-items:center; gap:6px; }
+  .who i { width:10px; height:10px; border-radius:50%; }
+  .st { display:inline-flex; align-items:center; height:22px; padding:0 9px; border-radius:999px; font-size:11px; font-weight:600; background:#fff; white-space:nowrap; }
+  .st.works { color:var(--green); box-shadow:inset 0 0 0 1px rgba(47,122,63,.4); }
+  .st.gap { color:var(--amber); box-shadow:inset 0 0 0 1px rgba(168,118,31,.45); }
+  .st.broken { color:var(--rust); box-shadow:inset 0 0 0 1px rgba(184,71,31,.45); }
+  .st.new { color:var(--blue); box-shadow:inset 0 0 0 1px rgba(47,111,214,.45); }
+
+  .stage { position:relative; display:grid; grid-template-columns:46px 1fr; gap:0 16px; }
+  .rail { position:relative; display:flex; justify-content:center; }
+  .rail::before { content:""; position:absolute; top:0; bottom:0; left:50%; width:1px; background:var(--line); }
+  .stage:last-of-type .rail::before { bottom:auto; height:24px; }
+  .num { position:relative; z-index:1; width:34px; height:34px; border-radius:50%; background:var(--page); box-shadow:inset 0 0 0 1.5px var(--ink); display:grid; place-items:center; font-size:14px; font-weight:600; margin-top:2px; }
+  .num.pre { box-shadow:inset 0 0 0 1.5px var(--label); color:var(--faint); }
+  .body { padding-bottom:34px; }
+  .eb { font-size:10.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--sec); margin-top:3px; }
+  .stage h2 { font-size:19px; font-weight:600; margin:2px 0 12px; }
+  .steps { display:flex; flex-direction:column; gap:8px; }
+  .step { background:#fff; border-radius:16px; box-shadow:inset 0 0 0 1px var(--line); padding:13px 16px; display:grid; grid-template-columns:auto 1fr auto; gap:4px 12px; align-items:start; }
+  .step .dot { width:10px; height:10px; border-radius:50%; margin-top:6px; }
+  .step b { font-weight:600; font-size:14.5px; display:block; }
+  .step p { grid-column:2 / 4; font-size:13px; color:var(--sec); line-height:1.5; }
+  .step p em { font-style:normal; color:var(--ink); }
+  .step .fix { grid-column:2 / 4; font-size:12.5px; color:var(--body); margin-top:2px; }
+  .step .fix span { font-weight:600; }
+  .c { background:var(--indigo); } .k { background:var(--beige); } .s { background:var(--label); }
+  .fork { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .fork .lbl { font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); margin:4px 0 6px 4px; }
+  @media (max-width:720px) { .fork { grid-template-columns:1fr; } }
+
+  .fixes { margin-top:16px; }
+  .fixes h2 { font-size:20px; font-weight:600; margin-bottom:4px; }
+  .fixes .sub { margin-bottom:14px; }
+  .fx { background:#fff; border-radius:16px; box-shadow:inset 0 0 0 1px var(--line); padding:14px 16px; display:grid; grid-template-columns:28px 1fr auto; gap:4px 12px; margin-bottom:8px; }
+  .fx .n { font-size:22px; font-weight:300; color:var(--faint); font-variant-numeric:tabular-nums; line-height:1; }
+  .fx b { font-size:14.5px; font-weight:600; }
+  .fx p { grid-column:2 / 4; font-size:13px; color:var(--sec); line-height:1.5; }
+  .fx .you { grid-column:2 / 4; font-size:12.5px; color:var(--rust); font-weight:600; }
+  .size { font-size:11px; font-weight:600; color:var(--faint); letter-spacing:.08em; text-transform:uppercase; padding-top:3px; }
+  .done { margin-top:26px; font-size:13px; color:var(--sec); line-height:1.6; }
+  .done b { color:var(--ink); font-weight:600; }
+</style></head><body><div class="wrap">
+
+<h1>A new client, from the app to their plan</h1>
+<p class="sub">What a client goes through today, traced through the code on 13 Nov and checked twice. Each step says who it is about and whether it works. The fixes, most important first, are at the bottom.</p>
+<div class="key">
+  <span class="who"><i class="c"></i>Client</span><span class="who"><i class="k"></i>Coach</span><span class="who"><i class="s"></i>The app</span>
+  <span style="width:14px"></span>
+  <span class="st works">Works</span><span class="st gap">Gap</span><span class="st broken">Broken</span><span class="st new">New today</span>
+</div>
+
+<div class="stage">
+  <div class="rail"><span class="num pre">0</span></div>
+  <div class="body">
+    <div class="eb">Before the app</div>
+    <h2>The coach adds you, and the invite goes out</h2>
+    <div class="steps">
+      <div class="step"><i class="dot k"></i><b>Finlay presses New client</b><span class="st works">Works</span>
+        <p>Name, email, birthdate, phone and address, then <em>Create and invite</em>. Your account exists from that moment, with no password.</p></div>
+      <div class="step"><i class="dot s"></i><b>An invite email goes out at once</b><span class="st gap">Gap</span>
+        <p>Sent by Clerk with its own wording and look, not "Finlay invited you". The link works for 30 days. It goes the second you're added, <em>before Finlay has built anything</em>, and there's no way to send it again if it gets lost.</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="rail"><span class="num">1</span></div>
+  <div class="body">
+    <div class="eb">Getting the app</div>
+    <h2>Finding Norcoach on the phone</h2>
+    <div class="steps">
+      <div class="step"><i class="dot c"></i><b>Nothing points to the app</b><span class="st gap">Gap</span>
+        <p>The invite has no App Store or TestFlight link, and the site never says there's an app. Today the client hears about it from the coach.</p></div>
+      <div class="step"><i class="dot c"></i><b>Tapping the invite opens the app, if it's installed</b><span class="st new">New today</span>
+        <p>Built today: the link opens Norcoach on the invite page. Without the app it opens Safari, and the client later has to sign in again inside the app. Not yet tried on a phone.</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="rail"><span class="num">2</span></div>
+  <div class="body">
+    <div class="eb">Getting in</div>
+    <h2>Signing in, no password</h2>
+    <div class="fork">
+      <div><div class="lbl">From the invite</div>
+        <div class="steps">
+          <div class="step"><i class="dot c"></i><b>"Alex, Finlay invited you"</b><span class="st works">Works</span>
+            <p>Finlay's face, one line about the app, then <em>Continue with email</em>. The link already proves the address, so no code to type. Apple and Google too.</p></div>
+        </div></div>
+      <div><div class="lbl">From the app's sign-in</div>
+        <div class="steps">
+          <div class="step"><i class="dot c"></i><b>Email, then a 6-digit code</b><span class="st works">Works</span>
+            <p>Type the email Finlay used, enter the code from the email, and you're in. Google and Apple work the same way.</p></div>
+        </div></div>
+    </div>
+    <div class="steps" style="margin-top:8px">
+      <div class="step"><i class="dot s"></i><b>Matched to Finlay's client by email alone</b><span class="st broken">Broken</span>
+        <p>Google under another address, Apple's Hide My Email, or a typo in the email Finlay typed all land on <em>No account yet</em>. That screen also offers <em>Create a coach account</em>. Finlay isn't told any of it.</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="rail"><span class="num">3</span></div>
+  <div class="body">
+    <div class="eb">First open</div>
+    <h2>The opening, then straight to Home</h2>
+    <div class="steps">
+      <div class="step"><i class="dot s"></i><b>The opening plays</b><span class="st works">Works</span>
+        <p>The star on paper, NORCOACH coming out from behind it, then Home.</p></div>
+      <div class="step"><i class="dot s"></i><b>Nothing is asked: no notifications</b><span class="st gap">Gap</span>
+        <p>The app never asks for notifications. They only come on if the client finds Settings → Preferences. Until then, everything Finlay sends, and every call reminder, goes nowhere outside the app.</p></div>
+      <div class="step"><i class="dot s"></i><b>No welcome step</b><span class="st gap">Gap</span>
+        <p>No hello from the coach, no Apple Health ask, nothing about the gym. Coaches get a welcome when they join; clients don't.</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="rail"><span class="num">4</span></div>
+  <div class="body">
+    <div class="eb">The first Home</div>
+    <h2>Personalised, or empty</h2>
+    <div class="fork">
+      <div><div class="lbl">Finlay built the plan first</div>
+        <div class="steps">
+          <div class="step"><i class="dot s"></i><b>Today, the cards, Finlay's latest</b><span class="st works">Works</span>
+            <p>Today lists the session (Start) and the check-in (Fill in). The phase cards show this week, and Latest from shows what Finlay set up, with To focus on once the first call is done.</p></div>
+        </div></div>
+      <div><div class="lbl">Nothing built yet</div>
+        <div class="steps">
+          <div class="step"><i class="dot s"></i><b>"All set for today"</b><span class="st broken">Broken</span>
+            <p>A green check over nothing, three <em>No plan yet</em> cards and <em>Nothing from Finlay yet</em>. A brand-new client is told they're done before anything exists. Likely, because the invite leaves before the plan is built.</p></div>
+        </div></div>
+    </div>
+    <div class="steps" style="margin-top:8px">
+      <div class="step"><i class="dot s"></i><b>A plan that starts later starts silently</b><span class="st gap">Gap</span>
+        <p>Its card says <em>No plan yet</em> with no date until the day comes; a training programme announces itself then, lifestyle and nutrition don't.</p></div>
+      <div class="step"><i class="dot s"></i><b>The welcome line can be wrong</b><span class="st gap">Gap</span>
+        <p>With no other news, Finlay's spot reads "Your first session is ready. Check in each morning…", even on a nutrition-only start, and it explains a feature.</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="rail"><span class="num">5</span></div>
+  <div class="body">
+    <div class="eb">The first days</div>
+    <h2>Training, food and the chat</h2>
+    <div class="steps">
+      <div class="step"><i class="dot c"></i><b>Nutrition logs from day one</b><span class="st works">Works</span>
+        <p>With no targets yet it's the food diary on its own, so food can be logged straight away.</p></div>
+      <div class="step"><i class="dot c"></i><b>Training is blank without a programme</b><span class="st gap">Gap</span>
+        <p>The photo banner and nothing under it, and no way to log a rogue session yet, so a keen client can't log what they train while the plan is coming.</p></div>
+      <div class="step"><i class="dot c"></i><b>First workout asks the gym</b><span class="st works">Works</span>
+        <p>Start always opens the gym picker; with no gyms it goes straight to adding one.</p></div>
+      <div class="step"><i class="dot c"></i><b>The chat is ready</b><span class="st works">Works</span>
+        <p>One line over an empty thread; a message reaches Finlay's phone.</p></div>
+      <div class="step"><i class="dot s"></i><b>Check-in reminders never arrive</b><span class="st broken">Broken</span>
+        <p>They're written but never shown or pushed, so the Check-in reminders switch does nothing. Call reminders are push only, so without notifications they're lost too.</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="rail"><span class="num">6</span></div>
+  <div class="body">
+    <div class="eb">Meanwhile, for the coach</div>
+    <h2>Knowing the client is in</h2>
+    <div class="steps">
+      <div class="step"><i class="dot k"></i><b>Only the rail tells him</b><span class="st gap">Gap</span>
+        <p>The client's face loses its dashed ring once they've signed in, and the chat says <em>Active now</em>. No row in the Feed, no push, and App access says nothing about whether they're in.</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="fixes">
+  <h2>What to fix, most important first</h2>
+  <p class="sub">Ranked by how much each one hurts a new client's first impression.</p>
+
+  <div class="fx"><span class="n">1</span><b>Send the invite when the plan is ready</b><span class="size">Medium</span>
+    <p>New client creates the account without sending anything; App access gets <em>Send invite</em>, and later <em>Resend</em>. Then the first Home is never empty, and a lost email can be sent again.</p></div>
+  <div class="fx"><span class="n">2</span><b>Ask for notifications once, after the first Home</b><span class="size">Medium</span>
+    <p>Inside the app, the phone's own question one time. Without it the coach's messages and call reminders never reach the phone.</p></div>
+  <div class="fx"><span class="n">3</span><b>Our own invite email, from the coach</b><span class="size">Small</span>
+    <p>"Finlay invited you to Norcoach", in the app's look, with the App Store (TestFlight for now) link and the invite button. Replies go to the coach.</p>
+    <p class="you">Needs you: verify norcoachapp.com in Resend, so mail can come from it.</p></div>
+  <div class="fx"><span class="n">4</span><b>Link the account through the invite, not the email</b><span class="size">Medium</span>
+    <p>Whoever opens the invite becomes that client, whatever address Google or Apple gives. No more <em>No account yet</em> for a real client, and no coach link on that screen.</p></div>
+  <div class="fx"><span class="n">5</span><b>App access tells the coach where things stand</b><span class="size">Small</span>
+    <p><em>Signed in</em> or <em>Not yet</em>, when the invite went, and Resend. A Feed row when a client joins.</p></div>
+  <div class="fx"><span class="n">6</span><b>An honest empty Home</b><span class="size">Small</span>
+    <p>No "All set for today" before there's a plan, and Finlay's spot without the explaining sentence.</p></div>
+  <div class="fx"><span class="n">7</span><b>Reminders that arrive</b><span class="size">Small</span>
+    <p>Check-in reminders pushed (or the switch removed), call reminders as a notification row as well as a push.</p></div>
+  <div class="fx"><span class="n">8</span><b>Small clean-ups</b><span class="size">Small</span>
+    <p>The invite link always built on app.norcoachapp.com (today it follows whatever address the coach is on), a broken invite page says sign in instead of "Hi, Your invited you", and the gym picker's two contradicting lines about moving sets.</p></div>
+
+  <p class="done"><b>Already done today:</b> the invite opens the app when it's installed, the sign-in screen is cleaner (centred logo, no coach link inside the app), and Start always asks for the gym.</p>
+</div>
+
+</div></body></html>
