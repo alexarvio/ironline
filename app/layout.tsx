@@ -9,6 +9,7 @@ import { clerkOn } from "./lib/clerk";
 import SlidePills from "./components/SlidePills";
 import FreshBuild from "./components/FreshBuild";
 import ZoomCalm from "./components/ZoomCalm";
+import NativeLinks from "./components/NativeLinks";
 import { buildId } from "./lib/buildId";
 import { getSessionUser } from "./lib/auth";
 import { markFor } from "./lib/brandMark";
@@ -109,6 +110,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* A page left open across a deploy reloads onto the new build (30 Oct). */}
         <FreshBuild build={buildId()} />
         <ZoomCalm />
+        {/* A tapped invite link opens in the iPhone app, on its page (13 Nov, Alex). */}
+        <NativeLinks />
       </body>
     </html>
   );
