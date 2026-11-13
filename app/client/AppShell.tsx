@@ -1,5 +1,6 @@
 "use client";
 
+import { ownTab } from "../lib/tabMemory";
 import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransition, type SyntheticEvent } from "react";
 import { pic } from "../lib/pic";
 import "./gyms.css";
@@ -88,9 +89,11 @@ const TAB_EVENT = "ironline:tab";
 /** The tab, for the server (page.tsx reads it). */
 export const TAB_COOKIE = "ironline_tab";
 
+// Whose tab it is: kept as "{client}:{tab}", only the signed-in client's own read back (lib/tabMemory.ts).
+let tabOwner: number | null = null;
 function readTab(): string | null {
   try {
-    return window.sessionStorage.getItem(TAB_KEY);
+    return ownTab(window.sessionStorage.getItem(TAB_KEY), tabOwner);
   } catch {
     return null;
   }
@@ -103,14 +106,14 @@ function subscribeTab(onChange: () => void) {
 
 function writeTab(id: string) {
   try {
-    window.sessionStorage.setItem(TAB_KEY, id);
+    window.sessionStorage.setItem(TAB_KEY, `${tabOwner}:${id}`);
   } catch {
     /* blocked storage: the tab still switches for this page */
   }
   // And in a cookie for this visit, so a reload is drawn on this tab by the
   // server instead of Home first and then this one.
   try {
-    document.cookie = `${TAB_COOKIE}=${encodeURIComponent(id)}; path=/; samesite=lax`;
+    document.cookie = `${TAB_COOKIE}=${encodeURIComponent(`${tabOwner}:${id}`)}; path=/; samesite=lax`;
   } catch {}
   window.dispatchEvent(new Event(TAB_EVENT));
 }
@@ -193,6 +196,7 @@ export default function AppShell({
   /** The tab the client was on (its cookie), so the server draws that one. */
   initialTab?: string | null;
 }) {
+  if (!readOnly) tabOwner = clientId;
   const storedTab = useSyncExternalStore(subscribeTab, readTab, () => initialTab);
   // The keyboard, one source for the app (--kb and kb-open on <html>), and the field being typed in kept in sight.
   useKeyboardReveal(!readOnly);

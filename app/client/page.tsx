@@ -133,6 +133,7 @@ import GymSettings from "./GymSettings";
 import SettingsFold from "./SettingsFold";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import AppShell, { AppTab, type Arrival, type PhoneScreen } from "./AppShell";
+import { ownTab } from "../lib/tabMemory";
 import NativeCoachRedirect from "../coach/NativeCoachRedirect";
 import OpeningSplash from "./OpeningSplash";
 import AvatarUpload from "./AvatarUpload";
@@ -1271,7 +1272,7 @@ export default async function ClientPage({
   const jar = await cookies();
   const tzCookie = decodeURIComponent(jar.get("ironline_tz")?.value ?? "");
   const phoneTz = tzCookie && isTimezone(tzCookie) ? tzCookie : null;
-  const initialTab = phone ? (PHONE_TAB_SCREENS.has(phoneScreen) ? phoneScreen : "home") : jar.get("ironline_tab")?.value ?? null;
+  const initialTab = phone ? (PHONE_TAB_SCREENS.has(phoneScreen) ? phoneScreen : "home") : ownTab(jar.get("ironline_tab")?.value, CLIENT_ID);
   // Only the client themselves sees their private "My notes", never a coach
   // previewing the app.
   const viewer = await getSessionUser();
