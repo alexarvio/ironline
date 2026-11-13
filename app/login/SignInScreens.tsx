@@ -72,6 +72,7 @@ function Or() {
 /** Signing in, coach or client: Apple, Google, or an email that gets a code. */
 export function SignInScreen({ onEmail, onApple, onGoogle, busy, error, notice, signupHref = "/signup" }: Oauth & Busy & { onEmail?: (email: string) => void; notice?: string | null; signupHref?: string }) {
   const [email, setEmail] = useState("");
+  const inApp = useSyncExternalStore(noSubscribe, () => nativePlatform() != null, () => false);
   return (
     <AuthShell>
       <h1 className="auth-title">Sign in</h1>
@@ -88,7 +89,7 @@ export function SignInScreen({ onEmail, onApple, onGoogle, busy, error, notice, 
       >
         <label className="auth-field">
           <span>Email</span>
-          <input name="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         {/* Where Clerk puts its bot check when a new account is made (sign-up protection). */}
         <div id="clerk-captcha" />
@@ -96,9 +97,12 @@ export function SignInScreen({ onEmail, onApple, onGoogle, busy, error, notice, 
           {busy ? "Sending…" : "Email me a code"}
         </button>
       </form>
-      <p className="auth-note">
-        Coaching others? <a href={signupHref}>Create a coach account</a>
-      </p>
+      {/* Not inside the phone app (13 Nov): it is the clients' way in; coaches sign up on the website. */}
+      {!inApp && (
+        <p className="auth-note">
+          Coaching others? <a href={signupHref}>Create a coach account</a>
+        </p>
+      )}
       <p className="auth-note auth-legal">
         <Bars parts={[<a key="p" href="/privacy">Privacy policy</a>, <a key="s" href="/support">Support</a>]} />
       </p>
@@ -199,7 +203,7 @@ export function CoachSignUpScreen({ onEmail, onApple, onGoogle, busy, error }: O
       >
         <label className="auth-field">
           <span>Email</span>
-          <input name="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         {/* Where Clerk puts its bot check when a new account is made (sign-up protection). */}
         <div id="clerk-captcha" />
