@@ -91,7 +91,8 @@ export const config = {
   // re-checks the service worker on its own, cookie or not, and a redirect
   // to /login there would break push notifications once a session expired.
   // coach.webmanifest is the coach phone's (21 Oct, /coach), fetched with no cookie the same way.
+  // .well-known (13 Nov): Apple reads apple-app-site-association there with no cookie, and it must never redirect.
   // api/upload (4 Nov, Alex: memory): every big file's way in, checked by its own route, so its body is never copied
   // into memory here.
-  matcher: ["/((?!_next/static|_next/image|api/video-reply|api/chat-review|api/upload|api/stripe/webhook|favicon.ico|manifest.webmanifest|coach.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
+  matcher: ["/((?!.well-known|_next/static|_next/image|api/video-reply|api/chat-review|api/upload|api/stripe/webhook|favicon.ico|manifest.webmanifest|coach.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
 };
