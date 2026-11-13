@@ -183,7 +183,7 @@ export default function HomeHub({
   // and names the phase the coach has scheduled, if any.
   const empty = (track: HomePhase["track"], id: number): HomePhase => ({ id, track, name: "No plan yet", start: today, end: null, coverUrl: defaultPhaseCover(track, 0), objectives: [], note: null, next: planGap?.next?.track === track ? { name: planGap.next.name, start: planGap.next.start } : null, placeholder: true });
   const cards: HomePhase[] = [
-    ...(lifestyle ? [lifestyle] : hasCheckIns ? [{ id: -1, track: "lifestyle" as const, name: "Check-in", start: today, end: null, coverUrl: "/img/lifestyle-bottle.jpg", objectives: [], note: null, next: null }] : [empty("lifestyle", -10)]),
+    ...(lifestyle ? [lifestyle] : hasCheckIns ? [{ id: -1, track: "lifestyle" as const, name: "Check-in", start: today, end: null, coverUrl: defaultPhaseCover("lifestyle", 0), objectives: [], note: null, next: null }] : [empty("lifestyle", -10)]),
     ...(["training", "nutrition"] as const).flatMap((t, i) => {
       const own = plan.filter((p) => p.track === t);
       return own.length ? own : [empty(t, -11 - i)];

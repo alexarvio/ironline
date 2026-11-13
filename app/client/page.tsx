@@ -1086,7 +1086,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
             rows={(["lifestyle", "training", "nutrition"] as const).map((track) => {
               const ph = getCurrentPhase(CLIENT_ID, track);
               const own = getClientCardPictures(CLIENT_ID)[track] ?? [];
-              const coach = ph ? (ph.cover_path ?? defaultPhaseCover(track, ph.id)) : track === "lifestyle" ? "/img/lifestyle-bottle.jpg" : defaultPhaseCover(track, 0);
+              const coach = ph ? (ph.cover_path ?? defaultPhaseCover(track, ph.id)) : defaultPhaseCover(track, 0);
               // A stock cover the coach never chose is the default, not theirs (22 Oct).
               return { track, own, coach, coachChose: !!ph?.cover_path };
             })}
