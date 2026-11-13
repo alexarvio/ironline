@@ -10,6 +10,7 @@ import DoneCheck from "../components/DoneCheck";
 import { newOnceKey } from "../lib/onceKey";
 import { VideoReplyBody, type VideoReplyView } from "./VideoReplySheet";
 import { dayWords } from "../lib/clientDates";
+import { pic } from "../lib/pic";
 import RingEdge from "../components/RingEdge";
 
 // The coach asked for a video of this exercise: a camera on the exercise
@@ -74,7 +75,7 @@ export default function VideoAskButton({ ask, assignmentId, exerciseName, coachN
  *  phone's choices; never a menu of ours or a see-through field). The coach's reply first, with what it answers under it:
  *  the client's own clip as a small frame, `Your video | Sat 10 Oct | Upper`, a tap playing it. What is picked starts going
  *  up at once (a photo made smaller first), so Send only files it. */
-export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, coachName = "Coach", onClose }: { ask: VideoAsk | null; assignmentId: number; /** Sending a picture of the swap (9 Oct). */ about?: "swap" | null; exerciseName: string; coachName?: string; onClose: () => void }) {
+export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, coachName = "Coach", finished = false, onClose }: { ask: VideoAsk | null; assignmentId: number; /** Sending a picture of the swap (9 Oct). */ about?: "swap" | null; exerciseName: string; coachName?: string; /** From a finished session (14 Nov, Alex): what was sent is looked at, not added to, and its day is the session's. */ finished?: boolean; onClose: () => void }) {
   const isPhoto = (f: Blob | null) => !!f && f.type.startsWith("image/");
   const sentPhoto = ask?.media === "photo";
   // The coach asked for it, with or without a note (the note is optional since 15 Oct).
@@ -260,7 +261,7 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
                 <span className="vas-label">What it replies to</span>
                 <button type="button" className={`vas-theirs-row${theirsOpen ? " open" : ""}`} onClick={() => setTheirsOpen((o) => !o)} aria-expanded={theirsOpen}>
                   <span className="vas-thumb" aria-hidden="true">
-                    {theirsPhoto ? <img src={theirs} alt="" /> : <video src={firstFrame(theirs)} muted playsInline preload="metadata" />}
+                    {theirsPhoto ? <img src={pic(theirs, 480)} alt="" /> : <video src={firstFrame(theirs)} muted playsInline preload="metadata" />}
                   </span>
                   <span className="vas-theirs-words">
                     <Bars parts={[theirsPhoto ? "Your photo" : "Your video", theirsAt ? dayWords(new Date(theirsAt), { weekday: "short" }) : null, reply.where || null]} />
@@ -271,7 +272,7 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
                     </svg>
                   </span>
                 </button>
-                {theirsOpen && (theirsPhoto ? <img className="vas-media" src={theirs} alt="" /> : <video className="vas-media" src={firstFrame(theirs)} controls autoPlay playsInline preload="metadata" />)}
+                {theirsOpen && (theirsPhoto ? <img className="vas-media" src={pic(theirs, 1080)} alt="" /> : <video className="vas-media" src={firstFrame(theirs)} controls autoPlay playsInline preload="metadata" />)}
               </div>
             )}
 
@@ -284,18 +285,22 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, c
 
             {showSent && ask?.src && (
               <>
-                {sentPhoto ? <img className="vas-media" src={ask.src} alt="" /> : <video className="vas-media" src={firstFrame(ask.src)} controls playsInline preload="metadata" />}
+                {/* The 1080 copy, not the original (14 Nov, Alex: "it takes a long time to load"). */}
+                {sentPhoto ? <img className="vas-media" src={pic(ask.src, 1080)} alt="" /> : <video className="vas-media" src={firstFrame(ask.src)} controls playsInline preload="metadata" />}
                 {ask.clientNote && <p className="vas-fact">“{ask.clientNote}”</p>}
-                {ask.sentAt && <p className="vas-fact">Sent {dayWords(new Date(ask.sentAt), { weekday: "short" })}</p>}
+                {ask.sentAt && !finished && <p className="vas-fact">Sent {dayWords(new Date(ask.sentAt), { weekday: "short" })}</p>}
               </>
             )}
             {/* The limit alone, and nothing with no ask (3 Nov, Alex: the words audit). */}
             {!ask?.src && asked && <p className="vas-fact">Up to 2 min</p>}
             {problem && <p className="vas-problem">{problem}</p>}
             {/* The one ink pill while nothing is picked; once something is sent or answered it is the white one. */}
-            <button type="button" className={ask?.src || reply ? "vas-pill white" : "vas-pill"} onClick={() => field.current?.click()}>
-              {addWords}
-            </button>
+            {/* A finished session sends nothing more once something is in (14 Nov, Alex); a late one is still sent from there. */}
+            {!(finished && (ask?.src || reply)) && (
+              <button type="button" className={ask?.src || reply ? "vas-pill white" : "vas-pill"} onClick={() => field.current?.click()}>
+                {addWords}
+              </button>
+            )}
           </>
         )}
         <input

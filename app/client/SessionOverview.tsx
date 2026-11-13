@@ -431,7 +431,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId, landed = false 
                 <VideoAskRow ask={sent} coachName={coachName} onOpen={() => setVideoOpen(true)} />
               </div>
             )}
-            {videoOpen && sent && <VideoAskSheet ask={sent} assignmentId={exercise.id} exerciseName={shownName(exercise)} coachName={coachName} onClose={() => setVideoOpen(false)} />}
+            {videoOpen && sent && <VideoAskSheet ask={sent} assignmentId={exercise.id} exerciseName={shownName(exercise)} coachName={coachName} finished onClose={() => setVideoOpen(false)} />}
           </div>
         </SoFold>
       </div>
