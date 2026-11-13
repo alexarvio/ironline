@@ -216,3 +216,18 @@
 .fdi-make-slots { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .fdi-make-slot { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 13px; font-weight: 600; color: #3a4250; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 0.2s ease, color 0.2s ease; }
 .fdi-make-slot.on { background: #141a24; color: #fff; box-shadow: none; }
+
+/* No picture: soft teal (14 Nov, Alex: B of docs/boards/meal-card-colour-mockup.html; the dark green-grey jumped against the
+   page and the see-through tab bar when switching tabs). Nutrition's teal at a whisper, ink type, the mark faint in teal,
+   the round buttons white with a teal hairline. A card with a picture keeps its photo, shade and white type. */
+.fdc-card.bare { color: #141a24; }
+.fdc-card.bare .fdc-bg { background-color: #E2EEEC; background-image: none; }
+.fdc-card.bare .fdc-bg::before { filter: invert(32%) sepia(52%) saturate(600%) hue-rotate(130deg); opacity: 0.08; }
+.fdc-card.bare .fdc-figs, .fdc-card.bare .fdc-figs.none { color: #5f7f7a; opacity: 1; }
+.fdc-card.bare .fdc-figs b { color: #141a24; }
+.fdc-card.bare .fdc-chev.fdc-chev { color: #141a24; opacity: 0.7; }
+.fdc-card.bare .fdc-tool.fdc-tool { background: rgba(255, 255, 255, 0.72); box-shadow: inset 0 0 0 1px rgba(29, 122, 112, 0.25); color: #1d7a70; }
+@media (hover: hover) {
+  .fdc-card.bare .fdc-tool.fdc-tool:hover { background: #fff; }
+}
+.fdc-card.bare .fdc-name-box.fdc-name-box { color: #141a24; }
