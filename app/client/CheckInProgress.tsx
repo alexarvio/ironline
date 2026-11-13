@@ -294,7 +294,7 @@ function MetricPanel({
                 </span>
               )}
             </div>
-            <span className="pg-name">{series.name}</span>
+            {/* No name under the figure (14 Nov, Alex): the picked chip above says which metric it is. */}
           </div>
           <div className="pg-range" role="radiogroup" aria-label="Time range">
             {ranges.map((r) => (
