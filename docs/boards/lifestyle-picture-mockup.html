@@ -1,0 +1,44 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lifestyle picture</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&display=swap" rel="stylesheet"><style>
+  body { font-family:Archivo,system-ui,sans-serif; font-weight:500; color:#141a24; background:#F5F5F5; padding:28px 20px 60px; margin:0; -webkit-font-smoothing:antialiased; }
+  h1 { font-size:20px; font-weight:600; margin:0 0 4px; }
+  .sub { color:#8b93a1; font-size:13px; margin:0 0 22px; max-width:760px; line-height:1.5; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:22px; }
+  .opt .n { font-size:13px; font-weight:600; margin:0 0 6px 4px; color:#5b6474; }
+  .card { position:relative; height:330px; border-radius:26px; overflow:hidden; background:#2a2f3a center/cover; }
+  .card::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(10,14,22,.15) 0%, rgba(10,14,22,.05) 40%, rgba(10,14,22,.55) 100%); }
+  .pill { position:absolute; z-index:1; top:16px; left:16px; height:32px; padding:0 14px; border-radius:999px; display:flex; align-items:center; gap:8px; color:#fff; font-size:11px; font-weight:600; letter-spacing:.16em; box-shadow:inset 0 0 0 1px rgba(255,255,255,.5); background:rgba(255,255,255,.14); backdrop-filter:blur(10px); }
+  .pill svg { width:13px; height:13px; fill:none; stroke:#fff; stroke-width:1.8; }
+  .glass { position:absolute; z-index:1; left:10px; right:10px; bottom:10px; height:64px; border-radius:20px; padding:0 18px; display:flex; align-items:center; color:#fff; font-size:20px; font-weight:600; background:rgba(40,48,70,.55); box-shadow:inset 0 0 0 1px rgba(255,255,255,.28); backdrop-filter:blur(14px); }
+  .what { font-size:12px; color:#8b93a1; margin:6px 0 0 4px; }
+  .now .card { filter:none; }
+</style></head><body>
+<h1>Lifestyle picture</h1>
+<p class="sub">Free photos from Unsplash, shown as the Home card. Tell me the number. The first one is today's, for comparison.</p>
+<div class="grid">
+  <div class="opt now"><p class="n">Today</p><div class="card" style="background-image:url('../../public/img/lifestyle-bottle.jpg')"><span class="pill"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>LIFESTYLE</span><div class="glass">No plan yet</div></div><p class="what">Water bottle</p></div>
+</div>
+<script>
+const P = [
+  ["photo-1602594748821-6df031e275e1","Arms up at sunset"],
+  ["photo-1506126613408-eca07ce68773","Meditating on a wooden floor"],
+  ["photo-1769011496342-2bd1ad232d8f","Sauna"],
+  ["photo-1777038095550-5e264a9552f9","Eyes closed, in the dark"],
+  ["photo-1681977151572-78a1ba5f8627","Yoga pose, dark room"],
+  ["photo-1787089573687-7f39a40bd617","Child's pose on a mat"],
+  ["photo-1430462708036-7ef5363d56d8","Walking on the shore"],
+  ["photo-1518057111178-44a106bad636","Morning coffee in hand"],
+  ["photo-1536349788264-1b816db3cc13","Morning light on a bed"],
+  ["photo-1775997486600-0dcd6bf6d1ab","Arms out over the water"],
+  ["photo-1635305920023-7a77fd24472e","Meditating by a waterfall"],
+  ["photo-1628002135197-8b371cb75d32","Standing on a rock at sunset"],
+];
+const g = document.querySelector(".grid");
+P.forEach(([id, what], i) => {
+  const d = document.createElement("div");
+  d.className = "opt";
+  d.innerHTML = `<p class="n">${i + 1}</p><div class="card" style="background-image:url('https://images.unsplash.com/${id}?w=700&q=70&fit=crop&auto=format')"><span class="pill"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>LIFESTYLE</span><div class="glass">No plan yet</div></div><p class="what">${what}</p>`;
+  g.appendChild(d);
+});
+</script>
+</body></html>
