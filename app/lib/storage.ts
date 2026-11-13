@@ -284,7 +284,7 @@ const missing = (error: unknown) => {
 
 /** A file's bytes: from memory, the disk (a file not copied to the bucket yet) or the bucket; null when it is nowhere.
     One trip to the bucket, a read that answers "not there" itself (25 Oct: a check first made it two). */
-async function readUpload(key: string): Promise<Buffer | null> {
+export async function readUpload(key: string): Promise<Buffer | null> {
   const hit = recall(key);
   if (hit) {
     lastSource.set(key, "memory");

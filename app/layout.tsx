@@ -12,7 +12,7 @@ import ZoomCalm from "./components/ZoomCalm";
 import NativeLinks from "./components/NativeLinks";
 import { buildId } from "./lib/buildId";
 import { getSessionUser } from "./lib/auth";
-import { markFor } from "./lib/brandMark";
+import { markFor, markInline } from "./lib/brandMark";
 
 export const metadata: Metadata = {
   title: "NORCOACH", // the tab's name in capitals, as the wordmark (24 Oct, Alex)
@@ -79,7 +79,10 @@ export const viewport: Viewport = {
 async function bgMark(): Promise<React.CSSProperties | undefined> {
   try {
     const mark = markFor(await getSessionUser());
-    return mark ? ({ "--bg-mark": `url("${mark}")` } as React.CSSProperties) : undefined;
+    if (!mark) return undefined;
+    // Inside the page, so it is there at once on every open (13 Nov, Alex); its address while that can't be made.
+    const src = (await markInline(mark)) ?? mark;
+    return { "--bg-mark": `url("${src}")` } as React.CSSProperties;
   } catch {
     return undefined;
   }

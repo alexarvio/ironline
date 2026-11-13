@@ -136,3 +136,33 @@ function unlinkUpload(publicPath: string | null | undefined) {
     /* already gone */
   }
 }
+
+/** The mark as a small picture inside the page itself (13 Nov, Alex: "the background image takes quite a little bit to
+ *  load when I open the app"): the upload's address went through a new signed bucket link each time, so the phone
+ *  fetched it again on every open. Drawn at 4.5% it needs no detail: half the box, a palette PNG, made once per mark
+ *  and kept in memory, its file name changing with every new logo. Null while it can't be read; the address then. */
+const inlined = new Map<string, Promise<string | null>>();
+export function markInline(mark: string): Promise<string | null> {
+  let hit = inlined.get(mark);
+  if (!hit) {
+    hit = (async () => {
+      try {
+        const { keyOf, readUpload } = await import("./storage");
+        const key = keyOf(mark);
+        const bytes = key ? await readUpload(key) : null;
+        if (!bytes) return null;
+        const sharp = await loadSharp();
+        const small = await sharp(bytes).resize(Math.round(BOX.width / 2), Math.round(BOX.height / 2), { fit: "inside" }).png({ palette: true, quality: 80, compressionLevel: 9 }).toBuffer();
+        return `data:image/png;base64,${small.toString("base64")}`;
+      } catch {
+        return null;
+      }
+    })();
+    inlined.set(mark, hit);
+    // A failed read is tried again next time, not kept.
+    void hit.then((v) => {
+      if (v == null) inlined.delete(mark);
+    });
+  }
+  return hit;
+}
