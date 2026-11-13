@@ -766,13 +766,12 @@ export default function AppShell({
                     </button>
                   )}
                   {/* Check-in (12 Nov, Alex: A of docs/boards/hidden-ways-mockup.html): the whole screen, Entries,
-                      Progress and Calendar, which before only an unmarked tap on Home opened. While a check-in is asked. */}
-                  {checkIn.sections.length > 0 && (
-                    <button type="button" className="app-menu-item" onClick={() => go(() => openCheckIn("daily"))}>
-                      <span className="app-menu-ico"><HeartIcon /></span>
-                      Check-in
-                    </button>
-                  )}
+                      Progress and Calendar, which before only an unmarked tap on Home opened. Always (14 Nov, Alex): with no
+                      lifestyle phase it opens on the black-and-white screen. */}
+                  <button type="button" className="app-menu-item" onClick={() => go(() => openCheckIn("daily"))}>
+                    <span className="app-menu-ico"><HeartIcon /></span>
+                    Check-in
+                  </button>
                   {/* Shape update: here alone, always (10 Nov, Alex: out of Settings). */}
                   <button
                     type="button"
