@@ -237,13 +237,18 @@ export default function CardPictureSheet({
               {/* eslint-disable-next-line @next/next/no-img-element -- an upload, or the photo itself while it goes up */}
               <img src={pic(x.preview, 480)} alt="" />
               <button type="button" disabled={saving} onClick={() => remove(x.key)} aria-label="Remove this picture">
-                ×
+                {/* The round × of Settings' card pictures (14 Nov, Alex: the sheet in the shared voice), drawn, never typed. */}
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 7l10 10M17 7 7 17" />
+                </svg>
               </button>
             </span>
           ))}
           {!full && (
             <button type="button" className="cv-cell cv-add" disabled={saving} onClick={() => fileRef.current?.click()} aria-label="Add pictures from your photos">
-              <span className="cv-add-plus" aria-hidden="true">+</span>
+              <svg className="cv-add-plus" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
               <span className="cv-add-text">Add</span>
             </button>
           )}

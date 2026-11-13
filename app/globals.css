@@ -21851,3 +21851,24 @@ html.vrec-on, html.vrec-on * { -webkit-user-select: none !important; user-select
 .wo-gymdrop-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-weight: 500; }
 .wo-gymdrop-row.on .wo-gymdrop-name { font-weight: 600; }
 .wo-gymdrop-check { flex: none; width: 16px; height: 16px; fill: none; stroke: #141a24; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Home's card-picture sheet in the shared voice (14 Nov, Alex: "not according to the rules"; docs/DESIGN-RULES.md §1, §6),
+   as Settings · Card pictures draws it: a plain white sheet, the title at 600 in ink, the count grey, each picture's round
+   white × with a hairline ring (drawn, never typed), the white hairline Add tile, Done the ink pill, going back words. */
+.cv-sheet.cv-sheet { color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; }
+.cv-sheet .cv-grab { background: #E1E5EB; }
+.cv-sheet .cv-title.cv-title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
+.cv-sheet .cv-count.cv-count { margin-left: 6px; font-size: 13px; font-weight: 600; color: #8b93a1; }
+.cv-sheet .cv-sub.cv-sub { font-size: 13px; font-weight: 500; color: #8b93a1; }
+.cv-sheet .cv-cell.cv-cell { border-radius: 12px; background: #E1E5EB; }
+.cv-sheet .cv-cell > button { display: flex; align-items: center; justify-content: center; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; font-size: 0; line-height: 0; }
+.cv-sheet .cv-cell > button svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.cv-sheet .cv-add.cv-add { gap: 4px; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.cv-sheet .cv-add-plus.cv-add-plus { width: 18px; height: 18px; fill: none; stroke: #141a24; stroke-width: 1.6; stroke-linecap: round; }
+.cv-sheet .cv-add-text.cv-add-text { font-size: 12px; font-weight: 600; color: #141a24; }
+@media (hover: hover) { .cv-sheet .cv-add.cv-add:hover { background: #fafbfd; } }
+.cv-sheet .cv-add.cv-add:active { background: #F5F6F8; }
+.cv-sheet .cv-actions.cv-actions { gap: 4px; align-items: center; }
+.cv-sheet .cv-btn.cv-btn { height: 44px; border: 0; border-radius: 999px; font-size: 14.5px; font-weight: 600; }
+.cv-sheet .cv-btn.primary.primary { background: #141a24; color: #fff; }
+.cv-sheet .cv-btn.plain.plain { width: auto; height: 36px; padding: 0 12px; background: none; color: #5b6474; font-size: 13px; font-weight: 600; }
