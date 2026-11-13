@@ -8,7 +8,8 @@ export const PHASE_COVERS: Record<PhaseTrack, string[]> = {
   nutrition: ["/img/nutrition-head.jpg"],
   // The gym (13 Nov, Alex: the photo on docs/boards/reopen-session-mockup.html; Unsplash, free to use) first, so it is the default.
   training: ["/img/training-gym.jpg", "/img/session-head.jpg"],
-  lifestyle: ["/img/lifestyle-bottle.jpg"],
+  // Walking on the shore (14 Nov, Alex: number 7 of docs/boards/lifestyle-picture-mockup.html; Unsplash, free to use).
+  lifestyle: ["/img/lifestyle-shore.jpg", "/img/lifestyle-bottle.jpg"],
 };
 
 export const PHASE_OBJECTIVES_MAX = 3;
